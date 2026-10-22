@@ -21,7 +21,7 @@ const healthyBackup: BackupStatus = {
   targetConfigured: true,
   running: false,
   nextRunAt: new Date(NOW.getTime() + 20 * HOUR),
-  lastSuccess: { at: new Date(NOW.getTime() - 3 * HOUR), name: "pagehall-daily.phbak", sizeBytes: 1024 },
+  lastSuccess: { at: new Date(NOW.getTime() - 3 * HOUR), name: "lunedo-daily.ldbak", sizeBytes: 1024 },
   lastFailure: null,
   alert: "none",
   beforeUpdate: { enabled: true, disabledBy: null },
@@ -94,7 +94,7 @@ describe.skipIf(!baseUrl)("OperationsStatusService", () => {
   let backup: BackupStatus;
   let collaborationReady: boolean | Error;
   let counts: Awaited<ReturnType<JobQueue["counts"]>>;
-  const filesDir = mkdtempSync(path.join(tmpdir(), "pagehall-status-"));
+  const filesDir = mkdtempSync(path.join(tmpdir(), "lunedo-status-"));
 
   const service = () =>
     new OperationsStatusService({

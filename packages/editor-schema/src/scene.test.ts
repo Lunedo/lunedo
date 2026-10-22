@@ -172,7 +172,7 @@ describe("validateScene", () => {
     expect(problems(scene(["text"]))).toContain("notAnObject");
   });
 
-  it("allows links to the web and to Pagehall only", () => {
+  it("allows links to the web and to Lunedo only", () => {
     expect(valid(scene([base("a", "rectangle", { link: "https://example.com/a" })])).elements).toHaveLength(
       1,
     );

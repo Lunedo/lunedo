@@ -10,7 +10,7 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Construction } from "lucide-react";
 import { useRef, useState } from "react";

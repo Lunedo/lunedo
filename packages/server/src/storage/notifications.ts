@@ -1,4 +1,4 @@
-import { notificationParamSchemas } from "@pagehall/shared";
+import { notificationParamSchemas } from "@lunedo/shared";
 import { defineNotificationType } from "../notifications/registry.js";
 import { formatBytes, formatPercent } from "./format.js";
 

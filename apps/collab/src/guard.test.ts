@@ -1,6 +1,6 @@
-import { documentSize } from "@pagehall/editor-schema";
-import { emptyScene, MAX_SCENE_BYTES, SCENE_ELEMENTS, yDocFromScene } from "@pagehall/editor-schema/scene";
-import { documentFromYDoc, yDocFromDocument } from "@pagehall/editor-schema/yjs";
+import { documentSize } from "@lunedo/editor-schema";
+import { emptyScene, MAX_SCENE_BYTES, SCENE_ELEMENTS, yDocFromScene } from "@lunedo/editor-schema/scene";
+import { documentFromYDoc, yDocFromDocument } from "@lunedo/editor-schema/yjs";
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { DocumentGuard, sceneValidator } from "./guard.js";

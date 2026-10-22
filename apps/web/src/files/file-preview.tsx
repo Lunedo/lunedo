@@ -1,4 +1,4 @@
-import { Badge, Button, Drawer, EmptyState, Notice, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, Drawer, EmptyState, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Download, FileQuestion, History, ImageOff, Maximize2, Pin, PinOff, RotateCcw } from "lucide-react";

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "../database/database.js";
 
-export const SYNC_RUNS_CHANNEL = "pagehall_sync_runs";
+export const SYNC_RUNS_CHANNEL = "lunedo_sync_runs";
 
 export interface SyncRunSignal {
   providerId: string;

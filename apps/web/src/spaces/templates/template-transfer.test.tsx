@@ -105,7 +105,7 @@ async function renderManager(
   return { onImported };
 }
 
-async function chooseFile(name = "retro.pagehall-template.json") {
+async function chooseFile(name = "retro.lunedo-template.json") {
   const input = await screen.findByLabelText(/Drop a template file here/);
   await userEvent.upload(input as HTMLInputElement, new File(["{}"], name, { type: "application/json" }));
 }
@@ -150,7 +150,7 @@ describe("importing templates", () => {
   it("prefills a new name for a conflict and imports with the edited name", async () => {
     const api = fakeApi({
       id: IMPORT,
-      fileName: "retro.pagehall-template.json",
+      fileName: "retro.lunedo-template.json",
       expiresAt: "2026-10-18T20:00:00.000Z",
       templates: [imported({ conflict: { templateId: RETRO, suggestedName: "Retro (imported)" } })],
     });
@@ -176,7 +176,7 @@ describe("importing templates", () => {
   it("marks a conflicting template and shows a taken name at its field", async () => {
     const api = fakeApi({
       id: IMPORT,
-      fileName: "retro.pagehall-template.json",
+      fileName: "retro.lunedo-template.json",
       expiresAt: "2026-10-18T20:00:00.000Z",
       templates: [imported({ conflict: { templateId: RETRO, suggestedName: "Retro (imported)" } })],
     });
@@ -200,7 +200,7 @@ describe("importing templates", () => {
 
     vi.mocked(api.confirm).mockRejectedValueOnce(
       new ApiError(409, {
-        type: "urn:pagehall:problem:templateNameTaken",
+        type: "urn:lunedo:problem:templateNameTaken",
         title: "Taken",
         status: 409,
         code: "templateNameTaken",
@@ -222,7 +222,7 @@ describe("importing templates", () => {
   it("replaces the existing template when chosen", async () => {
     const api = fakeApi({
       id: IMPORT,
-      fileName: "retro.pagehall-template.json",
+      fileName: "retro.lunedo-template.json",
       expiresAt: "2026-10-18T20:00:00.000Z",
       templates: [imported({ conflict: { templateId: RETRO, suggestedName: "Retro (imported)" } })],
     });
@@ -240,7 +240,7 @@ describe("importing templates", () => {
   it("shows problems and imports only the valid templates when asked to", async () => {
     const api = fakeApi({
       id: IMPORT,
-      fileName: "two.pagehall-template.json",
+      fileName: "two.lunedo-template.json",
       expiresAt: "2026-10-18T20:00:00.000Z",
       templates: [
         imported({ removed: { mention: 1 }, blockedEmbeds: ["https://unknown.example.com/x"] }),
@@ -255,7 +255,7 @@ describe("importing templates", () => {
     });
     await renderManager(api);
     await userEvent.click(await screen.findByRole("button", { name: "Import" }));
-    await chooseFile("two.pagehall-template.json");
+    await chooseFile("two.lunedo-template.json");
     await userEvent.click(screen.getByRole("button", { name: "Check file" }));
     expect(await screen.findByText("Template 'Broken', field 3: unknown key color")).toBeTruthy();
     expect(screen.getByText("Removed because it pointed to the other instance: 1 mention")).toBeTruthy();
@@ -274,7 +274,7 @@ describe("importing templates", () => {
   it("discards the preview when the dialog is closed", async () => {
     const api = fakeApi({
       id: IMPORT,
-      fileName: "retro.pagehall-template.json",
+      fileName: "retro.lunedo-template.json",
       expiresAt: "2026-10-18T20:00:00.000Z",
       templates: [imported()],
     });

@@ -4,9 +4,9 @@ let counter = 0;
 
 function parts(tabs: HTMLElement) {
   return {
-    buttons: Array.from(tabs.querySelectorAll<HTMLButtonElement>(":scope > .ph-tabs-list > [role=tab]")),
-    toggles: Array.from(tabs.querySelectorAll<HTMLButtonElement>(":scope > .ph-tab > .ph-tab-toggle")),
-    panels: Array.from(tabs.querySelectorAll<HTMLElement>(":scope > .ph-tab > [role=tabpanel]")),
+    buttons: Array.from(tabs.querySelectorAll<HTMLButtonElement>(":scope > .ld-tabs-list > [role=tab]")),
+    toggles: Array.from(tabs.querySelectorAll<HTMLButtonElement>(":scope > .ld-tab > .ld-tab-toggle")),
+    panels: Array.from(tabs.querySelectorAll<HTMLElement>(":scope > .ld-tab > [role=tabpanel]")),
   };
 }
 
@@ -55,11 +55,11 @@ export function setTabsMode(tabs: HTMLElement, narrow: boolean): void {
 }
 
 export function enhanceTabs(root: HTMLElement, narrow: boolean): HTMLElement[] {
-  const all = Array.from(root.querySelectorAll<HTMLElement>(".ph-tabs:not(.ph-tabs-print)"));
+  const all = Array.from(root.querySelectorAll<HTMLElement>(".ld-tabs:not(.ld-tabs-print)"));
   for (const tabs of all) {
     if (!tabs.dataset.tabsId) {
       counter += 1;
-      const id = `ph-tabs-${counter}`;
+      const id = `ld-tabs-${counter}`;
       tabs.dataset.tabsId = id;
       const { buttons, toggles, panels } = parts(tabs);
       buttons.forEach((button, index) => {
@@ -82,14 +82,14 @@ export function enhanceTabs(root: HTMLElement, narrow: boolean): HTMLElement[] {
 }
 
 export function handleTabsClick(target: HTMLElement): boolean {
-  const button = target.closest<HTMLElement>(".ph-tabs > .ph-tabs-list > [role=tab]");
-  const tabs = button?.closest<HTMLElement>(".ph-tabs");
+  const button = target.closest<HTMLElement>(".ld-tabs > .ld-tabs-list > [role=tab]");
+  const tabs = button?.closest<HTMLElement>(".ld-tabs");
   if (button && tabs) {
     selectTab(tabs, Number(button.dataset.index));
     return true;
   }
-  const toggle = target.closest<HTMLElement>(".ph-tabs > .ph-tab > .ph-tab-toggle");
-  const owner = toggle?.closest<HTMLElement>(".ph-tabs");
+  const toggle = target.closest<HTMLElement>(".ld-tabs > .ld-tab > .ld-tab-toggle");
+  const owner = toggle?.closest<HTMLElement>(".ld-tabs");
   if (toggle && owner && accordion(owner)) {
     toggleSection(owner, Number(toggle.dataset.index));
     return true;
@@ -100,7 +100,7 @@ export function handleTabsClick(target: HTMLElement): boolean {
 export function handleTabsKey(event: KeyboardEvent | React.KeyboardEvent): boolean {
   const target = event.target as HTMLElement;
   if (target.getAttribute("role") !== "tab") return false;
-  const tabs = target.closest<HTMLElement>(".ph-tabs");
+  const tabs = target.closest<HTMLElement>(".ld-tabs");
   if (!tabs) return false;
   const count = parts(tabs).buttons.length;
   const index = Number(target.dataset.index);

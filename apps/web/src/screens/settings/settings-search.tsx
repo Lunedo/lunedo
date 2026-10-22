@@ -1,4 +1,4 @@
-import { Button, classNames, controlClassName, EmptyState, Icon, PageContainer, Section } from "@pagehall/ui";
+import { Button, classNames, controlClassName, EmptyState, Icon, PageContainer, Section } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { Search, SearchX } from "lucide-react";
 import { useTranslation } from "react-i18next";

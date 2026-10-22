@@ -1,6 +1,6 @@
 # Knowledge bases
 
-A knowledge base is a space of the type **knowledge base**. It holds articles, such as how-tos and troubleshooting articles, sorted into categories. Authors write in the normal Pagehall interface with the same editor, versions, comments, permissions and search as in every other space. Readers use the **portal**, a lean site of its own without the navigation, page tree or editor of the app (see [The portal](#the-portal)).
+A knowledge base is a space of the type **knowledge base**. It holds articles, such as how-tos and troubleshooting articles, sorted into categories. Authors write in the normal Lunedo interface with the same editor, versions, comments, permissions and search as in every other space. Readers use the **portal**, a lean site of its own without the navigation, page tree or editor of the app (see [The portal](#the-portal)).
 
 ## Creating a knowledge base
 
@@ -16,7 +16,7 @@ Through the API, create it with `POST /api/v1/organizations/{organizationId}/spa
 
 The audience of a knowledge base decides who reads it:
 
-| Audience | Readers in Pagehall | Readers in the portal |
+| Audience | Readers in Lunedo | Readers in the portal |
 |---|---|---|
 | Public | every internal user of the instance | everyone, also without signing in |
 | All signed-in people (default) | every internal user of the instance | the same |
@@ -32,7 +32,7 @@ Portal accounts are for readers without an account of the organization, for exam
 - The invitation e-mail links to a page where the reader chooses a name and a password; afterwards the link leads to the portal. The link works once and for 7 days. An open invitation can be withdrawn there. A portal invitation replaces only an earlier portal invitation for the same address and knowledge base; open member invitations stay valid.
 - A portal account signs in with its e-mail address and password, and can add a passkey and an authenticator app on its own page. It reads the portals of the knowledge bases it was invited to, and of knowledge bases where it holds a role, never every knowledge base of the organization. It never sees the wiki: the API answers every other request of a portal account with `portalAccountOnly`, and opening the wiki shows only the list of its portals and its sign-in settings.
 - Portal accounts only read. A role above Reader for a portal account is refused (`portalAccountReaderOnly`), and a higher role through a group counts as Reader for it, in the API, the collaboration server and every other path.
-- An address that already belongs to another Pagehall account cannot accept the invitation (`portalInvitationAccountExists`); give that account a role instead.
+- An address that already belongs to another Lunedo account cannot accept the invitation (`portalInvitationAccountExists`); give that account a role instead.
 - The person who invites is responsible for the account and is reminded before its access ends, like for guests. When the date is reached, the access ends and the account no longer reads the organization's knowledge bases.
 - The list shows the portal accounts invited to this knowledge base. From there an account can be **deactivated**, which ends its sessions and blocks its sign-in, or **removed** from the organization. Organization administrators can do the same in the member list. An account that also reads knowledge bases of other organizations can only be removed, not deactivated, from one organization.
 - Invitations are recorded in the audit log as `invitation.created` and `portalAccount.invited`, acceptances as `invitation.accepted` and `account.created`, the end of access as `membership.removed` with the reason `expired` or `removed`, and deactivation as `account.deactivated`.
@@ -65,7 +65,7 @@ The gallery of a knowledge base asks for the title of the new article. Left empt
 
 ### Templates and sections
 
-Two article templates ship with Pagehall, in English and German:
+Two article templates ship with Lunedo, in English and German:
 
 | Template | Sections |
 |---|---|
@@ -88,7 +88,7 @@ Every article gets a number when it is created or moved into the knowledge base.
 
 Under **Space settings → Categories**, editors set the icon and the introduction of a category and change the order of categories. The portal shows the categories in this order. Without an icon, it shows the name when it has at most three characters, otherwise its first letter.
 
-Each category can have a contact address, which readers use when an article did not help. A subcategory without its own address uses the address of its category; a category without one uses the address of the knowledge base. Space admins set the addresses. Pagehall sends nothing itself and creates no tickets.
+Each category can have a contact address, which readers use when an article did not help. A subcategory without its own address uses the address of its category; a category without one uses the address of the knowledge base. Space admins set the addresses. Lunedo sends nothing itself and creates no tickets.
 
 API: `GET /api/v1/spaces/{spaceId}/categories`, `PUT /api/v1/categories/{itemId}` for the icon, `PUT /api/v1/categories/{itemId}/contact` and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact`. Title, introduction and order change like for every folder.
 
@@ -106,7 +106,7 @@ In the portal:
 
 - The default language has the addresses without prefix; every other language is under `/<language>/`, for example `/help/help/en/`. From two enabled languages on, the top bar shows a language choice that leads to the same page in the other language.
 - A reader who opens an article in a language without a published translation sees the article in the default language with a short note in the reader's language.
-- The texts of the portal (buttons, headings, dates) follow the language of the shown article, so that a page is never mixed. Pagehall has portal texts in English and German; other languages use the English texts.
+- The texts of the portal (buttons, headings, dates) follow the language of the shown article, so that a page is never mixed. Lunedo has portal texts in English and German; other languages use the English texts.
 - The search looks in the reader's language first. When it finds nothing there, it shows the results in the default language with a note. Category pages and lists show the translation where one exists and the original otherwise.
 - Public knowledge bases name the other languages of a page with `hreflang` links for search engines, plus `x-default` for the default language.
 
@@ -114,7 +114,7 @@ API: `GET` and `PUT /api/v1/spaces/{spaceId}/knowledge-base/languages`, `GET /ap
 
 ## Articles through the API
 
-Programs read and write articles with an API token of a service account that has a role in the knowledge base. The token's write level decides what it may do: read, write drafts that a person publishes in Pagehall, or write and publish. A token can be limited to selected knowledge bases. [api.md](api.md#knowledge-base-articles) describes the endpoints, the daily sync with `changedSince` and the numbers of removed articles, and writing reviewed articles back, with examples.
+Programs read and write articles with an API token of a service account that has a role in the knowledge base. The token's write level decides what it may do: read, write drafts that a person publishes in Lunedo, or write and publish. A token can be limited to selected knowledge bases. [api.md](api.md#knowledge-base-articles) describes the endpoints, the daily sync with `changedSince` and the numbers of removed articles, and writing reviewed articles back, with examples.
 
 Scripts that migrate an existing FAQ create categories with `POST /api/v1/spaces/{spaceId}/items` and `"kind": "folder"`, then each article with `POST /api/v1/spaces/{spaceId}/articles` with its category, type and sections in Markdown, upload its images with `POST /api/v1/articles/{itemId}/images?name=…`, save the sections that reference them with `PUT /api/v1/articles/{itemId}/draft` and publish with `POST /api/v1/articles/{itemId}/publish`.
 
@@ -161,7 +161,7 @@ An article can be based on internal pages, for example the operating documentati
 
 When a source page is published with changes, the article shows **Source page changed** in the review list until it is marked as reviewed, and its owner is notified once. Live pages count each saved version as a change. The notification and the review list name the article, never the source page.
 
-In Pagehall, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Editors of the article see only how many linked source pages they cannot read, and can remove those links, for example when the person who linked a restricted page has left; only people who can read such a page can link it again. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
+In Lunedo, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Editors of the article see only how many linked source pages they cannot read, and can remove those links, for example when the person who linked a restricted page has left; only people who can read such a page can link it again. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
 
 ## Reviews through the API
 
@@ -198,7 +198,7 @@ Readers open a knowledge base in its portal: a start page with the search and th
 A knowledge base can have its own domain, for example the address of an older help center.
 
 1. An instance administrator allows the domain for one organization under **Instance settings → Knowledge base portals** (`POST /api/v1/instance/portal-domains`). Allowing and removing are recorded in the audit log (`organization.portalDomainAllowed`, `organization.portalDomainRemoved`).
-2. The DNS record of the domain points to the instance, and the reverse proxy sends the domain to Pagehall and holds its certificate. Pagehall does not request certificates itself. Portals on own domains need HTTPS.
+2. The DNS record of the domain points to the instance, and the reverse proxy sends the domain to Lunedo and holds its certificate. Lunedo does not request certificates itself. Portals on own domains need HTTPS.
 3. A space admin chooses the domain under **Space settings → Address**, which lists only domains that are free or already used by this knowledge base. The page shows the DNS record to copy before saving.
 
 On its own domain only the portal answers; the app and `/api/` are not reachable there. Health checks (`/health/…`), `/metrics` and the certificate check `/tls/ask` for reverse proxies ([reverse-proxy.md](reverse-proxy.md#own-domains-for-knowledge-base-portals)) answer on every host without a database lookup. Each API node keeps the list of allowed domains in memory and reloads it whenever a domain is allowed or removed on any node; while the database cannot be reached, requests to other hosts get status 503. The portal keeps working under `/help/<path>/` on the instance as well.
@@ -207,7 +207,7 @@ On its own domain only the portal answers; the app and `/api/` are not reachable
 
 - Under `/help/<path>/` the portal uses the session of the app.
 - Anonymous visitors of a knowledge base that is not public see the sign-in page of the portal on every address, with one button per identity provider of the instance and "Sign in with an e-mail address", which leads to the normal sign-in and back to the requested address.
-- On an own domain the portal has a session of its own. A visitor without one is sent to the instance; when they are already signed in there, they come back at once with a session for the domain, otherwise they sign in first. People who do not belong to the organization of the domain are asked once per account and domain ("Sign in to <domain> with your account?", **Continue**); the answer is remembered and recorded in the audit log as `portalHandoff.consented`. Members of the organization are not asked. The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain, and can be used once. The cookie of the domain (`__Host-pagehall-portal`) is host-only, `Secure`, `HttpOnly` and `SameSite=Lax`.
+- On an own domain the portal has a session of its own. A visitor without one is sent to the instance; when they are already signed in there, they come back at once with a session for the domain, otherwise they sign in first. People who do not belong to the organization of the domain are asked once per account and domain ("Sign in to <domain> with your account?", **Continue**); the answer is remembered and recorded in the audit log as `portalHandoff.consented`. Members of the organization are not asked. The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain, and can be used once. The cookie of the domain (`__Host-lunedo-portal`) is host-only, `Secure`, `HttpOnly` and `SameSite=Lax`.
 - The session of a domain belongs to the session of the instance. Signing out in the portal signs out everywhere; when the instance session ends (sign-out, expiry, deactivation, "sign out everywhere"), the session of the domain ends too.
 - Requests that change something in the portal (rating, notes, sign-out) must come from the portal's own origin.
 
@@ -223,20 +223,20 @@ On its own domain only the portal answers; the app and `/api/` are not reachable
 
 - "Didn't help? Write to us" under an article opens the reader's mail program with the contact address of the article's category (inherited from the category above, then from the knowledge base), the article title as subject and the link to the article in the body. "Copy address" helps readers without a mail program.
 - On a search without results, and on the contact page, the reader chooses the area: each top-level category with a contact address, and "Something else" for the address of the knowledge base.
-- Pagehall sends nothing itself and creates no tickets.
+- Lunedo sends nothing itself and creates no tickets.
 
 ### Appearance
 
 Space admins set the appearance under **Space settings → Appearance and start page**. Changes apply at once.
 
 - **Logo**: PNG, JPEG or WebP up to 256 KiB. Without one, the portal shows the organization's logo or the first letter of its name.
-- **Brand color**: a color of the fixed palette, or an own color for light and dark mode. An own color must reach a contrast of 4.5:1 as text on the background and for text on it, in both modes. Otherwise Pagehall proposes the nearest shade that passes and saves it only after confirmation (`brandContrast` with `light` and `dark`, then `confirmProposal`).
+- **Brand color**: a color of the fixed palette, or an own color for light and dark mode. An own color must reach a contrast of 4.5:1 as text on the background and for text on it, in both modes. Otherwise Lunedo proposes the nearest shade that passes and saves it only after confirmation (`brandContrast` with `light` and `dark`, then `confirmProposal`).
 - **Start page**: heading and a short text above the search.
 - **Categories in the top bar**: the top bar shows up to five categories in their order and the rest under "All topics". From the set number of categories on (default 10), it shows only "Topics" with a menu of all categories.
-- **"Provided with Pagehall"** in the footer, on by default.
+- **"Provided with Lunedo"** in the footer, on by default.
 - **Notes of readers** are kept for 1 to 60 months (default 12). Shortening the period deletes older notes at once, after confirmation.
 
-The help icon of the app can open a knowledge base of the organization instead of the Pagehall documentation: **Organization settings → General → Help**. Only knowledge bases that everyone signed in may read can be chosen.
+The help icon of the app can open a knowledge base of the organization instead of the Lunedo documentation: **Organization settings → General → Help**. Only knowledge bases that everyone signed in may read can be chosen.
 
 API: `GET /api/v1/spaces/{spaceId}/knowledge-base/portal`, `PUT …/portal/address`, `PUT …/portal/appearance`, `PUT` and `DELETE …/portal/logo`, `GET …/portal/domains`; `GET` and `PUT /api/v1/organizations/{organizationId}/help`.
 
@@ -252,7 +252,7 @@ The content of an article is rendered to HTML once per published version and sto
 
 ## Static website
 
-A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The editing source stays the Pagehall instance; download a new ZIP after changes and upload it again, by hand or with your own script.
+A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The editing source stays the Lunedo instance; download a new ZIP after changes and upload it again, by hand or with your own script.
 
 Space admins start the download on the export page of the knowledge base settings (`POST /api/v1/spaces/{spaceId}/exports` with `"format": "site"`). It is built in the background like other exports, with the same notification, download lifetime and audit entry. Knowledge bases whose audience is not "public" are refused with `staticSiteNotPublic`, because a static website has no sign-in; if the audience changes while the website waits to be built, it fails with the reason `notPublic`.
 
@@ -265,7 +265,7 @@ The ZIP contains:
 - redirects from earlier addresses of an article: a small HTML page per old address and a `_redirects` file that Cloudflare Pages and Netlify understand;
 - `404.html`, and with an address of the website (`siteUrl`, for example `https://help.example.org/`) also `sitemap.xml`, `robots.txt` and language links for search engines.
 
-All links are relative, so the website works under any domain and in a subfolder. Things that need Pagehall are left out: the "Was this helpful?" question, reader statistics, the most-read list, sign-in and the account menu. The contact links stay, because they open the reader's e-mail program. The search needs JavaScript and a web server; opened from a local folder, browsers do not let the page read the index, and the search page says so.
+All links are relative, so the website works under any domain and in a subfolder. Things that need Lunedo are left out: the "Was this helpful?" question, reader statistics, the most-read list, sign-in and the account menu. The contact links stay, because they open the reader's e-mail program. The search needs JavaScript and a web server; opened from a local folder, browsers do not let the page read the index, and the search page says so.
 
 ### Publishing on Cloudflare Pages
 
@@ -297,10 +297,10 @@ GitHub Pages serves the files as they are; old addresses work through the HTML r
 
 The Markdown and HTML archives of the export keep what a knowledge base needs:
 
-- Every Markdown file starts with front matter: `title`, `created`, `updated`, `labels` and a `pagehall` block with the kind, version, author, `articleType`, `language` and `translation: true` for translations.
-- Sections are marked with comments around their heading and content, such as `<!-- pagehall:section key="steps" icon="list-ordered" -->` … `<!-- /pagehall:section -->`. Markdown viewers do not show them.
+- Every Markdown file starts with front matter: `title`, `created`, `updated`, `labels` and a `lunedo` block with the kind, version, author, `articleType`, `language` and `translation: true` for translations.
+- Sections are marked with comments around their heading and content, such as `<!-- lunedo:section key="steps" icon="list-ordered" -->` … `<!-- /lunedo:section -->`. Markdown viewers do not show them.
 - Each article sits in its own folder with its images; translations sit in folders below their article, and categories are folders.
-- HTML files carry `<html lang>` and a `pagehall:article-type` meta element; sections keep their `data-section` and `data-icon` attributes.
+- HTML files carry `<html lang>` and a `lunedo:article-type` meta element; sections keep their `data-section` and `data-icon` attributes.
 
 To move a knowledge base, export it as Markdown, start a Markdown import on the other instance and turn on **Import as a knowledge base**. Folders become categories, files become articles with their type, sections and images, and translations are linked to their article again. Numbers are assigned anew in the order of the import. The new knowledge base opens only for the people and groups given a role when the import is accepted; choose its audience in the visibility settings afterwards.
 
@@ -322,7 +322,7 @@ The portal records what readers do, without any account, session or address. No 
 - Searches older than 12 months are kept only as counts per term and month in `portal_search_months`, and only for terms searched at least 3 times in that month; rarer searches are deleted. The first search of a day schedules a job for the day the searches turn 12 months old, which moves them into the monthly counts; a daily sweep catches searches whose job was lost.
 - Rows of an article or knowledge base go when it is deleted permanently.
 
-The read interface is `PortalStatistics` in `@pagehall/server` (`services.portalStatistics`). Periods are `{ from, to }` with ISO dates, both included. It does not check permissions; the routes that use it decide who may read the statistics.
+The read interface is `PortalStatistics` in `@lunedo/server` (`services.portalStatistics`). Periods are `{ from, to }` with ISO dates, both included. It does not check permissions; the routes that use it decide who may read the statistics.
 
 | Method | Returns |
 |---|---|

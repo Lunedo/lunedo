@@ -1,4 +1,4 @@
-import { Badge, type BadgeVariant, Button, Popover, useToast } from "@pagehall/ui";
+import { Badge, type BadgeVariant, Button, Popover, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Languages, Plus } from "lucide-react";
@@ -83,7 +83,7 @@ export function TranslationsControl({
       trigger={
         <button
           type="button"
-          className="ph-inline-button inline-flex min-h-hit items-center gap-1 rounded-sm px-1 text-sm hover:bg-hover focus-visible:focus-ring"
+          className="ld-inline-button inline-flex min-h-hit items-center gap-1 rounded-sm px-1 text-sm hover:bg-hover focus-visible:focus-ring"
           aria-label={t("knowledgeBase.translations.buttonLabel", { language: label(data.language) })}
         >
           <Languages aria-hidden="true" className="size-icon-sm" />

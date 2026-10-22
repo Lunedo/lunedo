@@ -20,8 +20,8 @@ function drawingHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): st
   const label = renderer.label("drawing");
   const content = href
     ? `<img${htmlAttributes({ src: href, alt: label, loading: lazy ? "lazy" : null })}>`
-    : element("span", { class: "ph-drawing-empty" }, renderer.escape(label));
-  return element("figure", { class: "ph-drawing", "data-drawing-id": attrOf<string>(node, "id") }, content);
+    : element("span", { class: "ld-drawing-empty" }, renderer.escape(label));
+  return element("figure", { class: "ld-drawing", "data-drawing-id": attrOf<string>(node, "id") }, content);
 }
 
 export const drawingModule = defineModule({

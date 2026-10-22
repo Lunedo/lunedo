@@ -14,8 +14,8 @@ const CLOSE_INTERVAL_MS = 50;
  * skipped locally without it; in CI a missing URL is an error so that they cannot be skipped silently.
  */
 export function testDatabaseBaseUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const url = env.PAGEHALL_TEST_DATABASE_URL?.trim();
-  if (!url && env.CI) throw new Error("PAGEHALL_TEST_DATABASE_URL must be set in CI");
+  const url = env.LUNEDO_TEST_DATABASE_URL?.trim();
+  if (!url && env.CI) throw new Error("LUNEDO_TEST_DATABASE_URL must be set in CI");
   return url || undefined;
 }
 
@@ -25,13 +25,13 @@ export interface TemporaryDatabase {
   drop(): Promise<void>;
 }
 
-const RUN_VARIABLE = "PAGEHALL_TEST_DATABASE_RUN";
+const RUN_VARIABLE = "LUNEDO_TEST_DATABASE_RUN";
 const drops = new Set<Promise<void>>();
 
 /** Creates an empty database on the test server, or a copy of a template, and returns its URL. */
 export async function createTemporaryDatabase(
   baseUrl: string,
-  prefix = "pagehall_test",
+  prefix = "lunedo_test",
   template?: string,
 ): Promise<TemporaryDatabase> {
   const run = process.env[RUN_VARIABLE];
@@ -100,7 +100,7 @@ export function startDatabaseRun(baseUrl: string): () => Promise<void> {
   };
 }
 
-const TEMPLATE_LOCK = "pagehall.test-template";
+const TEMPLATE_LOCK = "lunedo.test-template";
 const templates = new Map<string, Promise<string>>();
 
 function migrationsFingerprint(): string {
@@ -122,7 +122,7 @@ function databaseUrl(baseUrl: string, name: string): string {
 }
 
 async function buildTemplate(baseUrl: string): Promise<string> {
-  const name = `pagehall_template_${migrationsFingerprint()}`;
+  const name = `lunedo_template_${migrationsFingerprint()}`;
   const building = `${name}_building`;
   const admin = new pg.Client({ connectionString: baseUrl });
   await admin.connect();
@@ -136,7 +136,7 @@ async function buildTemplate(baseUrl: string): Promise<string> {
       await admin.query(`create database "${building}"`);
       const pool = createDatabasePool({
         connectionString: databaseUrl(baseUrl, building),
-        applicationName: "pagehall-test-template",
+        applicationName: "lunedo-test-template",
       });
       try {
         await runMigrations(pool, { logger: createLogger({ service: "test", level: "silent" }) });
@@ -153,7 +153,7 @@ async function buildTemplate(baseUrl: string): Promise<string> {
 
 export async function createMigratedDatabase(
   baseUrl: string,
-  prefix = "pagehall_test",
+  prefix = "lunedo_test",
 ): Promise<TemporaryDatabase> {
   let template = templates.get(baseUrl);
   if (!template) {

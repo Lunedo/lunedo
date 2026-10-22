@@ -3,7 +3,7 @@ import {
   accountAttemptLimitSetting,
   clientAttemptLimitSetting,
   selfRegistrationSetting,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -149,11 +149,11 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
     const shown = (await owner.get("/api/v1/instance/mail")).json();
     expect(shown).toEqual({
       smtp: {
-        host: "smtp.pagehall.test",
+        host: "smtp.lunedo.test",
         port: 587,
         security: "none",
         username: null,
-        from: "wiki@pagehall.test",
+        from: "wiki@lunedo.test",
         oauth2: null,
       },
       passwordSet: false,
@@ -188,12 +188,12 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
     const before = test.mail.sent.length;
     const result = await owner.post("/api/v1/instance/mail/test", {
       ...configuration,
-      to: "owner@pagehall.test",
+      to: "owner@lunedo.test",
       language: "de",
     });
     expect(result.json()).toEqual({ delivered: true, error: null });
     expect(test.mail.sent.length).toBe(before + 1);
-    expect(test.mail.sent.at(-1)?.to).toBe("owner@pagehall.test");
+    expect(test.mail.sent.at(-1)?.to).toBe("owner@lunedo.test");
   });
 
   it("keeps the mail server and break-glass list away from people without permission", async () => {

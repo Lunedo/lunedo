@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import type { Editor, Range } from "@tiptap/core";
 import type { TFunction } from "i18next";
 import {

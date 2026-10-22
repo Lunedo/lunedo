@@ -1,4 +1,4 @@
-import { Badge, Checkbox, EmptyState, Skeleton } from "@pagehall/ui";
+import { Badge, Checkbox, EmptyState, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ListChecks } from "lucide-react";
@@ -116,7 +116,7 @@ export function TaskTable({
       ) : (
         <ul
           aria-label={t("tasks.listLabel")}
-          className="ph-task-table flex flex-col divide-y divide-border rounded-md border border-border"
+          className="ld-task-table flex flex-col divide-y divide-border rounded-md border border-border"
         >
           {tasks.data.items.map((task) => (
             <TaskRow key={task.id} task={task} showAssignee={showAssignee} />

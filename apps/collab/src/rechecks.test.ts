@@ -1,5 +1,5 @@
-import { AUDIT_CHANGES_CHANNEL, accountPrincipal, type ServerRuntime } from "@pagehall/server";
-import { testDatabaseBaseUrl } from "@pagehall/server/testing";
+import { AUDIT_CHANGES_CHANNEL, accountPrincipal, type ServerRuntime } from "@lunedo/server";
+import { testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type Client,

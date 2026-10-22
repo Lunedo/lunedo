@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { microsoftAuthorities, type SmtpOAuth2Configuration } from "@pagehall/shared";
+import { microsoftAuthorities, type SmtpOAuth2Configuration } from "@lunedo/shared";
 import { importPKCS8, SignJWT } from "jose";
 import { z } from "zod";
 

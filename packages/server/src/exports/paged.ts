@@ -6,7 +6,7 @@ import {
   escapeHtml,
   formatBytes,
   type RenderContext,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import sharp from "sharp";
 import type { Principal } from "../accounts/principal.js";
@@ -402,7 +402,7 @@ export class PagedExport {
       if (!id || !this.#leftOut.has(id)) return image;
       const alt = /\balt="([^"]*)"/.exec(image)?.[1] ?? "";
       const note = escapeHtml(this.#renderer.texts.imageLeftOut);
-      return `<span class="ph-export-note">${alt ? `${alt}: ` : ""}${note}</span>`;
+      return `<span class="ld-export-note">${alt ? `${alt}: ` : ""}${note}</span>`;
     });
   }
 

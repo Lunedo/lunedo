@@ -1,4 +1,4 @@
-import { validateDocument } from "@pagehall/editor-schema";
+import { validateDocument } from "@lunedo/editor-schema";
 import { Editor } from "@tiptap/core";
 import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";

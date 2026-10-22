@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { portableRemovals } from "@pagehall/editor-schema";
+import { portableRemovals } from "@lunedo/editor-schema";
 import { z } from "zod";
 import { MEGABYTE } from "../files/settings.js";
 import { SpaceError } from "../spaces/common.js";
@@ -15,7 +15,7 @@ import {
 
 export const templateRemovalKinds = portableRemovals;
 
-export const TEMPLATE_FORMAT = "pagehall-template";
+export const TEMPLATE_FORMAT = "lunedo-template";
 export const TEMPLATE_FORMAT_VERSION = 1;
 export const TEMPLATE_UPLOAD_MAX_BYTES = 20 * MEGABYTE;
 export const TEMPLATE_ENTRY_MAX_BYTES = 5 * MEGABYTE;
@@ -23,8 +23,8 @@ export const TEMPLATE_MANIFEST_MAX_BYTES = 5 * MEGABYTE;
 export const MAX_TEMPLATES_PER_UPLOAD = 50;
 export const MAX_FILES_PER_UPLOAD = 200;
 export const TEMPLATE_MANIFEST = "template.json";
-export const TEMPLATE_JSON_SUFFIX = ".pagehall-template.json";
-export const TEMPLATE_ZIP_SUFFIX = ".pagehall-template.zip";
+export const TEMPLATE_JSON_SUFFIX = ".lunedo-template.json";
+export const TEMPLATE_ZIP_SUFFIX = ".lunedo-template.zip";
 
 export const templateFileTypes = {
   "image/png": "png",
@@ -96,10 +96,10 @@ export const templateEntrySchema = z
 
 export const templateManifestSchema = z
   .object({
-    format: z.literal(TEMPLATE_FORMAT).describe("Always `pagehall-template`."),
+    format: z.literal(TEMPLATE_FORMAT).describe("Always `lunedo-template`."),
     formatVersion: z.literal(TEMPLATE_FORMAT_VERSION).describe("Version of this file format."),
     schemaVersion: z.number().int().min(1).describe("Version of the editor format of the documents."),
-    pagehallVersion: z.string().min(1).max(100).describe("Version of Pagehall that wrote the file."),
+    lunedoVersion: z.string().min(1).max(100).describe("Version of Lunedo that wrote the file."),
     templates: z
       .array(templateEntrySchema)
       .min(1)
@@ -107,7 +107,7 @@ export const templateManifestSchema = z
       .describe("The templates of the file."),
   })
   .strict()
-  .describe("A Pagehall template file.");
+  .describe("A Lunedo template file.");
 
 export type TemplateManifest = z.infer<typeof templateManifestSchema>;
 export type TemplateEntry = z.infer<typeof templateEntrySchema>;
@@ -115,7 +115,7 @@ export type TemplateFileEntry = z.infer<typeof templateFileEntrySchema>;
 
 export function templateFormatJsonSchema(): Record<string, unknown> {
   return {
-    title: "Pagehall template file",
+    title: "Lunedo template file",
     ...z.toJSONSchema(templateManifestSchema, { target: "draft-2020-12", io: "input" }),
   };
 }
@@ -142,7 +142,7 @@ const KEY_ORDER = [
   "format",
   "formatVersion",
   "schemaVersion",
-  "pagehallVersion",
+  "lunedoVersion",
   "templates",
   "name",
   "description",

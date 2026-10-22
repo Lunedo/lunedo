@@ -13,7 +13,7 @@ export interface Person {
 
 export type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
 
-const HEADERS = { "X-Pagehall-Request": "1", origin: BASE_URL };
+const HEADERS = { "X-Lunedo-Request": "1", origin: BASE_URL };
 let clientAddress: string | undefined;
 
 export function sendAs(address: string | undefined): void {
@@ -55,7 +55,7 @@ export async function join(
   role?: { builtIn: "owner" },
 ): Promise<Person> {
   const name = `${first} ${unique()}`;
-  const email = `${name.toLowerCase().split(" ").join(".")}@pagehall.test`;
+  const email = `${name.toLowerCase().split(" ").join(".")}@lunedo.test`;
   const password = `${first} passphrase for testing`;
   await post(inviter, `/api/v1/organizations/${organizationId}/invitations`, {
     email,

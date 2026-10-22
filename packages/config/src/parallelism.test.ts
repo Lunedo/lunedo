@@ -11,12 +11,12 @@ describe("localBudget", () => {
     expect(localBudget({}, { cores: 1, platform: "win32" })).toBe(1);
   });
 
-  it("takes PAGEHALL_PARALLELISM over the default", () => {
-    expect(localBudget({ PAGEHALL_PARALLELISM: "12" }, windows)).toBe(12);
+  it("takes LUNEDO_PARALLELISM over the default", () => {
+    expect(localBudget({ LUNEDO_PARALLELISM: "12" }, windows)).toBe(12);
   });
 
   it.each(["", "0", "-1", "2.5", "all"])("ignores the override %j", (value) => {
-    expect(localBudget({ PAGEHALL_PARALLELISM: value }, windows)).toBe(8);
+    expect(localBudget({ LUNEDO_PARALLELISM: value }, windows)).toBe(8);
   });
 });
 
@@ -45,7 +45,7 @@ describe("turboPlan", () => {
 describe("vitestWorkers", () => {
   it("follows CI_PARALLELISM wherever it is set", () => {
     expect(vitestWorkers({ CI: "true", CI_PARALLELISM: "3" }, windows)).toBe(3);
-    expect(vitestWorkers({ CI_PARALLELISM: "3", PAGEHALL_TEST_WORKERS: "1" }, windows)).toBe(3);
+    expect(vitestWorkers({ CI_PARALLELISM: "3", LUNEDO_TEST_WORKERS: "1" }, windows)).toBe(3);
   });
 
   it("leaves CI without CI_PARALLELISM to Vitest", () => {
@@ -53,7 +53,7 @@ describe("vitestWorkers", () => {
   });
 
   it("uses the share that the Turbo plan gave each task, or the whole budget for a single package", () => {
-    expect(vitestWorkers({ PAGEHALL_TEST_WORKERS: "2" }, windows)).toBe(2);
+    expect(vitestWorkers({ LUNEDO_TEST_WORKERS: "2" }, windows)).toBe(2);
     expect(vitestWorkers({}, windows)).toBe(8);
     expect(vitestWorkers({}, linux)).toBe(16);
   });
@@ -65,16 +65,16 @@ describe("endToEndWorkers", () => {
     expect(endToEndWorkers({ CI: "true" })).toBe(3);
   });
 
-  it("prefers PAGEHALL_E2E_WORKERS over CI_PARALLELISM in CI", () => {
-    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", PAGEHALL_E2E_WORKERS: "4" })).toBe(4);
-    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", PAGEHALL_E2E_WORKERS: "" })).toBe(2);
-    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", PAGEHALL_E2E_WORKERS: "0" })).toBe(2);
+  it("prefers LUNEDO_E2E_WORKERS over CI_PARALLELISM in CI", () => {
+    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", LUNEDO_E2E_WORKERS: "4" })).toBe(4);
+    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", LUNEDO_E2E_WORKERS: "" })).toBe(2);
+    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", LUNEDO_E2E_WORKERS: "0" })).toBe(2);
   });
 
-  it("uses 3 locally unless PAGEHALL_E2E_WORKERS says otherwise", () => {
+  it("uses 3 locally unless LUNEDO_E2E_WORKERS says otherwise", () => {
     expect(endToEndWorkers({})).toBe(3);
-    expect(endToEndWorkers({ PAGEHALL_E2E_WORKERS: "6" })).toBe(6);
-    expect(endToEndWorkers({ PAGEHALL_E2E_WORKERS: "none" })).toBe(3);
+    expect(endToEndWorkers({ LUNEDO_E2E_WORKERS: "6" })).toBe(6);
+    expect(endToEndWorkers({ LUNEDO_E2E_WORKERS: "none" })).toBe(3);
   });
 });
 

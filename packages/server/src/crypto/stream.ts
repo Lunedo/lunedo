@@ -7,7 +7,7 @@ import { KEY_LENGTH, type KeyRing, KeyRingError, keyFingerprint, type SecretKey 
  * Stream format, version 1 (for attachments and backups):
  *
  *   header (84 bytes)
- *     0  magic "PHS"          3 bytes
+ *     0  magic "LDS"          3 bytes
  *     3  format version (1)   1 byte
  *     4  key kind             1 byte: 1 master key, 2 backup key
  *     5  key ID               8 bytes: master key version (bytes 4-7), or backup key version
@@ -32,7 +32,7 @@ import { KEY_LENGTH, type KeyRing, KeyRingError, keyFingerprint, type SecretKey 
  * Replacing them with another stream's wrapped key yields a different data key, which fails
  * authentication of every chunk.
  */
-const MAGIC = Buffer.from("PHS");
+const MAGIC = Buffer.from("LDS");
 const FORMAT_VERSION = 1;
 const HEADER_LENGTH = 84;
 const WRAP_AAD_LENGTH = 13;

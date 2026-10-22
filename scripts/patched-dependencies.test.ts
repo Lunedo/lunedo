@@ -127,7 +127,7 @@ describe("check-patches", () => {
   });
 
   function repository(version: string): string {
-    const root = mkdtempSync(path.join(tmpdir(), "pagehall-patches-"));
+    const root = mkdtempSync(path.join(tmpdir(), "lunedo-patches-"));
     roots.push(root);
     mkdirSync(path.join(root, "apps", "web"), { recursive: true });
     mkdirSync(path.join(root, "packages"), { recursive: true });

@@ -1,4 +1,4 @@
-import { Badge, Button, ConfirmDialog, EmptyState, IconButton, List, Skeleton } from "@pagehall/ui";
+import { Badge, Button, ConfirmDialog, EmptyState, IconButton, List, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Download, FileArchive, FolderTree, Printer, Trash2 } from "lucide-react";

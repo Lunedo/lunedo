@@ -19,7 +19,7 @@ async function attach(page: Page, pageId: string, name: string, bytes: number) {
     {
       data: Buffer.alloc(bytes, 7),
       headers: {
-        "X-Pagehall-Request": "1",
+        "X-Lunedo-Request": "1",
         origin: new URL(page.url()).origin,
         "content-type": "application/octet-stream",
       },

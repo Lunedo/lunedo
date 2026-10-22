@@ -8,7 +8,7 @@ import {
   Skeleton,
   TruncatedText,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { BellOff, Newspaper } from "lucide-react";

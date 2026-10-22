@@ -17,7 +17,7 @@ import {
   schema,
   sectionIconValue,
   validateDocument,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { escapeXml } from "../formats/escape.js";
 import { DEFAULT_XML_LIMITS, parseXmlFragment, type XmlLimits, type XmlNode } from "../formats/xml.js";
 import { paletteColor } from "./colors.js";
@@ -688,16 +688,16 @@ class Converter {
   }
 
   section(node: XmlNode): NodeJson[] {
-    const key = node.attributes["data-pagehall-section"] ?? "";
+    const key = node.attributes["data-lunedo-section"] ?? "";
     const content = this.blocks(node.children);
     if (!/^[a-z][a-zA-Z0-9]{0,39}$/.test(key)) return content;
-    const icon = node.attributes["data-pagehall-icon"] ?? "";
+    const icon = node.attributes["data-lunedo-icon"] ?? "";
     return [
       {
         type: "section",
         attrs: {
           key,
-          title: (node.attributes["data-pagehall-title"] ?? "").slice(0, 255),
+          title: (node.attributes["data-lunedo-title"] ?? "").slice(0, 255),
           icon: sectionIconValue.safeParse(icon).success ? icon : null,
         },
         content: content.length > 0 ? content : [{ type: "paragraph" }],

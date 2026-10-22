@@ -1,4 +1,4 @@
-import { defaultEmbedServices } from "@pagehall/editor-schema";
+import { defaultEmbedServices } from "@lunedo/editor-schema";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -225,7 +225,7 @@ describe("tabs in the read view", () => {
     phone(true);
     const user = userEvent.setup();
     await read([tabs]);
-    const container = document.querySelector(".ph-tabs") as HTMLElement;
+    const container = document.querySelector(".ld-tabs") as HTMLElement;
     await waitFor(() => expect(container.dataset.mode).toBe("accordion"));
     const macos = screen.getByRole("button", { name: "macOS" });
     expect(macos?.getAttribute("aria-expanded")).toBe("false");
@@ -249,7 +249,7 @@ describe("file previews in the read view", () => {
     const image = await screen.findByRole("img", { name: "rack.png" });
     expect(image.getAttribute("src")).toContain(`/api/v1/attachments/${FILE}/content`);
     expect(
-      (document.querySelector(".ph-file-preview-box") as HTMLElement).style.getPropertyValue(
+      (document.querySelector(".ld-file-preview-box") as HTMLElement).style.getPropertyValue(
         "--preview-height",
       ),
     ).toBe("300px");

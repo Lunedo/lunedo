@@ -1,4 +1,4 @@
-import { groupDescriptionSchema, groupNameSchema } from "@pagehall/shared";
+import { groupDescriptionSchema, groupNameSchema } from "@lunedo/shared";
 import {
   Avatar,
   Badge,
@@ -18,7 +18,7 @@ import {
   Section,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Plus, ShieldCheck, Trash2, UserMinus, UsersRound } from "lucide-react";

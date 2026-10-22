@@ -14,7 +14,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { pipeline } from "node:stream/promises";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { createDatabase, type Database } from "../database/database.js";
@@ -56,8 +56,8 @@ describe.skipIf(!databaseUrl)("key rotation", () => {
   const columns: EncryptedColumn[] = [{ table, idColumn: "id", column: "value" }];
 
   beforeAll(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-rotation-"));
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-rotation-"));
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     await database.execute(sql.raw(`create table "${table}" (id uuid primary key, value bytea)`));
     queue = new PgBossQueue({
@@ -141,8 +141,8 @@ describe.skipIf(!databaseUrl)("key rotation", () => {
 
 describe.skipIf(!databaseUrl)("concurrent key rotations", () => {
   it("end with one consistent key ring and every value stays readable", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-rotation-"));
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-rotation-"));
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     const database = createDatabase(pool);
     const table = `test_secrets_${randomBytes(4).toString("hex")}`;
     const columns: EncryptedColumn[] = [{ table, idColumn: "id", column: "value" }];
@@ -222,8 +222,8 @@ describe.skipIf(!databaseUrl)("concurrent key rotations", () => {
 
 describe.skipIf(!databaseUrl)("key rotation of streams", () => {
   it("re-wraps registered streams and completes only when they are done", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-stream-rotation-"));
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-stream-rotation-"));
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     const database = createDatabase(pool);
     const queue = new PgBossQueue({
       connectionString: databaseUrl,

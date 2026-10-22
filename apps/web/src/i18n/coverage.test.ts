@@ -6,7 +6,7 @@ import {
   instanceAreas,
   organizationAreas,
   setupStepIds,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { describe, expect, it } from "vitest";
 import { auditEventKey } from "../components/audit-log.js";
 import { knownSettingKeys, settingDescriptionKey, settingLabelKey } from "../settings/setting-fields.js";

@@ -48,8 +48,8 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
   });
 
   beforeEach(async () => {
-    backupDir = await mkdtemp(path.join(tmpdir(), "pagehall-before-update-"));
-    workDir = await mkdtemp(path.join(tmpdir(), "pagehall-before-update-work-"));
+    backupDir = await mkdtemp(path.join(tmpdir(), "lunedo-before-update-"));
+    workDir = await mkdtemp(path.join(tmpdir(), "lunedo-before-update-work-"));
     await test.database.execute(sql`delete from backup_configuration`);
     await test.database.execute(sql`delete from backup_state`);
     await test.database.execute(sql`delete from backup_runs`);
@@ -75,7 +75,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
       masterKeys: async () => test.keyRing.ring,
       workDir,
       configuration: {},
-      pagehallVersion: "2.0.0",
+      lunedoVersion: "2.0.0",
       schemaVersion,
       logger,
     };
@@ -117,7 +117,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
       expect(parseBackupName(name ?? "")?.backupClass).toBe("beforeUpdate");
       expect((await readBackupHeader(path.join(backupDir, name ?? ""))).header).toMatchObject({
         schemaVersion,
-        pagehallVersion: "2.0.0",
+        lunedoVersion: "2.0.0",
       });
       const runs = await test.database.execute(sql`select trigger, state, name from backup_runs`);
       expect(runs.rows).toEqual([{ trigger: "beforeUpdate", state: "succeeded", name }]);
@@ -220,7 +220,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
   it.skipIf(!hasTools)(
     "writes to the default directory and deletes nothing while a restored instance is unconfirmed",
     async () => {
-      const target = await mkdtemp(path.join(tmpdir(), "pagehall-before-update-target-"));
+      const target = await mkdtemp(path.join(tmpdir(), "lunedo-before-update-target-"));
       try {
         await test.database.execute(sql`
           insert into backup_configuration (singleton, target_kind, target_path, keep_before_update)
@@ -262,7 +262,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
 
   it.skipIf(!hasTools)("makes a backup to a file wait for a running backup", async () => {
     const lock = await tryBackupLock(test.pool);
-    const output = path.join(backupDir, "manual.phbak");
+    const output = path.join(backupDir, "manual.ldbak");
     let finished = false;
     const writing = writeBackupFile(sources("0000_foundation"), output).then(() => {
       finished = true;
@@ -285,7 +285,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
     await expect(
       writeBackupFile(
         { ...sources("0000_foundation"), archiver, diskSpace: NO_SPACE },
-        path.join(backupDir, "manual.phbak"),
+        path.join(backupDir, "manual.ldbak"),
       ),
     ).rejects.toThrow("Not enough free space");
   });
@@ -303,12 +303,12 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
       logger,
     });
     await expect(failing).rejects.toBeInstanceOf(BackupBeforeUpdateError);
-    await expect(failing).rejects.toThrow("docker compose run --rm pagehall backup skip-before-update");
+    await expect(failing).rejects.toThrow("docker compose run --rm lunedo backup skip-before-update");
   });
 
   it("calls the start hook also when no migration is pending", async () => {
-    const temporary = await createTemporaryDatabase(baseUrl ?? "", "pagehall_before_update_test");
-    const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
+    const temporary = await createTemporaryDatabase(baseUrl ?? "", "lunedo_before_update_test");
+    const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "lunedo-test" });
     try {
       const calls: { applied: number; expected: number }[] = [];
       const record = async (pending: { applied: number; expected: number }) => {
@@ -328,8 +328,8 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
   });
 
   it("does not migrate when the hook fails", async () => {
-    const temporary = await createTemporaryDatabase(baseUrl ?? "", "pagehall_before_update_test");
-    const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
+    const temporary = await createTemporaryDatabase(baseUrl ?? "", "lunedo_before_update_test");
+    const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "lunedo-test" });
     try {
       await expect(
         runMigrations(pool, {

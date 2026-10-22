@@ -91,9 +91,9 @@ describe("the system status", () => {
         ),
         item("collaboration", "error", "unavailable"),
         item("fileStorage", "error", "notWritable", {
-          path: "/var/lib/pagehall/files",
+          path: "/var/lib/lunedo/files",
           freeBytes: null,
-          fixCommand: "chown -R 1000:1000 /var/lib/pagehall/files",
+          fixCommand: "chown -R 1000:1000 /var/lib/lunedo/files",
         }),
         item("futureCheck", "warning", "somethingNew"),
       ],
@@ -104,7 +104,7 @@ describe("the system status", () => {
     expect(await screen.findByRole("heading", { name: "System status" })).toBeTruthy();
     expect(await screen.findByText("Some checks failed")).toBeTruthy();
     expect(screen.getByText("2 errors and 2 warnings. Each check below says what to do.")).toBeTruthy();
-    expect(screen.getByText("Pagehall 1.4.2")).toBeTruthy();
+    expect(screen.getByText("Lunedo 1.4.2")).toBeTruthy();
     expect(
       screen.getByText(
         "86% of the file store is used. Free space or enlarge the volume before writes are paused.",
@@ -114,7 +114,7 @@ describe("the system status", () => {
       "/settings/instance/storage",
     );
     expect(screen.getByText(/The collaboration server does not answer/)).toBeTruthy();
-    expect(screen.getByText("chown -R 1000:1000 /var/lib/pagehall/files")).toBeTruthy();
+    expect(screen.getByText("chown -R 1000:1000 /var/lib/lunedo/files")).toBeTruthy();
     expect(screen.getByText("Check futureCheck")).toBeTruthy();
     const queues = screen.getByRole("table", { name: "Job queues" });
     expect(within(queues).getByText("copies.run")).toBeTruthy();

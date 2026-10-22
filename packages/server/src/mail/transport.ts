@@ -1,5 +1,5 @@
 import { connect, type Socket } from "node:net";
-import { smtpSecurityModes } from "@pagehall/shared";
+import { smtpSecurityModes } from "@lunedo/shared";
 import { createTransport } from "nodemailer";
 
 export interface MailMessage {

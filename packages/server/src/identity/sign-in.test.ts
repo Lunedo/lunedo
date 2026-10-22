@@ -17,10 +17,10 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { VirtualAuthenticator } from "../testing/webauthn.js";
-import { type CallbackResult, needsPagehallFactor } from "./sign-in.js";
+import { type CallbackResult, needsLunedoFactor } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const BASE = "https://pagehall.test";
+const BASE = "https://lunedo.test";
 const PASSWORD = "a long test passphrase";
 
 describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () => {
@@ -64,7 +64,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     requiredGroups?: string[];
     domains?: string[];
     issuer?: FakeOidcProvider;
-    secondFactor?: { mode: "provider" | "providerProof" | "pagehall"; proofValues?: string[] };
+    secondFactor?: { mode: "provider" | "providerProof" | "lunedo"; proofValues?: string[] };
   }) {
     const source = options.issuer ?? idp;
     const domains = options.domains ?? ["example.org"];
@@ -350,7 +350,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(audited.rows).toEqual([{ fields: { organizationId: org } }]);
   });
 
-  it("asks for a Pagehall second factor when the provider shows no proof of one", async () => {
+  it("asks for a Lunedo second factor when the provider shows no proof of one", async () => {
     const id = await provider({ accountCreation: true, secondFactor: { mode: "providerProof" } });
     const subject = randomUUID();
     const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org` };
@@ -384,8 +384,8 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(proven.signedIn.session).toMatchObject({ kind: "full", methods: ["identityProvider"] });
   });
 
-  it("always asks for a Pagehall second factor when the provider is set to", async () => {
-    const id = await provider({ accountCreation: true, secondFactor: { mode: "pagehall" } });
+  it("always asks for a Lunedo second factor when the provider is set to", async () => {
+    const id = await provider({ accountCreation: true, secondFactor: { mode: "lunedo" } });
     const subject = randomUUID();
     const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org`, amr: ["mfa"] };
     const first = await signIn(id, claims);
@@ -396,10 +396,10 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
 
   it("accepts the configured proof values of a provider", () => {
     const setting = { mode: "providerProof" as const, proofValues: ["hwk", "otp"] };
-    expect(needsPagehallFactor(setting, ["pwd", "otp"])).toBe(false);
-    expect(needsPagehallFactor(setting, ["pwd", "mfa"])).toBe(true);
-    expect(needsPagehallFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(false);
-    expect(needsPagehallFactor({ mode: "pagehall", proofValues: ["mfa"] }, ["mfa"])).toBe(true);
+    expect(needsLunedoFactor(setting, ["pwd", "otp"])).toBe(false);
+    expect(needsLunedoFactor(setting, ["pwd", "mfa"])).toBe(true);
+    expect(needsLunedoFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(false);
+    expect(needsLunedoFactor({ mode: "lunedo", proofValues: ["mfa"] }, ["mfa"])).toBe(true);
   });
 
   it("keeps a pending link for 15 minutes and refuses it afterwards", async () => {
@@ -491,7 +491,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(linked.session).toMatchObject({ accountId: existing.id, kind: "secondFactorSetup" });
   });
 
-  async function accountFromProvider(secondFactor?: { mode: "provider" | "pagehall" }) {
+  async function accountFromProvider(secondFactor?: { mode: "provider" | "lunedo" }) {
     const domain = `${randomUUID().slice(0, 8)}.example`;
     const first = await provider({
       accountCreation: true,
@@ -578,8 +578,8 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
   });
 
-  it("asks for the Pagehall second factor after a provider confirmed a link and the provider needs one", async () => {
-    const moved = await accountFromProvider({ mode: "pagehall" });
+  it("asks for the Lunedo second factor after a provider confirmed a link and the provider needs one", async () => {
+    const moved = await accountFromProvider({ mode: "lunedo" });
     const setup = await test.services.totp.begin(moved.accountId, { issuer: "Test", account: moved.email });
     if (!setup) throw new Error("TOTP was not started");
     const secret = Secret.fromBase32(setup.secret);

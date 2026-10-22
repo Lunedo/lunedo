@@ -1,5 +1,5 @@
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@lunedo/server";
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { registeredRoutes } from "../access/route-access.verifier.js";
 import { CSRF_HEADER } from "../http/csrf.js";
@@ -25,7 +25,7 @@ import {
   TestClient,
 } from "../testing/auth-app.js";
 
-const MEMBER = { email: "maintenance-member@pagehall.test", password: "a long enough passphrase" };
+const MEMBER = { email: "maintenance-member@lunedo.test", password: "a long enough passphrase" };
 const ID = "0192f0e0-0000-7000-8000-000000000001";
 
 describe("writesDuringMaintenance", () => {
@@ -193,7 +193,7 @@ describe.skipIf(!databaseBaseUrl)("maintenance mode through the API", () => {
 
   it("lets people and administrators remove access while everything else is refused", async () => {
     const organizationId = await firstOrganizationId(test);
-    const person = await createAccount(test, "maintenance-leaver@pagehall.test", MEMBER.password);
+    const person = await createAccount(test, "maintenance-leaver@lunedo.test", MEMBER.password);
     const first = await signedInClient(test, person.email, MEMBER.password);
     const second = await signedInClient(test, person.email, MEMBER.password);
     const created = await first.post("/api/v1/account/tokens", {

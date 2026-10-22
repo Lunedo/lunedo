@@ -8,9 +8,9 @@ const serverRoot = fileURLToPath(new URL("../../../../packages/server", import.m
 
 const PUBLISH_NOW = `
 const { createDatabase, createDatabasePool, createLogger, PgBossQueue, scheduledBlogPostsJob } =
-  await import("@pagehall/server");
+  await import("@lunedo/server");
 const [connectionString, postId] = process.argv.slice(1);
-const pool = createDatabasePool({ connectionString, applicationName: "pagehall-e2e", max: 2 });
+const pool = createDatabasePool({ connectionString, applicationName: "lunedo-e2e", max: 2 });
 const queue = new PgBossQueue({
   connectionString,
   database: createDatabase(pool),
@@ -41,9 +41,9 @@ export async function publishScheduledPostNow(postId: string): Promise<void> {
 }
 
 const MAKE_DUE = `
-const { createDatabasePool } = await import("@pagehall/server");
+const { createDatabasePool } = await import("@lunedo/server");
 const [connectionString, itemId] = process.argv.slice(1);
-const pool = createDatabasePool({ connectionString, applicationName: "pagehall-e2e", max: 1 });
+const pool = createDatabasePool({ connectionString, applicationName: "lunedo-e2e", max: 1 });
 try {
   await pool.query(
     "update article_reviews set published_at = now() - interval '4 months', reviewed_at = null where item_id = $1",

@@ -1,4 +1,4 @@
-import { publicApiDocumentationSetting } from "@pagehall/server";
+import { publicApiDocumentationSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateOpenApi, serializeOpenApi } from "../openapi/document.js";
 import {
@@ -31,7 +31,7 @@ describe.skipIf(!databaseBaseUrl)("API reference page", () => {
   });
 
   it("serves the page, its scripts and the description from the instance itself", async () => {
-    const account = await createAccount(test, "reader@pagehall.test");
+    const account = await createAccount(test, "reader@lunedo.test");
     const client = await signedInClient(test, account.email, account.password);
     const page = await client.get("/api/docs");
     expect(page.statusCode).toBe(200);

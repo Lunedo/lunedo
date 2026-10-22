@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
+import { ENTRA_SAML_CLAIMS, type SamlConfig } from "@lunedo/shared";
 import {
   type CacheProvider,
   type SamlConfig as NodeSamlConfig,
   SAML,
   ValidateInResponseTo,
 } from "@node-saml/node-saml";
-import { ENTRA_SAML_CLAIMS, type SamlConfig } from "@pagehall/shared";
 import type { Element } from "@xmldom/xmldom";
 import {
   type AuthorizationRequest,
@@ -249,7 +249,7 @@ function checkResponse(
   if ((attributeOf(response, "InResponseTo") ?? null) !== expected.requestId) {
     throw new ProviderResponseError(
       expected.requestId
-        ? "The response does not answer the request Pagehall sent"
+        ? "The response does not answer the request Lunedo sent"
         : "The response answers an unknown request",
     );
   }

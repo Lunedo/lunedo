@@ -8,7 +8,7 @@ import {
 } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { pipeline } from "node:stream/promises";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { EncryptedStream, EncryptedStreamOwner } from "../crypto/encrypted-stream.js";
 import type { KeyRingHolder } from "../crypto/key-ring-holder.js";
@@ -56,7 +56,7 @@ export interface StoredFile {
 
 const CONTENT_DIGEST_PURPOSE = "file-content";
 
-export const DISPLAY_VERSIONS_CHANNEL = "pagehall_display_versions";
+export const DISPLAY_VERSIONS_CHANNEL = "lunedo_display_versions";
 
 export const MAX_DISPLAY_VERSION_PIXELS = 100_000_000;
 
@@ -103,7 +103,7 @@ class Inspector extends Transform {
 }
 
 function associatedData(fileId: string): Buffer {
-  return Buffer.from(`pagehall-file:${fileId}`, "utf8");
+  return Buffer.from(`lunedo-file:${fileId}`, "utf8");
 }
 
 function storageKey(fileId: string): string {

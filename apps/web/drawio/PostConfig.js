@@ -18,7 +18,7 @@ window.OPEN_URL = null;
   window.addEventListener(
     "message",
     (event) => {
-      if (event.source !== window.parent || typeof event.data !== "string" || event.pagehallConverted) return;
+      if (event.source !== window.parent || typeof event.data !== "string" || event.lunedoConverted) return;
       let message;
       try {
         message = JSON.parse(event.data);
@@ -37,7 +37,7 @@ window.OPEN_URL = null;
             xml = null;
           }
           if (!xml) {
-            reply({ event: "pagehall-gliffy-failed" });
+            reply({ event: "lunedo-gliffy-failed" });
             return;
           }
           const converted = new MessageEvent("message", {
@@ -45,11 +45,11 @@ window.OPEN_URL = null;
             origin: event.origin,
             source: window.parent,
           });
-          converted.pagehallConverted = true;
+          converted.lunedoConverted = true;
           window.dispatchEvent(converted);
-          reply({ event: "pagehall-gliffy-converted" });
+          reply({ event: "lunedo-gliffy-converted" });
         },
-        () => reply({ event: "pagehall-gliffy-failed" }),
+        () => reply({ event: "lunedo-gliffy-failed" }),
       );
     },
     true,

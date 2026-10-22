@@ -1,4 +1,4 @@
-import { SCENE_ELEMENTS, SCENE_FILES } from "@pagehall/editor-schema/scene";
+import { SCENE_ELEMENTS, SCENE_FILES } from "@lunedo/editor-schema/scene";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {

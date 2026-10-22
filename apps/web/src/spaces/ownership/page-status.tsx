@@ -1,4 +1,4 @@
-import { Badge, Icon, Popover, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Icon, Popover, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, CircleSlash, Flag, LoaderCircle } from "lucide-react";
 import { useState } from "react";

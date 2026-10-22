@@ -1,4 +1,4 @@
-import { ConfirmDialog, Notice, Skeleton } from "@pagehall/ui";
+import { ConfirmDialog, Notice, Skeleton } from "@lunedo/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";

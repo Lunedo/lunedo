@@ -91,7 +91,7 @@ const syncDefaults = {
   deactivationLimitAccounts: SYNC_DEACTIVATION_LIMIT_ACCOUNTS.default,
 };
 
-export const secondFactorModes = ["provider", "providerProof", "pagehall"] as const;
+export const secondFactorModes = ["provider", "providerProof", "lunedo"] as const;
 export type SecondFactorMode = (typeof secondFactorModes)[number];
 
 const secondFactorSchema = z
@@ -333,7 +333,7 @@ export const samlConfigSchema = z.discriminatedUnion("preset", [
 export type SamlConfig = z.output<typeof samlConfigSchema>;
 export type SamlConfigInput = z.input<typeof samlConfigSchema>;
 
-export const ldapSecondFactorModes = ["pagehall", "provider"] as const;
+export const ldapSecondFactorModes = ["lunedo", "provider"] as const;
 
 export function ldapServerAddress(input: string): string | null {
   const value = input.trim();
@@ -371,9 +371,9 @@ const ldapCommonShape = {
   accountCreation: accountCreationSchema.default({ enabled: false, requiredGroups: [] }),
   sync: syncSchema.default(syncDefaults),
   secondFactor: z
-    .object({ mode: z.enum(ldapSecondFactorModes).default("pagehall") })
+    .object({ mode: z.enum(ldapSecondFactorModes).default("lunedo") })
     .strict()
-    .default({ mode: "pagehall" }),
+    .default({ mode: "lunedo" }),
 };
 
 export const activeDirectoryConfigSchema = z

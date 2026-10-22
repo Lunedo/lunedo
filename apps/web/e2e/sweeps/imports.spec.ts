@@ -18,12 +18,12 @@ async function prepared(page: Page, organizationId: string, reviewer: { id: stri
   })) as { id: string };
   await page.request.patch(`/api/v1/imports/${created.id}`, {
     data: { file: { kind: "folder", name: FOLDER_EXPORT } },
-    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
+    headers: { "X-Lunedo-Request": "1", origin: new URL(page.url()).origin },
   });
   await waitForImportState(created.id, "ready");
   await page.request.patch(`/api/v1/imports/${created.id}`, {
     data: { spaceKey: `S${unique()}`.slice(0, 10), spaceName: "IT Operations" },
-    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
+    headers: { "X-Lunedo-Request": "1", origin: new URL(page.url()).origin },
   });
   if (reviewer)
     await callApi(page, "PUT", `/api/v1/imports/${created.id}/reviewers`, { accountIds: [reviewer.id] });
@@ -33,7 +33,7 @@ async function prepared(page: Page, organizationId: string, reviewer: { id: stri
       `557058:bbbbbbbb-0002,${reviewer?.name ?? "Rita Reviewer"},rita.reviewer@elsewhere.example`,
       "557058:dddddddd-0004,Carol Clark,",
     ].join("\n"),
-    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin, "content-type": "text/csv" },
+    headers: { "X-Lunedo-Request": "1", origin: new URL(page.url()).origin, "content-type": "text/csv" },
   });
   return created.id;
 }

@@ -1,4 +1,4 @@
-import { type NodeJson, validateDocument } from "@pagehall/editor-schema";
+import { type NodeJson, validateDocument } from "@lunedo/editor-schema";
 import { describe, expect, it } from "vitest";
 import {
   type ConvertedPage,
@@ -651,7 +651,7 @@ describe("content report table", () => {
     });
   }
 
-  it("converts the legacy form with a blueprint and keeps Pagehall's own empty text", async () => {
+  it("converts the legacy form with a blueprint and keeps Lunedo's own empty text", async () => {
     expect(
       await blocks(
         legacy("content-report-table", {
@@ -920,7 +920,7 @@ describe("create from template", () => {
     });
   }
 
-  it("shortens a long button label and leaves a missing one to Pagehall's default", async () => {
+  it("shortens a long button label and leaves a missing one to Lunedo's default", async () => {
     const [long] = await blocks(
       macro("create-from-template", { templateId: "235077637", buttonLabel: "x".repeat(150) }),
     );

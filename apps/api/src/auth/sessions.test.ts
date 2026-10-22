@@ -4,7 +4,7 @@ import {
   clientLockoutFailuresSetting,
   maxSessionsSetting,
   reauthenticationSetting,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -22,8 +22,8 @@ import {
   TestClient,
 } from "../testing/auth-app.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
-const DEVICE_COOKIE = "__Host-pagehall-device";
+const SESSION_COOKIE = "__Host-lunedo-session";
+const DEVICE_COOKIE = "__Host-lunedo-device";
 
 async function sessionCount(test: AuthTestApp, accountId: string): Promise<number> {
   const result = await test.runtime.pool.query<{ count: string }>(
@@ -173,7 +173,7 @@ describe.skipIf(!databaseBaseUrl)("sessions", () => {
     const response = await client.post("/api/v1/auth/sign-out");
     expect(response.statusCode).toBe(204);
     expect(response.headers["set-cookie"]).toEqual([
-      expect.stringMatching(/^__Host-pagehall-session=; Path=\/; Max-Age=0;/),
+      expect.stringMatching(/^__Host-lunedo-session=; Path=\/; Max-Age=0;/),
     ]);
     const reused = await new TestClient(test.app).get("/api/v1/auth/session", {
       cookie: `${SESSION_COOKIE}=${token}`,
@@ -422,7 +422,7 @@ describe.skipIf(!databaseBaseUrl)("brute-force protection", () => {
   it("takes the client address from forwarding headers only behind a trusted proxy", async () => {
     const proxied = await createAuthTestApp({
       ...configuredSetupEnv,
-      PAGEHALL_TRUSTED_PROXIES: "10.0.0.0/8",
+      LUNEDO_TRUSTED_PROXIES: "10.0.0.0/8",
     });
     try {
       await completeConfiguredSetup(proxied);
@@ -502,10 +502,10 @@ describe.skipIf(!databaseBaseUrl)("CSRF protection", () => {
     const cookie = [...client.cookies].map(([name, value]) => `${name}=${value}`).join("; ");
     const attempts = [
       { origin: TEST_ORIGIN },
-      { "x-pagehall-request": "1" },
-      { "x-pagehall-request": "1", origin: "https://evil.example" },
-      { "x-pagehall-request": "1", origin: "http://pagehall.test" },
-      { "x-pagehall-request": "0", origin: TEST_ORIGIN },
+      { "x-lunedo-request": "1" },
+      { "x-lunedo-request": "1", origin: "https://evil.example" },
+      { "x-lunedo-request": "1", origin: "http://lunedo.test" },
+      { "x-lunedo-request": "0", origin: TEST_ORIGIN },
     ];
     for (const headers of attempts) {
       const response = await test.app.inject({
@@ -519,7 +519,7 @@ describe.skipIf(!databaseBaseUrl)("CSRF protection", () => {
     const signIn = await test.app.inject({
       method: "POST",
       url: "/api/v1/auth/sign-in",
-      headers: { origin: "https://evil.example", "x-pagehall-request": "1" },
+      headers: { origin: "https://evil.example", "x-lunedo-request": "1" },
       payload: { email: account.email, password: account.password },
     });
     expect(signIn.statusCode).toBe(403);
@@ -552,7 +552,7 @@ describe.skipIf(!databaseBaseUrl)("request validation", () => {
   });
 
   it("rejects malformed, unknown and oversized input at the boundary", async () => {
-    const headers = { "x-pagehall-request": "1", origin: TEST_ORIGIN, "content-type": "application/json" };
+    const headers = { "x-lunedo-request": "1", origin: TEST_ORIGIN, "content-type": "application/json" };
     const send = (payload: string, extra: Record<string, string> = {}) =>
       test.app.inject({
         method: "POST",
@@ -564,7 +564,7 @@ describe.skipIf(!databaseBaseUrl)("request validation", () => {
     expect(malformed.statusCode).toBe(400);
     expect(malformed.headers["content-type"]).toContain("application/problem+json");
     expect(malformed.json()).toEqual({
-      type: "urn:pagehall:problem:invalidInput",
+      type: "urn:lunedo:problem:invalidInput",
       title: "The request is not valid",
       status: 400,
       code: "invalidInput",
@@ -576,7 +576,7 @@ describe.skipIf(!databaseBaseUrl)("request validation", () => {
     expect(longPassword.json()).toMatchObject({ code: "invalidInput", fields: ["body.password"] });
     const oversized = await send("x".repeat(2_000_000));
     expect(oversized.statusCode).toBe(413);
-    expect(oversized.json()).toMatchObject({ type: "urn:pagehall:problem:payloadTooLarge" });
+    expect(oversized.json()).toMatchObject({ type: "urn:lunedo:problem:payloadTooLarge" });
     expect((await send("hello", { "content-type": "text/plain" })).statusCode).toBe(400);
   });
 });

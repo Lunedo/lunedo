@@ -1,12 +1,12 @@
 {
-  "name": "@pagehall/tokens",
+  "name": "@lunedo/tokens",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     ".": {
-      "@pagehall/source": "./src/index.ts",
+      "@lunedo/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
@@ -15,12 +15,12 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node dist/generate-cli.js",
-    "dev": "pagehall-dev --build \"tsc -p tsconfig.build.json && node dist/generate-cli.js\"",
+    "dev": "lunedo-dev --build \"tsc -p tsconfig.build.json && node dist/generate-cli.js\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@types/node": "^24.19.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"

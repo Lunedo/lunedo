@@ -8,8 +8,8 @@ export interface ReleaseVersion {
   patch: number;
 }
 
-export function pagehallVersion(env: Readonly<Record<string, string | undefined>> = process.env): string {
-  const value = env.PAGEHALL_VERSION?.trim();
+export function lunedoVersion(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  const value = env.LUNEDO_VERSION?.trim();
   return value ? value : DEVELOPMENT_VERSION;
 }
 

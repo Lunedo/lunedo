@@ -41,7 +41,7 @@ describe("page properties", () => {
       property("Status", paragraph({ type: "status", attrs: { text: "Live", color: "green" } })),
     );
     const html = renderHtml(document, { mention: () => ({ name: "Anna Berger" }) });
-    expect(html).toContain('<section class="ph-page-properties" aria-label="Page properties">');
+    expect(html).toContain('<section class="ld-page-properties" aria-label="Page properties">');
     expect(html).toContain('<th scope="row">Owner</th><td><p');
     expect(html).toContain("@Anna Berger");
     expect(html).toContain('data-color="green"');
@@ -199,7 +199,7 @@ describe("page properties report", () => {
   it("leave a placeholder for the web client when no data is given", () => {
     const html = renderHtml(reportDocument);
     expect(html).toContain(
-      `class="ph-properties-report" aria-label="Page properties report" data-space-ids="[&quot;${SPACE}&quot;]" data-labels="[&quot;site&quot;]"`,
+      `class="ld-properties-report" aria-label="Page properties report" data-space-ids="[&quot;${SPACE}&quot;]" data-labels="[&quot;site&quot;]"`,
     );
     expect(html).toContain('data-columns="[&quot;Owner&quot;]" data-first-column="Site"');
     expect(html).toContain('data-page-size="30" data-show-creator="true"');

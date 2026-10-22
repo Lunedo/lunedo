@@ -52,9 +52,9 @@ describe("ErrorState", () => {
     renderUi(
       <ErrorState
         title="The file store is not writable"
-        cause="Pagehall runs as user 1000, which cannot write to /var/lib/pagehall/files."
+        cause="Lunedo runs as user 1000, which cannot write to /var/lib/lunedo/files."
         action="Give the user ownership of the directory and check again."
-        command="chown -R 1000:1000 /var/lib/pagehall/files"
+        command="chown -R 1000:1000 /var/lib/lunedo/files"
         documentationUrl="https://docs.example.org/files"
         onRetry={retry}
         retryLabel="Check again"
@@ -69,7 +69,7 @@ describe("ErrorState", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Copy" }));
-    expect(writeText).toHaveBeenCalledWith("chown -R 1000:1000 /var/lib/pagehall/files");
+    expect(writeText).toHaveBeenCalledWith("chown -R 1000:1000 /var/lib/lunedo/files");
     expect(await screen.findByText("Copied")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));

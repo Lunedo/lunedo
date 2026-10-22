@@ -353,7 +353,7 @@ export class GroupMappingService {
         organizationId: mappingRules.organizationId,
         builtInRole: mappingRules.builtInRole,
         customRoleId: mappingRules.customRoleId,
-        pagehallGroupId: mappingRules.pagehallGroupId,
+        lunedoGroupId: mappingRules.lunedoGroupId,
         homeOrganization: mappingRules.homeOrganization,
         position: mappingRules.position,
       })
@@ -403,14 +403,14 @@ export class GroupMappingService {
         const key = `role:${organizationId}:${roleKey(role)}`;
         desired.set(key, { key, kind: "role", organizationId, role, groupId: null, home: null });
       }
-      if (row.pagehallGroupId) {
-        const key = `group:${row.pagehallGroupId}`;
+      if (row.lunedoGroupId) {
+        const key = `group:${row.lunedoGroupId}`;
         desired.set(key, {
           key,
           kind: "groupMember",
           organizationId,
           role: null,
-          groupId: row.pagehallGroupId,
+          groupId: row.lunedoGroupId,
           home: null,
         });
       }

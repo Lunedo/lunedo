@@ -99,7 +99,7 @@ export const colorsModule = defineModule({
       spec: {},
       attrs: { color: required(colorValue) },
       html: (mark, content) =>
-        element("span", { class: "ph-text-color", "data-color": attrOf<string>(mark, "color") }, content),
+        element("span", { class: "ld-text-color", "data-color": attrOf<string>(mark, "color") }, content),
       word: (mark, style) => ({ ...style, color: attrOf<ContentColor>(mark, "color") }),
       markdown: (_mark, content) => content,
     },
@@ -108,7 +108,7 @@ export const colorsModule = defineModule({
       spec: {},
       attrs: { color: optional(colorValue, "yellow") },
       html: (mark, content) =>
-        element("mark", { class: "ph-highlight", "data-color": attrOf<string>(mark, "color") }, content),
+        element("mark", { class: "ld-highlight", "data-color": attrOf<string>(mark, "color") }, content),
       word: (mark, style) => ({ ...style, highlight: attrOf<ContentColor>(mark, "color") }),
       markdown: (_mark, content) => content,
     },
@@ -125,7 +125,7 @@ export const inlineCommentModule = defineModule({
       copy: () => null,
       portable: removedNode("comment"),
       html: (mark, content) =>
-        element("span", { class: "ph-comment", "data-thread-id": attrOf<string>(mark, "threadId") }, content),
+        element("span", { class: "ld-comment", "data-thread-id": attrOf<string>(mark, "threadId") }, content),
       word: (_mark, style) => style,
       markdown: (_mark, content) => content,
     },

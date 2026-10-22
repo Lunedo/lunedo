@@ -1,4 +1,4 @@
-import { Button, EmptyState, Field, Input, PageHeader, Select, Skeleton } from "@pagehall/ui";
+import { Button, EmptyState, Field, Input, PageHeader, Select, Skeleton } from "@lunedo/ui";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Newspaper } from "lucide-react";

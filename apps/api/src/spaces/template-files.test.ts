@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -51,13 +51,13 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
 
   async function person() {
     counter += 1;
-    const account = await createAccount(test, `templates${counter}@pagehall.test`);
+    const account = await createAccount(test, `templates${counter}@lunedo.test`);
     return { id: account.id, client: await signedInClient(test, account.email, account.password) };
   }
 
   async function guest() {
     counter += 1;
-    const email = `template-guest${counter}@pagehall.test`;
+    const email = `template-guest${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const { database, services } = test.runtime;
     const account = await database.transaction((tx) =>
@@ -137,7 +137,7 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
         ).statusCode,
       ).toBe(403);
       const imported = await someone.client.post(
-        `/api/v1/spaces/${spaceId}/template-imports?name=t.pagehall-template.json`,
+        `/api/v1/spaces/${spaceId}/template-imports?name=t.lunedo-template.json`,
         Buffer.from("{}"),
         octet,
       );
@@ -149,10 +149,10 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
     });
     expect(exported.statusCode, exported.body).toBe(200);
     expect(exported.headers["content-type"]).toBe("application/zip");
-    expect(String(exported.headers["content-disposition"])).toContain("weekly-notes.pagehall-template.zip");
+    expect(String(exported.headers["content-disposition"])).toContain("weekly-notes.lunedo-template.zip");
 
     const preview = await admin.client.post(
-      `/api/v1/spaces/${spaceId}/template-imports?name=weekly-notes.pagehall-template.zip`,
+      `/api/v1/spaces/${spaceId}/template-imports?name=weekly-notes.lunedo-template.zip`,
       exported.rawPayload,
       octet,
     );
@@ -192,7 +192,7 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
   it("keeps space admins out of organization and instance templates", async () => {
     const { admin } = await setup();
     const organizationImport = await admin.client.post(
-      `/api/v1/organizations/${organizationId}/template-imports?name=t.pagehall-template.json`,
+      `/api/v1/organizations/${organizationId}/template-imports?name=t.lunedo-template.json`,
       Buffer.from("{}"),
       octet,
     );
@@ -227,8 +227,8 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
   it("names the limit when the upload is refused", async () => {
     const { admin, spaceId } = await setup();
     const preview = await admin.client.post(
-      `/api/v1/spaces/${spaceId}/template-imports?name=t.pagehall-template.json`,
-      Buffer.from(JSON.stringify({ format: "pagehall-template", formatVersion: 9 })),
+      `/api/v1/spaces/${spaceId}/template-imports?name=t.lunedo-template.json`,
+      Buffer.from(JSON.stringify({ format: "lunedo-template", formatVersion: 9 })),
       octet,
     );
     expect(preview.statusCode).toBe(400);

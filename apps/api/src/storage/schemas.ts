@@ -1,4 +1,4 @@
-import { storageReminders } from "@pagehall/server";
+import { storageReminders } from "@lunedo/server";
 import { z } from "zod";
 
 const percent = z.number().int().min(1).max(100);
@@ -10,7 +10,7 @@ export const storageStatusSchema = z
       .describe("Where files are stored: a local volume or S3-compatible storage."),
     measured: z
       .boolean()
-      .describe("Whether Pagehall can measure the usage. False for S3 storage without a limit."),
+      .describe("Whether Lunedo can measure the usage. False for S3 storage without a limit."),
     inactiveReason: z
       .enum(["noLimit"])
       .nullable()

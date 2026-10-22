@@ -22,11 +22,11 @@ describe.skipIf(!baseUrl)("recurring jobs", () => {
   let queue: PgBossQueue;
 
   beforeAll(async () => {
-    temporary = await createTemporaryDatabase(baseUrl ?? "", "pagehall_schedule_test");
+    temporary = await createTemporaryDatabase(baseUrl ?? "", "lunedo_schedule_test");
     databaseUrl = temporary.url;
     const migrationPool = createDatabasePool({
       connectionString: databaseUrl,
-      applicationName: "pagehall-test",
+      applicationName: "lunedo-test",
     });
     try {
       await runMigrations(migrationPool, { logger });
@@ -40,7 +40,7 @@ describe.skipIf(!baseUrl)("recurring jobs", () => {
   });
 
   beforeEach(async () => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     clock = new TestClock(Date.now());
     queue = new PgBossQueue({

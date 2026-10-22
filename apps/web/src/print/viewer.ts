@@ -16,7 +16,7 @@ export interface PrintViewer {
 
 declare global {
   interface Window {
-    pagehallPrint?: PrintViewer;
+    lunedoPrint?: PrintViewer;
   }
 }
 
@@ -56,7 +56,7 @@ function render(html: string, options: PrintOptions): Promise<PrintResult> {
   });
 }
 
-window.pagehallPrint = {
+window.lunedoPrint = {
   render: async (html, options = {}) => {
     await document.fonts.ready;
     return render(html, options);

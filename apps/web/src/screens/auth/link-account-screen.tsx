@@ -1,5 +1,5 @@
-import { passwordSchema, recoveryCodeSchema, totpCodeSchema } from "@pagehall/shared";
-import { Badge, Button, Field, Input, Notice, PasswordInput, SegmentedControl, Skeleton } from "@pagehall/ui";
+import { passwordSchema, recoveryCodeSchema, totpCodeSchema } from "@lunedo/shared";
+import { Badge, Button, Field, Input, Notice, PasswordInput, SegmentedControl, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { BadgeCheck, Fingerprint, KeyRound, LogIn } from "lucide-react";

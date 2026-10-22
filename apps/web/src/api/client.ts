@@ -3,7 +3,7 @@ import type { components, paths } from "./generated/schema.js";
 
 export type Schemas = components["schemas"];
 
-export const CSRF_HEADER = "X-Pagehall-Request";
+export const CSRF_HEADER = "X-Lunedo-Request";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

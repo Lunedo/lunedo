@@ -31,7 +31,7 @@ export interface ApiRouteDefinition {
   errors?: ProblemCode[];
 }
 
-export const API_ROUTE = "pagehall:api-route";
+export const API_ROUTE = "lunedo:api-route";
 
 export function successStatus(definition: ApiRouteDefinition): number {
   if (definition.redirect) return 303;

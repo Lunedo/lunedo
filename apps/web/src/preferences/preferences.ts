@@ -18,7 +18,7 @@ import {
   timeFormats,
   type WeekStart,
   weekStarts,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import { type Preference, preferencesQuery, queryKeys, sessionQuery } from "../api/queries.js";
@@ -62,7 +62,7 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   startPage: "appearance.startPage",
 };
 
-const STORAGE_KEY = "pagehall.appearance";
+const STORAGE_KEY = "lunedo.appearance";
 
 function oneOf<T extends string | number>(values: readonly T[], value: unknown, fallback: T): T {
   return values.includes(value as T) ? (value as T) : fallback;

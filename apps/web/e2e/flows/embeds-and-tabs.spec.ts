@@ -136,6 +136,6 @@ test("switches tabs with the mouse and the keyboard and opens a whiteboard from 
   await expect(tabs.getByRole("tab", { name: "Linux" })).toBeFocused();
   await expect(page.getByRole("tabpanel", { name: "Linux" })).toContainText("Linux steps");
 
-  await page.locator(".ph-whiteboard-card").getByText("Netzwerk-Umbau 2027").click();
+  await page.locator(".ld-whiteboard-card").getByText("Netzwerk-Umbau 2027").click();
   await expect(page).toHaveURL(new RegExp(`/whiteboards/${board.id}/`));
 });

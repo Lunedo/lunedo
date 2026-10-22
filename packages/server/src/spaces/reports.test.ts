@@ -1,10 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type {
-  DecisionReportRequest,
-  DocumentJson,
-  NodeJson,
-  PageReportRequest,
-} from "@pagehall/editor-schema";
+import type { DecisionReportRequest, DocumentJson, NodeJson, PageReportRequest } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";

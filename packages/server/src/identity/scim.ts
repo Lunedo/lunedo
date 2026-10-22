@@ -1,4 +1,4 @@
-import { emailSchema } from "@pagehall/shared";
+import { emailSchema } from "@lunedo/shared";
 import { and, asc, count, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import { type AccountService, EmailInUseError } from "../accounts/accounts.js";
 import type { AccountAdministrationService } from "../accounts/administration.js";
@@ -217,7 +217,7 @@ export class ScimService {
     }
     const loaded = await this.#providers.definition(providerId);
     if (!loaded) throw new ScimError(404, null, "The identity provider does not exist");
-    if (!loaded.active) throw new ScimError(403, null, "The identity provider is deactivated in Pagehall");
+    if (!loaded.active) throw new ScimError(403, null, "The identity provider is deactivated in Lunedo");
     return loaded.provider;
   }
 

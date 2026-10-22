@@ -145,9 +145,9 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(file.contentType).toBe("text/html; charset=utf-8");
       expect(file.fileName).toBe("Welcome.html");
       const printed = (await bytesOf(file)).toString("utf8");
-      expect(printed).toContain('<p class="ph-path">Handbook</p><h1 class="ph-page-title">Welcome</h1>');
-      expect(printed).toMatch(/<p class="ph-meta">Space admin · Last changed on [^<]+<\/p>/);
-      expect(printed).toContain('<span class="ph-entry">Overview</span>');
+      expect(printed).toContain('<p class="ld-path">Handbook</p><h1 class="ld-page-title">Welcome</h1>');
+      expect(printed).toMatch(/<p class="ld-meta">Space admin · Last changed on [^<]+<\/p>/);
+      expect(printed).toContain('<span class="ld-entry">Overview</span>');
       expect(printed).toContain("Network: setup/guide");
       expect(printed).toContain('data-access="none">No access</span>');
       expect(printed).not.toContain("Salaries");
@@ -184,8 +184,8 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         )
       ).toString("utf8");
       expect(commented).toContain("Please add the VLAN plan");
-      expect(commented).toContain('<p class="ph-comment-meta">Rita Reader · ');
-      expect(commented).not.toContain('<section class="ph-appendix"');
+      expect(commented).toContain('<p class="ld-comment-meta">Rita Reader · ');
+      expect(commented).not.toContain('<section class="ld-appendix"');
     });
 
     it("names the space and the ancestors in the path", async () => {
@@ -193,7 +193,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         await bytesOf(await test.services.exports.page(context.insider, context.pages.bonus.id, "print"))
       ).toString("utf8");
       expect(printed).toContain(
-        '<p class="ph-path">Handbook › Salaries 2027</p><h1 class="ph-page-title">Bonus plan</h1>',
+        '<p class="ld-path">Handbook › Salaries 2027</p><h1 class="ld-page-title">Bonus plan</h1>',
       );
     });
 
@@ -246,8 +246,8 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(printed).toContain("Chapter text");
       expect(printed).not.toContain("Hidden");
       expect(printed).not.toContain("Below");
-      expect(printed.match(/<article class="ph-print-page"/g)).toHaveLength(2);
-      expect(printed).toContain('<li data-level="1"><a href="#ph-page-');
+      expect(printed.match(/<article class="ld-print-page"/g)).toHaveLength(2);
+      expect(printed).toContain('<li data-level="1"><a href="#ld-page-');
       const word = await html(
         await bytesOf(
           await job(steward, { pageId: guide.id }, { format: "docx", options: defaultExportOptions }),
@@ -265,7 +265,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         { format: "print", options: defaultExportOptions },
       );
       const printed = (await bytesOf(file)).toString("utf8");
-      expect(printed).toContain('<h1 class="ph-document-title">Handbook</h1>');
+      expect(printed).toContain('<h1 class="ld-document-title">Handbook</h1>');
       expect(printed).toContain("Published text");
       expect(printed).not.toContain("Draft secret");
       expect(printed).not.toContain("Salaries");
@@ -578,7 +578,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(sent?.html).toContain(`src="/api/v1/attachments/${ids[0]}/content?size=display"`);
       expect(sent?.html).not.toContain(`src="/api/v1/attachments/${ids[1]}/content`);
       expect(sent?.html).toContain(
-        `<span class="ph-export-note">${ids[1]}: Image left out because the file would otherwise be too large.`,
+        `<span class="ld-export-note">${ids[1]}: Image left out because the file would otherwise be too large.`,
       );
     });
   });
@@ -716,12 +716,12 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
           ),
         )
       ).toString("utf8");
-      expect(printed.match(/<article class="ph-print-page"/g)).toHaveLength(3);
-      expect(printed).toContain('<h1 class="ph-page-title">Network map</h1>');
+      expect(printed.match(/<article class="ld-print-page"/g)).toHaveLength(3);
+      expect(printed).toContain('<h1 class="ld-page-title">Network map</h1>');
       expect(printed).toContain(
-        `<figure class="ph-whiteboard"><img src="/api/v1/whiteboards/${boards.map}/preview" alt="Network map"></figure>`,
+        `<figure class="ld-whiteboard"><img src="/api/v1/whiteboards/${boards.map}/preview" alt="Network map"></figure>`,
       );
-      expect(printed).toContain('<h1 class="ph-page-title">Blank board</h1>');
+      expect(printed).toContain('<h1 class="ld-page-title">Blank board</h1>');
       expect(printed).toContain("This whiteboard has no saved image yet");
       expect(printed).not.toContain("Secret board");
       expect(printed).not.toContain(boards.secret);
@@ -854,9 +854,9 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         expect(printed).not.toContain(`<img src="/api/v1/attachments/${hiddenImage}`);
         expect(printed).toContain("<strong>Login video</strong>");
         expect(printed).not.toContain("<iframe");
-        expect(printed).toContain('<h4 class="ph-tab-title">Windows</h4>');
+        expect(printed).toContain('<h4 class="ld-tab-title">Windows</h4>');
         expect(printed).toContain("macOS steps");
-        expect(printed).toContain('<span class="ph-heading-number">1.1 </span>Boards');
+        expect(printed).toContain('<span class="ld-heading-number">1.1 </span>Boards');
       });
 
       it("sends the images of whiteboard blocks and previews to the render container", async () => {
@@ -896,7 +896,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       const [call] = calls;
       expect(call?.authorization).toBe(`Bearer ${TOKEN}`);
       expect(call?.baseUrl).toBe(INSTANCE);
-      expect(call?.html).toContain('<h1 class="ph-page-title">Welcome</h1>');
+      expect(call?.html).toContain('<h1 class="ld-page-title">Welcome</h1>');
       expect(call?.html).not.toContain("Salaries");
       expect(call?.assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${image}/content`]);
       expect(call?.assets.map((asset) => asset.path)).not.toContain(

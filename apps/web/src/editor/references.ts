@@ -1,4 +1,4 @@
-import { slugify } from "@pagehall/editor-schema";
+import { slugify } from "@lunedo/editor-schema";
 import { useEffect, useSyncExternalStore } from "react";
 import { api } from "../api/client.js";
 import { isApiError, request } from "../api/request.js";

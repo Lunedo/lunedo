@@ -1,6 +1,6 @@
-import { commentText, type DocumentJson, migrateDocument } from "@pagehall/editor-schema";
-import { sceneText, validateScene } from "@pagehall/editor-schema/scene";
-import { type ContentLanguage, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
+import { commentText, type DocumentJson, migrateDocument } from "@lunedo/editor-schema";
+import { sceneText, validateScene } from "@lunedo/editor-schema/scene";
+import { type ContentLanguage, OTHER_CONTENT_LANGUAGE } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Database, Executor } from "../database/database.js";
 import { FileTooLargeError } from "../files/files.js";
@@ -81,7 +81,7 @@ function readers(item: SQL, space: SQL): SQL {
 }
 
 function lockKey(kind: "item" | "space", id: string): SQL {
-  return sql`hashtextextended(${`pagehall.search.${kind}:${id}`}, 0)`;
+  return sql`hashtextextended(${`lunedo.search.${kind}:${id}`}, 0)`;
 }
 
 function refusedContent(error: unknown): { code: string } {

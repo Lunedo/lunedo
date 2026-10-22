@@ -21,7 +21,7 @@ const DAY = 24 * 60 * 60 * 1000;
 const GENERIC = {
   preset: "generic",
   issuer: "https://idp.example.org",
-  clientId: "pagehall",
+  clientId: "lunedo",
   domains: [] as string[],
 };
 
@@ -216,7 +216,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       validDays: 365,
     });
     const certificate = new x509.X509Certificate(added.certificate ?? "");
-    expect(certificate.subject).toContain("Pagehall");
+    expect(certificate.subject).toContain("Lunedo");
     expect(added.keyId).toMatch(/^[\w-]{27}$/);
     expect(await test.services.identityProviders.certificate(provider.id, added.id)).toBe(added.certificate);
     const summary = await test.services.identityProviders.get(provider.id);
@@ -474,7 +474,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     });
     const directory = {
       preset: "generic",
-      bindDn: "cn=pagehall,dc=example,dc=org",
+      bindDn: "cn=lunedo,dc=example,dc=org",
       userBaseDn: "ou=people,dc=example,dc=org",
       groupBaseDn: "ou=groups,dc=example,dc=org",
     };

@@ -1,4 +1,4 @@
-import { useToast } from "@pagehall/ui";
+import { useToast } from "@lunedo/ui";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";
 import { filtersOf, type RecentSearch, useForgetSearch, useRememberSearch } from "./search-api.js";

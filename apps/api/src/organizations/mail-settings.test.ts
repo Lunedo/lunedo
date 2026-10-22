@@ -1,11 +1,11 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import {
   type FakeGraph,
   GRAPH_CLIENT_ID,
   GRAPH_CLIENT_SECRET,
   GRAPH_TENANT_ID,
   startFakeGraph,
-} from "@pagehall/server/testing";
+} from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addTotp, completeConfiguredSetup, configuredSetupEnv, OWNER } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
@@ -16,7 +16,7 @@ describe.skipIf(!databaseBaseUrl)("e-mail settings through the API", () => {
   let graph: FakeGraph;
 
   beforeAll(async () => {
-    test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true" });
+    test = await createAuthTestApp({ ...configuredSetupEnv, LUNEDO_INSECURE_IDENTITY_PROVIDERS: "true" });
     await completeConfiguredSetup(test);
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
     await test.runtime.settings.set(accountAttemptLimitSetting, {}, "instance", 1000);

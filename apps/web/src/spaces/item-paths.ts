@@ -1,4 +1,4 @@
-import { slugify } from "@pagehall/editor-schema";
+import { slugify } from "@lunedo/editor-schema";
 import { blogPostPath, folderPath, pagePath, type TreeItem, whiteboardPath } from "./space-queries.js";
 
 export function itemSlug(title: string): string {

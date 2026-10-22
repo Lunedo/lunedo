@@ -9,7 +9,7 @@ import {
   instanceAreas,
   type OrganizationArea,
   organizationAreas,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import type { BuiltInRoleKey, RoleScope } from "../organizations/access-schema.js";
 
 export {

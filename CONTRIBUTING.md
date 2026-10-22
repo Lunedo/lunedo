@@ -1,6 +1,6 @@
-# Contributing to Pagehall
+# Contributing to Lunedo
 
-Thank you for your interest in Pagehall. This document describes how to set up the project and what a contribution needs before it can be merged.
+Thank you for your interest in Lunedo. This document describes how to set up the project and what a contribution needs before it can be merged.
 
 Questions and ideas belong in GitHub Discussions. Bugs are reported as issues. Security vulnerabilities are reported privately as described in [SECURITY.md](SECURITY.md).
 
@@ -64,7 +64,7 @@ Every change comes with tests.
 
 - Unit tests use Vitest: `pnpm test`.
 - End-to-end tests use Playwright: `pnpm test:e2e`.
-- Integration tests run against a real PostgreSQL. Set `PAGEHALL_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. Mail tests also need `PAGEHALL_TEST_MAILPIT_URL=http://localhost:8025`. CI always runs them.
+- Integration tests run against a real PostgreSQL. Set `LUNEDO_TEST_DATABASE_URL`, for example to the database of the development environment, to include them locally. Mail tests also need `LUNEDO_TEST_MAILPIT_URL=http://localhost:8025`. CI always runs them.
 - Authentication, permissions, encryption and imports require thorough tests of both allowed and denied cases.
 
 Before you push, run `pnpm verify`. It runs every check of the CI jobs "Lint, typecheck and checks" and "Quick checks": lint, typecheck, translations, private references, patched dependencies, script tests, sign-off, licenses, the dependency audit and the comparison of the API description with `origin/main`. The API comparison needs Docker. A test fails when CI gains a check that `pnpm verify` does not run.

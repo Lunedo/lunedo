@@ -1,4 +1,3 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import {
   contentDisposition,
   defaultExportOptions,
@@ -6,7 +5,8 @@ import {
   type ExportRequest,
   orientations,
   paperSizes,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -170,7 +170,7 @@ export class ExportsController {
   @ApiRoute({
     summary: "Export a page",
     description:
-      "Sends the page as readers see it: the published version in publish mode. Modules such as child page lists and reports are rendered with your permissions; content you cannot read is left out. Private notes and the history are not exported; open comments only in `print`, `pdf` and `docx` when asked for. Links to other pages and to attachments point to Pagehall, except the attachments inside a ZIP. Images in `pdf` and `docx` are embedded when you may read them. Without the render container, `pdf` answers with `renderUnavailable`; people can still print the `print` format to PDF in their browser.",
+      "Sends the page as readers see it: the published version in publish mode. Modules such as child page lists and reports are rendered with your permissions; content you cannot read is left out. Private notes and the history are not exported; open comments only in `print`, `pdf` and `docx` when asked for. Links to other pages and to attachments point to Lunedo, except the attachments inside a ZIP. Images in `pdf` and `docx` are embedded when you may read them. Without the render container, `pdf` answers with `renderUnavailable`; people can still print the `print` format to PDF in their browser.",
     tags: [TAG],
     params: pageParams,
     query: pageExportQuery,

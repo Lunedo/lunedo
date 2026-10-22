@@ -1,4 +1,4 @@
-import { recordTestResult, repositoryPath } from "@pagehall/config/test-report";
+import { recordTestResult, repositoryPath } from "@lunedo/config/test-report";
 import type { Reporter, TestCase, TestResult } from "@playwright/test/reporter";
 
 export default class FlakyReporter implements Reporter {

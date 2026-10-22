@@ -10,7 +10,7 @@ import {
   type MaintenanceStatus,
   type ServerConfig,
   SYSTEM,
-} from "@pagehall/server";
+} from "@lunedo/server";
 
 export type MaintenanceCommand =
   | { action: "on"; message: string; blockSignIn: boolean }
@@ -35,7 +35,7 @@ export async function maintenance(
 ): Promise<void> {
   const pool = createDatabasePool({
     connectionString: config.database.url.reveal(),
-    applicationName: "pagehall-cli",
+    applicationName: "lunedo-cli",
   });
   try {
     const database = createDatabase(pool);

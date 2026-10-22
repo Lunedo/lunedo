@@ -3,11 +3,11 @@ import { publicAddress } from "./public-address.js";
 
 describe("the public address of the development server", () => {
   it("serves a public HTTPS hostname with secure hot reload and forwarded headers", () => {
-    expect(publicAddress("https://pagehall-test.example.org")).toEqual({
-      hostname: "pagehall-test.example.org",
+    expect(publicAddress("https://lunedo-test.example.org")).toEqual({
+      hostname: "lunedo-test.example.org",
       port: 443,
       socketProtocol: "wss",
-      forwardedHeaders: { "x-forwarded-proto": "https", "x-forwarded-host": "pagehall-test.example.org" },
+      forwardedHeaders: { "x-forwarded-proto": "https", "x-forwarded-host": "lunedo-test.example.org" },
     });
   });
 

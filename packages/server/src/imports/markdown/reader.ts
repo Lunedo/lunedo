@@ -317,7 +317,7 @@ export class MarkdownReader extends StagedConfluenceReader {
     if (knowledgeBase) {
       for (const folder of [...tree.folders.values()]) {
         if (!folder.index) continue;
-        const facts = (await this.#frontMatter(archive, tree, folder.index))?.pagehall;
+        const facts = (await this.#frontMatter(archive, tree, folder.index))?.lunedo;
         if (folder.path !== "" && facts?.kind === "page") articles.set(folder.pageId ?? "", facts.language);
         else tree.separateIndex(folder.path);
       }
@@ -436,7 +436,7 @@ export class MarkdownReader extends StagedConfluenceReader {
     const directory = directoryOf(path);
     const fallback = index ? posix.basename(directory) || tree.root || stem(path) : stem(path);
     const title = (converted.frontMatter.title ?? converted.heading ?? displayName(fallback)).slice(0, 255);
-    const facts = converted.frontMatter.pagehall;
+    const facts = converted.frontMatter.lunedo;
     const parentId = tree.parentOfFile(path);
     const wanted =
       knowledgeBase !== null &&

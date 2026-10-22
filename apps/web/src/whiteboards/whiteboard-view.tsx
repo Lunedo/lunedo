@@ -1,14 +1,5 @@
-import type { Scene } from "@pagehall/editor-schema/scene";
-import {
-  Button,
-  IconButton,
-  Menu,
-  type MenuItem,
-  Notice,
-  PageHeader,
-  Skeleton,
-  useToast,
-} from "@pagehall/ui";
+import type { Scene } from "@lunedo/editor-schema/scene";
+import { Button, IconButton, Menu, type MenuItem, Notice, PageHeader, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,

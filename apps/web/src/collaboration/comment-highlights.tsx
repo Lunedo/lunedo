@@ -13,9 +13,9 @@ export function CommentHighlights({
   if (ids.length === 0) return null;
   const selector = (id: string) => `${scope} [data-thread-id="${id}"]`;
   const rules = [
-    `${ids.map(selector).join(",")}{background-color:var(--ph-content-yellow-background);border-bottom:var(--ph-focus-width) solid var(--ph-color-warning);cursor:pointer}`,
+    `${ids.map(selector).join(",")}{background-color:var(--ld-content-yellow-background);border-bottom:var(--ld-focus-width) solid var(--ld-color-warning);cursor:pointer}`,
     ...(active && UUID.test(active)
-      ? [`${selector(active)}{outline:var(--ph-focus-width) solid var(--ph-color-accent);outline-offset:1px}`]
+      ? [`${selector(active)}{outline:var(--ld-focus-width) solid var(--ld-color-accent);outline-offset:1px}`]
       : []),
   ];
   return <style>{rules.join("")}</style>;

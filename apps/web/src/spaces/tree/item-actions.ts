@@ -1,4 +1,4 @@
-import { type MenuItem, useToast } from "@pagehall/ui";
+import { type MenuItem, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {

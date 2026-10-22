@@ -1,5 +1,5 @@
-import { calloutVariants, codeLanguages, FRAMED_SECTIONS, slugify } from "@pagehall/editor-schema";
-import { Combobox, Menu } from "@pagehall/ui";
+import { calloutVariants, codeLanguages, FRAMED_SECTIONS, slugify } from "@lunedo/editor-schema";
+import { Combobox, Menu } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
@@ -65,7 +65,7 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
   const headings = useHeadings(editor).filter((entry) => entry.level >= minLevel && entry.level <= maxLevel);
   const minimum = Math.min(...headings.map((entry) => entry.level), 6);
   return (
-    <NodeViewWrapper className={`ph-toc${selected ? " ph-node-selected" : ""}`} contentEditable={false}>
+    <NodeViewWrapper className={`ld-toc${selected ? " ld-node-selected" : ""}`} contentEditable={false}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-semibold">
           <ListTree aria-hidden="true" className="size-icon-md" />
@@ -75,7 +75,7 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
           <span className="flex flex-wrap items-center gap-2">
             <Menu
               trigger={
-                <button type="button" className="ph-inline-button">
+                <button type="button" className="ld-inline-button">
                   {t("editor.toc.fromLevel", { level: minLevel })}
                   <ChevronDown aria-hidden="true" className="size-icon-sm" />
                 </button>
@@ -89,7 +89,7 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
             />
             <Menu
               trigger={
-                <button type="button" className="ph-inline-button">
+                <button type="button" className="ld-inline-button">
                   {t("editor.toc.levels", { level: maxLevel })}
                   <ChevronDown aria-hidden="true" className="size-icon-sm" />
                 </button>
@@ -124,15 +124,15 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
   const { t } = useTranslation();
   const variant = String(node.attrs.variant);
   return (
-    <NodeViewWrapper as="aside" className="ph-callout" data-variant={variant} role="note">
-      <div contentEditable={false} className="ph-callout-control">
+    <NodeViewWrapper as="aside" className="ld-callout" data-variant={variant} role="note">
+      <div contentEditable={false} className="ld-callout-control">
         {editable ? (
           <Menu
             align="start"
             trigger={
               <button
                 type="button"
-                className="ph-callout-label ph-inline-button"
+                className="ld-callout-label ld-inline-button"
                 aria-label={t("editor.callout.change", {
                   type: translateKey(t, `editor.callout.${variant}`),
                 })}
@@ -147,13 +147,13 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
             }))}
           />
         ) : (
-          <span className="ph-callout-label">
+          <span className="ld-callout-label">
             <Info aria-hidden="true" className="size-icon-sm" />
             {translateKey(t, `editor.callout.${variant}`)}
           </span>
         )}
       </div>
-      <NodeViewContent className="ph-callout-content" />
+      <NodeViewContent className="ld-callout-content" />
     </NodeViewWrapper>
   );
 }
@@ -164,11 +164,11 @@ export function ExpandView({ node, editor, updateAttributes }: NodeViewProps) {
   const [open, setOpen] = useState(true);
   const Toggle = open ? ChevronDown : ChevronRight;
   return (
-    <NodeViewWrapper className="ph-expand" data-open={open ? "true" : "false"}>
-      <div contentEditable={false} className="ph-expand-summary">
+    <NodeViewWrapper className="ld-expand" data-open={open ? "true" : "false"}>
+      <div contentEditable={false} className="ld-expand-summary">
         <button
           type="button"
-          className="ph-inline-button"
+          className="ld-inline-button"
           aria-expanded={open}
           aria-label={t(open ? "editor.expand.collapse" : "editor.expand.open")}
           onClick={() => setOpen(!open)}
@@ -176,7 +176,7 @@ export function ExpandView({ node, editor, updateAttributes }: NodeViewProps) {
           <Toggle aria-hidden="true" className="size-icon-md" />
         </button>
         <input
-          className="ph-expand-title"
+          className="ld-expand-title"
           value={String(node.attrs.title)}
           maxLength={500}
           readOnly={!editable}
@@ -185,7 +185,7 @@ export function ExpandView({ node, editor, updateAttributes }: NodeViewProps) {
           onChange={(event) => updateAttributes({ title: event.target.value })}
         />
       </div>
-      <NodeViewContent className="ph-expand-content" hidden={!open} />
+      <NodeViewContent className="ld-expand-content" hidden={!open} />
     </NodeViewWrapper>
   );
 }
@@ -224,13 +224,13 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
       .run();
   };
   return (
-    <NodeViewWrapper className="ph-columns" data-count={count}>
+    <NodeViewWrapper className="ld-columns" data-count={count}>
       {editable && layouts.length > 1 ? (
-        <div contentEditable={false} className="ph-columns-control">
+        <div contentEditable={false} className="ld-columns-control">
           <Menu
             align="start"
             trigger={
-              <button type="button" className="ph-inline-button" aria-label={t("editor.columns.layout")}>
+              <button type="button" className="ld-inline-button" aria-label={t("editor.columns.layout")}>
                 <Columns2 aria-hidden="true" className="size-icon-sm" />
               </button>
             }
@@ -241,7 +241,7 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
           />
         </div>
       ) : null}
-      <NodeViewContent className="ph-columns-content" />
+      <NodeViewContent className="ld-columns-content" />
     </NodeViewWrapper>
   );
 }
@@ -249,7 +249,7 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
 export function ColumnView({ node }: NodeViewProps) {
   return (
     <NodeViewWrapper
-      className="ph-column"
+      className="ld-column"
       data-width={node.attrs.width}
       style={{ "--column-width": `${node.attrs.width}%` } as CSSProperties}
     >
@@ -270,8 +270,8 @@ export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps)
   );
   const language = (node.attrs.language as string | null) ?? "";
   return (
-    <NodeViewWrapper className="ph-code-block" data-language={language || undefined}>
-      <div contentEditable={false} className="ph-code-toolbar">
+    <NodeViewWrapper className="ld-code-block" data-language={language || undefined}>
+      <div contentEditable={false} className="ld-code-toolbar">
         {editable ? (
           <div className="w-field max-w-full">
             <Combobox
@@ -299,13 +299,13 @@ export function SectionView({ node }: NodeViewProps) {
   return (
     <NodeViewWrapper
       as="section"
-      className="ph-section"
+      className="ld-section"
       data-section={key}
       data-icon={icon ?? undefined}
       data-framed={FRAMED_SECTIONS.includes(key) ? "true" : undefined}
     >
       <h2 contentEditable={false}>
-        <NamedIcon name={icon} className="ph-section-icon" />
+        <NamedIcon name={icon} className="ld-section-icon" />
         {String(node.attrs.title)}
       </h2>
       <NodeViewContent />
@@ -321,13 +321,13 @@ function FrameMenu({ frame, onChange }: { frame: unknown; onChange: (frame: bool
   const { t } = useTranslation();
   const current = frame === true ? "on" : frame === false ? "off" : "auto";
   return (
-    <div className="ph-image-controls">
+    <div className="ld-image-controls">
       <Menu
         align="start"
         trigger={
           <button
             type="button"
-            className="ph-inline-button"
+            className="ld-inline-button"
             aria-label={t("knowledgeBase.frame.change", {
               frame: translateKey(t, `knowledgeBase.frame.${current}`),
             })}
@@ -350,7 +350,7 @@ export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
   const { t } = useTranslation();
   return (
     <NodeViewWrapper
-      className={`ph-unsupported-macro${selected ? " ph-node-selected" : ""}`}
+      className={`ld-unsupported-macro${selected ? " ld-node-selected" : ""}`}
       data-macro={node.attrs.name}
       contentEditable={false}
     >
@@ -370,7 +370,7 @@ export function AttachmentView({ node, selected, editor, updateAttributes }: Nod
   const name = String((isImage ? node.attrs.alt : node.attrs.name) || "");
   return (
     <NodeViewWrapper
-      className={`${isImage ? "ph-image" : "ph-file"}${selected ? " ph-node-selected" : ""}`}
+      className={`${isImage ? "ld-image" : "ld-file"}${selected ? " ld-node-selected" : ""}`}
       data-align={isImage ? String(node.attrs.align) : undefined}
       data-frame={isImage ? frameValue(node.attrs.frame) : undefined}
       contentEditable={false}
@@ -396,7 +396,7 @@ export function AttachmentView({ node, selected, editor, updateAttributes }: Nod
       ) : isImage && id ? (
         <img src={attachmentUrl(id, undefined, "display")} alt={name} loading="lazy" draggable={false} />
       ) : isImage || !id ? (
-        <p className="ph-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">
+        <p className="ld-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">
           <ImageOff aria-hidden="true" className="size-icon" />
           {t("editor.attachment.missingImage")}
         </p>

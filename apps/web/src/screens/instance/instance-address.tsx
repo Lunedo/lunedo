@@ -1,5 +1,5 @@
-import { instanceUrlSchema } from "@pagehall/shared";
-import { Button, ConfirmDialog, Icon, Input, SettingRow } from "@pagehall/ui";
+import { instanceUrlSchema } from "@lunedo/shared";
+import { Button, ConfirmDialog, Icon, Input, SettingRow } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { CircleAlert } from "lucide-react";
 import { useRef, useState } from "react";

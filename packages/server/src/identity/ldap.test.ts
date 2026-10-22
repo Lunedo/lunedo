@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type LdapConfigInput, ldapConfigSchema } from "@pagehall/shared";
+import { type LdapConfigInput, ldapConfigSchema } from "@lunedo/shared";
 import { describe, expect, it } from "vitest";
 import { FakeLdapDirectory, type FakeLdapEntry, objectGuid } from "../testing/fakes/ldap-directory.js";
 import {
@@ -10,7 +10,7 @@ import {
 } from "./adapter.js";
 import { GROUP_DEPTH_LIMIT, guidFromBytes, LdapAdapter } from "./ldap.js";
 
-const SERVICE_DN = "cn=pagehall,ou=service,dc=corp,dc=example";
+const SERVICE_DN = "cn=lunedo,ou=service,dc=corp,dc=example";
 const SERVICE_PASSWORD = "service password";
 const PASSWORD = "user password";
 
@@ -123,7 +123,7 @@ function genericProvider(config: Partial<LdapConfigInput> = {}): LdapProviderDef
     config: ldapConfigSchema.parse({
       preset: "generic",
       url: "ldaps://ldap.example.org",
-      bindDn: "cn=pagehall,ou=service,dc=example,dc=org",
+      bindDn: "cn=lunedo,ou=service,dc=example,dc=org",
       userBaseDn: "ou=people,dc=example,dc=org",
       groupBaseDn: "ou=groups,dc=example,dc=org",
       ...config,
@@ -133,7 +133,7 @@ function genericProvider(config: Partial<LdapConfigInput> = {}): LdapProviderDef
 
 function openLdap(extra: FakeLdapEntry[] = []): FakeLdapDirectory {
   return new FakeLdapDirectory([
-    { dn: "cn=pagehall,ou=service,dc=example,dc=org", password: SERVICE_PASSWORD, attributes: {} },
+    { dn: "cn=lunedo,ou=service,dc=example,dc=org", password: SERVICE_PASSWORD, attributes: {} },
     ...extra,
   ]);
 }
@@ -179,15 +179,15 @@ describe("LDAP and Active Directory", () => {
     expect(result.profile.signInName).toBe("alice");
   });
 
-  it.each([SERVICE_DN, "svc-pagehall@corp.example", "CORP\\svc-pagehall"])(
+  it.each([SERVICE_DN, "svc-lunedo@corp.example", "CORP\\svc-lunedo"])(
     "binds the Active Directory service account as %s",
     async (bindDn) => {
       const directory = activeDirectory();
       directory.netbiosDomain = "CORP";
       const service = directory.find(SERVICE_DN);
       if (!service) throw new Error("Service account expected");
-      service.attributes.userPrincipalName = ["svc-pagehall@corp.example"];
-      service.attributes.sAMAccountName = ["svc-pagehall"];
+      service.attributes.userPrincipalName = ["svc-lunedo@corp.example"];
+      service.attributes.sAMAccountName = ["svc-lunedo"];
       const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
       const provider = adProvider({ bindDn });
       const result = await adapter.testDirectory(provider, credentials, "alice@corp.example");

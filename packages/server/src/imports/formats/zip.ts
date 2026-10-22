@@ -169,7 +169,7 @@ export class ZipArchive {
       throw invalid("archiveTooLarge", "A file in the archive is larger than the limit.");
     }
     if (location.method !== STORED && location.method !== DEFLATED) {
-      throw invalid("unsupportedCompression", "The archive uses a compression method Pagehall cannot read.");
+      throw invalid("unsupportedCompression", "The archive uses a compression method Lunedo cannot read.");
     }
     if (
       location.size > limits.ratioThresholdBytes &&
@@ -239,7 +239,7 @@ export class ZipArchive {
         if (entry.compressionMethod !== STORED && entry.compressionMethod !== DEFLATED) {
           throw invalid(
             "unsupportedCompression",
-            "The archive uses a compression method Pagehall cannot read.",
+            "The archive uses a compression method Lunedo cannot read.",
           );
         }
         const key = nameKey(name);

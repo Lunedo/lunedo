@@ -1,4 +1,4 @@
-import { type Areas, areasOf, type RoleScope } from "@pagehall/shared";
+import { type Areas, areasOf, type RoleScope } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -9,7 +9,7 @@ import {
   Input,
   Notice,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";

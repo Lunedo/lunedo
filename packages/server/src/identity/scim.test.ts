@@ -87,7 +87,7 @@ describe.skipIf(!baseUrl)("SCIM provisioning", () => {
     const started = await test.services.providerSignIn.start({
       providerId,
       purpose: "signIn",
-      baseUrl: "https://pagehall.test",
+      baseUrl: "https://lunedo.test",
     });
     const callback = await idp.authorize(started.url, {
       sub: subject,

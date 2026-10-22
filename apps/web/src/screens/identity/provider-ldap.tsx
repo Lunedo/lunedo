@@ -4,7 +4,7 @@ import {
   distinguishedNameSchema,
   ldapSecondFactorModes,
   ldapServerAddress,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -16,7 +16,7 @@ import {
   Select,
   SettingRow,
   Switch,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { CircleCheck, CircleMinus, CircleX, FileUp, Lock, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

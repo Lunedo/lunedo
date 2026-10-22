@@ -1,4 +1,4 @@
-import { groupDescriptionSchema, groupNameSchema } from "@pagehall/shared";
+import { groupDescriptionSchema, groupNameSchema } from "@lunedo/shared";
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";

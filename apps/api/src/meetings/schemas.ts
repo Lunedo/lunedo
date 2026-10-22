@@ -13,7 +13,7 @@ import {
   topicOutcomes,
   topicStatuses,
   weekdays,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { z } from "zod";
 import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleDocument } from "../spaces/schemas.js";

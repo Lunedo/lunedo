@@ -1,4 +1,4 @@
-import { chatChannelKinds, chatChannelStates, chatDeliveryStates } from "@pagehall/shared";
+import { chatChannelKinds, chatChannelStates, chatDeliveryStates } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import {
   boolean,

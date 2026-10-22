@@ -1,11 +1,11 @@
 # Storage warnings
 
-Pagehall warns the instance administrators before the file store is full and refuses writes that would fill it. Only the file store is measured: attachments, import uploads and finished exports. The database is not.
+Lunedo warns the instance administrators before the file store is full and refuses writes that would fill it. Only the file store is measured: attachments, import uploads and finished exports. The database is not.
 
 ## Measuring
 
 - **Local volume:** the usage is read from the volume with `statfs`: used bytes divided by the size of the volume. It is read before every upload, import and export, and once a minute for the warnings.
-- **S3-compatible storage:** S3 does not report free space. Set a limit in the storage settings (for example 500 GB). Pagehall keeps a running total of the bytes it stores, adjusted on every write and delete, and compares it with the real sum once a day. Without a limit there is no warning and no refusal, and the settings say so.
+- **S3-compatible storage:** S3 does not report free space. Set a limit in the storage settings (for example 500 GB). Lunedo keeps a running total of the bytes it stores, adjusted on every write and delete, and compares it with the real sum once a day. Without a limit there is no warning and no refusal, and the settings say so.
 
 ## Levels
 

@@ -8,13 +8,13 @@ const holds = {
     local: (used: string, total: string, percent: string) =>
       `The file storage volume holds ${used} of ${total} (${percent}).`,
     s3: (used: string, total: string, percent: string) =>
-      `Pagehall stores ${used} in S3, ${percent} of the limit of ${total}.`,
+      `Lunedo stores ${used} in S3, ${percent} of the limit of ${total}.`,
   },
   de: {
     local: (used: string, total: string, percent: string) =>
       `Das Laufwerk für Dateien ist mit ${used} von ${total} belegt (${percent}).`,
     s3: (used: string, total: string, percent: string) =>
-      `Pagehall speichert ${used} in S3, das sind ${percent} des Limits von ${total}.`,
+      `Lunedo speichert ${used} in S3, das sind ${percent} des Limits von ${total}.`,
   },
 } as const;
 

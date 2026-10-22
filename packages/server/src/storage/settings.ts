@@ -1,4 +1,4 @@
-import { emailSchema } from "@pagehall/shared";
+import { emailSchema } from "@lunedo/shared";
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
 

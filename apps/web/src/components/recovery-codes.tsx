@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Notice, useToast } from "@pagehall/ui";
+import { Button, ButtonGroup, Notice, useToast } from "@lunedo/ui";
 import { Copy, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { downloadText } from "./download.js";
@@ -36,7 +36,7 @@ export function RecoveryCodes({ codes }: { codes: readonly string[] }) {
         <Button
           variant="outline"
           icon={Download}
-          onClick={() => downloadText("pagehall-recovery-codes.txt", text)}
+          onClick={() => downloadText("lunedo-recovery-codes.txt", text)}
         >
           {t("common.download")}
         </Button>

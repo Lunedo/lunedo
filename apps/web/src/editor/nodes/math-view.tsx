@@ -1,5 +1,5 @@
-import { MAX_LATEX_LENGTH } from "@pagehall/editor-schema";
-import { Button, Field, Popover, Textarea } from "@pagehall/ui";
+import { MAX_LATEX_LENGTH } from "@lunedo/editor-schema";
+import { Button, Field, Popover, Textarea } from "@lunedo/ui";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import katex from "katex";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
@@ -78,7 +78,7 @@ export function MathView({ node, updateAttributes, editor, selected, deleteNode 
     <button
       type="button"
       contentEditable={false}
-      className={displayMode ? "ph-math ph-math-block" : "ph-math"}
+      className={displayMode ? "ld-math ld-math-block" : "ld-math"}
       aria-label={t("editor.math.edit", { latex })}
     >
       {latex ? <Formula latex={latex} displayMode={displayMode} /> : <span>{t("editor.math.empty")}</span>}
@@ -87,7 +87,7 @@ export function MathView({ node, updateAttributes, editor, selected, deleteNode 
   return (
     <NodeViewWrapper
       as={displayMode ? "div" : "span"}
-      className={selected ? "ph-node-selected" : undefined}
+      className={selected ? "ld-node-selected" : undefined}
       data-latex={latex}
     >
       {editable ? (
@@ -112,7 +112,7 @@ export function MathView({ node, updateAttributes, editor, selected, deleteNode 
                 onKeyDown={onKeyDown}
               />
             </Field>
-            <section aria-live="polite" aria-label={t("editor.math.preview")} className="ph-math-preview">
+            <section aria-live="polite" aria-label={t("editor.math.preview")} className="ld-math-preview">
               {draft ? <Formula latex={draft} displayMode={displayMode} /> : null}
               {preview.error ? <p className="text-sm text-danger">{t("editor.math.invalid")}</p> : null}
             </section>

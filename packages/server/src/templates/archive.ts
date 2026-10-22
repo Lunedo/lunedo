@@ -145,10 +145,7 @@ export async function readTemplateArchive(bytes: Buffer): Promise<TemplateArchiv
       if (entry.isEncrypted())
         throw rejected("unsafeTemplateArchive", "The archive contains encrypted files.");
       if (entry.compressionMethod !== STORED && entry.compressionMethod !== DEFLATED) {
-        throw rejected(
-          "unsafeTemplateArchive",
-          "The archive uses a compression method Pagehall cannot read.",
-        );
+        throw rejected("unsafeTemplateArchive", "The archive uses a compression method Lunedo cannot read.");
       }
       if (files.size >= MAX_FILES_PER_UPLOAD && name !== TEMPLATE_MANIFEST) {
         throw rejected("tooManyTemplateFiles", `The archive holds more than ${MAX_FILES_PER_UPLOAD} files.`);

@@ -1,4 +1,4 @@
-import { modules } from "@pagehall/editor-schema";
+import { modules } from "@lunedo/editor-schema";
 import { Extension } from "@tiptap/core";
 import { Fragment, type Mark, type Node as ProseMirrorNode, Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
@@ -169,7 +169,7 @@ export function sanitizeSlice(slice: Slice): Slice {
   return new Slice(sanitizeFragment(slice.content), slice.openStart, slice.openEnd);
 }
 
-const key = new PluginKey("pagehallPaste");
+const key = new PluginKey("lunedoPaste");
 
 export const CleanPaste = Extension.create({
   name: "cleanPaste",

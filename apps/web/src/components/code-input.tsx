@@ -1,4 +1,4 @@
-import { OneTimeCodeInput } from "@pagehall/ui";
+import { OneTimeCodeInput } from "@lunedo/ui";
 import { type Control, Controller, type FieldValues, type Path } from "react-hook-form";
 
 export function CodeInput<TInput extends FieldValues, TOutput>({

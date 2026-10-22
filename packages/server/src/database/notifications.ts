@@ -53,7 +53,7 @@ export class NotificationListener {
     this.#connecting ??= (async () => {
       const client = new pg.Client({
         connectionString: this.#connectionString,
-        application_name: "pagehall-notifications",
+        application_name: "lunedo-notifications",
       });
       client.on("notification", (message) => {
         for (const handler of this.#handlers.get(message.channel) ?? []) handler(message.payload ?? "");

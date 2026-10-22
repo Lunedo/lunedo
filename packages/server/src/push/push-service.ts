@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { slugify } from "@pagehall/editor-schema";
-import { notificationEventOf, uuidv7 } from "@pagehall/shared";
+import { slugify } from "@lunedo/editor-schema";
+import { notificationEventOf, uuidv7 } from "@lunedo/shared";
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";

@@ -41,7 +41,7 @@ describe("parseOwner", () => {
 
 describe("runnerDirectory", () => {
   it("turns the runner name into one safe path segment", () => {
-    assert.equal(runnerDirectory("pagehall-runner-2"), "pagehall-runner-2");
+    assert.equal(runnerDirectory("lunedo-runner-2"), "lunedo-runner-2");
     assert.equal(runnerDirectory("runner 1/../x"), "runner-1-..-x");
   });
 

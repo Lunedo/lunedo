@@ -1,4 +1,4 @@
-import { Button, Section, SettingRow } from "@pagehall/ui";
+import { Button, Section, SettingRow } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";

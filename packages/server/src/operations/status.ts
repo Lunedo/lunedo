@@ -15,7 +15,7 @@ import type { BackupStatusSource } from "./backup-status.js";
 import { type RecentErrorType, recentErrorTypes } from "./error-events.js";
 import type { MaintenanceService } from "./maintenance.js";
 import type { UpdateCheckService } from "./update-check.js";
-import { pagehallVersion } from "./version.js";
+import { lunedoVersion } from "./version.js";
 
 export type StatusLevel = "ok" | "warning" | "error";
 
@@ -175,7 +175,7 @@ export class OperationsStatusService {
     this.#keyProvider = options.keyProvider;
     this.#configuredInstanceUrl = options.configuredInstanceUrl;
     this.#now = options.now ?? (() => new Date());
-    this.#version = options.version ?? pagehallVersion();
+    this.#version = options.version ?? lunedoVersion();
   }
 
   get database(): Database {

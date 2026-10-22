@@ -1,4 +1,4 @@
-import { type ChatChannelKind, chatChannelKinds } from "@pagehall/shared";
+import { type ChatChannelKind, chatChannelKinds } from "@lunedo/shared";
 import {
   Button,
   Checkbox,
@@ -9,7 +9,7 @@ import {
   Notice,
   RadioGroup,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

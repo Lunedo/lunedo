@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
-import { notificationEvents } from "@pagehall/shared";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
+import { notificationEvents } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -460,7 +460,7 @@ describe.skipIf(!baseUrl)("notification e-mails", () => {
       expect(await mailer.sendDue(new Date("2026-03-02T07:01:00Z"))).toEqual({ immediate: 0, digests: 1 });
       const [berlin, ...rest] = await sent(context.readerId);
       expect(rest).toEqual([]);
-      expect(berlin?.subject).toBe("Your daily summary from Pagehall: 2 notifications");
+      expect(berlin?.subject).toBe("Your daily summary from Lunedo: 2 notifications");
       expect(berlin?.text).toContain(context.space.name);
       expect(berlin?.text.indexOf("Second page")).toBeLessThan(berlin?.text.indexOf(context.page.title) ?? 0);
       expect(berlin?.text).toContain("First remark");

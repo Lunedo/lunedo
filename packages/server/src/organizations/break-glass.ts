@@ -1,4 +1,4 @@
-import { breakGlassReasonSchema } from "@pagehall/shared";
+import { breakGlassReasonSchema } from "@lunedo/shared";
 import { and, desc, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { SYSTEM } from "../accounts/principal.js";

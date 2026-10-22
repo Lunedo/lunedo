@@ -1,4 +1,4 @@
-import { Button, Field, Input, Menu, Popover, useToast } from "@pagehall/ui";
+import { Button, Field, Input, Menu, Popover, useToast } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { Braces, ImagePlus, MessageSquareText } from "lucide-react";
@@ -122,7 +122,7 @@ export function TemplateContentEditor({
       content: initial as object,
       editorProps: {
         attributes: {
-          class: "ph-content ph-editor-content",
+          class: "ld-content ld-editor-content",
           "aria-label": label,
           "aria-multiline": "true",
           role: "textbox",
@@ -145,7 +145,7 @@ export function TemplateContentEditor({
   });
   if (!editor) return null;
   const content = (
-    <div className="ph-page-editor flex flex-col gap-2">
+    <div className="ld-page-editor flex flex-col gap-2">
       <div className="flex flex-col gap-1 rounded-md border border-border bg-surface p-1">
         <div className="flex min-w-0 flex-wrap items-center gap-1">
           <div className="min-w-0 flex-1">
@@ -191,7 +191,7 @@ export function TemplateContentEditor({
         </div>
         <TableMenu editor={editor} />
       </div>
-      <div className="ph-editor-surface relative min-h-field rounded-md border border-border p-3">
+      <div className="ld-editor-surface relative min-h-field rounded-md border border-border p-3">
         <EditorContent editor={editor} />
       </div>
       <SelectionMenu editor={editor} actions={actions} />

@@ -20,7 +20,7 @@ export const REIMPORT_AFTER_TEMPLATE = path.join(STATE_DIR, "reimport-after.zip"
 const WRITE_EXPORT = `
 const { writeFileSync } = await import("node:fs");
 const { createCsvExport, createXmlExport, peopleExport, reimportAfter, reimportBefore, syntheticExport } =
-  await import("@pagehall/server/testing");
+  await import("@lunedo/server/testing");
 const [format, target, kind] = process.argv.slice(1);
 const models = { people: peopleExport, reimportBefore, reimportAfter };
 const model = (models[kind] ?? syntheticExport)();
@@ -92,7 +92,7 @@ const WRITE_FILES = `
 const { writeFileSync } = await import("node:fs");
 const [kind, target] = process.argv.slice(1);
 if (kind === "markdown") {
-  const { createZip } = await import("@pagehall/server/testing");
+  const { createZip } = await import("@lunedo/server/testing");
   writeFileSync(
     target,
     createZip([

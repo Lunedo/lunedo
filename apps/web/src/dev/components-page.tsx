@@ -1,4 +1,4 @@
-import { accentKeys } from "@pagehall/tokens";
+import { accentKeys } from "@lunedo/tokens";
 import {
   type Appearance,
   Avatar,
@@ -64,7 +64,7 @@ import {
   type UiLabels,
   UiProvider,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import {
   Bell,
   Building2,
@@ -533,14 +533,14 @@ function Feedback() {
         <ErrorState
           title={t("The file store is not writable", "Der Dateispeicher ist nicht beschreibbar")}
           cause={t(
-            "Pagehall runs as user 1000, which cannot write to /var/lib/pagehall/files.",
-            "Pagehall läuft als Benutzer 1000, der nicht in /var/lib/pagehall/files schreiben darf.",
+            "Lunedo runs as user 1000, which cannot write to /var/lib/lunedo/files.",
+            "Lunedo läuft als Benutzer 1000, der nicht in /var/lib/lunedo/files schreiben darf.",
           )}
           action={t(
             "Give this user ownership of the directory, then check again.",
             "Übertrage den Besitz des Verzeichnisses an diesen Benutzer und prüfe erneut.",
           )}
-          command="chown -R 1000:1000 /var/lib/pagehall/files"
+          command="chown -R 1000:1000 /var/lib/lunedo/files"
           documentationUrl="#documentation"
           onRetry={() => {}}
           retryLabel={t("Check again", "Erneut prüfen")}

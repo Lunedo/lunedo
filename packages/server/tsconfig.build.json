@@ -1,5 +1,5 @@
 {
-  "extends": "@pagehall/config/tsconfig/node.json",
+  "extends": "@lunedo/config/tsconfig/node.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist"

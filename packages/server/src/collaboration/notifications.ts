@@ -1,4 +1,4 @@
-import { contentNotificationParamSchemas } from "@pagehall/shared";
+import { contentNotificationParamSchemas } from "@lunedo/shared";
 import { defineNotificationType } from "../notifications/registry.js";
 
 const contentMentioned = defineNotificationType({

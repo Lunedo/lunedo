@@ -68,8 +68,8 @@ export class ConfluenceUnavailableError extends ImportError {
     super(
       code,
       code === "confluenceRateLimited"
-        ? "Confluence asked Pagehall to slow down for longer than it waits. The import continues later."
-        : "Pagehall could not reach Confluence. It tries again shortly.",
+        ? "Confluence asked Lunedo to slow down for longer than it waits. The import continues later."
+        : "Lunedo could not reach Confluence. It tries again shortly.",
     );
   }
 }
@@ -115,10 +115,7 @@ async function readJson(body: Readable): Promise<unknown> {
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
   } catch {
-    throw new ImportFormatError(
-      "confluenceInvalidResponse",
-      "Confluence sent an answer Pagehall cannot read.",
-    );
+    throw new ImportFormatError("confluenceInvalidResponse", "Confluence sent an answer Lunedo cannot read.");
   }
 }
 
@@ -165,7 +162,7 @@ export class ConfluenceApi {
     if (!path.startsWith("/") || path.startsWith("//") || /[\s\\]/.test(path)) {
       throw new ImportFormatError(
         "confluenceInvalidResponse",
-        "Confluence sent a link Pagehall cannot follow.",
+        "Confluence sent a link Lunedo cannot follow.",
       );
     }
     return `${this.base}${path}`;
@@ -203,7 +200,7 @@ export class ConfluenceApi {
         ) {
           throw new ImportFormatError(
             "confluenceBlocked",
-            "Pagehall may not connect to this address. Ask the instance administrators to allow its network.",
+            "Lunedo may not connect to this address. Ask the instance administrators to allow its network.",
           );
         }
         failures += 1;
@@ -255,14 +252,14 @@ export class ConfluenceApi {
         response.status >= 300 && response.status < 400 ? "confluenceRedirect" : "confluenceInvalidResponse",
         response.status >= 300 && response.status < 400
           ? "Confluence answered with a redirect to another address. Enter the address Confluence really uses."
-          : "Confluence sent an answer Pagehall cannot read.",
+          : "Confluence sent an answer Lunedo cannot read.",
       );
     }
     const parsed = schema.safeParse(await readJson(response.body));
     if (!parsed.success) {
       throw new ImportFormatError(
         "confluenceInvalidResponse",
-        "Confluence sent an answer Pagehall cannot read.",
+        "Confluence sent an answer Lunedo cannot read.",
       );
     }
     return parsed.data;

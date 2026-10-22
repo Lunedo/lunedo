@@ -1,5 +1,5 @@
+import { ERASURE_REASON_MAX_LENGTH } from "@lunedo/server";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req } from "@nestjs/common";
-import { ERASURE_REASON_MAX_LENGTH } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

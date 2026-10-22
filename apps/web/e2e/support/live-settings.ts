@@ -30,7 +30,7 @@ export async function change(
         : `/api/v1/organizations/${organizationId}/settings/${key}`;
   const response = await page.request.put(path, {
     data: value === undefined ? { clear: true } : isLock(value) ? value : { value },
-    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
+    headers: { "X-Lunedo-Request": "1", origin: new URL(page.url()).origin },
   });
   expect(response.status(), `${level} ${key}`).toBeLessThan(300);
 }

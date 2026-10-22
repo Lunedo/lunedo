@@ -1,4 +1,4 @@
-import { Button, List, ListRow, Section, Skeleton } from "@pagehall/ui";
+import { Button, List, ListRow, Section, Skeleton } from "@lunedo/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";

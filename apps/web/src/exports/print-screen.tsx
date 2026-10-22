@@ -1,4 +1,4 @@
-import { Button, Notice, Spinner, TruncatedText } from "@pagehall/ui";
+import { Button, Notice, Spinner, TruncatedText } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowLeft, Printer } from "lucide-react";
@@ -12,7 +12,7 @@ import { printOptions, printRouteSearch } from "./print-search.js";
 type Phase = "preparing" | "loading" | "layout" | "ready" | "failed";
 
 function viewerOf(frame: HTMLIFrameElement | null): PrintViewer | null {
-  return (frame?.contentWindow as (Window & { pagehallPrint?: PrintViewer }) | null)?.pagehallPrint ?? null;
+  return (frame?.contentWindow as (Window & { lunedoPrint?: PrintViewer }) | null)?.lunedoPrint ?? null;
 }
 
 export function PrintScreen() {

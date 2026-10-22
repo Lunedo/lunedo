@@ -1,4 +1,3 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import {
   type AnnouncementChangeSignal,
   type AuditChangeSignal,
@@ -12,8 +11,9 @@ import {
   type SpaceChangeSignal,
   type SyncRunSignal,
   type UnsubscribeState,
-} from "@pagehall/server";
-import { idSchema } from "@pagehall/shared";
+} from "@lunedo/server";
+import { idSchema } from "@lunedo/shared";
+import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, PublicRoute, SessionRoute } from "../access/route-access.js";

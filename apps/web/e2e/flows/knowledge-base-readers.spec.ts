@@ -17,7 +17,7 @@ test("invites a portal account that reads an article and never sees the wiki", a
   const suffix = unique();
   const reader = {
     name: `Rita Reader ${suffix}`,
-    email: `rita.reader.${suffix.toLowerCase()}@pagehall.test`,
+    email: `rita.reader.${suffix.toLowerCase()}@lunedo.test`,
     password: "reader passphrase for testing",
   };
 

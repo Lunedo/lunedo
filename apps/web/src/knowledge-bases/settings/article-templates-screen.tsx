@@ -1,4 +1,4 @@
-import { type SaveState, SaveStatus, Section, Skeleton, Switch } from "@pagehall/ui";
+import { type SaveState, SaveStatus, Section, Skeleton, Switch } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { LayoutTemplate } from "lucide-react";

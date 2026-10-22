@@ -87,11 +87,11 @@ describe("ListRow", () => {
     renderUi(
       <List>
         <ListRow title="Address" actions={<Badge>Next step</Badge>}>
-          <p>PAGEHALL_TRUSTED_PROXIES is not set.</p>
+          <p>LUNEDO_TRUSTED_PROXIES is not set.</p>
         </ListRow>
       </List>,
     );
-    expect(screen.getByText("PAGEHALL_TRUSTED_PROXIES is not set.").parentElement?.className).toContain(
+    expect(screen.getByText("LUNEDO_TRUSTED_PROXIES is not set.").parentElement?.className).toContain(
       "basis-full",
     );
   });

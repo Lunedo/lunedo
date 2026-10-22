@@ -1,12 +1,12 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req } from "@nestjs/common";
-import type { ChatChannel, ChatScope, ChatTestResult } from "@pagehall/server";
+import type { ChatChannel, ChatScope, ChatTestResult } from "@lunedo/server";
 import {
   chatChannelKinds,
   chatChannelStates,
   chatFailureReasons,
   organizationChatEvents,
   spaceChatEvents,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -78,7 +78,7 @@ const eventsSchema = z
     "What is posted. Spaces: `pagePublished`, `pageChanged` (combined per hour), `blogPostPublished`, `decisionRecorded`, `pageStatusChanged`, `commentCreated`. Organizations: `announcementPublished`.",
   );
 
-const nameSchema = z.string().min(1).max(80).describe("Name of the channel in Pagehall.");
+const nameSchema = z.string().min(1).max(80).describe("Name of the channel in Lunedo.");
 
 const createSchema = z
   .object({ kind: kindSchema, name: nameSchema, events: eventsSchema, target: targetSchema })
@@ -110,7 +110,7 @@ const channelSchema = z
   .object({
     id: uuid("ID of the channel."),
     kind: kindSchema,
-    name: z.string().describe("Name of the channel in Pagehall."),
+    name: z.string().describe("Name of the channel in Lunedo."),
     events: z.array(extensibleEnum(allEvents, "An event that is posted.")).describe("What is posted."),
     state: extensibleEnum(
       chatChannelStates,
@@ -135,7 +135,7 @@ const savedSchema = z
       .string()
       .nullable()
       .describe(
-        "For generic webhooks, the secret that signs each request (header `X-Pagehall-Signature`). Shown only in this answer.",
+        "For generic webhooks, the secret that signs each request (header `X-Lunedo-Signature`). Shown only in this answer.",
       ),
   })
   .describe("The saved channel.");

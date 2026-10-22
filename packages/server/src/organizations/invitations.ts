@@ -381,7 +381,7 @@ export class InvitationService {
         if (portalSpaceId && existing.type !== "portal") {
           throw new OrganizationError(
             "portalInvitationAccountExists",
-            "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access.",
+            "This e-mail address already belongs to a Lunedo account. Sign in with it and ask the people who invited you to give that account access.",
           );
         }
         if (existing.type === "guest" && kind !== "guest") {

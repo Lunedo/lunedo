@@ -1,7 +1,7 @@
-import { createDatabase, createDatabasePool, PostgresSearchAdapter, SearchIndexer } from "@pagehall/server";
+import { createDatabase, createDatabasePool, PostgresSearchAdapter, SearchIndexer } from "@lunedo/server";
 
 async function withIndexer<T>(databaseUrl: string, use: (indexer: SearchIndexer) => Promise<T>): Promise<T> {
-  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
+  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-cli" });
   try {
     return await use(
       new SearchIndexer({ database: createDatabase(pool), adapter: new PostgresSearchAdapter() }),
@@ -17,7 +17,7 @@ export async function rebuildSearchIndex(databaseUrl: string, write: (line: stri
     `Rebuilding the search index: ${queued} pages, blog posts and running topics are queued for the worker.`,
   );
   write("Search keeps answering meanwhile and tells people that results may be incomplete.");
-  write('Run "pagehall search status" to follow the progress.');
+  write('Run "lunedo search status" to follow the progress.');
 }
 
 export async function searchIndexStatus(databaseUrl: string, write: (line: string) => void): Promise<void> {

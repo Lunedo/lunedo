@@ -1,4 +1,4 @@
-import { instanceNameSchema, instanceUrlSchema } from "@pagehall/shared";
+import { instanceNameSchema, instanceUrlSchema } from "@lunedo/shared";
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
 
@@ -15,7 +15,7 @@ export const instanceUrlSetting = defineSetting({
 export const instanceNameSetting = defineSetting({
   key: "instance.name",
   schema: instanceNameSchema,
-  default: "Pagehall",
+  default: "Lunedo",
   levels: ["instance"],
   lockable: false,
 });

@@ -1,5 +1,5 @@
-import { commentText, type DocumentJson } from "@pagehall/editor-schema";
-import { type DateFormat, formatDate, notificationEventOf, notificationEvents } from "@pagehall/shared";
+import { commentText, type DocumentJson } from "@lunedo/editor-schema";
+import { type DateFormat, formatDate, notificationEventOf, notificationEvents } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";

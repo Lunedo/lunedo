@@ -1,4 +1,4 @@
-import { contentNotificationParamSchemas } from "@pagehall/shared";
+import { contentNotificationParamSchemas } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import { defineNotificationType } from "../notifications/registry.js";

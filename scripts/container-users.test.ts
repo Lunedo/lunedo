@@ -28,7 +28,7 @@ ${command}
 
 describe("containerUserProblems", () => {
   it("refuses a job container without --user", () => {
-    const problems = containerUserProblems({ "ci.yml": jobContainer("        --tmpfs /pagehall-e2e") });
+    const problems = containerUserProblems({ "ci.yml": jobContainer("        --tmpfs /lunedo-e2e") });
     assert.equal(problems.length, 1);
     assert.match(problems[0] ?? "", /ci\.yml, job e2e runs its steps in a container without --user/);
   });
@@ -52,7 +52,7 @@ describe("containerUserProblems", () => {
     const withUser = dockerRun(
       '          docker run --rm --user "$(id -u):$(id -g)"\n          --volume "$CI_CACHE_DIR:/ci-cache" image',
     );
-    const otherMount = dockerRun('          docker run --rm -v "$data:/var/lib/pagehall" image');
+    const otherMount = dockerRun('          docker run --rm -v "$data:/var/lib/lunedo" image');
     assert.deepEqual(containerUserProblems({ "a.yml": withUser, "b.yml": otherMount }), []);
   });
 

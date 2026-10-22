@@ -1,4 +1,4 @@
-import { headingNumbers } from "@pagehall/editor-schema";
+import { headingNumbers } from "@lunedo/editor-schema";
 import { type Editor, Extension } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
@@ -8,7 +8,7 @@ const key = new PluginKey<DecorationSet>("headingNumbers");
 
 function numberWidget(number: string): HTMLElement {
   const element = document.createElement("span");
-  element.className = "ph-heading-number";
+  element.className = "ld-heading-number";
   element.contentEditable = "false";
   element.textContent = `${number} `;
   return element;

@@ -1,5 +1,5 @@
-import { type DocumentJson, extractMentions, validateComment } from "@pagehall/editor-schema";
-import { Button, Notice } from "@pagehall/ui";
+import { type DocumentJson, extractMentions, validateComment } from "@lunedo/editor-schema";
+import { Button, Notice } from "@lunedo/ui";
 import { Extension } from "@tiptap/core";
 import { Placeholder, UndoRedo } from "@tiptap/extensions";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -66,7 +66,7 @@ export function CommentComposer({
       editorProps: {
         attributes: {
           class:
-            "ph-content ph-comment-editor min-h-control-lg rounded-md border border-control-border bg-surface px-3 py-2 focus-visible:focus-ring",
+            "ld-content ld-comment-editor min-h-control-lg rounded-md border border-control-border bg-surface px-3 py-2 focus-visible:focus-ring",
           role: "textbox",
           "aria-multiline": "true",
           "aria-labelledby": labelId,

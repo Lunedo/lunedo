@@ -1,4 +1,4 @@
-import { type Areas, areasOf, type RoleScope, roleNameSchema } from "@pagehall/shared";
+import { type Areas, areasOf, type RoleScope, roleNameSchema } from "@lunedo/shared";
 import {
   Button,
   ChoiceTable,
@@ -13,7 +13,7 @@ import {
   Notice,
   Section,
   Table,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";

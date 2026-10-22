@@ -73,7 +73,7 @@ describe("publishing with an empty required section", () => {
       [`POST /api/v1/pages/${pageId}/publish`]: () => ({
         status: 409,
         body: {
-          type: "urn:pagehall:problem:requiredSectionsEmpty",
+          type: "urn:lunedo:problem:requiredSectionsEmpty",
           title: "Required sections are empty",
           status: 409,
           code: "requiredSectionsEmpty",

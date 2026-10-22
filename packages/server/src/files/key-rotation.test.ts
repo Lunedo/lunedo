@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { PassThrough, Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -31,7 +31,7 @@ describe.skipIf(!baseUrl)("key rotation of stored files", () => {
   const { organization, member, space } = spaceFixtures(() => test);
 
   beforeAll(async () => {
-    keyFile = path.join(mkdtempSync(path.join(tmpdir(), "pagehall-file-rotation-")), "master-keys");
+    keyFile = path.join(mkdtempSync(path.join(tmpdir(), "lunedo-file-rotation-")), "master-keys");
     test = await createTestServices(baseUrl ?? "", { keyProvider: new FileKeyProvider(keyFile) });
     await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
     queue = new PgBossQueue({

@@ -1,4 +1,4 @@
-import { instanceUrlSetting } from "@pagehall/server";
+import { instanceUrlSetting } from "@lunedo/server";
 import type { FastifyRequest } from "fastify";
 import type { ApiContext } from "../context.js";
 import { ownOrigin } from "./csrf.js";

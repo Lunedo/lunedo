@@ -272,7 +272,7 @@ export const mappingRules = pgTable(
     organizationId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
     builtInRole: builtInRole(),
     customRoleId: uuid().references(() => customRoles.id, { onDelete: "cascade" }),
-    pagehallGroupId: uuid().references(() => groups.id, { onDelete: "set null" }),
+    lunedoGroupId: uuid("pagehall_group_id").references(() => groups.id, { onDelete: "set null" }),
     homeOrganization: boolean().notNull().default(false),
     ...timestamps(),
   },
@@ -285,7 +285,7 @@ export const mappingRules = pgTable(
     ),
     check(
       "mapping_rules_instance",
-      sql`${table.target} = 'organization' or (${table.pagehallGroupId} is null and not ${table.homeOrganization} and (${table.builtInRole} is not null or ${table.customRoleId} is not null))`,
+      sql`${table.target} = 'organization' or (${table.lunedoGroupId} is null and not ${table.homeOrganization} and (${table.builtInRole} is not null or ${table.customRoleId} is not null))`,
     ),
   ],
 );

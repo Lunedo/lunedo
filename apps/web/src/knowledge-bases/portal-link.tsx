@@ -1,4 +1,4 @@
-import { buttonClassName } from "@pagehall/ui";
+import { buttonClassName } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";

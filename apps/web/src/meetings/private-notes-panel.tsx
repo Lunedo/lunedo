@@ -1,5 +1,5 @@
-import type { NodeJson } from "@pagehall/editor-schema";
-import { Button, IconButton, Notice, Skeleton, useToast } from "@pagehall/ui";
+import type { NodeJson } from "@lunedo/editor-schema";
+import { Button, IconButton, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { ClipboardCopy, Lock, X } from "lucide-react";
@@ -163,7 +163,7 @@ function NotesEditor({
     content: initial.document as object,
     editorProps: {
       attributes: {
-        class: "ph-content ph-editor-content",
+        class: "ld-content ld-editor-content",
         "aria-label": t("meetings.notes.editorLabel"),
         "aria-multiline": "true",
         role: "textbox",
@@ -226,7 +226,7 @@ function NotesEditor({
 
   if (!editor) return null;
   return (
-    <div className="ph-page-editor flex flex-col gap-2">
+    <div className="ld-page-editor flex flex-col gap-2">
       {conflict ? (
         <Notice
           variant="warning"
@@ -257,7 +257,7 @@ function NotesEditor({
       <div className="rounded-md border border-border bg-surface p-1">
         <EditorToolbar editor={editor} items={items ?? []} />
       </div>
-      <div className="ph-editor-surface relative min-h-field rounded-md border border-border p-3">
+      <div className="ld-editor-surface relative min-h-field rounded-md border border-border p-3">
         <EditorContent editor={editor} />
       </div>
     </div>

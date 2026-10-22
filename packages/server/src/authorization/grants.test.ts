@@ -394,7 +394,7 @@ describe.skipIf(!baseUrl)("granting access", () => {
       const token = generateApiToken();
       const inserted = await test.pool.query<{ id: string }>(
         `insert into api_tokens (id, account_id, organization_id, name, token_hash, token_prefix, scopes, expires_at)
-         values ($1, $2, $3, 'Old', $4, 'ph_xxxxxx', $5, now() + interval '1 day') returning id`,
+         values ($1, $2, $3, 'Old', $4, 'ld_xxxxxx', $5, now() + interval '1 day') returning id`,
         [
           randomUUID(),
           admin,

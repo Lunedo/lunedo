@@ -32,7 +32,7 @@ export function formatReport(pinned: string | null, latest: string | null): stri
   const pinnedParts = parts(pinned);
   const latestParts = parts(latest);
   if (pinnedParts && latestParts && compare(latestParts, pinnedParts) > 0) {
-    return `${heading}\n\nSheetJS ${latest} is available; Pagehall pins ${pinned}. Update the tarball URL in apps/web/package.json and the lockfile.\n`;
+    return `${heading}\n\nSheetJS ${latest} is available; Lunedo pins ${pinned}. Update the tarball URL in apps/web/package.json and the lockfile.\n`;
   }
   return `${heading}\n\nThe pinned SheetJS ${pinned} is the latest release.\n`;
 }

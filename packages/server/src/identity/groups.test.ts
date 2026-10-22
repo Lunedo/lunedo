@@ -28,7 +28,7 @@ import type { CallbackResult } from "./sign-in.js";
 import { withheldRoles } from "./withheld.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const BASE = "https://pagehall.test";
+const BASE = "https://lunedo.test";
 
 describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
   let test: TestServices;

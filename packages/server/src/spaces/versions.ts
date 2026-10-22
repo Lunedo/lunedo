@@ -3,9 +3,9 @@ import {
   type DocumentJson,
   diffDocuments,
   editorSchemaVersion,
-} from "@pagehall/editor-schema";
-import { applyDocument } from "@pagehall/editor-schema/yjs";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { applyDocument } from "@lunedo/editor-schema/yjs";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import { type Principal, SYSTEM } from "../accounts/principal.js";

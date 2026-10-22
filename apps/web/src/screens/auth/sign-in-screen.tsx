@@ -1,5 +1,5 @@
-import { passwordSchema, signInEmailSchema } from "@pagehall/shared";
-import { Button, Dialog, Field, Input, Notice, PasswordInput, Skeleton } from "@pagehall/ui";
+import { passwordSchema, signInEmailSchema } from "@lunedo/shared";
+import { Button, Dialog, Field, Input, Notice, PasswordInput, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { Fingerprint, UserRound } from "lucide-react";

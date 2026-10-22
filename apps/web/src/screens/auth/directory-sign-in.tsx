@@ -1,5 +1,5 @@
-import { passwordSchema } from "@pagehall/shared";
-import { Button, Field, Input, Notice, PasswordInput } from "@pagehall/ui";
+import { passwordSchema } from "@lunedo/shared";
+import { Button, Field, Input, Notice, PasswordInput } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

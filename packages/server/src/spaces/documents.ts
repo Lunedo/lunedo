@@ -29,8 +29,8 @@ import {
   slugify,
   type ValidationProblem,
   validateDocument,
-} from "@pagehall/editor-schema";
-import { applyDocument, documentFromYDoc, migrateYDoc, yDocFromDocument } from "@pagehall/editor-schema/yjs";
+} from "@lunedo/editor-schema";
+import { applyDocument, documentFromYDoc, migrateYDoc, yDocFromDocument } from "@lunedo/editor-schema/yjs";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import type { Principal } from "../accounts/principal.js";
@@ -46,9 +46,9 @@ import { publishedFor, spaceKeyFor, spaceNameFor, visibleItem } from "./visibili
 export const LABEL_MAX_LENGTH = 100;
 export const MAX_REFERENCED_DIAGRAM_PAGES = 50;
 export const MAX_LABELS_PER_PAGE = 100;
-export const MERGE_ORIGIN = "pagehall:merge";
-export const API_ORIGIN = "pagehall:api";
-export const NORMALIZE_ORIGIN = "pagehall:normalize";
+export const MERGE_ORIGIN = "lunedo:merge";
+export const API_ORIGIN = "lunedo:api";
+export const NORMALIZE_ORIGIN = "lunedo:normalize";
 
 export class DocumentInvalidError extends Error {
   override name = "DocumentInvalidError";

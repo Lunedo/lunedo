@@ -1,4 +1,4 @@
-import { Notice, Section, SegmentedControl, SettingRow, Skeleton, useToast } from "@pagehall/ui";
+import { Notice, Section, SegmentedControl, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
 import { useState } from "react";

@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -34,7 +34,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base reviews through the API", () =
 
   async function person() {
     counter += 1;
-    const account = await createAccount(test, `review${counter}@pagehall.test`);
+    const account = await createAccount(test, `review${counter}@lunedo.test`);
     return { id: account.id, client: await signedInClient(test, account.email, account.password) };
   }
 

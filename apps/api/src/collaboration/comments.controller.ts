@@ -1,5 +1,5 @@
+import { MAX_COMMENTS_PER_PAGE } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
-import { MAX_COMMENTS_PER_PAGE } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

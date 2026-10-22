@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req, Res } from "@nestjs/common";
 import {
   type CredentialInput,
   LOGO_MAX_BYTES,
   type ProviderDraft,
   type ProviderSummary,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -66,7 +66,7 @@ const emergencyRecipientsSchema = z
         }),
       )
       .describe("Further accounts that get a notification."),
-    addresses: z.array(z.string()).describe("E-mail addresses outside Pagehall that get an e-mail."),
+    addresses: z.array(z.string()).describe("E-mail addresses outside Lunedo that get an e-mail."),
   })
   .describe("Who is told about an emergency sign-in of the instance owner.");
 
@@ -77,7 +77,7 @@ const emergencyRecipientsInputSchema = z
       .array(uuid("ID of an account."))
       .max(50)
       .describe("Further active accounts to notify, up to 50."),
-    addresses: z.array(z.email()).max(20).describe("E-mail addresses outside Pagehall, up to 20."),
+    addresses: z.array(z.email()).max(20).describe("E-mail addresses outside Lunedo, up to 20."),
   })
   .strict()
   .describe("The recipients of emergency sign-in warnings.");
@@ -159,7 +159,7 @@ export class IdentityProvidersController {
   @ApiRoute({
     summary: "Start setting up an instance identity provider",
     description:
-      "Creates a draft with its final ID, so that the redirect URI, the SAML entity ID and Pagehall's signing certificate are known before anything is entered at the provider.",
+      "Creates a draft with its final ID, so that the redirect URI, the SAML entity ID and Lunedo's signing certificate are known before anything is entered at the provider.",
     tags: [TAG],
     status: 201,
     body: createDraftSchema,
@@ -372,7 +372,7 @@ export class IdentityProvidersController {
           insecureIdentityProviders: z
             .boolean()
             .describe(
-              "Whether PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set, so identity providers may use plain HTTP and any host.",
+              "Whether LUNEDO_INSECURE_IDENTITY_PROVIDERS is set, so identity providers may use plain HTTP and any host.",
             ),
         })
         .describe("Sign-in security warnings."),
@@ -571,7 +571,7 @@ export class IdentityProvidersController {
   @ApiRoute({
     summary: "Choose the credential an instance provider uses",
     description:
-      "Pagehall uses the newest valid credential of each kind unless an administrator chooses another one. A chosen credential stays in use until it expires, is removed or another choice is made.",
+      "Lunedo uses the newest valid credential of each kind unless an administrator chooses another one. A chosen credential stays in use until it expires, is removed or another choice is made.",
     tags: [TAG],
     params: credentialParams,
     body: credentialChoiceSchema,
@@ -625,7 +625,7 @@ export class IdentityProvidersController {
     const certificate = await this.#services.identityProviders.certificate(providerId, credentialId);
     reply
       .header("content-type", "application/x-pem-file")
-      .header("content-disposition", `attachment; filename="pagehall-${providerId}.pem"`);
+      .header("content-disposition", `attachment; filename="lunedo-${providerId}.pem"`);
     return certificate;
   }
 
@@ -662,7 +662,7 @@ export class IdentityProvidersController {
   @Permission("instance.signIn.manage")
   @ApiRoute({
     summary: "Start a test sign-in with an instance provider",
-    description: "Signs nobody in. The result shows what Pagehall received.",
+    description: "Signs nobody in. The result shows what Lunedo received.",
     tags: [TAG],
     status: 200,
     params: providerIdParams,
@@ -684,7 +684,7 @@ export class IdentityProvidersController {
     summary: "Get the result of a test sign-in",
     tags: [TAG],
     params: testResultParams,
-    response: { description: "What Pagehall received.", schema: testResultSchema },
+    response: { description: "What Lunedo received.", schema: testResultSchema },
   })
   async instanceTestResult(
     @Param("providerId") providerId: string,

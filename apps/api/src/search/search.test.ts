@@ -4,7 +4,7 @@ import {
   accountPrincipal,
   clientAttemptLimitSetting,
   SYSTEM,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -43,7 +43,7 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
 
   async function person(home?: string) {
     counter += 1;
-    const account = await createAccount(test, `search${counter}@pagehall.test`, undefined, home);
+    const account = await createAccount(test, `search${counter}@lunedo.test`, undefined, home);
     return { id: account.id, client: await signedInClient(test, account.email, account.password) };
   }
 
@@ -193,7 +193,7 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
     const { word } = await setup();
     const other = await test.runtime.services.organizations.createAsActor(SYSTEM, {
       name: `Other ${counter}`,
-      ownerAccountId: (await createAccount(test, `owner${counter}@pagehall.test`)).id,
+      ownerAccountId: (await createAccount(test, `owner${counter}@lunedo.test`)).id,
     });
     const outsider = await person(other.id);
     const response = await outsider.client.get(`/api/v1/organizations/${organizationId}/search?q=${word}`);

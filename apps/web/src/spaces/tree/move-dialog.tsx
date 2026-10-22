@@ -1,14 +1,4 @@
-import {
-  Button,
-  Combobox,
-  Dialog,
-  Field,
-  Notice,
-  RadioGroup,
-  Select,
-  Skeleton,
-  useToast,
-} from "@pagehall/ui";
+import { Button, Combobox, Dialog, Field, Notice, RadioGroup, Select, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

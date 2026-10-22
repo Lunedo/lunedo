@@ -27,7 +27,7 @@ describe("InstanceAddressRow", () => {
     });
     await renderWithProviders(<InstanceAddressRow canManage />);
     expect(await screen.findByText("https://wiki.example.org")).toBeTruthy();
-    expect(screen.getByText(/Set by PAGEHALL_INSTANCE_URL in the server environment/)).toBeTruthy();
+    expect(screen.getByText(/Set by LUNEDO_INSTANCE_URL in the server environment/)).toBeTruthy();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
@@ -49,7 +49,7 @@ describe("InstanceAddressRow", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "https://wiki.example.org/");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    const dialog = await screen.findByRole("dialog", { name: "Move Pagehall to https://wiki.example.org?" });
+    const dialog = await screen.findByRole("dialog", { name: "Move Lunedo to https://wiki.example.org?" });
     expect(within(dialog).getByText(/Passkeys registered under the old address stop working/)).toBeTruthy();
     expect(within(dialog).getByText(/Redirect and reply URLs at every identity provider/)).toBeTruthy();
     expect(within(dialog).getByText(/All open sessions end, also yours/)).toBeTruthy();
@@ -84,7 +84,7 @@ describe("a page open under an old address", () => {
 
   it("explains the move and links to the same page at the new address", async () => {
     await renderWithProviders(<InstanceMovedScreen url="https://wiki.example.org" />);
-    expect(screen.getByText("Pagehall has moved")).toBeTruthy();
+    expect(screen.getByText("Lunedo has moved")).toBeTruthy();
     const link = screen.getByRole("link", { name: "Open https://wiki.example.org" });
     expect(link.getAttribute("href")).toBe(`https://wiki.example.org${window.location.pathname}`);
   });

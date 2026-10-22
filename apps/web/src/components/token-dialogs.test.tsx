@@ -10,7 +10,7 @@ beforeEach(() => {
 
 function renderDialog(
   maxLifetimeDays: number | null,
-  onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ph_secret" })),
+  onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ld_secret" })),
 ) {
   return renderWithProviders(
     <CreateTokenDialog
@@ -65,7 +65,7 @@ describe("content access of a token", () => {
   const organizationId = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
   const knowledgeBase = { id: "01929b1e-0000-7000-8000-0000000000b1", name: "Hilfe", key: "HELP" };
 
-  async function open(onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ph_secret" }))) {
+  async function open(onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ld_secret" }))) {
     mockApi({
       "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
       "GET /api/v1/spaces": () => ({ body: { items: [knowledgeBase], nextCursor: null } }),

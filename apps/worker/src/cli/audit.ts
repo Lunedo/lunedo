@@ -1,7 +1,7 @@
-import { AuditLog, createDatabase, createDatabasePool } from "@pagehall/server";
+import { AuditLog, createDatabase, createDatabasePool } from "@lunedo/server";
 
 export async function verifyAuditLog(databaseUrl: string, write: (line: string) => void): Promise<number> {
-  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
+  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-cli" });
   try {
     const results = await new AuditLog({ database: createDatabase(pool) }).verify();
     if (results.length === 0) write("The audit log is empty.");

@@ -42,7 +42,7 @@ async function authorityAndServer() {
   const now = Date.now();
   const authority = await x509.X509CertificateGenerator.createSelfSigned({
     serialNumber: "01",
-    name: "CN=Pagehall Test CA",
+    name: "CN=Lunedo Test CA",
     notBefore: new Date(now - 60_000),
     notAfter: new Date(now + 86_400_000),
     signingAlgorithm: ALGORITHM,

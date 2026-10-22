@@ -1,9 +1,9 @@
 import { startFakeGoogleDirectory } from "./google-directory.js";
 import { startFakeGraph } from "./microsoft-graph.js";
 
-const graph = await startFakeGraph({ port: Number(process.env.PAGEHALL_FAKE_GRAPH_PORT ?? 4320) });
+const graph = await startFakeGraph({ port: Number(process.env.LUNEDO_FAKE_GRAPH_PORT ?? 4320) });
 const google = await startFakeGoogleDirectory({
-  port: Number(process.env.PAGEHALL_FAKE_GOOGLE_PORT ?? 4321),
+  port: Number(process.env.LUNEDO_FAKE_GOOGLE_PORT ?? 4321),
 });
 
 process.stdout.write(`Microsoft Graph fake: ${graph.url} (token endpoint ${graph.tokenEndpoint()})

@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addTotp,
@@ -59,7 +59,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
 
   async function person(options: { portal?: boolean } = {}) {
     counter += 1;
-    const account = await createAccount(test, `portal${counter}@pagehall.test`);
+    const account = await createAccount(test, `portal${counter}@lunedo.test`);
     if (options.portal) {
       await test.runtime.pool.query("update accounts set type = 'portal' where id = $1", [account.id]);
       await test.runtime.pool.query("update memberships set kind = 'guest' where account_id = $1", [
@@ -231,7 +231,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(confirmed.json().colors).toEqual({ light: proposal, dark: "#8AA8E6" });
     const page = await anonymous().get(`${kb.path}/`);
     expect(page.body).toContain(`--kb:${proposal}`);
-    expect(page.body).not.toContain("Provided with Pagehall");
+    expect(page.body).not.toContain("Provided with Lunedo");
     const reader = await person();
     const denied = await reader.client.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/appearance`, {
       poweredBy: true,
@@ -590,7 +590,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const start = await onDomain(first.headers.location as string);
     expect(start.statusCode).toBe(303);
     const flowCookie = String(start.headers["set-cookie"]);
-    expect(flowCookie).toContain("__Host-pagehall-portal-flow=");
+    expect(flowCookie).toContain("__Host-lunedo-portal-flow=");
     expect(flowCookie).not.toMatch(/Domain=/i);
     const authorize = new URL(start.headers.location as string);
     expect(authorize.origin).toBe(TEST_ORIGIN);
@@ -602,7 +602,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const finished = await onDomain(`${callback.pathname}${callback.search}`);
     expect(finished.statusCode).toBe(303);
     const portalCookie = String(finished.headers["set-cookie"]);
-    expect(portalCookie).toContain("__Host-pagehall-portal=");
+    expect(portalCookie).toContain("__Host-lunedo-portal=");
     expect(portalCookie).toContain("Secure");
     expect(portalCookie).toContain("SameSite=Lax");
     expect(portalCookie).not.toMatch(/Domain=/i);
@@ -638,11 +638,11 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(set.statusCode, set.body).toBe(200);
     const elsewhere = await services().organizations.createAsActor(SYSTEM, {
       name: `Elsewhere ${counter}`,
-      ownerAccountId: (await createAccount(test, `elsewhere-owner${counter}@pagehall.test`)).id,
+      ownerAccountId: (await createAccount(test, `elsewhere-owner${counter}@lunedo.test`)).id,
     });
     const visitorAccount = await createAccount(
       test,
-      `elsewhere${counter}@pagehall.test`,
+      `elsewhere${counter}@lunedo.test`,
       "a long enough passphrase",
       elsewhere.id,
     );

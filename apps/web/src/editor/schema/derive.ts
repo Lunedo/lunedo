@@ -1,4 +1,4 @@
-import { modules } from "@pagehall/editor-schema";
+import { modules } from "@lunedo/editor-schema";
 import type { Attribute } from "@tiptap/core";
 
 const NODE_FIELDS = [

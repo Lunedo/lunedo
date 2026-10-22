@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { Readable, Writable } from "node:stream";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { createLogger } from "../logging/logger.js";

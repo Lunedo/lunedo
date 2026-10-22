@@ -1,4 +1,4 @@
-import type { ContentLanguage } from "@pagehall/shared";
+import type { ContentLanguage } from "@lunedo/shared";
 import type { Executor } from "../database/database.js";
 import type { SearchViewer } from "./access.js";
 import type { ParsedQuery } from "./query.js";

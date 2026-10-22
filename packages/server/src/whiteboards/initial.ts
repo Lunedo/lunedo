@@ -1,4 +1,4 @@
-import { emptyScene, yDocFromScene } from "@pagehall/editor-schema/scene";
+import { emptyScene, yDocFromScene } from "@lunedo/editor-schema/scene";
 import { sql } from "drizzle-orm";
 import type { Transaction } from "../database/database.js";
 import { encodeState } from "../spaces/documents.js";

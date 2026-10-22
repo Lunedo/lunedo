@@ -180,13 +180,13 @@ function ldapProvider(patch: Record<string, unknown> = {}, config: Record<string
       preset: "activeDirectory",
       url: "ldaps://dc01.verlag.example",
       startTls: false,
-      bindDn: "CN=pagehall,OU=Service,DC=verlag,DC=example",
+      bindDn: "CN=lunedo,OU=Service,DC=verlag,DC=example",
       userBaseDn: "OU=Staff,DC=verlag,DC=example",
       groupBaseDn: "OU=Groups,DC=verlag,DC=example",
       domains: ["verlag.example"],
       accountCreation: { enabled: false, requiredGroups: [] },
       sync: { intervalMinutes: 60, deactivationLimitPercent: 20, deactivationLimitAccounts: 5 },
-      secondFactor: { mode: "pagehall" },
+      secondFactor: { mode: "lunedo" },
       userFilter: "(&(objectCategory=person)(objectClass=user))",
       groupFilter: "(objectClass=group)",
       signInAttribute: "userPrincipalName",
@@ -237,7 +237,7 @@ function bodyOf(requests: RecordedRequest[], method: string, path: string) {
 }
 
 describe("adding a SAML provider", () => {
-  it("creates it from a metadata file, explains bad metadata and shows Pagehall's details", async () => {
+  it("creates it from a metadata file, explains bad metadata and shows Lunedo's details", async () => {
     let refuse = true;
     const { requests } = adminApi({
       [`POST ${BASE}`]: () =>
@@ -282,7 +282,7 @@ describe("adding a SAML provider", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     expect(
       await screen.findByText(
-        /Pagehall could not use the SAML metadata: The metadata has no signing certificate/,
+        /Lunedo could not use the SAML metadata: The metadata has no signing certificate/,
       ),
     ).toBeTruthy();
 
@@ -398,7 +398,7 @@ describe("adding an LDAP directory", () => {
     expect(screen.getByText("This field is required.")).toBeTruthy();
 
     expect(screen.getByText(/Enter a distinguished name, a user principal name/)).toBeTruthy();
-    await userEvent.type(screen.getByLabelText("Service account"), "svc-pagehall@verlag.example");
+    await userEvent.type(screen.getByLabelText("Service account"), "svc-lunedo@verlag.example");
     await userEvent.type(screen.getByLabelText("Password of the service account"), "bind secret");
     await userEvent.type(screen.getByLabelText("Base DN for people"), "OU=Staff,DC=verlag,DC=example");
     await userEvent.type(screen.getByLabelText("Base DN for groups"), "OU=Groups,DC=verlag,DC=example");
@@ -418,7 +418,7 @@ describe("adding an LDAP directory", () => {
         preset: "activeDirectory",
         url: "ldap://dc01.verlag.example",
         startTls: true,
-        bindDn: "svc-pagehall@verlag.example",
+        bindDn: "svc-lunedo@verlag.example",
         userBaseDn: "OU=Staff,DC=verlag,DC=example",
         groupBaseDn: "OU=Groups,DC=verlag,DC=example",
         domains: ["verlag.example"],
@@ -592,7 +592,7 @@ describe("adding an LDAP directory", () => {
       screen.getByLabelText("Upload CA certificate"),
       new File(["not a certificate"], "wrong.pem", { type: "application/x-pem-file" }),
     );
-    expect(await screen.findByText(/This file is not a CA certificate Pagehall can use/)).toBeTruthy();
+    expect(await screen.findByText(/This file is not a CA certificate Lunedo can use/)).toBeTruthy();
 
     await userEvent.upload(
       screen.getByLabelText("Upload CA certificate"),
@@ -650,7 +650,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     await renderPath("/settings/instance/sign-in-providers");
     expect(
       await screen.findByText(
-        /Metadata of ADFS · Verlag could not be refreshed at .*: The server answered with 503\. Pagehall keeps using the last good metadata\./,
+        /Metadata of ADFS · Verlag could not be refreshed at .*: The server answered with 503\. Lunedo keeps using the last good metadata\./,
       ),
     ).toBeTruthy();
     expect(screen.getByText(/The CA certificate of Active Directory · Verlag expires on/)).toBeTruthy();
@@ -678,7 +678,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     await userEvent.click(screen.getByRole("button", { name: "Load again" }));
     expect(
       await screen.findByText(
-        /Pagehall could not use the SAML metadata: The metadata is signed with an unknown key/,
+        /Lunedo could not use the SAML metadata: The metadata is signed with an unknown key/,
       ),
     ).toBeTruthy();
     fail = false;
@@ -930,7 +930,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     });
   });
 
-  it("keeps Pagehall's signing certificate apart from the credentials for Microsoft Graph", async () => {
+  it("keeps Lunedo's signing certificate apart from the credentials for Microsoft Graph", async () => {
     const entra = samlProvider({
       name: "Entra ID SAML",
       credentials: [
@@ -958,7 +958,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
       [`GET ${BASE}`]: () => ({ body: [entra] }),
     });
     await renderPath(`/settings/instance/sign-in-providers/${SAML}`);
-    const signing = (await screen.findByRole("heading", { name: "Pagehall's signing certificate" })).closest(
+    const signing = (await screen.findByRole("heading", { name: "Lunedo's signing certificate" })).closest(
       "section",
     ) as HTMLElement;
     const graph = screen
@@ -1002,16 +1002,16 @@ describe("SAML and LDAP providers in the list and the details", () => {
           sample: {
             subject: "972e766c-c3f5-49d6-96f6-d904e89e292c",
             email: null,
-            signInName: "alice@pagehall.lab",
+            signInName: "alice@lunedo.lab",
             displayName: "Alice Admin",
             groups: [],
           },
           attributes: [
             { name: "cn", values: ["Alice Admin"] },
             { name: "objectGUID", values: ["972e766c-c3f5-49d6-96f6-d904e89e292c"] },
-            { name: "userPrincipalName", values: ["alice@pagehall.lab"] },
+            { name: "userPrincipalName", values: ["alice@lunedo.lab"] },
           ],
-          searched: { attribute: "userPrincipalName", value: "alice@pagehall.lab" },
+          searched: { attribute: "userPrincipalName", value: "alice@lunedo.lab" },
         },
       }),
     });
@@ -1019,7 +1019,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
     expect(
       (await screen.findAllByText(/Read the attributes of a test person to choose/)).length,
     ).toBeGreaterThan(0);
-    await userEvent.type(screen.getByLabelText("Test person"), "alice@pagehall.lab");
+    await userEvent.type(screen.getByLabelText("Test person"), "alice@lunedo.lab");
     await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
     expect(await screen.findByText("The directory returned 3 attributes for Alice Admin.")).toBeTruthy();
     expect(
@@ -1033,7 +1033,7 @@ describe("SAML and LDAP providers in the list and the details", () => {
           ?.config.attributes,
       ).toEqual({ email: "userPrincipalName", displayName: "displayName" }),
     );
-    expect(await screen.findByText("Value of the test person: alice@pagehall.lab")).toBeTruthy();
+    expect(await screen.findByText("Value of the test person: alice@lunedo.lab")).toBeTruthy();
   });
 
   it("refuses an ldaps:// address while StartTLS is on instead of turning StartTLS off", async () => {

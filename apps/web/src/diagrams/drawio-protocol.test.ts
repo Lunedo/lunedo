@@ -26,7 +26,7 @@ describe("draw.io embed protocol", () => {
     expect(new URL(drawioUrl("fr"), "https://x.example").searchParams.get("lang")).toBe("en");
   });
 
-  it("reads only the events Pagehall handles", () => {
+  it("reads only the events Lunedo handles", () => {
     expect(parseDrawioMessage('{"event":"init"}')).toEqual({ event: "init" });
     expect(parseDrawioMessage('{"event":"autosave","xml":"<mxfile/>"}')).toEqual({
       event: "autosave",

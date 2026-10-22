@@ -1,4 +1,4 @@
-import { slugify } from "@pagehall/editor-schema";
+import { slugify } from "@lunedo/editor-schema";
 import {
   ArrowUpCircle,
   AtSign,

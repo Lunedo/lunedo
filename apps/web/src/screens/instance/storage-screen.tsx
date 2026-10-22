@@ -11,7 +11,7 @@ import {
   SettingRow,
   Skeleton,
   Textarea,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HardDrive } from "lucide-react";
 import { useState } from "react";

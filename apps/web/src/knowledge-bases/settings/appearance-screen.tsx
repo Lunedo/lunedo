@@ -1,4 +1,4 @@
-import { accentColors } from "@pagehall/shared";
+import { accentColors } from "@lunedo/shared";
 import {
   Button,
   ConfirmDialog,
@@ -14,7 +14,7 @@ import {
   Skeleton,
   Switch,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Palette } from "lucide-react";

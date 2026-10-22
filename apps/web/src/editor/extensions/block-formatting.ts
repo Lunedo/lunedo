@@ -1,4 +1,4 @@
-import type { TextAlignment } from "@pagehall/editor-schema";
+import type { TextAlignment } from "@lunedo/editor-schema";
 import { Extension } from "@tiptap/core";
 
 export const MAX_INDENT = 8;

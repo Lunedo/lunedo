@@ -1,4 +1,4 @@
-import { idSchema } from "@pagehall/shared";
+import { idSchema } from "@lunedo/shared";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,

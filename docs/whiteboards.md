@@ -1,6 +1,6 @@
 # Whiteboards and drawings
 
-Pagehall uses [Excalidraw](https://excalidraw.com) (MIT) for hand-drawn sketches. draw.io, Mermaid and PlantUML diagrams are described in [diagrams.md](diagrams.md). A **whiteboard** is an item in the page tree with an infinite canvas that several people edit at the same time. A **drawing** is a block inside a page.
+Lunedo uses [Excalidraw](https://excalidraw.com) (MIT) for hand-drawn sketches. draw.io, Mermaid and PlantUML diagrams are described in [diagrams.md](diagrams.md). A **whiteboard** is an item in the page tree with an infinite canvas that several people edit at the same time. A **drawing** is a block inside a page.
 
 Everything Excalidraw needs, including its fonts, is served by the instance. Whiteboards and drawings work without internet access and never contact excalidraw.com: the library browser, collaboration links, embedded web content and AI features are switched off.
 
@@ -19,7 +19,7 @@ Editors and space admins draw directly on the canvas; everyone who can read the 
 - Shapes, arrows, lines, freehand, text, frames and images are available from the toolbar.
 - **Sticky note** adds a note in the middle of the visible area. Notes are rectangles with text and can be colored and resized like other shapes.
 - Images are stored as attachments of the whiteboard, with the size limit and storage checks of every upload.
-- Links on elements can point to `http` and `https` addresses and to Pagehall pages.
+- Links on elements can point to `http` and `https` addresses and to Lunedo pages.
 
 On phones (narrower than 600 pixels), a whiteboard can be viewed and zoomed but not edited.
 
@@ -33,7 +33,7 @@ A version is kept when the last person leaves the whiteboard and after it was no
 
 ### Images of whiteboards
 
-After changes are saved, the browser of the person who made them stores an SVG image of the whiteboard. Pagehall sanitizes the image before storing it and serves it like other SVG files (`Content-Security-Policy: sandbox`, `X-Content-Type-Options: nosniff`). The image appears in the page tree (hover the icon), in folder overviews and in search results; each version keeps the image of its state. A whiteboard without an image shows a neutral icon.
+After changes are saved, the browser of the person who made them stores an SVG image of the whiteboard. Lunedo sanitizes the image before storing it and serves it like other SVG files (`Content-Security-Policy: sandbox`, `X-Content-Type-Options: nosniff`). The image appears in the page tree (hover the icon), in folder overviews and in search results; each version keeps the image of its state. A whiteboard without an image shows a neutral icon.
 
 ### Search and notifications
 

@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { z } from "zod";
@@ -30,7 +30,7 @@ let databaseUrl = "";
 
 beforeAll(async () => {
   if (!testDatabaseUrl) return;
-  database = await createMigratedDatabase(testDatabaseUrl, "pagehall_runtime_test");
+  database = await createMigratedDatabase(testDatabaseUrl, "lunedo_runtime_test");
   databaseUrl = database.url;
 });
 
@@ -59,7 +59,7 @@ function fakeProcess() {
 describe("startupWarnings", () => {
   it("warns at the start when identity providers may be insecure", () => {
     expect(startupWarnings({ insecureIdentityProviders: true })).toEqual([
-      expect.stringContaining("PAGEHALL_INSECURE_IDENTITY_PROVIDERS"),
+      expect.stringContaining("LUNEDO_INSECURE_IDENTITY_PROVIDERS"),
     ]);
     expect(startupWarnings({ insecureIdentityProviders: false })).toEqual([]);
   });
@@ -98,25 +98,25 @@ describe("registerShutdown", () => {
 
 describe("starting after an incomplete restore", () => {
   it("refuses to start and names the next step", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "pagehall-runtime-"));
+    const dir = await mkdtemp(path.join(tmpdir(), "lunedo-runtime-"));
     try {
       const filesDir = path.join(dir, "files");
       await mkdir(filesDir);
-      await writeRestoreMarker(filesDir, "/var/lib/pagehall/backups/pagehall.phbak");
+      await writeRestoreMarker(filesDir, "/var/lib/lunedo/backups/lunedo.ldbak");
       const started = createServerRuntime({
         role: "api",
         env: {
-          PAGEHALL_DATABASE_URL: "postgres://pagehall:pagehall@127.0.0.1:1/unreachable",
-          PAGEHALL_SECRETS_DIR: path.join(dir, "secrets"),
-          PAGEHALL_FILES_DIR: filesDir,
-          PAGEHALL_LOG_LEVEL: "silent",
+          LUNEDO_DATABASE_URL: "postgres://lunedo:lunedo@127.0.0.1:1/unreachable",
+          LUNEDO_SECRETS_DIR: path.join(dir, "secrets"),
+          LUNEDO_FILES_DIR: filesDir,
+          LUNEDO_LOG_LEVEL: "silent",
         },
       });
       const error = await started.catch((caught: unknown) => caught);
       expect(error).toBeInstanceOf(IncompleteRestoreError);
       expect(error).toBeInstanceOf(StartupError);
       expect((error as Error).message).toContain(
-        "Run the restore again with: pagehall backup restore --input /var/lib/pagehall/backups/pagehall.phbak --force.",
+        "Run the restore again with: lunedo backup restore --input /var/lib/lunedo/backups/lunedo.ldbak --force.",
       );
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -135,15 +135,15 @@ describe.skipIf(!testDatabaseUrl)("shutting down the worker runtime", () => {
   });
 
   async function startWorker(): Promise<ServerRuntime> {
-    dir = await mkdtemp(path.join(tmpdir(), "pagehall-runtime-"));
+    dir = await mkdtemp(path.join(tmpdir(), "lunedo-runtime-"));
     runtime = await createServerRuntime({
       role: "worker",
       env: {
-        PAGEHALL_DATABASE_URL: databaseUrl,
-        PAGEHALL_SECRETS_DIR: path.join(dir, "secrets"),
-        PAGEHALL_FILES_DIR: path.join(dir, "files"),
-        PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS: "1",
-        PAGEHALL_LOG_LEVEL: "silent",
+        LUNEDO_DATABASE_URL: databaseUrl,
+        LUNEDO_SECRETS_DIR: path.join(dir, "secrets"),
+        LUNEDO_FILES_DIR: path.join(dir, "files"),
+        LUNEDO_SHUTDOWN_TIMEOUT_SECONDS: "1",
+        LUNEDO_LOG_LEVEL: "silent",
       },
     });
     return runtime;
@@ -151,7 +151,7 @@ describe.skipIf(!testDatabaseUrl)("shutting down the worker runtime", () => {
 
   /** Reads the job state on a connection of its own, since the runtime's pool is closed by then. */
   async function jobState(id: string): Promise<string | undefined> {
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     try {
       const result = await pool.query<{ state: string }>("select state from pgboss.job where id = $1", [id]);
       return result.rows[0]?.state;
@@ -221,7 +221,7 @@ describe.skipIf(!testDatabaseUrl)("starting with encrypted data", () => {
   afterEach(async () => {
     if (dir) await rm(dir, { recursive: true, force: true });
     dir = undefined;
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     try {
       await pool.query(`drop table if exists "${table}"`);
     } finally {
@@ -232,7 +232,7 @@ describe.skipIf(!testDatabaseUrl)("starting with encrypted data", () => {
   /** Stores one value encrypted with master key version 2. */
   async function storeEncryptedValue() {
     const ring = parseKeyRing(formatKeyEntry(2, randomBytes(32)));
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     try {
       await pool.query(`create table "${table}" (id uuid primary key, value bytea)`);
       const id = uuidv7();
@@ -246,7 +246,7 @@ describe.skipIf(!testDatabaseUrl)("starting with encrypted data", () => {
   }
 
   async function start(masterKeys?: string) {
-    dir = await mkdtemp(path.join(tmpdir(), "pagehall-runtime-"));
+    dir = await mkdtemp(path.join(tmpdir(), "lunedo-runtime-"));
     const secretsDir = path.join(dir, "secrets");
     if (masterKeys !== undefined) {
       await mkdir(secretsDir, { recursive: true });
@@ -255,10 +255,10 @@ describe.skipIf(!testDatabaseUrl)("starting with encrypted data", () => {
     const runtime = createServerRuntime({
       role: "api",
       env: {
-        PAGEHALL_DATABASE_URL: databaseUrl,
-        PAGEHALL_SECRETS_DIR: secretsDir,
-        PAGEHALL_FILES_DIR: path.join(dir, "files"),
-        PAGEHALL_LOG_LEVEL: "silent",
+        LUNEDO_DATABASE_URL: databaseUrl,
+        LUNEDO_SECRETS_DIR: secretsDir,
+        LUNEDO_FILES_DIR: path.join(dir, "files"),
+        LUNEDO_LOG_LEVEL: "silent",
       },
       encrypted: { columns: [column], streamOwners: [] },
     });
@@ -286,7 +286,7 @@ describe.skipIf(!testDatabaseUrl)("starting with encrypted data", () => {
   });
 
   it("creates the first master key while nothing is encrypted", async () => {
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     try {
       await pool.query(`create table "${table}" (id uuid primary key, value bytea)`);
     } finally {

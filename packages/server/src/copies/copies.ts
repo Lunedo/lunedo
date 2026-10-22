@@ -5,9 +5,9 @@ import {
   copyPageDocument,
   type DocumentJson,
   documentAttachments,
-} from "@pagehall/editor-schema";
-import { copyScene, validateScene, yDocFromScene } from "@pagehall/editor-schema/scene";
-import { type Language, uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { copyScene, validateScene, yDocFromScene } from "@lunedo/editor-schema/scene";
+import { type Language, uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";

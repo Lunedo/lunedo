@@ -40,7 +40,7 @@ try {
   process.exit(0);
 }
 
-const directory = mkdtempSync(path.join(tmpdir(), "pagehall-oasdiff-"));
+const directory = mkdtempSync(path.join(tmpdir(), "lunedo-oasdiff-"));
 try {
   writeFileSync(path.join(directory, "base.json"), previous);
   copyFileSync(DESCRIPTION, path.join(directory, "head.json"));

@@ -1,4 +1,4 @@
-import { sectionEmpty } from "@pagehall/editor-schema";
+import { sectionEmpty } from "@lunedo/editor-schema";
 import { type Editor, Extension } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
@@ -18,7 +18,7 @@ const key = new PluginKey<DecorationSet>("requiredSections");
 
 function messageWidget(text: string, id: string): HTMLElement {
   const element = document.createElement("p");
-  element.className = "ph-section-required";
+  element.className = "ld-section-required";
   element.contentEditable = "false";
   element.id = id;
   element.setAttribute("role", "alert");
@@ -27,7 +27,7 @@ function messageWidget(text: string, id: string): HTMLElement {
 }
 
 export function requiredSectionId(sectionKey: string): string {
-  return `ph-required-${sectionKey}`;
+  return `ld-required-${sectionKey}`;
 }
 
 export function requiredSectionDecorations(
@@ -44,7 +44,7 @@ export function requiredSectionDecorations(
     if (section && sectionEmpty({ content })) {
       decorations.push(
         Decoration.node(position, position + node.nodeSize, {
-          class: "ph-section-missing",
+          class: "ld-section-missing",
           "aria-describedby": requiredSectionId(section.key),
         }),
         Decoration.widget(

@@ -13,7 +13,7 @@ const message: ChatMessage = {
   heading: "New page in IT <Ops> & more",
   title: "Restart *the* VPN | gateway @everyone",
   detail: "Published by Anna <script>",
-  link: { url: "https://wiki.example.org/spaces/ITOPS/pages/1/restart", label: "Open in Pagehall" },
+  link: { url: "https://wiki.example.org/spaces/ITOPS/pages/1/restart", label: "Open in Lunedo" },
   occurredAt: new Date("2026-10-15T10:00:00Z"),
   space: { id: "0192a000-0000-7000-8000-000000000001", key: "ITOPS", name: "IT Ops" },
   organizationId: "0192a000-0000-7000-8000-000000000002",
@@ -59,7 +59,7 @@ describe("chatRequest", () => {
     });
     expect(String(linked.body)).not.toContain("[Sign in](https://phish.example)");
     expect(body.attachments[0]?.content.actions).toEqual([
-      { type: "Action.OpenUrl", title: "Open in Pagehall", url: message.link?.url },
+      { type: "Action.OpenUrl", title: "Open in Lunedo", url: message.link?.url },
     ]);
   });
 
@@ -133,13 +133,13 @@ describe("chatRequest", () => {
     });
     const timestamp = String(now.getTime() / 1000);
     expect(request.headers).toMatchObject({
-      "x-pagehall-event": "pagePublished",
-      "x-pagehall-delivery": delivery.id,
-      "x-pagehall-timestamp": timestamp,
-      "x-pagehall-signature": webhookSignature(secret, timestamp, String(request.body)),
+      "x-lunedo-event": "pagePublished",
+      "x-lunedo-delivery": delivery.id,
+      "x-lunedo-timestamp": timestamp,
+      "x-lunedo-signature": webhookSignature(secret, timestamp, String(request.body)),
     });
     expect(webhookSignature("other", timestamp, String(request.body))).not.toBe(
-      request.headers["x-pagehall-signature"],
+      request.headers["x-lunedo-signature"],
     );
     expect(bodyOf(request)).toMatchObject({
       id: delivery.id,

@@ -1,4 +1,4 @@
-import { articleSections, type DocumentJson, emptySections } from "@pagehall/editor-schema";
+import { articleSections, type DocumentJson, emptySections } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import { SpaceError } from "../spaces/common.js";

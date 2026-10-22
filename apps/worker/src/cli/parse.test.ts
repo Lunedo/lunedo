@@ -3,23 +3,23 @@ import { parseCommand, UsageError } from "./parse.js";
 
 describe("parseCommand", () => {
   it("parses backup commands", () => {
-    expect(parseCommand(["backup", "create", "--output", "/backups/a.phbak"])).toEqual({
+    expect(parseCommand(["backup", "create", "--output", "/backups/a.ldbak"])).toEqual({
       name: "backup create",
-      output: "/backups/a.phbak",
+      output: "/backups/a.ldbak",
     });
-    expect(parseCommand(["backup", "verify", "--input", "a.phbak"])).toEqual({
+    expect(parseCommand(["backup", "verify", "--input", "a.ldbak"])).toEqual({
       name: "backup verify",
-      input: "a.phbak",
+      input: "a.ldbak",
     });
     expect(
-      parseCommand(["backup", "restore", "--input", "a.phbak", "--force", "--config-dir", "/restored"]),
+      parseCommand(["backup", "restore", "--input", "a.ldbak", "--force", "--config-dir", "/restored"]),
     ).toEqual({
       name: "backup restore",
-      input: "a.phbak",
+      input: "a.ldbak",
       force: true,
       configDir: "/restored",
     });
-    expect(parseCommand(["backup", "restore", "--input", "a.phbak"])).toMatchObject({ force: false });
+    expect(parseCommand(["backup", "restore", "--input", "a.ldbak"])).toMatchObject({ force: false });
     expect(parseCommand(["backup", "create", "--before-update"])).toEqual({
       name: "backup create before update",
     });
@@ -37,7 +37,7 @@ describe("parseCommand", () => {
   });
 
   it("does not combine a backup before an update with an output file", () => {
-    expect(() => parseCommand(["backup", "create", "--before-update", "--output", "a.phbak"])).toThrow(
+    expect(() => parseCommand(["backup", "create", "--before-update", "--output", "a.ldbak"])).toThrow(
       UsageError,
     );
   });
@@ -75,6 +75,6 @@ describe("parseCommand", () => {
     expect(() => parseCommand(["backup", "delete"])).toThrow(UsageError);
     expect(() => parseCommand(["backup", "create"])).toThrow("--output is required");
     expect(() => parseCommand(["backup", "verify", "--input", "a", "--unknown"])).toThrow();
-    expect(() => parseCommand(["backup", "verify", "a.phbak"])).toThrow();
+    expect(() => parseCommand(["backup", "verify", "a.ldbak"])).toThrow();
   });
 });

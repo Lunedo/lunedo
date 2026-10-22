@@ -40,7 +40,7 @@ describe("drawing blocks", () => {
   });
 
   it("show a placeholder without a preview or without access to it", () => {
-    expect(renderHtml(drawing({}))).toContain('class="ph-drawing-empty"');
+    expect(renderHtml(drawing({}))).toContain('class="ld-drawing-empty"');
     expect(renderHtml(saved, { attachment: () => null })).not.toContain("<img");
     expect(renderMarkdown(drawing({}))).toBe("*Drawing*\n");
   });

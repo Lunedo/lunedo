@@ -1,4 +1,4 @@
-import { Skeleton } from "@pagehall/ui";
+import { Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { HardDrive } from "lucide-react";
 import { useTranslation } from "react-i18next";

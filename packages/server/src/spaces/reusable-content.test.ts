@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson, NodeJson, PropertiesReportRequest } from "@pagehall/editor-schema";
+import type { DocumentJson, NodeJson, PropertiesReportRequest } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import mammoth from "mammoth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

@@ -24,7 +24,7 @@ function api(preview: () => { status?: number; body?: unknown }) {
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
-        name: "Pagehall",
+        name: "Lunedo",
         setupComplete: true,
         language: "en",
         accentColor: "petrol",
@@ -36,7 +36,7 @@ function api(preview: () => { status?: number; body?: unknown }) {
     "GET /api/v1/auth/session": () => ({
       status: 401,
       body: {
-        type: "urn:pagehall:problem:notSignedIn",
+        type: "urn:lunedo:problem:notSignedIn",
         title: "Not signed in",
         status: 401,
         code: "notSignedIn",
@@ -69,7 +69,7 @@ describe("accepting an invitation", () => {
     expect(await screen.findByRole("heading", { name: "Join Engineering" })).toBeTruthy();
     expect(
       screen.getByText(
-        "Olivia Owner invited you (lena@example.org) to work together in Engineering on Pagehall.",
+        "Olivia Owner invited you (lena@example.org) to work together in Engineering on Lunedo.",
       ),
     ).toBeTruthy();
     expect(window.location.hash).toBe("");
@@ -98,7 +98,7 @@ describe("accepting an invitation", () => {
     api(() => ({
       status: 400,
       body: {
-        type: "urn:pagehall:problem:invalidToken",
+        type: "urn:lunedo:problem:invalidToken",
         title: "Invalid",
         status: 400,
         code: "invalidToken",
@@ -113,7 +113,7 @@ describe("accepting an invitation", () => {
     mockApi({
       "GET /api/v1/instance/info": () => ({
         body: {
-          name: "Pagehall",
+          name: "Lunedo",
           setupComplete: true,
           language: "en",
           accentColor: "petrol",
@@ -125,7 +125,7 @@ describe("accepting an invitation", () => {
       "GET /api/v1/auth/session": () => ({
         status: 401,
         body: {
-          type: "urn:pagehall:problem:notSignedIn",
+          type: "urn:lunedo:problem:notSignedIn",
           title: "Not signed in",
           status: 401,
           code: "notSignedIn",

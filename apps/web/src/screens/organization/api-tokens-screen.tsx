@@ -1,4 +1,4 @@
-import { Button, Table } from "@pagehall/ui";
+import { Button, Table } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { KeyRound } from "lucide-react";

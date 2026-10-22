@@ -1,4 +1,4 @@
-import { Section, Skeleton } from "@pagehall/ui";
+import { Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Activity } from "lucide-react";
 import { useTranslation } from "react-i18next";

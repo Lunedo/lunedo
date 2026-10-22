@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { oidcConfigSchema } from "@pagehall/shared";
+import { oidcConfigSchema } from "@lunedo/shared";
 import { describe, expect, it } from "vitest";
 import { ProviderResponseError } from "./adapter.js";
 import { DirectoryClients } from "./directory.js";

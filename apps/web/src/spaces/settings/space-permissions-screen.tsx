@@ -8,7 +8,7 @@ import {
   Notice,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Shield, X } from "lucide-react";
 import { useState } from "react";

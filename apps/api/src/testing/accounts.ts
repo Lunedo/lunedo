@@ -1,20 +1,20 @@
-import { applyConfiguredSetup, createLogger } from "@pagehall/server";
+import { applyConfiguredSetup, createLogger } from "@lunedo/server";
 import { Secret, TOTP } from "otpauth";
 import type { AuthTestApp } from "./auth-app.js";
 import { TEST_ORIGIN, TestClient } from "./auth-app.js";
 
-export const OWNER = { email: "owner@pagehall.test", password: "owner passphrase 42" };
+export const OWNER = { email: "owner@lunedo.test", password: "owner passphrase 42" };
 
 export const configuredSetupEnv = {
-  PAGEHALL_INSTANCE_URL: TEST_ORIGIN,
-  PAGEHALL_INSTANCE_NAME: "Test wiki",
-  PAGEHALL_OWNER_EMAIL: OWNER.email,
-  PAGEHALL_OWNER_NAME: "Olivia Owner",
-  PAGEHALL_OWNER_PASSWORD: OWNER.password,
-  PAGEHALL_ORGANIZATION_NAME: "Test organization",
-  PAGEHALL_SMTP_HOST: "smtp.pagehall.test",
-  PAGEHALL_SMTP_SECURITY: "none",
-  PAGEHALL_SMTP_FROM: "wiki@pagehall.test",
+  LUNEDO_INSTANCE_URL: TEST_ORIGIN,
+  LUNEDO_INSTANCE_NAME: "Test wiki",
+  LUNEDO_OWNER_EMAIL: OWNER.email,
+  LUNEDO_OWNER_NAME: "Olivia Owner",
+  LUNEDO_OWNER_PASSWORD: OWNER.password,
+  LUNEDO_ORGANIZATION_NAME: "Test organization",
+  LUNEDO_SMTP_HOST: "smtp.lunedo.test",
+  LUNEDO_SMTP_SECURITY: "none",
+  LUNEDO_SMTP_FROM: "wiki@lunedo.test",
 };
 
 export async function completeConfiguredSetup(test: AuthTestApp): Promise<void> {

@@ -2,7 +2,7 @@ import type { Schemas } from "./client.js";
 
 export type Problem = Schemas["Problem"];
 
-const PROBLEM_PREFIX = "urn:pagehall:problem:";
+const PROBLEM_PREFIX = "urn:lunedo:problem:";
 
 export class ApiError extends Error {
   override name = "ApiError";

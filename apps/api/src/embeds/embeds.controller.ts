@@ -1,5 +1,5 @@
+import { defaultEmbedServices, EMBED_REFERRER_POLICIES } from "@lunedo/server";
 import { Controller, Get, Inject, Param } from "@nestjs/common";
-import { defaultEmbedServices, EMBED_REFERRER_POLICIES } from "@pagehall/server";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";

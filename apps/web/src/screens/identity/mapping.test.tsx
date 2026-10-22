@@ -84,7 +84,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
           : {
               preset,
               ...common,
-              issuer: "https://keycloak.example.org/realms/pagehall",
+              issuer: "https://keycloak.example.org/realms/lunedo",
               scopes: ["openid", "email", "profile"],
               claims: {
                 email: "email",
@@ -222,17 +222,17 @@ describe("group mapping", () => {
       [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
       [`GET ${BASE}/groups`]: (request) => ({
         body:
-          request.path.includes("q=pagehall") || !request.path.includes("q=")
-            ? [{ id: "pagehall-staff", name: "Pagehall staff", members: null, accounts: 3, mapped: false }]
+          request.path.includes("q=lunedo") || !request.path.includes("q=")
+            ? [{ id: "lunedo-staff", name: "Lunedo staff", members: null, accounts: 3, mapped: false }]
             : [],
       }),
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
-    expect(within(dialog).getByText(/Suggests the groups Pagehall has seen at sign-ins/)).toBeTruthy();
-    await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "pagehall-users");
-    expect(await screen.findByRole("option", { name: /Pagehall staff/ })).toBeTruthy();
+    expect(within(dialog).getByText(/Suggests the groups Lunedo has seen at sign-ins/)).toBeTruthy();
+    await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "lunedo-users");
+    expect(await screen.findByRole("option", { name: /Lunedo staff/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Use this text as group value/ })).toBeTruthy();
   });
 
@@ -244,8 +244,8 @@ describe("group mapping", () => {
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
-    expect(within(dialog).getByText(/Pagehall stores the ID of the group/)).toBeTruthy();
-    await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "pagehall-users");
+    expect(within(dialog).getByText(/Lunedo stores the ID of the group/)).toBeTruthy();
+    await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "lunedo-users");
     expect(await screen.findByText(/No group with this name found/)).toBeTruthy();
     expect(screen.queryByRole("option", { name: /Use this text as group value/ })).toBeNull();
   });
@@ -349,21 +349,21 @@ describe("group mapping", () => {
     });
     const first = {
       id: "01929b1e-0000-7000-8000-00000000a001",
-      prefix: "phscim_AbCdEf",
+      prefix: "ldscim_AbCdEf",
       expiresAt: null,
       lastUsedAt: null,
       createdAt: "2026-10-04T08:00:00.000Z",
     };
-    const second = { ...first, id: "01929b1e-0000-7000-8000-00000000a002", prefix: "phscim_GhIjKl" };
+    const second = { ...first, id: "01929b1e-0000-7000-8000-00000000a002", prefix: "ldscim_GhIjKl" };
     const { requests } = adminApi({
       [`GET ${BASE}/scim`]: status,
       [`POST ${BASE}/scim/tokens`]: () => {
         tokens = [first];
-        return { status: 201, body: { ...first, token: "phscim_AbCdEf-the-secret" } };
+        return { status: 201, body: { ...first, token: "ldscim_AbCdEf-the-secret" } };
       },
       [`POST ${BASE}/scim/tokens/${first.id}/renew`]: () => {
         tokens = [{ ...first, expiresAt: "2026-10-11T08:00:00.000Z" }, second];
-        return { status: 201, body: { ...second, token: "phscim_GhIjKl-the-new-secret" } };
+        return { status: 201, body: { ...second, token: "ldscim_GhIjKl-the-new-secret" } };
       },
       [`DELETE ${BASE}/scim/tokens/${first.id}`]: () => {
         tokens = [second];
@@ -393,16 +393,16 @@ describe("group mapping", () => {
     ).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Create token" }));
     const created = await screen.findByRole("dialog", { name: "New SCIM token" });
-    expect(within(created).getByDisplayValue("phscim_AbCdEf-the-secret")).toBeTruthy();
+    expect(within(created).getByDisplayValue("ldscim_AbCdEf-the-secret")).toBeTruthy();
     await userEvent.click(within(created).getByRole("button", { name: "Done" }));
-    expect(screen.queryByDisplayValue("phscim_AbCdEf-the-secret")).toBeNull();
+    expect(screen.queryByDisplayValue("ldscim_AbCdEf-the-secret")).toBeNull();
 
     await userEvent.click(await screen.findByRole("button", { name: "Renew" }));
     const renewed = await screen.findByRole("dialog", { name: "New SCIM token" });
-    expect(within(renewed).getByDisplayValue("phscim_GhIjKl-the-new-secret")).toBeTruthy();
+    expect(within(renewed).getByDisplayValue("ldscim_GhIjKl-the-new-secret")).toBeTruthy();
     expect(within(renewed).getByText(/keeps working for seven days/)).toBeTruthy();
     await userEvent.click(within(renewed).getByRole("button", { name: "Done" }));
-    const old = (await screen.findByText("phscim_AbCdEf…")).closest("li") as HTMLElement;
+    const old = (await screen.findByText("ldscim_AbCdEf…")).closest("li") as HTMLElement;
     await userEvent.click(within(old).getByRole("button", { name: "Remove token" }));
     const confirm = await screen.findByRole("dialog", { name: "Remove this token?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Remove token" }));
@@ -724,7 +724,7 @@ describe("the sync log", () => {
       [`GET ${BASE}/mapping-rules`]: () => ({ body: [] }),
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
-    expect(await screen.findByText(/It has no directory Pagehall could synchronize with/)).toBeTruthy();
+    expect(await screen.findByText(/It has no directory Lunedo could synchronize with/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Sync now" })).toBeNull();
   });
 
@@ -794,7 +794,7 @@ describe("synchronized groups", () => {
     await renderPath(`/settings/organizations/${ORGANIZATION}/groups`);
     const table = await screen.findByRole("table");
     expect(await within(table).findByText("Entra ID")).toBeTruthy();
-    expect(within(table).getByText("Pagehall")).toBeTruthy();
+    expect(within(table).getByText("Lunedo")).toBeTruthy();
   });
 
   it("keeps the members of a synchronized group read-only", async () => {

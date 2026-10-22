@@ -1,22 +1,22 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { createServerRuntime, type Env, type ServerRuntime } from "@pagehall/server";
+import { createServerRuntime, type Env, type ServerRuntime } from "@lunedo/server";
 import {
   CapturingTransport,
   createMigratedDatabase,
   deliverPendingMail,
   type TemporaryDatabase,
   testDatabaseBaseUrl,
-} from "@pagehall/server/testing";
+} from "@lunedo/server/testing";
+import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import type { LightMyRequestResponse } from "fastify";
 import { apiContextOf } from "../context.js";
 import { CSRF_HEADER } from "../http/csrf.js";
 import { createTestApp } from "./create-test-app.js";
 import { openApiValidator } from "./openapi-validator.js";
 
-export const TEST_ORIGIN = "https://pagehall.test";
+export const TEST_ORIGIN = "https://lunedo.test";
 
 export const databaseBaseUrl = testDatabaseBaseUrl();
 
@@ -33,18 +33,18 @@ export async function createAuthTestApp(
   env: Env = {},
   options: { captureMail?: boolean; webRoot?: string } = {},
 ): Promise<AuthTestApp> {
-  if (!databaseBaseUrl) throw new Error("PAGEHALL_TEST_DATABASE_URL is not set");
-  const database: TemporaryDatabase = await createMigratedDatabase(databaseBaseUrl, "pagehall_api_test");
-  const dataDir = mkdtempSync(path.join(tmpdir(), "pagehall-api-"));
+  if (!databaseBaseUrl) throw new Error("LUNEDO_TEST_DATABASE_URL is not set");
+  const database: TemporaryDatabase = await createMigratedDatabase(databaseBaseUrl, "lunedo_api_test");
+  const dataDir = mkdtempSync(path.join(tmpdir(), "lunedo-api-"));
   const mail = new CapturingTransport();
   const runtimeEnv: Env = {
-    PAGEHALL_DATABASE_URL: database.url,
-    PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
-    PAGEHALL_FILES_DIR: dataDir,
-    PAGEHALL_BACKUP_DIR: mkdtempSync(path.join(tmpdir(), "pagehall-api-backups-")),
-    PAGEHALL_WORK_DIR: mkdtempSync(path.join(tmpdir(), "pagehall-api-work-")),
-    PAGEHALL_LOG_LEVEL: "silent",
-    PAGEHALL_DATABASE_POOL_SIZE: "4",
+    LUNEDO_DATABASE_URL: database.url,
+    LUNEDO_SECRETS_DIR: path.join(dataDir, "secrets"),
+    LUNEDO_FILES_DIR: dataDir,
+    LUNEDO_BACKUP_DIR: mkdtempSync(path.join(tmpdir(), "lunedo-api-backups-")),
+    LUNEDO_WORK_DIR: mkdtempSync(path.join(tmpdir(), "lunedo-api-work-")),
+    LUNEDO_LOG_LEVEL: "silent",
+    LUNEDO_DATABASE_POOL_SIZE: "4",
     ...env,
   };
   let runtime: ServerRuntime | undefined;

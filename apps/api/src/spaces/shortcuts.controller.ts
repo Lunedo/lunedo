@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req } from "@nestjs/common";
 import {
   MAX_SHORTCUTS,
   SHORTCUT_LABEL_MAX_LENGTH,
   SHORTCUT_URL_MAX_LENGTH,
   treeItemKinds,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -23,7 +23,7 @@ const shortcutSchema = z
   .object({
     id: uuid("ID of the shortcut."),
     label: z.string().describe("The label shown in the sidebar."),
-    url: z.string().nullable().describe("The external address, or null for content in Pagehall."),
+    url: z.string().nullable().describe("The external address, or null for content in Lunedo."),
     item: z
       .object({
         id: uuid("ID of the content."),
@@ -32,9 +32,7 @@ const shortcutSchema = z
         spaceKey: z.string().describe("Key of the space the content is in."),
       })
       .nullable()
-      .describe(
-        "The content in Pagehall, or null for an external address or content the caller cannot open.",
-      ),
+      .describe("The content in Lunedo, or null for an external address or content the caller cannot open."),
     hidden: z
       .boolean()
       .describe(

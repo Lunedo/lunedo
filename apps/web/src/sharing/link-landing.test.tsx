@@ -105,11 +105,11 @@ describe("opening a share link", () => {
     await userEvent.click(screen.getByRole("button", { name: "Open page" }));
     expect(await screen.findByRole("heading", { name: "Status page" })).toBeTruthy();
     expect(screen.getByText("All systems normal")).toBeTruthy();
-    expect(pageRequest?.headers.get("x-pagehall-unlock")).toBe("proof");
+    expect(pageRequest?.headers.get("x-lunedo-unlock")).toBe("proof");
     await userEvent.click(screen.getByRole("button", { name: "Download" }));
     await waitFor(() => expect(saved).toHaveBeenCalledOnce());
     expect(downloads).toHaveLength(1);
-    expect(downloads[0]?.headers.get("x-pagehall-unlock")).toBe("proof");
+    expect(downloads[0]?.headers.get("x-lunedo-unlock")).toBe("proof");
     expect(downloads[0]?.path).toBe(`/api/v1/share-links/${TOKEN}/attachments/${FILE}/content`);
     expect(document.body.innerHTML).not.toContain("proof");
     expect(window.location.pathname).toBe(`/s/${TOKEN}`);

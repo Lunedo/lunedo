@@ -1,4 +1,4 @@
-import { cleanLabel } from "@pagehall/editor-schema";
+import { cleanLabel } from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

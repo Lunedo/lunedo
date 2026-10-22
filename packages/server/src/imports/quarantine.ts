@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Database, Transaction } from "../database/database.js";
 import { insertKnowledgeBase } from "../knowledge-bases/rules.js";

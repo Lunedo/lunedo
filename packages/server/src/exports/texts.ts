@@ -1,4 +1,4 @@
-import type { RenderLabels } from "@pagehall/editor-schema";
+import type { RenderLabels } from "@lunedo/editor-schema";
 import type { Language } from "../mail/templates.js";
 
 export interface ExportTexts {
@@ -77,13 +77,13 @@ const english: ExportTexts = {
     reportDue: "Due",
     reportPage: "Page",
     templateButton: "Create from template",
-    unavailableHere: "{name} cannot be shown in this format. Open the page in Pagehall to see it.",
+    unavailableHere: "{name} cannot be shown in this format. Open the page in Lunedo to see it.",
     pageProperties: "Page properties",
     propertiesReport: "Page properties report",
     noReportedProperties: "No pages with page properties match the filters",
     propertiesReportCreator: "Creator",
     propertiesReportLabels: "Labels",
-    propertiesReportMore: "{shown} of {total} pages. Open the page in Pagehall to see all.",
+    propertiesReportMore: "{shown} of {total} pages. Open the page in Lunedo to see all.",
     importedQuery:
       "Imported with a query that could not be converted: {query}. Check the labels and spaces of this block.",
     contentByLabel: "Content by label",
@@ -125,9 +125,9 @@ const english: ExportTexts = {
   unavailable: (what) => `${what} could not be exported.`,
   pageUnavailable: "The content of this page could not be exported.",
   whiteboardWithoutImage:
-    "This whiteboard has no saved image yet, for example because nothing was drawn on it. Open it in Pagehall to see it.",
+    "This whiteboard has no saved image yet, for example because nothing was drawn on it. Open it in Lunedo to see it.",
   imageLeftOut:
-    "Image left out because the file would otherwise be too large. Open the page in Pagehall, or export it as HTML or Markdown with attachments, to get every image.",
+    "Image left out because the file would otherwise be too large. Open the page in Lunedo, or export it as HTML or Markdown with attachments, to get every image.",
   someContent: "This content",
   nodeTitles: {},
   pageNumber: { before: "Page ", between: " of " },
@@ -188,13 +188,13 @@ const german: ExportTexts = {
     reportPage: "Seite",
     templateButton: "Aus Vorlage erstellen",
     unavailableHere:
-      "{name} kann in diesem Format nicht dargestellt werden. Öffnen Sie die Seite in Pagehall, um es zu sehen.",
+      "{name} kann in diesem Format nicht dargestellt werden. Öffnen Sie die Seite in Lunedo, um es zu sehen.",
     pageProperties: "Seiteneigenschaften",
     propertiesReport: "Bericht zu Seiteneigenschaften",
     noReportedProperties: "Keine Seite mit Seiteneigenschaften passt zu den Filtern",
     propertiesReportCreator: "Erstellt von",
     propertiesReportLabels: "Labels",
-    propertiesReportMore: "{shown} von {total} Seiten. Öffnen Sie die Seite in Pagehall, um alle zu sehen.",
+    propertiesReportMore: "{shown} von {total} Seiten. Öffnen Sie die Seite in Lunedo, um alle zu sehen.",
     importedQuery:
       "Mit einer Abfrage importiert, die nicht übernommen werden konnte: {query}. Prüfen Sie Labels und Bereiche dieses Blocks.",
     contentByLabel: "Inhalte nach Label",
@@ -238,9 +238,9 @@ const german: ExportTexts = {
   unavailable: (what) => `${what} konnte nicht exportiert werden.`,
   pageUnavailable: "Der Inhalt dieser Seite konnte nicht exportiert werden.",
   whiteboardWithoutImage:
-    "Von diesem Whiteboard ist noch kein Bild gespeichert, zum Beispiel weil noch nichts darauf gezeichnet wurde. Öffnen Sie es in Pagehall, um es zu sehen.",
+    "Von diesem Whiteboard ist noch kein Bild gespeichert, zum Beispiel weil noch nichts darauf gezeichnet wurde. Öffnen Sie es in Lunedo, um es zu sehen.",
   imageLeftOut:
-    "Bild ausgelassen, weil die Datei sonst zu groß würde. Öffnen Sie die Seite in Pagehall oder exportieren Sie sie als HTML oder Markdown mit Anhängen, um alle Bilder zu erhalten.",
+    "Bild ausgelassen, weil die Datei sonst zu groß würde. Öffnen Sie die Seite in Lunedo oder exportieren Sie sie als HTML oder Markdown mit Anhängen, um alle Bilder zu erhalten.",
   someContent: "Dieser Inhalt",
   nodeTitles: {},
   pageNumber: { before: "Seite ", between: " von " },

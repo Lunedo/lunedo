@@ -1,8 +1,8 @@
 import { createDecipheriv, createECDH, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";

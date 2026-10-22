@@ -1,4 +1,4 @@
-import { Button, EmptyState, Notice, Skeleton } from "@pagehall/ui";
+import { Button, EmptyState, Notice, Skeleton } from "@lunedo/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { UserRoundCheck } from "lucide-react";

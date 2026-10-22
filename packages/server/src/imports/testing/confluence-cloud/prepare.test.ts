@@ -72,6 +72,19 @@ describe("anonymizing the Confluence Cloud test data", () => {
     for (const text of result) expect(findProblems("sample", text, clean)).toEqual([]);
   });
 
+  it("writes the current product name where the test content names the former one", () => {
+    const clean = createAnonymizer({
+      actors: ACTORS,
+      site: "https://pagehall-test.atlassian.net",
+      ...collectIds([]),
+    });
+    expect(clean.text("Testdaten für Pagehall, key pagehall probe, PAGEHALL_URL")).toBe(
+      "Testdaten für Lunedo, key lunedo probe, LUNEDO_URL",
+    );
+    expect(clean.text("https://pagehall-test.atlassian.net/wiki")).toBe("https://example.atlassian.net/wiki");
+    expect(findProblems("page", "Testdaten für Pagehall", clean)).toContain("page: former product name left");
+  });
+
   it("finds personal data, foreign e-mail addresses and secrets that are left", () => {
     const clean = anonymizer(sample);
     const hidden = Buffer.from("written by Rosa Lindqvist").toString("base64");

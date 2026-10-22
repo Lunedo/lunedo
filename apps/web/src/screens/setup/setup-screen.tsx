@@ -1,5 +1,5 @@
-import { type SetupStepId, setupCodeSchema } from "@pagehall/shared";
-import { Button, Field, Input, Notice, Skeleton } from "@pagehall/ui";
+import { type SetupStepId, setupCodeSchema } from "@lunedo/shared";
+import { Button, Field, Input, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
@@ -21,7 +21,7 @@ import { OrganizationStep } from "./steps/organization-step.js";
 import { OwnerStep } from "./steps/owner-step.js";
 import { SystemCheckStep } from "./steps/system-check-step.js";
 
-const SETUP_CODE_COMMAND = 'docker compose logs pagehall | grep "Setup link"';
+const SETUP_CODE_COMMAND = 'docker compose logs lunedo | grep "Setup link"';
 
 const STEP_ORDER: SetupStepId[] = ["systemCheck", "instance", "owner", "keyBackup", "organization"];
 

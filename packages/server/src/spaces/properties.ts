@@ -1,4 +1,4 @@
-import { type DocumentJson, excerptContent, extractPageProperties, plainText } from "@pagehall/editor-schema";
+import { type DocumentJson, excerptContent, extractPageProperties, plainText } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 

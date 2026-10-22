@@ -6,7 +6,7 @@ import {
   Field,
   focusFirstInvalidSoon,
   Notice,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

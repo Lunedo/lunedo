@@ -1,5 +1,5 @@
-import { commentKit, type DocumentJson, type TextAnchor } from "@pagehall/editor-schema";
-import { Avatar, Badge, Button, IconButton, Menu, Skeleton, useToast } from "@pagehall/ui";
+import { commentKit, type DocumentJson, type TextAnchor } from "@lunedo/editor-schema";
+import { Avatar, Badge, Button, IconButton, Menu, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
@@ -63,7 +63,7 @@ function CommentBody({ body, people }: { body: DocumentJson; people: Record<stri
   if (html === null) return <p className="text-sm text-text-muted">{t("comments.unreadable")}</p>;
   return (
     // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated comment
-    <div className="ph-content ph-comment-body text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+    <div className="ld-content ld-comment-body text-sm" dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
 

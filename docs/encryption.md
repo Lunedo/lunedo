@@ -1,12 +1,12 @@
 # Encryption
 
-Secrets that Pagehall stores in the database, such as identity provider secrets, SMTP credentials and TOTP secrets, are encrypted with envelope encryption. Attachments and backups use the same keys through a streaming format. Passwords and API tokens are hashed, never encrypted.
+Secrets that Lunedo stores in the database, such as identity provider secrets, SMTP credentials and TOTP secrets, are encrypted with envelope encryption. Attachments and backups use the same keys through a streaming format. Passwords and API tokens are hashed, never encrypted.
 
 ## Keys
 
-- **Master keys** protect the data keys. They come from a key provider: the file provider (default, `master-keys` in the secrets directory, generated on first start) or the env provider (`PAGEHALL_MASTER_KEYS`). Further providers, such as HashiCorp Vault, OpenBao or a cloud KMS, implement the same `KeyProvider` interface.
+- **Master keys** protect the data keys. They come from a key provider: the file provider (default, `master-keys` in the secrets directory, generated on first start) or the env provider (`LUNEDO_MASTER_KEYS`). Further providers, such as HashiCorp Vault, OpenBao or a cloud KMS, implement the same `KeyProvider` interface.
 
-  At startup Pagehall counts the master key versions that encrypted columns and streams use. The file provider generates version 1 only while the database holds no encrypted data; otherwise a missing key file stops the start with a message, so that a lost key ring is never silently replaced by a new key. Pagehall also refuses to start when a key version in use is missing from the ring.
+  At startup Lunedo counts the master key versions that encrypted columns and streams use. The file provider generates version 1 only while the database holds no encrypted data; otherwise a missing key file stops the start with a message, so that a lost key ring is never silently replaced by a new key. Lunedo also refuses to start when a key version in use is missing from the ring.
 - **Data keys** are random 256-bit keys, one per encrypted value or stream. They are stored only in wrapped form, next to the data.
 - **The backup key** encrypts backups and is separate from the master keys.
 
@@ -18,7 +18,7 @@ Values in the database are `bytea` columns created with `encrypted()`:
 
 | Offset | Length | Content |
 |---|---|---|
-| 0 | 3 | Magic `PHE` |
+| 0 | 3 | Magic `LDE` |
 | 3 | 1 | Format version, 1 |
 | 4 | 4 | Master key version, big endian |
 | 8 | 12 | IV for wrapping the data key |
@@ -36,7 +36,7 @@ Large data is encrypted in chunks of 64 KiB, so it never has to fit in memory. E
 
 | Offset | Length | Content |
 |---|---|---|
-| 0 | 3 | Magic `PHS` |
+| 0 | 3 | Magic `LDS` |
 | 3 | 1 | Format version, 1 |
 | 4 | 1 | Key kind: 1 master key, 2 backup key |
 | 5 | 8 | Key ID: the master key version in bytes 4–7, or the backup key version in bytes 0–3 and the first 4 bytes of its fingerprint |
@@ -57,13 +57,13 @@ Rotating the master key re-wraps every data key with a new master key version: i
 With the file provider:
 
 ```sh
-docker compose exec pagehall pagehall keys rotate
-docker compose exec pagehall pagehall keys status
+docker compose exec lunedo lunedo keys rotate
+docker compose exec lunedo lunedo keys status
 ```
 
 `rotate` adds a new version to the key ring file, tells all running nodes to reload it, and starts a background job in the worker. New data is encrypted with the new version immediately. Values that still use an older version stay readable until the job has re-wrapped them. `status` shows the current version and the progress of the latest rotation. Remove an old version from the key ring only after the rotation is completed. Rotations started at the same time are serialized: each adds its own version, and the background job always re-wraps to the newest one.
 
-With the env provider, add the new version to `PAGEHALL_MASTER_KEYS` (keep the old ones), restart all nodes, and then run `pagehall keys rotate`.
+With the env provider, add the new version to `LUNEDO_MASTER_KEYS` (keep the old ones), restart all nodes, and then run `lunedo keys rotate`.
 
 ## Encrypted columns
 

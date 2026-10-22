@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -19,7 +19,7 @@ const VERSION_FILE = {
       version: "99.0.0",
       date: "2026-11-02",
       minimumUpdateFrom: null,
-      url: "https://github.com/pagehall/pagehall/releases/tag/v99.0.0",
+      url: "https://github.com/lunedo/lunedo/releases/tag/v99.0.0",
       notes: { new: ["Something new."], improved: [], fixed: [], breaking: [], manualSteps: [] },
     },
   ],
@@ -42,11 +42,11 @@ describe.skipIf(!databaseBaseUrl)("updates through the API", () => {
     const port = (server.address() as AddressInfo).port;
     test = await createAuthTestApp({
       ...configuredSetupEnv,
-      PAGEHALL_UPDATE_CHECK_URL: `http://127.0.0.1:${port}/pagehall-versions.json`,
-      PAGEHALL_OUTBOUND_ALLOWED_NETWORKS: "127.0.0.1/32",
-      PAGEHALL_INSTALL_METHOD: "script",
-      PAGEHALL_INSTALL_DIR: "/opt/pagehall",
-      PAGEHALL_VERSION: "1.4.2",
+      LUNEDO_UPDATE_CHECK_URL: `http://127.0.0.1:${port}/lunedo-versions.json`,
+      LUNEDO_OUTBOUND_ALLOWED_NETWORKS: "127.0.0.1/32",
+      LUNEDO_INSTALL_METHOD: "script",
+      LUNEDO_INSTALL_DIR: "/opt/lunedo",
+      LUNEDO_VERSION: "1.4.2",
     });
     await completeConfiguredSetup(test);
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
@@ -54,8 +54,8 @@ describe.skipIf(!databaseBaseUrl)("updates through the API", () => {
     owner = new TestClient(test.app);
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
-    await createAccount(test, "updates-member@pagehall.test", "a long enough passphrase");
-    member = await signedInClient(test, "updates-member@pagehall.test", "a long enough passphrase");
+    await createAccount(test, "updates-member@lunedo.test", "a long enough passphrase");
+    member = await signedInClient(test, "updates-member@lunedo.test", "a long enough passphrase");
   });
 
   afterAll(async () => {
@@ -74,18 +74,18 @@ describe.skipIf(!databaseBaseUrl)("updates through the API", () => {
       latest: "99.0.0",
       commands: {
         method: "script",
-        steps: [{ text: "cd /opt/pagehall" }, { text: "./pagehall update 99.0.0" }],
+        steps: [{ text: "cd /opt/lunedo" }, { text: "./lunedo update 99.0.0" }],
       },
     });
     expect(requests).toHaveLength(1);
-    expect(requests[0]?.url).toBe("/pagehall-versions.json");
+    expect(requests[0]?.url).toBe("/lunedo-versions.json");
     expect(Object.keys(requests[0]?.headers ?? {}).sort()).toEqual([
       "accept",
       "connection",
       "host",
       "user-agent",
     ]);
-    expect(requests[0]?.headers["user-agent"]).toBe("Pagehall update check");
+    expect(requests[0]?.headers["user-agent"]).toBe("Lunedo update check");
 
     const shown = await owner.get("/api/v1/instance/updates");
     expect(shown.json()).toMatchObject({ running: "1.4.2", latest: "99.0.0" });

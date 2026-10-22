@@ -1,4 +1,4 @@
-import { Combobox, type ComboboxItem, Field, SettingRow, Skeleton, Switch } from "@pagehall/ui";
+import { Combobox, type ComboboxItem, Field, SettingRow, Skeleton, Switch } from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

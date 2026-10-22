@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import type { NodeJson } from "@pagehall/editor-schema";
+import type { NodeJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
@@ -165,7 +165,7 @@ describe.skipIf(!baseUrl)("knowledge base round trip between instances", () => {
     const markdown = [...files].find(([path]) => path.endsWith("VPN einrichten.md"));
     expect(markdown?.[1].toString("utf8")).toMatch(/^---\n[\s\S]*articleType: howTo[\s\S]*language: de/);
     expect(markdown?.[1].toString("utf8")).toContain(
-      '<!-- pagehall:section key="steps" icon="list-ordered" -->',
+      '<!-- lunedo:section key="steps" icon="list-ordered" -->',
     );
 
     const view = await harness.importedFiles({
@@ -236,7 +236,7 @@ describe.skipIf(!baseUrl)("knowledge base round trip between instances", () => {
     const html = [...files].find(([path]) => path.endsWith("VPN einrichten.html"))?.[1].toString("utf8");
     expect(html).toContain('data-section="steps"');
     expect(html).toContain('data-icon="list-ordered"');
-    expect(html).toContain('<meta name="pagehall:article-type" content="howTo">');
+    expect(html).toContain('<meta name="lunedo:article-type" content="howTo">');
     expect(html).toContain('<html lang="de"');
   });
 

@@ -1,4 +1,4 @@
-import { Button } from "@pagehall/ui";
+import { Button } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";

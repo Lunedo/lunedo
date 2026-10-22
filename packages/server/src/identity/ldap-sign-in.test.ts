@@ -17,7 +17,7 @@ import { SYNC_RUNS_CHANNEL } from "./sync-signals.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const PASSWORD = "directory password";
-const SERVICE_DN = "cn=pagehall,ou=service,dc=example,dc=org";
+const SERVICE_DN = "cn=lunedo,ou=service,dc=example,dc=org";
 const SERVICE_PASSWORD = "service password";
 
 function person(uid: string, domain: string, extra: Record<string, string[]> = {}): FakeLdapEntry {
@@ -76,7 +76,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   }
 
   async function provider(
-    secondFactor: "pagehall" | "provider" = "provider",
+    secondFactor: "lunedo" | "provider" = "provider",
     deactivationLimitPercent = 20,
     deactivationLimitAccounts = 5,
   ) {
@@ -220,8 +220,8 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   it("stores the directory's ID of a group chosen by name and matches it for nested members", async () => {
     const { id, domain } = await provider();
     const ada = person(`ada-${randomUUID().slice(0, 6)}`, domain);
-    const users = group(`pagehall-users-${randomUUID().slice(0, 6)}`, [ada.dn]);
-    const admins = group(`pagehall-admins-${randomUUID().slice(0, 6)}`, [users.dn]);
+    const users = group(`lunedo-users-${randomUUID().slice(0, 6)}`, [ada.dn]);
+    const admins = group(`lunedo-admins-${randomUUID().slice(0, 6)}`, [users.dn]);
     directory.entries.push(ada, users, admins);
     const org = await organization();
     const name = String(admins.attributes.cn?.[0]);
@@ -247,17 +247,17 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   it("matches a rule of Active Directory for nested members at sign-in and in a sync", async () => {
     const ad = await activeDirectoryProvider();
     const alice = ad.adPerson(`alice-${randomUUID().slice(0, 6)}`);
-    const users = ad.adGroup("pagehall-users", [alice.dn]);
-    const admins = ad.adGroup("pagehall-admins", [users.dn]);
+    const users = ad.adGroup("lunedo-users", [alice.dn]);
+    const admins = ad.adGroup("lunedo-admins", [users.dn]);
     directory.entries.push(alice, users, admins);
     const org = await organization();
     await expect(
-      ruleFor(ad.id, org.id, org.owner, { id: "pagehall-admins", name: null }),
+      ruleFor(ad.id, org.id, org.owner, { id: "lunedo-admins", name: null }),
     ).rejects.toMatchObject({ code: "providerGroupNotFound" });
-    const [match] = await test.services.mappingRules.searchGroups(ad.id, "pagehall-admins");
+    const [match] = await test.services.mappingRules.searchGroups(ad.id, "lunedo-admins");
     expect(match?.id).toBe(guidFromBytes(admins.attributes.objectGUID?.[0] as Buffer));
     const rule = await ruleFor(ad.id, org.id, org.owner, { id: String(match?.id), name: null });
-    expect(rule.group.name).toBe("pagehall-admins");
+    expect(rule.group.name).toBe("lunedo-admins");
     const signedIn = await signIn(ad.id, String(alice.attributes.userPrincipalName?.[0]));
     if (signedIn.kind !== "signedIn") throw new Error(`Signed in expected, got ${signedIn.kind}`);
     const accountId = signedIn.signedIn.session.accountId;
@@ -506,7 +506,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     const started = await test.services.providerSignIn.start({
       providerId: entra.id,
       purpose: "signIn",
-      baseUrl: "https://pagehall.test",
+      baseUrl: "https://lunedo.test",
     });
     const callback = await idp.authorize(started.url, { sub: randomUUID(), email });
     const result = await test.services.providerSignIn.callback({
@@ -608,7 +608,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     expect(directory.binds.length).toBe(before);
   });
 
-  it("applies Pagehall's rate limits before the bind", async () => {
+  it("applies Lunedo's rate limits before the bind", async () => {
     const { id, domain } = await provider();
     const cleo = person(`cleo-${randomUUID().slice(0, 6)}`, domain);
     directory.entries.push(cleo);
@@ -630,8 +630,8 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     expect(directory.binds.filter((bind) => bind.dn === cleo.dn).length).toBe(binds);
   });
 
-  it("asks for a Pagehall second factor by default", async () => {
-    const { id, domain } = await provider("pagehall");
+  it("asks for a Lunedo second factor by default", async () => {
+    const { id, domain } = await provider("lunedo");
     const dora = person(`dora-${randomUUID().slice(0, 6)}`, domain);
     directory.entries.push(dora);
     const result = await signIn(id, String(dora.attributes.mail?.[0]));

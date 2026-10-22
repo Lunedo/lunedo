@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
 import {
   MAX_PAGE_STATUS_VALUES,
   MAX_UNOWNED_PAGE,
   PAGE_STATUS_NAME_MAX_LENGTH,
   treeItemKinds,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

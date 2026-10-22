@@ -1,5 +1,5 @@
+import { ANONYMOUS, accountPrincipal, EMBED_REFERRER_POLICIES, type Principal } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req, Res } from "@nestjs/common";
-import { ANONYMOUS, accountPrincipal, EMBED_REFERRER_POLICIES, type Principal } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -23,7 +23,7 @@ const tokenParams = z
   .object({ token: z.string().max(100).describe("The token from the link address.") })
   .strict();
 const tokenAttachmentParams = tokenParams.extend({ attachmentId: uuid("ID of the attachment.") }).strict();
-const UNLOCK_HEADER = "x-pagehall-unlock";
+const UNLOCK_HEADER = "x-lunedo-unlock";
 
 const versionQuery = z
   .object({
@@ -306,7 +306,7 @@ export class ShareLinksController {
   @ApiRoute({
     summary: "Read a page through a link for anyone",
     description:
-      "Returns the published content and the attachments of the page the link opens, without the page tree and comments. Links with a password need the proof from the open endpoint in the `X-Pagehall-Unlock` header.",
+      "Returns the published content and the attachments of the page the link opens, without the page tree and comments. Links with a password need the proof from the open endpoint in the `X-Lunedo-Unlock` header.",
     tags: [TAG],
     params: tokenParams,
     response: {
@@ -343,7 +343,7 @@ export class ShareLinksController {
   @ApiRoute({
     summary: "Download an attachment through a link for anyone",
     description:
-      "Sends an attachment of the page the link opens. Links with a password need the proof from the open endpoint in the `X-Pagehall-Unlock` header; it is never accepted in the address, so that it does not end up in histories or copied links.",
+      "Sends an attachment of the page the link opens. Links with a password need the proof from the open endpoint in the `X-Lunedo-Unlock` header; it is never accepted in the address, so that it does not end up in histories or copied links.",
     tags: [TAG],
     params: tokenAttachmentParams,
     query: versionQuery,

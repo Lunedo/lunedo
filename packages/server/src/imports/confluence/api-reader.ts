@@ -229,7 +229,7 @@ function apiPath(path: string): string {
 function nextPath(next: string | null | undefined): string | null {
   if (!next) return null;
   if (next.startsWith("/rest/api/") || next.startsWith("/api/v2/")) return next;
-  throw new ImportFormatError("confluenceInvalidResponse", "Confluence sent a link Pagehall cannot follow.");
+  throw new ImportFormatError("confluenceInvalidResponse", "Confluence sent a link Lunedo cannot follow.");
 }
 
 function attachmentId(value: string): string {
@@ -314,7 +314,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
     if (!connection) {
       throw new ImportFormatError(
         "connectionMissing",
-        "Pagehall deleted the token of this import. Enter it again to continue.",
+        "Lunedo deleted the token of this import. Enter it again to continue.",
       );
     }
     return connection;

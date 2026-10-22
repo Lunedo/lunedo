@@ -197,7 +197,7 @@ export class KeyRotation {
   }
 }
 
-const ROTATION_LOCK = "pagehall.key-rotation";
+const ROTATION_LOCK = "lunedo.key-rotation";
 
 /**
  * Adds a master key version (where the provider manages keys) and starts the rotation to it.

@@ -22,7 +22,7 @@ Update from 1.4.0 or later.
 
 ### Manual steps
 
-- Set PAGEHALL_TRUSTED_PROXIES.
+- Set LUNEDO_TRUSTED_PROXIES.
 
 ## 1.4.2 · 2026-10-01
 
@@ -32,10 +32,10 @@ Update from 1.4.0 or later.
 `;
 
 function changelog(): Record<string, string> {
-  const directory = mkdtempSync(path.join(tmpdir(), "pagehall-notes-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "lunedo-notes-"));
   const file = path.join(directory, "CHANGELOG.md");
   writeFileSync(file, CHANGELOG);
-  return { PAGEHALL_CHANGELOG_FILE: file };
+  return { LUNEDO_CHANGELOG_FILE: file };
 }
 
 async function lines(
@@ -49,13 +49,13 @@ async function lines(
   return written;
 }
 
-describe("pagehall release-notes", () => {
+describe("lunedo release-notes", () => {
   it("prints the notes of every release after a version, with breaking changes and manual steps first", async () => {
     expect(await lines(changelog(), "1.4.2")).toEqual([
-      "Pagehall 1.5.0 (2026-11-02)",
+      "Lunedo 1.5.0 (2026-11-02)",
       "  Update from 1.4.0 or later.",
       "  Manual steps:",
-      "    - Set PAGEHALL_TRUSTED_PROXIES.",
+      "    - Set LUNEDO_TRUSTED_PROXIES.",
       "  New:",
       "    - Maintenance mode.",
     ]);
@@ -65,9 +65,9 @@ describe("pagehall release-notes", () => {
   it("refuses an update that skips a required version and allows one from a new enough version", async () => {
     await expect(lines(changelog(), null, false, "1.3.9")).rejects.toThrow(UpdateStepError);
     await expect(lines(changelog(), null, false, "1.3.9")).rejects.toThrow(
-      "Pagehall 1.5.0 can only be installed from 1.4.0 or later, and 1.3.9 is installed. Update to 1.4.0 first",
+      "Lunedo 1.5.0 can only be installed from 1.4.0 or later, and 1.3.9 is installed. Update to 1.4.0 first",
     );
-    expect((await lines(changelog(), null, false, "1.4.0"))[0]).toBe("Pagehall 1.5.0 (2026-11-02)");
+    expect((await lines(changelog(), null, false, "1.4.0"))[0]).toBe("Lunedo 1.5.0 (2026-11-02)");
   });
 
   it("prints the version file that is attached to every release", async () => {
@@ -78,7 +78,7 @@ describe("pagehall release-notes", () => {
         {
           version: "1.5.0",
           minimumUpdateFrom: "1.4.0",
-          url: "https://github.com/pagehall/pagehall/releases/tag/v1.5.0",
+          url: "https://github.com/lunedo/lunedo/releases/tag/v1.5.0",
         },
         { version: "1.4.2", notes: { fixed: ["Uploads."] } },
       ],

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -501,7 +501,7 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
       expect(await auditNames(kb.id)).toContain("space.permissionGranted");
     });
 
-    it("lets portal knowledge bases be read in Pagehall only by holders of a role", async () => {
+    it("lets portal knowledge bases be read in Lunedo only by holders of a role", async () => {
       const { org, kb, editor } = await setup("signedIn");
       const colleague = await member(org.id);
       expect(await role(colleague, kb.id)).toBe("reader");

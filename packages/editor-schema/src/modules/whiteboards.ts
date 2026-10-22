@@ -35,8 +35,8 @@ function whiteboardHtml(node: ValidNode, renderer: HtmlRenderer): string {
   if (board === undefined) {
     return element(
       "figure",
-      { class: "ph-whiteboard", "data-whiteboard-id": id },
-      element("span", { class: "ph-whiteboard-empty" }, renderer.escape(renderer.label("whiteboard"))),
+      { class: "ld-whiteboard", "data-whiteboard-id": id },
+      element("span", { class: "ld-whiteboard-empty" }, renderer.escape(renderer.label("whiteboard"))),
     );
   }
   if (board === null) {
@@ -44,7 +44,7 @@ function whiteboardHtml(node: ValidNode, renderer: HtmlRenderer): string {
     return note
       ? element(
           "figure",
-          { class: "ph-whiteboard ph-whiteboard-note" },
+          { class: "ld-whiteboard ld-whiteboard-note" },
           element("p", {}, renderer.escape(note)),
         )
       : "";
@@ -54,12 +54,12 @@ function whiteboardHtml(node: ValidNode, renderer: HtmlRenderer): string {
   const title = board.title || renderer.label("whiteboard");
   const image = preview
     ? `<img${htmlAttributes({ src: preview, alt: "", loading: renderer.context.target === "print" ? null : "lazy" })}>`
-    : element("span", { class: "ph-whiteboard-empty" }, renderer.escape(renderer.label("whiteboard")));
+    : element("span", { class: "ld-whiteboard-empty" }, renderer.escape(renderer.label("whiteboard")));
   const caption = element("figcaption", {}, renderer.escape(title));
   const content = href
-    ? element("a", { href, class: "ph-whiteboard-link" }, `${image}${caption}`)
+    ? element("a", { href, class: "ld-whiteboard-link" }, `${image}${caption}`)
     : `${image}${caption}`;
-  return element("figure", { class: "ph-whiteboard", "data-whiteboard-id": id }, content);
+  return element("figure", { class: "ld-whiteboard", "data-whiteboard-id": id }, content);
 }
 
 function whiteboardWord(node: ValidNode, renderer: WordRenderer): WordContent[] {

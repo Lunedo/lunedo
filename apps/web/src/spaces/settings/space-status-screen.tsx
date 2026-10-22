@@ -10,7 +10,7 @@ import {
   Select,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Flag, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";

@@ -1,12 +1,12 @@
 # Real-time collaboration
 
-People who edit a page at the same time work on one shared document. Pagehall uses [Yjs](https://yjs.dev) for the document and [Hocuspocus](https://tiptap.dev/docs/hocuspocus) for the server. The collaboration server runs in the `collab` role of the image (part of `all`).
+People who edit a page at the same time work on one shared document. Lunedo uses [Yjs](https://yjs.dev) for the document and [Hocuspocus](https://tiptap.dev/docs/hocuspocus) for the server. The collaboration server runs in the `collab` role of the image (part of `all`).
 
 ## Connections
 
 The web client connects to `wss://<instance address>/collab` with the document name `page:<page ID>` for pages and blog posts, and `whiteboard:<item ID>` for whiteboards ([whiteboards.md](whiteboards.md)).
 
-- In a single container (`all`), the API forwards WebSocket connections on `/collab` to the local collaboration server, so only the API port needs to be published. `PAGEHALL_COLLAB_UPSTREAM` changes where the API forwards to.
+- In a single container (`all`), the API forwards WebSocket connections on `/collab` to the local collaboration server, so only the API port needs to be published. `LUNEDO_COLLAB_UPSTREAM` changes where the API forwards to.
 - With separate roles behind a load balancer, route `/collab` to the collaboration nodes, with WebSocket support and idle timeouts above 60 seconds. Keep the `Host`, `Cookie` and `Origin` headers unchanged.
 
 A connection is accepted only when:
@@ -40,6 +40,6 @@ Permission changes take effect on open connections at once, also on other nodes.
 
 ## Several nodes
 
-A single collaboration node needs no Redis. With more than one, set `PAGEHALL_REDIS_URL` on every collaboration node: updates, presence and save messages travel between the nodes through Redis, so people on different nodes see each other's changes immediately. Without Redis, nodes still converge through the database, but only after a page is stored.
+A single collaboration node needs no Redis. With more than one, set `LUNEDO_REDIS_URL` on every collaboration node: updates, presence and save messages travel between the nodes through Redis, so people on different nodes see each other's changes immediately. Without Redis, nodes still converge through the database, but only after a page is stored.
 
 Any Redis-compatible server works, for example Redis or Valkey.

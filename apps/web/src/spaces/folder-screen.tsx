@@ -1,4 +1,4 @@
-import { Button, EmptyState, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@pagehall/ui";
+import { Button, EmptyState, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import {

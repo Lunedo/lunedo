@@ -64,14 +64,14 @@ function diagramHtml(type: DiagramType, node: ValidNode, renderer: HtmlRenderer,
   const label = renderer.label(type);
   const source = sourceOf(node);
   const code = (text: string) =>
-    element("pre", { class: "ph-code-block" }, element("code", { class: "hljs" }, escapeHtml(text)));
+    element("pre", { class: "ld-code-block" }, element("code", { class: "hljs" }, escapeHtml(text)));
   let content: string;
   if (href) {
     content = `<img${htmlAttributes({ src: href, alt: label, loading: screen ? "lazy" : null })}>`;
     if (screen && source.length > 0) {
       content += element(
         "details",
-        { class: "ph-diagram-source" },
+        { class: "ld-diagram-source" },
         element("summary", {}, renderer.escape(renderer.label("diagramSource"))) + code(source),
       );
     }
@@ -79,15 +79,15 @@ function diagramHtml(type: DiagramType, node: ValidNode, renderer: HtmlRenderer,
     content =
       element(
         "p",
-        { class: "ph-diagram-hint" },
+        { class: "ld-diagram-hint" },
         renderer.escape(renderer.label("diagramNotRendered", { name: label })),
       ) + code(source);
   } else {
-    content = element("span", { class: "ph-diagram-empty" }, renderer.escape(label));
+    content = element("span", { class: "ld-diagram-empty" }, renderer.escape(label));
   }
   return element(
     "figure",
-    { class: "ph-diagram", "data-diagram": type, "data-diagram-id": attrOf<string>(node, "id") },
+    { class: "ld-diagram", "data-diagram": type, "data-diagram-id": attrOf<string>(node, "id") },
     content,
   );
 }
@@ -360,22 +360,22 @@ function sourceTitle(diagram: ReferencedDiagram, renderer: AnyRenderer): string 
 function referenceHtml(node: ValidNode, renderer: HtmlRenderer): string {
   const diagram = referenced(node, renderer);
   const attributes = {
-    class: "ph-diagram ph-diagram-reference",
+    class: "ld-diagram ld-diagram-reference",
     "data-diagram": "drawioReference",
     "data-page-id": attrOf<string | null>(node, "pageId"),
     "data-diagram-ref": attrOf<string | null>(node, "diagramId"),
   };
-  const hint = (text: string) => element("p", { class: "ph-diagram-hint" }, renderer.escape(text));
+  const hint = (text: string) => element("p", { class: "ld-diagram-hint" }, renderer.escape(text));
   if (diagram === undefined) {
     return element(
       "figure",
       { ...attributes, "data-name": attrOf<string>(node, "name") },
-      element("span", { class: "ph-diagram-empty" }, renderer.escape(renderer.label("drawioReference"))),
+      element("span", { class: "ld-diagram-empty" }, renderer.escape(renderer.label("drawioReference"))),
     );
   }
   if (diagram === null) {
     const note = hiddenNote(node, renderer);
-    return note ? element("figure", { class: "ph-diagram ph-diagram-reference" }, hint(note)) : "";
+    return note ? element("figure", { class: "ld-diagram ld-diagram-reference" }, hint(note)) : "";
   }
   const label = renderer.label("drawio");
   const preview = referencedPreview(diagram, renderer);
@@ -383,7 +383,7 @@ function referenceHtml(node: ValidNode, renderer: HtmlRenderer): string {
     ? hint(renderer.label("diagramRemoved"))
     : preview
       ? `<img${htmlAttributes({ src: preview, alt: label })}>`
-      : element("span", { class: "ph-diagram-empty" }, renderer.escape(label));
+      : element("span", { class: "ld-diagram-empty" }, renderer.escape(label));
   const href = renderer.safeHref(diagram.href);
   const title = renderer.escape(sourceTitle(diagram, renderer));
   const caption = renderer

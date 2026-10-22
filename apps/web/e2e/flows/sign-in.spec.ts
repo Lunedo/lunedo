@@ -79,7 +79,7 @@ test("returns to the page that was open when the session ended", async ({ browse
   const page = await context.newPage();
   await page.goto("/settings/security");
   await expect(page.getByRole("heading", { name: "Security", level: 1 })).toBeVisible();
-  await context.clearCookies({ name: "__Host-pagehall-session" });
+  await context.clearCookies({ name: "__Host-lunedo-session" });
   await page.reload();
   await expect(page).toHaveURL(/\/sign-in\?/);
   expect(new URL(page.url()).searchParams.get("redirect")).toBe("/settings/security");

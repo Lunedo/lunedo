@@ -24,7 +24,7 @@ const applied = appliedMigrations(
       "postgres",
       "psql",
       "-U",
-      "pagehall",
+      "lunedo",
       "-d",
       DEV_DATABASE,
       "-At",

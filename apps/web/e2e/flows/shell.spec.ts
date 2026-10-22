@@ -112,7 +112,7 @@ test("switches language, color mode and text size immediately", async ({ page })
   await expect
     .poll(() =>
       page.evaluate(() =>
-        getComputedStyle(document.documentElement).getPropertyValue("--ph-text-scale").trim(),
+        getComputedStyle(document.documentElement).getPropertyValue("--ld-text-scale").trim(),
       ),
     )
     .toBe("1.125");
@@ -219,7 +219,7 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
   await page.goto(`${pagePath}?edit=true`);
   await expect(page.getByRole("textbox", { name: "Page content" })).toBeEditable();
   await expectOnlyContentScrolls(`${pagePath}?edit=true`, ["nav[aria-label='Main navigation']"]);
-  const toolbar = await page.locator(".ph-editor-bar").boundingBox();
+  const toolbar = await page.locator(".ld-editor-bar").boundingBox();
   const main = await page.locator("#main").boundingBox();
   expect(toolbar?.y).toBeGreaterThanOrEqual(main?.y ?? 0);
   expect(toolbar?.y).toBeLessThan((main?.y ?? 0) + 10);

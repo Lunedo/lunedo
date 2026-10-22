@@ -9,7 +9,7 @@ import { instanceUrlSetting } from "./instance-settings.js";
 import { accountPrincipal, SYSTEM } from "./principal.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const BASE = "https://pagehall.test";
+const BASE = "https://lunedo.test";
 const PASSWORD = "a long test passphrase";
 
 describe.skipIf(!baseUrl)("placeholders and anonymization", () => {

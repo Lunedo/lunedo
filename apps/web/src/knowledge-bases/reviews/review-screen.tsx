@@ -7,7 +7,7 @@ import {
   PageHeader,
   SegmentedControl,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen, Languages, SquarePen, UserRoundX } from "lucide-react";

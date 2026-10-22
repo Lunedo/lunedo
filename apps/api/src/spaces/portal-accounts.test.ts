@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -201,7 +201,7 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     expect(refused.statusCode).toBe(409);
     expect(refused.json().code).toBe("portalAudienceRequired");
     const kb = await knowledgeBase("portal");
-    const member = await createAccount(test, "kollege@pagehall.test");
+    const member = await createAccount(test, "kollege@lunedo.test");
     const { token } = await invite(kb.id, member.email);
     const taken = await new TestClient(test.app).post("/api/v1/invitations/accept", {
       token,
@@ -225,7 +225,7 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
       kind: "member",
     });
     expect(pending.statusCode, pending.body).toBe(201);
-    const member = await createAccount(test, "max-kb@pagehall.test");
+    const member = await createAccount(test, "max-kb@lunedo.test");
     const max = await signedInClient(test, member.email, member.password);
     const own = await knowledgeBase("portal", max);
     const attempts = [

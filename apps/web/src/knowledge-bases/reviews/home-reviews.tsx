@@ -1,4 +1,4 @@
-import { Badge, Button, Section } from "@pagehall/ui";
+import { Badge, Button, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen } from "lucide-react";

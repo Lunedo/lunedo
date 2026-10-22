@@ -1,5 +1,5 @@
-import { accessLevels, instanceAreas, organizationAreas, supportedLanguages } from "@pagehall/server";
-import { accentColors, idSchema } from "@pagehall/shared";
+import { accessLevels, instanceAreas, organizationAreas, supportedLanguages } from "@lunedo/server";
+import { accentColors, idSchema } from "@lunedo/shared";
 import { z } from "zod";
 
 export const uuid = (description: string) => idSchema.describe(description);
@@ -133,7 +133,7 @@ export const groupSchema = z
       .nullable()
       .optional()
       .describe(
-        "The identity provider that manages the members of a synchronized group, or null. Members of such a group cannot be changed in Pagehall; its permissions can.",
+        "The identity provider that manages the members of a synchronized group, or null. Members of such a group cannot be changed in Lunedo; its permissions can.",
       ),
     formerlySynchronizedFrom: z
       .string()
@@ -411,7 +411,7 @@ export const exampleApiToken = {
   accountId: exampleServiceAccount.id,
   organizationId: exampleOrganization.id,
   name: "CI pipeline",
-  prefix: "ph_4fT9xQ",
+  prefix: "ld_4fT9xQ",
   scopes: { organization: { spaces: "manage" } },
   contentLevel: "draft" as const,
   knowledgeBaseIds: ["01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"],

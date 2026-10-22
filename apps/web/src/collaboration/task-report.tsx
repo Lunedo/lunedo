@@ -3,8 +3,8 @@ import {
   type TaskReportStatus,
   taskReportDueWindows,
   taskReportStatuses,
-} from "@pagehall/editor-schema";
-import { Combobox, Field, Select } from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Combobox, Field, Select } from "@lunedo/ui";
 import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -89,7 +89,7 @@ export function TaskReport({
       ? "person"
       : "anyone";
   return (
-    <section className="ph-task-report-view flex flex-col gap-3" aria-label={t("tasks.report.title")}>
+    <section className="ld-task-report-view flex flex-col gap-3" aria-label={t("tasks.report.title")}>
       <h3 className="flex items-center gap-2 font-semibold">
         <ListChecks aria-hidden="true" className="size-icon-md" />
         {t("tasks.report.title")}

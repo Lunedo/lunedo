@@ -1,5 +1,5 @@
-import { accountPrincipal, SYSTEM } from "@pagehall/server";
-import { testDatabaseBaseUrl } from "@pagehall/server/testing";
+import { accountPrincipal, SYSTEM } from "@lunedo/server";
+import { testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import {

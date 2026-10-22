@@ -47,7 +47,7 @@ export interface ChromiumOptions {
 }
 
 interface PrintWindow {
-  pagehallPrint?: { render(html: string, options?: { baseUrl?: string }): Promise<{ pages: number }> };
+  lunedoPrint?: { render(html: string, options?: { baseUrl?: string }): Promise<{ pages: number }> };
 }
 
 export class ChromiumRenderer implements Renderer {
@@ -165,10 +165,10 @@ export class ChromiumRenderer implements Renderer {
     });
     const page = await context.newPage();
     await page.goto(`${RENDER_ORIGIN}/print.html`, { waitUntil: "load" });
-    await page.waitForFunction(() => (globalThis as PrintWindow).pagehallPrint !== undefined);
+    await page.waitForFunction(() => (globalThis as PrintWindow).lunedoPrint !== undefined);
     await page.evaluate(
       async ({ html, baseUrl }) => {
-        const viewer = (globalThis as PrintWindow).pagehallPrint;
+        const viewer = (globalThis as PrintWindow).lunedoPrint;
         if (!viewer) throw new Error("The print viewer did not start");
         await viewer.render(html, baseUrl ? { baseUrl } : {});
       },

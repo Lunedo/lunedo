@@ -4,7 +4,7 @@ import type {
   ServerRuntime,
   SettingsRegistry,
   SettingsService,
-} from "@pagehall/server";
+} from "@lunedo/server";
 
 export const API_CONTEXT = Symbol("API_CONTEXT");
 

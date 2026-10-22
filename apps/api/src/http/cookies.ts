@@ -1,16 +1,16 @@
-import { SESSION_COOKIE } from "@pagehall/server";
+import { SESSION_COOKIE } from "@lunedo/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 export const COOKIES = {
   session: SESSION_COOKIE,
-  pending: "__Host-pagehall-pending",
-  device: "__Host-pagehall-device",
-  setup: "__Host-pagehall-setup",
-  providerFlow: "__Host-pagehall-provider",
-  link: "__Host-pagehall-link",
-  lastProvider: "__Host-pagehall-last-provider",
-  portal: "__Host-pagehall-portal",
-  portalFlow: "__Host-pagehall-portal-flow",
+  pending: "__Host-lunedo-pending",
+  device: "__Host-lunedo-device",
+  setup: "__Host-lunedo-setup",
+  providerFlow: "__Host-lunedo-provider",
+  link: "__Host-lunedo-link",
+  lastProvider: "__Host-lunedo-last-provider",
+  portal: "__Host-lunedo-portal",
+  portalFlow: "__Host-lunedo-portal-flow",
 } as const;
 
 export type CookieName = (typeof COOKIES)[keyof typeof COOKIES];

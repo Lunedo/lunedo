@@ -13,8 +13,8 @@ export type Language = keyof typeof resources;
 
 export const supportedLanguages = Object.keys(resources) as Language[];
 
-const STORAGE_KEY = "pagehall.language";
-const CHOICE_KEY = "pagehall.chosenLanguage";
+const STORAGE_KEY = "lunedo.language";
+const CHOICE_KEY = "lunedo.chosenLanguage";
 
 export function isLanguage(value: unknown): value is Language {
   return typeof value === "string" && (supportedLanguages as string[]).includes(value);

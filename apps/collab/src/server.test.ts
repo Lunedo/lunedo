@@ -1,4 +1,4 @@
-import { testDatabaseBaseUrl } from "@pagehall/server/testing";
+import { testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Cluster, createCluster, type Node } from "./harness.testing.js";
 import { itemIdOf } from "./server.js";

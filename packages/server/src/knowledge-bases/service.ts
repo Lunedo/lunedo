@@ -4,7 +4,7 @@ import {
   type NodeJson,
   plainText,
   sectionIconValue,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";

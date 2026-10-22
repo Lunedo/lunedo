@@ -470,7 +470,7 @@ export function decorateArticleHtml(markup: string, base: string, root: string =
     .replaceAll(`${PORTAL_BASE_PLACEHOLDER}/files/`, `${root}/files/`)
     .replaceAll(`${PORTAL_BASE_PLACEHOLDER}/`, `${base}/`)
     .replace(
-      /(<section class="ph-section"[^>]*?data-icon="([a-z0-9-]+)"[^>]*><h2 id="[^"]*">)/g,
+      /(<section class="ld-section"[^>]*?data-icon="([a-z0-9-]+)"[^>]*><h2 id="[^"]*">)/g,
       (_match, opening: string, name: string) =>
         hasIcon(name) ? `${opening}<span class="hb" aria-hidden="true">${icon(name).value}</span>` : opening,
     );

@@ -1,5 +1,5 @@
-import { microsoftAuthorities, type SmtpOAuth2Provider } from "@pagehall/shared";
-import { CopyButton, Notice } from "@pagehall/ui";
+import { microsoftAuthorities, type SmtpOAuth2Provider } from "@lunedo/shared";
+import { CopyButton, Notice } from "@lunedo/ui";
 import { useTranslation } from "react-i18next";
 
 export const GOOGLE_MAIL_SCOPE = "https://mail.google.com/";

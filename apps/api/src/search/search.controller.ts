@@ -1,4 +1,3 @@
-import { Controller, Get, Inject, Param, Query, Req } from "@nestjs/common";
 import {
   DEFAULT_SEARCH_LIMIT,
   MAX_QUERY_LENGTH,
@@ -9,7 +8,8 @@ import {
   searchItemTypes,
   searchSorts,
   searchUpdatedRanges,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Controller, Get, Inject, Param, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

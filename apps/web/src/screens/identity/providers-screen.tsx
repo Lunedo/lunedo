@@ -11,7 +11,7 @@ import {
   Table,
   TableToolbar,
   TruncatedText,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";

@@ -1,4 +1,4 @@
-import { defaultEmbedServices, type EmbedService } from "@pagehall/editor-schema";
+import { defaultEmbedServices, type EmbedService } from "@lunedo/editor-schema";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";

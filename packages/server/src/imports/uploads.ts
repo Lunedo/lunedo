@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { PassThrough, type Readable, Transform, type TransformCallback } from "node:stream";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -74,7 +74,7 @@ export async function importStorageUsed(executor: Executor, organizationId: stri
 
 export async function lockImportStorage(executor: Executor, organizationId: string): Promise<void> {
   await executor.execute(
-    sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.importStorage:${organizationId}`}, 0))`,
+    sql`select pg_advisory_xact_lock(hashtextextended(${`lunedo.importStorage:${organizationId}`}, 0))`,
   );
 }
 

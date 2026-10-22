@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
-import { ChromiumRenderer, createRenderServer } from "@pagehall/render";
+import { ChromiumRenderer, createRenderServer } from "@lunedo/render";
 import { chromium, type Page } from "@playwright/test";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -463,10 +463,10 @@ We move the backup to Sunday`);
       const body = JSON.parse(request?.body ?? "{}") as { event: string; text: string };
       expect(body).toMatchObject({ event: "announcementPublished" });
       expect(body.text).toContain("Maintenance tomorrow");
-      expect(request?.headers["x-pagehall-signature"]).toBe(
+      expect(request?.headers["x-lunedo-signature"]).toBe(
         webhookSignature(
           channel.signingSecret ?? "",
-          String(request?.headers["x-pagehall-timestamp"]),
+          String(request?.headers["x-lunedo-timestamp"]),
           request?.body ?? "",
         ),
       );

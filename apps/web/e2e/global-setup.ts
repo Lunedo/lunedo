@@ -70,13 +70,13 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   for (const port of [E2E_PORT, E2E_PORT + 1, E2E_PORT + 2]) {
     if (await answers(`http://localhost:${port}/`)) {
       throw new Error(
-        `Port ${port} is already in use, probably by another end-to-end run. Wait for it to finish, or choose other ports with PAGEHALL_E2E_PORT.`,
+        `Port ${port} is already in use, probably by another end-to-end run. Wait for it to finish, or choose other ports with LUNEDO_E2E_PORT.`,
       );
     }
   }
   rmSync(STATE_DIR, { recursive: true, force: true });
   mkdirSync(STATE_DIR, { recursive: true });
-  const database = `pagehall_e2e_${Date.now()}`;
+  const database = `lunedo_e2e_${Date.now()}`;
   const admin = new pg.Client({ connectionString: DATABASE_BASE_URL });
   await admin.connect();
   await admin.query(`create database ${database}`);
@@ -86,25 +86,25 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const dataDir = mkdtempSync(path.join(STATE_DIR, "data-"));
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    PAGEHALL_DATABASE_URL: databaseUrl(database),
-    PAGEHALL_HOST: process.env.PAGEHALL_E2E_HOST ?? "127.0.0.1",
-    PAGEHALL_API_PORT: String(E2E_PORT),
-    PAGEHALL_COLLAB_PORT: String(E2E_PORT + 1),
-    PAGEHALL_WORKER_PORT: String(E2E_PORT + 2),
-    ...(process.env.PAGEHALL_E2E_REDIS_URL ? { PAGEHALL_REDIS_URL: process.env.PAGEHALL_E2E_REDIS_URL } : {}),
-    PAGEHALL_WEB_ROOT: webRoot,
-    PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
-    PAGEHALL_FILES_DIR: path.join(dataDir, "files"),
-    PAGEHALL_BACKUP_DIR: path.join(dataDir, "backups"),
-    PAGEHALL_WORK_DIR: path.join(dataDir, "work"),
-    PAGEHALL_IMPORT_DIR: IMPORT_DIR,
-    PAGEHALL_LOG_LEVEL: "info",
-    PAGEHALL_TRUSTED_PROXIES: "127.0.0.1,::1",
-    PAGEHALL_UPDATE_CHECK: "false",
-    PAGEHALL_INSECURE_IDENTITY_PROVIDERS: process.env.PAGEHALL_E2E_IDP === "1" ? "true" : "false",
+    LUNEDO_DATABASE_URL: databaseUrl(database),
+    LUNEDO_HOST: process.env.LUNEDO_E2E_HOST ?? "127.0.0.1",
+    LUNEDO_API_PORT: String(E2E_PORT),
+    LUNEDO_COLLAB_PORT: String(E2E_PORT + 1),
+    LUNEDO_WORKER_PORT: String(E2E_PORT + 2),
+    ...(process.env.LUNEDO_E2E_REDIS_URL ? { LUNEDO_REDIS_URL: process.env.LUNEDO_E2E_REDIS_URL } : {}),
+    LUNEDO_WEB_ROOT: webRoot,
+    LUNEDO_SECRETS_DIR: path.join(dataDir, "secrets"),
+    LUNEDO_FILES_DIR: path.join(dataDir, "files"),
+    LUNEDO_BACKUP_DIR: path.join(dataDir, "backups"),
+    LUNEDO_WORK_DIR: path.join(dataDir, "work"),
+    LUNEDO_IMPORT_DIR: IMPORT_DIR,
+    LUNEDO_LOG_LEVEL: "info",
+    LUNEDO_TRUSTED_PROXIES: "127.0.0.1,::1",
+    LUNEDO_UPDATE_CHECK: "false",
+    LUNEDO_INSECURE_IDENTITY_PROVIDERS: process.env.LUNEDO_E2E_IDP === "1" ? "true" : "false",
   };
-  mkdirSync(env.PAGEHALL_FILES_DIR as string, { recursive: true });
-  mkdirSync(env.PAGEHALL_BACKUP_DIR as string, { recursive: true });
+  mkdirSync(env.LUNEDO_FILES_DIR as string, { recursive: true });
+  mkdirSync(env.LUNEDO_BACKUP_DIR as string, { recursive: true });
   mkdirSync(IMPORT_DIR, { recursive: true });
   await writeSyntheticExport("csv", FOLDER_EXPORT_TEMPLATE);
   await writeSyntheticExport("csv", PEOPLE_EXPORT_TEMPLATE, "people");

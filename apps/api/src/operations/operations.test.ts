@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -20,8 +20,8 @@ describe.skipIf(!databaseBaseUrl)("operations status through the API", () => {
   beforeAll(async () => {
     test = await createAuthTestApp({
       ...configuredSetupEnv,
-      PAGEHALL_METRICS_TOKEN: METRICS_TOKEN,
-      PAGEHALL_COLLAB_UPSTREAM: "http://127.0.0.1:9",
+      LUNEDO_METRICS_TOKEN: METRICS_TOKEN,
+      LUNEDO_COLLAB_UPSTREAM: "http://127.0.0.1:9",
     });
     await completeConfiguredSetup(test);
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
@@ -29,8 +29,8 @@ describe.skipIf(!databaseBaseUrl)("operations status through the API", () => {
     owner = new TestClient(test.app);
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
-    await createAccount(test, "operations-member@pagehall.test", "a long enough passphrase");
-    member = await signedInClient(test, "operations-member@pagehall.test", "a long enough passphrase");
+    await createAccount(test, "operations-member@lunedo.test", "a long enough passphrase");
+    member = await signedInClient(test, "operations-member@lunedo.test", "a long enough passphrase");
   });
 
   afterAll(async () => {
@@ -57,18 +57,14 @@ describe.skipIf(!databaseBaseUrl)("operations status through the API", () => {
   });
 
   it("lets viewers of operations read, but only managers change maintenance and run the update check", async () => {
-    const watcher = await createAccount(test, "operations-auditor@pagehall.test", "a long enough passphrase");
+    const watcher = await createAccount(test, "operations-auditor@lunedo.test", "a long enough passphrase");
     await test.runtime.services.roles.assign(SYSTEM, {
       scope: "instance",
       organizationId: null,
       role: { builtIn: "securityAuditor" },
       principal: { kind: "account", id: watcher.id },
     });
-    const auditor = await signedInClient(
-      test,
-      "operations-auditor@pagehall.test",
-      "a long enough passphrase",
-    );
+    const auditor = await signedInClient(test, "operations-auditor@lunedo.test", "a long enough passphrase");
     for (const url of [
       "/api/v1/instance/operations/status",
       "/api/v1/instance/maintenance",
@@ -88,11 +84,11 @@ describe.skipIf(!databaseBaseUrl)("operations status through the API", () => {
       headers: { authorization: `Bearer ${METRICS_TOKEN}` },
     });
     expect(response.statusCode).toBe(200);
-    expect(response.body).toMatch(/^pagehall_build_info\{version="dev",service="api"\} 1$/m);
-    expect(response.body).toMatch(/^pagehall_database_size_bytes\{service="api"\} \d+$/m);
-    expect(response.body).toMatch(/^pagehall_storage_level\{service="api"\} 0$/m);
-    expect(response.body).toMatch(/^pagehall_collab_up\{service="api"\} 0$/m);
-    expect(response.body).toMatch(/^pagehall_mail_delivery_failures_total\{service="api"\} 0$/m);
-    expect(response.body).not.toContain("operations-member@pagehall.test");
+    expect(response.body).toMatch(/^lunedo_build_info\{version="dev",service="api"\} 1$/m);
+    expect(response.body).toMatch(/^lunedo_database_size_bytes\{service="api"\} \d+$/m);
+    expect(response.body).toMatch(/^lunedo_storage_level\{service="api"\} 0$/m);
+    expect(response.body).toMatch(/^lunedo_collab_up\{service="api"\} 0$/m);
+    expect(response.body).toMatch(/^lunedo_mail_delivery_failures_total\{service="api"\} 0$/m);
+    expect(response.body).not.toContain("operations-member@lunedo.test");
   });
 });

@@ -56,7 +56,7 @@ test("an administrator switches maintenance on, a colleague can only read, and i
     await expect(content(other)).toHaveAttribute("contenteditable", "false");
     const refused = await other.request.put(`/api/v1/pages/${created.id}/content`, {
       data: { document: { type: "doc", content: [paragraph("Changed during maintenance.")] } },
-      headers: { "X-Pagehall-Request": "1", origin: new URL(other.url()).origin },
+      headers: { "X-Lunedo-Request": "1", origin: new URL(other.url()).origin },
     });
     expect(refused.status()).toBe(503);
     expect(((await refused.json()) as { code: string }).code).toBe("maintenanceMode");

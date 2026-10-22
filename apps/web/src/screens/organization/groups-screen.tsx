@@ -1,4 +1,4 @@
-import { groupDescriptionSchema, groupNameSchema } from "@pagehall/shared";
+import { groupDescriptionSchema, groupNameSchema } from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -11,7 +11,7 @@ import {
   TableToolbar,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Lock, Plus, UsersRound } from "lucide-react";
@@ -116,7 +116,7 @@ export function GroupsScreen() {
                   ) : group.formerlySynchronizedFrom ? (
                     t("groups.formerlySynchronized", { provider: group.formerlySynchronizedFrom })
                   ) : (
-                    t("groups.managedByPagehall")
+                    t("groups.managedByLunedo")
                   ),
               },
             ]}

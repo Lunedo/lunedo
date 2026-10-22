@@ -62,7 +62,7 @@ describe("scopeOf", () => {
       "docker/idp/openldap/seed.ldif",
       "packages/server/src/auth/sign-in.ts",
       "apps/api/src/auth/auth.controller.ts",
-      "docker/idp/keycloak/pagehall-realm.json",
+      "docker/idp/keycloak/lunedo-realm.json",
     ]) {
       assert.equal(ready([file]).identityProviders, true, file);
     }
@@ -112,7 +112,7 @@ describe("scopeOf", () => {
     }
     for (const file of [
       "docker/compose.dev.yml",
-      "docker/idp/keycloak/pagehall-realm.json",
+      "docker/idp/keycloak/lunedo-realm.json",
       "docker/dev-healthcheck.ts",
     ]) {
       assert.equal(ready([file]).backup, false, file);

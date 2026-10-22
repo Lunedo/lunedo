@@ -1,4 +1,4 @@
-import { Button, Dialog, Notice, Skeleton } from "@pagehall/ui";
+import { Button, Dialog, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Server } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -78,10 +78,10 @@ export function DrawioEditor({ pageId, blockId, source, title, onSaved, onClose 
         case "autosave":
           setChanged(true);
           break;
-        case "pagehall-gliffy-converted":
+        case "lunedo-gliffy-converted":
           setChanged(true);
           break;
-        case "pagehall-gliffy-failed":
+        case "lunedo-gliffy-failed":
           window.clearTimeout(timer);
           setPhase("gliffyFailed");
           break;

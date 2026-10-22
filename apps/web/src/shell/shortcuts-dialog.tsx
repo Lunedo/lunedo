@@ -1,4 +1,4 @@
-import { Dialog, Kbd } from "@pagehall/ui";
+import { Dialog, Kbd } from "@lunedo/ui";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { translateKey } from "../i18n/translate.js";

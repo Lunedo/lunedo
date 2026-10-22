@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { handleOperationsRequest, type OperationsEndpoints } from "@pagehall/server";
+import { handleOperationsRequest, type OperationsEndpoints } from "@lunedo/server";
 
 export interface OperationsServer {
   start(): Promise<AddressInfo>;

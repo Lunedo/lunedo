@@ -1,5 +1,5 @@
-.ph-whiteboard .default-sidebar-trigger,
-.ph-whiteboard [data-testid="toolbar-embeddable"],
-.ph-whiteboard .library-menu-browse-button {
+.ld-whiteboard .default-sidebar-trigger,
+.ld-whiteboard [data-testid="toolbar-embeddable"],
+.ld-whiteboard .library-menu-browse-button {
   display: none;
 }

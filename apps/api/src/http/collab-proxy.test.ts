@@ -1,6 +1,6 @@
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { createLogger } from "@pagehall/server";
+import { createLogger } from "@lunedo/server";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket, { WebSocketServer } from "ws";
 import { attachCollabProxy } from "./collab-proxy.js";
@@ -57,7 +57,7 @@ describe("collaboration proxy", () => {
     const target = await upstream();
     const port = await proxy(target.port);
     const socket = await open(`ws://127.0.0.1:${port}/collab`, {
-      cookie: "__Host-pagehall-session=abc",
+      cookie: "__Host-lunedo-session=abc",
       origin: "https://wiki.example.org",
       "x-forwarded-for": "203.0.113.66",
     });
@@ -69,7 +69,7 @@ describe("collaboration proxy", () => {
     socket.close();
     expect(target.paths).toEqual(["/collab"]);
     expect(target.seen[0]).toMatchObject({
-      cookie: "__Host-pagehall-session=abc",
+      cookie: "__Host-lunedo-session=abc",
       origin: "https://wiki.example.org",
       "x-forwarded-for": "127.0.0.1",
       "x-forwarded-proto": "http",

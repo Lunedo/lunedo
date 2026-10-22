@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import {
   defaultSpacePermissionsSchema,
   isValidSpaceKey,
   normalizeSpaceKey,
   SpaceError,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

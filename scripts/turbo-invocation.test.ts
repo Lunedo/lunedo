@@ -8,24 +8,24 @@ describe("turboInvocation", () => {
   it("splits the local budget between Turbo tasks and the workers of each task", () => {
     const { args, env } = turboInvocation(["run", "test", "--continue"], {}, windows);
     assert.deepEqual(args, ["run", "test", "--continue", "--concurrency=2"]);
-    assert.equal(env.PAGEHALL_TEST_WORKERS, "4");
+    assert.equal(env.LUNEDO_TEST_WORKERS, "4");
     assert.equal(env.GOMAXPROCS, "4");
   });
 
-  it("takes the budget from PAGEHALL_PARALLELISM", () => {
-    const { args, env } = turboInvocation(["run", "test"], { PAGEHALL_PARALLELISM: "16" }, windows);
+  it("takes the budget from LUNEDO_PARALLELISM", () => {
+    const { args, env } = turboInvocation(["run", "test"], { LUNEDO_PARALLELISM: "16" }, windows);
     assert.deepEqual(args, ["run", "test", "--concurrency=4"]);
-    assert.equal(env.PAGEHALL_TEST_WORKERS, "4");
+    assert.equal(env.LUNEDO_TEST_WORKERS, "4");
   });
 
   it("keeps a concurrency and worker count that the caller chose", () => {
     const { args, env } = turboInvocation(
       ["run", "typecheck", "--concurrency=1"],
-      { PAGEHALL_TEST_WORKERS: "5", GOMAXPROCS: "7" },
+      { LUNEDO_TEST_WORKERS: "5", GOMAXPROCS: "7" },
       windows,
     );
     assert.deepEqual(args, ["run", "typecheck", "--concurrency=1"]);
-    assert.equal(env.PAGEHALL_TEST_WORKERS, "5");
+    assert.equal(env.LUNEDO_TEST_WORKERS, "5");
     assert.equal(env.GOMAXPROCS, "7");
     assert.deepEqual(turboInvocation(["run", "test"], { TURBO_CONCURRENCY: "2" }, windows).args, [
       "run",

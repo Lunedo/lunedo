@@ -1,8 +1,8 @@
+import { createLogger, currentRequestContext, Metrics, Secret } from "@lunedo/server";
 import { Controller, type ExecutionContext, Get, Module, Post } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
-import { createLogger, currentRequestContext, Metrics, Secret } from "@pagehall/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { configureApp, createFastifyAdapter } from "../app.js";
 import { AppModule } from "../app.module.js";

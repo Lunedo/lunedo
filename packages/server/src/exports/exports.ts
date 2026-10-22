@@ -1,6 +1,6 @@
 import { Readable, Transform, type TransformCallback } from "node:stream";
-import { escapeHtml } from "@pagehall/editor-schema";
-import { formatDate, uuidv7 } from "@pagehall/shared";
+import { escapeHtml } from "@lunedo/editor-schema";
+import { formatDate, uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { InstanceAddressService } from "../accounts/instance-address.js";
 import type { Principal, TokenGrant, TokenScopes } from "../accounts/principal.js";
@@ -714,7 +714,7 @@ export class ExportService {
     try {
       await this.#database.transaction(async (tx) => {
         await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.exports:${actor.id}`}, 0))`,
+          sql`select pg_advisory_xact_lock(hashtextextended(${`lunedo.exports:${actor.id}`}, 0))`,
         );
         await this.#delete(
           tx,
@@ -731,9 +731,7 @@ export class ExportService {
           );
         }
         if (measured) {
-          await tx.execute(
-            sql`select pg_advisory_xact_lock(hashtextextended('pagehall.exports.storage', 0))`,
-          );
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('lunedo.exports.storage', 0))`);
           const pending = await tx.execute<{ bytes: string | number }>(sql`
             select coalesce(sum(estimated_size), 0) as bytes from exports where state in ('queued', 'running')`);
           try {
@@ -1018,7 +1016,7 @@ export class ExportService {
 
   async #lock(id: string): Promise<(() => Promise<void>) | null> {
     const client = await this.#pool.connect();
-    const key = `pagehall.export:${id}`;
+    const key = `lunedo.export:${id}`;
     try {
       const result = await client.query<{ locked: boolean }>(
         "select pg_try_advisory_lock(hashtextextended($1, 0)) as locked",
@@ -1460,7 +1458,7 @@ export class ExportService {
     return htmlDocument(
       language,
       title,
-      `<header><h1>${title}</h1><p class="ph-meta">${escapeHtml(renderer.texts.exported(renderer.format.date(now)))}</p></header><nav class="ph-index" aria-label="${escapeHtml(renderer.texts.contents)}">${list(plan.roots)}</nav>`,
+      `<header><h1>${title}</h1><p class="ld-meta">${escapeHtml(renderer.texts.exported(renderer.format.date(now)))}</p></header><nav class="ld-index" aria-label="${escapeHtml(renderer.texts.contents)}">${list(plan.roots)}</nav>`,
     );
   }
 

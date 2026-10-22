@@ -8,7 +8,7 @@ import {
   Table,
   type TableColumn,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { ChartColumn, FilePlus, MessageSquareText, SearchX, Trash2 } from "lucide-react";

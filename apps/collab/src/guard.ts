@@ -1,4 +1,4 @@
-import { validateDocument } from "@pagehall/editor-schema";
+import { validateDocument } from "@lunedo/editor-schema";
 import {
   elementBytes,
   hasOnlySceneTypes,
@@ -12,8 +12,8 @@ import {
   SCENE_SETTINGS,
   type SceneProblem,
   validateElement,
-} from "@pagehall/editor-schema/scene";
-import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
+} from "@lunedo/editor-schema/scene";
+import { documentFromYDoc } from "@lunedo/editor-schema/yjs";
 import * as Y from "yjs";
 
 export type UpdateVerdict =

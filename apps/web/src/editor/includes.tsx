@@ -1,5 +1,5 @@
-import { type IncludeRequest, MAX_EXCERPT_NAME_LENGTH, MAX_INCLUDE_DEPTH } from "@pagehall/editor-schema";
-import { Checkbox, Combobox, Field, Input, Notice, SkeletonText } from "@pagehall/ui";
+import { type IncludeRequest, MAX_EXCERPT_NAME_LENGTH, MAX_INCLUDE_DEPTH } from "@lunedo/editor-schema";
+import { Checkbox, Combobox, Field, Input, Notice, SkeletonText } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { FileInput, Quote, TextQuote } from "lucide-react";
@@ -28,7 +28,7 @@ export function includeFromAttrs(type: string, attrs: Record<string, unknown>): 
 }
 
 function Note({ children }: { children: ReactNode }) {
-  return <p className="ph-include-note text-sm text-text-muted">{children}</p>;
+  return <p className="ld-include-note text-sm text-text-muted">{children}</p>;
 }
 
 function TitleLink({ href, children }: { href: string; children: string }) {
@@ -133,7 +133,7 @@ export function IncludedContent({
   }
   return (
     <section
-      className="ph-include-panel flex flex-col gap-2"
+      className="ld-include-panel flex flex-col gap-2"
       aria-label={page.title || t("editor.readView.untitledPage")}
     >
       {hint}
@@ -232,7 +232,7 @@ export function IncludeView({ node, editor, updateAttributes, selected }: NodeVi
   const Icon = type === "includeExcerpt" ? TextQuote : FileInput;
   return (
     <NodeViewWrapper
-      className={`ph-include-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-include-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type={type}
     >
@@ -263,8 +263,8 @@ export function ExcerptView({ node, editor, updateAttributes }: NodeViewProps) {
   const [name, setName] = useState(String(node.attrs.name ?? ""));
   const hidden = node.attrs.hidden === true;
   return (
-    <NodeViewWrapper className="ph-excerpt-block" data-hidden={hidden ? "true" : undefined}>
-      <div contentEditable={false} className="ph-block-header">
+    <NodeViewWrapper className="ld-excerpt-block" data-hidden={hidden ? "true" : undefined}>
+      <div contentEditable={false} className="ld-block-header">
         <span className="flex items-center gap-2 font-semibold">
           <Quote aria-hidden="true" className="size-icon-md" />
           {t(hidden ? "editor.excerpt.hiddenTitle" : "editor.excerpt.title")}
@@ -296,7 +296,7 @@ export function ExcerptView({ node, editor, updateAttributes }: NodeViewProps) {
           {t("editor.excerpt.hiddenNote")}
         </p>
       ) : null}
-      <NodeViewContent className="ph-excerpt-content" />
+      <NodeViewContent className="ld-excerpt-content" />
     </NodeViewWrapper>
   );
 }

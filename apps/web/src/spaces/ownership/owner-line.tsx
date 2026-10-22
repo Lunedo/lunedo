@@ -11,7 +11,7 @@ import {
   Icon,
   Popover,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Mail, UserRoundCog } from "lucide-react";
 import { useMemo, useState } from "react";

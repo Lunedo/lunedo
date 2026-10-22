@@ -1,4 +1,3 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Req, Res } from "@nestjs/common";
 import {
   AuthError,
   type AuthenticationResponseJSON,
@@ -9,8 +8,9 @@ import {
   ProviderResponseError,
   RateLimitedError,
   SignInBlockedError,
-} from "@pagehall/server";
-import { idSchema } from "@pagehall/shared";
+} from "@lunedo/server";
+import { idSchema } from "@lunedo/shared";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute, SessionRoute } from "../access/route-access.js";
@@ -158,7 +158,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Return from a provider",
     description:
-      "The provider sends the browser here. Pagehall answers with a redirect (303) to the next page.",
+      "The provider sends the browser here. Lunedo answers with a redirect (303) to the next page.",
     tags: [TAG],
     params: providerIdParams,
     redirect: { description: "Redirect to the next page: the start page, linking, or the refusal page." },
@@ -238,9 +238,9 @@ export class ProviderAuthController {
   @Get("auth/providers/:providerId/saml/metadata")
   @PublicRoute()
   @ApiRoute({
-    summary: "SAML metadata of Pagehall",
+    summary: "SAML metadata of Lunedo",
     description:
-      "The service provider metadata to register at the identity provider: entity ID, assertion consumer service and the signing certificates of Pagehall.",
+      "The service provider metadata to register at the identity provider: entity ID, assertion consumer service and the signing certificates of Lunedo.",
     tags: [TAG],
     params: providerIdParams,
     raw: { contentTypes: ["application/samlmetadata+xml"], description: "The metadata.", example: "" },
@@ -256,7 +256,7 @@ export class ProviderAuthController {
     );
     reply
       .header("content-type", "application/samlmetadata+xml")
-      .header("content-disposition", `inline; filename="pagehall-${providerId}.xml"`)
+      .header("content-disposition", `inline; filename="lunedo-${providerId}.xml"`)
       .header("cache-control", "no-cache");
     return metadata;
   }
@@ -266,7 +266,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Receive a SAML response",
     description:
-      "The identity provider posts the response here. Pagehall keeps it with the started sign-in and redirects (303) to the callback, which checks it in the browser that started the sign-in.",
+      "The identity provider posts the response here. Lunedo keeps it with the started sign-in and redirects (303) to the callback, which checks it in the browser that started the sign-in.",
     tags: [TAG],
     params: providerIdParams,
     body: samlResponseBodySchema,
@@ -308,7 +308,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Sign in with a directory password",
     description:
-      "For LDAP and Active Directory providers. Pagehall finds the person with its service account and checks the password with a bind. Pagehall's rate limits apply before the directory is asked, so failed attempts here never lock the directory account.",
+      "For LDAP and Active Directory providers. Lunedo finds the person with its service account and checks the password with a bind. Lunedo's rate limits apply before the directory is asked, so failed attempts here never lock the directory account.",
     tags: [TAG],
     status: 200,
     params: providerIdParams,
@@ -379,7 +379,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Back-channel logout",
     description:
-      "The provider signs a person out. Pagehall validates the logout token and ends the sessions that came from that provider sign-in.",
+      "The provider signs a person out. Lunedo validates the logout token and ends the sessions that came from that provider sign-in.",
     tags: [TAG],
     status: 200,
     params: providerIdParams,
@@ -437,7 +437,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Confirm a link through a linked provider",
     description:
-      "Starts a fresh sign-in at a provider that is already linked to the account. Pagehall asks the provider to sign the person in again and checks that it happened just now.",
+      "Starts a fresh sign-in at a provider that is already linked to the account. Lunedo asks the provider to sign the person in again and checks that it happened just now.",
     tags: [TAG],
     status: 200,
     body: linkProviderSchema,
@@ -464,7 +464,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Confirm a link with a directory password",
     description:
-      "For accounts linked to an LDAP or Active Directory provider. Pagehall checks the password with a bind, then links and signs in, or asks for the second factor of the account first.",
+      "For accounts linked to an LDAP or Active Directory provider. Lunedo checks the password with a bind, then links and signs in, or asks for the second factor of the account first.",
     tags: [TAG],
     status: 200,
     body: linkDirectorySchema,
@@ -579,7 +579,7 @@ export class ProviderAuthController {
   @SessionRoute()
   @ApiRoute({
     summary: "Confirm the identity through a provider",
-    description: "Starts a fresh sign-in at the provider. Pagehall checks that it happened just now.",
+    description: "Starts a fresh sign-in at the provider. Lunedo checks that it happened just now.",
     tags: [TAG],
     status: 200,
     body: reauthenticateSchema,
@@ -609,7 +609,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Confirm the identity with the directory password",
     description:
-      "For accounts linked to an LDAP or Active Directory provider. Pagehall checks the password with a bind.",
+      "For accounts linked to an LDAP or Active Directory provider. Lunedo checks the password with a bind.",
     tags: [TAG],
     status: 200,
     body: directoryReauthenticationSchema,

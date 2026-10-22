@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { get, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import {
   accountAttemptLimitSetting,
   clientAttemptLimitSetting,
@@ -10,8 +9,9 @@ import {
   type ServerRuntime,
   SPACE_CHANGES_CHANNEL,
   signalRun,
-} from "@pagehall/server";
-import { countQueries } from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { countQueries } from "@lunedo/server/testing";
+import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -27,7 +27,7 @@ import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from
 import { createTestApp } from "../testing/create-test-app.js";
 import { COALESCE_MS } from "./space-signals.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
+const SESSION_COOKIE = "__Host-lunedo-session";
 
 describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
   let test: AuthTestApp;
@@ -252,7 +252,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;
     const responses: IncomingMessage[] = [];
-    const other = await createAccount(test, "sync-runs-other@pagehall.test");
+    const other = await createAccount(test, "sync-runs-other@lunedo.test");
     const otherClient = await signedInClient(test, other.email, other.password);
     try {
       second = await createTestApp(apiContextOf(secondRuntime));
@@ -297,13 +297,13 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;
     const responses: IncomingMessage[] = [];
-    const member = await createAccount(test, "changes-member@pagehall.test");
+    const member = await createAccount(test, "changes-member@lunedo.test");
     const memberClient = await signedInClient(test, member.email, member.password);
     const elsewhere = await owner.post("/api/v1/organizations", { name: "Changes elsewhere" });
     expect(elsewhere.statusCode).toBe(201);
     const outsider = await createAccount(
       test,
-      "changes-outsider@pagehall.test",
+      "changes-outsider@lunedo.test",
       "a long enough passphrase",
       elsewhere.json().id,
     );
@@ -399,9 +399,9 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;
     const responses: IncomingMessage[] = [];
-    const reader = await createAccount(test, "space-reader@pagehall.test");
+    const reader = await createAccount(test, "space-reader@lunedo.test");
     const readerClient = await signedInClient(test, reader.email, reader.password);
-    const other = await createAccount(test, "space-other@pagehall.test");
+    const other = await createAccount(test, "space-other@lunedo.test");
     const otherClient = await signedInClient(test, other.email, other.password);
     try {
       second = await createTestApp(apiContextOf(secondRuntime));
@@ -510,7 +510,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;
     const responses: IncomingMessage[] = [];
-    const editor = await createAccount(test, "live-editor@pagehall.test");
+    const editor = await createAccount(test, "live-editor@lunedo.test");
     const editorClient = await signedInClient(test, editor.email, editor.password);
     try {
       second = await createTestApp(apiContextOf(secondRuntime));
@@ -620,7 +620,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     }
 
     async function person(name: string) {
-      const created = await createAccount(test, `${name}-${randomUUID().slice(0, 8)}@pagehall.test`);
+      const created = await createAccount(test, `${name}-${randomUUID().slice(0, 8)}@lunedo.test`);
       return { id: created.id, client: await signedInClient(test, created.email, created.password) };
     }
 
@@ -735,7 +735,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const secondRuntime = await createServerRuntime({ role: "api", env: test.env });
     let second: NestFastifyApplication | undefined;
     let response: IncomingMessage | undefined;
-    const other = await createAccount(test, "settings-other@pagehall.test");
+    const other = await createAccount(test, "settings-other@lunedo.test");
     const otherClient = await signedInClient(test, other.email, other.password);
     try {
       second = await createTestApp(apiContextOf(secondRuntime));

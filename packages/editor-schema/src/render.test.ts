@@ -41,7 +41,7 @@ function skipElement(html: string, start: number, tag: string): number {
 function htmlText(html: string): string {
   let output = "";
   let index = 0;
-  const math = /<(span|div) class="ph-math[^"]*" data-latex="([^"]*)">/g;
+  const math = /<(span|div) class="ld-math[^"]*" data-latex="([^"]*)">/g;
   for (let match = math.exec(html); match; match = math.exec(html)) {
     output += html.slice(index, match.index);
     output += match[2] ?? "";
@@ -51,8 +51,8 @@ function htmlText(html: string): string {
   output += html.slice(index);
   return decode(
     output
-      .replace(/<div class="ph-callout-control">[\s\S]*?<\/div>/g, "")
-      .replace(/<div class="ph-tabs-list"[^>]*>[\s\S]*?<\/div>/g, "")
+      .replace(/<div class="ld-callout-control">[\s\S]*?<\/div>/g, "")
+      .replace(/<div class="ld-tabs-list"[^>]*>[\s\S]*?<\/div>/g, "")
       .replace(/<svg\b[\s\S]*?<\/svg>/g, "")
       .replace(/<[^>]*>/g, ""),
   ).replace(/\s+/g, "");
@@ -159,7 +159,7 @@ describe("callout", () => {
       },
       { labels: { callout: { warning: "Warnung" } as never } },
     );
-    expect(html).toContain('<div class="ph-callout-control"><span class="ph-callout-label"><svg');
+    expect(html).toContain('<div class="ld-callout-control"><span class="ld-callout-label"><svg');
     expect(html).toContain("</svg>Warnung</span></div>");
     expect(html.indexOf("Warnung")).toBeLessThan(html.indexOf("Mind the gap"));
   });
@@ -233,7 +233,7 @@ describe("renderHtml", () => {
     const html = renderHtml(doc(paragraph({ type: "pageLink", attrs: { pageId: PAGE } })), {
       pageLink: () => ({ href: "javascript:alert(1)", title: "Evil", accessible: true }),
     });
-    expect(html).toBe('<p><span class="ph-page-link">Evil</span></p>');
+    expect(html).toBe('<p><span class="ld-page-link">Evil</span></p>');
   });
 
   it("renders links with rel attributes", () => {
@@ -265,7 +265,7 @@ describe("renderHtml", () => {
     expect(html).toContain('<h2 id="setup">');
     expect(html).toContain('<h2 id="setup-2">');
     expect(html).toContain(
-      '<nav class="ph-toc" aria-label="Table of contents"><ul><li><a href="#uber-uns">Über uns</a><ul><li><a href="#setup">Setup</a></li><li><a href="#setup-2">Setup</a></li></ul></li></ul></nav>',
+      '<nav class="ld-toc" aria-label="Table of contents"><ul><li><a href="#uber-uns">Über uns</a><ul><li><a href="#setup">Setup</a></li><li><a href="#setup-2">Setup</a></li></ul></li></ul></nav>',
     );
   });
 
@@ -274,7 +274,7 @@ describe("renderHtml", () => {
       doc(paragraph(text("x", [{ type: "textColor", attrs: { color: "red" } }, { type: "highlight" }]))),
     );
     expect(html).toBe(
-      '<p><span class="ph-text-color" data-color="red"><mark class="ph-highlight" data-color="yellow">x</mark></span></p>',
+      '<p><span class="ld-text-color" data-color="red"><mark class="ld-highlight" data-color="yellow">x</mark></span></p>',
     );
   });
 
@@ -295,10 +295,10 @@ describe("renderHtml", () => {
       ),
     );
     expect(html).toContain(
-      '<pre class="ph-code-block" data-language="javascript"><code class="hljs language-javascript">',
+      '<pre class="ld-code-block" data-language="javascript"><code class="hljs language-javascript">',
     );
     expect(html).toContain('<span class="hljs-keyword">const</span>');
-    expect(html).toContain('class="ph-math" data-latex="x^2"');
+    expect(html).toContain('class="ld-math" data-latex="x^2"');
     expect(html).toContain('<span class="katex">');
   });
 
@@ -310,7 +310,7 @@ describe("renderHtml", () => {
         labels: { noAccess: "Kein Zugriff" },
       },
     );
-    expect(html).toBe('<p><span class="ph-page-link" data-access="none">Kein Zugriff</span></p>');
+    expect(html).toBe('<p><span class="ld-page-link" data-access="none">Kein Zugriff</span></p>');
   });
 
   it("marks links to pages in the trash for people who could read them", () => {
@@ -320,7 +320,7 @@ describe("renderHtml", () => {
       labels: { inTrash: "Im Papierkorb" },
     };
     expect(renderHtml(link, context)).toBe(
-      '<p><span class="ph-page-link" data-state="trash">Printer list (Im Papierkorb)</span></p>',
+      '<p><span class="ld-page-link" data-state="trash">Printer list (Im Papierkorb)</span></p>',
     );
     expect(renderMarkdown(link, context).trim()).toBe("Printer list (Im Papierkorb)");
   });
@@ -353,7 +353,7 @@ describe("renderHtml", () => {
       ),
     );
     expect(html).toBe(
-      `<p><span class="ph-mention" data-account-id="${ID}">@Unknown person</span><time class="ph-date" datetime="2026-10-12">2026-10-12</time><span class="ph-page-link" data-missing="true">Later</span></p>`,
+      `<p><span class="ld-mention" data-account-id="${ID}">@Unknown person</span><time class="ld-date" datetime="2026-10-12">2026-10-12</time><span class="ld-page-link" data-missing="true">Later</span></p>`,
     );
   });
 });
@@ -489,7 +489,7 @@ describe("template nodes", () => {
   it("hides placeholder instructions from readers and shows them in previews", () => {
     expect(renderHtml(document)).not.toContain("Describe the goal");
     expect(renderHtml(document, { showPlaceholders: true })).toContain(
-      '<span class="ph-placeholder">Describe the goal</span>',
+      '<span class="ld-placeholder">Describe the goal</span>',
     );
     expect(renderMarkdown(document)).not.toContain("Describe the goal");
   });
@@ -559,7 +559,7 @@ describe("child pages", () => {
   it("show the label and the settings until the reader's pages are known", () => {
     const html = renderHtml(doc(block));
     expect(html).toBe(
-      `<nav class="ph-child-pages" aria-label="Child pages" data-page-id="${PAGE}" data-depth="2" data-sort="title" data-reverse="true"><p>Child pages</p></nav>`,
+      `<nav class="ld-child-pages" aria-label="Child pages" data-page-id="${PAGE}" data-depth="2" data-sort="title" data-reverse="true"><p>Child pages</p></nav>`,
     );
     expect(renderMarkdown(doc(block))).toBe("*Child pages*\n");
   });
@@ -592,7 +592,7 @@ describe("child pages", () => {
 
   it("say when there is nothing to show and never link to unsafe addresses", () => {
     expect(renderHtml(doc(block), { childPages: () => [] })).toContain(
-      '<p class="ph-listing-empty">No child pages</p>',
+      '<p class="ld-listing-empty">No child pages</p>',
     );
     expect(renderMarkdown(doc(block), { childPages: () => [] })).toBe("*No child pages*\n");
     const evil = { childPages: () => [{ title: "<b>x</b>", href: "javascript:alert(1)", children: [] }] };
@@ -610,7 +610,7 @@ describe("child pages", () => {
 describe("attachment list", () => {
   it("shows the label until the attachments are known", () => {
     expect(renderHtml(doc({ type: "attachmentList" }))).toBe(
-      '<section class="ph-attachment-list" aria-label="Attachments"><p>Attachments</p></section>',
+      '<section class="ld-attachment-list" aria-label="Attachments"><p>Attachments</p></section>',
     );
     expect(renderMarkdown(doc({ type: "attachmentList" }))).toBe("*Attachments*\n");
   });
@@ -620,7 +620,7 @@ describe("attachment list", () => {
     const html = renderHtml(doc(block), context);
     expect(html).toContain('data-file-types="pdf"');
     expect(html).toContain(
-      `<li data-attachment-id="${ID}"><a href="/api/v1/attachments/${ID}" rel="noopener noreferrer">handbook.pdf</a> <span class="ph-attachment-size">(2.5 MB)</span></li>`,
+      `<li data-attachment-id="${ID}"><a href="/api/v1/attachments/${ID}" rel="noopener noreferrer">handbook.pdf</a> <span class="ld-attachment-size">(2.5 MB)</span></li>`,
     );
     expect(html).not.toContain("budget.xlsx");
     expect(renderMarkdown(doc(block), context)).toBe(
@@ -633,7 +633,7 @@ describe("attachment list", () => {
 
   it("says when no attachment matches", () => {
     const block = { type: "attachmentList", attrs: { fileTypes: ["docx"] } };
-    expect(renderHtml(doc(block), context)).toContain('<p class="ph-listing-empty">No attachments</p>');
+    expect(renderHtml(doc(block), context)).toContain('<p class="ld-listing-empty">No attachments</p>');
     expect(renderMarkdown(doc(block), context)).toBe("*No attachments*\n");
   });
 
@@ -659,7 +659,7 @@ describe("page report", () => {
 
   it("shows the label and the filters until the reader's pages are known", () => {
     expect(renderHtml(doc(block))).toBe(
-      `<section class="ph-page-report" aria-label="Page report" data-space-id="${PAGE}" data-labels="vpn,network" data-sort="title" data-reverse="true" data-limit="5"><p>Page report</p></section>`,
+      `<section class="ld-page-report" aria-label="Page report" data-space-id="${PAGE}" data-labels="vpn,network" data-sort="title" data-reverse="true" data-limit="5"><p>Page report</p></section>`,
     );
     expect(renderMarkdown(doc(block))).toBe("*Page report*\n");
   });
@@ -698,7 +698,7 @@ describe("page report", () => {
 
   it("says when no page matches and never links to unsafe addresses or renders markup", () => {
     expect(renderHtml(doc(block), { pageReport: () => [] })).toContain(
-      '<p class="ph-listing-empty">No pages match the filters</p>',
+      '<p class="ld-listing-empty">No pages match the filters</p>',
     );
     expect(renderMarkdown(doc(block), { pageReport: () => [] })).toBe("*No pages match the filters*\n");
     const evil = {
@@ -738,14 +738,14 @@ describe("decision report", () => {
 
   it("shows the label and the filters until the reader's decisions are known", () => {
     expect(renderHtml(doc(block))).toBe(
-      `<section class="ph-decision-report" aria-label="Decision report" data-space-id="${PAGE}" data-labels="vpn" data-parent-id="${ID}" data-order="oldest"><p>Decision report</p></section>`,
+      `<section class="ld-decision-report" aria-label="Decision report" data-space-id="${PAGE}" data-labels="vpn" data-parent-id="${ID}" data-order="oldest"><p>Decision report</p></section>`,
     );
     expect(renderMarkdown(doc(block))).toBe("*Decision report*\n");
   });
 
   it("lists each decision with the page it was made on", () => {
     expect(renderHtml(doc(block), context)).toContain(
-      `<ul><li><p>Use WireGuard</p><p class="ph-decision-source"><a href="/pages/${PAGE}">VPN setup</a> · on 2026-10-02</p></li></ul>`,
+      `<ul><li><p>Use WireGuard</p><p class="ld-decision-source"><a href="/pages/${PAGE}">VPN setup</a> · on 2026-10-02</p></li></ul>`,
     );
     expect(renderMarkdown(doc(block), context)).toBe(
       `- Use WireGuard\n  [VPN setup](/pages/${PAGE}) · on 2026-10-02\n`,
@@ -826,7 +826,7 @@ describe("task report", () => {
 
   it("says when no task matches", () => {
     expect(renderHtml(doc(block), { taskReport: () => [] })).toContain(
-      '<p class="ph-listing-empty">No tasks match the filters</p>',
+      '<p class="ld-listing-empty">No tasks match the filters</p>',
     );
     expect(renderMarkdown(doc(block), { taskReport: () => [] })).toBe("*No tasks match the filters*\n");
   });
@@ -841,7 +841,7 @@ describe("images with a display version", () => {
 
   it("show the display version on screen and link the original to open it in full size", () => {
     expect(renderHtml(document, { attachment, labels: { openFullSize: "Volle Größe" } })).toContain(
-      `<a class="ph-image-full" href="/api/v1/attachments/${ID}/content" target="_blank" rel="noopener noreferrer" title="Volle Größe">` +
+      `<a class="ld-image-full" href="/api/v1/attachments/${ID}/content" target="_blank" rel="noopener noreferrer" title="Volle Größe">` +
         `<img src="/api/v1/attachments/${ID}/content?size=display" alt="Rack" loading="lazy"></a>`,
     );
   });
@@ -849,7 +849,7 @@ describe("images with a display version", () => {
   it("print the display version without a link and keep the original in Markdown", () => {
     const printed = renderHtml(document, { attachment, target: "print" });
     expect(printed).toContain(`<img src="/api/v1/attachments/${ID}/content?size=display" alt="Rack">`);
-    expect(printed).not.toContain("ph-image-full");
+    expect(printed).not.toContain("ld-image-full");
     expect(renderMarkdown(document, { attachment })).toBe(`![Rack](/api/v1/attachments/${ID}/content)\n`);
   });
 
@@ -857,11 +857,11 @@ describe("images with a display version", () => {
     const tooLarge = (id: string) => ({ ...attachment(id), tooLarge: true });
     const html = renderHtml(document, { attachment: tooLarge });
     expect(html).not.toContain("<img");
-    expect(html).toContain('class="ph-image ph-image-too-large"');
-    expect(html).toContain('<span class="ph-image-name">Rack</span>');
-    expect(html).toContain('<span class="ph-image-hint">This image is too large to show here.</span>');
+    expect(html).toContain('class="ld-image ld-image-too-large"');
+    expect(html).toContain('<span class="ld-image-name">Rack</span>');
+    expect(html).toContain('<span class="ld-image-hint">This image is too large to show here.</span>');
     expect(html).toContain(
-      `<a class="ph-image-open" href="/api/v1/attachments/${ID}/content" target="_blank" rel="noopener noreferrer">Open full size</a>`,
+      `<a class="ld-image-open" href="/api/v1/attachments/${ID}/content" target="_blank" rel="noopener noreferrer">Open full size</a>`,
     );
     const printed = renderHtml(document, { attachment: tooLarge, target: "print" });
     expect(printed).not.toContain("<img");
@@ -874,7 +874,7 @@ describe("images with a display version", () => {
       attachment: (id) => ({ href: `/api/v1/attachments/${id}/content` }),
     });
     expect(html).toContain(`<img src="/api/v1/attachments/${ID}/content" alt="Rack" loading="lazy">`);
-    expect(html).not.toContain("ph-image-full");
+    expect(html).not.toContain("ld-image-full");
   });
 });
 
@@ -929,7 +929,7 @@ describe("template button", () => {
         }),
       ),
     ).toBe(
-      `<div class="ph-template-button" data-template-id="${ID}" data-label="New &lt;project&gt;" data-title="Project {name}"><span class="ph-template-button-label">New &lt;project&gt;</span></div>`,
+      `<div class="ld-template-button" data-template-id="${ID}" data-label="New &lt;project&gt;" data-title="Project {name}"><span class="ld-template-button-label">New &lt;project&gt;</span></div>`,
     );
     expect(renderMarkdown(doc({ type: "templateButton", attrs: { templateId: "builtin:how-to" } }))).toBe(
       "*Create from template*\n",

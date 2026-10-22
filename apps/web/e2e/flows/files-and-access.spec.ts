@@ -341,7 +341,7 @@ test("shows a large photo as its display version and opens the original in full 
     data: original,
     headers: {
       "content-type": "application/octet-stream",
-      "X-Pagehall-Request": "1",
+      "X-Lunedo-Request": "1",
       origin: new URL(page.url()).origin,
     },
   });

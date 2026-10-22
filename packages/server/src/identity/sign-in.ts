@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { directoryPasswordSchema, type LdapConfig, type OidcConfig, type SamlConfig } from "@pagehall/shared";
+import { directoryPasswordSchema, type LdapConfig, type OidcConfig, type SamlConfig } from "@lunedo/shared";
 import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import * as client from "openid-client";
 import { ZodError } from "zod";
@@ -79,11 +79,11 @@ export interface StartedFlow {
   browserToken: string;
 }
 
-export function needsPagehallFactor(
-  setting: { mode: "provider" | "providerProof" | "pagehall"; proofValues?: readonly string[] },
+export function needsLunedoFactor(
+  setting: { mode: "provider" | "providerProof" | "lunedo"; proofValues?: readonly string[] },
   methods: readonly string[],
 ): boolean {
-  if (setting.mode === "pagehall") return true;
+  if (setting.mode === "lunedo") return true;
   if (setting.mode === "provider") return false;
   return !methods.some((method) => setting.proofValues?.includes(method));
 }
@@ -343,7 +343,7 @@ export class ProviderSignInService {
       if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
     }
     if (provider.type === "ldap") {
-      throw new OrganizationError("invalidInput", "Directory providers sign in on the Pagehall page");
+      throw new OrganizationError("invalidInput", "Directory providers sign in on the Lunedo page");
     }
     const browserToken = client.randomState();
     const state = client.randomState();
@@ -485,7 +485,7 @@ export class ProviderSignInService {
           groups,
           groupsFailed,
           emailVerified,
-          secondFactor: needsPagehallFactor(provider.config.secondFactor, result.methods),
+          secondFactor: needsLunedoFactor(provider.config.secondFactor, result.methods),
           providerSessionId: result.providerSessionId,
           client: input.client,
           returnTo: flow.returnTo,
@@ -1010,7 +1010,7 @@ export class ProviderSignInService {
     const outcome = await this.#finishLink(
       pending.id,
       account,
-      needsPagehallFactor(provider.config.secondFactor, methods),
+      needsLunedoFactor(provider.config.secondFactor, methods),
       client,
       started,
     );
@@ -1049,8 +1049,7 @@ export class ProviderSignInService {
     }
     await this.#throttle?.recordSuccess(subjects.email ?? "");
     const factorRequired =
-      provider.config.secondFactor.mode === "pagehall" ||
-      (await this.#signIn.secondFactorRequired(account.id));
+      provider.config.secondFactor.mode === "lunedo" || (await this.#signIn.secondFactorRequired(account.id));
     return this.#finishLink(pending.id, account, factorRequired, input.client, started);
   }
 
@@ -1399,7 +1398,7 @@ export class ProviderSignInService {
           groups: profile.groups,
           groupsFailed: result.groupsFailed,
           emailVerified,
-          secondFactor: provider.config.secondFactor.mode === "pagehall" ? true : "policy",
+          secondFactor: provider.config.secondFactor.mode === "lunedo" ? true : "policy",
           providerSessionId: null,
           client: input.client,
           returnTo: null,

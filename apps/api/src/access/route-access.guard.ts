@@ -1,5 +1,3 @@
-import { type CanActivate, type ExecutionContext, Inject, Injectable } from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
 import {
   type AccountServices,
   accountPrincipal,
@@ -12,8 +10,10 @@ import {
   ScimTokenRejectedError,
   SetupNotFoundError,
   TokenRejectedError,
-} from "@pagehall/server";
-import { isUuid } from "@pagehall/shared";
+} from "@lunedo/server";
+import { isUuid } from "@lunedo/shared";
+import { type CanActivate, type ExecutionContext, Inject, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
@@ -102,7 +102,7 @@ export class RouteAccessGuard implements CanActivate {
   }
 
   #setActor(request: FastifyRequest, principal: AccountPrincipal): void {
-    request.pagehallPrincipal = principal;
+    request.lunedoPrincipal = principal;
     const context = currentRequestContext();
     if (context) context.actor = principal;
   }
@@ -259,7 +259,7 @@ export class RouteAccessGuard implements CanActivate {
     const token = readCookie(request, COOKIES.session);
     const session = token ? await services.sessions.resolve(token) : null;
     if (!session) throw new ProblemException("notSignedIn", "Sign in first");
-    request.pagehallSession = session;
+    request.lunedoSession = session;
     const principal = accountPrincipal(session.accountId);
     this.#setActor(request, principal);
     if (session.kind === "secondFactorSetup" && !access.secondFactorSetup) {

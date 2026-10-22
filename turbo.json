@@ -6,10 +6,10 @@
   "globalPassThroughEnv": [
     "CI_PARALLELISM",
     "CI_RETRIES",
-    "PAGEHALL_PARALLELISM",
-    "PAGEHALL_TEST_WORKERS",
-    "PAGEHALL_E2E_WORKERS",
-    "PAGEHALL_TEST_REPORT_DIR",
+    "LUNEDO_PARALLELISM",
+    "LUNEDO_TEST_WORKERS",
+    "LUNEDO_E2E_WORKERS",
+    "LUNEDO_TEST_REPORT_DIR",
     "GITHUB_WORKSPACE",
     "GOMAXPROCS",
     "RAYON_NUM_THREADS",
@@ -31,11 +31,11 @@
     "test": {
       "dependsOn": ["^build"],
       "env": [
-        "PAGEHALL_TEST_DATABASE_URL",
-        "PAGEHALL_TEST_MAILPIT_URL",
-        "PAGEHALL_TEST_MAILPIT_SMTP_PORT",
-        "PAGEHALL_TEST_REDIS_URL",
-        "PAGEHALL_TEST_S3_ENDPOINT"
+        "LUNEDO_TEST_DATABASE_URL",
+        "LUNEDO_TEST_MAILPIT_URL",
+        "LUNEDO_TEST_MAILPIT_SMTP_PORT",
+        "LUNEDO_TEST_REDIS_URL",
+        "LUNEDO_TEST_S3_ENDPOINT"
       ]
     },
     "test:e2e": {
@@ -47,7 +47,7 @@
       "dependsOn": ["^build"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["PAGEHALL_*"]
+      "passThroughEnv": ["LUNEDO_*"]
     }
   }
 }

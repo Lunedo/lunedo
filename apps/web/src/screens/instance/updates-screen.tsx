@@ -1,4 +1,4 @@
-import { Badge, Button, CopyButton, Notice, Section, SettingRow, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, CopyButton, Notice, Section, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpCircle, RefreshCw } from "lucide-react";
 import { useState } from "react";

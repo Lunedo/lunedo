@@ -1,4 +1,4 @@
-import type { ComboboxLoader } from "@pagehall/ui";
+import type { ComboboxLoader } from "@lunedo/ui";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { rememberReferences } from "../editor/references.js";

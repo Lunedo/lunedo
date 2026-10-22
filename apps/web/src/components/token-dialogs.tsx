@@ -4,7 +4,7 @@ import {
   instanceAreas,
   organizationAreas,
   tokenNameSchema,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import {
   Button,
   ConfirmDialog,
@@ -15,7 +15,7 @@ import {
   RadioGroup,
   SegmentedControl,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";

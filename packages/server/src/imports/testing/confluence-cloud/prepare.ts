@@ -60,6 +60,8 @@ const FAKE_SITE = "example.atlassian.net";
 const AVATAR =
   /(?:https?:\/\/[^\s"'<>]*)?\/(?:wiki\/)?aa-avatar\/[^\s"'<>&]*|https?:\/\/[a-z0-9.-]*(?:avatar|gravatar)[a-z0-9.-]*\/[^\s"'<>]*/gi;
 const FAKE_AVATAR = "/wiki/images/icons/profilepics/default.svg";
+const FORMER_PRODUCT_NAME = "pagehall";
+const PRODUCT_NAME = "Lunedo";
 const ATLASSIAN_SITE = /\b[a-z0-9-]+\.atlassian\.net\b/gi;
 const MEDIA =
   /\b(?:api\.media\.atlassian\.com|media-cdn\.atlassian\.com)\b|aa-avatar|gravatar\.com|avatar-management/i;
@@ -84,6 +86,12 @@ function fakeUuid(index: number): string {
 
 function fakeLegacy(index: number): string {
   return `000000000000${String(index).padStart(12, "0")}`;
+}
+
+function productName(match: string): string {
+  if (match === match.toUpperCase()) return PRODUCT_NAME.toUpperCase();
+  if (match === match.toLowerCase()) return PRODUCT_NAME.toLowerCase();
+  return PRODUCT_NAME;
 }
 
 function escapeRegExp(value: string): string {
@@ -172,7 +180,7 @@ export function createAnonymizer(input: {
       }
       if (host)
         result = result.replace(hostPattern, (_match, next: string) => (next ? "example-" : "example"));
-      return result;
+      return result.replace(new RegExp(FORMER_PRODUCT_NAME, "gi"), productName);
     },
   };
 }
@@ -224,6 +232,7 @@ export function findProblems(
     if (match[0].toLowerCase() !== FAKE_SITE) problems.push(`${name}: Atlassian site ${match[0]} left`);
   }
   if (MEDIA.test(content.replaceAll(FAKE_AVATAR, ""))) problems.push(`${name}: avatar or media address left`);
+  if (lower.includes(FORMER_PRODUCT_NAME)) problems.push(`${name}: former product name left`);
   for (const match of content.matchAll(NAME_FIELD)) {
     const value = (match[1] ?? match[2] ?? "").trim();
     if (value && !/^(?:Test User \d+|System)$/.test(value) && !(names?.has(value) ?? false)) {

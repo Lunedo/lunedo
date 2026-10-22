@@ -19,7 +19,7 @@ test("shows mapping rules added and removed in another session without a reload"
     config: {
       preset: "generic",
       issuer: "https://login.live-rules.test",
-      clientId: "pagehall",
+      clientId: "lunedo",
       domains: [`live-${Date.now()}.test`],
       claims: { groups: "groups" },
       accountCreation: { enabled: false, requiredGroups: [] },

@@ -1,6 +1,6 @@
-import { MAX_SCENE_BYTES, SCENE_ELEMENTS, SCENE_FILES } from "@pagehall/editor-schema/scene";
-import { accountPrincipal, type ServerRuntime } from "@pagehall/server";
-import { testDatabaseBaseUrl } from "@pagehall/server/testing";
+import { MAX_SCENE_BYTES, SCENE_ELEMENTS, SCENE_FILES } from "@lunedo/editor-schema/scene";
+import { accountPrincipal, type ServerRuntime } from "@lunedo/server";
+import { testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import {

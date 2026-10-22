@@ -14,7 +14,7 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-import { pagehallVersion } from "../operations/version.js";
+import { lunedoVersion } from "../operations/version.js";
 import { type ConfigSettingName, configSettings, type InstallMethod } from "./definitions.js";
 import { Secret } from "./secret.js";
 
@@ -113,24 +113,24 @@ function readConfigFile(file: string): Record<string, string> {
     raw = readFileSync(file, "utf8");
   } catch (error) {
     throw new ConfigError(
-      `PAGEHALL_CONFIG_FILE: cannot read ${file} (${(error as NodeJS.ErrnoException).code})`,
+      `LUNEDO_CONFIG_FILE: cannot read ${file} (${(error as NodeJS.ErrnoException).code})`,
     );
   }
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch {
-    throw new ConfigError(`PAGEHALL_CONFIG_FILE: ${file} is not valid JSON`);
+    throw new ConfigError(`LUNEDO_CONFIG_FILE: ${file} is not valid JSON`);
   }
   const parsed = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).safeParse(json);
   if (!parsed.success) {
-    throw new ConfigError("PAGEHALL_CONFIG_FILE: must be a JSON object of strings, numbers and booleans");
+    throw new ConfigError("LUNEDO_CONFIG_FILE: must be a JSON object of strings, numbers and booleans");
   }
   const values: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsed.data)) {
     const base = key.endsWith("_FILE") && secretNames.has(key.slice(0, -5)) ? key.slice(0, -5) : key;
-    if (!settingNames.has(base) || key === "PAGEHALL_CONFIG_FILE") {
-      throw new ConfigError(`PAGEHALL_CONFIG_FILE: unknown setting ${key}`);
+    if (!settingNames.has(base) || key === "LUNEDO_CONFIG_FILE") {
+      throw new ConfigError(`LUNEDO_CONFIG_FILE: unknown setting ${key}`);
     }
     values[key] = String(value);
   }
@@ -147,16 +147,16 @@ function readSecretFile(name: string, file: string): string {
 
 /** Merges environment variables over the optional configuration file. */
 function collectRawValues(env: Env): Record<string, string | undefined> {
-  const configFile = env.PAGEHALL_CONFIG_FILE?.trim();
+  const configFile = env.LUNEDO_CONFIG_FILE?.trim();
   const fromFile = configFile ? readConfigFile(configFile) : {};
   const value = (key: string) => {
     const fromEnv = env[key];
     return fromEnv !== undefined && fromEnv !== "" ? fromEnv : fromFile[key];
   };
 
-  const raw: Record<string, string | undefined> = { PAGEHALL_CONFIG_FILE: configFile };
+  const raw: Record<string, string | undefined> = { LUNEDO_CONFIG_FILE: configFile };
   for (const setting of configSettings) {
-    if (setting.name === "PAGEHALL_CONFIG_FILE") continue;
+    if (setting.name === "LUNEDO_CONFIG_FILE") continue;
     const direct = value(setting.name);
     const file = setting.secret ? value(`${setting.name}_FILE`) : undefined;
     if (direct !== undefined && file !== undefined) {
@@ -176,18 +176,18 @@ function overlaps(first: string, second: string): boolean {
 }
 
 function checkWorkDir(values: Record<ConfigSettingName, unknown>, problems: string[]): void {
-  const work = values.PAGEHALL_WORK_DIR as string | undefined;
+  const work = values.LUNEDO_WORK_DIR as string | undefined;
   if (!work) return;
   for (const name of [
-    "PAGEHALL_BACKUP_DIR",
-    "PAGEHALL_FILES_DIR",
-    "PAGEHALL_SECRETS_DIR",
-    "PAGEHALL_IMPORT_DIR",
+    "LUNEDO_BACKUP_DIR",
+    "LUNEDO_FILES_DIR",
+    "LUNEDO_SECRETS_DIR",
+    "LUNEDO_IMPORT_DIR",
   ] as const) {
     const other = values[name] as string | undefined;
     if (other && overlaps(work, other)) {
       problems.push(
-        `PAGEHALL_WORK_DIR: must not overlap with ${name} (${other}); choose a directory of its own`,
+        `LUNEDO_WORK_DIR: must not overlap with ${name} (${other}); choose a directory of its own`,
       );
     }
   }
@@ -215,26 +215,26 @@ export function loadConfig(env: Env): ServerConfig {
   }
 
   const provider =
-    (values.PAGEHALL_KEY_PROVIDER as "env" | "file" | undefined) ??
-    (values.PAGEHALL_MASTER_KEYS ? "env" : "file");
-  if (provider === "env" && !values.PAGEHALL_MASTER_KEYS) {
-    problems.push("PAGEHALL_MASTER_KEYS: is required when PAGEHALL_KEY_PROVIDER is env");
+    (values.LUNEDO_KEY_PROVIDER as "env" | "file" | undefined) ??
+    (values.LUNEDO_MASTER_KEYS ? "env" : "file");
+  if (provider === "env" && !values.LUNEDO_MASTER_KEYS) {
+    problems.push("LUNEDO_MASTER_KEYS: is required when LUNEDO_KEY_PROVIDER is env");
   }
-  if (provider === "file" && values.PAGEHALL_MASTER_KEYS) {
-    problems.push("PAGEHALL_MASTER_KEYS: is only used by the env key provider");
+  if (provider === "file" && values.LUNEDO_MASTER_KEYS) {
+    problems.push("LUNEDO_MASTER_KEYS: is only used by the env key provider");
   }
-  if (values.PAGEHALL_FILE_STORAGE === "s3" && !values.PAGEHALL_S3_BUCKET) {
-    problems.push("PAGEHALL_S3_BUCKET: is required when PAGEHALL_FILE_STORAGE is s3");
+  if (values.LUNEDO_FILE_STORAGE === "s3" && !values.LUNEDO_S3_BUCKET) {
+    problems.push("LUNEDO_S3_BUCKET: is required when LUNEDO_FILE_STORAGE is s3");
   }
-  if (Boolean(values.PAGEHALL_RENDER_URL) !== Boolean(values.PAGEHALL_RENDER_TOKEN)) {
-    problems.push("PAGEHALL_RENDER_URL and PAGEHALL_RENDER_TOKEN: set both or neither");
+  if (Boolean(values.LUNEDO_RENDER_URL) !== Boolean(values.LUNEDO_RENDER_TOKEN)) {
+    problems.push("LUNEDO_RENDER_URL and LUNEDO_RENDER_TOKEN: set both or neither");
   }
-  if (Boolean(values.PAGEHALL_S3_ACCESS_KEY_ID) !== Boolean(values.PAGEHALL_S3_SECRET_ACCESS_KEY)) {
-    problems.push("PAGEHALL_S3_ACCESS_KEY_ID and PAGEHALL_S3_SECRET_ACCESS_KEY: set both or neither");
+  if (Boolean(values.LUNEDO_S3_ACCESS_KEY_ID) !== Boolean(values.LUNEDO_S3_SECRET_ACCESS_KEY)) {
+    problems.push("LUNEDO_S3_ACCESS_KEY_ID and LUNEDO_S3_SECRET_ACCESS_KEY: set both or neither");
   }
   checkWorkDir(values, problems);
   const setup = configuredSetup(values, problems);
-  checkSetupCode(values.PAGEHALL_SETUP_CODE as string | undefined, problems);
+  checkSetupCode(values.LUNEDO_SETUP_CODE as string | undefined, problems);
   if (problems.length > 0) {
     throw new ConfigError(`Invalid configuration:\n  ${problems.join("\n  ")}`);
   }
@@ -243,77 +243,77 @@ export function loadConfig(env: Env): ServerConfig {
     const value = values[name] as string | undefined;
     return value === undefined ? undefined : new Secret(value);
   };
-  const secretsDir = values.PAGEHALL_SECRETS_DIR as string;
+  const secretsDir = values.LUNEDO_SECRETS_DIR as string;
 
   return {
-    host: values.PAGEHALL_HOST as string,
+    host: values.LUNEDO_HOST as string,
     ports: {
-      api: values.PAGEHALL_API_PORT as number,
-      collab: values.PAGEHALL_COLLAB_PORT as number,
-      worker: values.PAGEHALL_WORKER_PORT as number,
+      api: values.LUNEDO_API_PORT as number,
+      collab: values.LUNEDO_COLLAB_PORT as number,
+      worker: values.LUNEDO_WORKER_PORT as number,
     },
     collabUpstream: (
-      (values.PAGEHALL_COLLAB_UPSTREAM as string | undefined) ??
-      `http://127.0.0.1:${values.PAGEHALL_COLLAB_PORT as number}`
+      (values.LUNEDO_COLLAB_UPSTREAM as string | undefined) ??
+      `http://127.0.0.1:${values.LUNEDO_COLLAB_PORT as number}`
     ).replace(/\/$/, ""),
-    redisUrl: secret("PAGEHALL_REDIS_URL"),
-    logLevel: values.PAGEHALL_LOG_LEVEL as LogLevel,
+    redisUrl: secret("LUNEDO_REDIS_URL"),
+    logLevel: values.LUNEDO_LOG_LEVEL as LogLevel,
     database: {
-      url: secret("PAGEHALL_DATABASE_URL") as Secret,
-      poolSize: values.PAGEHALL_DATABASE_POOL_SIZE as number,
+      url: secret("LUNEDO_DATABASE_URL") as Secret,
+      poolSize: values.LUNEDO_DATABASE_POOL_SIZE as number,
     },
     fileStorage:
-      values.PAGEHALL_FILE_STORAGE === "s3"
+      values.LUNEDO_FILE_STORAGE === "s3"
         ? {
             kind: "s3" as const,
-            bucket: values.PAGEHALL_S3_BUCKET as string,
-            endpoint: values.PAGEHALL_S3_ENDPOINT as string | undefined,
-            region: values.PAGEHALL_S3_REGION as string,
-            accessKeyId: secret("PAGEHALL_S3_ACCESS_KEY_ID"),
-            secretAccessKey: secret("PAGEHALL_S3_SECRET_ACCESS_KEY"),
-            forcePathStyle: values.PAGEHALL_S3_FORCE_PATH_STYLE as boolean,
-            prefix: values.PAGEHALL_S3_PREFIX as string,
+            bucket: values.LUNEDO_S3_BUCKET as string,
+            endpoint: values.LUNEDO_S3_ENDPOINT as string | undefined,
+            region: values.LUNEDO_S3_REGION as string,
+            accessKeyId: secret("LUNEDO_S3_ACCESS_KEY_ID"),
+            secretAccessKey: secret("LUNEDO_S3_SECRET_ACCESS_KEY"),
+            forcePathStyle: values.LUNEDO_S3_FORCE_PATH_STYLE as boolean,
+            prefix: values.LUNEDO_S3_PREFIX as string,
           }
         : { kind: "local" as const },
-    filesUrl: (values.PAGEHALL_FILES_URL as string | undefined)?.replace(/\/$/, ""),
+    filesUrl: (values.LUNEDO_FILES_URL as string | undefined)?.replace(/\/$/, ""),
     paths: {
-      files: values.PAGEHALL_FILES_DIR as string,
-      imports: values.PAGEHALL_IMPORT_DIR as string,
-      backups: values.PAGEHALL_BACKUP_DIR as string,
-      work: values.PAGEHALL_WORK_DIR as string,
+      files: values.LUNEDO_FILES_DIR as string,
+      imports: values.LUNEDO_IMPORT_DIR as string,
+      backups: values.LUNEDO_BACKUP_DIR as string,
+      work: values.LUNEDO_WORK_DIR as string,
       secrets: secretsDir,
-      webRoot: values.PAGEHALL_WEB_ROOT as string | undefined,
+      webRoot: values.LUNEDO_WEB_ROOT as string | undefined,
     },
     keys: {
       provider,
-      masterKeys: secret("PAGEHALL_MASTER_KEYS"),
+      masterKeys: secret("LUNEDO_MASTER_KEYS"),
       masterKeysPath:
-        (values.PAGEHALL_MASTER_KEYS_PATH as string | undefined) ?? path.join(secretsDir, "master-keys"),
-      backupKeys: secret("PAGEHALL_BACKUP_KEY"),
+        (values.LUNEDO_MASTER_KEYS_PATH as string | undefined) ?? path.join(secretsDir, "master-keys"),
+      backupKeys: secret("LUNEDO_BACKUP_KEY"),
     },
-    backupBeforeUpdate: values.PAGEHALL_BACKUP_BEFORE_UPDATE as boolean,
-    metricsToken: secret("PAGEHALL_METRICS_TOKEN"),
-    render: values.PAGEHALL_RENDER_URL
+    backupBeforeUpdate: values.LUNEDO_BACKUP_BEFORE_UPDATE as boolean,
+    metricsToken: secret("LUNEDO_METRICS_TOKEN"),
+    render: values.LUNEDO_RENDER_URL
       ? {
-          url: (values.PAGEHALL_RENDER_URL as string).replace(/\/$/, ""),
-          token: secret("PAGEHALL_RENDER_TOKEN") as Secret,
+          url: (values.LUNEDO_RENDER_URL as string).replace(/\/$/, ""),
+          token: secret("LUNEDO_RENDER_TOKEN") as Secret,
         }
       : undefined,
-    shutdownTimeoutSeconds: values.PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS as number,
-    trustedProxies: values.PAGEHALL_TRUSTED_PROXIES as string[],
-    outboundAllowedNetworks: values.PAGEHALL_OUTBOUND_ALLOWED_NETWORKS as string[],
-    passwordHashConcurrency: values.PAGEHALL_PASSWORD_HASH_CONCURRENCY as number,
-    insecureIdentityProviders: values.PAGEHALL_INSECURE_IDENTITY_PROVIDERS as boolean,
+    shutdownTimeoutSeconds: values.LUNEDO_SHUTDOWN_TIMEOUT_SECONDS as number,
+    trustedProxies: values.LUNEDO_TRUSTED_PROXIES as string[],
+    outboundAllowedNetworks: values.LUNEDO_OUTBOUND_ALLOWED_NETWORKS as string[],
+    passwordHashConcurrency: values.LUNEDO_PASSWORD_HASH_CONCURRENCY as number,
+    insecureIdentityProviders: values.LUNEDO_INSECURE_IDENTITY_PROVIDERS as boolean,
     setup,
-    setupCode: secret("PAGEHALL_SETUP_CODE"),
-    instanceUrl: instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL).data,
-    version: pagehallVersion(env),
+    setupCode: secret("LUNEDO_SETUP_CODE"),
+    instanceUrl: instanceUrlSchema.safeParse(values.LUNEDO_INSTANCE_URL).data,
+    version: lunedoVersion(env),
     updates: {
-      check: values.PAGEHALL_UPDATE_CHECK as boolean,
-      url: values.PAGEHALL_UPDATE_CHECK_URL as string,
-      installMethod: values.PAGEHALL_INSTALL_METHOD as InstallMethod | undefined,
-      installDir: values.PAGEHALL_INSTALL_DIR as string | undefined,
-      changelogFile: changelogFileOf(values.PAGEHALL_CHANGELOG_FILE as string | undefined),
+      check: values.LUNEDO_UPDATE_CHECK as boolean,
+      url: values.LUNEDO_UPDATE_CHECK_URL as string,
+      installMethod: values.LUNEDO_INSTALL_METHOD as InstallMethod | undefined,
+      installDir: values.LUNEDO_INSTALL_DIR as string | undefined,
+      changelogFile: changelogFileOf(values.LUNEDO_CHANGELOG_FILE as string | undefined),
     },
   };
 }
@@ -325,37 +325,37 @@ function checkSetupCode(code: string | undefined, problems: string[]): void {
   if (code === undefined) return;
   if (code.replace(/[\s-]/g, "").length < SETUP_CODE_MIN_LENGTH) {
     problems.push(
-      `PAGEHALL_SETUP_CODE: must have at least ${SETUP_CODE_MIN_LENGTH} characters, not counting spaces and hyphens`,
+      `LUNEDO_SETUP_CODE: must have at least ${SETUP_CODE_MIN_LENGTH} characters, not counting spaces and hyphens`,
     );
   }
   if (code.length > SETUP_CODE_MAX_LENGTH) {
-    problems.push(`PAGEHALL_SETUP_CODE: must have at most ${SETUP_CODE_MAX_LENGTH} characters`);
+    problems.push(`LUNEDO_SETUP_CODE: must have at most ${SETUP_CODE_MAX_LENGTH} characters`);
   }
 }
 
 const SETUP_SETTINGS = [
-  "PAGEHALL_INSTANCE_NAME",
-  "PAGEHALL_OWNER_EMAIL",
-  "PAGEHALL_OWNER_NAME",
-  "PAGEHALL_OWNER_PASSWORD",
-  "PAGEHALL_ORGANIZATION_NAME",
-  "PAGEHALL_ORGANIZATION_LANGUAGE",
-  "PAGEHALL_ORGANIZATION_TIME_ZONE",
+  "LUNEDO_INSTANCE_NAME",
+  "LUNEDO_OWNER_EMAIL",
+  "LUNEDO_OWNER_NAME",
+  "LUNEDO_OWNER_PASSWORD",
+  "LUNEDO_ORGANIZATION_NAME",
+  "LUNEDO_ORGANIZATION_LANGUAGE",
+  "LUNEDO_ORGANIZATION_TIME_ZONE",
 ] as const;
 
 const SMTP_SETTINGS = [
-  "PAGEHALL_SMTP_HOST",
-  "PAGEHALL_SMTP_PORT",
-  "PAGEHALL_SMTP_SECURITY",
-  "PAGEHALL_SMTP_USERNAME",
-  "PAGEHALL_SMTP_PASSWORD",
-  "PAGEHALL_SMTP_FROM",
+  "LUNEDO_SMTP_HOST",
+  "LUNEDO_SMTP_PORT",
+  "LUNEDO_SMTP_SECURITY",
+  "LUNEDO_SMTP_USERNAME",
+  "LUNEDO_SMTP_PASSWORD",
+  "LUNEDO_SMTP_FROM",
 ] as const;
 
 function checkInstanceUrl(values: Record<ConfigSettingName, unknown>, problems: string[]): void {
-  const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
-  if (values.PAGEHALL_INSTANCE_URL !== undefined && !url.success) {
-    problems.push(`PAGEHALL_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
+  const url = instanceUrlSchema.safeParse(values.LUNEDO_INSTANCE_URL);
+  if (values.LUNEDO_INSTANCE_URL !== undefined && !url.success) {
+    problems.push(`LUNEDO_INSTANCE_URL: ${url.error.issues[0]?.message ?? "is invalid"}`);
   }
 }
 
@@ -369,71 +369,66 @@ function configuredSetup(
     return undefined;
   }
   if (given(SETUP_SETTINGS).length === 0) {
-    problems.push(
-      "PAGEHALL_SMTP_HOST: SMTP settings in the configuration require setup through configuration",
-    );
+    problems.push("LUNEDO_SMTP_HOST: SMTP settings in the configuration require setup through configuration");
   }
   for (const name of [
-    "PAGEHALL_INSTANCE_URL",
-    "PAGEHALL_OWNER_EMAIL",
-    "PAGEHALL_OWNER_NAME",
-    "PAGEHALL_OWNER_PASSWORD",
-    "PAGEHALL_ORGANIZATION_NAME",
+    "LUNEDO_INSTANCE_URL",
+    "LUNEDO_OWNER_EMAIL",
+    "LUNEDO_OWNER_NAME",
+    "LUNEDO_OWNER_PASSWORD",
+    "LUNEDO_ORGANIZATION_NAME",
   ] as const) {
     if (values[name] === undefined) problems.push(`${name}: is required for setup through configuration`);
   }
-  const url = instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL);
+  const url = instanceUrlSchema.safeParse(values.LUNEDO_INSTANCE_URL);
   checkInstanceUrl(values, problems);
-  const timeZone = values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined;
+  const timeZone = values.LUNEDO_ORGANIZATION_TIME_ZONE as string | undefined;
   if (timeZone !== undefined && !isTimeZone(timeZone)) {
-    problems.push("PAGEHALL_ORGANIZATION_TIME_ZONE: must be an IANA time zone");
+    problems.push("LUNEDO_ORGANIZATION_TIME_ZONE: must be an IANA time zone");
   }
-  if (
-    values.PAGEHALL_OWNER_EMAIL !== undefined &&
-    !z.email().safeParse(values.PAGEHALL_OWNER_EMAIL).success
-  ) {
-    problems.push("PAGEHALL_OWNER_EMAIL: must be an e-mail address");
+  if (values.LUNEDO_OWNER_EMAIL !== undefined && !z.email().safeParse(values.LUNEDO_OWNER_EMAIL).success) {
+    problems.push("LUNEDO_OWNER_EMAIL: must be an e-mail address");
   }
 
   let smtp: ConfiguredSmtp | undefined;
   if (given(SMTP_SETTINGS).length > 0) {
-    for (const name of ["PAGEHALL_SMTP_HOST", "PAGEHALL_SMTP_FROM"] as const) {
+    for (const name of ["LUNEDO_SMTP_HOST", "LUNEDO_SMTP_FROM"] as const) {
       if (values[name] === undefined) problems.push(`${name}: is required when SMTP is configured`);
     }
-    if (values.PAGEHALL_SMTP_FROM !== undefined && !z.email().safeParse(values.PAGEHALL_SMTP_FROM).success) {
-      problems.push("PAGEHALL_SMTP_FROM: must be an e-mail address");
+    if (values.LUNEDO_SMTP_FROM !== undefined && !z.email().safeParse(values.LUNEDO_SMTP_FROM).success) {
+      problems.push("LUNEDO_SMTP_FROM: must be an e-mail address");
     }
-    const security = (values.PAGEHALL_SMTP_SECURITY as ConfiguredSmtp["security"] | undefined) ?? "starttls";
-    const username = (values.PAGEHALL_SMTP_USERNAME as string | undefined) ?? null;
-    const password = values.PAGEHALL_SMTP_PASSWORD as string | undefined;
+    const security = (values.LUNEDO_SMTP_SECURITY as ConfiguredSmtp["security"] | undefined) ?? "starttls";
+    const username = (values.LUNEDO_SMTP_USERNAME as string | undefined) ?? null;
+    const password = values.LUNEDO_SMTP_PASSWORD as string | undefined;
     if ((password !== undefined) !== (username !== null)) {
-      problems.push("PAGEHALL_SMTP_USERNAME: set together with PAGEHALL_SMTP_PASSWORD");
+      problems.push("LUNEDO_SMTP_USERNAME: set together with LUNEDO_SMTP_PASSWORD");
     }
     if (security === "none" && username !== null) {
-      problems.push("PAGEHALL_SMTP_SECURITY: credentials require tls or starttls");
+      problems.push("LUNEDO_SMTP_SECURITY: credentials require tls or starttls");
     }
     smtp = {
-      host: values.PAGEHALL_SMTP_HOST as string,
-      port: (values.PAGEHALL_SMTP_PORT as number | undefined) ?? (security === "tls" ? 465 : 587),
+      host: values.LUNEDO_SMTP_HOST as string,
+      port: (values.LUNEDO_SMTP_PORT as number | undefined) ?? (security === "tls" ? 465 : 587),
       security,
       username,
       password: password === undefined ? null : new Secret(password),
-      from: values.PAGEHALL_SMTP_FROM as string,
+      from: values.LUNEDO_SMTP_FROM as string,
     };
   }
 
   return {
     instanceUrl: url.success ? url.data : "",
-    instanceName: values.PAGEHALL_INSTANCE_NAME as string | undefined,
+    instanceName: values.LUNEDO_INSTANCE_NAME as string | undefined,
     owner: {
-      email: values.PAGEHALL_OWNER_EMAIL as string,
-      name: values.PAGEHALL_OWNER_NAME as string,
-      password: new Secret((values.PAGEHALL_OWNER_PASSWORD as string | undefined) ?? ""),
+      email: values.LUNEDO_OWNER_EMAIL as string,
+      name: values.LUNEDO_OWNER_NAME as string,
+      password: new Secret((values.LUNEDO_OWNER_PASSWORD as string | undefined) ?? ""),
     },
     organization: {
-      name: values.PAGEHALL_ORGANIZATION_NAME as string,
-      language: values.PAGEHALL_ORGANIZATION_LANGUAGE as "en" | "de" | undefined,
-      timeZone: values.PAGEHALL_ORGANIZATION_TIME_ZONE as string | undefined,
+      name: values.LUNEDO_ORGANIZATION_NAME as string,
+      language: values.LUNEDO_ORGANIZATION_LANGUAGE as "en" | "de" | undefined,
+      timeZone: values.LUNEDO_ORGANIZATION_TIME_ZONE as string | undefined,
     },
     smtp,
   };

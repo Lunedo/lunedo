@@ -1,5 +1,5 @@
-import { emptyScene, type Scene, validateScene } from "@pagehall/editor-schema/scene";
-import { Button, Dialog, Notice, Skeleton } from "@pagehall/ui";
+import { emptyScene, type Scene, validateScene } from "@lunedo/editor-schema/scene";
+import { Button, Dialog, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useMemo, useRef, useState } from "react";

@@ -3,7 +3,7 @@ import {
   anyoneLinksSetting,
   clientAttemptLimitSetting,
   SYSTEM,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -46,7 +46,7 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
 
   async function person() {
     counter += 1;
-    const email = `access${counter}@pagehall.test`;
+    const email = `access${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const { id } = await createAccount(test, email, password);
     return { id, client: await signedInClient(test, email, password) };
@@ -183,7 +183,7 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       const opened = await visitor.post(`/api/v1/share-links/${token}/open`, { password: "harbour lantern" });
       expect(opened.statusCode, opened.body).toBe(200);
       const unlock = (opened.json() as { unlock: string }).unlock;
-      const read = await visitor.get(`/api/v1/share-links/${token}/page`, { "x-pagehall-unlock": unlock });
+      const read = await visitor.get(`/api/v1/share-links/${token}/page`, { "x-lunedo-unlock": unlock });
       expect(read.statusCode, read.body).toBe(200);
       expect(read.json()).toMatchObject({ title: "Status page" });
       const inAddress = await visitor.get(
@@ -193,7 +193,7 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       expect((await visitor.get(`/api/v1/items/${shared}`)).statusCode).toBe(401);
       expect((await owner.delete(`/api/v1/pages/${shared}/share-links/${link.id}`)).statusCode).toBe(204);
       expect(
-        (await visitor.get(`/api/v1/share-links/${token}/page`, { "x-pagehall-unlock": unlock })).statusCode,
+        (await visitor.get(`/api/v1/share-links/${token}/page`, { "x-lunedo-unlock": unlock })).statusCode,
       ).toBe(404);
       const guesser = new TestClient(test.app, { remoteAddress: "203.0.113.51" });
       let limited = false;

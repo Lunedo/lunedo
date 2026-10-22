@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { accountPrincipal, SYSTEM } from "@pagehall/server";
+import { accountPrincipal, SYSTEM } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -136,7 +136,7 @@ describe.skipIf(!databaseBaseUrl)("SCIM provisioning", () => {
     const created = await scim("POST", "/Users", entraUser(input));
     expect(created.statusCode).toBe(201);
     expect(created.headers.location).toBe(
-      `${configuredSetupEnv.PAGEHALL_INSTANCE_URL}/scim/v2/${providerId}/Users/${created.json().id}`,
+      `${configuredSetupEnv.LUNEDO_INSTANCE_URL}/scim/v2/${providerId}/Users/${created.json().id}`,
     );
     expect(created.json()).toMatchObject({ userName: input.upn, externalId: input.objectId, active: true });
     const { id } = created.json();
@@ -267,7 +267,7 @@ describe.skipIf(!databaseBaseUrl)("SCIM provisioning", () => {
 
   it("refuses requests without a token, with a wrong, old or removed token and with the token of another provider", async () => {
     const path = "/Users";
-    for (const options of [{ token: null }, { token: "phscim_wrong" }, { token: otherToken }]) {
+    for (const options of [{ token: null }, { token: "ldscim_wrong" }, { token: otherToken }]) {
       const response = await scim("GET", path, undefined, options);
       expect(response.statusCode).toBe(401);
       expect(response.headers["content-type"]).toContain(SCIM_JSON);
@@ -386,10 +386,10 @@ describe.skipIf(!databaseBaseUrl)("SCIM provisioning", () => {
     const signals: { providerId: string; runId: string }[] = [];
     try {
       listener.on("notification", (notification) => {
-        if (notification.channel === "pagehall_sync_runs" && notification.payload)
+        if (notification.channel === "lunedo_sync_runs" && notification.payload)
           signals.push(JSON.parse(notification.payload));
       });
-      await listener.query("listen pagehall_sync_runs");
+      await listener.query("listen lunedo_sync_runs");
       const user = await provision();
       await expect.poll(() => signals.length, { timeout: 5000 }).toBe(1);
       await scim("PATCH", `/Users/${user.id}`, entraDisable());
@@ -401,7 +401,7 @@ describe.skipIf(!databaseBaseUrl)("SCIM provisioning", () => {
       );
       expect(runs.rowCount).toBe(2);
     } finally {
-      await listener.query("unlisten pagehall_sync_runs");
+      await listener.query("unlisten lunedo_sync_runs");
       listener.release();
     }
   });
@@ -418,7 +418,7 @@ describe.skipIf(!databaseBaseUrl)("SCIM provisioning", () => {
     expect(log.items.some((run: { trigger: string }) => run.trigger === "scim")).toBe(true);
     const status = (await owner.get(`/api/v1/instance/identity-providers/${providerId}/scim`)).json();
     expect(status).toMatchObject({
-      url: `${configuredSetupEnv.PAGEHALL_INSTANCE_URL}/scim/v2/${providerId}`,
+      url: `${configuredSetupEnv.LUNEDO_INSTANCE_URL}/scim/v2/${providerId}`,
     });
     expect(status.lastRequestAt).not.toBeNull();
     expect(status.lastDay.changes).toBeGreaterThan(0);

@@ -31,7 +31,7 @@ describe.skipIf(!databaseUrl)("RateLimiter and SignInThrottle", () => {
   let throttle: SignInThrottle;
 
   beforeAll(() => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     rateLimiter = new RateLimiter({ database });
     const settings = new SettingsService({

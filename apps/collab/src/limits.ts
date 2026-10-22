@@ -1,4 +1,4 @@
-import { MAX_DOCUMENT_BYTES } from "@pagehall/editor-schema";
+import { MAX_DOCUMENT_BYTES } from "@lunedo/editor-schema";
 
 export const COLLAB_PATH = "/collab";
 export const DOCUMENT_PREFIX = "page:";
@@ -19,7 +19,7 @@ export const STORE_MAX_DEBOUNCE_MS = 10_000;
 export const STORE_RETRY_MS = 5_000;
 export const RECHECK_INTERVAL_MS = 30_000;
 
-export const CLIENT_ADDRESS_HEADER = "x-pagehall-client-address";
+export const CLIENT_ADDRESS_HEADER = "x-lunedo-client-address";
 
 export const closeReasons = {
   updateRejected: { code: 4400, reason: "updateRejected" },

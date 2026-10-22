@@ -1,4 +1,4 @@
-import type { Areas } from "@pagehall/shared";
+import type { Areas } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -13,7 +13,7 @@ import {
   Notice,
   Section,
   Table,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";

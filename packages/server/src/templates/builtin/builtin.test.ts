@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { type NodeJson, validateDocument } from "@pagehall/editor-schema";
+import { type NodeJson, validateDocument } from "@lunedo/editor-schema";
 import { describe, expect, it } from "vitest";
 import { templateFieldsSchema } from "../fields.js";
 import { templateCategories } from "../schema.js";

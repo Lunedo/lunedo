@@ -80,13 +80,13 @@ test("collects page properties of two pages in a report on a third page and incl
   const sites = await createPage(page, spaceId, spaceKey, "All sites");
   await openEditor(page, sites.path, "Our sites");
   await insert(page, "properties", /^Page properties report/);
-  const report = page.locator(".ph-properties-report-block");
+  const report = page.locator(".ld-properties-report-block");
   await expect(report.getByRole("link", { name: "Site Graz" })).toBeVisible();
   await expect(report.getByRole("link", { name: "Site Linz" })).toBeVisible();
   await content(page).focus();
   await page.keyboard.press("Control+End");
   await insert(page, "einbinden", /^Include excerpt/);
-  const include = page.locator(".ph-include-block");
+  const include = page.locator(".ld-include-block");
   await include.getByRole("combobox", { name: "Page" }).fill("Site Graz");
   await page.getByRole("option", { name: /^Site Graz/ }).click();
   await expect(include.getByText("Graz is the main site.")).toBeVisible();
@@ -178,17 +178,17 @@ test("inserts blocks whose names have spaces from the slash menu", async ({ page
   await page.keyboard.type("/page properties report");
   await expect(page.getByRole("option").first()).toHaveAccessibleName(/^Page properties report/);
   await page.keyboard.press("Enter");
-  await expect(page.locator(".ph-properties-report-block")).toBeVisible();
+  await expect(page.locator(".ld-properties-report-block")).toBeVisible();
   await expect(content(page)).not.toContainText("/page properties report");
-  await expect(page.locator(".ph-properties-report-block :focus")).toHaveCount(1);
+  await expect(page.locator(".ld-properties-report-block :focus")).toHaveCount(1);
 
   await content(page).focus();
   await page.keyboard.press("Control+End");
   await page.keyboard.press("Enter");
   await page.keyboard.type("/include excerpt");
   await page.keyboard.press("Enter");
-  await expect(page.locator(".ph-include-block")).toBeVisible();
-  await expect(page.locator(".ph-include-block").getByRole("combobox", { name: "Page" })).toBeFocused();
+  await expect(page.locator(".ld-include-block")).toBeVisible();
+  await expect(page.locator(".ld-include-block").getByRole("combobox", { name: "Page" })).toBeFocused();
 
   await content(page).focus();
   await page.keyboard.press("Control+End");

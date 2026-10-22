@@ -27,9 +27,9 @@ import type { DatabaseArchiver } from "./postgres.js";
 import { expiredBackups, type RetentionPolicy } from "./retention.js";
 import type { BackupTarget } from "./targets.js";
 
-const BACKUP_LOCK = "pagehall.backup";
-const ROTATION_LOCK = "pagehall.key-rotation";
-const TEST_RESTORE_LOCK = "pagehall.backup-test-restore";
+const BACKUP_LOCK = "lunedo.backup";
+const ROTATION_LOCK = "lunedo.key-rotation";
+const TEST_RESTORE_LOCK = "lunedo.backup-test-restore";
 const PROGRESS_INTERVAL_MS = 30_000;
 
 export interface BackupSources {
@@ -45,7 +45,7 @@ export interface BackupSources {
   workDir: string;
   diskSpace?: ((dir: string) => Promise<DiskSpace>) | undefined;
   configuration: Record<string, string>;
-  pagehallVersion: string;
+  lunedoVersion: string;
   schemaVersion: string;
   logger: Logger;
 }
@@ -335,7 +335,7 @@ async function privateStaging(sources: BackupSources, target?: BackupTarget): Pr
   const staging = stagingDirectory(sources.workDir);
   if (target?.kind === "local" && isInside(target.description, staging)) {
     throw new StagingInsideTargetError(
-      `The work directory ${sources.workDir} lies inside the backup target ${target.description}, so the staged database dump would be written into the target. Choose a target outside ${sources.workDir}, or move PAGEHALL_WORK_DIR.`,
+      `The work directory ${sources.workDir} lies inside the backup target ${target.description}, so the staged database dump would be written into the target. Choose a target outside ${sources.workDir}, or move LUNEDO_WORK_DIR.`,
     );
   }
   await mkdir(sources.workDir, { recursive: true, mode: 0o700 });
@@ -422,7 +422,7 @@ export async function writeBackup(
       objectStore: sources.objectStore,
       scope: options.scope,
       config: sources.configuration,
-      pagehallVersion: sources.pagehallVersion,
+      lunedoVersion: sources.lunedoVersion,
       schemaVersion: sources.schemaVersion,
       logger: sources.logger,
     });
@@ -453,7 +453,7 @@ export async function writeBackupFile(sources: BackupSources, output: string): P
         filesDir: sources.filesDir,
         objectStore: sources.objectStore,
         config: sources.configuration,
-        pagehallVersion: sources.pagehallVersion,
+        lunedoVersion: sources.lunedoVersion,
         schemaVersion: sources.schemaVersion,
         logger: sources.logger,
       });

@@ -1,4 +1,4 @@
-import { Badge, Button, Skeleton } from "@pagehall/ui";
+import { Badge, Button, Skeleton } from "@lunedo/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CalendarDays } from "lucide-react";

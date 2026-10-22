@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyState, PageHeader, Skeleton } from "@pagehall/ui";
+import { Badge, Button, EmptyState, PageHeader, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CalendarClock, Plus, Repeat } from "lucide-react";

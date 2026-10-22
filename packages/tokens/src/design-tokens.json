@@ -1,5 +1,5 @@
 {
-  "$description": "Pagehall design tokens. Source of truth for the web client theme.",
+  "$description": "Lunedo design tokens. Source of truth for the web client theme.",
   "color": {
     "light": {
       "bg": "#FFFFFF",

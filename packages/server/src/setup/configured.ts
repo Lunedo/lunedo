@@ -1,4 +1,4 @@
-import { proposeFormats } from "@pagehall/shared";
+import { proposeFormats } from "@lunedo/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, PasswordPolicyError } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -44,7 +44,7 @@ export async function applyConfiguredSetup(options: {
         .catch((error: unknown) => {
           if (error instanceof PasswordPolicyError) {
             throw new StartupError(
-              `PAGEHALL_OWNER_PASSWORD: does not meet the password policy (${error.problem})`,
+              `LUNEDO_OWNER_PASSWORD: does not meet the password policy (${error.problem})`,
             );
           }
           throw error;

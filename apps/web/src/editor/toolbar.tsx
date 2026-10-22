@@ -1,4 +1,4 @@
-import { classNames, Menu, type MenuItem, Tooltip } from "@pagehall/ui";
+import { classNames, Menu, type MenuItem, Tooltip } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
 import {
@@ -29,7 +29,7 @@ function tooltipText(action: ToolbarAction): string {
 }
 
 const BUTTON =
-  "ph-toolbar-button inline-flex h-control-sm min-w-control-sm shrink-0 items-center justify-center gap-1 rounded-sm px-1 text-text hover:bg-hover aria-pressed:bg-selected aria-pressed:text-selected-text disabled:text-text-muted";
+  "ld-toolbar-button inline-flex h-control-sm min-w-control-sm shrink-0 items-center justify-center gap-1 rounded-sm px-1 text-text hover:bg-hover aria-pressed:bg-selected aria-pressed:text-selected-text disabled:text-text-muted";
 
 function menuItems(actions: ToolbarAction[]): MenuItem[] {
   return actions.map((action) => ({
@@ -155,7 +155,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, { editor: Editor; items: 
     };
 
     return (
-      <div className="ph-toolbar-shell relative">
+      <div className="ld-toolbar-shell relative">
         <div
           ref={container}
           role="toolbar"

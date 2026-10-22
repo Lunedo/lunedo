@@ -1,4 +1,4 @@
-import { classNames, useToast } from "@pagehall/ui";
+import { classNames, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useState } from "react";

@@ -17,7 +17,7 @@ import {
   Textarea,
   Tooltip,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Info, UserPlus, UserRound } from "lucide-react";

@@ -135,7 +135,7 @@ describe.skipIf(!baseUrl)("announcements", () => {
     const listened: string[] = [];
     const client = await test.pool.connect();
     try {
-      await client.query("listen pagehall_announcement_changes");
+      await client.query("listen lunedo_announcement_changes");
       client.on("notification", (message) => listened.push(message.payload ?? ""));
       now = new Date(startsAt.getTime() + 1);
       expect(await announcements.signalStarted()).toBe(1);
@@ -143,7 +143,7 @@ describe.skipIf(!baseUrl)("announcements", () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
       expect(listened).toEqual([JSON.stringify({ scope: "organization", organizationId: context.org.id })]);
     } finally {
-      await client.query("unlisten pagehall_announcement_changes");
+      await client.query("unlisten lunedo_announcement_changes");
       client.release();
     }
     expect((await announcements.shown(context.member))[0]).toMatchObject({ startsAt, endsAt });
@@ -215,7 +215,7 @@ describe.skipIf(!baseUrl)("announcements", () => {
     const listened: string[] = [];
     const client = await test.pool.connect();
     try {
-      await client.query("listen pagehall_announcement_changes");
+      await client.query("listen lunedo_announcement_changes");
       client.on("notification", (message) => listened.push(message.payload ?? ""));
       const saved = await announcements.set(context.admin, context.org.id, banner());
       expect(await announcements.remove(context.admin, context.org.id)).toBe(true);
@@ -236,7 +236,7 @@ describe.skipIf(!baseUrl)("announcements", () => {
         JSON.stringify({ scope: "organization", organizationId: context.org.id }),
       ]);
     } finally {
-      await client.query("unlisten pagehall_announcement_changes");
+      await client.query("unlisten lunedo_announcement_changes");
       client.release();
     }
   });

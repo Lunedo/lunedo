@@ -1,4 +1,4 @@
-import type { WatchState } from "@pagehall/shared";
+import type { WatchState } from "@lunedo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";

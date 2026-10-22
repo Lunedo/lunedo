@@ -7,7 +7,7 @@ import {
   Notice,
   PageHeader,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import {

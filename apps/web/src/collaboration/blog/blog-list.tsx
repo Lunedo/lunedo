@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, useToast } from "@pagehall/ui";
+import { Badge, Button, IconButton, useToast } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { CircleAlert, Clock, FilePen, Pin, PinOff } from "lucide-react";
 import { useTranslation } from "react-i18next";

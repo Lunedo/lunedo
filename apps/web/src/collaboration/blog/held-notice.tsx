@@ -1,4 +1,4 @@
-import { Button, Notice, useToast } from "@pagehall/ui";
+import { Button, Notice, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Send, X } from "lucide-react";

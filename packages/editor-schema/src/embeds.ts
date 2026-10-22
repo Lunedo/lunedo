@@ -363,7 +363,7 @@ export const defaultEmbedServices: readonly EmbedService[] = [
     name: "Figma",
     rules: ["file", "design", "proto", "board", "slides"].map((kind) => ({
       pattern: `https://www.figma.com/${kind}/{file}/{*}`,
-      embed: "https://www.figma.com/embed?embed_host=pagehall&url={url}",
+      embed: "https://www.figma.com/embed?embed_host=lunedo&url={url}",
     })),
   },
   {

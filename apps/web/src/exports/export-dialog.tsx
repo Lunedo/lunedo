@@ -1,4 +1,4 @@
-import { Button, Dialog, Notice, RadioGroup, SegmentedControl, Switch, useToast } from "@pagehall/ui";
+import { Button, Dialog, Notice, RadioGroup, SegmentedControl, Switch, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Printer } from "lucide-react";

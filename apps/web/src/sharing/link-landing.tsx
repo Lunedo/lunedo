@@ -1,4 +1,4 @@
-import { Button, EmptyState, Field, Notice, PasswordInput, Skeleton, useToast } from "@pagehall/ui";
+import { Button, EmptyState, Field, Notice, PasswordInput, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { FileText, Link2Off, LockKeyhole, LogIn, Paperclip } from "lucide-react";
@@ -47,7 +47,7 @@ async function attachmentBlob(
   let response: Response;
   try {
     response = await fetch(attachmentHref(token, attachmentId, size ? { size } : {}), {
-      headers: { "x-pagehall-unlock": unlock },
+      headers: { "x-lunedo-unlock": unlock },
     });
   } catch {
     throw networkError();
@@ -150,7 +150,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
       request(() =>
         api.GET("/api/v1/share-links/{token}/page", {
           params: { path: { token } },
-          ...(unlock ? { headers: { "x-pagehall-unlock": unlock } } : {}),
+          ...(unlock ? { headers: { "x-lunedo-unlock": unlock } } : {}),
         }),
       ),
     throwOnError: false,

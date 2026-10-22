@@ -1,12 +1,4 @@
-import {
-  Combobox,
-  IconButton,
-  Select,
-  Sidebar,
-  SidebarGroup,
-  SidebarHeader,
-  SidebarItem,
-} from "@pagehall/ui";
+import { Combobox, IconButton, Select, Sidebar, SidebarGroup, SidebarHeader, SidebarItem } from "@lunedo/ui";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";

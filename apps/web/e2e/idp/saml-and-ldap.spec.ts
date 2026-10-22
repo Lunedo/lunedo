@@ -31,7 +31,7 @@ import {
   userDn,
 } from "../support/ldap.js";
 
-const headers = { "X-Pagehall-Request": "1", origin: BASE_URL };
+const headers = { "X-Lunedo-Request": "1", origin: BASE_URL };
 
 let reauthenticated = false;
 

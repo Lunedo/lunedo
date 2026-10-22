@@ -1,4 +1,4 @@
-import type { ComboboxItem, ComboboxLoader, ComboboxPage } from "@pagehall/ui";
+import type { ComboboxItem, ComboboxLoader, ComboboxPage } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";

@@ -1,5 +1,5 @@
-import { type DocumentDiff, type DocumentJson, diffDocuments } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import { type DocumentDiff, type DocumentJson, diffDocuments } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -44,7 +44,7 @@ const TAB_CHANGES: Record<ChangeTab, readonly ChangeType[]> = {
 };
 
 const DECISIONS: Record<string, readonly ChangeDecision[]> = {
-  conflict: ["pagehall", "source", "both"],
+  conflict: ["lunedo", "source", "both"],
   deleted: ["trash", "keep"],
 };
 
@@ -94,7 +94,7 @@ export interface ChangeEntryView {
 
 export interface ChangeComparison {
   readonly kind: "page" | "template";
-  readonly pagehall: { readonly title: string; readonly version: number | null };
+  readonly lunedo: { readonly title: string; readonly version: number | null };
   readonly source: { readonly title: string; readonly version: number | null };
   readonly decisions: readonly ChangeDecision[];
   readonly decision: ChangeDecision | null;
@@ -202,7 +202,7 @@ export class ReimportService {
     if (!["review", "running", "accepted", "superseded"].includes(row.state) || row.phase === "compare") {
       throw new ImportError(
         "changesUnavailable",
-        "The changes are listed once Pagehall has compared the export.",
+        "The changes are listed once Lunedo has compared the export.",
       );
     }
     return row;
@@ -468,7 +468,7 @@ export class ReimportService {
       );
     }
     const kind = change.kind;
-    const pagehall =
+    const lunedo =
       kind === "page"
         ? await this.#currentPage(viewer, change.item_id)
         : await this.#currentTemplate(viewer, row.target_space_id, change.target_id);
@@ -504,19 +504,19 @@ export class ReimportService {
         "The export no longer holds this content. Compare the export again.",
       );
     }
-    const sourceTitle = text(change.details.sourceTitle) ?? pagehall.title;
+    const sourceTitle = text(change.details.sourceTitle) ?? lunedo.title;
     const version = change.details.sourceVersion;
     return {
       kind,
-      pagehall: { title: pagehall.title, version: pagehall.version },
+      lunedo: { title: lunedo.title, version: lunedo.version },
       source: { title: sourceTitle, version: typeof version === "number" ? version : null },
-      decisions: change.held ? ["pagehall"] : (DECISIONS.conflict ?? []),
+      decisions: change.held ? ["lunedo"] : (DECISIONS.conflict ?? []),
       decision: change.decision,
       diff: diffDocuments(
-        { title: pagehall.title, document: pagehall.document },
+        { title: lunedo.title, document: lunedo.document },
         { title: sourceTitle, document },
       ),
-      before: pagehall.document,
+      before: lunedo.document,
       after: document,
     };
   }
@@ -687,8 +687,8 @@ export class ReimportService {
     const principal = details.principal as PrincipalRef | null | undefined;
     if (!principal) {
       throw new ImportError(
-        "holderNotInPagehall",
-        "This person or group is not in Pagehall yet. Map them in the report of the import first.",
+        "holderNotInLunedo",
+        "This person or group is not in Lunedo yet. Map them in the report of the import first.",
       );
     }
     const index = grants.findIndex(
@@ -817,7 +817,7 @@ export class ReimportService {
         row.applied_at !== null
           ? []
           : row.change === "conflict" && row.held
-            ? ["pagehall"]
+            ? ["lunedo"]
             : (DECISIONS[row.change] ?? []),
       decision: row.decision,
       decidedBy: row.decided_by ? { id: row.decided_by, name: row.decided_by_name } : null,
@@ -873,7 +873,7 @@ export class ReimportService {
         ) {
           throw new ImportError(
             "restrictionPending",
-            "Fewer people may read this page in Confluence, and that permission difference is not applied yet. Apply the difference in the permissions tab first, or keep the Pagehall version.",
+            "Fewer people may read this page in Confluence, and that permission difference is not applied yet. Apply the difference in the permissions tab first, or keep the Lunedo version.",
           );
         }
       }
@@ -977,8 +977,8 @@ export class ReimportService {
     const principal = details.principal as PrincipalRef | null | undefined;
     if (!principal) {
       throw new ImportError(
-        "holderNotInPagehall",
-        "This person or group is not in Pagehall yet. Map them in the report of the import first.",
+        "holderNotInLunedo",
+        "This person or group is not in Lunedo yet. Map them in the report of the import first.",
       );
     }
     const existing = await tx.execute<{ id: string }>(sql`
@@ -1002,8 +1002,8 @@ export class ReimportService {
     const principal = details.principal as PrincipalRef | null | undefined;
     if (!principal || principal.kind === "organizationMembers") {
       throw new ImportError(
-        "holderNotInPagehall",
-        "This person or group is not in Pagehall yet. Map them in the report of the import first.",
+        "holderNotInLunedo",
+        "This person or group is not in Lunedo yet. Map them in the report of the import first.",
       );
     }
     return {

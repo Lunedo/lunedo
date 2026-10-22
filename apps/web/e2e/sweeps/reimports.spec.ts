@@ -12,7 +12,7 @@ import {
 import { unique } from "../support/people.js";
 import { sweepAppearances } from "../support/sweeps.js";
 
-const headers = (page: Page) => ({ "X-Pagehall-Request": "1", origin: new URL(page.url()).origin });
+const headers = (page: Page) => ({ "X-Lunedo-Request": "1", origin: new URL(page.url()).origin });
 
 async function analyzed(page: Page, organizationId: string, template: string, spaceId?: string) {
   placeFolderExport(organizationId, template);

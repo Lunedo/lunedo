@@ -68,13 +68,13 @@ export async function loadMasterKeyRing(options: {
   } catch (error) {
     if (!(error instanceof KeyRingError) || inUse.length === 0) throw error;
     throw new MasterKeyError(
-      `The database contains data encrypted with master key version ${inUse.join(", ")}, but no master key ring is available: ${error.message}. Restore the master key ring of this instance (master-keys in the secrets directory, or PAGEHALL_MASTER_KEYS) and start Pagehall again. A new key is never created while encrypted data exists.`,
+      `The database contains data encrypted with master key version ${inUse.join(", ")}, but no master key ring is available: ${error.message}. Restore the master key ring of this instance (master-keys in the secrets directory, or LUNEDO_MASTER_KEYS) and start Lunedo again. A new key is never created while encrypted data exists.`,
     );
   }
   const missing = inUse.filter((version) => !options.keyRing.ring.has(version));
   if (missing.length > 0) {
     throw new MasterKeyError(
-      `Stored data uses master key version ${missing.join(", ")}, which the master key ring does not contain. Restore the complete master key ring of this instance and start Pagehall again.`,
+      `Stored data uses master key version ${missing.join(", ")}, which the master key ring does not contain. Restore the complete master key ring of this instance and start Lunedo again.`,
     );
   }
 }

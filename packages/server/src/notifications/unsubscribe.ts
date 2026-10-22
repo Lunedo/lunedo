@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { type NotificationType, notificationEvents, operationsNotificationTypes } from "@pagehall/shared";
+import { type NotificationType, notificationEvents, operationsNotificationTypes } from "@lunedo/shared";
 import { eq } from "drizzle-orm";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accounts } from "../accounts/schema.js";

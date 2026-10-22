@@ -1,6 +1,6 @@
 import { onSignOut } from "../session/sign-out.js";
 
-const PREFIX = "pagehall.recentCommands.";
+const PREFIX = "lunedo.recentCommands.";
 export const RECENT_COMMANDS = 5;
 
 function storage(): Storage | null {

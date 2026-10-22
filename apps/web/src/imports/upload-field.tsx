@@ -1,4 +1,4 @@
-import { Badge, Button, classNames, ErrorState, Icon } from "@pagehall/ui";
+import { Badge, Button, classNames, ErrorState, Icon } from "@lunedo/ui";
 import { CheckCircle2, FileArchive, Upload } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

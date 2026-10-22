@@ -48,7 +48,7 @@ test("exports a template with an image and imports it into another space under a
       data: PIXEL,
       headers: {
         "content-type": "application/octet-stream",
-        "X-Pagehall-Request": "1",
+        "X-Lunedo-Request": "1",
         origin: new URL(page.url()).origin,
       },
     },
@@ -83,7 +83,7 @@ test("exports a template with an image and imports it into another space under a
   const downloading = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Download file" }).click();
   const download = await downloading;
-  expect(download.suggestedFilename()).toBe("onboarding.pagehall-template.zip");
+  expect(download.suggestedFilename()).toBe("onboarding.lunedo-template.zip");
   const path = await download.path();
 
   await page.goto(`/spaces/${target.key}/settings/templates`);

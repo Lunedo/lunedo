@@ -1,4 +1,4 @@
-import { Section } from "@pagehall/ui";
+import { Section } from "@lunedo/ui";
 import type { ReactNode } from "react";
 
 export function Panel({

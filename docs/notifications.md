@@ -26,7 +26,7 @@ Content events reach people who watch the content, see [Watching](#watching): `c
 
 Event types register in the `NotificationRegistry` with a parameter schema, a visibility rule, the mail they render and, for types not about a page, the space or item they come from, so later features add their own without changing the core.
 
-Every type belongs to exactly one event of `notificationEvents` in `@pagehall/shared`. Preferences, muting and the delivery of every channel route through that list: `mentions`, `tasks`, `shares`, `accessRequests`, `comments`, `changes`, `blogPosts`, `meetings` and `ownershipAndStatus` for content, `spaceAdministration`, `importsAndExports` and one event per administration type such as `apiTokenExpiring`. Their parameters are defined in `@pagehall/shared`, so that the web client renders them with the same types.
+Every type belongs to exactly one event of `notificationEvents` in `@lunedo/shared`. Preferences, muting and the delivery of every channel route through that list: `mentions`, `tasks`, `shares`, `accessRequests`, `comments`, `changes`, `blogPosts`, `meetings` and `ownershipAndStatus` for content, `spaceAdministration`, `importsAndExports` and one event per administration type such as `apiTokenExpiring`. Their parameters are defined in `@lunedo/shared`, so that the web client renders them with the same types.
 
 Mails for password resets, e-mail changes, recovery codes, invitations, registrations and test mails remain direct mails: they are part of a flow the person started and do not depend on preferences.
 
@@ -76,13 +76,13 @@ A new notification for which the person chose push is written to `push_outbox` i
 
 ## Chat channels
 
-Space administrators connect a space to Microsoft Teams (a Workflows webhook with an Adaptive Card), Slack and Discord webhooks, a Matrix room (homeserver, room ID and the access token of a bot) or a generic webhook. Organization administrators with the integrations area connect channels for the organization announcement. Addresses, tokens and the signing secret of generic webhooks are stored encrypted and are never returned; the signing secret is shown once after saving. Generic webhooks get a JSON body with the headers `X-Pagehall-Event`, `X-Pagehall-Delivery`, `X-Pagehall-Timestamp` and `X-Pagehall-Signature` (`sha256=` and the HMAC-SHA256 of the timestamp, a dot and the body).
+Space administrators connect a space to Microsoft Teams (a Workflows webhook with an Adaptive Card), Slack and Discord webhooks, a Matrix room (homeserver, room ID and the access token of a bot) or a generic webhook. Organization administrators with the integrations area connect channels for the organization announcement. Addresses, tokens and the signing secret of generic webhooks are stored encrypted and are never returned; the signing secret is shown once after saving. Generic webhooks get a JSON body with the headers `X-Lunedo-Event`, `X-Lunedo-Delivery`, `X-Lunedo-Timestamp` and `X-Lunedo-Signature` (`sha256=` and the HMAC-SHA256 of the timestamp, a dot and the body).
 
 Events: `pagePublished` (first version of a page), `pageChanged` (later versions, combined per page for one hour), `blogPostPublished`, `decisionRecorded` (sent five minutes after the decision appears, with its text at that time), `pageStatusChanged`, `commentCreated` and, for organizations, `announcementPublished` (sent when the announcement starts).
 
 Only content every member of the space can read is posted: the item is published, not in the trash or archived, and neither it nor a page above it has a view restriction. Comments on such pages are posted unless they belong to a hidden inline comment. Confidential and personal spaces cannot have chat channels. The check runs when the event happens and again when the message is sent.
 
-Requests go to public addresses only. Private, loopback and link-local addresses are refused unless they are in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`; the address is checked for every connection, so redirects and changed DNS answers cannot reach other networks. Redirects keep the Matrix token only on the same origin.
+Requests go to public addresses only. Private, loopback and link-local addresses are refused unless they are in `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`; the address is checked for every connection, so redirects and changed DNS answers cannot reach other networks. Redirects keep the Matrix token only on the same origin.
 
 Deliveries are stored in `chat_deliveries` and sent by the worker with up to five retries and backoff. A channel whose service keeps failing, or answers that the address is gone or not allowed, is marked failing with the reason, its administrators are notified once, and nothing more is posted until a test message succeeds or the address is changed. Finished deliveries are deleted after 14 days.
 
@@ -96,7 +96,7 @@ Watching never grants anything. Delivery checks that the watcher can read the it
 
 ## Live updates
 
-A committed notification sends a PostgreSQL notification on the channel `pagehall_notifications` with the recipient's account ID. Every API node listens on one connection and forwards it to the streams of that account, so a client receives it from any node. After the listening connection was lost, every stream gets an update, because events may have been missed.
+A committed notification sends a PostgreSQL notification on the channel `lunedo_notifications` with the recipient's account ID. Every API node listens on one connection and forwards it to the streams of that account, so a client receives it from any node. After the listening connection was lost, every stream gets an update, because events may have been missed.
 
 ## Endpoints
 

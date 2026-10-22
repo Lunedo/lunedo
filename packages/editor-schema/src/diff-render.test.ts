@@ -61,41 +61,41 @@ describe("renderDiffHtml", () => {
   it("marks added, removed and formatted text in the inline view", () => {
     const diff = compare([p("a quick fox and dog")], [p("a slow fox and ", text("dog", [{ type: "bold" }]))]);
     expect(renderDiffHtml(diff, "inline")).toBe(
-      '<div class="ph-diff-block" data-change="changed"><p>a <del class="ph-diff-removed">quick</del><ins class="ph-diff-added">slow</ins> fox and <span class="ph-diff-formatted"><strong>dog</strong></span></p></div>',
+      '<div class="ld-diff-block" data-change="changed"><p>a <del class="ld-diff-removed">quick</del><ins class="ld-diff-added">slow</ins> fox and <span class="ld-diff-formatted"><strong>dog</strong></span></p></div>',
     );
   });
 
   it("shows only the before side with removals in the before view", () => {
     const diff = compare([p("a quick fox and dog")], [p("a slow fox and ", text("dog", [{ type: "bold" }]))]);
     expect(renderDiffHtml(diff, "before")).toBe(
-      '<div class="ph-diff-block" data-change="changed"><p>a <del class="ph-diff-removed">quick</del> fox and <span class="ph-diff-formatted">dog</span></p></div>',
+      '<div class="ld-diff-block" data-change="changed"><p>a <del class="ld-diff-removed">quick</del> fox and <span class="ld-diff-formatted">dog</span></p></div>',
     );
   });
 
   it("shows only the after side with additions in the after view", () => {
     const diff = compare([p("one"), p("gone away")], [p("one"), p("brand new")]);
     expect(renderDiffHtml(diff, "after")).toBe(
-      '<p>one</p><div class="ph-diff-block" data-change="added"><p>brand new</p></div>',
+      '<p>one</p><div class="ld-diff-block" data-change="added"><p>brand new</p></div>',
     );
     expect(renderDiffHtml(diff, "before")).toBe(
-      '<p>one</p><div class="ph-diff-block" data-change="removed"><p>gone away</p></div>',
+      '<p>one</p><div class="ld-diff-block" data-change="removed"><p>gone away</p></div>',
     );
   });
 
   it("wraps whole blocks and marks moved blocks at their new position", () => {
     const diff = compare([p("first"), p("second")], [p("second"), p("first")]);
     expect(renderDiffHtml(diff, "inline")).toBe(
-      '<p>second</p><div class="ph-diff-block" data-change="moved"><span class="ph-diff-note">Moved</span><p>first</p></div>',
+      '<p>second</p><div class="ld-diff-block" data-change="moved"><span class="ld-diff-note">Moved</span><p>first</p></div>',
     );
   });
 
   it("lists changed attributes in a note with default or custom labels", () => {
     const diff = compare([heading(1, "Intro")], [heading(2, "Intro")]);
     expect(renderDiffHtml(diff, "inline")).toBe(
-      '<div class="ph-diff-block" data-change="changed"><span class="ph-diff-note">Changed: level</span><h2 id="intro">Intro</h2></div>',
+      '<div class="ld-diff-block" data-change="changed"><span class="ld-diff-note">Changed: level</span><h2 id="intro">Intro</h2></div>',
     );
     expect(renderDiffHtml(diff, "before", {}, { labels: { attributes: "Geändert: {names} <b>" } })).toContain(
-      '<span class="ph-diff-note">Geändert: level &lt;b&gt;</span><h1 id="intro">Intro</h1>',
+      '<span class="ld-diff-note">Geändert: level &lt;b&gt;</span><h1 id="intro">Intro</h1>',
     );
   });
 
@@ -130,8 +130,8 @@ describe("renderDiffHtml", () => {
     const html = renderDiffHtml(diff, "inline", context);
     expect(html).toContain("@Ann &lt;Admin&gt;");
     expect(html).toContain('href="/pages/plan"');
-    expect(html).toContain('<span class="ph-placeholder">Fill in</span>');
-    expect(html).toMatch(/<ins class="ph-diff-added">.*ph-mention.*<\/ins>/);
+    expect(html).toContain('<span class="ld-placeholder">Fill in</span>');
+    expect(html).toMatch(/<ins class="ld-diff-added">.*ld-mention.*<\/ins>/);
   });
 
   it("marks table rows and cells in place", () => {
@@ -140,8 +140,8 @@ describe("renderDiffHtml", () => {
     const html = renderDiffHtml(diff, "inline");
     expect(html).toContain('<td data-change="added"><p>x</p></td>');
     expect(html).toContain('<tr data-change="added">');
-    expect(html.slice(html.indexOf("<tbody>"))).not.toContain("ph-diff-block");
-    expect(html.startsWith('<div class="ph-diff-block" data-change="changed"><div class="ph-table">')).toBe(
+    expect(html.slice(html.indexOf("<tbody>"))).not.toContain("ld-diff-block");
+    expect(html.startsWith('<div class="ld-diff-block" data-change="changed"><div class="ld-table">')).toBe(
       true,
     );
   });
@@ -153,7 +153,7 @@ describe("renderDiffHtml", () => {
     });
     const html = renderDiffHtml(compare([tasks(null)], [tasks("2026-10-12")]), "inline");
     expect(html).toContain(
-      '<li data-change="changed" class="ph-task-item" data-checked="false" data-due-date="2026-10-12"><input type="checkbox" disabled aria-label="Open"><div><span class="ph-diff-note">Changed: dueDate</span><p>Ship</p><span class="ph-task-meta"><time class="ph-task-due" datetime="2026-10-12">2026-10-12</time></span></div></li>',
+      '<li data-change="changed" class="ld-task-item" data-checked="false" data-due-date="2026-10-12"><input type="checkbox" disabled aria-label="Open"><div><span class="ld-diff-note">Changed: dueDate</span><p>Ship</p><span class="ld-task-meta"><time class="ld-task-due" datetime="2026-10-12">2026-10-12</time></span></div></li>',
     );
   });
 
@@ -165,7 +165,7 @@ describe("renderDiffHtml", () => {
     });
     const diff = compare([code("a\n<b>")], [code("a\nc")]);
     expect(renderDiffHtml(diff, "inline")).toBe(
-      '<div class="ph-diff-block" data-change="changed"><pre class="ph-code-block" data-language="javascript"><code class="hljs language-javascript">a\n<del class="ph-diff-removed">&lt;b&gt;</del>\n<ins class="ph-diff-added">c</ins></code></pre></div>',
+      '<div class="ld-diff-block" data-change="changed"><pre class="ld-code-block" data-language="javascript"><code class="hljs language-javascript">a\n<del class="ld-diff-removed">&lt;b&gt;</del>\n<ins class="ld-diff-added">c</ins></code></pre></div>',
     );
     expect(renderDiffHtml(diff, "after")).toContain("a\n<ins");
     expect(renderDiffHtml(diff, "after")).not.toContain("<del");
@@ -177,7 +177,7 @@ describe("renderDiffHtml", () => {
       [{ type: "blockMath", attrs: { latex: "b^2" } }],
     );
     expect(renderDiffHtml(diff, "inline")).toContain(
-      '<span class="ph-diff-note">Changed: latex</span><div class="ph-math ph-math-block" data-latex="b^2">',
+      '<span class="ld-diff-note">Changed: latex</span><div class="ld-math ld-math-block" data-latex="b^2">',
     );
     expect(renderDiffHtml(diff, "before")).toContain('data-latex="a^2"');
   });

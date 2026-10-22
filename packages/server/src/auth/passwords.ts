@@ -1,9 +1,9 @@
 import { argon2, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { PASSWORD_MAX_LENGTH } from "@pagehall/shared";
+import { PASSWORD_MAX_LENGTH } from "@lunedo/shared";
 import { ConcurrencyLimiter } from "./concurrency.js";
 
-export { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH_FLOOR } from "@pagehall/shared";
+export { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH_FLOOR } from "@lunedo/shared";
 
 export interface Argon2Parameters {
   memory: number;

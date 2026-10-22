@@ -10,7 +10,7 @@ function page(id: string, title: string, overrides: Partial<PrintPage> = {}): Pr
     title,
     path: ["IT", "Network"],
     meta: ["Anna Weber · Published version 8 of 12 Oct 2026"],
-    body: `<h1 id="uplink">Uplink</h1><nav class="ph-toc"><a href="#uplink">Uplink</a></nav><p><a href="#ph-page-b">Vienna</a></p>`,
+    body: `<h1 id="uplink">Uplink</h1><nav class="ld-toc"><a href="#uplink">Uplink</a></nav><p><a href="#ld-page-b">Vienna</a></p>`,
     headings: [{ level: 1, text: "Uplink", id: "uplink" }],
     comments: [],
     ...overrides,
@@ -40,7 +40,7 @@ describe("print-ready HTML", () => {
 
   it("adds a running header and a footer with the exporter and page numbers", () => {
     const html = print([page("a", "Graz")]);
-    expect(html).toContain('@top-left{content:string(ph-path) " \\203A  " string(ph-title);');
+    expect(html).toContain('@top-left{content:string(ld-path) " \\203A  " string(ld-title);');
     expect(html).toContain('@bottom-left{content:"Exported on 16 Oct 2026 by Anna <Weber>";');
     expect(html).toContain('@bottom-right{content:"Page " counter(page) " of " counter(pages);');
     expect(html).toContain("@page :first{@top-left{content:none}}");
@@ -61,38 +61,38 @@ describe("print-ready HTML", () => {
 
   it("shows the title block of a single page with its headings as contents and starts the content on a new sheet", () => {
     const html = print([page("a", "Graz")]);
-    expect(html).toContain('<p class="ph-path">IT › Network</p><h1 class="ph-page-title">Graz</h1>');
-    expect(html).toContain('<p class="ph-meta">Anna Weber · Published version 8 of 12 Oct 2026</p>');
+    expect(html).toContain('<p class="ld-path">IT › Network</p><h1 class="ld-page-title">Graz</h1>');
+    expect(html).toContain('<p class="ld-meta">Anna Weber · Published version 8 of 12 Oct 2026</p>');
     expect(html).toContain(
-      '<li data-level="0"><a href="#p0-uplink"><span class="ph-entry">Uplink</span></a></li>',
+      '<li data-level="0"><a href="#p0-uplink"><span class="ld-entry">Uplink</span></a></li>',
     );
-    expect(html).toContain('<article class="ph-print-page" id="ph-page-a">');
+    expect(html).toContain('<article class="ld-print-page" id="ld-page-a">');
     expect(html).toContain('<h1 id="p0-uplink">Uplink</h1>');
     expect(html).toContain('<a href="#p0-uplink">Uplink</a>');
   });
 
   it("prints a single page without contents on the first sheet", () => {
     const html = print([page("a", "Graz")], { contents: false, attachments: false });
-    expect(html).not.toContain('<nav class="ph-contents"');
-    expect(html).not.toContain('class="ph-print-page"');
-    expect(html).toContain('<article id="ph-page-a"><div class="ph-front">');
+    expect(html).not.toContain('<nav class="ld-contents"');
+    expect(html).not.toContain('class="ld-print-page"');
+    expect(html).toContain('<article id="ld-page-a"><div class="ld-front">');
   });
 
   it("starts every page of several on a new sheet and lists them in the contents", () => {
     const html = print([page("a", "Graz"), page("b", "Vienna", { depth: 1 })]);
-    expect(html.match(/<article class="ph-print-page"/g)).toHaveLength(2);
-    expect(html).toContain('<h1 class="ph-document-title">Network</h1>');
+    expect(html.match(/<article class="ld-print-page"/g)).toHaveLength(2);
+    expect(html).toContain('<h1 class="ld-document-title">Network</h1>');
     expect(html).toContain(
-      '<li data-level="0"><a href="#ph-page-a"><span class="ph-entry">Graz</span></a></li>',
+      '<li data-level="0"><a href="#ld-page-a"><span class="ld-entry">Graz</span></a></li>',
     );
     expect(html).toContain(
-      '<li data-level="1"><a href="#ph-page-b"><span class="ph-entry">Vienna</span></a></li>',
+      '<li data-level="1"><a href="#ld-page-b"><span class="ld-entry">Vienna</span></a></li>',
     );
-    expect(html).toContain(".ph-contents a::after{content:target-counter(attr(href url),page)}");
-    expect(html).toContain(".ph-print-page,.ph-appendix{break-before:page}");
+    expect(html).toContain(".ld-contents a::after{content:target-counter(attr(href url),page)}");
+    expect(html).toContain(".ld-print-page,.ld-appendix{break-before:page}");
     expect(html).toContain('<h1 id="p0-uplink">Uplink</h1>');
     expect(html).toContain('<h1 id="p1-uplink">Uplink</h1>');
-    expect(html).toContain('<a href="#ph-page-b">Vienna</a>');
+    expect(html).toContain('<a href="#ld-page-b">Vienna</a>');
   });
 
   it("adds the attachment appendix and comments only when asked", () => {
@@ -108,15 +108,15 @@ describe("print-ready HTML", () => {
       ],
     });
     const full = print([commented], { comments: true, attachments: true });
-    expect(full).toContain('<section class="ph-appendix" id="ph-appendix"><h2>Appendix: attachments</h2>');
+    expect(full).toContain('<section class="ld-appendix" id="ld-appendix"><h2>Appendix: attachments</h2>');
     expect(full).toContain("<td>plan.pdf</td><td>Graz</td><td>48 KB</td>");
-    expect(full).toContain('<p class="ph-comment-quote">On “uplink”</p>');
+    expect(full).toContain('<p class="ld-comment-quote">On “uplink”</p>');
     expect(full).toContain("<p>Is this 10G?</p>");
     expect(full).toContain(
-      '<div class="ph-comment-reply"><p class="ph-comment-meta">Anna Weber · 12 Oct 2026 11:00</p><p>Yes</p></div>',
+      '<div class="ld-comment-reply"><p class="ld-comment-meta">Anna Weber · 12 Oct 2026 11:00</p><p>Yes</p></div>',
     );
     const plain = print([commented], { comments: false, attachments: false });
-    expect(plain).not.toContain('<section class="ph-appendix"');
+    expect(plain).not.toContain('<section class="ld-appendix"');
     expect(plain).not.toContain("Is this 10G?");
   });
 

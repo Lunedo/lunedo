@@ -225,7 +225,7 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
   });
 
   afterAll(async () => {
-    if (process.env.PAGEHALL_IMPORT_CHECK_OUT) {
+    if (process.env.LUNEDO_IMPORT_CHECK_OUT) {
       const resolved: Record<string, ImportSnapshot> = {};
       for (const [key, value] of snapshots)
         resolved[key] = await value.catch(() => ({
@@ -236,7 +236,7 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
           roles: [],
         }));
       writeFileSync(
-        process.env.PAGEHALL_IMPORT_CHECK_OUT,
+        process.env.LUNEDO_IMPORT_CHECK_OUT,
         JSON.stringify({ durations: Object.fromEntries(durations), snapshots: resolved }, null, 1),
       );
     }

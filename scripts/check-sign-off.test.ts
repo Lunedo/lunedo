@@ -6,7 +6,7 @@ import path from "node:path";
 import { after, describe, it } from "node:test";
 
 const script = path.resolve(import.meta.dirname, "check-sign-off.ts");
-const repo = mkdtempSync(path.join(tmpdir(), "pagehall-sign-off-"));
+const repo = mkdtempSync(path.join(tmpdir(), "lunedo-sign-off-"));
 execFileSync("git", ["init", "--quiet", repo]);
 execFileSync("git", ["-C", repo, "config", "user.name", "Ada Lovelace"]);
 execFileSync("git", ["-C", repo, "config", "user.email", "ada@example.org"]);

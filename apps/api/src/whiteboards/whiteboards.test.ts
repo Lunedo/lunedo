@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, recordClient } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, recordClient } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import {
@@ -93,7 +93,7 @@ describe.skipIf(!databaseBaseUrl)("whiteboards through the API", () => {
 
   async function person() {
     counter += 1;
-    const email = `boards${counter}@pagehall.test`;
+    const email = `boards${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const { id } = await createAccount(test, email, password);
     return { id, client: await signedInClient(test, email, password) };

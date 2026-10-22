@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";

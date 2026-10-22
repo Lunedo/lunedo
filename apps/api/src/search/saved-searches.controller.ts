@@ -1,4 +1,3 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req } from "@nestjs/common";
 import {
   MAX_SAVED_SEARCH_NAME,
   RECENT_SEARCH_LIMIT,
@@ -8,7 +7,8 @@ import {
   searchContentTypes,
   searchFiltersSchema,
   searchQueryTextSchema,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

@@ -1,4 +1,4 @@
-import { Button, Field, Input } from "@pagehall/ui";
+import { Button, Field, Input } from "@lunedo/ui";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";

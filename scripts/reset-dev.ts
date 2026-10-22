@@ -17,7 +17,7 @@ function docker(args: string[], input?: string): string {
 
 function psql(sql: string): string {
   return docker(
-    ["exec", "-T", "postgres", "psql", "-U", "pagehall", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1"],
+    ["exec", "-T", "postgres", "psql", "-U", "lunedo", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1"],
     sql,
   );
 }
@@ -43,7 +43,7 @@ const databases = psql("SELECT datname FROM pg_database;").split("\n").filter(Bo
 const statements = resetStatements(databases);
 psql(statements.join("\n"));
 const project = JSON.parse(docker(["config", "--format", "json"])) as { name: string };
-execFileSync("docker", ["volume", "rm", "--force", `${project.name}_pagehall-data`], { stdio: "inherit" });
+execFileSync("docker", ["volume", "rm", "--force", `${project.name}_lunedo-data`], { stdio: "inherit" });
 console.log(
   `Dropped ${statements.length - 2} test databases and reset the development database and secrets.`,
 );

@@ -1,4 +1,4 @@
-import { Button, Dialog } from "@pagehall/ui";
+import { Button, Dialog } from "@lunedo/ui";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TrashEntry } from "../content-queries.js";

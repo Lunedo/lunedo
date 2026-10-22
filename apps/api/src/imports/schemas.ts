@@ -12,7 +12,7 @@ import {
   problemCodes,
   reimportPhases,
   reportCategoryNames,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 import { pageImpactSchema } from "../sharing/schemas.js";
@@ -69,7 +69,7 @@ export const importSchema = z
     history: z
       .boolean()
       .describe(
-        "Whether every Confluence version becomes a Pagehall version, or only the current state is imported.",
+        "Whether every Confluence version becomes a Lunedo version, or only the current state is imported.",
       ),
     peopleSource: z
       .object({
@@ -147,7 +147,7 @@ export const importSchema = z
       })
       .describe("Options of the source."),
     throttledUntil: timestamp(
-      "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself.",
+      "Until when Confluence asked Lunedo to slow down, or null. The import continues by itself.",
     ).nullable(),
     waitingFor: z
       .string()
@@ -384,7 +384,7 @@ export const updateImportSchema = z
           .boolean()
           .optional()
           .describe(
-            "For a `markdown` import: `true` makes the new space a knowledge base. Folders become categories, files become articles, and article types, languages, translations and sections written by a Pagehall export are kept. The knowledge base opens for the people given a role when it is accepted; choose its audience afterwards in its settings.",
+            "For a `markdown` import: `true` makes the new space a knowledge base. Folders become categories, files become articles, and article types, languages, translations and sections written by a Lunedo export are kept. The knowledge base opens for the people given a role when it is accepted; choose its audience afterwards in its settings.",
           ),
       })
       .strict()
@@ -396,7 +396,7 @@ export const updateImportSchema = z
     history: z
       .boolean()
       .optional()
-      .describe("Whether every Confluence version becomes a Pagehall version. Takes noticeably longer."),
+      .describe("Whether every Confluence version becomes a Lunedo version. Takes noticeably longer."),
     sourceUrl: z
       .string()
       .max(500)
@@ -458,7 +458,7 @@ export const reportSchema = z
       .number()
       .int()
       .describe("Permission entries that did not map exactly or wait for a person or group."),
-    groupsMissing: z.number().int().describe("Confluence groups without a group in Pagehall."),
+    groupsMissing: z.number().int().describe("Confluence groups without a group in Lunedo."),
   })
   .describe("Summary of the report of an import.");
 
@@ -626,7 +626,7 @@ export const connectionSchema = z
       })
       .strict(),
   ])
-  .describe("How Pagehall reads Confluence through its API.");
+  .describe("How Lunedo reads Confluence through its API.");
 
 export const spaceSelectionSchema = z
   .object({
@@ -826,12 +826,12 @@ export const permissionEntriesSchema = z
                   ["account", "group", "organizationMembers", "anonymous"],
                   "Who held the permission: a person, a group, all signed-in users or anonymous visitors.",
                 ),
-                id: uuid("ID of the account or group in Pagehall.").nullable(),
-                name: z.string().nullable().describe("Name in Pagehall, or null."),
+                id: uuid("ID of the account or group in Lunedo.").nullable(),
+                name: z.string().nullable().describe("Name in Lunedo, or null."),
                 sourceName: z.string().nullable().describe("Name of the group in Confluence, or null."),
               })
               .describe("The holder of the permission."),
-            role: roleSchema.nullable().describe("Role in Pagehall, or null when nothing is taken over."),
+            role: roleSchema.nullable().describe("Role in Lunedo, or null when nothing is taken over."),
             permissions: z
               .array(z.string())
               .describe("Confluence permissions of the holder, such as `VIEWSPACE`."),
@@ -862,7 +862,7 @@ export const proposedAccessSchema = z
           .extend({ name: z.string().nullable().describe("Name of the person or group, or null.") })
           .describe("A role for a holder, with the holder's name."),
       )
-      .describe("Roles taken from Confluence for people and groups that exist in Pagehall."),
+      .describe("Roles taken from Confluence for people and groups that exist in Lunedo."),
     pending: z
       .number()
       .int()
@@ -872,12 +872,12 @@ export const proposedAccessSchema = z
 
 const tabSchema = extensibleEnum(
   changeTabs,
-  "Group of changes: `conflicts` (changed in Pagehall and at the source, or held because someone is editing), `updates` (new and changed only at the source), `deleted` (deleted at the source), `moved` (moved at the source) and `permissions` (differences to the permissions in the source).",
+  "Group of changes: `conflicts` (changed in Lunedo and at the source, or held because someone is editing), `updates` (new and changed only at the source), `deleted` (deleted at the source), `moved` (moved at the source) and `permissions` (differences to the permissions in the source).",
 );
 
 const decisionSchema = extensibleEnum(
   changeDecisions,
-  "Decision: for a conflict `pagehall` keeps the Pagehall version, `source` takes the source version as a new version, `both` keeps the Pagehall version and adds the source version to the history, marked as not applied; for a page deleted at the source `trash` moves it to the trash and `keep` keeps it.",
+  "Decision: for a conflict `lunedo` keeps the Lunedo version, `source` takes the source version as a new version, `both` keeps the Lunedo version and adds the source version to the history, marked as not applied; for a page deleted at the source `trash` moves it to the trash and `keep` keeps it.",
 );
 
 export const changeSummarySchema = z
@@ -906,7 +906,7 @@ export const changeSummarySchema = z
       .number()
       .int()
       .describe("Conflicts and deletions that still wait, including those the caller cannot see."),
-    applying: z.boolean().describe("Whether Pagehall is applying the changes right now."),
+    applying: z.boolean().describe("Whether Lunedo is applying the changes right now."),
   })
   .describe("Summary of the changes of a re-import.");
 
@@ -930,16 +930,16 @@ export const changeEntrySchema = z
     ),
     change: extensibleEnum(
       changeTypes,
-      "Kind of change: `new`, `updated`, `conflict`, `deleted` (deleted at the source), `moved` (follows the source), `movedHere` (moved in Pagehall, so it stays), `labels`, `gone` (a comment or attachment deleted at the source, only listed) or `permission`.",
+      "Kind of change: `new`, `updated`, `conflict`, `deleted` (deleted at the source), `moved` (follows the source), `movedHere` (moved in Lunedo, so it stays), `labels`, `gone` (a comment or attachment deleted at the source, only listed) or `permission`.",
     ),
     item: z
       .object({
         id: uuid("ID of the page."),
-        title: z.string().describe("Title of the page in Pagehall."),
+        title: z.string().describe("Title of the page in Lunedo."),
         spaceKey: z.string().describe("Key of its space."),
       })
       .nullable()
-      .describe("The page in Pagehall, or null when the change concerns something else."),
+      .describe("The page in Lunedo, or null when the change concerns something else."),
     title: z.string().nullable().describe("Title of what changed."),
     sourceTitle: z
       .string()
@@ -959,10 +959,10 @@ export const changeEntrySchema = z
     changedHere: z
       .object({
         by: changePersonSchema.nullable().describe("Who changed it last, or null when unknown."),
-        at: timestamp("When it was changed last in Pagehall."),
+        at: timestamp("When it was changed last in Lunedo."),
       })
       .nullable()
-      .describe("The last change in Pagehall, for conflicts."),
+      .describe("The last change in Lunedo, for conflicts."),
     changedAtSource: timestamp("When it was changed at the source.").nullable(),
     from: placeSchema
       .nullable()
@@ -975,9 +975,7 @@ export const changeEntrySchema = z
         added: z.array(z.string()).describe("Labels added at the source."),
         removed: z
           .array(z.string())
-          .describe(
-            "Labels removed at the source. They are removed only if nobody touched them in Pagehall.",
-          ),
+          .describe("Labels removed at the source. They are removed only if nobody touched them in Lunedo."),
       })
       .nullable()
       .describe("Label changes."),
@@ -991,8 +989,8 @@ export const changeEntrySchema = z
         holder: z
           .object({
             kind: extensibleEnum(["account", "group", "organizationMembers"], "Kind of holder."),
-            id: uuid("ID of the account or group in Pagehall.").nullable(),
-            name: z.string().nullable().describe("Name in Pagehall, or null when unknown."),
+            id: uuid("ID of the account or group in Lunedo.").nullable(),
+            name: z.string().nullable().describe("Name in Lunedo, or null when unknown."),
             sourceName: z.string().nullable().describe("Name or ID at the source."),
           })
           .nullable()
@@ -1001,18 +999,16 @@ export const changeEntrySchema = z
           .string()
           .nullable()
           .describe("Role according to the source, or null when the role is removed."),
-        currentRole: z.string().nullable().describe("Role in Pagehall now, or null."),
+        currentRole: z.string().nullable().describe("Role in Lunedo now, or null."),
         restriction: z.string().nullable().describe("`view` or `edit` for page restrictions."),
         applicable: z
           .boolean()
           .describe(
-            "Whether it can be applied now. Holders not in Pagehall yet are mapped in the report first.",
+            "Whether it can be applied now. Holders not in Lunedo yet are mapped in the report first.",
           ),
       })
       .nullable()
-      .describe(
-        "A difference to the permissions at the source. Pagehall never changes permissions by itself.",
-      ),
+      .describe("A difference to the permissions at the source. Lunedo never changes permissions by itself."),
     held: z
       .boolean()
       .describe(
@@ -1028,7 +1024,7 @@ export const changeEntrySchema = z
     decisions: z
       .array(decisionSchema)
       .describe(
-        "Decisions that can be taken now. While a conflict waits for a restriction, only `pagehall` is possible.",
+        "Decisions that can be taken now. While a conflict waits for a restriction, only `lunedo` is possible.",
       ),
     decision: decisionSchema.nullable(),
     decidedBy: changePersonSchema.nullable().describe("Who decided, or null."),
@@ -1070,7 +1066,7 @@ export const confluenceLinkSchema = z
     title: z.string().describe("Title of the page."),
     slug: z.string().describe("Title as it appears in the address."),
   })
-  .describe("The Pagehall page an old Confluence link points to.");
+  .describe("The Lunedo page an old Confluence link points to.");
 
 export const differenceImpactSchema = z
   .object({
@@ -1088,19 +1084,19 @@ const comparisonSideSchema = z.object({
     .int()
     .nullable()
     .describe(
-      "Version number: in Pagehall the published version when the caller may only read the page, null for the current draft or a template; at the source the version in the export.",
+      "Version number: in Lunedo the published version when the caller may only read the page, null for the current draft or a template; at the source the version in the export.",
     ),
 });
 
 export const changeComparisonSchema = z
   .object({
     kind: extensibleEnum(["page", "template"], "Whether a page or a space template is compared."),
-    pagehall: comparisonSideSchema.describe("The current content in Pagehall."),
+    lunedo: comparisonSideSchema.describe("The current content in Lunedo."),
     source: comparisonSideSchema.describe("The content of the new export, converted as it would be applied."),
     decisions: z
       .array(decisionSchema)
       .describe(
-        "Decisions that can be taken now. While the page waits for a restriction from the source, only `pagehall` is possible.",
+        "Decisions that can be taken now. While the page waits for a restriction from the source, only `lunedo` is possible.",
       ),
     decision: decisionSchema.nullable().describe("The decision taken for the conflict so far, or null."),
     diff: z
@@ -1112,6 +1108,4 @@ export const changeComparisonSchema = z
     after: documentSchema,
     references: pageContentSchema.shape.references,
   })
-  .describe(
-    "The current content in Pagehall compared with the content of the new export. Nothing is applied.",
-  );
+  .describe("The current content in Lunedo compared with the content of the new export. Nothing is applied.");

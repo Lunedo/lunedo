@@ -1,4 +1,4 @@
-import { useToast } from "@pagehall/ui";
+import { useToast } from "@lunedo/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";

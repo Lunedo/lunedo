@@ -1,5 +1,5 @@
 import type { Readable } from "node:stream";
-import type { SceneProblem } from "@pagehall/editor-schema/scene";
+import type { SceneProblem } from "@lunedo/editor-schema/scene";
 import { FileTooLargeError } from "../files/files.js";
 
 export class SceneInvalidError extends Error {

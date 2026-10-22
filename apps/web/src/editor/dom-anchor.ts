@@ -1,8 +1,8 @@
-import { ANCHOR_CONTEXT_LENGTH, MAX_QUOTE_LENGTH, type TextAnchor } from "@pagehall/editor-schema";
+import { ANCHOR_CONTEXT_LENGTH, MAX_QUOTE_LENGTH, type TextAnchor } from "@lunedo/editor-schema";
 
 const BLOCKS = "p, h1, h2, h3, h4, h5, h6, pre";
 const ATOMS =
-  ".ph-mention, .ph-page-link, .ph-date, .ph-emoji, .ph-status, .ph-math, .ph-placeholder, .ph-template-field, .ph-task-meta";
+  ".ld-mention, .ld-page-link, .ld-date, .ld-emoji, .ld-status, .ld-math, .ld-placeholder, .ld-template-field, .ld-task-meta";
 
 function textNodes(block: Element): Text[] {
   const walker = block.ownerDocument.createTreeWalker(block, NodeFilter.SHOW_TEXT, {

@@ -24,8 +24,8 @@ export interface Operation {
   summary?: string;
   description?: string;
   tags?: string[];
-  "x-pagehall-permission"?: unknown;
-  "x-pagehall-internal"?: boolean;
+  "x-lunedo-permission"?: unknown;
+  "x-lunedo-internal"?: boolean;
   "x-stability-level"?: "alpha";
   security: Record<string, string[]>[];
   parameters?: Parameter[];
@@ -311,7 +311,7 @@ function operation(
     tags: definition.tags,
     ...(route.access?.kind === "permission"
       ? {
-          "x-pagehall-permission": {
+          "x-lunedo-permission": {
             action: route.access.action,
             ...(route.access.alternatives.length > 0 ? { alternatives: route.access.alternatives } : {}),
             resource: route.access.resource.type,
@@ -319,7 +319,7 @@ function operation(
           },
         }
       : {}),
-    ...(route.internal ? { "x-pagehall-internal": true, "x-stability-level": "alpha" } : {}),
+    ...(route.internal ? { "x-lunedo-internal": true, "x-stability-level": "alpha" } : {}),
     security: security(route.access),
     ...(parameterList.length > 0 ? { parameters: parameterList } : {}),
     ...(definition.upload
@@ -389,7 +389,7 @@ export function generateOpenApi(
   return {
     openapi: "3.1.1",
     info: {
-      title: "Pagehall API",
+      title: "Lunedo API",
       version: "1",
       description: GETTING_STARTED,
       license: { name: "AGPL-3.0-only", identifier: "AGPL-3.0-only" },
@@ -403,14 +403,14 @@ export function generateOpenApi(
         bearerAuth: {
           type: "http",
           scheme: "bearer",
-          description: "An API token starting with `ph_`, sent as `Authorization: Bearer <token>`.",
+          description: "An API token starting with `ld_`, sent as `Authorization: Bearer <token>`.",
         },
         sessionCookie: {
           type: "apiKey",
           in: "cookie",
-          name: "__Host-pagehall-session",
+          name: "__Host-lunedo-session",
           description:
-            "The session of a signed-in user. State-changing requests also need the `X-Pagehall-Request: 1` header.",
+            "The session of a signed-in user. State-changing requests also need the `X-Lunedo-Request: 1` header.",
         },
       },
     },

@@ -8,7 +8,7 @@ import {
   SettingRow,
   Skeleton,
   Table,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { Info, Lock, LockOpen, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

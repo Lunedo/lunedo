@@ -1,4 +1,4 @@
-import type { Roadmap } from "@pagehall/editor-schema";
+import type { Roadmap } from "@lunedo/editor-schema";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { useMemo } from "react";
 import { usePageReferences } from "./references.js";
@@ -19,7 +19,7 @@ export function RoadmapView({ node, selected }: NodeViewProps) {
   const blocks = useMemo(() => [node.toJSON()], [node]);
   return (
     <NodeViewWrapper
-      className={`ph-roadmap-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-roadmap-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="roadmap"
     >

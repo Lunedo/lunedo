@@ -51,7 +51,7 @@ test("inserts a draw.io diagram, edits it in the overlay without outside request
 
   const overlay = page.getByRole("dialog", { name: "Edit draw.io diagram" });
   await expect(overlay).toBeVisible();
-  await expect(overlay.getByText(/is served by this Pagehall instance/)).toBeVisible();
+  await expect(overlay.getByText(/is served by this Lunedo instance/)).toBeVisible();
   const drawio = page.frameLocator('iframe[title="draw.io editor"]');
   const shape = drawio.locator(".geSidebarContainer a.geItem").first();
   await expect(shape).toBeVisible({ timeout: 45_000 });
@@ -85,7 +85,7 @@ test("inserts a draw.io diagram, edits it in the overlay without outside request
   expect(outside).toEqual([]);
 
   await page.goto(created.path);
-  await expect(page.locator('figure.ph-diagram[data-diagram="drawio"] img')).toBeVisible();
+  await expect(page.locator('figure.ld-diagram[data-diagram="drawio"] img')).toBeVisible();
 });
 
 test("tells a second person who is editing a draw.io diagram", async ({ page, organization }) => {
@@ -160,7 +160,7 @@ test("renders a Mermaid block in the sandbox, keeps the last good image on error
   expect(svg).not.toContain("foreignObject");
 
   await page.goto(created.path);
-  await expect(page.locator('figure.ph-diagram[data-diagram="mermaid"] img')).toBeVisible();
+  await expect(page.locator('figure.ld-diagram[data-diagram="mermaid"] img')).toBeVisible();
 });
 
 test("renders several Mermaid diagram types and neutralizes scripts and javascript links", async ({
@@ -229,7 +229,7 @@ test("renders several Mermaid diagram types and neutralizes scripts and javascri
   }
 
   await page.goto(created.path);
-  await expect(page.locator('figure.ph-diagram[data-diagram="mermaid"] img')).toHaveCount(diagrams.length);
+  await expect(page.locator('figure.ld-diagram[data-diagram="mermaid"] img')).toHaveCount(diagrams.length);
   expect(
     await page.evaluate(() => (window as { mermaidInjected?: boolean }).mermaidInjected),
   ).toBeUndefined();
@@ -362,7 +362,7 @@ test("converts a Gliffy diagram to draw.io when it is first edited", async ({ pa
     data: Buffer.from(GLIFFY),
     headers: {
       "content-type": "application/octet-stream",
-      "X-Pagehall-Request": "1",
+      "X-Lunedo-Request": "1",
       origin: new URL(page.url()).origin,
     },
   });

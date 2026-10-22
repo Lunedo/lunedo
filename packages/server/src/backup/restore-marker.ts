@@ -4,9 +4,9 @@ import { z } from "zod";
 import { StartupError } from "../runtime/startup-error.js";
 
 /** Exists in the file store from the start of a restore until the instance is consistent again. */
-export const RESTORE_MARKER = ".pagehall-restore-incomplete";
+export const RESTORE_MARKER = ".lunedo-restore-incomplete";
 /** Files of a restore are extracted here and moved into the file store after the database restore. */
-export const RESTORE_STAGING = ".pagehall-restore-staging";
+export const RESTORE_STAGING = ".lunedo-restore-staging";
 
 export const RESTORED_MARKER = "restored";
 
@@ -75,6 +75,6 @@ export async function checkRestoreComplete(filesDir: string): Promise<void> {
     : "A restore of a backup";
   const input = parsed?.input ?? "<backup file>";
   throw new IncompleteRestoreError(
-    `${what} did not complete, so the database and the file store may not match. Run the restore again with: pagehall backup restore --input ${input} --force. Pagehall does not start until a restore completes and removes ${path.join(filesDir, RESTORE_MARKER)}.`,
+    `${what} did not complete, so the database and the file store may not match. Run the restore again with: lunedo backup restore --input ${input} --force. Lunedo does not start until a restore completes and removes ${path.join(filesDir, RESTORE_MARKER)}.`,
   );
 }

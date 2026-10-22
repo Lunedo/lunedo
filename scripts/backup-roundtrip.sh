@@ -10,20 +10,20 @@ export MSYS_NO_PATHCONV=1
 
 image="${1:?usage: scripts/backup-roundtrip.sh <image>}"
 suffix="$$"
-network="pagehall-roundtrip-${suffix}"
-postgres="pagehall-roundtrip-db-${suffix}"
-postgres_next="pagehall-roundtrip-db-next-${suffix}"
-s3="pagehall-roundtrip-s3-${suffix}"
-worker="pagehall-roundtrip-worker-${suffix}"
-source_data="pagehall-roundtrip-source-${suffix}"
-target_data="pagehall-roundtrip-target-${suffix}"
-next_data="pagehall-roundtrip-next-${suffix}"
-s3_data="pagehall-roundtrip-s3-target-${suffix}"
-backups="pagehall-roundtrip-backups-${suffix}"
+network="lunedo-roundtrip-${suffix}"
+postgres="lunedo-roundtrip-db-${suffix}"
+postgres_next="lunedo-roundtrip-db-next-${suffix}"
+s3="lunedo-roundtrip-s3-${suffix}"
+worker="lunedo-roundtrip-worker-${suffix}"
+source_data="lunedo-roundtrip-source-${suffix}"
+target_data="lunedo-roundtrip-target-${suffix}"
+next_data="lunedo-roundtrip-next-${suffix}"
+s3_data="lunedo-roundtrip-s3-target-${suffix}"
+backups="lunedo-roundtrip-backups-${suffix}"
 password="roundtrip-${suffix}"
 s3_secret="roundtrip-s3-${suffix}"
 seaweedfs="chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d"
-work="${TMPDIR:-/tmp}/pagehall-roundtrip-${suffix}"
+work="${TMPDIR:-/tmp}/lunedo-roundtrip-${suffix}"
 mkdir -p "$work"
 
 cleanup() {
@@ -34,21 +34,21 @@ cleanup() {
 }
 trap cleanup EXIT
 
-url() { echo "postgres://pagehall:${password}@${2:-$postgres}:5432/$1"; }
+url() { echo "postgres://lunedo:${password}@${2:-$postgres}:5432/$1"; }
 
-pagehall() {
+lunedo() {
   local data="$1" database="$2"
   shift 2
   docker run --rm --network "$network" \
-    -e PAGEHALL_DATABASE_URL="$(url "$database")" \
-    -v "$data:/var/lib/pagehall" -v "$backups:/var/lib/pagehall/backups" \
+    -e LUNEDO_DATABASE_URL="$(url "$database")" \
+    -v "$data:/var/lib/lunedo" -v "$backups:/var/lib/lunedo/backups" \
     "$image" "$@"
 }
 
 psql_on() {
   local container="$1" database="$2"
   shift 2
-  docker exec -i -e PGPASSWORD="$password" "$container" psql -v ON_ERROR_STOP=1 -qAt -U pagehall -d "$database" "$@"
+  docker exec -i -e PGPASSWORD="$password" "$container" psql -v ON_ERROR_STOP=1 -qAt -U lunedo -d "$database" "$@"
 }
 
 psql_in() {
@@ -65,11 +65,11 @@ start_postgres() {
     postgres_settings=(-c fsync=off -c synchronous_commit=off -c full_page_writes=off)
   fi
   docker run -d --name "$name" --network "$network" ${postgres_args[@]+"${postgres_args[@]}"} \
-    -e POSTGRES_USER=pagehall -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=source \
+    -e POSTGRES_USER=lunedo -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=source \
     "postgres:${version}-alpine" ${postgres_settings[@]+"${postgres_settings[@]}"} >/dev/null
   for _ in $(seq 1 60); do
     # Only the final server listens on TCP; the temporary one during initialization uses the socket.
-    docker exec "$name" pg_isready -h 127.0.0.1 -U pagehall -d source >/dev/null 2>&1 && return 0
+    docker exec "$name" pg_isready -h 127.0.0.1 -U lunedo -d source >/dev/null 2>&1 && return 0
     sleep 1
   done
   echo "PostgreSQL ${version} did not start" >&2
@@ -100,14 +100,14 @@ content_summary() {
 }
 
 file_checksums() {
-  docker run --rm -v "$1:/var/lib/pagehall" --entrypoint sh "$image" -c \
-    'cd /var/lib/pagehall/files && find . -type f -exec sha256sum {} + | sort'
+  docker run --rm -v "$1:/var/lib/lunedo" --entrypoint sh "$image" -c \
+    'cd /var/lib/lunedo/files && find . -type f -exec sha256sum {} + | sort'
 }
 
 copy_secrets() {
   # The operator keeps the secrets separately from backups; the new instance gets the same keys.
-  docker run --rm -v "$1:/var/lib/pagehall" -v "$source_data:/source:ro" --entrypoint sh "$image" -c \
-    'cp /source/secrets/* /var/lib/pagehall/secrets/'
+  docker run --rm -v "$1:/var/lib/lunedo" -v "$source_data:/source:ro" --entrypoint sh "$image" -c \
+    'cp /source/secrets/* /var/lib/lunedo/secrets/'
 }
 
 echo "Starting PostgreSQL"
@@ -118,10 +118,10 @@ psql_in source -c "create database target_s3"
 
 echo "Setting up the source instance through configuration and creating sample data"
 docker run -d --name "${postgres}-api" --network "$network" \
-  -e PAGEHALL_DATABASE_URL="$(url source)" -e PAGEHALL_INSTANCE_URL=https://wiki.example.org \
-  -e PAGEHALL_OWNER_EMAIL=owner@example.org -e PAGEHALL_OWNER_NAME=Owner \
-  -e PAGEHALL_OWNER_PASSWORD="roundtrip owner ${suffix}" -e PAGEHALL_ORGANIZATION_NAME=Roundtrip \
-  -v "$source_data:/var/lib/pagehall" "$image" api >/dev/null
+  -e LUNEDO_DATABASE_URL="$(url source)" -e LUNEDO_INSTANCE_URL=https://wiki.example.org \
+  -e LUNEDO_OWNER_EMAIL=owner@example.org -e LUNEDO_OWNER_NAME=Owner \
+  -e LUNEDO_OWNER_PASSWORD="roundtrip owner ${suffix}" -e LUNEDO_ORGANIZATION_NAME=Roundtrip \
+  -v "$source_data:/var/lib/lunedo" "$image" api >/dev/null
 for _ in $(seq 1 60); do
   if [ "$(psql_in source -c "select to_regclass('public.instance') is not null
     and exists (select 1 from instance where setup_completed_at is not null)" 2>/dev/null)" = "t" ]; then break; fi
@@ -135,16 +135,16 @@ fi
 psql_in source -c "insert into setting_values (id, level, scope_id, key, value, locked) values
   ('0192f0e0-0000-7000-8000-000000000001', 'instance', '00000000-0000-0000-0000-000000000000', 'locale.language', '\"de\"', true),
   ('0192f0e0-0000-7000-8000-000000000002', 'organization', '0192f0e0-0000-7000-8000-00000000000a', 'locale.timeZone', '\"Europe/Vienna\"', false)"
-docker run --rm -v "$source_data:/var/lib/pagehall" --entrypoint sh "$image" -c \
-  'mkdir -p /var/lib/pagehall/files/attachments/2026 && head -c 3000000 /dev/urandom > /var/lib/pagehall/files/attachments/2026/large.bin && echo "report" > /var/lib/pagehall/files/report.txt'
+docker run --rm -v "$source_data:/var/lib/lunedo" --entrypoint sh "$image" -c \
+  'mkdir -p /var/lib/lunedo/files/attachments/2026 && head -c 3000000 /dev/urandom > /var/lib/lunedo/files/attachments/2026/large.bin && echo "report" > /var/lib/lunedo/files/report.txt'
 
 echo "Creating and verifying the backup"
-pagehall "$source_data" source backup create --output /var/lib/pagehall/backups/roundtrip.phbak
-pagehall "$source_data" source backup verify --input /var/lib/pagehall/backups/roundtrip.phbak
+lunedo "$source_data" source backup create --output /var/lib/lunedo/backups/roundtrip.ldbak
+lunedo "$source_data" source backup verify --input /var/lib/lunedo/backups/roundtrip.ldbak
 
 echo "Restoring into a fresh instance"
 copy_secrets "$target_data"
-pagehall "$target_data" target backup restore --input /var/lib/pagehall/backups/roundtrip.phbak
+lunedo "$target_data" target backup restore --input /var/lib/lunedo/backups/roundtrip.ldbak
 
 echo "Comparing"
 database_summary "$postgres" source > "$work/source.txt"
@@ -158,22 +158,22 @@ echo "Compared $(wc -l < "$work/source.txt") tables"
 diff <(file_checksums "$source_data") <(file_checksums "$target_data")
 
 echo "Checking that a second restore is refused"
-if pagehall "$target_data" target backup restore --input /var/lib/pagehall/backups/roundtrip.phbak 2>/dev/null; then
+if lunedo "$target_data" target backup restore --input /var/lib/lunedo/backups/roundtrip.ldbak 2>/dev/null; then
   echo "A restore into a non-empty instance was not refused" >&2
   exit 1
 fi
 
 echo "Checking the restored instance"
-pagehall "$target_data" target keys status
-pagehall "$target_data" target audit verify
+lunedo "$target_data" target keys status
+lunedo "$target_data" target audit verify
 
 echo "Restoring into the next PostgreSQL major version"
 start_postgres "$postgres_next" 17
 copy_secrets "$next_data"
 docker run --rm --network "$network" \
-  -e PAGEHALL_DATABASE_URL="$(url source "$postgres_next")" \
-  -v "$next_data:/var/lib/pagehall" -v "$backups:/var/lib/pagehall/backups" \
-  "$image" backup restore --input /var/lib/pagehall/backups/roundtrip.phbak
+  -e LUNEDO_DATABASE_URL="$(url source "$postgres_next")" \
+  -v "$next_data:/var/lib/lunedo" -v "$backups:/var/lib/lunedo/backups" \
+  "$image" backup restore --input /var/lib/lunedo/backups/roundtrip.ldbak
 database_summary "$postgres_next" source > "$work/next.txt"
 diff "$work/source.txt" "$work/next.txt"
 diff <(file_checksums "$source_data") <(file_checksums "$next_data")
@@ -181,7 +181,7 @@ echo "Restored into PostgreSQL $(psql_on "$postgres_next" source -c "show server
 
 echo "Backing up to S3-compatible storage on a schedule"
 docker run -d --name "$s3" --network "$network" \
-  -e AWS_ACCESS_KEY_ID=pagehall -e AWS_SECRET_ACCESS_KEY="$s3_secret" "$seaweedfs" >/dev/null
+  -e AWS_ACCESS_KEY_ID=lunedo -e AWS_SECRET_ACCESS_KEY="$s3_secret" "$seaweedfs" >/dev/null
 for _ in $(seq 1 60); do
   docker exec "$s3" wget -qO- http://127.0.0.1:8333/healthz >/dev/null 2>&1 && break
   sleep 1
@@ -189,19 +189,19 @@ done
 subnet="$(docker network inspect -f '{{(index .IPAM.Config 0).Subnet}}' "$network")"
 # The schedule fires at the next full minute but one, in UTC, the default time zone of an instance.
 daily_time="$(date -u -d '+2 minutes' +%H:%M)"
-docker run --rm --network "$network" -e PAGEHALL_DATABASE_URL="$(url source)" \
-  -v "$source_data:/var/lib/pagehall" -w /app/worker --entrypoint node "$image" --input-type=module -e '
+docker run --rm --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
+  -v "$source_data:/var/lib/lunedo" -w /app/worker --entrypoint node "$image" --input-type=module -e '
 import { createRequire } from "node:module";
 const { backupS3SecretContext, createDatabasePool, createKeyProvider, Encryption, loadConfig } =
-  await import("@pagehall/server");
-const require = createRequire(createRequire(import.meta.url).resolve("@pagehall/server"));
+  await import("@lunedo/server");
+const require = createRequire(createRequire(import.meta.url).resolve("@lunedo/server"));
 const { CreateBucketCommand, S3Client } = require("@aws-sdk/client-s3");
 const [endpoint, secret, dailyTime] = process.argv.slice(1);
 const s3 = new S3Client({
   region: "us-east-1",
   endpoint,
   forcePathStyle: true,
-  credentials: { accessKeyId: "pagehall", secretAccessKey: secret },
+  credentials: { accessKeyId: "lunedo", secretAccessKey: secret },
 });
 await s3.send(new CreateBucketCommand({ Bucket: "roundtrip" }));
 s3.destroy();
@@ -213,15 +213,15 @@ await pool.query(
   `insert into backup_configuration (singleton, enabled, daily_time, target_kind, s3_endpoint, s3_region,
      s3_bucket, s3_prefix, s3_force_path_style, s3_access_key_id)
    values (true, true, $1, $2, $3, $4, $5, $6, true, $7)`,
-  [dailyTime, "s3", endpoint, "us-east-1", "roundtrip", "scheduled/", "pagehall"],
+  [dailyTime, "s3", endpoint, "us-east-1", "roundtrip", "scheduled/", "lunedo"],
 );
 await pool.query("insert into instance_secrets (name, value) values ($1, $2)", ["backup.s3SecretAccessKey", value]);
 await pool.query("insert into backup_state (singleton, last_slot, enabled_at) values (true, now(), now())");
 await pool.end();
 ' "http://${s3}:8333" "$s3_secret" "$daily_time"
-docker run -d --name "$worker" --network "$network" -e PAGEHALL_DATABASE_URL="$(url source)" \
-  -e PAGEHALL_OUTBOUND_ALLOWED_NETWORKS="$subnet" \
-  -v "$source_data:/var/lib/pagehall" -v "$backups:/var/lib/pagehall/backups" "$image" worker >/dev/null
+docker run -d --name "$worker" --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
+  -e LUNEDO_OUTBOUND_ALLOWED_NETWORKS="$subnet" \
+  -v "$source_data:/var/lib/lunedo" -v "$backups:/var/lib/lunedo/backups" "$image" worker >/dev/null
 state=""
 for _ in $(seq 1 90); do
   state="$(psql_in source -c "select state from backup_runs where trigger = 'scheduled' order by started_at desc limit 1")"
@@ -237,27 +237,27 @@ fi
 name="$(psql_in source -c "select name from backup_runs where trigger = 'scheduled' and state = 'succeeded' limit 1")"
 docker rm -f "$worker" >/dev/null
 content_summary "$postgres" source > "$work/s3-source.txt"
-docker run --rm --network "$network" -v "$backups:/var/lib/pagehall/backups" -w /app/worker \
+docker run --rm --network "$network" -v "$backups:/var/lib/lunedo/backups" -w /app/worker \
   --entrypoint node "$image" --input-type=module -e '
 import { createWriteStream } from "node:fs";
 import { createRequire } from "node:module";
 import { pipeline } from "node:stream/promises";
-const require = createRequire(createRequire(import.meta.url).resolve("@pagehall/server"));
+const require = createRequire(createRequire(import.meta.url).resolve("@lunedo/server"));
 const { GetObjectCommand, S3Client } = require("@aws-sdk/client-s3");
 const [endpoint, secret, key, output] = process.argv.slice(1);
 const client = new S3Client({
   region: "us-east-1",
   endpoint,
   forcePathStyle: true,
-  credentials: { accessKeyId: "pagehall", secretAccessKey: secret },
+  credentials: { accessKeyId: "lunedo", secretAccessKey: secret },
 });
 const object = await client.send(new GetObjectCommand({ Bucket: "roundtrip", Key: key }));
 await pipeline(object.Body, createWriteStream(output));
-' "http://${s3}:8333" "$s3_secret" "scheduled/${name}" "/var/lib/pagehall/backups/${name}"
+' "http://${s3}:8333" "$s3_secret" "scheduled/${name}" "/var/lib/lunedo/backups/${name}"
 
 echo "Restoring the scheduled backup from S3 into a fresh instance"
 copy_secrets "$s3_data"
-pagehall "$s3_data" target_s3 backup restore --input "/var/lib/pagehall/backups/${name}"
+lunedo "$s3_data" target_s3 backup restore --input "/var/lib/lunedo/backups/${name}"
 content_summary "$postgres" target_s3 > "$work/s3-target.txt"
 diff "$work/s3-source.txt" "$work/s3-target.txt"
 diff <(file_checksums "$source_data") <(file_checksums "$s3_data")

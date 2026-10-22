@@ -1,4 +1,4 @@
-import { Button } from "@pagehall/ui";
+import { Button } from "@lunedo/ui";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { Pencil, PenLine } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -69,7 +69,7 @@ export function DrawingView({ node, selected, editor, updateAttributes }: NodeVi
 
   return (
     <NodeViewWrapper
-      className={`ph-drawing flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ph-node-selected" : ""}`}
+      className={`ld-drawing flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-drawing-id={blockId}
     >

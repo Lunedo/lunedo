@@ -21,10 +21,10 @@ import {
   knownSchemaVersions,
   type Logger,
   loadConfig,
+  lunedoVersion,
   outboundPolicy,
   PgBossQueue,
   PostgresArchiver,
-  pagehallVersion,
   requestSkipBeforeUpdate,
   resolveGeneratedSecrets,
   restoreBackup,
@@ -33,7 +33,7 @@ import {
   type ServerConfig,
   verifyBackup,
   writeBackupFile,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { verifyAuditLog } from "./audit.js";
 import { maintenance } from "./maintenance.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
@@ -61,14 +61,14 @@ function backupSources(
     masterKeys: () => availableMasterKeys(config),
     workDir: config.paths.work,
     configuration: configurationForBackup(env),
-    pagehallVersion: pagehallVersion(env),
+    lunedoVersion: lunedoVersion(env),
     schemaVersion: currentSchemaVersion(),
     logger,
   };
 }
 
 async function withPool<T>(databaseUrl: string, use: (pool: DatabasePool) => Promise<T>): Promise<T> {
-  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
+  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-cli" });
   try {
     return await use(pool);
   } finally {
@@ -82,7 +82,7 @@ async function run(command: Command): Promise<void> {
     return;
   }
   if (command.name === "version") {
-    write(pagehallVersion());
+    write(lunedoVersion());
     return;
   }
   if (command.name === "release-notes") {
@@ -122,7 +122,7 @@ async function run(command: Command): Promise<void> {
       const version = command.forVersion ?? config.version;
       await requestSkipBeforeUpdate(config.paths.work, version);
       write(
-        `The next start of Pagehall ${version} applies pending migrations without a backup before the update. Any other start removes this request.`,
+        `The next start of Lunedo ${version} applies pending migrations without a backup before the update. Any other start removes this request.`,
       );
       return;
     }
@@ -134,7 +134,7 @@ async function run(command: Command): Promise<void> {
         knownSchemaVersions: knownSchemaVersions(),
       });
       write(
-        `Backup is complete and readable: ${manifest.entries.length} entries, schema ${manifest.schemaVersion}, created ${manifest.createdAt} by Pagehall ${manifest.pagehallVersion}.`,
+        `Backup is complete and readable: ${manifest.entries.length} entries, schema ${manifest.schemaVersion}, created ${manifest.createdAt} by Lunedo ${manifest.lunedoVersion}.`,
       );
       return;
     }
@@ -153,9 +153,7 @@ async function run(command: Command): Promise<void> {
         knownSchemaVersions: knownSchemaVersions(),
         logger,
       });
-      write(
-        `Backup restored (schema ${manifest.schemaVersion}). Start Pagehall to apply pending migrations.`,
-      );
+      write(`Backup restored (schema ${manifest.schemaVersion}). Start Lunedo to apply pending migrations.`);
       return;
     }
     case "audit verify": {
@@ -176,7 +174,7 @@ async function run(command: Command): Promise<void> {
     }
     case "keys rotate":
     case "keys status": {
-      const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
+      const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-cli" });
       const database = createDatabase(pool);
       const keyRing = new KeyRingHolder(createKeyProvider(config), logger);
       const jobs = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "producer" });

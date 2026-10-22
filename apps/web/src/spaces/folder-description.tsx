@@ -1,4 +1,4 @@
-import { Field, Textarea } from "@pagehall/ui";
+import { Field, Textarea } from "@lunedo/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SaveIndicator, useSaveState } from "../components/auto-save.js";

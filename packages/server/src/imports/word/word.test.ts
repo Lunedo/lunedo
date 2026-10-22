@@ -1,4 +1,4 @@
-import { MAX_DOCUMENT_BYTES, type NodeJson } from "@pagehall/editor-schema";
+import { MAX_DOCUMENT_BYTES, type NodeJson } from "@lunedo/editor-schema";
 import {
   Document,
   ExternalHyperlink,

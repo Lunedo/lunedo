@@ -24,7 +24,7 @@ Events belong to a scope: the instance or an organization. Each scope has its ow
 
 Personal data of an account in an event is encrypted with a key of its own per account: the account's name as actor, target or reference, its e-mail and sign-in addresses in the fields the catalog marks as personal, and the IP address and user agent of requests it made. The event keeps the account ID in plain form. The keys are stored in `audit_subject_keys`, wrapped with the master key like other secrets (see [encryption.md](encryption.md)). Invitations get a key of their own, which belongs to the account that accepts them.
 
-The hash covers the encrypted values. Anonymizing an account destroys its keys: its events remain, show "former user" with the account ID (`former` on actor and target, `formerAccounts` for references), and the hash chain still verifies. Copies already exported as CSV or streamed to other systems are outside Pagehall and keep the data. Events recorded before this encryption existed are not changed.
+The hash covers the encrypted values. Anonymizing an account destroys its keys: its events remain, show "former user" with the account ID (`former` on actor and target, `formerAccounts` for references), and the hash chain still verifies. Copies already exported as CSV or streamed to other systems are outside Lunedo and keep the data. Events recorded before this encryption existed are not changed.
 
 ## Reading and exporting
 
@@ -37,7 +37,7 @@ The same filters work on `.../audit-events/export`, which streams all matching e
 ## Verification
 
 ```sh
-docker compose exec pagehall pagehall audit verify
+docker compose exec lunedo lunedo audit verify
 ```
 
 The command checks every chain and prints one line per scope. When an entry was changed, removed or inserted, it names the first broken entry and exits with status 1.

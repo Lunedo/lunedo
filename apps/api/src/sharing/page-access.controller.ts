@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import {
   type AccessChange,
   type GiveAccessDraft,
   giveAccessDraftSchema,
   type Principal,
   restrictionKinds,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

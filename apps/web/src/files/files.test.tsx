@@ -246,7 +246,7 @@ describe("the attachments of a page", () => {
     if (!input) throw new Error("missing file input");
     await userEvent.upload(input, new File(["video"], "Recording.mp4", { type: "video/mp4" }));
     FakeUpload.instances[0]?.respond(413, {
-      type: "urn:pagehall:problem:fileTooLarge",
+      type: "urn:lunedo:problem:fileTooLarge",
       title: "The file is larger than allowed",
       status: 413,
       code: "fileTooLarge",

@@ -225,7 +225,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     TemplatePlaceholders,
     BlockFormatting,
     MathInputRules,
-    Dropcursor.configure({ color: "var(--ph-color-accent)", width: 2, class: "ph-drop-cursor" }),
+    Dropcursor.configure({ color: "var(--ld-color-accent)", width: 2, class: "ld-drop-cursor" }),
     Gapcursor,
     TrailingNode,
     Placeholder.extend({ name: "emptyHint" }).configure({ placeholder: t("editor.placeholder") }),

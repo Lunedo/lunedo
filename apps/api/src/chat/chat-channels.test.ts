@@ -1,5 +1,5 @@
 import { createECDH, randomBytes } from "node:crypto";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -35,7 +35,7 @@ describe.skipIf(!databaseBaseUrl)("chat channels and browser push through the AP
 
   async function person() {
     counter += 1;
-    const email = `chat${counter}@pagehall.test`;
+    const email = `chat${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const id = (await createAccount(test, email, password)).id;
     return { id, email, password, client: await signedInClient(test, email, password) };

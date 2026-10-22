@@ -24,7 +24,7 @@ function api() {
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
-        name: "Pagehall",
+        name: "Lunedo",
         setupComplete: false,
         language: "en",
         accentColor: "petrol",
@@ -77,10 +77,10 @@ describe("the setup code page", () => {
     expect((await screen.findByLabelText("Setup code")).getAttribute("value") ?? "").toBe("");
     expect(
       screen.getByText(
-        "The code is in the .env file if you used the setup script or set PAGEHALL_SETUP_CODE. Otherwise it is in the log of the Pagehall container:",
+        "The code is in the .env file if you used the setup script or set LUNEDO_SETUP_CODE. Otherwise it is in the log of the Lunedo container:",
       ),
     ).toBeTruthy();
-    expect(screen.getByText('docker compose logs pagehall | grep "Setup link"')).toBeTruthy();
+    expect(screen.getByText('docker compose logs lunedo | grep "Setup link"')).toBeTruthy();
   });
 });
 
@@ -96,7 +96,7 @@ describe("the setup steps", () => {
     mockApi({
       "GET /api/v1/instance/info": () => ({
         body: {
-          name: "Pagehall",
+          name: "Lunedo",
           setupComplete: false,
           language: "en",
           accentColor: "petrol",
@@ -109,7 +109,7 @@ describe("the setup steps", () => {
       "POST /api/v1/setup/session": () => ({
         status: 400,
         body: {
-          type: "urn:pagehall:problem:invalidSetupCode",
+          type: "urn:lunedo:problem:invalidSetupCode",
           title: "Wrong",
           status: 400,
           code: "invalidSetupCode",
@@ -119,7 +119,7 @@ describe("the setup steps", () => {
     await renderSetup("/setup");
     await userEvent.type(await screen.findByLabelText("Setup code"), CODE);
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByText(/Copy the code from PAGEHALL_SETUP_CODE in the \.env file/)).toBeTruthy();
+    expect(await screen.findByText(/Copy the code from LUNEDO_SETUP_CODE in the \.env file/)).toBeTruthy();
   });
 
   it("keeps what was typed when going back", async () => {
@@ -127,7 +127,7 @@ describe("the setup steps", () => {
     mockApi({
       "GET /api/v1/instance/info": () => ({
         body: {
-          name: "Pagehall",
+          name: "Lunedo",
           setupComplete: false,
           language: "en",
           accentColor: "petrol",
@@ -180,7 +180,7 @@ describe("the setup steps", () => {
               completed: false,
               details: {
                 url: "",
-                name: "Pagehall",
+                name: "Lunedo",
                 suggestedUrl: "https://wiki.example.org",
                 urlFromEnvironment: false,
               },

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { z } from "zod";
 import { createDatabase, type Database } from "../database/database.js";
@@ -109,7 +109,7 @@ describe.skipIf(!databaseUrl)("SettingsService", () => {
   let settings: SettingsService;
 
   beforeAll(() => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     settings = new SettingsService({ database, logger });
   });
@@ -353,7 +353,7 @@ describe.skipIf(!databaseUrl)("SettingsService", () => {
 
 describe.skipIf(!databaseUrl)("SettingsService with a failing database", () => {
   it("does not cache a failed load and recovers on the next read", async () => {
-    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     const query = pool.query.bind(pool);
     let failures = 1;
     pool.query = ((...args: Parameters<typeof query>) => {

@@ -12,7 +12,7 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Eye, Megaphone, Save, Trash2 } from "lucide-react";

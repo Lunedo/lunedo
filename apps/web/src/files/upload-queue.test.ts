@@ -4,7 +4,7 @@ import { BUSY_RETRIES, uploadQueue } from "./upload-queue.js";
 
 function busy(): ApiError {
   return new ApiError(503, {
-    type: "urn:pagehall:problem:busy",
+    type: "urn:lunedo:problem:busy",
     title: "The server is busy",
     status: 503,
     code: "busy",

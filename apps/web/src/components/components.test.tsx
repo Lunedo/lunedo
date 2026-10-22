@@ -314,7 +314,7 @@ describe("SettingsList", () => {
       return undefined;
     });
     await renderList(
-      [entry({ key: "instance.name", value: "Docs", defaultValue: "Pagehall", source: "organization" })],
+      [entry({ key: "instance.name", value: "Docs", defaultValue: "Lunedo", source: "organization" })],
       onChange,
     );
     const input = screen.getByRole("textbox", { name: "Instance name" });

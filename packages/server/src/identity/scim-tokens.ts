@@ -7,7 +7,7 @@ import type { Database, Transaction } from "../database/database.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { identityProviders, scimTokens } from "./schema.js";
 
-const TOKEN_PREFIX = "phscim_";
+const TOKEN_PREFIX = "ldscim_";
 const PREFIX_LENGTH = TOKEN_PREFIX.length + 6;
 export const SCIM_TOKEN_OVERLAP_DAYS = 7;
 const LAST_USED_PRECISION_MS = 60_000;

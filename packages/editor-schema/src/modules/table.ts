@@ -105,7 +105,7 @@ export const tableModule = defineModule({
       html: (node, renderer) =>
         element(
           "div",
-          { class: "ph-table" },
+          { class: "ld-table" },
           element("table", {}, element("tbody", {}, renderer.children(node))),
         ),
       word: (node, renderer) => [

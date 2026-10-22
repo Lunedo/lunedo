@@ -428,7 +428,7 @@ export const importChanges = pgTable(
     ),
     check(
       "import_changes_decision",
-      sql`${table.decision} is null or ${table.decision} in ('pagehall', 'source', 'both', 'trash', 'keep')`,
+      sql`${table.decision} is null or ${table.decision} in ('lunedo', 'source', 'both', 'trash', 'keep')`,
     ),
   ],
 );

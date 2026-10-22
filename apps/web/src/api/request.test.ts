@@ -4,7 +4,7 @@ import { ApiError, isApiError, request, setReauthenticationHandler, setSignedOut
 
 function problem(status: number, code: string, extra: Record<string, unknown> = {}) {
   return new Response(
-    JSON.stringify({ type: `urn:pagehall:problem:${code}`, title: code, status, code, ...extra }),
+    JSON.stringify({ type: `urn:lunedo:problem:${code}`, title: code, status, code, ...extra }),
     { status, headers: { "content-type": "application/problem+json" } },
   );
 }
@@ -21,8 +21,8 @@ describe("the API client", () => {
     await client.POST("/api/v1/auth/sign-out");
     await client.GET("/api/v1/auth/session");
     const [post, get] = fetch.mock.calls.map(([input]) => input);
-    expect(post?.headers.get("X-Pagehall-Request")).toBe("1");
-    expect(get?.headers.get("X-Pagehall-Request")).toBeNull();
+    expect(post?.headers.get("X-Lunedo-Request")).toBe("1");
+    expect(get?.headers.get("X-Lunedo-Request")).toBeNull();
   });
 });
 

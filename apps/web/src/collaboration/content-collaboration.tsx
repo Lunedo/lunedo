@@ -1,5 +1,5 @@
-import type { TextAnchor } from "@pagehall/editor-schema";
-import { IconButton, useToast } from "@pagehall/ui";
+import type { TextAnchor } from "@lunedo/editor-schema";
+import { IconButton, useToast } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Star } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";

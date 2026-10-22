@@ -6,7 +6,7 @@ import type { ConfluenceTransport } from "../../confluence/api-client.js";
 import { createZip } from "../zip-writer.js";
 import { type BundleEntry, canonicalQuery, type RecordedEntry } from "./prepare.js";
 
-const FIXTURES = process.env.PAGEHALL_CONFLUENCE_FIXTURES ?? path.join(import.meta.dirname, "fixtures");
+const FIXTURES = process.env.LUNEDO_CONFLUENCE_FIXTURES ?? path.join(import.meta.dirname, "fixtures");
 
 export const CLOUD_SPACES = ["PHIT", "PHKB", "PHPROJ", "PHGF", "PHEDGE"] as const;
 export type CloudSpace = (typeof CLOUD_SPACES)[number];

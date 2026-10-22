@@ -10,7 +10,7 @@ import {
   Skeleton,
   Table,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserRound, Users } from "lucide-react";
 import { useState } from "react";

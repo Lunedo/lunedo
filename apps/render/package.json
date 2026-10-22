@@ -1,12 +1,12 @@
 {
-  "name": "@pagehall/render",
+  "name": "@lunedo/render",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     ".": {
-      "@pagehall/source": "./src/index.ts",
+      "@lunedo/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
@@ -21,7 +21,7 @@
     "playwright-core": "1.64.1"
   },
   "devDependencies": {
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@types/node": "^24.19.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"

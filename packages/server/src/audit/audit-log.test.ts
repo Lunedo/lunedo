@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { Encryption } from "../crypto/envelope.js";
@@ -39,7 +39,7 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
   let encryption: Encryption;
 
   beforeAll(() => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     const ring = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
     encryption = new Encryption(() => ring);

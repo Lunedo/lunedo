@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import type { ChatChannelKind, ChatEvent, ChatFailureReason } from "@pagehall/shared";
+import type { ChatChannelKind, ChatEvent, ChatFailureReason } from "@lunedo/shared";
 import { z } from "zod";
 import { OutboundError, type OutboundRequest, type OutboundResponse } from "../outbound/guarded-request.js";
 
@@ -72,7 +72,7 @@ export interface ChatDelivery {
   now: Date;
 }
 
-const USER_AGENT = "Pagehall";
+const USER_AGENT = "Lunedo";
 
 function slackEscape(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -232,11 +232,11 @@ export function chatRequest(delivery: ChatDelivery): OutboundRequest {
     headers: {
       "content-type": "application/json",
       "user-agent": USER_AGENT,
-      "x-pagehall-event": message.event,
-      "x-pagehall-delivery": delivery.id,
-      "x-pagehall-timestamp": timestamp,
+      "x-lunedo-event": message.event,
+      "x-lunedo-delivery": delivery.id,
+      "x-lunedo-timestamp": timestamp,
       ...(delivery.signingSecret
-        ? { "x-pagehall-signature": webhookSignature(delivery.signingSecret, timestamp, body) }
+        ? { "x-lunedo-signature": webhookSignature(delivery.signingSecret, timestamp, body) }
         : {}),
     },
     body,

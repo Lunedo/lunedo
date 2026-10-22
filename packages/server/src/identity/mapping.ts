@@ -1,4 +1,4 @@
-import { type MappingRuleInput, mappingRuleInputSchema } from "@pagehall/shared";
+import { type MappingRuleInput, mappingRuleInputSchema } from "@lunedo/shared";
 import { and, asc, count, eq, ilike, inArray, isNotNull, isNull, max, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
@@ -114,7 +114,7 @@ export class MappingRuleService {
         builtInRole: mappingRules.builtInRole,
         customRoleId: mappingRules.customRoleId,
         customRoleName: customRoles.name,
-        synchronizedGroupId: mappingRules.pagehallGroupId,
+        synchronizedGroupId: mappingRules.lunedoGroupId,
         synchronizedGroupName: groups.name,
         homeOrganization: mappingRules.homeOrganization,
         createdAt: mappingRules.createdAt,
@@ -127,7 +127,7 @@ export class MappingRuleService {
       .innerJoin(providerGroups, eq(providerGroups.id, mappingRules.groupId))
       .leftJoin(organizations, eq(organizations.id, mappingRules.organizationId))
       .leftJoin(customRoles, eq(customRoles.id, mappingRules.customRoleId))
-      .leftJoin(groups, eq(groups.id, mappingRules.pagehallGroupId))
+      .leftJoin(groups, eq(groups.id, mappingRules.lunedoGroupId))
       .where(and(eq(mappingRules.providerId, providerId), ruleId ? eq(mappingRules.id, ruleId) : undefined))
       .orderBy(asc(mappingRules.position), asc(mappingRules.id));
     return rows.map((row) => ({
@@ -284,7 +284,7 @@ export class MappingRuleService {
         );
       if (!custom) throw new OrganizationError("roleNotFound", "The role does not exist at this level");
     }
-    const pagehallGroupId =
+    const lunedoGroupId =
       input.target === "organization" && input.synchronizedGroup
         ? await this.#synchronizedGroup(
             tx,
@@ -301,7 +301,7 @@ export class MappingRuleService {
       organizationId: input.target === "organization" ? input.organizationId : null,
       builtInRole: role && "builtIn" in role ? role.builtIn : null,
       customRoleId: role && "customRoleId" in role ? role.customRoleId : null,
-      pagehallGroupId,
+      lunedoGroupId,
       homeOrganization: input.target === "organization" ? input.homeOrganization : false,
     };
   }
@@ -464,14 +464,14 @@ export class MappingRuleService {
       const [row] = await tx
         .delete(mappingRules)
         .where(eq(mappingRules.id, ruleId))
-        .returning({ groupId: mappingRules.groupId, pagehallGroupId: mappingRules.pagehallGroupId });
-      if (row?.pagehallGroupId) {
+        .returning({ groupId: mappingRules.groupId, lunedoGroupId: mappingRules.lunedoGroupId });
+      if (row?.lunedoGroupId) {
         const [stillUsed] = await tx
           .select({ value: count() })
           .from(mappingRules)
-          .where(eq(mappingRules.pagehallGroupId, row.pagehallGroupId));
+          .where(eq(mappingRules.lunedoGroupId, row.lunedoGroupId));
         if (Number(stillUsed?.value ?? 0) === 0) {
-          await tx.delete(managedGroups).where(eq(managedGroups.groupId, row.pagehallGroupId));
+          await tx.delete(managedGroups).where(eq(managedGroups.groupId, row.lunedoGroupId));
         }
       }
       await this.#audit.record(tx, {

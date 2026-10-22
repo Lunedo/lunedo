@@ -6,7 +6,7 @@ import {
   notificationChannelSettingKey,
   notificationEvents,
   notificationParamSchemas,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { defineSetting, type SettingDefinition } from "../settings/definition.js";

@@ -2,7 +2,7 @@ import {
   responsibleAccountIdsSchema,
   serviceAccountDescriptionSchema,
   serviceAccountNameSchema,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";

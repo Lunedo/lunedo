@@ -1,4 +1,4 @@
-import { PASSWORD_MAX_LENGTH, signInRefusalReasons, testFailureReasons } from "@pagehall/server";
+import { PASSWORD_MAX_LENGTH, signInRefusalReasons, testFailureReasons } from "@lunedo/server";
 import {
   caCertificateSchema,
   clientSecretSchema,
@@ -13,7 +13,7 @@ import {
   samlConfigSchema,
   samlMetadataXmlSchema,
   signInRefusalReferenceSchema,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { z } from "zod";
 import { authenticationResponseSchema, secondFactorSchema, signedInSchema } from "../auth/schemas.js";
 import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
@@ -99,7 +99,7 @@ const returnTo = z
   .string()
   .max(2000)
   .regex(/^\/(?!\/)[^\\\s]*$/, "must be a path on this instance")
-  .describe("Path in Pagehall to open after the sign-in, for example `/settings/security`.");
+  .describe("Path in Lunedo to open after the sign-in, for example `/settings/security`.");
 
 export const credentialInputSchema = z
   .discriminatedUnion("kind", [
@@ -140,7 +140,7 @@ export const credentialInputSchema = z
       .strict(),
   ])
   .describe(
-    "A client secret, a certificate or a SAML signing key pair that Pagehall generates, or the password of a directory service account. Private keys and passwords never leave Pagehall.",
+    "A client secret, a certificate or a SAML signing key pair that Lunedo generates, or the password of a directory service account. Private keys and passwords never leave Lunedo.",
   );
 
 const providerName = identityProviderNameSchema.describe("Name shown on the sign-in page.");
@@ -174,7 +174,7 @@ export const createProviderSchema = z
           .nullable()
           .optional()
           .describe(
-            "Credential for Microsoft Graph, for Entra ID with directory sync. Pagehall generates its own signing key.",
+            "Credential for Microsoft Graph, for Entra ID with directory sync. Lunedo generates its own signing key.",
           ),
       })
       .strict(),
@@ -232,8 +232,8 @@ export const draftSchema = z
       .describe("Redirect URI for OIDC, assertion consumer service URL for SAML, the sign-in page for LDAP."),
     saml: z
       .object({
-        entityId: z.string().describe("Entity ID of Pagehall."),
-        metadataUrl: z.string().describe("Address of Pagehall's metadata."),
+        entityId: z.string().describe("Entity ID of Lunedo."),
+        metadataUrl: z.string().describe("Address of Lunedo's metadata."),
         signingCredentialId: z
           .string()
           .nullable()
@@ -314,9 +314,9 @@ export const connectionCheckSchema = z
   .describe("Connection settings to check before they are saved.");
 
 export const connectionCheckResultSchema = z.object({
-  ok: z.boolean().describe("Whether Pagehall reached the provider with these settings."),
+  ok: z.boolean().describe("Whether Lunedo reached the provider with these settings."),
   check: z.enum(["discovery", "metadata", "directory"]).describe("What was checked."),
-  url: z.string().nullable().describe("The address Pagehall contacted."),
+  url: z.string().nullable().describe("The address Lunedo contacted."),
   status: z.number().int().nullable().describe("The HTTP status of the answer, when there was one."),
   problem: z
     .enum([
@@ -343,7 +343,7 @@ export const directoryTestSchema = z
       .max(320)
       .nullable()
       .optional()
-      .describe("A sign-in name to look up. Without it, Pagehall reads any one person."),
+      .describe("A sign-in name to look up. Without it, Lunedo reads any one person."),
   })
   .strict()
   .describe("What to look up in the directory.");
@@ -372,7 +372,7 @@ export const directoryTestResultSchema = z
       .describe("The checks in order. A failed check ends the test."),
     sample: z
       .object({
-        subject: z.string().describe("Identifier Pagehall uses for the person."),
+        subject: z.string().describe("Identifier Lunedo uses for the person."),
         email: z.string().nullable().describe("E-mail address."),
         signInName: z.string().nullable().describe("Sign-in name."),
         displayName: z.string().nullable().describe("Display name."),
@@ -385,11 +385,11 @@ export const directoryTestResultSchema = z
       .describe("The person found, or null."),
     searched: z
       .object({
-        attribute: z.string().describe("The attribute Pagehall searched."),
+        attribute: z.string().describe("The attribute Lunedo searched."),
         value: z.string().describe("The value it searched for."),
       })
       .nullable()
-      .describe("What Pagehall searched for when a sign-in name was given."),
+      .describe("What Lunedo searched for when a sign-in name was given."),
     attributes: receivedClaimsSchema,
   })
   .describe("Result of the directory test.");
@@ -418,7 +418,7 @@ export const directorySignInResultSchema = z
         status: z.literal("secondFactorRequired"),
         factors: z.array(z.string()).describe("Second factors of the account."),
       })
-      .describe("A Pagehall second factor is required next."),
+      .describe("A Lunedo second factor is required next."),
     z
       .object({ status: z.literal("linkRequired") })
       .describe("An account with the address exists; the person confirms the link next."),
@@ -435,7 +435,7 @@ export const directorySignInResultSchema = z
 export const samlResponseBodySchema = z
   .object({
     SAMLResponse: z.string().min(1).max(1_000_000).describe("The SAML response, Base64-encoded."),
-    RelayState: z.string().max(200).optional().describe("The state Pagehall sent with the request."),
+    RelayState: z.string().max(200).optional().describe("The state Lunedo sent with the request."),
   })
   .describe("The SAML response the identity provider posts.");
 
@@ -478,7 +478,7 @@ const providerCredentialSchema = credentialSchema
     inUse: z
       .boolean()
       .describe(
-        "Whether Pagehall uses this credential: the one an administrator chose, otherwise the newest valid one.",
+        "Whether Lunedo uses this credential: the one an administrator chose, otherwise the newest valid one.",
       ),
     chosen: z.boolean().describe("Whether an administrator chose this credential."),
   })
@@ -522,7 +522,7 @@ const providerBase = {
     .describe("Whether a service account key for the Google directory is stored. The key is never shown."),
   capabilities: z
     .object({
-      groups: z.boolean().describe("Whether Pagehall learns the groups of a person from this provider."),
+      groups: z.boolean().describe("Whether Lunedo learns the groups of a person from this provider."),
       directorySync: z
         .boolean()
         .describe("Whether profiles and groups are synchronized in the background, not only at sign-in."),
@@ -550,7 +550,7 @@ const providerBase = {
     .datetime()
     .nullable()
     .describe(
-      "Since when sign-ins through the provider carry no groups claim or attribute although they did before, or null. Pagehall then treats the person as having no groups.",
+      "Since when sign-ins through the provider carry no groups claim or attribute although they did before, or null. Lunedo then treats the person as having no groups.",
     ),
   warnings: z
     .array(
@@ -584,8 +584,8 @@ export const providerSchema = z
         .object({
           entityId: z
             .string()
-            .describe("Entity ID of Pagehall as service provider, the address of its metadata."),
-          metadataUrl: z.string().describe("Address of Pagehall's service provider metadata."),
+            .describe("Entity ID of Lunedo as service provider, the address of its metadata."),
+          metadataUrl: z.string().describe("Address of Lunedo's service provider metadata."),
           identityProvider: z
             .object({
               entityId: z.string().describe("Entity ID of the identity provider."),
@@ -692,7 +692,7 @@ export const linkInfoSchema = z
     factors: z
       .array(z.enum(["totp", "passkey", "recoveryCode"]))
       .describe(
-        "Second factors of the account. One of them is required with the password, or after a provider confirmed the link when that provider needs a Pagehall second factor.",
+        "Second factors of the account. One of them is required with the password, or after a provider confirmed the link when that provider needs a Lunedo second factor.",
       ),
     password: z.boolean().describe("Whether the password of the account can confirm the link."),
     passkey: z.boolean().describe("Whether a passkey of the account can confirm the link."),
@@ -795,7 +795,7 @@ export const refusalSchema = z
 export const testResultSchema = z
   .union([
     z.object({
-      subject: z.string().describe("Identifier Pagehall uses for the person."),
+      subject: z.string().describe("Identifier Lunedo uses for the person."),
       email: z.string().nullable().describe("E-mail address."),
       emailVerified: z.boolean().describe("Whether the address lies in a configured domain."),
       signInName: z.string().nullable().describe("Sign-in name."),
@@ -807,13 +807,13 @@ export const testResultSchema = z
       claims: receivedClaimsSchema,
     }),
     z.object({
-      error: z.string().describe("What failed, as the provider or Pagehall reported it."),
+      error: z.string().describe("What failed, as the provider or Lunedo reported it."),
       reason: z
         .enum(testFailureReasons)
         .describe("Why the test sign-in failed, so that the interface can say what to do."),
     }),
   ])
-  .describe("What Pagehall received from the provider.");
+  .describe("What Lunedo received from the provider.");
 
 export const identitySchema = z
   .object({
@@ -916,19 +916,19 @@ export const mappingRuleSchema = z
       .describe("The organization, for organization rules."),
     role: ruleRoleSchema,
     synchronizedGroup: z
-      .object({ id: uuid("ID of the group in Pagehall."), name: z.string().describe("Name of the group.") })
+      .object({ id: uuid("ID of the group in Lunedo."), name: z.string().describe("Name of the group.") })
       .nullable()
-      .describe("The synchronized Pagehall group the members are added to, or null."),
+      .describe("The synchronized Lunedo group the members are added to, or null."),
     homeOrganization: z
       .boolean()
       .describe(
         "Whether the organization becomes the home organization of accounts that have none, ahead of other rules.",
       ),
-    accounts: z.number().int().describe("Accounts in Pagehall that are in the group."),
+    accounts: z.number().int().describe("Accounts in Lunedo that are in the group."),
     createdAt: timestamp("When the rule was created."),
     updatedAt: timestamp("When the rule was last changed."),
   })
-  .describe("A rule that maps a group of the provider to access in Pagehall.");
+  .describe("A rule that maps a group of the provider to access in Lunedo.");
 
 export const ruleOrderSchema = z
   .object({
@@ -953,7 +953,7 @@ export const providerGroupMatchSchema = z
     id: z.string().describe("Stable ID of the group at the provider."),
     name: z.string().nullable().describe("Name of the group."),
     members: z.number().int().nullable().describe("Members at the provider, or null when unknown."),
-    accounts: z.number().int().describe("Accounts in Pagehall that are in the group."),
+    accounts: z.number().int().describe("Accounts in Lunedo that are in the group."),
     mapped: z.boolean().describe("Whether a rule uses the group already."),
   })
   .describe("A group of the provider.");
@@ -961,7 +961,7 @@ export const providerGroupMatchSchema = z
 export const rulePreviewSchema = z
   .object({
     members: z.number().int().nullable().describe("Members at the provider, or null when unknown."),
-    accounts: z.number().int().describe("Accounts in Pagehall that gain access."),
+    accounts: z.number().int().describe("Accounts in Lunedo that gain access."),
     sample: z
       .array(z.object({ id: uuid("ID of the account."), name: z.string().describe("Name of the account.") }))
       .describe("Some of these accounts, by name."),

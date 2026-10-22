@@ -1,4 +1,4 @@
-import { TEMPLATE_FIELD_KEY } from "@pagehall/editor-schema";
+import { TEMPLATE_FIELD_KEY } from "@lunedo/editor-schema";
 import { z } from "zod";
 
 export const templateFieldTypes = ["text", "date", "person", "choice"] as const;

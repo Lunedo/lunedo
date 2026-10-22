@@ -27,7 +27,7 @@ describe("latestRelease", () => {
 
 describe("formatReport", () => {
   it("reports a newer release", () => {
-    assert.match(formatReport("0.20.3", "0.21.0"), /SheetJS 0\.21\.0 is available; Pagehall pins 0\.20\.3/);
+    assert.match(formatReport("0.20.3", "0.21.0"), /SheetJS 0\.21\.0 is available; Lunedo pins 0\.20\.3/);
   });
 
   it("says when the pinned version is current", () => {

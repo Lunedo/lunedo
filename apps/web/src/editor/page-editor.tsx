@@ -1,5 +1,5 @@
-import { anchorAt, type TextAnchor } from "@pagehall/editor-schema";
-import { IconButton, SkeletonText, useToast } from "@pagehall/ui";
+import { anchorAt, type TextAnchor } from "@lunedo/editor-schema";
+import { IconButton, SkeletonText, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
@@ -183,7 +183,7 @@ function CollaborativeEditor({
       }),
       editorProps: {
         attributes: () => ({
-          class: "ph-content ph-editor-content",
+          class: "ld-content ld-editor-content",
           "aria-label": t("editor.contentLabel"),
           "aria-multiline": "true",
           "aria-readonly": String(readOnly.current),
@@ -285,7 +285,7 @@ function CollaborativeEditor({
 
   return (
     <PageContextValue value={pageContext}>
-      <div className="ph-page-editor flex flex-col gap-3">
+      <div className="ld-page-editor flex flex-col gap-3">
         {snapshot.problem ? <CollaborationProblemNotice problem={snapshot.problem} /> : null}
         {uploads ? (
           <input
@@ -304,7 +304,7 @@ function CollaborativeEditor({
         ) : null}
         {blocked || !editor ? null : (
           <>
-            <div className="ph-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card">
+            <div className="ld-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0 flex-1">
                   {preferences.editorToolbar && editable ? (
@@ -343,7 +343,7 @@ function CollaborativeEditor({
             {/* biome-ignore lint/a11y/useKeyWithClickEvents: the comments panel offers the same threads by keyboard */}
             <div
               ref={surface}
-              className="ph-editor-surface relative"
+              className="ld-editor-surface relative"
               data-comment-scope={pageId}
               onClick={(event) => {
                 const mark = (event.target as HTMLElement).closest<HTMLElement>("[data-thread-id]");
@@ -362,7 +362,7 @@ function CollaborativeEditor({
             {editable ? (
               <>
                 <SelectionMenu editor={editor} actions={actions} />
-                <DragHandle editor={editor} className="ph-drag-handle">
+                <DragHandle editor={editor} className="ld-drag-handle">
                   <span className="flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-hover">
                     <GripVertical aria-hidden="true" className="size-icon-md" />
                     <span className="sr-only">{t("editor.drag.handle")}</span>

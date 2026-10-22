@@ -1,12 +1,12 @@
 {
-  "title": "Pagehall template file",
+  "title": "Lunedo template file",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
     "format": {
       "type": "string",
-      "const": "pagehall-template",
-      "description": "Always `pagehall-template`."
+      "const": "lunedo-template",
+      "description": "Always `lunedo-template`."
     },
     "formatVersion": {
       "type": "number",
@@ -19,11 +19,11 @@
       "maximum": 9007199254740991,
       "description": "Version of the editor format of the documents."
     },
-    "pagehallVersion": {
+    "lunedoVersion": {
       "type": "string",
       "minLength": 1,
       "maxLength": 100,
-      "description": "Version of Pagehall that wrote the file."
+      "description": "Version of Lunedo that wrote the file."
     },
     "templates": {
       "minItems": 1,
@@ -301,9 +301,9 @@
     "format",
     "formatVersion",
     "schemaVersion",
-    "pagehallVersion",
+    "lunedoVersion",
     "templates"
   ],
   "additionalProperties": false,
-  "description": "A Pagehall template file."
+  "description": "A Lunedo template file."
 }

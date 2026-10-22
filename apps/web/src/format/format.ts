@@ -5,7 +5,7 @@ import {
   type NumberFormat,
   type TimeFormat,
   type WeekStart,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { browserTimeZone } from "./time-zones.js";
 
 export interface FormatSettings {

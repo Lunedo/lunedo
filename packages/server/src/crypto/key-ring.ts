@@ -110,7 +110,7 @@ export function parseKeyRing(text: string): KeyRing {
  */
 export function keyFingerprint(purpose: "master" | "backup", key: SecretKey): string {
   return createHash("sha256")
-    .update(`pagehall-${purpose}-key`)
+    .update(`lunedo-${purpose}-key`)
     .update(key.use())
     .digest()
     .subarray(0, 8)

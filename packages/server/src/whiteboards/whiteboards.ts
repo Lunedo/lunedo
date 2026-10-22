@@ -8,8 +8,8 @@ import {
   sceneFromYDoc,
   validateScene,
   visibleScene,
-} from "@pagehall/editor-schema/scene";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema/scene";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import type { Principal } from "../accounts/principal.js";

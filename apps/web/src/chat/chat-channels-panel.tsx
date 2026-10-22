@@ -10,7 +10,7 @@ import {
   Skeleton,
   TruncatedText,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { Hash, MessageCircle, MessagesSquare, Pencil, Plus, Send, Trash2, Webhook } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -5,25 +5,21 @@ import {
   createLogger,
   type DatabasePool,
   runMigrations,
-} from "@pagehall/server";
-import {
-  createTemporaryDatabase,
-  type TemporaryDatabase,
-  testDatabaseBaseUrl,
-} from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { createTemporaryDatabase, type TemporaryDatabase, testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { verifyAuditLog } from "./audit.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const DATABASE_HOOK_TIMEOUT_MS = 60_000;
 
-describe.skipIf(!baseUrl)("pagehall audit verify", () => {
+describe.skipIf(!baseUrl)("lunedo audit verify", () => {
   let database: TemporaryDatabase;
   let pool: DatabasePool;
 
   beforeAll(async () => {
-    database = await createTemporaryDatabase(baseUrl ?? "", "pagehall_cli_test");
-    pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test" });
+    database = await createTemporaryDatabase(baseUrl ?? "", "lunedo_cli_test");
+    pool = createDatabasePool({ connectionString: database.url, applicationName: "lunedo-test" });
     await runMigrations(pool, { logger: createLogger({ service: "test", level: "silent" }) });
   }, DATABASE_HOOK_TIMEOUT_MS);
 

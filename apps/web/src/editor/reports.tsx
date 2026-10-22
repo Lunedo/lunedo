@@ -9,7 +9,7 @@ import {
   type PageReportRequest,
   type PageReportSort,
   pageReportSorts,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import {
   Button,
   Checkbox,
@@ -19,7 +19,7 @@ import {
   Select,
   SkeletonText,
   Table,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { FileStack, FlagTriangleRight } from "lucide-react";
@@ -428,7 +428,7 @@ export function DecisionReportList({ request: report }: { request: DecisionRepor
   if (items.length === 0) return <Empty text={t("editor.decisionReport.empty")} />;
   return (
     <div className="flex flex-col gap-2">
-      <ul className="ph-decision-report-items">
+      <ul className="ld-decision-report-items">
         {items.map((decision) => (
           <li key={decision.id}>
             <p className="wrap-anywhere">{decision.text}</p>
@@ -507,11 +507,11 @@ export function PageReportView({ node, editor, updateAttributes, selected }: Nod
   const report = pageReportFromAttrs(node.attrs);
   return (
     <NodeViewWrapper
-      className={`ph-page-report-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-page-report-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="pageReport"
     >
-      <section className="ph-page-report flex flex-col gap-3" aria-label={t("editor.pageReport.title")}>
+      <section className="ld-page-report flex flex-col gap-3" aria-label={t("editor.pageReport.title")}>
         <h3 className="flex items-center gap-2 font-semibold">
           <FileStack aria-hidden="true" className="size-icon-md" />
           {t("editor.pageReport.title")}
@@ -536,12 +536,12 @@ export function DecisionReportView({ node, editor, updateAttributes, selected }:
   const report = decisionReportFromAttrs(node.attrs);
   return (
     <NodeViewWrapper
-      className={`ph-decision-report-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-decision-report-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="decisionReport"
     >
       <section
-        className="ph-decision-report flex flex-col gap-3"
+        className="ld-decision-report flex flex-col gap-3"
         aria-label={t("editor.decisionReport.title")}
       >
         <h3 className="flex items-center gap-2 font-semibold">

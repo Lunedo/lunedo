@@ -1,5 +1,5 @@
-import { slugify } from "@pagehall/editor-schema";
-import { Badge, Button, EmptyState, List, ListRow, Section, Skeleton, useToast } from "@pagehall/ui";
+import { slugify } from "@lunedo/editor-schema";
+import { Badge, Button, EmptyState, List, ListRow, Section, Skeleton, useToast } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { Bell, BellOff, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";

@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -122,7 +122,7 @@ describe.skipIf(!databaseBaseUrl)("audit log through the API", () => {
   });
 
   it("gives the security auditor everything and members nothing", async () => {
-    const auditor = await createAccount(test, "auditor@pagehall.test");
+    const auditor = await createAccount(test, "auditor@lunedo.test");
     const assigned = await owner.post("/api/v1/instance/role-assignments", {
       role: { builtIn: "securityAuditor" },
       principal: { kind: "account", id: auditor.id },
@@ -141,7 +141,7 @@ describe.skipIf(!databaseBaseUrl)("audit log through the API", () => {
     const csv = await auditorClient.get("/api/v1/instance/audit-events/export");
     expect(csv.statusCode).toBe(200);
 
-    const member = await createAccount(test, "curious@pagehall.test");
+    const member = await createAccount(test, "curious@lunedo.test");
     const memberClient = await signedInClient(test, member.email, member.password);
     expect((await memberClient.get(`/api/v1/organizations/${organizationId}/audit-events`)).statusCode).toBe(
       403,

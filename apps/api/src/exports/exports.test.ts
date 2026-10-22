@@ -3,8 +3,8 @@ import {
   clientAttemptLimitSetting,
   MAX_PARALLEL_PAGE_EXPORTS,
   pageExportSlots,
-} from "@pagehall/server";
-import { testJobContext } from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { testJobContext } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -36,7 +36,7 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
 
   async function person() {
     counter += 1;
-    const email = `exporter${counter}@pagehall.test`;
+    const email = `exporter${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const id = (await createAccount(test, email, password)).id;
     return { id, client: await signedInClient(test, email, password) };
@@ -204,7 +204,7 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     expect(printed.headers["content-disposition"]).toContain('filename="Restart the VPN gateway.html"');
     expect(printed.body).toContain("@page{size:letter landscape;");
     expect(printed.body).toContain("Hold the button");
-    expect(printed.body).not.toContain('<nav class="ph-contents"');
+    expect(printed.body).not.toContain('<nav class="ld-contents"');
 
     const word = await context.reader.client.get(`/api/v1/pages/${context.pageId}/export?format=docx`);
     expect(word.statusCode, word.body).toBe(200);

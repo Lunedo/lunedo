@@ -1,4 +1,4 @@
-import { Button, Notice } from "@pagehall/ui";
+import { Button, Notice } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import type { ConnectionCheckResult } from "../../api/identity-queries.js";

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { NodeJson } from "@pagehall/editor-schema";
+import type { NodeJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";

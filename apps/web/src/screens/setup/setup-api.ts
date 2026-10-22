@@ -6,7 +6,7 @@ import {
   type SetupStepId,
   setupStepIds,
   setupStepSchemas,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";

@@ -4,7 +4,7 @@ import {
   createServerRuntime,
   registerShutdown,
   StartupError,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { createCollabServer } from "./server.js";
 
 let runtime: Awaited<ReturnType<typeof createServerRuntime>>;

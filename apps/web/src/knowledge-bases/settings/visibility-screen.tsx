@@ -9,7 +9,7 @@ import {
   RadioGroup,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye } from "lucide-react";
 import { useState } from "react";

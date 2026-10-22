@@ -1,4 +1,4 @@
-import { Button } from "@pagehall/ui";
+import { Button } from "@lunedo/ui";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,9 +50,9 @@ function checks(patch: Record<string, unknown> = {}) {
     fileStorage: {
       status: "error",
       cause: "notWritable",
-      fixCommand: "chown -R 1000:1000 /var/lib/pagehall/files",
+      fixCommand: "chown -R 1000:1000 /var/lib/lunedo/files",
       docs: "setup.md#file-storage",
-      path: "/var/lib/pagehall/files",
+      path: "/var/lib/lunedo/files",
       exists: true,
       writable: false,
       freeBytes: null,
@@ -86,13 +86,13 @@ describe("the system check", () => {
     expect(screen.getByText("File storage did not pass the check")).toBeTruthy();
     expect(
       screen.getByText(
-        "/var/lib/pagehall/files is not writable by the user Pagehall runs as (UID 1000). The directory belongs to UID 0.",
+        "/var/lib/lunedo/files is not writable by the user Lunedo runs as (UID 1000). The directory belongs to UID 0.",
       ),
     ).toBeTruthy();
-    expect(screen.getByText("chown -R 1000:1000 /var/lib/pagehall/files")).toBeTruthy();
+    expect(screen.getByText("chown -R 1000:1000 /var/lib/lunedo/files")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Read the documentation/ })[0]?.getAttribute("href")).toBe(
-      "https://github.com/pagehall/pagehall/blob/main/docs/setup.md#file-storage",
+      "https://github.com/lunedo/lunedo/blob/main/docs/setup.md#file-storage",
     );
     expect(screen.getByText("You set the address in the next step.")).toBeTruthy();
     expect(screen.getByText("Next step")).toBeTruthy();
@@ -132,7 +132,7 @@ describe("the system check", () => {
         />
       </PreferencesProvider>,
     );
-    expect(screen.getByText("Set through PAGEHALL_INSTANCE_URL: https://wiki.example.org")).toBeTruthy();
+    expect(screen.getByText("Set through LUNEDO_INSTANCE_URL: https://wiki.example.org")).toBeTruthy();
     expect(screen.queryByText("Instance URL did not pass the check")).toBeNull();
   });
 });

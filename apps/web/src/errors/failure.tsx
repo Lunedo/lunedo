@@ -1,4 +1,4 @@
-import { ErrorState, Notice, useToast } from "@pagehall/ui";
+import { ErrorState, Notice, useToast } from "@lunedo/ui";
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";

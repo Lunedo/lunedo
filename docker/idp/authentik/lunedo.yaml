@@ -1,6 +1,6 @@
 version: 1
 metadata:
-  name: Pagehall test setup
+  name: Lunedo test setup
   labels:
     blueprints.goauthentik.io/instantiate: "true"
 entries:
@@ -11,7 +11,7 @@ entries:
     attrs:
       name: Alice Example
       email: alice@example.org
-      password: pagehall-test-password
+      password: lunedo-test-password
       is_active: true
   - model: authentik_core.user
     id: user-bob
@@ -20,7 +20,7 @@ entries:
     attrs:
       name: Bob Example
       email: bob@example.org
-      password: pagehall-test-password
+      password: lunedo-test-password
       is_active: true
   - model: authentik_core.user
     id: user-carol
@@ -29,7 +29,7 @@ entries:
     attrs:
       name: Carol Example
       email: carol@example.org
-      password: pagehall-test-password
+      password: lunedo-test-password
       is_active: true
   - model: authentik_core.user
     id: user-dave
@@ -38,7 +38,7 @@ entries:
     attrs:
       name: Dave Example
       email: dave@example.org
-      password: pagehall-test-password
+      password: lunedo-test-password
       is_active: true
   - model: authentik_core.user
     id: user-erin
@@ -47,7 +47,7 @@ entries:
     attrs:
       name: Erin Outside
       email: erin@example.net
-      password: pagehall-test-password
+      password: lunedo-test-password
       is_active: true
   - model: authentik_core.group
     id: group-engineering
@@ -55,7 +55,7 @@ entries:
       name: engineering
     attrs:
       attributes:
-        pagehall_test_group: engineering
+        lunedo_test_group: engineering
       users:
         - !KeyOf user-alice
         - !KeyOf user-bob
@@ -66,15 +66,15 @@ entries:
       name: admins
     attrs:
       attributes:
-        pagehall_test_group: admins
+        lunedo_test_group: admins
       users:
         - !KeyOf user-alice
   - model: authentik_providers_oauth2.scopemapping
     id: scope-profile
     identifiers:
-      name: Pagehall profile
+      name: Lunedo profile
     attrs:
-      name: Pagehall profile
+      name: Lunedo profile
       scope_name: profile
       description: Name and user name without groups
       expression: |
@@ -87,11 +87,11 @@ entries:
   - model: authentik_providers_oauth2.scopemapping
     id: scope-groups
     identifiers:
-      name: Pagehall groups
+      name: Lunedo groups
     attrs:
-      name: Pagehall groups
+      name: Lunedo groups
       scope_name: groups
-      description: Group IDs and names for Pagehall
+      description: Group IDs and names for Lunedo
       expression: |
         groups = list(request.user.ak_groups.all())
         return {
@@ -99,9 +99,9 @@ entries:
             "group_names": [group.name for group in groups],
         }
   - model: authentik_providers_oauth2.oauth2provider
-    id: provider-pagehall
+    id: provider-lunedo
     identifiers:
-      name: Pagehall
+      name: Lunedo
     attrs:
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
@@ -109,13 +109,13 @@ entries:
       grant_types:
         - authorization_code
         - refresh_token
-      client_id: pagehall
-      client_secret: pagehall-authentik-secret
+      client_id: lunedo
+      client_secret: lunedo-authentik-secret
       include_claims_in_id_token: true
       issuer_mode: per_provider
       sub_mode: hashed_user_id
       logout_method: backchannel
-      logout_uri: !Env [PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL, ""]
+      logout_uri: !Env [LUNEDO_AUTHENTIK_BACKCHANNEL_LOGOUT_URL, ""]
       redirect_uris:
         - matching_mode: regex
           url: 'http://(localhost|127\.0\.0\.1):[0-9]+/.*'
@@ -126,10 +126,10 @@ entries:
         - !KeyOf scope-profile
         - !KeyOf scope-groups
   - model: authentik_core.application
-    id: application-pagehall
+    id: application-lunedo
     identifiers:
-      slug: pagehall
+      slug: lunedo
     attrs:
-      name: Pagehall
-      provider: !KeyOf provider-pagehall
+      name: Lunedo
+      provider: !KeyOf provider-lunedo
       policy_engine_mode: any

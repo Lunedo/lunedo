@@ -14,10 +14,10 @@ const schemaFile = new URL("../../../../docs/template-format.schema.json", impor
 const hash = "a".repeat(64);
 
 const valid = {
-  format: "pagehall-template",
+  format: "lunedo-template",
   formatVersion: 1,
   schemaVersion: 11,
-  pagehallVersion: "1.0.0",
+  lunedoVersion: "1.0.0",
   templates: [
     {
       name: "Retro",
@@ -168,17 +168,17 @@ describe("template file format", () => {
           name: "N",
         },
       ],
-      pagehallVersion: "1",
+      lunedoVersion: "1",
       schemaVersion: 11,
       formatVersion: 1,
-      format: "pagehall-template",
+      format: "lunedo-template",
     });
     expect(text.split("\n").slice(0, 5)).toEqual([
       "{",
-      '  "format": "pagehall-template",',
+      '  "format": "lunedo-template",',
       '  "formatVersion": 1,',
       '  "schemaVersion": 11,',
-      '  "pagehallVersion": "1",',
+      '  "lunedoVersion": "1",',
     ]);
     expect(text.indexOf('"name"')).toBeLessThan(text.indexOf('"document"'));
     expect(text.endsWith("}\n")).toBe(true);

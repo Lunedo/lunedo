@@ -1,5 +1,5 @@
-import type { NodeJson } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import type { NodeJson } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

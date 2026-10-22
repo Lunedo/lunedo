@@ -80,13 +80,13 @@ Headings are numbered when the render context has `numberHeadings` (a page optio
 
 `renderHtml` produces the HTML of the read view and `renderMarkdown` GitHub-flavored Markdown, both from the same module definitions. A render context resolves mentions, page links, attachments and dates and provides translated labels. The HTML renderer escapes all content, renders only allowed links and writes colors as names (`data-color`), never as values. Formulas render with KaTeX up to 20,000 characters of LaTeX per document; further formulas appear as their source. In Markdown, formulas stay inside code (`` $`…`$ `` and ```` ```math ```` blocks), so their content cannot turn into Markdown or HTML.
 
-With `target: "print"` in the render context, `renderHtml` produces the HTML for print: images load at once with their width, and expand blocks show their content under their title. A node can define its own `print` form. A node that cannot be printed, such as a diagram without a preview, sets `print: "unsupported"` and appears as a note that names it and points to the page in Pagehall.
+With `target: "print"` in the render context, `renderHtml` produces the HTML for print: images load at once with their width, and expand blocks show their content under their title. A node can define its own `print` form. A node that cannot be printed, such as a diagram without a preview, sets `print: "unsupported"` and appears as a note that names it and points to the page in Lunedo.
 
 `renderWord` produces a neutral description of a Word document: paragraphs with styled text runs, headings with anchors, lists and task lists, tables with merged cells and backgrounds, code, labelled boxes for callouts and decisions, images, contents and placeholders. The server turns it into a `.docx` file; the package itself has no Word dependency. Each node defines a `word` form and each mark changes the style of its text. A node without a `word` form appears as the same note as in print. The render context's `nodeTitle` names nodes in that note.
 
 ## Whiteboard scenes
 
-`@pagehall/editor-schema/scene` defines the scenes of whiteboards and drawing blocks: Excalidraw elements, images and settings. `validateScene` accepts the element types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame with their known fields only; embedded web content, AI frames and custom data other than the sticky-note flag are refused. Links on elements allow `http`, `https` and internal paths. Images are referenced by the ID of an attachment of the same item, never by address.
+`@lunedo/editor-schema/scene` defines the scenes of whiteboards and drawing blocks: Excalidraw elements, images and settings. `validateScene` accepts the element types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame with their known fields only; embedded web content, AI frames and custom data other than the sticky-note flag are refused. Links on elements allow `http`, `https` and internal paths. Images are referenced by the ID of an attachment of the same item, never by address.
 
 | Limit | Value |
 |---|---|
@@ -105,7 +105,7 @@ Report blocks and include blocks hold only their settings. The renderers ask the
 
 ## Collaboration
 
-`@pagehall/editor-schema/yjs` converts between documents and Yjs documents in the format of Tiptap's collaboration extension (fragment `default`). `applyDocument` writes a document into an existing Yjs document with minimal changes, so edits made at the same time are kept.
+`@lunedo/editor-schema/yjs` converts between documents and Yjs documents in the format of Tiptap's collaboration extension (fragment `default`). `applyDocument` writes a document into an existing Yjs document with minimal changes, so edits made at the same time are kept.
 
 ## Versions and migrations
 
@@ -123,7 +123,7 @@ export const pollModule = defineModule({
       name: "poll",
       spec: { group: "block", atom: true },
       attrs: { question: required(z.string().min(1)) },
-      html: (node, renderer) => `<div class="ph-poll">${renderer.escape(attrOf<string>(node, "question"))}</div>`,
+      html: (node, renderer) => `<div class="ld-poll">${renderer.escape(attrOf<string>(node, "question"))}</div>`,
       word: (node) => [{ type: "paragraph", content: [wordText(attrOf<string>(node, "question"))] }],
       markdown: (node, renderer) => renderer.escape(attrOf<string>(node, "question")),
     },

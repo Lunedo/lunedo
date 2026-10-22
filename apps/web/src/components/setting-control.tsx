@@ -6,7 +6,7 @@ import {
   SettingSelect,
   Switch,
   TimeZoneCombobox,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";

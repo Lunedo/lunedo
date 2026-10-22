@@ -110,7 +110,7 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     await setup.locked((tx) => setup.markComplete(tx, "assistant"));
     await setup.issueCode(log.logger, { configuredCode });
     expect(log.lines.map((line) => JSON.parse(line).message)).toEqual([
-      "Setup is complete, PAGEHALL_SETUP_CODE can be removed from the configuration",
+      "Setup is complete, LUNEDO_SETUP_CODE can be removed from the configuration",
     ]);
     await setup.issueCode(log.logger);
     expect(log.lines).toHaveLength(1);

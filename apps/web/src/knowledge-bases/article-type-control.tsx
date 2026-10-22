@@ -1,4 +1,4 @@
-import { Menu, useToast } from "@pagehall/ui";
+import { Menu, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -58,7 +58,7 @@ export function ArticleTypeControl({
       trigger={
         <button
           type="button"
-          className="ph-inline-button inline-flex min-h-hit items-center gap-1 rounded-sm px-1 text-sm hover:bg-hover focus-visible:focus-ring"
+          className="ld-inline-button inline-flex min-h-hit items-center gap-1 rounded-sm px-1 text-sm hover:bg-hover focus-visible:focus-ring"
           aria-label={t("knowledgeBase.articleTypes.change", { type: label })}
         >
           <Icon aria-hidden="true" className="size-icon-sm" />

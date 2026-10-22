@@ -1,18 +1,18 @@
 export function testMailpitUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const url = env.PAGEHALL_TEST_MAILPIT_URL?.trim();
-  if (!url && env.CI) throw new Error("PAGEHALL_TEST_MAILPIT_URL must be set in CI");
+  const url = env.LUNEDO_TEST_MAILPIT_URL?.trim();
+  if (!url && env.CI) throw new Error("LUNEDO_TEST_MAILPIT_URL must be set in CI");
   return url || undefined;
 }
 
 export function testMailpitSmtpPort(env: NodeJS.ProcessEnv = process.env): number {
-  const raw = env.PAGEHALL_TEST_MAILPIT_SMTP_PORT?.trim();
+  const raw = env.LUNEDO_TEST_MAILPIT_SMTP_PORT?.trim();
   if (!raw) {
-    if (env.CI) throw new Error("PAGEHALL_TEST_MAILPIT_SMTP_PORT must be set in CI");
+    if (env.CI) throw new Error("LUNEDO_TEST_MAILPIT_SMTP_PORT must be set in CI");
     return 1025;
   }
   const port = Number(raw);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error("PAGEHALL_TEST_MAILPIT_SMTP_PORT must be a port number");
+    throw new Error("LUNEDO_TEST_MAILPIT_SMTP_PORT must be a port number");
   }
   return port;
 }

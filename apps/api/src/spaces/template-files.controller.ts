@@ -1,19 +1,19 @@
 import type { Readable } from "node:stream";
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import {
   type AttachmentContent,
   contentDisposition,
   type DisplayVersionSize,
   type ExportSource,
   FILE_NAME_MAX_LENGTH,
+  lunedoVersion,
   MAX_TEMPLATES_PER_UPLOAD,
-  pagehallVersion,
   type TemplateExport,
   type TemplateLanguage,
   type TemplateScope,
   templateLanguages,
   templateRemovalKinds,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -207,7 +207,7 @@ const importPreviewSchema = z
 
 const examplePreview = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5aa0",
-  fileName: "change-request.pagehall-template.zip",
+  fileName: "change-request.lunedo-template.zip",
   templates: [
     {
       index: 0,
@@ -284,7 +284,7 @@ const rawTemplateFile = {
   contentTypes: ["application/json", "application/zip"],
   description:
     "A template file: JSON for templates without files, otherwise a ZIP archive with `template.json` and the files under `files/`.",
-  example: '{\n  "format": "pagehall-template",\n  "formatVersion": 1\n}\n',
+  example: '{\n  "format": "lunedo-template",\n  "formatVersion": 1\n}\n',
 };
 
 const importErrors = [
@@ -417,7 +417,7 @@ export class TemplateFilesController {
       actorOf(request),
       source,
       templateIds,
-      pagehallVersion(),
+      lunedoVersion(),
     );
     return sendExport(reply, file);
   }

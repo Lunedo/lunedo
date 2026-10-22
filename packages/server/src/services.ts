@@ -1,6 +1,6 @@
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
@@ -166,7 +166,7 @@ import { MaintenanceService, SignInBlockedError } from "./operations/maintenance
 import { operationsNotificationTypes } from "./operations/notifications.js";
 import { type CollaborationProbe, OperationsStatusService } from "./operations/status.js";
 import { UpdateCheckService } from "./operations/update-check.js";
-import { pagehallVersion } from "./operations/version.js";
+import { lunedoVersion } from "./operations/version.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
 import { HomeOrganizationService } from "./organizations/home.js";
@@ -409,7 +409,7 @@ export function createAccountServices(options: {
     workDir: string;
     secretsDir: string;
     configuration: Record<string, string>;
-    pagehallVersion: string;
+    lunedoVersion: string;
     beforeUpdateEnvironment: boolean;
     policy?: OutboundPolicy;
     archiver?: (databaseUrl: string) => DatabaseArchiver;
@@ -801,7 +801,7 @@ export function createAccountServices(options: {
     backupOptions?.archiver ?? ((url: string) => new PostgresArchiver({ databaseUrl: url }));
   const backupDatabaseUrl = backupOptions?.databaseUrl ?? "";
   const backupDir = backupOptions?.backupDir ?? options.filesDir;
-  const workDir = backupOptions?.workDir ?? path.join(tmpdir(), `pagehall-work-${process.pid}`);
+  const workDir = backupOptions?.workDir ?? path.join(tmpdir(), `lunedo-work-${process.pid}`);
   const masterKeysOfInstance = async () => options.keyRing.ring;
   const backups = new BackupService({
     database,
@@ -824,7 +824,7 @@ export function createAccountServices(options: {
       masterKeys: masterKeysOfInstance,
       workDir,
       configuration: backupOptions?.configuration ?? {},
-      pagehallVersion: backupOptions?.pagehallVersion ?? "dev",
+      lunedoVersion: backupOptions?.lunedoVersion ?? "dev",
       schemaVersion: currentSchemaVersion(),
     },
     testRestore: {
@@ -1128,7 +1128,7 @@ export function createAccountServices(options: {
       configuredInstanceUrl: options.configuredInstanceUrl,
     }),
   );
-  const version = options.version ?? pagehallVersion();
+  const version = options.version ?? lunedoVersion();
   const updates = new UpdateCheckService({
     database,
     settings,

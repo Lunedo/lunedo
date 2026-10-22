@@ -4,7 +4,7 @@ import {
   type NodeJson,
   narrowEmbedServices,
   resolveEmbed,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import type { SettingsService } from "../settings/service.js";
 import { allowedEmbedServicesSetting, embedServicesSetting } from "./settings.js";
 

@@ -8,7 +8,7 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarClock, Newspaper, Plus } from "lucide-react";

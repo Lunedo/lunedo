@@ -1,4 +1,4 @@
-import type { WatchState } from "@pagehall/shared";
+import type { WatchState } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { accountPrincipal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

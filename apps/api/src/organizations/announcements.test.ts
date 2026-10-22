@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { get, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, createServerRuntime } from "@lunedo/server";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, createServerRuntime } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -17,7 +17,7 @@ import {
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 import { createTestApp } from "../testing/create-test-app.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
+const SESSION_COOKIE = "__Host-lunedo-session";
 const DAY = 86_400_000;
 
 describe.skipIf(!databaseBaseUrl)("announcements, blog subscriptions and shortcuts through the API", () => {
@@ -43,7 +43,7 @@ describe.skipIf(!databaseBaseUrl)("announcements, blog subscriptions and shortcu
 
   async function person(homeOrganizationId?: string) {
     counter += 1;
-    const email = `announce${counter}@pagehall.test`;
+    const email = `announce${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const id = (await createAccount(test, email, password, homeOrganizationId)).id;
     return { id, client: await signedInClient(test, email, password) };

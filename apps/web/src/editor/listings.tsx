@@ -5,8 +5,8 @@ import {
   MAX_CHILD_PAGE_DEPTH,
   MAX_FILE_TYPES,
   matchesFileTypes,
-} from "@pagehall/editor-schema";
-import { Checkbox, Combobox, type ComboboxLoader, Field, Input, Select, SkeletonText } from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Checkbox, Combobox, type ComboboxLoader, Field, Input, Select, SkeletonText } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { Files, FolderTree } from "lucide-react";
@@ -374,11 +374,11 @@ export function ChildPagesView({ node, editor, updateAttributes, selected }: Nod
   const request = childPagesFromAttrs(node.attrs);
   return (
     <NodeViewWrapper
-      className={`ph-child-pages-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-child-pages-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="childPages"
     >
-      <section className="ph-child-pages flex flex-col gap-3" aria-label={t("editor.childPages.title")}>
+      <section className="ld-child-pages flex flex-col gap-3" aria-label={t("editor.childPages.title")}>
         <h3 className="flex items-center gap-2 font-semibold">
           <FolderTree aria-hidden="true" className="size-icon-md" />
           {t("editor.childPages.title")}
@@ -399,12 +399,12 @@ export function AttachmentListView({ node, editor, updateAttributes, selected }:
   const fileTypes = fileTypesOf(node.attrs.fileTypes);
   return (
     <NodeViewWrapper
-      className={`ph-attachment-list-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-attachment-list-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="attachmentList"
     >
       <section
-        className="ph-attachment-list flex flex-col gap-3"
+        className="ld-attachment-list flex flex-col gap-3"
         aria-label={t("editor.attachmentList.title")}
       >
         <h3 className="flex items-center gap-2 font-semibold">

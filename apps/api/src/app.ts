@@ -1,6 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { NestFactory } from "@nestjs/core";
-import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import {
   ANONYMOUS,
   defaultEmbedServices,
@@ -8,7 +6,9 @@ import {
   enterRequestContext,
   type Logger,
   type RequestContext,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { NestFactory } from "@nestjs/core";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
@@ -119,14 +119,14 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
     const moved = await movedTo(request, context);
     if (moved) {
-      return sendProblem(reply, "instanceMoved", "Open Pagehall at its current address", {
+      return sendProblem(reply, "instanceMoved", "Open Lunedo at its current address", {
         instanceUrl: moved,
       });
     }
     return sendProblem(
       reply,
       "csrfRejected",
-      "State-changing requests need the X-Pagehall-Request header and a matching Origin",
+      "State-changing requests need the X-Lunedo-Request header and a matching Origin",
     );
   });
   fastify.addHook("onResponse", async (request, reply) => {

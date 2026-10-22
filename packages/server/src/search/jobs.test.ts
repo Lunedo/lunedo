@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
 import { NotificationListener } from "../database/notifications.js";

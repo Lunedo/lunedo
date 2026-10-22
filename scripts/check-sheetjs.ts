@@ -16,5 +16,5 @@ const report = formatReport(pinned, latest);
 console.log(report);
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);
 if (pinned && latest && report.includes("is available")) {
-  console.log(`::warning title=SheetJS release::SheetJS ${latest} is available; Pagehall pins ${pinned}.`);
+  console.log(`::warning title=SheetJS release::SheetJS ${latest} is available; Lunedo pins ${pinned}.`);
 }

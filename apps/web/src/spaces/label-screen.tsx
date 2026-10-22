@@ -1,4 +1,4 @@
-import { EmptyState, PageHeader, Skeleton } from "@pagehall/ui";
+import { EmptyState, PageHeader, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { FileText, Tag } from "lucide-react";

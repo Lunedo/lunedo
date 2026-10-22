@@ -7,8 +7,8 @@ import {
   checkBrandColor,
   normalizeHex,
   proposeBrandColor,
-} from "@pagehall/shared";
-import { tokens } from "@pagehall/tokens";
+} from "@lunedo/shared";
+import { tokens } from "@lunedo/tokens";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";

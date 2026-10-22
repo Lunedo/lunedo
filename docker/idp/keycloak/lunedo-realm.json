@@ -1,5 +1,5 @@
 {
-  "realm": "pagehall",
+  "realm": "lunedo",
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
@@ -11,13 +11,13 @@
       "id": "6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f",
       "name": "engineering",
       "path": "/engineering",
-      "attributes": { "pagehall_group_id": ["6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f"] }
+      "attributes": { "lunedo_group_id": ["6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f"] }
     },
     {
       "id": "0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d",
       "name": "admins",
       "path": "/admins",
-      "attributes": { "pagehall_group_id": ["0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d"] }
+      "attributes": { "lunedo_group_id": ["0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d"] }
     }
   ],
   "users": [
@@ -29,7 +29,7 @@
       "firstName": "Alice",
       "lastName": "Example",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "lunedo-test-password", "temporary": false }],
       "groups": ["/engineering", "/admins"]
     },
     {
@@ -40,7 +40,7 @@
       "firstName": "Bob",
       "lastName": "Example",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "lunedo-test-password", "temporary": false }],
       "groups": ["/engineering"]
     },
     {
@@ -51,7 +51,7 @@
       "firstName": "Carol",
       "lastName": "Example",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "lunedo-test-password", "temporary": false }],
       "groups": []
     },
     {
@@ -62,7 +62,7 @@
       "firstName": "Dave",
       "lastName": "Example",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "lunedo-test-password", "temporary": false }],
       "groups": ["/engineering"]
     },
     {
@@ -73,35 +73,35 @@
       "firstName": "Erin",
       "lastName": "Outside",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "pagehall-test-password", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "lunedo-test-password", "temporary": false }],
       "groups": []
     }
   ],
   "clients": [
     {
-      "clientId": "pagehall",
-      "name": "Pagehall",
+      "clientId": "lunedo",
+      "name": "Lunedo",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "pagehall-keycloak-secret",
+      "secret": "lunedo-keycloak-secret",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "frontchannelLogout": false,
       "redirectUris": [
-        "http://localhost:${PAGEHALL_E2E_PORT:4310}/*",
+        "http://localhost:${LUNEDO_E2E_PORT:4310}/*",
         "http://localhost:5173/*",
         "http://localhost:3000/*",
-        "http://127.0.0.1:${PAGEHALL_E2E_PORT:4310}/*",
+        "http://127.0.0.1:${LUNEDO_E2E_PORT:4310}/*",
         "http://127.0.0.1:5173/*",
         "http://127.0.0.1:3000/*"
       ],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "backchannel.logout.url": "${PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:}",
+        "backchannel.logout.url": "${LUNEDO_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:}",
         "backchannel.logout.session.required": "true",
         "backchannel.logout.revoke.offline.tokens": "false"
       },
@@ -113,7 +113,7 @@
           "protocolMapper": "oidc-usermodel-attribute-mapper",
           "consentRequired": false,
           "config": {
-            "user.attribute": "pagehall_group_id",
+            "user.attribute": "lunedo_group_id",
             "claim.name": "groups",
             "jsonType.label": "String",
             "multivalued": "true",

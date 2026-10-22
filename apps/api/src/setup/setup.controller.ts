@@ -1,5 +1,5 @@
+import { setupCodeSchema, setupStepStateSchema } from "@lunedo/shared";
 import { Body, Controller, Get, Inject, Param, Post, Req, Res } from "@nestjs/common";
-import { setupCodeSchema, setupStepStateSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SetupCodeRoute, SetupSessionRoute } from "../access/route-access.js";

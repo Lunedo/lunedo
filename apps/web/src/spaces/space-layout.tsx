@@ -1,4 +1,4 @@
-import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@pagehall/ui";
+import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {

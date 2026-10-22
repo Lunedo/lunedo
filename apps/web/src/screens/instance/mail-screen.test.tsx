@@ -123,7 +123,7 @@ describe("the e-mail settings", () => {
     });
     await renderMail();
     await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
-    expect(await screen.findByText(/Pagehall cannot see how the permission was granted/)).toBeTruthy();
+    expect(await screen.findByText(/Lunedo cannot see how the permission was granted/)).toBeTruthy();
     expect(screen.getByText(/run Enable-OrganizationCustomization first/)).toBeTruthy();
     expect(screen.getByText(/can then send as any mailbox of your organization/)).toBeTruthy();
     await userEvent.type(screen.getByLabelText("Directory (tenant) ID"), TENANT);
@@ -147,7 +147,7 @@ describe("the e-mail settings", () => {
     });
     const graphTest = requests.find((request) => request.path === "/api/v1/instance/mail/graph/test");
     expect(graphTest?.body).toMatchObject({ to: OLIVIA.email });
-    expect(within(document.body).queryByText("Pagehall sends through Microsoft Graph.")).toBeNull();
+    expect(within(document.body).queryByText("Lunedo sends through Microsoft Graph.")).toBeNull();
   });
 
   it("lists the Microsoft 365 steps in the order they are done", async () => {
@@ -321,7 +321,7 @@ describe("the e-mail settings", () => {
       }),
     });
     await renderMail();
-    expect(await screen.findByText(/Pagehall could not connect to the mail server/)).toBeTruthy();
+    expect(await screen.findByText(/Lunedo could not connect to the mail server/)).toBeTruthy();
     expect(screen.getByText(/Failed step: connecting to the mail server/)).toBeTruthy();
     expect(screen.getByText("Not yet")).toBeTruthy();
   });

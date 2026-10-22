@@ -28,9 +28,9 @@ describe("install.sh", () => {
     const printed = run(["print-compose"]);
     assert.equal(printed.status, 0, printed.stderr);
     assert.equal(printed.stdout, documented());
-    assert.match(printed.stdout, /image: ghcr\.io\/pagehall\/pagehall:<version>\n/);
-    assert.match(printed.stdout, /PAGEHALL_SETUP_CODE: \$\{PAGEHALL_SETUP_CODE:-\}/);
-    assert.match(printed.stdout, /PAGEHALL_INSTANCE_URL: \$\{PAGEHALL_INSTANCE_URL:-\}/);
+    assert.match(printed.stdout, /image: ghcr\.io\/lunedo\/lunedo:<version>\n/);
+    assert.match(printed.stdout, /LUNEDO_SETUP_CODE: \$\{LUNEDO_SETUP_CODE:-\}/);
+    assert.match(printed.stdout, /LUNEDO_INSTANCE_URL: \$\{LUNEDO_INSTANCE_URL:-\}/);
   });
 
   it("refuses versions, ports and options it does not know", () => {
@@ -41,18 +41,18 @@ describe("install.sh", () => {
   });
 
   it("changes nothing in an existing installation and points to the update command", () => {
-    const directory = mkdtempSync(path.join(tmpdir(), "pagehall-installed-"));
-    writeFileSync(path.join(directory, ".env"), "PAGEHALL_MASTER_KEYS=1:kept\n");
-    writeFileSync(path.join(directory, ".pagehall-install"), "method=script\nversion=1.4.2\n");
+    const directory = mkdtempSync(path.join(tmpdir(), "lunedo-installed-"));
+    writeFileSync(path.join(directory, ".env"), "LUNEDO_MASTER_KEYS=1:kept\n");
+    writeFileSync(path.join(directory, ".lunedo-install"), "method=script\nversion=1.4.2\n");
     const result = run(["install", "--dir", directory, "--yes"]);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /Pagehall is already installed in .* \(version 1\.4\.2\)/);
-    assert.match(result.stdout, /pagehall update/);
-    assert.equal(readFileSync(path.join(directory, ".env"), "utf8"), "PAGEHALL_MASTER_KEYS=1:kept\n");
+    assert.match(result.stdout, /Lunedo is already installed in .* \(version 1\.4\.2\)/);
+    assert.match(result.stdout, /lunedo update/);
+    assert.equal(readFileSync(path.join(directory, ".env"), "utf8"), "LUNEDO_MASTER_KEYS=1:kept\n");
   });
 
   it("refuses to update a directory without an installation", () => {
-    const directory = mkdtempSync(path.join(tmpdir(), "pagehall-empty-"));
-    assert.match(run(["update", "--dir", directory, "--yes"]).stderr, /is not a Pagehall installation/);
+    const directory = mkdtempSync(path.join(tmpdir(), "lunedo-empty-"));
+    assert.match(run(["update", "--dir", directory, "--yes"]).stderr, /is not a Lunedo installation/);
   });
 });

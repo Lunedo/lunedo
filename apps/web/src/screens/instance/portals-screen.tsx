@@ -13,7 +13,7 @@ import {
   type TableColumn,
   useToast,
   VisuallyHidden,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Globe, LibraryBig, Plus } from "lucide-react";
 import { useState } from "react";

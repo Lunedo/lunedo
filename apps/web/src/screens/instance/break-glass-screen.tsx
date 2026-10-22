@@ -1,4 +1,4 @@
-import { Badge, Button, Combobox, Field, Notice, Section, Table } from "@pagehall/ui";
+import { Badge, Button, Combobox, Field, Notice, Section, Table } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
 import { useState } from "react";

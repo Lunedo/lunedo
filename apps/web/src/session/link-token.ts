@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const STORAGE_KEY = "pagehall.linkToken";
+const STORAGE_KEY = "lunedo.linkToken";
 
 let captured: { path: string; token: string } | null = null;
 

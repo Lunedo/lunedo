@@ -11,7 +11,7 @@ import {
   Skeleton,
   Tabs,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Lock, Mail, Trash2, UserPlus, Users } from "lucide-react";

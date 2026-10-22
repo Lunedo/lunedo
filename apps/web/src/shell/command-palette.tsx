@@ -7,7 +7,7 @@ import {
   highlightParts,
   Kbd,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { Building2, Command as CommandIcon, Link2, type LucideIcon, Search } from "lucide-react";

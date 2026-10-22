@@ -1,6 +1,6 @@
+import { accountPrincipal, type FactorAdded, type RegistrationResponseJSON } from "@lunedo/server";
+import { idSchema } from "@lunedo/shared";
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
-import { accountPrincipal, type FactorAdded, type RegistrationResponseJSON } from "@pagehall/server";
-import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SessionRoute } from "../access/route-access.js";

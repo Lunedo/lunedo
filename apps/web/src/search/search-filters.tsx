@@ -1,4 +1,4 @@
-import { Button, Checkbox, Combobox, RadioGroup } from "@pagehall/ui";
+import { Button, Checkbox, Combobox, RadioGroup } from "@lunedo/ui";
 import { X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";

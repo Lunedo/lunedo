@@ -5,8 +5,8 @@ import {
   type NodeJson,
   rewriteFileReferences,
   validateDocument,
-} from "@pagehall/editor-schema";
-import { isUuid, uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { isUuid, uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";

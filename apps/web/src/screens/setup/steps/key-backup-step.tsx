@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Checkbox, Icon, Notice, useToast } from "@pagehall/ui";
+import { Button, ButtonGroup, Checkbox, Icon, Notice, useToast } from "@lunedo/ui";
 import { CircleAlert, Copy, Download } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,7 +7,7 @@ import { problemMessage } from "../../../errors/problem-message.js";
 import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
-const KEY_FILE = "pagehall-keys.env";
+const KEY_FILE = "lunedo-keys.env";
 
 export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"keyBackup">) {
   const { t } = useTranslation();
@@ -61,7 +61,7 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
 
   const keys = content
     ?.split("\n")
-    .filter((line) => line.startsWith("PAGEHALL_"))
+    .filter((line) => line.startsWith("LUNEDO_"))
     .join("\n");
 
   return (

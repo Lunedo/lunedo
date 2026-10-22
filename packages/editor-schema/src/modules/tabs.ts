@@ -42,7 +42,7 @@ function tabsHtml(node: ValidNode, renderer: HtmlRenderer): string {
   const tabs = node.content;
   const list = element(
     "div",
-    { class: "ph-tabs-list", role: "tablist" },
+    { class: "ld-tabs-list", role: "tablist" },
     tabs
       .map((tab, index) =>
         element(
@@ -50,7 +50,7 @@ function tabsHtml(node: ValidNode, renderer: HtmlRenderer): string {
           {
             type: "button",
             role: "tab",
-            class: "ph-tab-button",
+            class: "ld-tab-button",
             "data-index": index,
             "aria-selected": index === 0 ? "true" : "false",
             tabindex: index === 0 ? "0" : "-1",
@@ -64,12 +64,12 @@ function tabsHtml(node: ValidNode, renderer: HtmlRenderer): string {
     .map((tab, index) =>
       element(
         "section",
-        { class: "ph-tab", "data-index": index },
+        { class: "ld-tab", "data-index": index },
         `${element(
           "button",
           {
             type: "button",
-            class: "ph-tab-toggle",
+            class: "ld-tab-toggle",
             "data-index": index,
             "aria-expanded": index === 0 ? "true" : "false",
           },
@@ -77,7 +77,7 @@ function tabsHtml(node: ValidNode, renderer: HtmlRenderer): string {
         )}${element(
           "div",
           {
-            class: "ph-tab-panel",
+            class: "ld-tab-panel",
             role: "tabpanel",
             tabindex: "0",
             "data-index": index,
@@ -88,19 +88,19 @@ function tabsHtml(node: ValidNode, renderer: HtmlRenderer): string {
       ),
     )
     .join("");
-  return element("div", { class: "ph-tabs" }, `${list}${panels}`);
+  return element("div", { class: "ld-tabs" }, `${list}${panels}`);
 }
 
 function tabsPrint(node: ValidNode, renderer: HtmlRenderer): string {
   return element(
     "div",
-    { class: "ph-tabs ph-tabs-print" },
+    { class: "ld-tabs ld-tabs-print" },
     node.content
       .map((tab) =>
         element(
           "section",
-          { class: "ph-tab" },
-          `${element("h4", { class: "ph-tab-title" }, renderer.escape(attrOf<string>(tab, "title")))}${renderer.children(tab)}`,
+          { class: "ld-tab" },
+          `${element("h4", { class: "ld-tab-title" }, renderer.escape(attrOf<string>(tab, "title")))}${renderer.children(tab)}`,
         ),
       )
       .join(""),

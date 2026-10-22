@@ -10,7 +10,7 @@ import {
   Skeleton,
   Tabs,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ImageUp, KeyRound, Pause, Play, Trash2 } from "lucide-react";

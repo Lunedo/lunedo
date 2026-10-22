@@ -64,8 +64,8 @@ describe.skipIf(!baseUrl)("backups", () => {
   const admins: string[] = [];
 
   beforeAll(async () => {
-    backupDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-default-"));
-    workDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-work-"));
+    backupDir = await mkdtemp(path.join(tmpdir(), "lunedo-backup-default-"));
+    workDir = await mkdtemp(path.join(tmpdir(), "lunedo-backup-work-"));
     test = await createTestServices(baseUrl ?? "", {
       configuredInstanceUrl: "https://wiki.example.org",
       jobs,
@@ -74,8 +74,8 @@ describe.skipIf(!baseUrl)("backups", () => {
         backupDir,
         workDir,
         secretsDir: path.join(backupDir, "secrets"),
-        configuration: { "environment.json": '{"PAGEHALL_HOST":"0.0.0.0"}\n' },
-        pagehallVersion: "1.2.3",
+        configuration: { "environment.json": '{"LUNEDO_HOST":"0.0.0.0"}\n' },
+        lunedoVersion: "1.2.3",
         beforeUpdateEnvironment: true,
         clock: () => now,
       }),
@@ -120,7 +120,7 @@ describe.skipIf(!baseUrl)("backups", () => {
     now = new Date("2026-10-21T08:00:00.000Z");
     enqueued.length = 0;
     keys.clear();
-    targetDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-target-"));
+    targetDir = await mkdtemp(path.join(tmpdir(), "lunedo-backup-target-"));
     await test.database.execute(sql`delete from backup_configuration`);
     await test.database.execute(sql`delete from backup_state`);
     await test.database.execute(sql`delete from backup_runs`);
@@ -193,7 +193,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         kind: "s3" as const,
         endpoint: "https://s3.example.org",
         region: "eu-central-1",
-        bucket: "pagehall-backups",
+        bucket: "lunedo-backups",
         prefix: "",
         forcePathStyle: false,
         accessKeyId: "AKIAEXAMPLE",
@@ -224,8 +224,8 @@ describe.skipIf(!baseUrl)("backups", () => {
         kind: "s3",
         endpoint: "https://s3.example.org",
         region: "eu-central-1",
-        bucket: "pagehall-backups",
-        prefix: "pagehall/",
+        bucket: "lunedo-backups",
+        prefix: "lunedo/",
         forcePathStyle: true,
         accessKeyId: "AKIAEXAMPLE",
         secretAccessKey: secret,
@@ -233,7 +233,7 @@ describe.skipIf(!baseUrl)("backups", () => {
       expect(overview.target).toMatchObject({
         kind: "s3",
         secretKeyConfigured: true,
-        bucket: "pagehall-backups",
+        bucket: "lunedo-backups",
       });
       expect(JSON.stringify(overview)).not.toContain(secret);
       const stored = await test.database.execute<{ value: Buffer }>(
@@ -243,7 +243,7 @@ describe.skipIf(!baseUrl)("backups", () => {
       const changes = await audited("backup.targetChanged");
       expect(changes.at(-1)).toMatchObject({
         kind: "s3",
-        location: "s3://pagehall-backups/pagehall/",
+        location: "s3://lunedo-backups/lunedo/",
         endpointHost: "s3.example.org",
         credentialsReplaced: true,
       });
@@ -253,7 +253,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         kind: "s3" as const,
         endpoint: "https://s3.example.org",
         region: "eu-central-1",
-        bucket: "pagehall-backups",
+        bucket: "lunedo-backups",
         prefix: "other/",
         forcePathStyle: true,
         accessKeyId: "AKIAEXAMPLE",
@@ -346,10 +346,10 @@ describe.skipIf(!baseUrl)("backups", () => {
         kind: "s3",
         endpoint: "http://127.0.0.1:1",
         region: "us-east-1",
-        bucket: "pagehall-backups",
+        bucket: "lunedo-backups",
         prefix: "",
         forcePathStyle: true,
-        accessKeyId: "pagehall",
+        accessKeyId: "lunedo",
         secretAccessKey: "not used",
       });
       expect(result).toMatchObject({
@@ -359,7 +359,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         allowedNetwork: "127.0.0.1/32",
       });
       expect(result.ok === false && result.message).toContain(
-        "resolves to 127.0.0.1, which is in a private network. If Pagehall should reach it, add 127.0.0.1/32 or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS",
+        "resolves to 127.0.0.1, which is in a private network. If Lunedo should reach it, add 127.0.0.1/32 or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS",
       );
     });
   });
@@ -371,7 +371,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         await useLocalTarget();
         await writeFile(path.join(targetDir, "notes.txt"), "not a backup");
         await writeFile(
-          path.join(targetDir, "pagehall-backup-20260101T000000Z-daily-00000000.phbak"),
+          path.join(targetDir, "lunedo-backup-20260101T000000Z-daily-00000000.ldbak"),
           "looks like a backup by its name only",
         );
         await backups().run({ trigger: "manual", slot: null, actorId: owner });
@@ -381,8 +381,8 @@ describe.skipIf(!baseUrl)("backups", () => {
         const list = await backups().list();
         expect(list.available).toBe(true);
         const created = list.backups.find((backup) => backup.backupClass === "manual");
-        expect(created).toMatchObject({ readable: true, pagehallVersion: "1.2.3", scope: "all" });
-        expect(list.backups.find((backup) => backup.name.endsWith("00000000.phbak"))).toMatchObject({
+        expect(created).toMatchObject({ readable: true, lunedoVersion: "1.2.3", scope: "all" });
+        expect(list.backups.find((backup) => backup.name.endsWith("00000000.ldbak"))).toMatchObject({
           readable: false,
         });
         const header = (await readBackupHeader(path.join(targetDir, created?.name ?? ""))).header;
@@ -393,7 +393,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         });
 
         await backups().deleteBackup(actor(), created?.name ?? "");
-        expect(await files()).toEqual(["notes.txt", "pagehall-backup-20260101T000000Z-daily-00000000.phbak"]);
+        expect(await files()).toEqual(["notes.txt", "lunedo-backup-20260101T000000Z-daily-00000000.ldbak"]);
         expect((await audited("backup.deleted")).at(-1)).toMatchObject({
           name: created?.name,
           reason: "manual",
@@ -402,7 +402,7 @@ describe.skipIf(!baseUrl)("backups", () => {
           "is not in the backup target",
         );
         await expect(
-          backups().deleteBackup(actor(), "pagehall-backup-20260101T000000Z-daily-00000000.phbak"),
+          backups().deleteBackup(actor(), "lunedo-backup-20260101T000000Z-daily-00000000.ldbak"),
         ).rejects.toThrow("is not in the backup target");
       },
     );
@@ -448,7 +448,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         await test.database.execute(sql`delete from backup_runs`);
         const foreignPartial = `${foreign?.name}.00000000-0000-4000-8000-000000000000.partial`;
         await writeFile(path.join(targetDir, foreignPartial), "an upload of another instance");
-        const ownName = "pagehall-backup-20261022T010000Z-daily-0000abcd.phbak";
+        const ownName = "lunedo-backup-20261022T010000Z-daily-0000abcd.ldbak";
         await test.database.execute(sql`
           insert into backup_runs (id, trigger, backup_class, state, name, started_at, finished_at)
           values (gen_random_uuid(), 'scheduled', 'daily', 'failed', ${ownName}, now(), now())`);
@@ -466,7 +466,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         expect(names).toContain(foreign?.name);
         expect(names).toContain(foreignPartial);
         expect(names).not.toContain(ownPartial);
-        expect(names.filter((name) => name.endsWith(".phbak"))).toHaveLength(2);
+        expect(names.filter((name) => name.endsWith(".ldbak"))).toHaveLength(2);
         expect((await audited("backup.deleted")).map((fields) => fields.name)).not.toContain(foreign?.name);
       },
     );
@@ -646,7 +646,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         ]);
         expect(result?.checks.find((check) => check.check === "rows")?.detail).toMatchObject({ instance: 1 });
         const leftovers = await test.pool.query(
-          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+          "select datname from pg_database where datname like 'lunedo_test_restore_%'",
         );
         expect(leftovers.rows).toEqual([]);
         expect((await readdir(workDir)).filter((entry) => entry.startsWith("test-restore-"))).toEqual([]);
@@ -685,14 +685,14 @@ describe.skipIf(!baseUrl)("backups", () => {
         await useLocalTarget();
         await backups().run({ trigger: "manual", slot: null, actorId: owner });
         const [created] = (await backups().list()).backups;
-        const role = `pagehall_nocreate_${randomBytes(4).toString("hex")}`;
+        const role = `lunedo_nocreate_${randomBytes(4).toString("hex")}`;
         await test.pool.query(`create role ${role} login password 'only for this test' nocreatedb`);
         const url = new URL(test.url);
         url.username = role;
         url.password = "only for this test";
         const limited = createDatabasePool({
           connectionString: url.toString(),
-          applicationName: "pagehall-test",
+          applicationName: "lunedo-test",
         });
         try {
           const outcome = await runTestRestore(
@@ -761,7 +761,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         expect(space?.databaseBytes).toBeGreaterThan(0);
         expect(space?.neededBytes).toBe(Number(space?.databaseBytes) + Number(space?.filesBytes));
         const databases = await test.pool.query(
-          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+          "select datname from pg_database where datname like 'lunedo_test_restore_%'",
         );
         expect(databases.rows).toEqual([]);
       },
@@ -809,7 +809,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         });
         expect(outcome.checks.at(-1)).toMatchObject({ check: "space", passed: false });
         const databases = await test.pool.query(
-          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+          "select datname from pg_database where datname like 'lunedo_test_restore_%'",
         );
         expect(databases.rows).toEqual([]);
         expect((await readdir(workDir)).filter((entry) => entry.startsWith("test-restore-"))).toEqual([]);
@@ -834,7 +834,7 @@ describe.skipIf(!baseUrl)("backups", () => {
       await useLocalTarget();
       await test.database.execute(sql`
         insert into backup_test_restores (id, backup_name, trigger, state, stage, started_at)
-        values (gen_random_uuid(), 'pagehall-backup-20261020T000000Z-daily-00000000.phbak', 'manual',
+        values (gen_random_uuid(), 'lunedo-backup-20261020T000000Z-daily-00000000.ldbak', 'manual',
           'running', 'verify', ${new Date(now.getTime() - DAY - 60_000)})`);
       await backups().check();
       const rows = await test.database.execute<{ state: string; error: string }>(
@@ -848,17 +848,17 @@ describe.skipIf(!baseUrl)("backups", () => {
     it("removes leftovers of an interrupted test restore and shows when it did", async () => {
       const id = "01900000-0000-7000-8000-000000000001";
       const key = id.replaceAll("-", "");
-      await test.pool.query(`create database pagehall_test_restore_${key}`);
+      await test.pool.query(`create database lunedo_test_restore_${key}`);
       const leftover = path.join(workDir, `test-restore-${key}`);
       await mkdir(path.join(leftover, "attachments"), { recursive: true });
       await writeFile(path.join(leftover, "attachments", "copy.txt"), "copy of a stored file");
       await test.database.execute(sql`
         insert into backup_test_restores (id, backup_name, trigger, state, stage, started_at, job_started_at)
-        values (${id}, 'pagehall-backup-20261020T000000Z-daily-00000000.phbak', 'automatic', 'running',
+        values (${id}, 'lunedo-backup-20261020T000000Z-daily-00000000.ldbak', 'automatic', 'running',
           'restore', ${now}, ${now})`);
       await backups().check();
       const databases = await test.pool.query(
-        "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+        "select datname from pg_database where datname like 'lunedo_test_restore_%'",
       );
       expect(databases.rows).toEqual([]);
       expect(await readdir(workDir)).not.toContain(`test-restore-${key}`);
@@ -901,7 +901,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         await backups().run({ trigger: "scheduled", slot: "2026-10-23T00:00:00.000Z", actorId: null });
         expect(await files()).toEqual(before);
         await backups().run({ trigger: "manual", slot: null, actorId: owner });
-        expect((await files()).filter((name) => name.endsWith(".phbak"))).toHaveLength(2);
+        expect((await files()).filter((name) => name.endsWith(".ldbak"))).toHaveLength(2);
         expect(enqueued.filter((job) => job.name === "backup.test-restore")).toEqual([]);
 
         const confirmed = await backups().confirmTarget(actor());
@@ -917,7 +917,7 @@ describe.skipIf(!baseUrl)("backups", () => {
       await writeRestoredMarker(workDir);
       await pauseBackupsAfterRestore(workDir, test.database, logger);
       expect((await backups().overview()).restoredAt).not.toBeNull();
-      const other = await mkdtemp(path.join(tmpdir(), "pagehall-backup-other-"));
+      const other = await mkdtemp(path.join(tmpdir(), "lunedo-backup-other-"));
       try {
         expect((await backups().updateTarget(actor(), { kind: "local", path: other })).restoredAt).toBeNull();
       } finally {
@@ -946,8 +946,8 @@ describe.skipIf(!baseUrl)("backups", () => {
 
   it("keeps the content of other files out of the list", async () => {
     await useLocalTarget();
-    await writeFile(path.join(targetDir, "pagehall-backup-x.phbak"), "x");
+    await writeFile(path.join(targetDir, "lunedo-backup-x.ldbak"), "x");
     expect((await backups().list()).backups).toEqual([]);
-    expect(await readFile(path.join(targetDir, "pagehall-backup-x.phbak"), "utf8")).toBe("x");
+    expect(await readFile(path.join(targetDir, "lunedo-backup-x.ldbak"), "utf8")).toBe("x");
   });
 });

@@ -1,4 +1,4 @@
-import { backupClasses, backupScopes, targetFailures } from "@pagehall/server";
+import { backupClasses, backupScopes, targetFailures } from "@lunedo/server";
 import { z } from "zod";
 import { uuid } from "../http/schemas.js";
 
@@ -141,7 +141,7 @@ export const backupOverviewSchema = z
         disabledBy: z
           .enum(["setting", "environment"])
           .nullable()
-          .describe("What turned it off: the setting, or PAGEHALL_BACKUP_BEFORE_UPDATE."),
+          .describe("What turned it off: the setting, or LUNEDO_BACKUP_BEFORE_UPDATE."),
       })
       .describe("Backups before updates."),
     keyConfirmed: z
@@ -153,7 +153,7 @@ export const backupOverviewSchema = z
           .describe("Who confirmed it."),
       })
       .nullable()
-      .describe("When an administrator confirmed that the backup key is stored outside Pagehall."),
+      .describe("When an administrator confirmed that the backup key is stored outside Lunedo."),
     running: z.boolean().describe("Whether a backup is running now."),
     testRestoreRunning: z.boolean().describe("Whether a test restore is running now."),
     alert: z
@@ -234,7 +234,7 @@ export const backupTargetSchema = z
     z
       .object({
         kind: z.literal("local").describe("A directory inside the container."),
-        path: z.string().max(1024).describe("Absolute path, for example /var/lib/pagehall/backups."),
+        path: z.string().max(1024).describe("Absolute path, for example /var/lib/lunedo/backups."),
       })
       .strict()
       .describe("A local target."),
@@ -274,13 +274,13 @@ export const targetTestResultSchema = z
       .string()
       .nullable()
       .describe(
-        "The network to add to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS so the refused address can be reached, or null.",
+        "The network to add to LUNEDO_OUTBOUND_ALLOWED_NETWORKS so the refused address can be reached, or null.",
       ),
   })
   .describe("The result of the connection test.");
 
 export const keyConfirmationSchema = z
-  .object({ confirmed: z.boolean().describe("Whether the backup key is stored outside Pagehall.") })
+  .object({ confirmed: z.boolean().describe("Whether the backup key is stored outside Lunedo.") })
   .strict()
   .describe("Confirms or withdraws that the backup key is stored elsewhere.");
 
@@ -297,14 +297,14 @@ export const backupListSchema = z
             createdAt: instant("When it was created."),
             sizeBytes: z.number().int().describe("Size in bytes."),
             readable: z.boolean().describe("Whether its header could be read."),
-            pagehallVersion: z.string().nullable().describe("Pagehall version that created it."),
+            lunedoVersion: z.string().nullable().describe("Lunedo version that created it."),
             schemaVersion: z.string().nullable().describe("Schema version of the database in it."),
             scope: z.enum(backupScopes).nullable().describe("What it contains."),
             testRestore: testRestoreSchema.nullable().describe("The latest test restore, or null."),
           })
           .describe("A backup."),
       )
-      .describe("Backups Pagehall created in the target, newest first."),
+      .describe("Backups Lunedo created in the target, newest first."),
   })
   .describe("Backups in the target.");
 
@@ -312,7 +312,7 @@ export const backupNameParams = z
   .object({
     name: z
       .string()
-      .regex(/^pagehall-backup-\d{8}T\d{6}Z-(daily|weekly|monthly|manual|before-update)-[0-9a-f]{8}\.phbak$/)
+      .regex(/^lunedo-backup-\d{8}T\d{6}Z-(daily|weekly|monthly|manual|before-update)-[0-9a-f]{8}\.ldbak$/)
       .describe("Name of the backup."),
   })
   .strict();
@@ -328,7 +328,7 @@ const exampleRun = {
   trigger: "scheduled",
   backupClass: "daily",
   state: "succeeded",
-  name: "pagehall-backup-20261021T000000Z-daily-3f0c8a1b.phbak",
+  name: "lunedo-backup-20261021T000000Z-daily-3f0c8a1b.ldbak",
   sizeBytes: 524_288_000,
   error: null,
   startedAt: "2026-10-21T00:00:02.000Z",
@@ -342,7 +342,7 @@ export const exampleTestRestore = {
   stage: "done",
   checks: [
     { check: "verify", passed: true, detail: { entries: 1204, schemaVersion: "0094_backup_schedules" } },
-    { check: "restore", passed: true, detail: { database: "pagehall_test_restore_3f0c8a1b9d2e" } },
+    { check: "restore", passed: true, detail: { database: "lunedo_test_restore_3f0c8a1b9d2e" } },
     {
       check: "schemaVersion",
       passed: true,
@@ -377,8 +377,8 @@ export const exampleBackupOverview = {
     kind: "s3",
     endpoint: "https://s3.example.org",
     region: "eu-central-1",
-    bucket: "pagehall-backups",
-    prefix: "pagehall/",
+    bucket: "lunedo-backups",
+    prefix: "lunedo/",
     forcePathStyle: false,
     accessKeyId: "AKIAEXAMPLE",
     secretKeyConfigured: true,
@@ -423,7 +423,7 @@ export const exampleBackupList = {
       createdAt: "2026-10-21T00:00:03.000Z",
       sizeBytes: 524_288_000,
       readable: true,
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion: "0094_backup_schedules",
       scope: "all",
       testRestore: exampleTestRestore,
@@ -435,8 +435,8 @@ export const exampleS3Target = {
   kind: "s3",
   endpoint: "https://s3.example.org",
   region: "eu-central-1",
-  bucket: "pagehall-backups",
-  prefix: "pagehall/",
+  bucket: "lunedo-backups",
+  prefix: "lunedo/",
   forcePathStyle: false,
   accessKeyId: "AKIAEXAMPLE",
   secretAccessKey: "example-secret-key",

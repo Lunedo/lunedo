@@ -14,22 +14,22 @@ FROM base AS dev
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
-    && install -d -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets
+    && install -d -m 700 /var/lib/lunedo /var/lib/lunedo/files /var/lib/lunedo/secrets
 
 FROM base AS build
 COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
 RUN --mount=type=cache,id=drawio,target=/repo/.cache/drawio \
-    pnpm turbo run build --filter=@pagehall/api --filter=@pagehall/collab --filter=@pagehall/worker --filter=@pagehall/web
+    pnpm turbo run build --filter=@lunedo/api --filter=@lunedo/collab --filter=@lunedo/worker --filter=@lunedo/web
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     for app in api collab worker; do \
-      pnpm --filter="@pagehall/$app" deploy --prod "/out/$app" || exit 1; \
+      pnpm --filter="@lunedo/$app" deploy --prod "/out/$app" || exit 1; \
     done
 
 FROM node:24-bookworm-slim AS runtime
 ARG VERSION=dev
-LABEL org.opencontainers.image.title="Pagehall" \
+LABEL org.opencontainers.image.title="Lunedo" \
       org.opencontainers.image.description="Self-hosted wiki, knowledge base and project planning tool" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.version="${VERSION}"
@@ -46,10 +46,10 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
-    PAGEHALL_VERSION=${VERSION} \
-    PAGEHALL_WEB_ROOT=/app/web     PAGEHALL_CHANGELOG_FILE=/app/CHANGELOG.md
-RUN install -d -o node -g node -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets \
-    /var/lib/pagehall/backups /var/lib/pagehall/work
+    LUNEDO_VERSION=${VERSION} \
+    LUNEDO_WEB_ROOT=/app/web     LUNEDO_CHANGELOG_FILE=/app/CHANGELOG.md
+RUN install -d -o node -g node -m 700 /var/lib/lunedo /var/lib/lunedo/files /var/lib/lunedo/secrets \
+    /var/lib/lunedo/backups /var/lib/lunedo/work
 RUN install -d -o root -g root -m 755 /data/import
 WORKDIR /app
 COPY --from=build --chown=root:root /out/api ./api
@@ -58,13 +58,13 @@ COPY --from=build --chown=root:root /out/worker ./worker
 COPY --from=build --chown=root:root /repo/apps/web/dist ./web
 COPY --chown=root:root CHANGELOG.md ./CHANGELOG.md
 COPY --chown=root:root --chmod=644 scripts/install.sh ./install.sh
-COPY --chmod=755 docker/start.sh /usr/local/bin/pagehall
+COPY --chmod=755 docker/start.sh /usr/local/bin/lunedo
 # sharp loads its prebuilt libvips for the architecture of this image; fail the build if it cannot.
 RUN for app in api worker; do \
-      (cd "/app/$app" && node -e "require('node:module').createRequire(require.resolve('@pagehall/server'))('sharp')") || exit 1; \
+      (cd "/app/$app" && node -e "require('node:module').createRequire(require.resolve('@lunedo/server'))('sharp')") || exit 1; \
     done
 USER node
-VOLUME /var/lib/pagehall
+VOLUME /var/lib/lunedo
 EXPOSE 3000 3001 3002
-ENTRYPOINT ["pagehall"]
+ENTRYPOINT ["lunedo"]
 CMD ["all"]

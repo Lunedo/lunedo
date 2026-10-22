@@ -19,7 +19,7 @@ describe.skipIf(!databaseUrl)("cleanupJobProgress", () => {
   let queue: PgBossQueue;
 
   beforeAll(async () => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     queue = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "producer" });
   });

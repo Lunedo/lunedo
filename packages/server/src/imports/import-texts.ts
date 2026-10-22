@@ -1,4 +1,4 @@
-import { defaultImportTexts, type ImportText } from "@pagehall/editor-schema";
+import { defaultImportTexts, type ImportText } from "@lunedo/editor-schema";
 import type { TemplateLanguage } from "../templates/builtin/types.js";
 
 const importTexts: Readonly<Record<TemplateLanguage, Readonly<Record<ImportText, string>>>> = {

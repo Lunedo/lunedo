@@ -5,7 +5,7 @@ import {
   emptyDocument,
   migrateDocument,
   validateDocument,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

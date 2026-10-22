@@ -2,15 +2,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-export const E2E_PORT = Number(process.env.PAGEHALL_E2E_PORT ?? 4310);
+export const E2E_PORT = Number(process.env.LUNEDO_E2E_PORT ?? 4310);
 export const BASE_URL = `http://localhost:${E2E_PORT}`;
 export const DATABASE_BASE_URL =
-  process.env.PAGEHALL_E2E_DATABASE_URL ?? "postgres://pagehall:pagehall@localhost:5432/pagehall";
-export const MAILPIT_URL = process.env.PAGEHALL_E2E_MAILPIT_URL ?? "http://localhost:8025";
-export const SMTP_HOST = process.env.PAGEHALL_E2E_SMTP_HOST ?? "localhost";
-export const SMTP_PORT = Number(process.env.PAGEHALL_E2E_SMTP_PORT ?? 1025);
+  process.env.LUNEDO_E2E_DATABASE_URL ?? "postgres://lunedo:lunedo@localhost:5432/lunedo";
+export const MAILPIT_URL = process.env.LUNEDO_E2E_MAILPIT_URL ?? "http://localhost:8025";
+export const SMTP_HOST = process.env.LUNEDO_E2E_SMTP_HOST ?? "localhost";
+export const SMTP_PORT = Number(process.env.LUNEDO_E2E_SMTP_PORT ?? 1025);
 
-export const STATE_DIR = process.env.PAGEHALL_E2E_STATE_DIR ?? path.join(tmpdir(), "pagehall-e2e-state");
+export const STATE_DIR = process.env.LUNEDO_E2E_STATE_DIR ?? path.join(tmpdir(), "lunedo-e2e-state");
 
 export interface E2EState {
   setupCode?: string;
@@ -21,7 +21,7 @@ export interface E2EState {
 
 export const OWNER = {
   name: "Olivia Owner",
-  email: "owner@pagehall.test",
+  email: "owner@lunedo.test",
   password: "a long owner passphrase 2026",
 };
 

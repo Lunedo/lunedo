@@ -1,5 +1,5 @@
-import { domainSchema } from "@pagehall/shared";
-import { Button, ConfirmDialog, Field, Input, List, ListRow, Notice, Section } from "@pagehall/ui";
+import { domainSchema } from "@lunedo/shared";
+import { Button, ConfirmDialog, Field, Input, List, ListRow, Notice, Section } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Globe, Plus } from "lucide-react";

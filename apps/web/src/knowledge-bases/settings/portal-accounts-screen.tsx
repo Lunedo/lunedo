@@ -1,4 +1,4 @@
-import { emailSchema } from "@pagehall/shared";
+import { emailSchema } from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -13,7 +13,7 @@ import {
   Section,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Mail, UserPlus, UserRound, Users } from "lucide-react";

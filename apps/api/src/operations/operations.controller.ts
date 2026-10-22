@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Inject, Post, Put, Req } from "@nestjs/common";
 import type {
   MaintenanceStatus,
   OperationsStatus,
   RunningChangelog,
   UpdateCheckStatus,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Get, Inject, Post, Put, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -162,7 +162,7 @@ export class OperationsController {
   @ApiRoute({
     summary: "Get the running version and available updates",
     description:
-      "Shows the running version, what is new in it, the result of the last update check, every release after the running version with its notes, breaking changes and manual steps, and the commands to update for the recorded installation method. The commands are built by Pagehall; nothing from the version file is executed or shown as HTML.",
+      "Shows the running version, what is new in it, the result of the last update check, every release after the running version with its notes, breaking changes and manual steps, and the commands to update for the recorded installation method. The commands are built by Lunedo; nothing from the version file is executed or shown as HTML.",
     tags: [TAG],
     response: { description: "Version and updates.", schema: updatesSchema, example: exampleUpdates },
   })

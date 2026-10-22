@@ -1,4 +1,4 @@
-import { Field, Select, Skeleton } from "@pagehall/ui";
+import { Field, Select, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Crosshair } from "lucide-react";
 import { type KeyboardEvent, type MouseEvent, useState } from "react";

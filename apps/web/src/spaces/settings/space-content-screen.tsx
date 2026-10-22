@@ -1,4 +1,4 @@
-import { Button, ConfirmDialog, DangerAction, DangerZone, useToast } from "@pagehall/ui";
+import { Button, ConfirmDialog, DangerAction, DangerZone, useToast } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, Trash2 } from "lucide-react";

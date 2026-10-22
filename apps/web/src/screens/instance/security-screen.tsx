@@ -1,4 +1,4 @@
-import { Section } from "@pagehall/ui";
+import { Section } from "@lunedo/ui";
 import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SettingsList } from "../../components/settings-list.js";

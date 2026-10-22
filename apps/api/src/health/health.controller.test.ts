@@ -10,7 +10,7 @@ afterEach(async () => {
 });
 
 const failing = async () => {
-  throw new Error("password authentication failed for user pagehall");
+  throw new Error("password authentication failed for user lunedo");
 };
 
 describe("health endpoints", () => {

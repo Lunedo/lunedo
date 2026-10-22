@@ -1,4 +1,4 @@
-import { Button, Notice, Spinner } from "@pagehall/ui";
+import { Button, Notice, Spinner } from "@lunedo/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import { MailX } from "lucide-react";

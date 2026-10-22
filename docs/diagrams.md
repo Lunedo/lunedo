@@ -61,13 +61,13 @@ These blocks come from imported `inc-drawio` macros.
 | `mermaid`, `mermaid-macro`, `mermaid-diagram`, `mermaid-cloud` with the source in the macro body | Mermaid block with that source |
 | `plantuml` | PlantUML block with its source |
 
-Confluence Cloud stores the draw.io and Gliffy apps as app extensions (`ac:adf-extension`) whose key ends in `drawio`, `drawio-sketch`, `inc-drawio` or `gliffy`. Pagehall reads the diagram name and page from their parameters in any order and ignores the copy Confluence keeps as fallback. A diagram name with or without `.drawio` finds the same file and the same diagram of another page.
+Confluence Cloud stores the draw.io and Gliffy apps as app extensions (`ac:adf-extension`) whose key ends in `drawio`, `drawio-sketch`, `inc-drawio` or `gliffy`. Lunedo reads the diagram name and page from their parameters in any order and ignores the copy Confluence keeps as fallback. A diagram name with or without `.drawio` finds the same file and the same diagram of another page.
 
 - An `inc-drawio` macro whose page is not part of the import shows a note with the diagram name; the report lists it under "included diagrams are on pages that were not imported".
 - A draw.io diagram whose file is missing keeps its preview image. The import report lists it under "diagram files are missing"; editing it starts an empty diagram.
 - Gliffy diagrams are converted to draw.io in the browser when someone first chooses **Edit in draw.io**; the report lists them. Until then, the page shows the Gliffy image. A server-side conversion would need the draw.io converter, which runs only in a browser.
 - Mermaid macros whose source is stored in another form, such as compressed in a parameter, stay unsupported-macro blocks with their original data.
-- Imported Mermaid and PlantUML diagrams have no image until someone saves them in Pagehall; until then, pages, search and exports use their source.
+- Imported Mermaid and PlantUML diagrams have no image until someone saves them in Lunedo; until then, pages, search and exports use their source.
 
 ## Limits
 
@@ -92,9 +92,9 @@ The upload limit of the organization applies as for every attachment.
 
 ### draw.io
 
-Pagehall ships draw.io **31.4.6** unchanged, except for its configuration files, and serves it itself. The web build downloads the release archive from GitHub, checks its SHA-256 against the pinned value and leaves out the server parts, cloud connectors, plugins and source maps. The instance never contacts diagrams.net. Settings, Instance, Rendering shows the shipped version.
+Lunedo ships draw.io **31.4.6** unchanged, except for its configuration files, and serves it itself. The web build downloads the release archive from GitHub, checks its SHA-256 against the pinned value and leaves out the server parts, cloud connectors, plugins and source maps. The instance never contacts diagrams.net. Settings, Instance, Rendering shows the shipped version.
 
-The icon sets and shape libraries of draw.io come with an additional condition from their authors: they may not be used in Atlassian products or the Atlassian Marketplace. Pagehall is neither; diagrams created with them are not affected.
+The icon sets and shape libraries of draw.io come with an additional condition from their authors: they may not be used in Atlassian products or the Atlassian Marketplace. Lunedo is neither; diagrams created with them are not affected.
 
 ### PlantUML rendering
 

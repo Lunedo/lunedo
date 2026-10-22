@@ -1,5 +1,5 @@
 import { Writable } from "node:stream";
-import { createLogger } from "@pagehall/server";
+import { createLogger } from "@lunedo/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { createTestApp } from "../testing/create-test-app.js";
 

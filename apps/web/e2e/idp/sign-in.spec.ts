@@ -21,7 +21,7 @@ import {
 
 const HOST_FROM_PROVIDER = BASE_URL.replace("localhost", "host.docker.internal");
 
-const headers = { "X-Pagehall-Request": "1", origin: BASE_URL };
+const headers = { "X-Lunedo-Request": "1", origin: BASE_URL };
 
 let reauthenticated = false;
 
@@ -144,7 +144,7 @@ for (const provider of identityProviders) {
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const session = await context.request.get("/api/v1/auth/session");
       expect(((await session.json()) as { account: { email: string } }).account.email).toBe(user.email);
-      await context.clearCookies({ name: "__Host-pagehall-session" });
+      await context.clearCookies({ name: "__Host-lunedo-session" });
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `E2E ${provider.name}` })).toBeVisible();
       await context.close();
@@ -163,7 +163,7 @@ for (const provider of identityProviders) {
       await context.close();
     });
 
-    test("ends the Pagehall session when the provider signs the person out", async ({ browser }) => {
+    test("ends the Lunedo session when the provider signs the person out", async ({ browser }) => {
       const { context, page } = await freshContext(browser);
       await signInThroughProvider(page, provider, user);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -326,7 +326,7 @@ test.describe("linking an existing account", () => {
     await page.getByLabel(`Password of ${person.name}`).fill("not the password");
     await page.getByRole("button", { name: "Confirm and link" }).click();
     await expect(
-      page.getByText(`This is not the Pagehall password of ${person.name}.`, { exact: false }),
+      page.getByText(`This is not the Lunedo password of ${person.name}.`, { exact: false }),
     ).toBeVisible();
     await page.getByLabel(`Password of ${person.name}`).fill(person.password);
     await page.getByRole("button", { name: "Confirm and link" }).click();

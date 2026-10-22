@@ -1,4 +1,4 @@
-import { modules } from "@pagehall/editor-schema";
+import { modules } from "@lunedo/editor-schema";
 import { Extension } from "@tiptap/core";
 import type { Fragment, Mark } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";

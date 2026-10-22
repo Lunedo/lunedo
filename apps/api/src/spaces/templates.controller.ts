@@ -1,4 +1,3 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import {
   MAX_CHOICE_OPTIONS,
   MAX_TEMPLATE_FIELDS,
@@ -10,7 +9,8 @@ import {
   type TemplateScope,
   templateCategories,
   templateFieldTypes,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

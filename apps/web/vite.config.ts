@@ -12,7 +12,7 @@ import { DRAWIO_VERSION } from "./src/diagrams/drawio-version.js";
 
 function previewFrameAssets(): Plugin {
   return {
-    name: "pagehall-preview-frame-assets",
+    name: "lunedo-preview-frame-assets",
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         if (isPreviewFrameAsset(request.method, request.url, request.headers.origin)) {
@@ -28,7 +28,7 @@ function previewFrameAssets(): Plugin {
 function excalidrawAssets(): Plugin {
   let fonts = "";
   return {
-    name: "pagehall-excalidraw-assets",
+    name: "lunedo-excalidraw-assets",
     configResolved(config) {
       fonts = path.join(config.root, "node_modules", "@excalidraw", "excalidraw", "dist", "prod", "fonts");
     },
@@ -64,13 +64,13 @@ function drawioAssets(): Plugin {
   let ready: Promise<string> | null = null;
   const prepare = () => {
     ready ??= ensureDrawio(
-      process.env.PAGEHALL_DRAWIO_CACHE ?? path.resolve(root, "../../.cache/drawio"),
+      process.env.LUNEDO_DRAWIO_CACHE ?? path.resolve(root, "../../.cache/drawio"),
       path.join(root, "drawio"),
     );
     return ready;
   };
   return {
-    name: "pagehall-drawio-assets",
+    name: "lunedo-drawio-assets",
     configResolved(config) {
       root = config.root;
     },
@@ -104,16 +104,16 @@ function drawioAssets(): Plugin {
   };
 }
 
-const polling = process.env.PAGEHALL_DEV_POLLING === "true";
-const instance = publicAddress(process.env.PAGEHALL_INSTANCE_URL);
+const polling = process.env.LUNEDO_DEV_POLLING === "true";
+const instance = publicAddress(process.env.LUNEDO_INSTANCE_URL);
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), previewFrameAssets(), excalidrawAssets(), drawioAssets()],
   resolve: {
-    conditions: ["@pagehall/source", ...defaultClientConditions],
+    conditions: ["@lunedo/source", ...defaultClientConditions],
   },
   server: {
-    host: process.env.PAGEHALL_DEV_HOST ?? "localhost",
+    host: process.env.LUNEDO_DEV_HOST ?? "localhost",
     port: 5173,
     strictPort: true,
     cors: { origin: [/^https?:\/\/(?:[^:]+\.)?localhost(?::\d+)?$/] },
@@ -127,7 +127,7 @@ export default defineConfig({
         ["/api", "/scim"].map((path) => [
           path,
           {
-            target: process.env.PAGEHALL_DEV_API_URL ?? "http://localhost:3000",
+            target: process.env.LUNEDO_DEV_API_URL ?? "http://localhost:3000",
             changeOrigin: false,
             xfwd: true,
             ...(instance ? { headers: instance.forwardedHeaders } : {}),
@@ -135,7 +135,7 @@ export default defineConfig({
         ]),
       ),
       "/collab": {
-        target: process.env.PAGEHALL_DEV_COLLAB_URL ?? "ws://localhost:3001",
+        target: process.env.LUNEDO_DEV_COLLAB_URL ?? "ws://localhost:3001",
         ws: true,
         changeOrigin: false,
         xfwd: true,

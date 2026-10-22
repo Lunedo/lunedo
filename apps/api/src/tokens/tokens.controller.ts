@@ -1,5 +1,5 @@
+import { type ApiToken, tokenNameSchema } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
-import { type ApiToken, tokenNameSchema } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";

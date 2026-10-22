@@ -3,7 +3,7 @@ import { z } from "zod";
 import { copyImpactSchema, moveImpactSchema } from "../spaces/schemas.js";
 import { uuid } from "./schemas.js";
 
-export const PROBLEM_TYPE_PREFIX = "urn:pagehall:problem:";
+export const PROBLEM_TYPE_PREFIX = "urn:lunedo:problem:";
 
 export const problems = {
   invalidInput: { status: 400, title: "The request is not valid" },
@@ -97,9 +97,9 @@ export const problems = {
   invalidMapping: { status: 400, title: "The mapping is not valid" },
   invalidMappingTarget: { status: 400, title: "The account cannot take over the placeholder" },
   invalidItem: { status: 400, title: "Files can only be attached to pages, blog posts and whiteboards" },
-  invalidScene: { status: 400, title: "The drawing contains something Pagehall cannot store" },
+  invalidScene: { status: 400, title: "The drawing contains something Lunedo cannot store" },
   invalidDrawingImage: { status: 400, title: "The image of the drawing is not a valid SVG image" },
-  invalidDiagram: { status: 400, title: "The file is not a draw.io diagram Pagehall can store" },
+  invalidDiagram: { status: 400, title: "The file is not a draw.io diagram Lunedo can store" },
   revisionNotStored: { status: 409, title: "The whiteboard has not been saved in this state yet" },
   invalidCover: { status: 400, title: "The cover must be an image attached to the post" },
   invalidFocus: { status: 400, title: "The focal point lies outside the image" },
@@ -167,7 +167,7 @@ export const problems = {
   tooManyPagesForFile: { status: 409, title: "Too many pages for a Word or PDF file" },
   renderUnavailable: { status: 503, title: "Server-side PDF needs the render container" },
   renderFailed: { status: 502, title: "The render container could not create the PDF" },
-  holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
+  holderNotInLunedo: { status: 409, title: "The person or group is not in Lunedo yet" },
   differenceResolved: { status: 409, title: "The difference no longer exists" },
   notRestricted: { status: 409, title: "The page has no restriction of this kind" },
   importNotReady: { status: 409, title: "The export is still being read" },
@@ -188,9 +188,9 @@ export const problems = {
   invalidAccessToken: { status: 400, title: "The personal access token is not valid" },
   confluenceUnauthorized: { status: 400, title: "Confluence refused the token" },
   confluenceCertificate: { status: 502, title: "The certificate of Confluence is not trusted" },
-  confluenceBlocked: { status: 400, title: "Pagehall may not connect to this address" },
+  confluenceBlocked: { status: 400, title: "Lunedo may not connect to this address" },
   confluenceRedirect: { status: 502, title: "Confluence redirected to another address" },
-  confluenceInvalidResponse: { status: 502, title: "Confluence sent an answer Pagehall cannot read" },
+  confluenceInvalidResponse: { status: 502, title: "Confluence sent an answer Lunedo cannot read" },
   confluenceUnreachable: { status: 502, title: "Confluence could not be reached" },
   confluenceRateLimited: { status: 503, title: "Confluence asked to slow down" },
   confluenceSpaceMissing: { status: 404, title: "The Confluence space does not exist or cannot be read" },
@@ -375,8 +375,8 @@ export const problems = {
   templateNotFound: { status: 404, title: "The template does not exist" },
   templateImportNotFound: { status: 404, title: "The import preview does not exist anymore" },
   unsupportedTemplateFile: { status: 400, title: "Templates hold PNG, JPEG, GIF, WebP and SVG images only" },
-  invalidTemplateFile: { status: 400, title: "The file is not a valid Pagehall template file" },
-  newerTemplateFormat: { status: 400, title: "The template file was written by a newer Pagehall" },
+  invalidTemplateFile: { status: 400, title: "The file is not a valid Lunedo template file" },
+  newerTemplateFormat: { status: 400, title: "The template file was written by a newer Lunedo" },
   tooManyTemplates: { status: 400, title: "The file holds more templates than allowed" },
   tooManyTemplateFiles: { status: 400, title: "The archive holds more files than allowed" },
   templateArchiveTooLarge: { status: 413, title: "The archive unpacks to more than allowed" },
@@ -509,7 +509,7 @@ export const problemSchema = z
     step: z
       .enum(["write", "read", "delete", "list"])
       .optional()
-      .describe("What Pagehall was doing with the backup target when it failed, for `backupTargetFailed`."),
+      .describe("What Lunedo was doing with the backup target when it failed, for `backupTargetFailed`."),
     refusal: z
       .enum(["upload", "largeWrite"])
       .optional()
@@ -621,7 +621,7 @@ export const problemSchema = z
       .number()
       .int()
       .optional()
-      .describe("Highest format or editor schema version this Pagehall reads, for `newerTemplateFormat`."),
+      .describe("Highest format or editor schema version this Lunedo reads, for `newerTemplateFormat`."),
     templateIndex: z
       .number()
       .int()

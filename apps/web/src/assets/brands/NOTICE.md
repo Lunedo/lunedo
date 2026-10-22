@@ -10,4 +10,4 @@ They are used unchanged, only to offer sign-in with these providers, as describe
 - Microsoft: https://learn.microsoft.com/entra/identity-platform/howto-add-branding-in-apps
 - Google: https://developers.google.com/identity/branding-guidelines
 
-These files are not covered by the license of Pagehall. Do not use them for any other purpose.
+These files are not covered by the license of Lunedo. Do not use them for any other purpose.

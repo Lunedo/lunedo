@@ -42,7 +42,7 @@ export interface FakeGoogleData {
 }
 
 export const GOOGLE_DOMAIN = "example.org";
-export const GOOGLE_SERVICE_ACCOUNT = "pagehall-directory@pagehall-test.iam.gserviceaccount.com";
+export const GOOGLE_SERVICE_ACCOUNT = "lunedo-directory@lunedo-test.iam.gserviceaccount.com";
 export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/admin.directory.group.readonly",
   "https://www.googleapis.com/auth/admin.directory.user.readonly",

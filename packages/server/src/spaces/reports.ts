@@ -19,7 +19,7 @@ import {
   type ReportedDecision,
   type ReportedPage,
   slugify,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

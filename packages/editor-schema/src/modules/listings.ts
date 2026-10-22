@@ -214,12 +214,12 @@ export const childPagesModule = defineModule({
           pages === null
             ? element("p", {}, renderer.escape(renderer.label("childPages")))
             : pages.length === 0
-              ? element("p", { class: "ph-listing-empty" }, renderer.escape(renderer.label("noChildPages")))
+              ? element("p", { class: "ld-listing-empty" }, renderer.escape(renderer.label("noChildPages")))
               : pagesHtml(pages, renderer, 1);
         return element(
           "nav",
           {
-            class: "ph-child-pages",
+            class: "ld-child-pages",
             "aria-label": renderer.label("childPages"),
             "data-page-id": request.pageId,
             "data-depth": request.depth ?? "all",
@@ -270,19 +270,19 @@ export const attachmentListModule = defineModule({
           return element(
             "li",
             { "data-attachment-id": attachment.id },
-            `${href ? element("a", { href, rel: "noopener noreferrer" }, name) : name} ${element("span", { class: "ph-attachment-size" }, `(${renderer.escape(renderer.formatSize(attachment.size))})`)}`,
+            `${href ? element("a", { href, rel: "noopener noreferrer" }, name) : name} ${element("span", { class: "ld-attachment-size" }, `(${renderer.escape(renderer.formatSize(attachment.size))})`)}`,
           );
         });
         const content =
           attachments === null
             ? element("p", {}, renderer.escape(renderer.label("attachmentList")))
             : items.length === 0
-              ? element("p", { class: "ph-listing-empty" }, renderer.escape(renderer.label("noAttachments")))
+              ? element("p", { class: "ld-listing-empty" }, renderer.escape(renderer.label("noAttachments")))
               : element("ul", {}, items.join(""));
         return element(
           "section",
           {
-            class: "ph-attachment-list",
+            class: "ld-attachment-list",
             "aria-label": renderer.label("attachmentList"),
             "data-file-types": attrOf<string[]>(node, "fileTypes").join(",") || null,
           },

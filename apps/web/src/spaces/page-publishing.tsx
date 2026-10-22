@@ -8,7 +8,7 @@ import {
   Popover,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";

@@ -7,7 +7,7 @@ import {
   type SceneProblem,
   sceneImageTypes,
   validateElement,
-} from "@pagehall/editor-schema/scene";
+} from "@lunedo/editor-schema/scene";
 import * as Y from "yjs";
 
 export interface SyncElement {

@@ -1,5 +1,5 @@
-import type { AccentColor } from "@pagehall/shared";
-import { useAppearance } from "@pagehall/ui";
+import type { AccentColor } from "@lunedo/shared";
+import { useAppearance } from "@lunedo/ui";
 import {
   createContext,
   type ReactNode,

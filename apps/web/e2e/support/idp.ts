@@ -5,7 +5,7 @@ export type IdentityProviderName = "keycloak" | "authentik";
 export type TestUserName = "alice" | "bob" | "carol" | "dave" | "erin";
 export type TestGroupName = "engineering" | "admins";
 
-export const TEST_PASSWORD = "pagehall-test-password";
+export const TEST_PASSWORD = "lunedo-test-password";
 
 export const TEST_USERS: Record<TestUserName, { email: string; name: string; groups: TestGroupName[] }> = {
   alice: { email: "alice@example.org", name: "Alice Example", groups: ["engineering", "admins"] },
@@ -58,8 +58,8 @@ async function json<T>(response: Response, action: string): Promise<T> {
   return (text === "" ? undefined : JSON.parse(text)) as T;
 }
 
-const KEYCLOAK_URL = env("PAGEHALL_E2E_KEYCLOAK_URL", "http://keycloak.localhost:8080");
-const KEYCLOAK_REALM = "pagehall";
+const KEYCLOAK_URL = env("LUNEDO_E2E_KEYCLOAK_URL", "http://keycloak.localhost:8080");
+const KEYCLOAK_REALM = "lunedo";
 
 const KEYCLOAK_GROUP_IDS: Record<TestGroupName, string> = {
   engineering: "6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f",
@@ -72,8 +72,8 @@ async function keycloakToken(): Promise<string> {
     body: new URLSearchParams({
       grant_type: "password",
       client_id: "admin-cli",
-      username: env("PAGEHALL_E2E_KEYCLOAK_ADMIN", "admin"),
-      password: env("PAGEHALL_E2E_KEYCLOAK_ADMIN_PASSWORD", "admin"),
+      username: env("LUNEDO_E2E_KEYCLOAK_ADMIN", "admin"),
+      password: env("LUNEDO_E2E_KEYCLOAK_ADMIN_PASSWORD", "admin"),
     }),
   });
   return (await json<{ access_token: string }>(response, "Keycloak admin sign-in")).access_token;
@@ -101,8 +101,8 @@ async function keycloakUserId(user: string): Promise<string> {
 export const keycloak: IdentityProviderFixture = {
   name: "keycloak",
   issuer: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
-  clientId: "pagehall",
-  clientSecret: env("PAGEHALL_E2E_KEYCLOAK_CLIENT_SECRET", "pagehall-keycloak-secret"),
+  clientId: "lunedo",
+  clientSecret: env("LUNEDO_E2E_KEYCLOAK_CLIENT_SECRET", "lunedo-keycloak-secret"),
   scopes: "openid email profile",
   async groupId(group) {
     return KEYCLOAK_GROUP_IDS[group];
@@ -139,10 +139,10 @@ export const keycloak: IdentityProviderFixture = {
   async setBackchannelLogoutUrl(url) {
     const clients = await keycloakAdmin<{ id: string; attributes?: Record<string, string> }[]>(
       "GET",
-      "/clients?clientId=pagehall",
+      "/clients?clientId=lunedo",
     );
     const client = clients[0];
-    if (!client) throw new Error("Keycloak client pagehall does not exist");
+    if (!client) throw new Error("Keycloak client lunedo does not exist");
     await keycloakAdmin("PUT", `/clients/${client.id}`, {
       ...client,
       attributes: { ...client.attributes, "backchannel.logout.url": url },
@@ -166,13 +166,13 @@ export const keycloak: IdentityProviderFixture = {
   },
 };
 
-const AUTHENTIK_URL = env("PAGEHALL_E2E_AUTHENTIK_URL", "http://authentik.localhost:9000");
+const AUTHENTIK_URL = env("LUNEDO_E2E_AUTHENTIK_URL", "http://authentik.localhost:9000");
 
 async function authentikApi<T>(method: string, path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${AUTHENTIK_URL}/api/v3${path}`, {
     method,
     headers: {
-      authorization: `Bearer ${env("PAGEHALL_E2E_AUTHENTIK_TOKEN", "pagehall-authentik-api-token")}`,
+      authorization: `Bearer ${env("LUNEDO_E2E_AUTHENTIK_TOKEN", "lunedo-authentik-api-token")}`,
       ...(body === undefined ? {} : { "content-type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -194,7 +194,7 @@ async function authentikGroupId(group: TestGroupName): Promise<string> {
   if (known) return known;
   const page = await authentikApi<{ results: { pk: string; name: string }[] }>(
     "GET",
-    `/core/groups/?attributes=${encodeURIComponent(JSON.stringify({ pagehall_test_group: group }))}`,
+    `/core/groups/?attributes=${encodeURIComponent(JSON.stringify({ lunedo_test_group: group }))}`,
   );
   const tagged = page.results[0];
   if (tagged) {
@@ -210,9 +210,9 @@ async function authentikGroupId(group: TestGroupName): Promise<string> {
 
 export const authentik: IdentityProviderFixture = {
   name: "authentik",
-  issuer: `${AUTHENTIK_URL}/application/o/pagehall/`,
-  clientId: "pagehall",
-  clientSecret: env("PAGEHALL_E2E_AUTHENTIK_CLIENT_SECRET", "pagehall-authentik-secret"),
+  issuer: `${AUTHENTIK_URL}/application/o/lunedo/`,
+  clientId: "lunedo",
+  clientSecret: env("LUNEDO_E2E_AUTHENTIK_CLIENT_SECRET", "lunedo-authentik-secret"),
   scopes: "openid email profile groups",
   groupId: authentikGroupId,
   async setUserEnabled(user, enabled) {
@@ -255,9 +255,9 @@ export const authentik: IdentityProviderFixture = {
     }
   },
   async setBackchannelLogoutUrl(url) {
-    const page = await authentikApi<{ results: { pk: number }[] }>("GET", "/providers/oauth2/?name=Pagehall");
+    const page = await authentikApi<{ results: { pk: number }[] }>("GET", "/providers/oauth2/?name=Lunedo");
     const provider = page.results[0];
-    if (!provider) throw new Error("Authentik provider Pagehall does not exist");
+    if (!provider) throw new Error("Authentik provider Lunedo does not exist");
     await authentikApi("PATCH", `/providers/oauth2/${provider.pk}/`, {
       logout_uri: url,
       logout_method: "backchannel",
@@ -286,7 +286,7 @@ export const authentik: IdentityProviderFixture = {
       .waitFor({ state: "visible", timeout: AUTHENTIK_FLOW_TIMEOUT })
       .catch((error: unknown) => {
         throw new Error(
-          `Authentik did not show its sign-in form within ${AUTHENTIK_FLOW_TIMEOUT / 1000} s (page: ${page.url()}). Pagehall redirected correctly, so the provider is slow or unavailable.`,
+          `Authentik did not show its sign-in form within ${AUTHENTIK_FLOW_TIMEOUT / 1000} s (page: ${page.url()}). Lunedo redirected correctly, so the provider is slow or unavailable.`,
           { cause: error },
         );
       });

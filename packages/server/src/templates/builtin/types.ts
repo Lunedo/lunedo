@@ -1,4 +1,4 @@
-import type { DocumentJson } from "@pagehall/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import type { Rhythm } from "../../meetings/schedule.js";
 import type { ArticleType } from "../../spaces/schema.js";
 import type { TemplateField } from "../fields.js";

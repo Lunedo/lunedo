@@ -19,7 +19,7 @@ import {
   timeFormats,
   type WeekStart,
   weekStarts,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { z } from "zod";
 import { defineSetting, type SettingLevel } from "./definition.js";
 import type { ScopeChain, SettingsService, WriteOptions } from "./service.js";

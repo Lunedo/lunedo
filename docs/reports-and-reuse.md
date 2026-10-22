@@ -25,7 +25,7 @@ The report is always up to date: it reads the values when it is shown. In print 
 
 ### How the values are stored
 
-When a page is published, or saved in live mode, Pagehall writes the page properties of that version to the table `page_properties`: one row per property with the page, the position, the ID of the set, the name, the name in lower case, the value as editor JSON, its plain text and a sort key. Drafts never reach the table. The report filters this table by name and joins it with the page tree, the labels and the permission filter, so it answers quickly also for spaces with thousands of pages. The values stay structured, so they can later become fields of databases.
+When a page is published, or saved in live mode, Lunedo writes the page properties of that version to the table `page_properties`: one row per property with the page, the position, the ID of the set, the name, the name in lower case, the value as editor JSON, its plain text and a sort key. Drafts never reach the table. The report filters this table by name and joins it with the page tree, the labels and the permission filter, so it answers quickly also for spaces with thousands of pages. The values stay structured, so they can later become fields of databases.
 
 ## Content by label
 

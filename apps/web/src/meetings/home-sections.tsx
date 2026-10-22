@@ -1,4 +1,4 @@
-import { Avatar, Button, Section, Skeleton } from "@pagehall/ui";
+import { Avatar, Button, Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CalendarClock, Plus, Users } from "lucide-react";

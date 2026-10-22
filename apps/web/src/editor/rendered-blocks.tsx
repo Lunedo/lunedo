@@ -1,4 +1,4 @@
-import { type NodeJson, renderHtml } from "@pagehall/editor-schema";
+import { type NodeJson, renderHtml } from "@lunedo/editor-schema";
 import { type MouseEvent, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -35,7 +35,7 @@ export function RenderedBlocks({
     // biome-ignore lint/a11y/noStaticElementInteractions: clicks come from the links inside, which are keyboard operable
     // biome-ignore lint/a11y/useKeyWithClickEvents: the links inside handle their own keyboard input
     <div
-      className="ph-content ph-rendered-blocks"
+      className="ld-content ld-rendered-blocks"
       onClick={follow}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated blocks
       dangerouslySetInnerHTML={{ __html: html }}

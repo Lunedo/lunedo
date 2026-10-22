@@ -1,8 +1,8 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 
-export const PUSH_OUTBOX_CHANNEL = "pagehall_push_outbox";
+export const PUSH_OUTBOX_CHANNEL = "lunedo_push_outbox";
 
 export interface PushOutboxEntry {
   recipientId: string;

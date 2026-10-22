@@ -33,7 +33,7 @@ afterEach(() => {
 const CHECK = {
   enabled: true,
   disabledBy: null,
-  url: "https://github.com/pagehall/pagehall/releases/latest/download/pagehall-versions.json",
+  url: "https://github.com/lunedo/lunedo/releases/latest/download/lunedo-versions.json",
   checkedAt: new Date().toISOString(),
   succeeded: true,
   failure: null,
@@ -109,22 +109,22 @@ describe("the updates screen", () => {
             version: "1.5.0",
             date: "2026-11-02",
             minimumUpdateFrom: "1.3.0",
-            url: "https://github.com/pagehall/pagehall/releases/tag/v1.5.0",
+            url: "https://github.com/lunedo/lunedo/releases/tag/v1.5.0",
             notes: { ...NOTES, new: ["Maintenance mode."], breaking: ["<b>The metrics port moved.</b>"] },
           },
         ],
         commands: {
           method: "script",
           steps: [
-            { kind: "command", text: "cd /opt/pagehall" },
-            { kind: "command", text: "./pagehall update 1.5.0" },
+            { kind: "command", text: "cd /opt/lunedo" },
+            { kind: "command", text: "./lunedo update 1.5.0" },
           ],
         },
       }),
     );
     await renderScreen();
-    expect(await screen.findByText("Pagehall 1.5.0 is available")).toBeTruthy();
-    expect(screen.getByText("./pagehall update 1.5.0")).toBeTruthy();
+    expect(await screen.findByText("Lunedo 1.5.0 is available")).toBeTruthy();
+    expect(screen.getByText("./lunedo update 1.5.0")).toBeTruthy();
     expect(screen.getByText("Breaking changes: read before you update")).toBeTruthy();
     expect(screen.getByText("<b>The metrics port moved.</b>")).toBeTruthy();
     expect(screen.getByText("Update to it from 1.3.0 or later.")).toBeTruthy();

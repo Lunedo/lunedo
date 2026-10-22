@@ -1,4 +1,4 @@
-import { contentLanguages, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
+import { contentLanguages, OTHER_CONTENT_LANGUAGE } from "@lunedo/shared";
 import {
   Badge,
   Combobox,
@@ -11,7 +11,7 @@ import {
   Select,
   SettingRow,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Languages } from "lucide-react";
 import { useMemo, useState } from "react";

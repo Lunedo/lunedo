@@ -89,5 +89,5 @@ export function slugify(text: string): string {
 }
 
 export function headingNumberHtml(number: string | null): string {
-  return number ? `<span class="ph-heading-number">${escapeHtml(number)} </span>` : "";
+  return number ? `<span class="ld-heading-number">${escapeHtml(number)} </span>` : "";
 }

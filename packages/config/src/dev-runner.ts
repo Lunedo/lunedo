@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Development loop for Node packages: rebuilds on changes and restarts the entry point.
-// Usage: pagehall-dev [--start dist/main.js] [--watch <dir>]... [--build "<command>"]
+// Usage: lunedo-dev [--start dist/main.js] [--watch <dir>]... [--build "<command>"]
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { snapshot } from "./file-snapshot.ts";

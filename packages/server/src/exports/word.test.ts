@@ -1,5 +1,5 @@
 import { buffer } from "node:stream/consumers";
-import { modules, type RenderContext, renderWord, type WordBlock } from "@pagehall/editor-schema";
+import { modules, type RenderContext, renderWord, type WordBlock } from "@lunedo/editor-schema";
 import mammoth from "mammoth";
 import { describe, expect, it } from "vitest";
 import yauzl from "yauzl";

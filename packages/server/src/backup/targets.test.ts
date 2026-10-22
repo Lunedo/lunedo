@@ -29,9 +29,9 @@ import {
   s3Failure,
 } from "./targets.js";
 
-const endpoint = process.env.PAGEHALL_TEST_S3_ENDPOINT?.trim();
-const accessKeyId = process.env.PAGEHALL_TEST_S3_ACCESS_KEY_ID ?? "pagehall";
-const secretAccessKey = process.env.PAGEHALL_TEST_S3_SECRET_ACCESS_KEY ?? "pagehall-s3";
+const endpoint = process.env.LUNEDO_TEST_S3_ENDPOINT?.trim();
+const accessKeyId = process.env.LUNEDO_TEST_S3_ACCESS_KEY_ID ?? "lunedo";
+const secretAccessKey = process.env.LUNEDO_TEST_S3_SECRET_ACCESS_KEY ?? "lunedo-s3";
 const logger = createLogger({ service: "test", level: "silent" });
 const backupKeys = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
 const MB = 1024 * 1024;
@@ -72,7 +72,7 @@ describe("local backup target", () => {
   let dir: string;
 
   beforeAll(async () => {
-    dir = await mkdtemp(path.join(tmpdir(), "pagehall-target-"));
+    dir = await mkdtemp(path.join(tmpdir(), "lunedo-target-"));
   });
 
   afterAll(async () => {
@@ -99,7 +99,7 @@ describe("local backup target", () => {
 });
 
 describe.skipIf(!endpoint)("S3 backup target", () => {
-  const bucket = `pagehall-backup-${randomBytes(4).toString("hex")}`;
+  const bucket = `lunedo-backup-${randomBytes(4).toString("hex")}`;
   const policy = outboundPolicy(["127.0.0.0/8", "::1/128"]);
   const client = new S3Client({
     region: "us-east-1",
@@ -120,7 +120,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
 
   beforeAll(async () => {
     await client.send(new CreateBucketCommand({ Bucket: bucket }));
-    staging = await mkdtemp(path.join(tmpdir(), "pagehall-s3-staging-"));
+    staging = await mkdtemp(path.join(tmpdir(), "lunedo-s3-staging-"));
   });
 
   afterAll(async () => {
@@ -158,9 +158,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
     expect(await failure(new S3BackupTarget({ ...config, secretAccessKey: "wrong" }, policy))).toBe(
       "write:credentials",
     );
-    expect(() => new S3BackupTarget(config, outboundPolicy([]))).toThrow(
-      "PAGEHALL_OUTBOUND_ALLOWED_NETWORKS",
-    );
+    expect(() => new S3BackupTarget(config, outboundPolicy([]))).toThrow("LUNEDO_OUTBOUND_ALLOWED_NETWORKS");
     const resolvesPrivately = new S3BackupTarget(
       { ...config, endpoint: "http://storage.internal.test:8333" },
       outboundPolicy([], async () => [{ address: "172.18.0.7", family: 4 }]),
@@ -189,7 +187,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
       database: database(dump),
       filesDir: path.join(staging, "no-files"),
       config: {},
-      pagehallVersion: "1.2.3",
+      lunedoVersion: "1.2.3",
       schemaVersion: "0000_foundation",
       logger,
     });
@@ -200,7 +198,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
       new PutObjectCommand({ Bucket: bucket, Key: `backups/${lookalike}`, Body: "named like a backup" }),
     );
     const listed = await listBackups(target);
-    expect(listed.map((backup) => [backup.name, backup.header?.pagehallVersion ?? null])).toEqual([
+    expect(listed.map((backup) => [backup.name, backup.header?.lunedoVersion ?? null])).toEqual([
       [name, "1.2.3"],
       [lookalike, null],
     ]);
@@ -249,7 +247,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
         filesDir: path.join(staging, "no-files"),
         objectStore,
         config: {},
-        pagehallVersion: "1.2.3",
+        lunedoVersion: "1.2.3",
         schemaVersion: "0000_foundation",
         logger,
       }),

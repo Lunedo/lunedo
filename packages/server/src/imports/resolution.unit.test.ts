@@ -1,4 +1,4 @@
-import { type DocumentJson, validateComment } from "@pagehall/editor-schema";
+import { type DocumentJson, validateComment } from "@lunedo/editor-schema";
 import { describe, expect, it } from "vitest";
 import { threadAnchor, toCommentDocument, withoutThreads } from "./comment-document.js";
 import { roleFor } from "./permissions.js";

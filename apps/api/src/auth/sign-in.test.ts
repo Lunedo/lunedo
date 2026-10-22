@@ -3,8 +3,8 @@ import {
   clientLockoutFailuresSetting,
   PasswordHasher,
   twoFactorRequiredSetting,
-} from "@pagehall/server";
-import { VirtualAuthenticator } from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { VirtualAuthenticator } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -23,8 +23,8 @@ import {
   TestClient,
 } from "../testing/auth-app.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
-const PENDING_COOKIE = "__Host-pagehall-pending";
+const SESSION_COOKIE = "__Host-lunedo-session";
+const PENDING_COOKIE = "__Host-lunedo-pending";
 
 async function auditNames(test: AuthTestApp): Promise<string[]> {
   const result = await test.runtime.pool.query<{ name: string }>(
@@ -91,10 +91,10 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       expect(cookies).toEqual(
         expect.arrayContaining([
           expect.stringMatching(
-            /^__Host-pagehall-device=[\w-]{43}; Path=\/; Max-Age=\d+; HttpOnly; Secure; SameSite=Lax$/,
+            /^__Host-lunedo-device=[\w-]{43}; Path=\/; Max-Age=\d+; HttpOnly; Secure; SameSite=Lax$/,
           ),
           expect.stringMatching(
-            /^__Host-pagehall-session=[\w-]{43}; Path=\/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax$/,
+            /^__Host-lunedo-session=[\w-]{43}; Path=\/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax$/,
           ),
         ]),
       );
@@ -344,7 +344,7 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       options = (await client.post("/api/v1/auth/sign-in/second-factor/passkey-options")).json();
       const phished = await client.post("/api/v1/auth/sign-in/second-factor", {
         type: "passkey",
-        response: authenticator.assert(options, "https://pagehall.example"),
+        response: authenticator.assert(options, "https://lunedo.example"),
       });
       expect(phished.json()).toMatchObject({ code: "invalidSecondFactor" });
 
@@ -365,7 +365,7 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
       const client = new TestClient(test.app);
       const options = (await client.post("/api/v1/auth/sign-in/passkey-options")).json();
       expect(options.userVerification).toBe("required");
-      expect(options.rpId).toBe("pagehall.test");
+      expect(options.rpId).toBe("lunedo.test");
       expect(options.allowCredentials ?? []).toEqual([]);
       const response = await client.post("/api/v1/auth/sign-in/passkey", {
         response: authenticator.assert(options, TEST_ORIGIN),

@@ -1,4 +1,4 @@
-import { Button, Notice } from "@pagehall/ui";
+import { Button, Notice } from "@lunedo/ui";
 import { AlertTriangle, Check, CloudOff, LoaderCircle, PencilLine } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ export function SaveStateIndicator({ state, draft = false }: { state: SaveState;
       role="status"
       aria-live="polite"
       data-state={state}
-      className="ph-save-state inline-flex items-center gap-1 text-sm whitespace-nowrap"
+      className="ld-save-state inline-flex items-center gap-1 text-sm whitespace-nowrap"
     >
       <Icon
         aria-hidden="true"

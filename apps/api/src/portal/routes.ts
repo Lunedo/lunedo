@@ -46,7 +46,7 @@ import {
   signedOutPage,
   signInPage,
   startPage,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ApiContext } from "../context.js";
 import { sendAttachment } from "../files/serve.js";
@@ -153,7 +153,7 @@ function sameOrigin(request: FastifyRequest, origin: string): boolean {
 }
 
 const OPERATIONS = /^\/(health|metrics|tls)(\/|$)/;
-const UNAVAILABLE = "Pagehall cannot reach its database at the moment. Try again in a minute.";
+const UNAVAILABLE = "Lunedo cannot reach its database at the moment. Try again in a minute.";
 
 export function registerPortal(fastify: FastifyInstance, context: ApiContext): void {
   fastify.addHook("onRequest", async (request, reply) => {

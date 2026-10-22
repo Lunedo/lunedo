@@ -1,4 +1,4 @@
-import { isUuid, type LdapConfig } from "@pagehall/shared";
+import { isUuid, type LdapConfig } from "@lunedo/shared";
 import { AndFilter, EqualityFilter, escapeFilter, Filter, FilterParser, ResultCodeError } from "ldapts";
 import {
   type CallbackInput,
@@ -120,7 +120,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
   }
 
   async authorizationUrl(): Promise<StartedAuthorization> {
-    throw new ProviderResponseError("Directory providers sign in on the Pagehall page");
+    throw new ProviderResponseError("Directory providers sign in on the Lunedo page");
   }
 
   async completeSignIn(
@@ -128,7 +128,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
     _credentials: readonly ProviderCredential[],
     _input: CallbackInput,
   ): Promise<RedirectSignInResult> {
-    throw new ProviderResponseError("Directory providers sign in on the Pagehall page");
+    throw new ProviderResponseError("Directory providers sign in on the Lunedo page");
   }
 
   hasDirectory(provider: ProviderDefinition): boolean {
