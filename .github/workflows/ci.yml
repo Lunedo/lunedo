@@ -291,8 +291,11 @@ jobs:
             base="$(git merge-base HEAD origin/main)"
             if [ "$base" = "$(git rev-parse HEAD)" ]; then base="$(git rev-parse HEAD~1)"; fi
             echo "No release exists yet. Installing the image of $base, the commit before this change, then updating to the build under test."
-            git worktree add --detach "$RUNNER_TEMP/previous" "$base"
-            echo "path=$RUNNER_TEMP/previous" >> "$GITHUB_OUTPUT"
+            path="$RUNNER_TEMP/previous-${{ github.run_id }}-${{ github.run_attempt }}"
+            git worktree prune
+            rm -rf "$path"
+            git worktree add --detach "$path" "$base"
+            echo "path=$path" >> "$GITHUB_OUTPUT"
             echo "sha=$base" >> "$GITHUB_OUTPUT"
             echo "image=pagehall:previous-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
             echo "build=true" >> "$GITHUB_OUTPUT"
@@ -355,7 +358,10 @@ jobs:
         if: always()
         env:
           PREVIOUS: ${{ steps.previous.outputs.image }}
-        run: docker image rm --force pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }} "$PREVIOUS" || true
+          PREVIOUS_PATH: ${{ steps.previous.outputs.path }}
+        run: |
+          docker image rm --force pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }} "$PREVIOUS" || true
+          if [ -n "$PREVIOUS_PATH" ]; then git worktree remove --force "$PREVIOUS_PATH" || rm -rf "$PREVIOUS_PATH"; fi
 
   e2e:
     name: End-to-end, accessibility and visual tests
