@@ -75,8 +75,9 @@ describe("imageNameProblems", () => {
   });
 
   it("rejects image names with capitals anywhere", () => {
-    assert.deepEqual(imageNameProblems("image: ghcr.io/Lunedo/lunedo:1.0", "docs/setup.md"), [
-      "docs/setup.md:1: image name ghcr.io/Lunedo/lunedo:1.0 must be lowercase",
+    const image = ["ghcr.io", "Lunedo", "lunedo:1.0"].join("/");
+    assert.deepEqual(imageNameProblems(`image: ${image}`, "docs/setup.md"), [
+      `docs/setup.md:1: image name ${image} must be lowercase`,
     ]);
   });
 
