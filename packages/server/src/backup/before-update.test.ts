@@ -225,14 +225,14 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
         await test.database.execute(sql`
           insert into backup_configuration (singleton, target_kind, target_path, keep_before_update)
           values (true, 'local', ${target}, 1)`);
-        await writeRestoredMarker(test.filesDir);
+        await writeRestoredMarker(workDir);
         await before();
         await second();
         await before();
         expect(await readdir(target)).toEqual([]);
         expect(await names()).toHaveLength(2);
       } finally {
-        await rm(path.join(test.filesDir, RESTORED_MARKER), { force: true });
+        await rm(path.join(workDir, RESTORED_MARKER), { force: true });
         await rm(target, { recursive: true, force: true });
       }
     },

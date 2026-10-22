@@ -131,7 +131,7 @@ A restored database brings back the backup settings, the target and its secret k
 
 > This instance was restored from a backup. Backups are paused until you confirm the target.
 
-An instance administrator then either confirms the target, which resumes the backups and is audited as `backup.targetConfirmed`, or changes the target, which resumes them as well. **Back up now** keeps working while the backups are paused, and a backup before an update goes to `PAGEHALL_BACKUP_DIR` instead of the target and deletes nothing. The status page shows the pause. The restore writes `.pagehall-restored` to the file store for this; the next start turns it into the pause and removes it.
+An instance administrator then either confirms the target, which resumes the backups and is audited as `backup.targetConfirmed`, or changes the target, which resumes them as well. **Back up now** keeps working while the backups are paused, and a backup before an update goes to `PAGEHALL_BACKUP_DIR` instead of the target and deletes nothing. The status page shows the pause. `backup restore` records this as the file `restored` in the work directory (`PAGEHALL_WORK_DIR`), never in the file store, so no later backup carries it along; the next start turns it into the pause in the database and removes the file. Test restores never set it.
 
 Deleting a backup in the list asks for its name and cannot be undone.
 

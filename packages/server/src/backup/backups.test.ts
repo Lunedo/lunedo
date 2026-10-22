@@ -833,9 +833,9 @@ describe.skipIf(!baseUrl)("backups", () => {
         const before = await files();
         enqueued.length = 0;
 
-        await writeRestoredMarker(test.filesDir);
-        await pauseBackupsAfterRestore(test.filesDir, test.database, logger);
-        await expect(stat(path.join(test.filesDir, ".pagehall-restored"))).rejects.toThrow();
+        await writeRestoredMarker(workDir);
+        await pauseBackupsAfterRestore(workDir, test.database, logger);
+        await expect(stat(path.join(workDir, "restored"))).rejects.toThrow();
         const paused = await backups().overview();
         expect(paused.restoredAt).not.toBeNull();
         expect(paused.nextRunAt).toBeNull();
@@ -859,8 +859,8 @@ describe.skipIf(!baseUrl)("backups", () => {
 
     it("ends the pause when the target is changed", async () => {
       await useLocalTarget();
-      await writeRestoredMarker(test.filesDir);
-      await pauseBackupsAfterRestore(test.filesDir, test.database, logger);
+      await writeRestoredMarker(workDir);
+      await pauseBackupsAfterRestore(workDir, test.database, logger);
       expect((await backups().overview()).restoredAt).not.toBeNull();
       const other = await mkdtemp(path.join(tmpdir(), "pagehall-backup-other-"));
       try {

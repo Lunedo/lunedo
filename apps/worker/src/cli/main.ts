@@ -149,6 +149,7 @@ async function run(command: Command): Promise<void> {
         objectStore: config.fileStorage.kind === "s3" ? fileStoreOf(config) : undefined,
         configDir: command.configDir,
         force: command.force,
+        markRestoredIn: config.paths.work,
         knownSchemaVersions: knownSchemaVersions(),
         logger,
       });

@@ -214,7 +214,7 @@ export async function createServerRuntime(options: {
       },
     });
 
-    await pauseBackupsAfterRestore(config.paths.files, database, logger);
+    await pauseBackupsAfterRestore(config.paths.work, database, logger);
     await removeStaleStaging(pool, config.paths.work, logger);
 
     const columns = options.encrypted?.columns ?? encryptedColumns;

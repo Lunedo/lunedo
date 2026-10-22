@@ -122,8 +122,8 @@ async function audit<TName extends AuditEventName>(
   }
 }
 
-async function restoredAndUnconfirmed(database: Database, filesDir: string): Promise<boolean> {
-  if (await hasRestoredMarker(filesDir)) return true;
+async function restoredAndUnconfirmed(database: Database, workDir: string): Promise<boolean> {
+  if (await hasRestoredMarker(workDir)) return true;
   try {
     const result = await database.execute<{ restored: boolean }>(
       sql`select restored_at is not null as restored from backup_state where singleton`,
@@ -136,7 +136,7 @@ async function restoredAndUnconfirmed(database: Database, filesDir: string): Pro
 
 async function openConfiguredTarget(options: BeforeUpdateOptions, masterKeys: KeyRing | null) {
   const configuration = await readBackupConfiguration(options.database);
-  const paused = await restoredAndUnconfirmed(options.database, options.sources.filesDir);
+  const paused = await restoredAndUnconfirmed(options.database, options.sources.workDir);
   if (!configuration.target || paused) {
     await ensureDirectory(options.backupDir);
     return {

@@ -205,6 +205,29 @@ describe("backups", () => {
     expect(restored.restored?.toString()).toContain(`${marker} last part`);
   });
 
+  it("mark a restore in the work directory only, never in the file store", async () => {
+    await create();
+    const work = path.join(dir, "work");
+    const target = path.join(dir, "restored");
+    await restoreBackup({
+      input: archivePath,
+      backupKeys,
+      knownSchemaVersions,
+      masterKeys,
+      database: new FakeDatabase(Buffer.alloc(0)),
+      filesDir: target,
+      force: false,
+      markRestoredIn: work,
+      logger,
+    });
+    expect(await readdir(work)).toEqual(["restored"]);
+    expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
+    const other = path.join(dir, "restored-without-marker");
+    await restoreInto(other, new FakeDatabase(Buffer.alloc(0)));
+    expect(await readdir(work)).toEqual(["restored"]);
+    expect((await readdir(other)).sort()).toEqual(["attachments", "logo.png"]);
+  });
+
   it("start with a readable, unencrypted header", async () => {
     const created = await create();
     const { header, bytes } = await readBackupHeader(archivePath);
@@ -299,7 +322,7 @@ describe("backups", () => {
     const database = new FakeDatabase(Buffer.alloc(0), false);
     await restoreInto(target, database, { force: true });
     expect(database.replacedExisting).toBe(true);
-    expect((await readdir(target)).sort()).toEqual([".pagehall-restored", "attachments", "logo.png"]);
+    expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
   });
 
   it("stay readable after a new backup key version is added", async () => {
@@ -351,7 +374,7 @@ describe("backups without the file store", () => {
     const database = new FakeDatabase(Buffer.alloc(0), false);
     await restoreInto(target, database, { force: true });
     expect(database.restored?.equals(databaseDump)).toBe(true);
-    expect((await readdir(target)).sort()).toEqual([".pagehall-restored", "kept.txt"]);
+    expect((await readdir(target)).sort()).toEqual(["kept.txt"]);
   });
 
   it("leave out the header field when they contain everything", async () => {
@@ -532,7 +555,7 @@ describe("interrupted restores", () => {
 
     await rm(configDir);
     await restoreInto(target, database, { force: true });
-    expect((await readdir(target)).sort()).toEqual([".pagehall-restored", "attachments", "logo.png"]);
+    expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
     await expect(checkRestoreComplete(target)).resolves.toBeUndefined();
   });
 
@@ -551,7 +574,7 @@ describe("interrupted restores", () => {
     await writeFile(path.join(target, RESTORE_STAGING, "attachments", "partial.bin"), "partial");
 
     await restoreInto(target, new FakeDatabase(Buffer.alloc(0)));
-    expect((await readdir(target)).sort()).toEqual([".pagehall-restored", "attachments", "logo.png"]);
+    expect((await readdir(target)).sort()).toEqual(["attachments", "logo.png"]);
     expect(await readdir(path.join(target, "attachments"))).toEqual(["2026"]);
   });
 

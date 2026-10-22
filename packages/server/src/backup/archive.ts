@@ -572,6 +572,7 @@ export interface RestoreBackupOptions extends ReadOptions {
   configDir?: string | undefined;
   /** Overwrite a database or file store that is not empty. */
   force: boolean;
+  markRestoredIn?: string | undefined;
   logger: Logger;
 }
 
@@ -665,7 +666,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
     if (!earlierRestoreIncomplete) await removeRestoreMarker(options.filesDir);
     throw error;
   }
-  await writeRestoredMarker(options.filesDir);
+  if (options.markRestoredIn) await writeRestoredMarker(options.markRestoredIn);
   await removeRestoreMarker(options.filesDir);
   options.logger.info(
     { schemaVersion: first.manifest.schemaVersion, entries: first.manifest.entries.length },
