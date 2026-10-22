@@ -139,6 +139,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     const output = path.join(dir, "backup.phbak");
     await createBackup({
       output,
+      stagingDir: path.join(path.dirname(output), "work"),
       backupKeys,
       masterKeys: [],
       database: new PostgresArchiver({ databaseUrl: source.url }),

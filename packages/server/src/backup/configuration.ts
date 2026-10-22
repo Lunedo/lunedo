@@ -184,13 +184,20 @@ export function closeTarget(target: BackupTarget): void {
 
 export type LocalPathProblem = "relative" | "reserved";
 
-export function localPathProblem(candidate: string, reserved: readonly string[]): LocalPathProblem | null {
+function isInside(parent: string, child: string): boolean {
+  const relative = path.relative(path.resolve(parent), path.resolve(child));
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+export function localPathProblem(
+  candidate: string,
+  reserved: readonly string[],
+  notInside: readonly string[] = [],
+): LocalPathProblem | null {
   if (!path.isAbsolute(candidate)) return "relative";
   const normalized = path.resolve(candidate);
   if (normalized === path.parse(normalized).root) return "reserved";
-  for (const dir of reserved) {
-    const relative = path.relative(path.resolve(dir), normalized);
-    if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) return "reserved";
-  }
+  if (reserved.some((dir) => isInside(dir, normalized))) return "reserved";
+  if (notInside.some((dir) => isInside(normalized, dir))) return "reserved";
   return null;
 }

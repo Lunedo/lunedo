@@ -1,4 +1,4 @@
-import { chmod, mkdir, readdir, rm } from "node:fs/promises";
+import { chmod, mkdir, readdir, rm, stat, statfs } from "node:fs/promises";
 import path from "node:path";
 import { Transform, type TransformCallback } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -19,6 +19,7 @@ import {
   type BackupManifest,
   type BackupScope,
   createBackup,
+  STAGED_DUMP,
 } from "./archive.js";
 import { describeFailure } from "./errors.js";
 import { type BackupClass, type BackupName, backupName, parseBackupName } from "./naming.js";
@@ -41,11 +42,122 @@ export interface BackupSources {
   columns?: readonly EncryptedColumn[];
   backupKeys: KeyRing;
   masterKeys: () => Promise<KeyRing | null>;
-  stagingDir: string;
+  workDir: string;
+  diskSpace?: ((dir: string) => Promise<DiskSpace>) | undefined;
   configuration: Record<string, string>;
   pagehallVersion: string;
   schemaVersion: string;
   logger: Logger;
+}
+
+export interface DiskSpace {
+  free: number;
+  total: number;
+  device: number;
+}
+
+export async function diskSpace(dir: string): Promise<DiskSpace> {
+  const [stats, info] = await Promise.all([statfs(dir), stat(dir)]);
+  return { free: stats.bavail * stats.bsize, total: stats.blocks * stats.bsize, device: info.dev };
+}
+
+export class NotEnoughSpaceError extends BackupError {
+  override name = "NotEnoughSpaceError";
+}
+
+const SPACE_MARGIN = 1.2;
+const DEFAULT_CRITICAL_PERCENT = 95;
+
+export async function criticalPercent(pool: Pick<DatabasePool, "query">): Promise<number> {
+  try {
+    const result = await pool.query<{ value: unknown }>(
+      "select value from setting_values where level = 'instance' and key = 'storage.criticalPercent' and value is not null limit 1",
+    );
+    const value = result.rows[0]?.value;
+    return typeof value === "number" && value > 0 && value <= 100 ? value : DEFAULT_CRITICAL_PERCENT;
+  } catch {
+    return DEFAULT_CRITICAL_PERCENT;
+  }
+}
+
+export async function databaseSize(database: Database): Promise<number> {
+  const result = await database.execute<{ size: string }>(
+    sql`select pg_database_size(current_database()) as size`,
+  );
+  return Number(result.rows[0]?.size ?? 0);
+}
+
+async function previousBackupSize(database: Database): Promise<number> {
+  try {
+    const result = await database.execute<{ size: string | null }>(sql`
+      select size_bytes as size from backup_runs where state = 'succeeded' and size_bytes is not null
+      order by finished_at desc nulls last limit 1`);
+    return Number(result.rows[0]?.size ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+function formatGb(bytes: number): string {
+  return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+}
+
+export interface SpaceNeed {
+  dir: string;
+  bytes: number;
+  label: string;
+}
+
+export async function checkSpace(
+  needs: readonly SpaceNeed[],
+  options: { critical: number; measure?: (dir: string) => Promise<DiskSpace>; advice: string },
+): Promise<void> {
+  const measure = options.measure ?? diskSpace;
+  const disks = new Map<number, { space: DiskSpace; bytes: number; labels: string[] }>();
+  for (const need of needs) {
+    const space = await measure(need.dir);
+    const disk = disks.get(space.device) ?? { space, bytes: 0, labels: [] };
+    disk.bytes += need.bytes;
+    disk.labels.push(need.label);
+    disks.set(space.device, disk);
+  }
+  for (const { space, bytes, labels } of disks.values()) {
+    if (space.total <= 0) continue;
+    const projected = ((space.total - space.free + bytes) / space.total) * 100;
+    if (bytes > space.free || projected >= options.critical) {
+      throw new NotEnoughSpaceError(
+        `Not enough free space for ${labels.join(" and ")}: about ${formatGb(bytes)} are needed, ${formatGb(space.free)} are free, and the disk must stay below ${options.critical} %. ${options.advice}`,
+      );
+    }
+  }
+}
+
+async function checkBackupSpace(
+  sources: BackupSources,
+  stagingDir: string,
+  outputDir: string | null,
+): Promise<void> {
+  const database = await databaseSize(sources.database);
+  const needs: SpaceNeed[] = [
+    {
+      dir: stagingDir,
+      bytes: Math.ceil(database * SPACE_MARGIN),
+      label: "the database dump in the work directory",
+    },
+  ];
+  if (outputDir !== null) {
+    const archive = Math.max(await previousBackupSize(sources.database), database);
+    needs.push({
+      dir: outputDir,
+      bytes: Math.ceil(archive * SPACE_MARGIN),
+      label: "the backup in the target",
+    });
+  }
+  await checkSpace(needs, {
+    critical: await criticalPercent(sources.pool),
+    ...(sources.diskSpace ? { measure: sources.diskSpace } : {}),
+    advice: "Free up space, lower the number of kept backups, or choose another target or work directory.",
+  });
 }
 
 export interface Lock {
@@ -204,48 +316,105 @@ export interface WrittenBackup {
   manifest: BackupManifest;
 }
 
-const STAGING = ".pagehall-staging";
-const STAGED_DUMP = /^\.pagehall-backup-[0-9a-f-]{36}\.dump$/;
+const STAGING = "backup-staging";
 
-async function privateStaging(sources: BackupSources): Promise<string> {
-  const staging = path.join(sources.stagingDir, STAGING);
+export class StagingInsideTargetError extends BackupError {
+  override name = "StagingInsideTargetError";
+}
+
+function isInside(parent: string, child: string): boolean {
+  const relative = path.relative(path.resolve(parent), path.resolve(child));
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+export function stagingDirectory(workDir: string): string {
+  return path.join(workDir, STAGING);
+}
+
+async function privateStaging(sources: BackupSources, target?: BackupTarget): Promise<string> {
+  const staging = stagingDirectory(sources.workDir);
+  if (target?.kind === "local" && isInside(target.description, staging)) {
+    throw new StagingInsideTargetError(
+      `The work directory ${sources.workDir} lies inside the backup target ${target.description}, so the staged database dump would be written into the target. Choose a target outside ${sources.workDir}, or move PAGEHALL_WORK_DIR.`,
+    );
+  }
+  await mkdir(sources.workDir, { recursive: true, mode: 0o700 });
+  await chmod(sources.workDir, 0o700);
   await mkdir(staging, { recursive: true, mode: 0o700 });
   await chmod(staging, 0o700);
   return staging;
 }
 
-async function removeStaleDumps(sources: BackupSources): Promise<void> {
-  const staging = path.join(sources.stagingDir, STAGING);
+async function removeStagedDumps(workDir: string): Promise<string[]> {
   let entries: string[];
   try {
-    entries = await readdir(staging);
+    entries = await readdir(stagingDirectory(workDir));
   } catch {
-    return;
+    return [];
   }
+  const removed: string[] = [];
   for (const entry of entries) {
-    if (STAGED_DUMP.test(entry)) await rm(path.join(staging, entry), { force: true });
+    if (!STAGED_DUMP.test(entry)) continue;
+    await rm(path.join(stagingDirectory(workDir), entry), { force: true });
+    removed.push(entry);
+  }
+  return removed;
+}
+
+export async function removeStaleStaging(pool: DatabasePool, workDir: string, logger: Logger): Promise<void> {
+  const lock = await tryBackupLock(pool);
+  if (!lock) return;
+  try {
+    const removed = await removeStagedDumps(workDir);
+    if (removed.length > 0)
+      logger.info({ removed: removed.length }, "Staged files of interrupted backups removed");
+  } finally {
+    await lock.release();
+  }
+}
+
+export async function recordedBackupNames(
+  database: Database,
+  which: "succeeded" | "incomplete",
+): Promise<Set<string>> {
+  try {
+    const result = await database.execute<{ name: string }>(
+      which === "succeeded"
+        ? sql`select name from backup_runs where name is not null and state = 'succeeded'`
+        : sql`select name from backup_runs where name is not null and state in ('running', 'failed')`,
+    );
+    return new Set(result.rows.map((row) => row.name));
+  } catch {
+    return new Set();
   }
 }
 
 export async function writeBackup(
   sources: BackupSources,
-  options: { target: BackupTarget; backupClass: BackupClass; scope: BackupScope; now?: Date },
+  options: { target: BackupTarget; backupClass: BackupClass; scope: BackupScope; name?: string; now?: Date },
 ): Promise<WrittenBackup> {
   const rotation = await advisoryLock(sources.pool, ROTATION_LOCK, { shared: true, wait: true });
   try {
     const masterKeys = await masterKeysForBackup(sources);
-    const name = backupName(options.backupClass, options.now ?? new Date());
+    const name = options.name ?? backupName(options.backupClass, options.now ?? new Date());
     let reported = Date.now();
     const destination = counted(options.target.destination(name), (bytes) => {
       if (Date.now() - reported < PROGRESS_INTERVAL_MS) return;
       reported = Date.now();
       sources.logger.info({ backup: name, written: formatBytes(bytes) }, "Backup in progress");
     });
-    await options.target.removeIncomplete();
-    await removeStaleDumps(sources);
+    const stagingDir = await privateStaging(sources, options.target);
+    if (options.target.kind === "local") await options.target.capacity();
+    await checkBackupSpace(
+      sources,
+      stagingDir,
+      options.target.kind === "local" ? options.target.description : null,
+    );
+    await options.target.removeIncomplete(await recordedBackupNames(sources.database, "incomplete"));
+    await removeStagedDumps(sources.workDir);
     const manifest = await createBackup({
       output: destination,
-      stagingDir: await privateStaging(sources),
+      stagingDir,
       backupKeys: sources.backupKeys,
       masterKeys,
       database: sources.archiver,
@@ -264,23 +433,35 @@ export async function writeBackup(
 }
 
 export async function writeBackupFile(sources: BackupSources, output: string): Promise<BackupManifest> {
-  const rotation = await advisoryLock(sources.pool, ROTATION_LOCK, { shared: true, wait: true });
+  let lock = await tryBackupLock(sources.pool);
+  if (!lock) {
+    sources.logger.warn("Waiting for a running backup to finish");
+    lock = await waitForBackupLock(sources.pool);
+  }
   try {
-    return await createBackup({
-      output,
-      stagingDir: await privateStaging(sources),
-      backupKeys: sources.backupKeys,
-      masterKeys: await masterKeysForBackup(sources),
-      database: sources.archiver,
-      filesDir: sources.filesDir,
-      objectStore: sources.objectStore,
-      config: sources.configuration,
-      pagehallVersion: sources.pagehallVersion,
-      schemaVersion: sources.schemaVersion,
-      logger: sources.logger,
-    });
+    const rotation = await advisoryLock(sources.pool, ROTATION_LOCK, { shared: true, wait: true });
+    try {
+      const stagingDir = await privateStaging(sources);
+      await checkBackupSpace(sources, stagingDir, path.dirname(output));
+      await removeStagedDumps(sources.workDir);
+      return await createBackup({
+        output,
+        stagingDir,
+        backupKeys: sources.backupKeys,
+        masterKeys: await masterKeysForBackup(sources),
+        database: sources.archiver,
+        filesDir: sources.filesDir,
+        objectStore: sources.objectStore,
+        config: sources.configuration,
+        pagehallVersion: sources.pagehallVersion,
+        schemaVersion: sources.schemaVersion,
+        logger: sources.logger,
+      });
+    } finally {
+      await rotation?.release();
+    }
   } finally {
-    await rotation?.release();
+    await lock.release();
   }
 }
 

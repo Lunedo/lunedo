@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql } from "drizzle-orm";
@@ -39,6 +39,7 @@ interface Enqueued {
 describe.skipIf(!baseUrl)("backups", () => {
   let test: TestServices;
   let backupDir: string;
+  let workDir: string;
   let targetDir: string;
   let now = new Date("2026-10-21T08:00:00.000Z");
   const enqueued: Enqueued[] = [];
@@ -61,12 +62,14 @@ describe.skipIf(!baseUrl)("backups", () => {
 
   beforeAll(async () => {
     backupDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-default-"));
+    workDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-work-"));
     test = await createTestServices(baseUrl ?? "", {
       configuredInstanceUrl: "https://wiki.example.org",
       jobs,
       backup: (url) => ({
         databaseUrl: url,
         backupDir,
+        workDir,
         secretsDir: path.join(backupDir, "secrets"),
         configuration: { "environment.json": '{"PAGEHALL_HOST":"0.0.0.0"}\n' },
         pagehallVersion: "1.2.3",
@@ -107,6 +110,7 @@ describe.skipIf(!baseUrl)("backups", () => {
   afterAll(async () => {
     await test?.close();
     await rm(backupDir, { recursive: true, force: true });
+    await rm(workDir, { recursive: true, force: true });
   });
 
   beforeEach(async () => {
@@ -401,16 +405,66 @@ describe.skipIf(!baseUrl)("backups", () => {
     );
 
     it.skipIf(!hasTools)(
-      "stages the database dump in a private directory, never in the target, and removes stale dumps",
+      "stages the database dump in the private work directory, never in the target, and removes stale dumps",
       async () => {
-        await useLocalTarget();
-        const staging = path.join(backupDir, ".pagehall-staging");
+        await useLocalTarget(backupDir);
+        const staging = path.join(workDir, "backup-staging");
         await mkdir(staging, { recursive: true });
-        const stale = path.join(staging, ".pagehall-backup-00000000-0000-4000-8000-000000000000.dump");
+        const stale = path.join(staging, "backup-00000000-0000-4000-8000-000000000000.dump.enc");
         await writeFile(stale, "left over by a killed run");
         await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect(await runs()).toMatchObject([{ state: "succeeded" }]);
         expect(await readdir(staging)).toEqual([]);
-        expect((await files()).filter((name) => name.endsWith(".dump"))).toEqual([]);
+        expect(
+          (await readdir(backupDir, { recursive: true })).filter((name) => name.includes("dump")),
+        ).toEqual([]);
+        if (process.platform !== "win32") {
+          expect((await stat(staging)).mode & 0o777).toBe(0o700);
+          expect((await stat(workDir)).mode & 0o777).toBe(0o700);
+        }
+      },
+    );
+
+    it("refuses a target that contains the work directory", async () => {
+      expect(
+        await settingsError(backups().updateTarget(actor(), { kind: "local", path: path.dirname(workDir) })),
+      ).toBe("reservedPath");
+      expect(await settingsError(backups().updateTarget(actor(), { kind: "local", path: workDir }))).toBe(
+        "reservedPath",
+      );
+    });
+
+    it.skipIf(!hasTools)(
+      "deletes only backups this instance recorded and removes only its own unfinished files",
+      async () => {
+        await useLocalTarget();
+        await backups().updateSettings(actor(), { enabled: true, retention: { daily: 1 } });
+        now = new Date(Date.UTC(2026, 9, 22, 1, 0, 30));
+        await backups().run({ trigger: "scheduled", slot: "2026-10-22T00:00:00.000Z", actorId: null });
+        const [foreign] = (await backups().list()).backups;
+        await test.database.execute(sql`delete from backup_runs`);
+        const foreignPartial = `${foreign?.name}.00000000-0000-4000-8000-000000000000.partial`;
+        await writeFile(path.join(targetDir, foreignPartial), "an upload of another instance");
+        const ownName = "pagehall-backup-20261022T010000Z-daily-0000abcd.phbak";
+        await test.database.execute(sql`
+          insert into backup_runs (id, trigger, backup_class, state, name, started_at, finished_at)
+          values (gen_random_uuid(), 'scheduled', 'daily', 'failed', ${ownName}, now(), now())`);
+        const ownPartial = `${ownName}.00000000-0000-4000-8000-000000000001.partial`;
+        await writeFile(path.join(targetDir, ownPartial), "left over by an interrupted run");
+        for (let day = 1; day < 4; day += 1) {
+          now = new Date(Date.UTC(2026, 9, 22 + day, 1, 0, 30));
+          await backups().run({
+            trigger: "scheduled",
+            slot: new Date(Date.UTC(2026, 9, 22 + day, 0, 0)).toISOString(),
+            actorId: null,
+          });
+        }
+        const names = await files();
+        expect(names).toContain(foreign?.name);
+        expect(names).toContain(foreignPartial);
+        expect(names).not.toContain(ownPartial);
+        expect(names.filter((name) => name.endsWith(".phbak"))).toHaveLength(2);
+        expect((await audited("backup.deleted")).map((fields) => fields.name)).not.toContain(foreign?.name);
       },
     );
 

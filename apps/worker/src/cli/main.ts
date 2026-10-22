@@ -59,7 +59,7 @@ function backupSources(
     streamOwners: encryptedStreamOwnersOf(fileStore),
     backupKeys: resolveGeneratedSecrets(config).backupKeys,
     masterKeys: () => availableMasterKeys(config),
-    stagingDir: config.paths.backups,
+    workDir: config.paths.work,
     configuration: configurationForBackup(env),
     pagehallVersion: pagehallVersion(env),
     schemaVersion: currentSchemaVersion(),

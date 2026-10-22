@@ -257,10 +257,9 @@ export interface BackupServiceOptions {
   sources: Omit<BackupSources, "logger">;
   testRestore: Omit<TestRestoreSources, "logger" | "pool">;
   policy: OutboundPolicy;
-  paths: { files: string; secrets: string; imports: string; backups: string };
+  paths: { files: string; secrets: string; imports: string; backups: string; work: string };
   fileStoreKind: "local" | "s3";
   beforeUpdateEnvironment: boolean;
-  criticalPercent: () => Promise<number>;
   logger: Logger;
   clock?: () => Date;
 }
@@ -538,11 +537,16 @@ export class BackupService {
   #validateTarget(input: TargetInput): TargetSettings {
     if (input.kind === "local") {
       const candidate = input.path.trim();
-      const problem = localPathProblem(candidate, [
-        this.#options.paths.files,
-        this.#options.paths.secrets,
-        this.#options.paths.imports,
-      ]);
+      const problem = localPathProblem(
+        candidate,
+        [
+          this.#options.paths.files,
+          this.#options.paths.secrets,
+          this.#options.paths.imports,
+          this.#options.paths.work,
+        ],
+        [this.#options.paths.work],
+      );
       if (problem === "relative") {
         throw new BackupSettingsError(
           "invalidPath",
@@ -553,7 +557,7 @@ export class BackupService {
       if (problem === "reserved") {
         throw new BackupSettingsError(
           "reservedPath",
-          "This path holds the file store, the secrets or the import folder, or is the root directory. Choose a directory of its own.",
+          "This path holds the file store, the secrets, the import folder or the work directory for temporary backup files, or is the root directory. Choose a directory of its own.",
           ["path"],
         );
       }

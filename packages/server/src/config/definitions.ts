@@ -138,7 +138,12 @@ export const configSettings = [
   setting(
     "PAGEHALL_BACKUP_DIR",
     path.default("/var/lib/pagehall/backups"),
-    "Default local backup target, used for backups before updates while no target is set up. Backups to S3 stage the database dump here.",
+    "Default local backup target, used for backups before updates while no target is set up.",
+  ),
+  setting(
+    "PAGEHALL_WORK_DIR",
+    path.default("/var/lib/pagehall/work"),
+    "Private directory (mode 0700) for temporary files of backups and test restores: the encrypted database dump of a running backup and the copy of the file store a test restore checks. It must not lie inside the backup directory, a backup target or the file store, and needs free space for the database and, during a test restore, for the file store.",
   ),
   setting(
     "PAGEHALL_BACKUP_BEFORE_UPDATE",

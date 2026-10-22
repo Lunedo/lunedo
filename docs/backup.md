@@ -31,8 +31,8 @@ Instance administrators set up backups once under **Settings > Instance > Backup
 
 One target per instance:
 
-- **Directory:** an absolute path inside the container, by default `/var/lib/pagehall/backups` (`PAGEHALL_BACKUP_DIR`). It must be writable by the container user and must not lie inside the file store, the secrets directory or the import folder. When the directory is on the same volume as the file store, the section warns that one disk failure loses both.
-- **S3-compatible storage:** endpoint, region, bucket, optional prefix ending with `/`, access key, secret key and whether the bucket is addressed in the path. The secret key is stored encrypted with the master key and never shown again; leave it empty to keep it, or enter a new one to replace it. Changing the endpoint, the region, the bucket or the access key requires the secret key again, so a stored key is never sent to another service. Backups are streamed in parts of 8 MB and never held in memory; an upload that fails is aborted, and parts that a killed process left behind are aborted before the next run.
+- **Directory:** an absolute path inside the container, by default `/var/lib/pagehall/backups` (`PAGEHALL_BACKUP_DIR`). It must be writable by the container user, must not lie inside the file store, the secrets directory, the import folder or the work directory (`PAGEHALL_WORK_DIR`), and must not contain the work directory. When the directory is on the same volume as the file store, the section warns that one disk failure loses both.
+- **S3-compatible storage:** endpoint, region, bucket, optional prefix ending with `/`, access key, secret key and whether the bucket is addressed in the path. The secret key is stored encrypted with the master key and never shown again; leave it empty to keep it, or enter a new one to replace it. Changing the endpoint, the region, the bucket or the access key requires the secret key again, so a stored key is never sent to another service. Backups are streamed in parts of 8 MB and never held in memory; an upload that fails is aborted. Before each run, Pagehall aborts the unfinished uploads of earlier runs that its own run records list; uploads of any other instance writing to the same bucket are never touched.
 
 **Test connection** writes, reads, lists and deletes a small test object with the entered settings, without saving them, and names the step and the cause of a failure: missing directory, permission, read-only file system, full target, DNS, a refused private address, connection, TLS, credentials or bucket.
 
@@ -105,13 +105,25 @@ For SMB, use `type: cifs`, `device: "//nas.example.org/pagehall-backups"` and `o
 - **Weekly backup** on a day of the week and **monthly backup** on a day of the month (in shorter months on the last day): the backup of that day is kept as a weekly or monthly one. A day that is both counts as monthly.
 - Only one backup runs at a time across all workers. A scheduled run that would overlap a running backup is skipped and listed as skipped.
 - **Back up now** starts a manual backup to the same target. Manual backups are kept until they are deleted.
-- Before a backup to a directory, the free space is checked against the critical level of the storage warnings (95 % by default, see [storage.md](storage.md)): a backup that would take the disk above it is refused with the space it needs and the space that is free.
+- Before every backup (scheduled, manual, before an update and `backup create`), Pagehall checks the free space of the work directory for the database dump and, for a directory target, of the target for the backup: the size of the database plus 20 %, and for the target the larger of the last backup and the database, plus 20 %. When both are on the same disk, the needs are added. A backup that would take a disk above the critical level of the storage warnings (95 % by default, see [storage.md](storage.md)) is refused with the space it needs and the space that is free, before `pg_dump` starts. This applies to S3 targets as well, whose dump is staged on the local disk.
+
+### Where the database dump is staged
+
+`tar` needs the size of an entry before it is written, so the database dump is staged on disk while a backup runs. It is staged in `backup-staging` below the work directory (`PAGEHALL_WORK_DIR`, by default `/var/lib/pagehall/work`, mode 0700, owned by the container user), never in the backup directory or a target, and it is encrypted under a key that exists only in memory for that run. A process that is killed in the middle of a backup leaves only ciphertext that nobody can read; Pagehall removes such leftovers when it starts and before every backup. In the Compose file of the setup script, the work directory is part of the data volume, not of the `backups` folder on the host.
 
 Backups are named `pagehall-backup-<UTC time>-<class>-<random>.phbak`, for example `pagehall-backup-20261021T020000Z-daily-3f0c8a1b.phbak`.
 
 ### Retention
 
-Grandfather-father-son: the newest 7 daily, 4 weekly and 6 monthly backups are kept (each number can be changed), the newest 3 backups before updates, and every manual backup until it is deleted. Every backup has exactly one class, so a backup kept as a monthly one never counts against the daily ones. Retention runs after each successful scheduled backup and deletes only files or objects that have the name of a Pagehall backup and a readable backup header; other files in the target are never touched.
+Grandfather-father-son: the newest 7 daily, 4 weekly and 6 monthly backups are kept (each number can be changed), the newest 3 backups before updates, and every manual backup until it is deleted. Every backup has exactly one class, so a backup kept as a monthly one never counts against the daily ones. Retention runs after each successful scheduled backup and deletes only backups that the run records of this instance list as created by it, with the name of a Pagehall backup and a readable backup header; other files in the target are never touched. A copy of the instance, made by copying the database or a virtual machine, therefore never deletes backups that the original wrote after the copy, and two instances that share a target never thin out each other's backups.
+
+### After a restore
+
+A restored database brings back the backup settings, the target and its secret key. If the restore created a second instance, for example a test system, it would write into and prune the backups of the original. So after `backup restore`, Pagehall pauses scheduled backups, retention and the monthly test restore. The backup settings and every page of the admin area show:
+
+> This instance was restored from a backup. Backups are paused until you confirm the target.
+
+An instance administrator then either confirms the target, which resumes the backups and is audited as `backup.targetConfirmed`, or changes the target, which resumes them as well. **Back up now** keeps working while the backups are paused, and a backup before an update goes to `PAGEHALL_BACKUP_DIR` instead of the target and deletes nothing. The status page shows the pause. The restore writes `.pagehall-restored` to the file store for this; the next start turns it into the pause and removes it.
 
 Deleting a backup in the list asks for its name and cannot be undone.
 

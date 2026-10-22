@@ -106,6 +106,7 @@ function requiredMasterKeys(keys: KeyRing = masterKeys) {
 async function create(options: { schemaVersion?: string; keys?: KeyRing; masterKeys?: KeyRing } = {}) {
   return createBackup({
     output: archivePath,
+    stagingDir: path.join(dir, "work"),
     backupKeys: options.keys ?? backupKeys,
     masterKeys: requiredMasterKeys(options.masterKeys),
     database: new FakeDatabase(databaseDump),
@@ -152,6 +153,56 @@ describe("backups", () => {
     ]);
     const verified = await verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions });
     expect(verified).toEqual(created);
+  });
+
+  it("never write the database dump to disk as plaintext, also while a run is in the middle of it", async () => {
+    const marker = "marker-plaintext-dump-content";
+    let resume: () => void = () => {};
+    const resumed = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    let paused: () => void = () => {};
+    const reachedPause = new Promise<void>((resolve) => {
+      paused = resolve;
+    });
+    const database = new FakeDatabase(Buffer.from(marker));
+    database.dump = () =>
+      Readable.from(
+        (async function* () {
+          yield Buffer.from(`${marker} first part `.repeat(4096));
+          paused();
+          await resumed;
+          yield Buffer.from(`${marker} last part`);
+        })(),
+      );
+    const work = path.join(dir, "work");
+    const running = createBackup({
+      output: archivePath,
+      stagingDir: work,
+      backupKeys,
+      masterKeys: requiredMasterKeys(),
+      database,
+      filesDir,
+      config: {},
+      pagehallVersion: "1.0.0",
+      schemaVersion,
+      logger,
+    });
+    await reachedPause;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const staged = await readdir(work);
+    expect(staged).toHaveLength(1);
+    for (const entry of await readdir(dir, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const content = await readFile(path.join(entry.parentPath, entry.name));
+      expect(content.includes(Buffer.from(marker)), path.join(entry.parentPath, entry.name)).toBe(false);
+    }
+    resume();
+    await running;
+    expect(await readdir(work)).toEqual([]);
+    const restored = new FakeDatabase(Buffer.alloc(0));
+    await restoreInto(path.join(dir, "restored"), restored);
+    expect(restored.restored?.toString()).toContain(`${marker} last part`);
   });
 
   it("start with a readable, unencrypted header", async () => {
@@ -203,6 +254,7 @@ describe("backups", () => {
     await source.write("ab/cd/object-one", Readable.from([Buffer.from("object content")]));
     await createBackup({
       output: archivePath,
+      stagingDir: path.join(dir, "work"),
       backupKeys,
       masterKeys: requiredMasterKeys(),
       database: new FakeDatabase(databaseDump),
@@ -279,6 +331,7 @@ describe("backups without the file store", () => {
   it("contain no files, say so in the header and leave the files of the instance alone on restore", async () => {
     await createBackup({
       output: archivePath,
+      stagingDir: path.join(dir, "work"),
       backupKeys,
       masterKeys: requiredMasterKeys(),
       database: new FakeDatabase(databaseDump),
@@ -329,6 +382,7 @@ describe("reading a backup for a restore", () => {
     const other = path.join(dir, "other.phbak");
     await createBackup({
       output: other,
+      stagingDir: path.join(dir, "work"),
       backupKeys,
       masterKeys: requiredMasterKeys(),
       database: new FakeDatabase(Buffer.from("PGDMP another dump")),
