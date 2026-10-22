@@ -5518,26 +5518,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -5620,26 +5600,6 @@
                       "title": "This endpoint needs a signed-in session",
                       "status": 403,
                       "code": "sessionRequired"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -6736,26 +6696,6 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -8719,26 +8659,6 @@
                       "title": "The last owner cannot leave",
                       "status": 409,
                       "code": "lastOwner"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -10811,26 +10731,6 @@
                       "title": "Own sessions are ended on the security page",
                       "status": 409,
                       "code": "endOwnSessions"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -33839,26 +33739,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -34559,26 +34439,6 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -105734,26 +105594,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -118765,26 +118605,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -128428,26 +128248,6 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -158937,26 +158737,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -161124,26 +160904,6 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -173757,26 +173517,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       },
@@ -174445,26 +174185,6 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -175967,26 +175687,6 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -208874,26 +208574,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       },
@@ -214096,26 +213776,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -215326,26 +214986,6 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -217720,26 +217360,6 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -242736,26 +242356,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -244055,26 +243655,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -244277,26 +243857,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -244474,26 +244034,6 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:pagehall:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
                     }
                   }
                 }
