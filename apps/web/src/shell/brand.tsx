@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Heron } from "./heron.js";
+import { LunedoMark } from "./lunedo-mark.js";
 
 export interface BrandOrganization {
   id: string;
@@ -26,7 +26,7 @@ export function BrandMark({ organization }: { organization: BrandOrganization | 
   }
   return (
     <div className="flex items-center gap-2 font-semibold text-lg">
-      <Heron className="size-8 text-accent" />
+      <LunedoMark className="size-8" />
       <span>{t("brand.name")}</span>
     </div>
   );

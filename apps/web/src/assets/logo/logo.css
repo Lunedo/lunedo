@@ -1,0 +1,16 @@
+.lunedo-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.lunedo-mark > img {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+:root:not([data-theme="dark"]):not([data-contrast="high"]) .lunedo-mark > [data-variant="petrol"],
+:root[data-contrast="high"]:not([data-theme="dark"]) .lunedo-mark > [data-variant="black"],
+:root[data-theme="dark"] .lunedo-mark > [data-variant="white"] {
+  display: block;
+}

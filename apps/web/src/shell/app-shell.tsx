@@ -1,4 +1,4 @@
-import { Notice, Rail } from "@pagehall/ui";
+import { Notice, Rail } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,8 +19,8 @@ import { signedOut } from "../session/sign-out.js";
 import { AnnouncementBanners } from "./announcement-banners.js";
 import { CommandPaletteHost } from "./command-palette.js";
 import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
-import { Heron } from "./heron.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
+import { LunedoMark } from "./lunedo-mark.js";
 import { MaintenanceBanner } from "./maintenance-banner.js";
 import { useNavigationFocus } from "./navigation-focus.js";
 import { useRegistry } from "./registry.js";
@@ -116,7 +116,7 @@ function ShellFrame() {
               aria-label={t("rail.home")}
               className="flex size-10 items-center justify-center rounded-md text-accent focus-visible:outline-2 focus-visible:outline-accent"
             >
-              <Heron className="size-8" />
+              <LunedoMark className="size-8" />
             </Link>
           }
           footer={items
