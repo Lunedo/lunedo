@@ -1099,5 +1099,34 @@ describe.skipIf(!baseUrl)("copying content", () => {
         errorCode: "copyInterrupted",
       });
     });
+
+    it("does not count maintenance mode as time a copy waited", async () => {
+      const { wiki, other, as } = await setup();
+      const { root } = await bigTree(as, wiki.id);
+      const queued = await test.services.copies.copy(as, root.id, {
+        spaceId: other.id,
+        parentId: null,
+        descendants: true,
+      });
+      await test.database.execute(
+        sql`update item_copies set updated_at = now() - interval '6 hours' where id = ${queued.id}`,
+      );
+      try {
+        await test.database.execute(sql`
+          insert into maintenance_state (singleton, enabled, started_at) values (true, true, now() - interval '5 hours')
+          on conflict (singleton) do update set enabled = true, started_at = now() - interval '5 hours'`);
+        await test.services.copies.watchdog();
+        expect(await test.services.copies.get(as, queued.id)).toMatchObject({ state: "queued" });
+        await test.database.execute(sql`
+          update maintenance_state set enabled = false, started_at = null,
+            last_started_at = now() - interval '5 hours', last_ended_at = now() - interval '30 minutes'`);
+        await test.services.copies.watchdog();
+        expect(await test.services.copies.get(as, queued.id)).toMatchObject({ state: "queued" });
+      } finally {
+        await test.database.execute(sql`
+          update maintenance_state set enabled = false, started_at = null, last_started_at = null,
+            last_ended_at = null`);
+      }
+    });
   });
 });

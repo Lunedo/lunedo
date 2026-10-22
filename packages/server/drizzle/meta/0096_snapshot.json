@@ -1,5 +1,5 @@
 {
-  "id": "51ef7550-974c-446c-a336-8a60cb1c9aba",
+  "id": "3b4de830-1b07-4309-8cad-435f08dc2116",
   "prevId": "375891f9-fd87-4f12-be4a-30bdf333e5a3",
   "version": "7",
   "dialect": "postgresql",
@@ -11914,6 +11914,18 @@
         },
         "started_at": {
           "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_started_at": {
+          "name": "last_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_ended_at": {
+          "name": "last_ended_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

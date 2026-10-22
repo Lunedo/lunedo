@@ -10,6 +10,7 @@ import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import { isKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { Logger } from "../logging/logger.js";
 import type { NotificationService } from "../notifications/service.js";
+import { idleOutsideMaintenance } from "../operations/maintenance.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
 import { isStorageFull } from "../storage/errors.js";
 import type { AtlassianDirectory } from "./atlassian.js";
@@ -736,7 +737,7 @@ export class ImportWorker {
     const stale = await this.#database.execute<{ id: string }>(sql`
       select id from imports
       where state in ('analyzing', 'running', 'stopping', 'discarding')
-        and coalesce(heartbeat_at, updated_at) < now() - make_interval(mins => ${STALE_MINUTES})
+        and ${idleOutsideMaintenance(sql`coalesce(heartbeat_at, updated_at)`, sql`make_interval(mins => ${STALE_MINUTES})`)}
       limit 100`);
     for (const row of stale.rows) await this.#continue(row.id);
     return stale.rows.length;

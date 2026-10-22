@@ -20,6 +20,7 @@ import type { FileService } from "../files/files.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import { checkKnowledgeBaseSubtree, isKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { NotificationService } from "../notifications/service.js";
+import { idleOutsideMaintenance } from "../operations/maintenance.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import { actorIdOf, auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
 import { encodeState, insertInitialDocument, migrated, recomputeLinks } from "../spaces/documents.js";
@@ -449,7 +450,8 @@ export class CopyService {
   async watchdog(): Promise<void> {
     const stale = await this.#database.execute<{ id: string }>(sql`
       select id from item_copies
-      where state in ('queued', 'running') and updated_at < now() - make_interval(hours => ${STALE_COPY_HOURS})`);
+      where state in ('queued', 'running')
+        and ${idleOutsideMaintenance(sql`updated_at`, sql`make_interval(hours => ${STALE_COPY_HOURS})`)}`);
     for (const row of stale.rows) await this.#fail(row.id, "copyInterrupted");
     await this.#database.execute(sql`
       delete from item_copies

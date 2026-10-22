@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
@@ -160,6 +160,8 @@ export class MaintenanceService {
           message = ${input.enabled ? message : ""},
           block_sign_in = ${blockSignIn},
           started_at = ${input.enabled ? (before.startedAt ?? now) : null},
+          last_started_at = ${input.enabled ? sql`last_started_at` : sql`started_at`},
+          last_ended_at = ${input.enabled ? sql`last_ended_at` : sql`now()`},
           changed_at = ${now},
           changed_by = ${changedBy}
         where singleton
@@ -194,4 +196,15 @@ export class MaintenanceService {
     const status = await this.status();
     if (status.enabled) throw new MaintenanceModeError(status);
   }
+}
+
+export function idleOutsideMaintenance(since: SQL, limit: SQL): SQL {
+  return sql`(
+    not exists (select 1 from maintenance_state where enabled)
+    and now() - (${since}) - coalesce(
+      (select greatest(interval '0', last_ended_at - greatest((${since}), last_started_at))
+        from maintenance_state where last_ended_at is not null and last_started_at is not null),
+      interval '0'
+    ) > ${limit}
+  )`;
 }
