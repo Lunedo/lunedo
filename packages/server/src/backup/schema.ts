@@ -137,7 +137,7 @@ export const backupTestRestores = pgTable(
 );
 
 export interface TestRestoreCheck {
-  check: "verify" | "privilege" | "restore" | "schemaVersion" | "rows" | "files";
+  check: "verify" | "space" | "privilege" | "restore" | "schemaVersion" | "rows" | "files";
   passed: boolean;
   detail: Record<string, string | number | boolean | null>;
 }

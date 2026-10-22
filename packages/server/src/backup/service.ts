@@ -26,7 +26,7 @@ import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { storageOperationsEmailsSetting, storageReminderSetting } from "../storage/settings.js";
 import { reminderDue } from "../storage/storage.js";
-import { BackupError, type BackupScope } from "./archive.js";
+import type { BackupScope } from "./archive.js";
 import {
   BACKUP_S3_SECRET,
   type BackupConfiguration,
@@ -1262,6 +1262,12 @@ export class BackupService {
       targetId: null,
       fields: { name: row.backupName, trigger: row.trigger, state: outcome.state, stage: outcome.stage },
     });
+    if (outcome.checks.some((check) => check.check === "space" && !check.passed)) {
+      this.#logger.warn(
+        { backup: row.backupName, trigger: row.trigger },
+        "The test restore only verified the backup because there is not enough free space for a full restore",
+      );
+    }
     if (outcome.state === "failed") {
       await this.#announce({
         type: "backup.testRestoreFailed",
@@ -1501,8 +1507,4 @@ export class BackupService {
         });
     }
   }
-}
-
-function formatGb(bytes: number): string {
-  return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
 }

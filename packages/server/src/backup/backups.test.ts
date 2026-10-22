@@ -520,15 +520,18 @@ describe.skipIf(!baseUrl)("backups", () => {
       expect(await files()).toEqual([]);
     });
 
-    it.skipIf(!hasTools)("refuses a backup that would fill a local target", async () => {
-      await useLocalTarget();
-      await test.settings.set(storageCriticalPercentSetting, {}, "instance", 1);
-      await backups().run({ trigger: "manual", slot: null, actorId: owner });
-      expect(await runs()).toMatchObject([
-        { state: "failed", error: expect.stringContaining("Not enough free space") },
-      ]);
-      expect(await files()).toEqual([]);
-    });
+    it.skipIf(!hasTools)(
+      "refuses a backup that would fill the disk of the work directory or the target",
+      async () => {
+        await useLocalTarget();
+        await test.settings.set(storageCriticalPercentSetting, {}, "instance", 1);
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect(await runs()).toMatchObject([
+          { state: "failed", error: expect.stringContaining("Not enough free space") },
+        ]);
+        expect(await files()).toEqual([]);
+      },
+    );
 
     it("queues manual backups for the worker and audits the request", async () => {
       await useLocalTarget();

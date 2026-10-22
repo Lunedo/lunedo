@@ -91,7 +91,7 @@ const runSchema = z
 const checkSchema = z
   .object({
     check: z
-      .enum(["verify", "privilege", "restore", "schemaVersion", "rows", "files"])
+      .enum(["verify", "space", "privilege", "restore", "schemaVersion", "rows", "files"])
       .describe("What was checked."),
     passed: z.boolean().describe("Whether the check passed."),
     detail: z
@@ -109,7 +109,7 @@ export const testRestoreSchema = z
     state: z
       .enum(["running", "passed", "verified", "failed"])
       .describe(
-        "`passed`: restored and checked. `verified`: only verified, because the database user may not create databases. `failed`: see `error`.",
+        "`passed`: restored and checked. `verified`: only verified, because the database user may not create databases or the work directory has too little free space (see `error`). `failed`: see `error`.",
       ),
     stage: z.enum(["verify", "restore", "checks", "done"]).describe("How far it got."),
     checks: z.array(checkSchema).describe("What was checked."),

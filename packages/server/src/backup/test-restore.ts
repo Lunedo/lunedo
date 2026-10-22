@@ -89,6 +89,7 @@ export interface TestRestoreSources {
   workDir: string;
   logger: Logger;
   archiver?: (databaseUrl: string) => DatabaseArchiver;
+  diskSpace?: ((dir: string) => Promise<DiskSpace>) | undefined;
 }
 
 async function createDatabasePrivilege(pool: DatabasePool): Promise<{ allowed: boolean; user: string }> {
@@ -188,9 +189,16 @@ async function inspect(
   }
 }
 
+function filesSize(manifest: BackupManifest): number {
+  return manifest.entries
+    .filter((entry) => entry.path.startsWith("files/"))
+    .reduce((sum, entry) => sum + entry.size, 0);
+}
+
 export async function runTestRestore(
   target: BackupTarget,
   name: string,
+  runId: string,
   sources: TestRestoreSources,
   onStage: (stage: TestRestoreStage, checks: TestRestoreCheck[]) => Promise<void>,
 ): Promise<TestRestoreOutcome> {
@@ -203,10 +211,11 @@ export async function runTestRestore(
     error: message(error),
   });
 
+  let manifest: BackupManifest;
   try {
     const source = await target.source(name);
     try {
-      const manifest = await verifyBackup({
+      manifest = await verifyBackup({
         input: source,
         backupKeys: sources.backupKeys,
         knownSchemaVersions: sources.knownSchemaVersions,
@@ -234,11 +243,24 @@ export async function runTestRestore(
     return { state: "verified", stage: "done", checks, error: null };
   }
 
+  const neededBytes = Math.ceil(filesSize(manifest) * SPACE_MARGIN);
+  try {
+    await mkdir(sources.workDir, { recursive: true, mode: 0o700 });
+    await checkSpace([{ dir: sources.workDir, bytes: neededBytes, label: "the copy of the file store" }], {
+      critical: await criticalPercent(sources.pool),
+      ...(sources.diskSpace ? { measure: sources.diskSpace } : {}),
+      advice:
+        "The backup itself was checked and is complete and readable. Free up space in the work directory, or move PAGEHALL_WORK_DIR to a larger disk, and start the test restore again.",
+    });
+  } catch (error) {
+    if (!(error instanceof NotEnoughSpaceError)) throw error;
+    checks.push({ check: "space", passed: false, detail: { neededBytes } });
+    return { state: "verified", stage: "done", checks, error: error.message };
+  }
+
   stage = "restore";
   await onStage(stage, checks);
-  const suffix = randomBytes(6).toString("hex");
-  const databaseName = `pagehall_test_restore_${suffix}`;
-  const filesDir = path.join(sources.workDir, `.pagehall-test-restore-${suffix}`);
+  const { database: databaseName, directory: filesDir } = testRestoreNames(sources.workDir, runId);
   const databaseUrl = databaseUrlFor(sources.databaseUrl, databaseName);
   let created = false;
   try {
