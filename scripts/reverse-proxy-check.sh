@@ -23,6 +23,7 @@ app="pagehall-proxy-app-${suffix}"
 proxy="pagehall-proxy-${suffix}"
 password="proxy-${suffix}"
 work="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-proxy-${suffix}-XXXX")"
+chmod 755 "$work"
 if command -v cygpath >/dev/null; then work="$(cygpath -m "$work")"; fi
 failures=0
 
@@ -95,6 +96,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=wiki.example.org" \
   -keyout "$work/privkey.pem" -out "$work/fullchain.pem" >/dev/null 2>&1
 chmod 644 "$work/privkey.pem" "$work/fullchain.pem"
 head -c 60000000 /dev/zero > "$work/upload.bin"
+chmod 644 "$work/upload.bin"
 
 start_caddy() {
   block caddy | sed 's/^\temail admin@example.org$/\tlocal_certs/' > "$work/Caddyfile"
