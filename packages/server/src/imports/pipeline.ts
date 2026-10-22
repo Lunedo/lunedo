@@ -7,9 +7,9 @@ import {
   narrowEmbedServices,
   resolveEmbed,
   slugify,
-} from "@pagehall/editor-schema";
-import { yDocFromDocument } from "@pagehall/editor-schema/yjs";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { yDocFromDocument } from "@lunedo/editor-schema/yjs";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -1571,7 +1571,7 @@ export class ImportPipeline {
       const baseline = baselines.get(page.sourceId);
       if (!itemId || !state || !baseline || !editable.has(itemId)) continue;
       const held = narrowing.holds({ sourceId: page.sourceId, itemId, heldBy: heldBy(entry.details) });
-      if (held && entry.decision !== "pagehall") continue;
+      if (held && entry.decision !== "lunedo") continue;
       const threads = new Map<string, string>();
       const converted = converter.convert(page.sourceId, (ref) => {
         const commentId = markers.get(page.sourceId)?.get(ref);
@@ -1606,7 +1606,7 @@ export class ImportPipeline {
       const author = (page.modifierId ? modifiers.get(page.modifierId) : undefined) ?? run.importerId;
       await this.#database.transaction(async (tx) => {
         const current = await this.#lockChange(tx, entry.id);
-        if (!current || (held && current.decision !== "pagehall")) return;
+        if (!current || (held && current.decision !== "lunedo")) return;
         const exists = (await localPages(tx, [itemId])).get(itemId);
         if (!exists) {
           await this.#applied(tx, entry.id, reimport.actorId);
@@ -1625,7 +1625,7 @@ export class ImportPipeline {
           apply = true;
         } else if (current.change === "conflict" && current.decision === "both") {
           apply = false;
-        } else if (current.change === "conflict" && current.decision === "pagehall") {
+        } else if (current.change === "conflict" && current.decision === "lunedo") {
           apply = null;
         } else {
           return;

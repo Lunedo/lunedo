@@ -1,4 +1,4 @@
-import { Combobox } from "@pagehall/ui";
+import { Combobox } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";

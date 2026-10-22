@@ -1,5 +1,5 @@
-import { contentColors, isIsoDate } from "@pagehall/editor-schema";
-import { Button, Field, Input, Popover, useToast } from "@pagehall/ui";
+import { contentColors, isIsoDate } from "@lunedo/editor-schema";
+import { Button, Field, Input, Popover, useToast } from "@lunedo/ui";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { type FormEvent, type KeyboardEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,7 @@ export function MentionView({ node, selected }: NodeViewProps) {
   return (
     <NodeViewWrapper
       as="span"
-      className={`ph-mention${selected ? " ph-node-selected" : ""}`}
+      className={`ld-mention${selected ? " ld-node-selected" : ""}`}
       data-account-id={id}
     >
       @{name ?? t("editor.mention.unknown")}
@@ -64,11 +64,11 @@ export function PageLinkView({ node, selected }: NodeViewProps) {
     }
   };
   return (
-    <NodeViewWrapper as="span" className={selected ? "ph-node-selected" : undefined}>
+    <NodeViewWrapper as="span" className={selected ? "ld-node-selected" : undefined}>
       <button
         type="button"
         contentEditable={false}
-        className="ph-page-link"
+        className="ld-page-link"
         data-missing={missing ? "true" : undefined}
         data-access={accessible ? undefined : "none"}
         aria-disabled={accessible ? undefined : true}
@@ -92,7 +92,7 @@ export function StatusView({ node, updateAttributes, editor, selected }: NodeVie
     <button
       type="button"
       contentEditable={false}
-      className="ph-status"
+      className="ld-status"
       data-color={color}
       aria-label={t("editor.status.edit", { text: node.attrs.text })}
       disabled={!editable}
@@ -111,7 +111,7 @@ export function StatusView({ node, updateAttributes, editor, selected }: NodeVie
     setOpen(false);
   };
   return (
-    <NodeViewWrapper as="span" className={selected ? "ph-node-selected" : undefined}>
+    <NodeViewWrapper as="span" className={selected ? "ld-node-selected" : undefined}>
       {editable ? (
         <Popover trigger={chip} open={open} onOpenChange={setOpen} label={t("editor.status.title")}>
           <form className="flex flex-col gap-3" onSubmit={save}>
@@ -135,7 +135,7 @@ export function StatusView({ node, updateAttributes, editor, selected }: NodeVie
                 <button
                   key={candidate}
                   type="button"
-                  className="ph-status"
+                  className="ld-status"
                   data-color={candidate}
                   aria-pressed={candidate === color}
                   onClick={() => updateAttributes({ color: candidate })}
@@ -167,7 +167,7 @@ export function DateView({ node, updateAttributes, editor, selected }: NodeViewP
     <button
       type="button"
       contentEditable={false}
-      className="ph-date"
+      className="ld-date"
       aria-label={t("editor.date.edit", { date: label })}
       disabled={!editable}
     >
@@ -181,7 +181,7 @@ export function DateView({ node, updateAttributes, editor, selected }: NodeViewP
     }
   };
   return (
-    <NodeViewWrapper as="span" className={selected ? "ph-node-selected" : undefined}>
+    <NodeViewWrapper as="span" className={selected ? "ld-node-selected" : undefined}>
       {editable ? (
         <Popover trigger={chip} open={open} onOpenChange={setOpen} label={t("editor.date.title")}>
           <Field label={t("editor.date.label")}>
@@ -204,7 +204,7 @@ export function DateView({ node, updateAttributes, editor, selected }: NodeViewP
 
 export function EmojiView({ node }: NodeViewProps) {
   return (
-    <NodeViewWrapper as="span" className="ph-emoji">
+    <NodeViewWrapper as="span" className="ld-emoji">
       {String(node.attrs.emoji)}
     </NodeViewWrapper>
   );
@@ -215,7 +215,7 @@ export function PlaceholderView({ node, selected }: NodeViewProps) {
   return (
     <NodeViewWrapper
       as="span"
-      className={`ph-placeholder${selected ? " ph-node-selected" : ""}`}
+      className={`ld-placeholder${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       title={t("editor.placeholderNode.hint")}
     >
@@ -230,7 +230,7 @@ export function TemplateFieldView({ node, selected }: NodeViewProps) {
   return (
     <NodeViewWrapper
       as="span"
-      className={`ph-template-field${selected ? " ph-node-selected" : ""}`}
+      className={`ld-template-field${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       title={t("editor.templateField.hint", { field })}
     >

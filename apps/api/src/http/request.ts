@@ -1,22 +1,22 @@
-import type { ClientInfo, Principal, Session } from "@pagehall/server";
+import type { ClientInfo, Principal, Session } from "@lunedo/server";
 import type { FastifyRequest } from "fastify";
 import { COOKIES, readCookie } from "./cookies.js";
 
 declare module "fastify" {
   interface FastifyRequest {
-    pagehallSession?: Session;
-    pagehallPrincipal?: Extract<Principal, { type: "account" }>;
+    lunedoSession?: Session;
+    lunedoPrincipal?: Extract<Principal, { type: "account" }>;
   }
 }
 
 export function sessionOf(request: FastifyRequest): Session {
-  if (!request.pagehallSession) throw new Error("The route does not declare session access");
-  return request.pagehallSession;
+  if (!request.lunedoSession) throw new Error("The route does not declare session access");
+  return request.lunedoSession;
 }
 
 export function actorOf(request: FastifyRequest): Extract<Principal, { type: "account" }> {
-  if (!request.pagehallPrincipal) throw new Error("The route does not declare authenticated access");
-  return request.pagehallPrincipal;
+  if (!request.lunedoPrincipal) throw new Error("The route does not declare authenticated access");
+  return request.lunedoPrincipal;
 }
 
 export function bearerToken(request: FastifyRequest): string | undefined {

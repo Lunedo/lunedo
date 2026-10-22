@@ -2,13 +2,13 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
-image="${1:?usage: scripts/backup-network-check.sh <image with node, such as the Pagehall image under test>}"
+image="${1:?usage: scripts/backup-network-check.sh <image with node, such as the Lunedo image under test>}"
 curl_image="curlimages/curl:8.18.0@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 docs="$root/docs/backup.md"
-project="pagehall-storage-$$"
-work="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-storage-$$-XXXX")"
+project="lunedo-storage-$$"
+work="$(mktemp -d "${TMPDIR:-/tmp}/lunedo-storage-$$-XXXX")"
 if command -v cygpath >/dev/null; then work="$(cygpath -m "$work")"; fi
 failures=0
 
@@ -32,10 +32,10 @@ awk '
 ' "$docs" >"$work/storage.yml"
 [ -s "$work/storage.yml" ] || { echo "The example marked backup-network-check is missing in docs/backup.md" >&2; exit 1; }
 bash "$root/scripts/install.sh" print-compose >"$work/compose.yml"
-sed -i.bak "s#^    image: ghcr.io/pagehall/pagehall:.*#    image: $image#" "$work/compose.yml"
+sed -i.bak "s#^    image: ghcr.io/lunedo/lunedo:.*#    image: $image#" "$work/compose.yml"
 {
   printf 'POSTGRES_PASSWORD=%s\n' "storage-check-$$"
-  printf 'STORAGE_ACCESS_KEY=%s\n' "pagehall"
+  printf 'STORAGE_ACCESS_KEY=%s\n' "lunedo"
   printf 'STORAGE_SECRET_KEY=%s\n' "storage-check-secret-$$"
 } >"$work/.env"
 
@@ -47,17 +47,17 @@ read_config() {
     $1
   " <"$work/config.json"
 }
-allowed="$(read_config 'process.stdout.write(config.services.pagehall.environment.PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ?? "");')"
+allowed="$(read_config 'process.stdout.write(config.services.lunedo.environment.LUNEDO_OUTBOUND_ALLOWED_NETWORKS ?? "");')"
 storage_address="$(read_config '
   const networks = config.services.storage.networks ?? {};
   process.stdout.write(Object.values(networks).map((network) => network?.ipv4_address).find(Boolean) ?? "");')"
-pagehall_networks="$(read_config 'process.stdout.write(Object.keys(config.services.pagehall.networks ?? {}).sort().join(" "));')"
+lunedo_networks="$(read_config 'process.stdout.write(Object.keys(config.services.lunedo.networks ?? {}).sort().join(" "));')"
 
 [ -n "$storage_address" ] || fail "The storage service has no fixed address"
 [ "$allowed" = "$storage_address/32" ] ||
-  fail "PAGEHALL_OUTBOUND_ALLOWED_NETWORKS is '$allowed', not only the address of the storage service ($storage_address/32)"
-[ "$pagehall_networks" = "default storage" ] ||
-  fail "Pagehall must stay on the default network and join the storage network, but is on: $pagehall_networks"
+  fail "LUNEDO_OUTBOUND_ALLOWED_NETWORKS is '$allowed', not only the address of the storage service ($storage_address/32)"
+[ "$lunedo_networks" = "default storage" ] ||
+  fail "Lunedo must stay on the default network and join the storage network, but is on: $lunedo_networks"
 
 compose up -d --wait postgres storage >/dev/null
 postgres_address="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "$(compose ps -q postgres)")"

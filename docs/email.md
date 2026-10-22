@@ -1,14 +1,14 @@
 # E-mail
 
-Pagehall sends e-mail for password resets, e-mail address changes, recovery code use, setup tests, invitations and self-registration. Reminders and notices, such as expiring access or break-glass access, are notifications; e-mail is one of their channels, see [notifications.md](notifications.md).
+Lunedo sends e-mail for password resets, e-mail address changes, recovery code use, setup tests, invitations and self-registration. Reminders and notices, such as expiring access or break-glass access, are notifications; e-mail is one of their channels, see [notifications.md](notifications.md).
 
 ## Sending method
 
-Pagehall sends either through SMTP or through Microsoft Graph (`mail.method`, instance setting). A method takes effect when its settings are saved; switching to Microsoft Graph needs saved Graph settings and a credential. Changes are audited as `mail.methodChanged`, `mail.smtpChanged`, `mail.graphChanged`, `mail.credentialAdded` and `mail.credentialRemoved`; test mails as `mail.testSent` with the method.
+Lunedo sends either through SMTP or through Microsoft Graph (`mail.method`, instance setting). A method takes effect when its settings are saved; switching to Microsoft Graph needs saved Graph settings and a credential. Changes are audited as `mail.methodChanged`, `mail.smtpChanged`, `mail.graphChanged`, `mail.credentialAdded` and `mail.credentialRemoved`; test mails as `mail.testSent` with the method.
 
 ## SMTP
 
-SMTP is an instance setting, configured in the setup assistant, in the instance administration or through configuration. The password is stored with envelope encryption and never returned; changing the configuration needs a recent sign-in. A test mail can be sent with a configuration before it is saved; without a new password it uses the stored one. A successful test means that the server accepted the mail; many servers reject it later and send a non-delivery report to the sender address, which Pagehall cannot see.
+SMTP is an instance setting, configured in the setup assistant, in the instance administration or through configuration. The password is stored with envelope encryption and never returned; changing the configuration needs a recent sign-in. A test mail can be sent with a configuration before it is saved; without a new password it uses the stored one. A successful test means that the server accepted the mail; many servers reject it later and send a non-delivery report to the sender address, which Lunedo cannot see.
 
 | Security | Behavior |
 |---|---|
@@ -22,9 +22,9 @@ Services such as SendGrid, Mailgun, Amazon SES, Postmark and Brevo are used thro
 
 ### SMTP with OAuth2
 
-Instead of a password, SMTP can sign in with an access token through SASL XOAUTH2 (`oauth2` in the SMTP configuration). The user name is the mailbox Pagehall signs in as. OAuth2 needs TLS or STARTTLS.
+Instead of a password, SMTP can sign in with an access token through SASL XOAUTH2 (`oauth2` in the SMTP configuration). The user name is the mailbox Lunedo signs in as. OAuth2 needs TLS or STARTTLS.
 
-| Provider | Grant | Pagehall stores |
+| Provider | Grant | Lunedo stores |
 |---|---|---|
 | `microsoft365` | Client credentials at `{authority}/{tenant}/oauth2/v2.0/token` with the scope `https://outlook.office365.com/.default` | Tenant ID, application ID, Microsoft cloud; the client secret |
 | `google` | Signed JWT assertion of a service account with domain-wide delegation, subject the mailbox, scope `https://mail.google.com/`, at `https://oauth2.googleapis.com/token` | Service account and its client ID; only the private key of the uploaded key file |
@@ -32,21 +32,21 @@ Instead of a password, SMTP can sign in with an access token through SASL XOAUTH
 
 Setup in Microsoft 365: register an app, add the application permission `SMTP.SendAsApp` of Office 365 Exchange Online with admin consent, create a client secret, then in Exchange Online PowerShell register the service principal (`New-ServicePrincipal -AppId … -ObjectId …`, with the object ID from Enterprise applications), give it the mailbox (`Add-MailboxPermission -Identity … -User … -AccessRights FullAccess`) and allow SMTP sign-in for it (`Set-CASMailbox -Identity … -SmtpClientAuthenticationDisabled $false`). Setup in Google Workspace: create a service account with a JSON key, then add its client ID with the scope `https://mail.google.com/` under domain-wide delegation in the Admin console. The settings show these steps and the values to copy before the fields. Google advises against service account keys; rotate the key regularly and upload the new one.
 
-Secrets and access tokens are stored with envelope encryption and never returned or logged. Pagehall fetches a token when it needs one and keeps it, shared by all nodes, until five minutes before it expires; when the mail server refuses a stored token, it fetches a new one once. Changing the SMTP configuration drops the stored token; a new OAuth2 client needs its secret again, and switching back to a password removes the OAuth2 secret. A test mail fetches a fresh token and names the step that failed (`token`, `connect`, `authenticate`, `send`); token errors are `oauthTokenUnreachable`, `oauthClientRejected`, `oauthNotAuthorized`, `oauthScopeRejected`, `oauthTokenRefused` and `oauthKeyInvalid`.
+Secrets and access tokens are stored with envelope encryption and never returned or logged. Lunedo fetches a token when it needs one and keeps it, shared by all nodes, until five minutes before it expires; when the mail server refuses a stored token, it fetches a new one once. Changing the SMTP configuration drops the stored token; a new OAuth2 client needs its secret again, and switching back to a password removes the OAuth2 secret. A test mail fetches a fresh token and names the step that failed (`token`, `connect`, `authenticate`, `send`); token errors are `oauthTokenUnreachable`, `oauthClientRejected`, `oauthNotAuthorized`, `oauthScopeRejected`, `oauthTokenRefused` and `oauthKeyInvalid`.
 
 ## Microsoft Graph
 
-Exchange Online is moving away from SMTP with passwords. With Microsoft Graph, Pagehall sends through `sendMail` of one sender mailbox, with an app registration of its own:
+Exchange Online is moving away from SMTP with passwords. With Microsoft Graph, Lunedo sends through `sendMail` of one sender mailbox, with an app registration of its own:
 
 1. In the Entra admin center, create an app registration for e-mail only, separate from the one for sign-in.
 2. Give the app the right to send. There are two ways:
    - Recommended: grant it only for the sender mailbox, in Exchange Online with RBAC for applications, and not in Entra ID. Create a service principal for the app (`New-ServicePrincipal`), a management scope that contains only the sender mailbox (`New-ManagementScope`), and assign the role `Application Mail.Send` with that scope (`New-ManagementRoleAssignment -Role "Application Mail.Send" -App … -CustomResourceScope …`). A tenant that has never been customized needs `Enable-OrganizationCustomization` first, which can take several hours to complete.
    - Simple: grant `Mail.Send` as an application permission in Entra ID, with admin consent. The app can then send as every mailbox of the tenant.
 
-   Pagehall cannot see which way was chosen. It sends only as the sender mailbox, but it does not know whether the app is limited to it.
-3. In Pagehall, enter the directory (tenant) ID, the application (client) ID and the sender mailbox, optionally a sender name, and add a client secret or let Pagehall create a certificate, whose public part is uploaded to the app registration. Secrets and private keys are stored with envelope encryption and never returned. As with identity providers, several credentials can exist during a renewal, the last one cannot be removed while Graph sends, and the holders of the instance settings area are notified 30 and 7 days before the last one expires (`mail.credentialExpiring`).
+   Lunedo cannot see which way was chosen. It sends only as the sender mailbox, but it does not know whether the app is limited to it.
+3. In Lunedo, enter the directory (tenant) ID, the application (client) ID and the sender mailbox, optionally a sender name, and add a client secret or let Lunedo create a certificate, whose public part is uploaded to the app registration. Secrets and private keys are stored with envelope encryption and never returned. As with identity providers, several credentials can exist during a renewal, the last one cannot be removed while Graph sends, and the holders of the instance settings area are notified 30 and 7 days before the last one expires (`mail.credentialExpiring`).
 
-The authority and the Graph endpoint default to the global Microsoft cloud; other Microsoft clouds can be set, other hosts only with `PAGEHALL_INSECURE_IDENTITY_PROVIDERS` for development. A test mail can be sent with settings before they are saved. Errors name what failed and what to do:
+The authority and the Graph endpoint default to the global Microsoft cloud; other Microsoft clouds can be set, other hosts only with `LUNEDO_INSECURE_IDENTITY_PROVIDERS` for development. A test mail can be sent with settings before they are saved. Errors name what failed and what to do:
 
 | Code | Meaning |
 |---|---|
@@ -61,7 +61,7 @@ The authority and the Graph endpoint default to the global Microsoft cloud; othe
 
 Delivery through Graph is retried like delivery through SMTP. Mails with list headers, which all notification mails have, are sent in MIME format with a text and an HTML part, because Graph accepts other headers only that way; Graph then keeps a copy in the Sent Items of the sender mailbox, which a retention policy can clean up.
 
-Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. Pagehall sends with `saveToSentItems: false`, so the sent mail itself does not appear in Sent Items; the message trace in the Exchange admin center shows what happened to it.
+Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. Lunedo sends with `saveToSentItems: false`, so the sent mail itself does not appear in Sent Items; the message trace in the Exchange admin center shows what happened to it.
 
 ## Delivery
 

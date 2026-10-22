@@ -1,5 +1,5 @@
-import type { PageRequest, Page as ServerPage } from "@pagehall/server";
-import { idSchema } from "@pagehall/shared";
+import type { PageRequest, Page as ServerPage } from "@lunedo/server";
+import { idSchema } from "@lunedo/shared";
 import { z } from "zod";
 import { ProblemException } from "./problems.js";
 

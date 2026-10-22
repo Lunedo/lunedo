@@ -10,7 +10,7 @@ An embed shows a video, design, presentation or document of an external service 
 - An address on the allowlist appears as a frame. It loads only when it scrolls into view, so opening a long page sends nothing to the services further down. The title and the link stay below the frame, so readers can open the content at the source, also when the instance has no internet access and the frame stays empty.
 - An address that is not on the allowlist appears as a link with a short hint. When an administrator adds the service later, the block shows the frame without editing the page; when a service is removed, its embeds turn back into links.
 - The height can be set from 100 to 2,000 pixels.
-- Print and Word show the title and the link. An imported embed that came with a preview image also shows that image; Pagehall never fetches images from the service during an export.
+- Print and Word show the title and the link. An imported embed that came with a preview image also shows that image; Lunedo never fetches images from the service during an export.
 
 Frames run with `sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"`, `allow="fullscreen; picture-in-picture; encrypted-media"` and the referrer policy of the matching rule, `no-referrer` unless the rule says otherwise. The service runs in its own origin and cannot reach the page, the session or other frames.
 
@@ -33,7 +33,7 @@ Examples:
 | Pattern | Embed address |
 |---|---|
 | `https://www.youtube.com/watch?v={video}` | `https://www.youtube-nocookie.com/embed/{video}` |
-| `https://www.figma.com/design/{file}/{*}` | `https://www.figma.com/embed?embed_host=pagehall&url={url}` |
+| `https://www.figma.com/design/{file}/{*}` | `https://www.figma.com/embed?embed_host=lunedo&url={url}` |
 | `https://{tenant}.sharepoint.com/{*}/_layouts/15/embed.aspx?UniqueId={file}` | the same address |
 
 Each rule can also set the **address sent to the service**:
@@ -47,7 +47,7 @@ The web client sends `Content-Security-Policy: frame-src 'self' …` with the or
 
 ## File previews
 
-The **File preview** option of a file block shows the file inside the page: PDF, images, video, audio, text and code, Markdown, CSV, SVG (sanitized), Word and Excel. Other types stay a download link. Previews use the same sandboxed frame as the preview drawer; PDF files are rendered by Pagehall, not by the browser.
+The **File preview** option of a file block shows the file inside the page: PDF, images, video, audio, text and code, Markdown, CSV, SVG (sanitized), Word and Excel. Other types stay a download link. Previews use the same sandboxed frame as the preview drawer; PDF files are rendered by Lunedo, not by the browser.
 
 - Height (150 to 2,000 pixels) and page size (fit to width or 50 to 200 percent) can be set.
 - The file is loaded only when the block scrolls into view; large files are previewed up to the limits of the preview drawer.

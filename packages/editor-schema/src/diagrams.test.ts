@@ -64,12 +64,12 @@ describe("diagram blocks", () => {
       previewId: PREVIEW,
       previewVersion: 1,
     });
-    expect(renderHtml(document, context)).toContain('<details class="ph-diagram-source">');
+    expect(renderHtml(document, context)).toContain('<details class="ld-diagram-source">');
     expect(renderHtml(document, { ...context, target: "print" })).not.toContain("<details");
   });
 
   it("show a placeholder for draw.io diagrams without an image or without access to it", () => {
-    expect(renderHtml(diagram("drawio", {}))).toContain('class="ph-diagram-empty"');
+    expect(renderHtml(diagram("drawio", {}))).toContain('class="ld-diagram-empty"');
     expect(
       renderHtml(diagram("drawio", { previewId: PREVIEW, previewVersion: 1 }), { attachment: () => null }),
     ).not.toContain("<img");

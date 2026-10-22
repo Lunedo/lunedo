@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -17,7 +17,7 @@ import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from
 const hasTools = spawnSync("pg_dump", ["--version"]).status === 0;
 if (process.env.CI && !hasTools) throw new Error("pg_dump must be installed in CI");
 
-const NAME = "pagehall-backup-20261021T020000Z-daily-0a1b2c3d.phbak";
+const NAME = "lunedo-backup-20261021T020000Z-daily-0a1b2c3d.ldbak";
 
 describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
   let test: AuthTestApp;
@@ -34,17 +34,17 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
     owner = new TestClient(test.app);
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
-    await createAccount(test, "backup-member@pagehall.test", "a long enough passphrase");
-    member = await signedInClient(test, "backup-member@pagehall.test", "a long enough passphrase");
-    const watcher = await createAccount(test, "backup-auditor@pagehall.test", "a long enough passphrase");
+    await createAccount(test, "backup-member@lunedo.test", "a long enough passphrase");
+    member = await signedInClient(test, "backup-member@lunedo.test", "a long enough passphrase");
+    const watcher = await createAccount(test, "backup-auditor@lunedo.test", "a long enough passphrase");
     await test.runtime.services.roles.assign(SYSTEM, {
       scope: "instance",
       organizationId: null,
       role: { builtIn: "securityAuditor" },
       principal: { kind: "account", id: watcher.id },
     });
-    auditor = await signedInClient(test, "backup-auditor@pagehall.test", "a long enough passphrase");
-    targetDir = mkdtempSync(path.join(tmpdir(), "pagehall-api-target-"));
+    auditor = await signedInClient(test, "backup-auditor@lunedo.test", "a long enough passphrase");
+    targetDir = mkdtempSync(path.join(tmpdir(), "lunedo-api-target-"));
   });
 
   afterAll(async () => {
@@ -60,8 +60,8 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
 
   const changes: [string, string, unknown?][] = [
     ["PATCH", "/api/v1/instance/backups/settings", { enabled: false }],
-    ["PUT", "/api/v1/instance/backups/target", { kind: "local", path: "/var/lib/pagehall/backups" }],
-    ["POST", "/api/v1/instance/backups/target/test", { kind: "local", path: "/var/lib/pagehall/backups" }],
+    ["PUT", "/api/v1/instance/backups/target", { kind: "local", path: "/var/lib/lunedo/backups" }],
+    ["POST", "/api/v1/instance/backups/target/test", { kind: "local", path: "/var/lib/lunedo/backups" }],
     ["PUT", "/api/v1/instance/backups/key-confirmation", { confirmed: true }],
     ["POST", "/api/v1/instance/backups/target/confirmation"],
     ["POST", "/api/v1/instance/backups/runs"],
@@ -96,7 +96,7 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
       kind: "s3",
       endpoint: "https://s3.example.org",
       region: "eu-central-1",
-      bucket: "pagehall-backups",
+      bucket: "lunedo-backups",
       prefix: "",
       forcePathStyle: false,
       accessKeyId: "AKIAEXAMPLE",
@@ -106,7 +106,7 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
     const read = await auditor.get("/api/v1/instance/backups");
     expect(read.statusCode).toBe(200);
     expect(read.json()).toMatchObject({
-      target: { kind: "s3", bucket: "pagehall-backups", secretKeyConfigured: true },
+      target: { kind: "s3", bucket: "lunedo-backups", secretKeyConfigured: true },
     });
     expect(read.body).not.toContain(secret);
     expect(
@@ -198,7 +198,7 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
 
     await test.runtime.pool.query(`
       update backup_configuration set target_kind = 's3', target_path = null, s3_region = 'us-east-1',
-        s3_bucket = 'pagehall-backups', s3_access_key_id = 'pagehall'`);
+        s3_bucket = 'lunedo-backups', s3_access_key_id = 'lunedo'`);
     await test.runtime.pool.query("delete from instance_secrets where name like 'backup.%'");
     const started = await owner.post("/api/v1/instance/backups/runs");
     expect(started.statusCode, started.body).toBe(502);

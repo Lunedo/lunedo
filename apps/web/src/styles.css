@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@pagehall/tokens/theme.css";
+@import "@lunedo/tokens/theme.css";
 
 @source "../../../packages/ui/src";
 
@@ -11,9 +11,9 @@
   }
 
   body {
-    background-color: var(--ph-color-bg);
-    color: var(--ph-color-text);
-    font-family: var(--ph-font-sans);
+    background-color: var(--ld-color-bg);
+    color: var(--ld-color-text);
+    font-family: var(--ld-font-sans);
     font-size: var(--text-base);
     line-height: var(--leading-ui);
     -webkit-font-smoothing: antialiased;
@@ -26,12 +26,12 @@
   }
 
   a {
-    color: var(--ph-color-accent);
+    color: var(--ld-color-accent);
   }
 
   :focus-visible {
-    outline: var(--ph-focus-width) solid var(--ph-color-accent);
-    outline-offset: var(--ph-focus-offset);
+    outline: var(--ld-focus-width) solid var(--ld-color-accent);
+    outline-offset: var(--ld-focus-offset);
   }
 
   [data-quiet-focus]:focus-visible {

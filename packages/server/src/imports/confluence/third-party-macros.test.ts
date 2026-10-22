@@ -1,4 +1,4 @@
-import { defaultEmbedServices, type NodeJson, resolveEmbed, validateDocument } from "@pagehall/editor-schema";
+import { defaultEmbedServices, type NodeJson, resolveEmbed, validateDocument } from "@lunedo/editor-schema";
 import { describe, expect, it } from "vitest";
 import {
   type ConvertedPage,

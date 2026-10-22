@@ -1,21 +1,17 @@
 import { randomBytes } from "node:crypto";
-import { createDatabasePool, loadConfig } from "@pagehall/server";
-import {
-  createMigratedDatabase,
-  type TemporaryDatabase,
-  testDatabaseBaseUrl,
-} from "@pagehall/server/testing";
+import { createDatabasePool, loadConfig } from "@lunedo/server";
+import { createMigratedDatabase, type TemporaryDatabase, testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { maintenance } from "./maintenance.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const DATABASE_HOOK_TIMEOUT_MS = 60_000;
 
-describe.skipIf(!baseUrl)("pagehall maintenance", () => {
+describe.skipIf(!baseUrl)("lunedo maintenance", () => {
   let database: TemporaryDatabase;
 
   beforeAll(async () => {
-    database = await createMigratedDatabase(baseUrl ?? "", "pagehall_cli_maintenance_test");
+    database = await createMigratedDatabase(baseUrl ?? "", "lunedo_cli_maintenance_test");
   }, DATABASE_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
@@ -24,8 +20,8 @@ describe.skipIf(!baseUrl)("pagehall maintenance", () => {
 
   async function run(command: Parameters<typeof maintenance>[1]): Promise<string[]> {
     const config = loadConfig({
-      PAGEHALL_DATABASE_URL: database.url,
-      PAGEHALL_MASTER_KEYS: `1:${randomBytes(32).toString("base64")}`,
+      LUNEDO_DATABASE_URL: database.url,
+      LUNEDO_MASTER_KEYS: `1:${randomBytes(32).toString("base64")}`,
     });
     const written: string[] = [];
     await maintenance(config, command, (line) => written.push(line));
@@ -44,7 +40,7 @@ describe.skipIf(!baseUrl)("pagehall maintenance", () => {
 
     const pool = createDatabasePool({
       connectionString: database.url,
-      applicationName: "pagehall-test",
+      applicationName: "lunedo-test",
     });
     try {
       const events = await pool.query<{ name: string; actor_type: string }>(

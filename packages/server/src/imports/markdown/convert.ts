@@ -25,7 +25,7 @@ export interface MarkdownLookup {
   problem(code: "unsupportedMarkdown" | "unresolvedFileLink", details: Record<string, string>): void;
 }
 
-export interface PagehallFacts {
+export interface LunedoFacts {
   readonly kind: "page" | "folder" | null;
   readonly articleType: "howTo" | "troubleshooting" | null;
   readonly language: string | null;
@@ -38,7 +38,7 @@ export interface FrontMatter {
   readonly created: string | null;
   readonly modified: string | null;
   readonly properties: readonly (readonly [string, string])[];
-  readonly pagehall: PagehallFacts | null;
+  readonly lunedo: LunedoFacts | null;
 }
 
 export interface ConvertedMarkdown {
@@ -84,15 +84,15 @@ const EMPTY_FRONT_MATTER: FrontMatter = {
   created: null,
   modified: null,
   properties: [],
-  pagehall: null,
+  lunedo: null,
 };
-const PAGEHALL_KEY = "pagehall";
+const LUNEDO_KEY = "lunedo";
 const ARTICLE_TYPES = new Set(["howTo", "troubleshooting"]);
 const SECTION_OPEN =
-  /^<!--\s*pagehall:section\s+key="([a-z][a-zA-Z0-9]{0,39})"(?:\s+icon="([a-z][a-z0-9]*(?:-[a-z0-9]+)*)")?\s*-->\s*$/;
-const SECTION_CLOSE = /^<!--\s*\/pagehall:section\s*-->\s*$/;
+  /^<!--\s*lunedo:section\s+key="([a-z][a-zA-Z0-9]{0,39})"(?:\s+icon="([a-z][a-z0-9]*(?:-[a-z0-9]+)*)")?\s*-->\s*$/;
+const SECTION_CLOSE = /^<!--\s*\/lunedo:section\s*-->\s*$/;
 
-function pagehallFacts(value: unknown): PagehallFacts | null {
+function lunedoFacts(value: unknown): LunedoFacts | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   const kind = record.kind === "page" || record.kind === "folder" ? record.kind : null;
@@ -159,7 +159,7 @@ export function parseFrontMatter(yaml: string | null, problem: MarkdownLookup["p
   const title = scalar(first(TITLE_KEYS));
   const labels = LABEL_KEYS.flatMap((key) => labelsOf(record[key]));
   const properties: [string, string][] = [];
-  const used = new Set([...TITLE_KEYS, ...LABEL_KEYS, ...CREATED_KEYS, ...MODIFIED_KEYS, PAGEHALL_KEY]);
+  const used = new Set([...TITLE_KEYS, ...LABEL_KEYS, ...CREATED_KEYS, ...MODIFIED_KEYS, LUNEDO_KEY]);
   for (const [key, value] of Object.entries(record)) {
     if (used.has(key) || IGNORED_KEYS.has(key) || properties.length >= MAX_PROPERTIES) continue;
     const single = scalar(value);
@@ -180,7 +180,7 @@ export function parseFrontMatter(yaml: string | null, problem: MarkdownLookup["p
     created: isoDate(first(CREATED_KEYS)),
     modified: isoDate(first(MODIFIED_KEYS)),
     properties,
-    pagehall: pagehallFacts(record[PAGEHALL_KEY]),
+    lunedo: lunedoFacts(record[LUNEDO_KEY]),
   };
 }
 
@@ -525,7 +525,7 @@ function sections(tokens: readonly Token[], renderer: Renderer, lookup: Markdown
     }
     return element(
       "section",
-      { "data-pagehall-section": open.key, "data-pagehall-icon": open.icon, "data-pagehall-title": title },
+      { "data-lunedo-section": open.key, "data-lunedo-icon": open.icon, "data-lunedo-title": title },
       blocks(tokens.slice(from, end), renderer, lookup),
     );
   };

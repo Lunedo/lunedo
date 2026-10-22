@@ -1,4 +1,3 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import {
   brandColors,
   brandValues,
@@ -9,7 +8,8 @@ import {
   type PortalConfig,
   type PortalDomain,
   TOP_BAR_THRESHOLD_MAX,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -57,7 +57,7 @@ const portalSchema = z
       .number()
       .int()
       .describe("From this number of categories on, the top bar shows a single topics menu."),
-    poweredBy: z.boolean().describe("Whether the footer says that the portal is provided with Pagehall."),
+    poweredBy: z.boolean().describe("Whether the footer says that the portal is provided with Lunedo."),
     feedbackRetentionMonths: z
       .number()
       .int()
@@ -109,7 +109,7 @@ const appearanceSchema = z
       .max(TOP_BAR_THRESHOLD_MAX)
       .optional()
       .describe("See the portal."),
-    poweredBy: z.boolean().optional().describe("Shows “Provided with Pagehall” in the footer."),
+    poweredBy: z.boolean().optional().describe("Shows “Provided with Lunedo” in the footer."),
     feedbackRetentionMonths: z
       .number()
       .int()
@@ -172,7 +172,7 @@ const helpSchema = z
   .object({
     current: helpCandidateSchema
       .nullable()
-      .describe("The chosen knowledge base, or null for the Pagehall documentation."),
+      .describe("The chosen knowledge base, or null for the Lunedo documentation."),
     candidates: z.array(helpCandidateSchema).describe("Knowledge bases everyone signed in may read."),
   })
   .describe("Where the help icon of the app leads.");
@@ -180,7 +180,7 @@ const helpSchema = z
 const helpBodySchema = z
   .object({ spaceId: uuid("ID of the knowledge base.").nullable() })
   .strict()
-  .describe("The knowledge base, or null for the Pagehall documentation.");
+  .describe("The knowledge base, or null for the Lunedo documentation.");
 
 export function portalUrl(instanceUrl: string, config: { path: string; domain: string | null }): string {
   return config.domain ? `https://${config.domain}/` : `${instanceUrl}/help/${config.path}/`;
@@ -366,7 +366,7 @@ export class PortalController {
   @ApiRoute({
     summary: "Allow a domain for portals",
     description:
-      "Lets one organization use the domain for one of its knowledge base portals. The reverse proxy must send the domain to Pagehall and hold its certificate. The change is recorded in the audit log.",
+      "Lets one organization use the domain for one of its knowledge base portals. The reverse proxy must send the domain to Lunedo and hold its certificate. The change is recorded in the audit log.",
     tags: [INSTANCE_TAG],
     status: 201,
     body: allowDomainSchema,
@@ -428,7 +428,7 @@ export class PortalController {
   @ApiRoute({
     summary: "Choose where the help icon leads",
     description:
-      "Points the help icon of the app to a knowledge base of the organization that everyone signed in may read, or back to the Pagehall documentation with null.",
+      "Points the help icon of the app to a knowledge base of the organization that everyone signed in may read, or back to the Lunedo documentation with null.",
     tags: [TAG],
     params: organizationParams,
     body: helpBodySchema,

@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   }
   const server = createRenderServer({
     token: config.token,
-    version: process.env.PAGEHALL_VERSION ?? "dev",
+    version: process.env.LUNEDO_VERSION ?? "dev",
     renderer,
     concurrency: config.concurrency,
     maxWaiting: config.maxWaiting,

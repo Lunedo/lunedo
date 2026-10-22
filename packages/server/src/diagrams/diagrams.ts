@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { type DiagramType, MAX_DRAWING_TEXT } from "@pagehall/editor-schema";
+import { type DiagramType, MAX_DRAWING_TEXT } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { Database } from "../database/database.js";

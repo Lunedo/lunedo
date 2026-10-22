@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { slugify } from "@pagehall/editor-schema";
+import { slugify } from "@lunedo/editor-schema";
 import {
   type ChatChannelKind,
   type ChatChannelState,
@@ -9,7 +9,7 @@ import {
   type SpaceChatEvent,
   spaceChatEvents,
   uuidv7,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -47,7 +47,7 @@ import {
 import { chatChannels, chatDeliveries } from "./schema.js";
 import { chatTexts } from "./texts.js";
 
-export const CHAT_DELIVERIES_CHANNEL = "pagehall_chat_deliveries";
+export const CHAT_DELIVERIES_CHANNEL = "lunedo_chat_deliveries";
 export const PAGE_CHANGES_COMBINE_MINUTES = 60;
 export const DECISION_SETTLE_MINUTES = 5;
 const MAX_CHANNELS = 20;

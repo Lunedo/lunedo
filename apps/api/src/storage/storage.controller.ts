@@ -1,5 +1,5 @@
+import type { StorageStatus } from "@lunedo/server";
 import { Body, Controller, Get, Inject, Post, Put, Req } from "@nestjs/common";
-import type { StorageStatus } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -33,7 +33,7 @@ export class StorageController {
   @ApiRoute({
     summary: "Get the usage of the file store",
     description:
-      "Shows the usage of the file store, the active warning level and the settings of the warnings. For a local volume the usage is read from the volume; for S3 storage it is the running total of the files Pagehall stores, measured against the limit if one is set.",
+      "Shows the usage of the file store, the active warning level and the settings of the warnings. For a local volume the usage is read from the volume; for S3 storage it is the running total of the files Lunedo stores, measured against the limit if one is set.",
     tags: [TAG],
     response: {
       description: "Usage and settings.",

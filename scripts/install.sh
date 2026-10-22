@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE_REPOSITORY="ghcr.io/pagehall/pagehall"
+IMAGE_REPOSITORY="ghcr.io/lunedo/lunedo"
 POSTGRES_IMAGE="postgres:17-alpine"
-RECORD=".pagehall-install"
+RECORD=".lunedo-install"
 MIN_FREE_KB=$((4 * 1024 * 1024))
-READY_TIMEOUT_SECONDS="${PAGEHALL_READY_TIMEOUT:-600}"
+READY_TIMEOUT_SECONDS="${LUNEDO_READY_TIMEOUT:-600}"
 CODE_ALPHABET="ABCDEFGHJKMNPQRSTVWXYZ23456789"
 
 assume_yes=0
@@ -23,22 +23,22 @@ pull=1
 usage() {
   cat <<'USAGE'
 Usage:
-  install.sh [install] [options]       Install Pagehall with Docker Compose
-  pagehall update [version] [options]  Update this installation, with a backup first
-  pagehall maintenance on|off|status   Switch maintenance mode, see pagehall maintenance --help
-  pagehall backup ...                  Run a backup command in the container
-  pagehall version                     Show the installed version
+  install.sh [install] [options]       Install Lunedo with Docker Compose
+  lunedo update [version] [options]  Update this installation, with a backup first
+  lunedo maintenance on|off|status   Switch maintenance mode, see lunedo maintenance --help
+  lunedo backup ...                  Run a backup command in the container
+  lunedo version                     Show the installed version
 
 Options:
-  --dir <directory>     Installation directory (default /opt/pagehall, on macOS ~/pagehall)
+  --dir <directory>     Installation directory (default /opt/lunedo, on macOS ~/lunedo)
   --url <address>       Address people open, for example https://wiki.example.org
   --version <version>   Version to install or update to (default: the newest release)
-  --image <reference>   Image to use instead of ghcr.io/pagehall/pagehall:<version>
-  --port <port>         Host port of Pagehall (default 3000)
+  --image <reference>   Image to use instead of ghcr.io/lunedo/lunedo:<version>
+  --port <port>         Host port of Lunedo (default 3000)
   --bind <address>      Host address the port listens on (default 127.0.0.1)
   --subnet <cidr>       Subnet of the Compose network (default 172.30.0.0/24)
   --proxy <address>     Fixed address of a reverse proxy on the Compose network, the only address
-                        Pagehall trusts for forwarded headers (default: none)
+                        Lunedo trusts for forwarded headers (default: none)
   --no-pull             Use a local image without pulling it
   --yes                 Answer every question with its default, for unattended runs
   --help                Show this help
@@ -127,7 +127,7 @@ setup_code() {
 }
 
 default_directory() {
-  if [ "$(uname -s)" = "Darwin" ]; then printf '%s/pagehall' "$HOME"; else printf '/opt/pagehall'; fi
+  if [ "$(uname -s)" = "Darwin" ]; then printf '%s/lunedo' "$HOME"; else printf '/opt/lunedo'; fi
 }
 
 script_directory() {
@@ -162,30 +162,30 @@ image_version() {
   docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "$1" 2>/dev/null || true
 }
 
-current_image() { sed -n 's/^    image: \(.*pagehall.*\)$/\1/p' "$directory/compose.yml" | head -n 1; }
+current_image() { sed -n 's/^    image: \(.*lunedo.*\)$/\1/p' "$directory/compose.yml" | head -n 1; }
 
 compose_file() {
   local reference="$1"
   cat <<COMPOSE
-name: pagehall
+name: lunedo
 
 services:
   postgres:
     image: $POSTGRES_IMAGE
     restart: unless-stopped
     environment:
-      POSTGRES_USER: pagehall
+      POSTGRES_USER: lunedo
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: pagehall
+      POSTGRES_DB: lunedo
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pagehall -d pagehall"]
+      test: ["CMD-SHELL", "pg_isready -U lunedo -d lunedo"]
       interval: 5s
       timeout: 5s
       retries: 30
 
-  pagehall:
+  lunedo:
     image: $reference
     restart: unless-stopped
     init: true
@@ -194,21 +194,21 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      PAGEHALL_DATABASE_URL: postgres://pagehall:\${POSTGRES_PASSWORD}@postgres:5432/pagehall
-      PAGEHALL_INSTANCE_URL: \${PAGEHALL_INSTANCE_URL:-}
-      PAGEHALL_SETUP_CODE: \${PAGEHALL_SETUP_CODE:-}
-      PAGEHALL_MASTER_KEYS: \${PAGEHALL_MASTER_KEYS:-}
-      PAGEHALL_BACKUP_KEY: \${PAGEHALL_BACKUP_KEY:-}
-      PAGEHALL_METRICS_TOKEN: \${PAGEHALL_METRICS_TOKEN:-}
-      PAGEHALL_TRUSTED_PROXIES: \${PAGEHALL_TRUSTED_PROXIES:-}
-      PAGEHALL_UPDATE_CHECK: \${PAGEHALL_UPDATE_CHECK:-true}
-      PAGEHALL_INSTALL_METHOD: \${PAGEHALL_INSTALL_METHOD:-compose}
-      PAGEHALL_INSTALL_DIR: \${PAGEHALL_INSTALL_DIR:-}
+      LUNEDO_DATABASE_URL: postgres://lunedo:\${POSTGRES_PASSWORD}@postgres:5432/lunedo
+      LUNEDO_INSTANCE_URL: \${LUNEDO_INSTANCE_URL:-}
+      LUNEDO_SETUP_CODE: \${LUNEDO_SETUP_CODE:-}
+      LUNEDO_MASTER_KEYS: \${LUNEDO_MASTER_KEYS:-}
+      LUNEDO_BACKUP_KEY: \${LUNEDO_BACKUP_KEY:-}
+      LUNEDO_METRICS_TOKEN: \${LUNEDO_METRICS_TOKEN:-}
+      LUNEDO_TRUSTED_PROXIES: \${LUNEDO_TRUSTED_PROXIES:-}
+      LUNEDO_UPDATE_CHECK: \${LUNEDO_UPDATE_CHECK:-true}
+      LUNEDO_INSTALL_METHOD: \${LUNEDO_INSTALL_METHOD:-compose}
+      LUNEDO_INSTALL_DIR: \${LUNEDO_INSTALL_DIR:-}
     ports:
-      - "\${PAGEHALL_BIND:-127.0.0.1}:\${PAGEHALL_PORT:-3000}:3000"
+      - "\${LUNEDO_BIND:-127.0.0.1}:\${LUNEDO_PORT:-3000}:3000"
     volumes:
-      - pagehall-data:/var/lib/pagehall
-      - ./backups:/var/lib/pagehall/backups
+      - lunedo-data:/var/lib/lunedo
+      - ./backups:/var/lib/lunedo/backups
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 10s
@@ -218,13 +218,13 @@ services:
 
 volumes:
   postgres-data:
-  pagehall-data:
+  lunedo-data:
 
 networks:
   default:
     ipam:
       config:
-        - subnet: \${PAGEHALL_SUBNET:-172.30.0.0/24}
+        - subnet: \${LUNEDO_SUBNET:-172.30.0.0/24}
 COMPOSE
 }
 
@@ -241,13 +241,13 @@ check_requirements() {
   while [ ! -d "$parent" ]; do parent="$(dirname "$parent")"; done
   free="$(df -Pk "$parent" | awk 'NR == 2 { print $4 }')"
   if [ -n "$free" ] && [ "$free" -lt "$MIN_FREE_KB" ]; then
-    problems+=("Only $((free / 1024 / 1024)) GB are free in $parent. Pagehall needs at least 4 GB for its images and first data; free space or choose another directory with --dir.")
+    problems+=("Only $((free / 1024 / 1024)) GB are free in $parent. Lunedo needs at least 4 GB for its images and first data; free space or choose another directory with --dir.")
   fi
   if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
     problems+=("Port $port is already in use on this host. Stop the program that uses it, or choose another port with --port.")
   fi
   if [ "${#problems[@]}" -gt 0 ]; then
-    say "Pagehall cannot be installed yet:" >&2
+    say "Lunedo cannot be installed yet:" >&2
     local problem
     for problem in "${problems[@]}"; do say "  - $problem" >&2; done
     exit 1
@@ -261,7 +261,7 @@ wait_ready() {
   return 1
 }
 
-install_pagehall() {
+install_lunedo() {
   directory="${directory:-$(ask "Installation directory" "$(default_directory)")}"
   directory="${directory%/}"
   port="${port:-3000}"
@@ -274,20 +274,20 @@ install_pagehall() {
   fi
 
   if [ -f "$directory/$RECORD" ] || [ -f "$directory/compose.yml" ] || [ -f "$directory/.env" ]; then
-    say "Pagehall is already installed in $directory (version $(record_value version))."
-    say "Nothing was changed. Secrets and data stay as they are. To update it, run $directory/pagehall update."
+    say "Lunedo is already installed in $directory (version $(record_value version))."
+    say "Nothing was changed. Secrets and data stay as they are. To update it, run $directory/lunedo update."
     if interactive && confirm "Update this installation instead?"; then
       local arguments=(update --dir "$directory")
       if [ -n "$version" ]; then arguments+=("$version"); fi
       if [ -n "$image" ]; then arguments+=(--image "$image"); fi
       if [ "$pull" -eq 0 ]; then arguments+=(--no-pull); fi
       if [ "$assume_yes" -eq 1 ]; then arguments+=(--yes); fi
-      exec "$directory/pagehall" "${arguments[@]}"
+      exec "$directory/lunedo" "${arguments[@]}"
     fi
     exit 0
   fi
 
-  [ -f "$0" ] || fail "Download the script first and run it from the file, for example: curl -fsSLO https://github.com/pagehall/pagehall/releases/latest/download/install.sh && bash install.sh"
+  [ -f "$0" ] || fail "Download the script first and run it from the file, for example: curl -fsSLO https://github.com/lunedo/lunedo/releases/latest/download/install.sh && bash install.sh"
   check_requirements
 
   instance_url="${instance_url:-$(ask "Address people open, for example https://wiki.example.org" "http://localhost:$port")}"
@@ -295,7 +295,7 @@ install_pagehall() {
   valid_url "$instance_url" || fail "$instance_url is not an address like https://wiki.example.org: use http:// or https:// and no path."
   case "$instance_url" in
     https://* | http://localhost* | http://127.0.0.1*) ;;
-    *) say "Warning: $instance_url does not use HTTPS. Signing in needs HTTPS; put Pagehall behind a reverse proxy with TLS." ;;
+    *) say "Warning: $instance_url does not use HTTPS. Signing in needs HTTPS; put Lunedo behind a reverse proxy with TLS." ;;
   esac
 
   if [ "$proxy_given" -eq 0 ]; then
@@ -327,29 +327,29 @@ install_pagehall() {
     umask 077
     {
       printf 'POSTGRES_PASSWORD=%s\n' "$(random_text 40 'A-Za-z0-9')"
-      printf 'PAGEHALL_INSTANCE_URL=%s\n' "$instance_url"
-      printf 'PAGEHALL_SETUP_CODE=%s\n' "$code"
-      printf 'PAGEHALL_MASTER_KEYS=1:%s\n' "$(random_key)"
-      printf 'PAGEHALL_BACKUP_KEY=1:%s\n' "$(random_key)"
-      printf 'PAGEHALL_METRICS_TOKEN=%s\n' "$(random_text 43 'A-Za-z0-9')"
-      printf 'PAGEHALL_TRUSTED_PROXIES=%s\n' "${proxy:+$proxy/32}"
-      printf 'PAGEHALL_SUBNET=%s\n' "$subnet"
-      printf 'PAGEHALL_PORT=%s\n' "$port"
-      printf 'PAGEHALL_BIND=%s\n' "$bind"
-      printf 'PAGEHALL_INSTALL_METHOD=script\n'
-      printf 'PAGEHALL_INSTALL_DIR=%s\n' "$directory"
+      printf 'LUNEDO_INSTANCE_URL=%s\n' "$instance_url"
+      printf 'LUNEDO_SETUP_CODE=%s\n' "$code"
+      printf 'LUNEDO_MASTER_KEYS=1:%s\n' "$(random_key)"
+      printf 'LUNEDO_BACKUP_KEY=1:%s\n' "$(random_key)"
+      printf 'LUNEDO_METRICS_TOKEN=%s\n' "$(random_text 43 'A-Za-z0-9')"
+      printf 'LUNEDO_TRUSTED_PROXIES=%s\n' "${proxy:+$proxy/32}"
+      printf 'LUNEDO_SUBNET=%s\n' "$subnet"
+      printf 'LUNEDO_PORT=%s\n' "$port"
+      printf 'LUNEDO_BIND=%s\n' "$bind"
+      printf 'LUNEDO_INSTALL_METHOD=script\n'
+      printf 'LUNEDO_INSTALL_DIR=%s\n' "$directory"
     } >"$directory/.env"
   )
   write_compose "$reference"
-  cp "$0" "$directory/pagehall"
-  chmod 755 "$directory/pagehall"
+  cp "$0" "$directory/lunedo"
+  chmod 755 "$directory/lunedo"
 
   say ""
-  say "Open this link to set up Pagehall once it has started:"
+  say "Open this link to set up Lunedo once it has started:"
   say ""
   say "  $instance_url/setup#code=$code"
   say ""
-  say "The link works once. Pagehall is being downloaded and started now."
+  say "The link works once. Lunedo is being downloaded and started now."
   say ""
 
   if [ "$pull" -eq 1 ]; then compose pull --quiet; fi
@@ -366,14 +366,14 @@ install_pagehall() {
   fi
 
   if ! wait_ready; then
-    say "Pagehall did not become ready within $READY_TIMEOUT_SECONDS seconds. The last log lines:" >&2
-    compose logs --tail 60 pagehall >&2 || true
+    say "Lunedo did not become ready within $READY_TIMEOUT_SECONDS seconds. The last log lines:" >&2
+    compose logs --tail 60 lunedo >&2 || true
     fail "Check the log above, fix the cause and run 'cd $directory && docker compose up -d'."
   fi
   write_record "$(image_version "$(current_image)")"
 
   say ""
-  say "Pagehall $(record_value version) runs in $directory."
+  say "Lunedo $(record_value version) runs in $directory."
   say ""
   say "Next steps:"
   say "  1. Set up the instance: $instance_url/setup#code=$code"
@@ -381,21 +381,21 @@ install_pagehall() {
     say "  2. Run your reverse proxy with TLS at $proxy on the Compose network; only that address is"
     say "     trusted for forwarded headers:"
   else
-    say "  2. Put a reverse proxy with TLS in front of $bind:$port. No proxy is trusted yet, so Pagehall"
+    say "  2. Put a reverse proxy with TLS in front of $bind:$port. No proxy is trusted yet, so Lunedo"
     say "     ignores forwarded headers and sees every client as the proxy. Give a proxy in this Compose"
-    say "     project a fixed address and set PAGEHALL_TRUSTED_PROXIES in .env to it, never to the"
+    say "     project a fixed address and set LUNEDO_TRUSTED_PROXIES in .env to it, never to the"
     say "     whole subnet or its gateway:"
   fi
-  say "     https://github.com/pagehall/pagehall/blob/main/docs/reverse-proxy.md"
+  say "     https://github.com/lunedo/lunedo/blob/main/docs/reverse-proxy.md"
   say "  3. Copy $directory/.env to a safe place. It holds the master key and the backup key;"
   say "     a backup cannot be restored without them."
-  say "  4. Update later with: $directory/pagehall update"
+  say "  4. Update later with: $directory/lunedo update"
 }
 
-update_pagehall() {
+update_lunedo() {
   directory="${directory:-$(script_directory)}"
   [ -f "$directory/compose.yml" ] && [ -f "$directory/.env" ] ||
-    fail "$directory is not a Pagehall installation. Run the update from the installation directory, or pass --dir."
+    fail "$directory is not a Lunedo installation. Run the update from the installation directory, or pass --dir."
   [ "$(record_value method)" = "script" ] ||
     fail "$directory was not installed with the setup script. Update it as described in docs/setup.md."
   check_directory_mode "$directory"
@@ -413,7 +413,7 @@ update_pagehall() {
   say "Downloading $target_reference"
   if [ "$pull" -eq 1 ]; then docker pull --quiet "$target_reference" >/dev/null; fi
   target="$(image_version "$target_reference")"
-  [ -n "$target" ] || fail "The image $target_reference has no version label; it is not a Pagehall image."
+  [ -n "$target" ] || fail "The image $target_reference has no version label; it is not a Lunedo image."
   if [ -z "$image" ] && is_release "$target"; then
     if [ "$target_reference" != "$IMAGE_REPOSITORY:$target" ]; then
       docker image tag "$target_reference" "$IMAGE_REPOSITORY:$target"
@@ -421,15 +421,15 @@ update_pagehall() {
     fi
   fi
   if [ "$target_reference" = "$current_reference" ] && [ "$target" = "$current" ]; then
-    say "Pagehall $current is already installed. Nothing to do."
+    say "Lunedo $current is already installed. Nothing to do."
     return 0
   fi
   if is_release "$current" && is_release "$target" && ! version_lt "$current" "$target"; then
-    fail "Pagehall $current is installed; $target is not newer. Downgrades are done by restoring a backup, see docs/setup.md."
+    fail "Lunedo $current is installed; $target is not newer. Downgrades are done by restoring a backup, see docs/setup.md."
   fi
 
   say ""
-  say "Update from Pagehall $current to $target"
+  say "Update from Lunedo $current to $target"
   if is_release "$current" && is_release "$target"; then
     say ""
     if ! docker run --rm "$target_reference" release-notes --update-from "$current"; then
@@ -447,29 +447,29 @@ update_pagehall() {
   local location
   say "Creating the backup before the update"
   compose up -d --wait --wait-timeout "$READY_TIMEOUT_SECONDS" >/dev/null 2>&1 || true
-  if ! location="$(compose exec -T pagehall pagehall backup create --before-update)" || [ -z "$location" ]; then
-    fail "The backup before the update failed, so Pagehall was not updated. Fix the cause shown above and run the update again."
+  if ! location="$(compose exec -T lunedo lunedo backup create --before-update)" || [ -z "$location" ]; then
+    fail "The backup before the update failed, so Lunedo was not updated. Fix the cause shown above and run the update again."
   fi
   location="$(printf '%s' "$location" | tail -n 1 | tr -d '\r')"
   say "The backup is $(host_location "$location")"
 
-  say "Starting Pagehall $target"
+  say "Starting Lunedo $target"
   replace_image "$target_reference"
-  if ! compose run --rm --no-deps -T pagehall backup skip-before-update --for-version "$target" >/dev/null 2>&1; then
-    say "Pagehall $target could not record that the backup before the update is done; its first start takes a second one."
+  if ! compose run --rm --no-deps -T lunedo backup skip-before-update --for-version "$target" >/dev/null 2>&1; then
+    say "Lunedo $target could not record that the backup before the update is done; its first start takes a second one."
   fi
   if ! wait_ready; then
     say "" >&2
-    say "Pagehall $target did not become ready. The last log lines:" >&2
-    compose logs --tail 80 pagehall >&2 || true
+    say "Lunedo $target did not become ready. The last log lines:" >&2
+    compose logs --tail 80 lunedo >&2 || true
     cat >&2 <<ROLLBACK
 
-The update stopped. Nothing was restored automatically. To go back to Pagehall $current:
+The update stopped. Nothing was restored automatically. To go back to Lunedo $current:
 
   cd $directory
-  docker compose stop pagehall
+  docker compose stop lunedo
   sed -i.bak 's#image: $target_reference#image: $current_reference#' compose.yml
-  docker compose run --rm pagehall backup restore --input $(restore_input "$location") --force
+  docker compose run --rm lunedo backup restore --input $(restore_input "$location") --force
   docker compose up -d
 
 The backup is $(host_location "$location").$(s3_note "$location") See docs/setup.md#rollback.
@@ -477,26 +477,26 @@ ROLLBACK
     exit 1
   fi
   write_record "$target" "$current"
-  if docker run --rm --entrypoint cat "$target_reference" /app/install.sh >"$directory/pagehall.new" 2>/dev/null; then
-    chmod 755 "$directory/pagehall.new"
-    mv "$directory/pagehall.new" "$directory/pagehall"
+  if docker run --rm --entrypoint cat "$target_reference" /app/install.sh >"$directory/lunedo.new" 2>/dev/null; then
+    chmod 755 "$directory/lunedo.new"
+    mv "$directory/lunedo.new" "$directory/lunedo"
   else
-    rm -f "$directory/pagehall.new"
+    rm -f "$directory/lunedo.new"
   fi
   say ""
-  say "Pagehall runs version $target. The backup from before the update is $(host_location "$location")."
+  say "Lunedo runs version $target. The backup from before the update is $(host_location "$location")."
 }
 
 host_location() {
   case "$1" in
-    /var/lib/pagehall/backups/*) printf '%s/backups/%s' "$directory" "${1#/var/lib/pagehall/backups/}" ;;
+    /var/lib/lunedo/backups/*) printf '%s/backups/%s' "$directory" "${1#/var/lib/lunedo/backups/}" ;;
     *) printf '%s' "$1" ;;
   esac
 }
 
 restore_input() {
   case "$1" in
-    s3://*) printf '/var/lib/pagehall/backups/%s' "${1##*/}" ;;
+    s3://*) printf '/var/lib/lunedo/backups/%s' "${1##*/}" ;;
     *) printf '%s' "$1" ;;
   esac
 }
@@ -527,7 +527,7 @@ replace_image() {
   (
     umask 077
     awk -v reference="$reference" '
-      !done && /^    image: / && $0 ~ /pagehall/ { print "    image: " reference; done = 1; next }
+      !done && /^    image: / && $0 ~ /lunedo/ { print "    image: " reference; done = 1; next }
       { print }
     ' "$directory/compose.yml" >"$directory/compose.yml.tmp"
   )
@@ -537,8 +537,8 @@ replace_image() {
 
 in_container() {
   directory="${directory:-$(script_directory)}"
-  [ -f "$directory/compose.yml" ] || fail "$directory is not a Pagehall installation."
-  compose exec -T pagehall pagehall "$@"
+  [ -f "$directory/compose.yml" ] || fail "$directory is not a Lunedo installation."
+  compose exec -T lunedo lunedo "$@"
 }
 
 command="install"
@@ -595,6 +595,6 @@ case "$command" in
     directory="${directory:-$(script_directory)}"
     say "$(record_value version)"
     ;;
-  install) install_pagehall ;;
-  update) update_pagehall ;;
+  install) install_lunedo ;;
+  update) update_lunedo ;;
 esac

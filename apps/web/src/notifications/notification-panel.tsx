@@ -7,7 +7,7 @@ import {
   Skeleton,
   Spinner,
   useOpener,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { BellOff, CheckCheck, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";

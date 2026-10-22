@@ -7,7 +7,7 @@ import {
   MAX_PROPERTY_SET_ID_LENGTH,
   type NodeJson,
   type PropertiesReportRequest,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import {
   Checkbox,
   Combobox,
@@ -20,7 +20,7 @@ import {
   SkeletonText,
   Table,
   type TableSort,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { ListPlus, Table2, TableProperties, Trash2 } from "lucide-react";
@@ -499,12 +499,12 @@ export function PropertiesReportView({ node, editor, updateAttributes, selected 
   const keys = useReportKeys(report, editable);
   return (
     <NodeViewWrapper
-      className={`ph-properties-report-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-properties-report-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="propertiesReport"
     >
       <section
-        className="ph-properties-report flex flex-col gap-3"
+        className="ld-properties-report flex flex-col gap-3"
         aria-label={t("editor.propertiesReport.title")}
       >
         <h3 className="flex items-center gap-2 font-semibold">
@@ -555,8 +555,8 @@ export function PagePropertiesView({ node, editor, updateAttributes, getPos }: N
       .run();
   };
   return (
-    <NodeViewWrapper className="ph-page-properties-block" data-hidden={hidden ? "true" : undefined}>
-      <div contentEditable={false} className="ph-block-header">
+    <NodeViewWrapper className="ld-page-properties-block" data-hidden={hidden ? "true" : undefined}>
+      <div contentEditable={false} className="ld-block-header">
         <span className="flex items-center gap-2 font-semibold">
           <TableProperties aria-hidden="true" className="size-icon-md" />
           {t("editor.pageProperties.title")}
@@ -586,14 +586,14 @@ export function PagePropertiesView({ node, editor, updateAttributes, getPos }: N
           </span>
         ) : null}
       </div>
-      <div contentEditable={false} className="ph-page-properties-head" aria-hidden="true">
+      <div contentEditable={false} className="ld-page-properties-head" aria-hidden="true">
         <span>{t("editor.pageProperties.name")}</span>
         <span>{t("editor.pageProperties.value")}</span>
       </div>
-      <NodeViewContent className="ph-page-properties-rows" />
+      <NodeViewContent className="ld-page-properties-rows" />
       {editable ? (
         <div contentEditable={false}>
-          <button type="button" className="ph-inline-button" onClick={addRow}>
+          <button type="button" className="ld-inline-button" onClick={addRow}>
             <ListPlus aria-hidden="true" className="size-icon-sm" />
             {t("editor.pageProperties.addRow")}
           </button>
@@ -627,12 +627,12 @@ export function PagePropertyView({ node, editor, getPos }: NodeViewProps) {
       .run();
   };
   return (
-    <NodeViewWrapper className="ph-page-property">
-      <NodeViewContent className="ph-page-property-cells" />
+    <NodeViewWrapper className="ld-page-property">
+      <NodeViewContent className="ld-page-property-cells" />
       {editable ? (
         <span
           contentEditable={false}
-          className="ph-page-property-actions flex size-hit shrink-0 items-center justify-center"
+          className="ld-page-property-actions flex size-hit shrink-0 items-center justify-center"
         >
           <IconButton
             icon={Trash2}

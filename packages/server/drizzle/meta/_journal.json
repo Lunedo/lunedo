@@ -680,6 +680,13 @@
       "when": 1792662377798,
       "tag": "0096_backup_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1792687814603,
+      "tag": "0097_rename_kept_decision",
+      "breakpoints": true
     }
   ]
 }

@@ -6,8 +6,8 @@ import {
   organizationNameSchema,
   proposeFormats,
   timeZoneSchema,
-} from "@pagehall/shared";
-import { Button, Combobox, Field, Input, Notice, Select, TimeZoneCombobox } from "@pagehall/ui";
+} from "@lunedo/shared";
+import { Button, Combobox, Field, Input, Notice, Select, TimeZoneCombobox } from "@lunedo/ui";
 import { useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";

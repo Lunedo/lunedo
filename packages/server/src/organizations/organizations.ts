@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { AccentColor } from "@pagehall/shared";
-import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
+import type { AccentColor } from "@lunedo/shared";
+import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@lunedo/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";

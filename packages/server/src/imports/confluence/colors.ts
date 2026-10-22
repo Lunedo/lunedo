@@ -1,4 +1,4 @@
-import type { ContentColor } from "@pagehall/editor-schema";
+import type { ContentColor } from "@lunedo/editor-schema";
 
 const NAMED: Readonly<Record<string, string>> = {
   black: "#000000",

@@ -134,7 +134,7 @@ export class ImportWorker {
     try {
       const result = await client.query<{ locked: boolean }>(
         "select pg_try_advisory_lock(hashtextextended($1, 0)) as locked",
-        [`pagehall.import:${importId}`],
+        [`lunedo.import:${importId}`],
       );
       if (!result.rows[0]?.locked) {
         client.release();
@@ -147,7 +147,7 @@ export class ImportWorker {
     return async () => {
       try {
         await client.query("select pg_advisory_unlock(hashtextextended($1, 0))", [
-          `pagehall.import:${importId}`,
+          `lunedo.import:${importId}`,
         ]);
         client.release();
       } catch (error) {
@@ -650,7 +650,7 @@ export class ImportWorker {
           spaceId: row.target_space_id ?? "",
           created: count("new"),
           updated: count("updated"),
-          keptPagehall: count("conflict", "pagehall"),
+          keptLunedo: count("conflict", "lunedo"),
           tookSource: count("conflict", "source"),
           keptBoth: count("conflict", "both"),
           trashed: count("deleted", "trash"),

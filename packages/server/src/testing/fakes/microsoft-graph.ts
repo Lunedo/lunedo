@@ -50,7 +50,7 @@ export interface FakeSentMail {
 
 export const GRAPH_TENANT_ID = "0f1e2d3c-4b5a-4968-8776-655443322110";
 export const GRAPH_CLIENT_ID = "6c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
-export const GRAPH_CLIENT_SECRET = "pagehall-graph-secret";
+export const GRAPH_CLIENT_SECRET = "lunedo-graph-secret";
 export const GRAPH_OVERAGE_GROUP_COUNT = 250;
 
 export const GRAPH_IDS = {

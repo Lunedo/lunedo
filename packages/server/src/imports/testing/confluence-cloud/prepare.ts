@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { gzipSync, inflateRawSync } from "node:zlib";
+import { gunzipSync, gzipSync, inflateRawSync } from "node:zlib";
 
 export interface Actor {
   readonly role: string;
@@ -60,6 +60,8 @@ const FAKE_SITE = "example.atlassian.net";
 const AVATAR =
   /(?:https?:\/\/[^\s"'<>]*)?\/(?:wiki\/)?aa-avatar\/[^\s"'<>&]*|https?:\/\/[a-z0-9.-]*(?:avatar|gravatar)[a-z0-9.-]*\/[^\s"'<>]*/gi;
 const FAKE_AVATAR = "/wiki/images/icons/profilepics/default.svg";
+const FORMER_PRODUCT_NAME = "pagehall";
+const PRODUCT_NAME = "Lunedo";
 const ATLASSIAN_SITE = /\b[a-z0-9-]+\.atlassian\.net\b/gi;
 const MEDIA =
   /\b(?:api\.media\.atlassian\.com|media-cdn\.atlassian\.com)\b|aa-avatar|gravatar\.com|avatar-management/i;
@@ -84,6 +86,12 @@ function fakeUuid(index: number): string {
 
 function fakeLegacy(index: number): string {
   return `000000000000${String(index).padStart(12, "0")}`;
+}
+
+function productName(match: string): string {
+  if (match === match.toUpperCase()) return PRODUCT_NAME.toUpperCase();
+  if (match === match.toLowerCase()) return PRODUCT_NAME.toLowerCase();
+  return PRODUCT_NAME;
 }
 
 function escapeRegExp(value: string): string {
@@ -172,7 +180,7 @@ export function createAnonymizer(input: {
       }
       if (host)
         result = result.replace(hostPattern, (_match, next: string) => (next ? "example-" : "example"));
-      return result;
+      return result.replace(new RegExp(FORMER_PRODUCT_NAME, "gi"), productName);
     },
   };
 }
@@ -224,6 +232,7 @@ export function findProblems(
     if (match[0].toLowerCase() !== FAKE_SITE) problems.push(`${name}: Atlassian site ${match[0]} left`);
   }
   if (MEDIA.test(content.replaceAll(FAKE_AVATAR, ""))) problems.push(`${name}: avatar or media address left`);
+  if (lower.includes(FORMER_PRODUCT_NAME)) problems.push(`${name}: former product name left`);
   for (const match of content.matchAll(NAME_FIELD)) {
     const value = (match[1] ?? match[2] ?? "").trim();
     if (value && !/^(?:Test User \d+|System)$/.test(value) && !(names?.has(value) ?? false)) {
@@ -593,11 +602,57 @@ export function prepare(
   return { files: written };
 }
 
-if (import.meta.main) {
+function withProductName(value: unknown, key?: string): unknown {
+  if (typeof value === "string") {
+    if (key !== "base64") return value.replace(new RegExp(FORMER_PRODUCT_NAME, "gi"), productName);
+    const text = asText(Buffer.from(value, "base64"));
+    return text === null ? value : Buffer.from(withProductName(text) as string, "utf8").toString("base64");
+  }
+  if (Array.isArray(value)) return value.map((item) => withProductName(item));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([name, item]) => [withProductName(name), withProductName(item, name)]),
+    );
+  }
+  return value;
+}
+
+export function renameProductInFixtures(folder: string): { files: { name: string; bytes: number }[] } {
+  const files: { name: string; bytes: number }[] = [];
+  for (const name of readdirSync(folder).sort()) {
+    const file = path.join(folder, name);
+    const before = readFileSync(file);
+    let after: Buffer;
+    if (name.endsWith(".jsonl.gz")) {
+      const lines = gunzipSync(before).toString("utf8").split("\n").filter(Boolean);
+      after = bundle(lines.map((line) => withProductName(JSON.parse(line)) as object));
+    } else if (name.endsWith(".json")) {
+      const value = withProductName(JSON.parse(before.toString("utf8")));
+      after = Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+    } else continue;
+    const content = name.endsWith(".gz") ? gunzipSync(after).toString("utf8") : after.toString("utf8");
+    if (content.toLowerCase().includes(FORMER_PRODUCT_NAME))
+      throw new Error(`${name}: former product name left`);
+    if (after.equals(before)) continue;
+    writeFileSync(file, after);
+    files.push({ name, bytes: after.length });
+  }
+  return { files };
+}
+
+if (import.meta.main && process.argv[2] === "--rename-product") {
+  try {
+    const { files } = renameProductInFixtures(path.join(import.meta.dirname, "fixtures"));
+    for (const file of files) process.stdout.write(`${file.name}\t${file.bytes} bytes\n`);
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
+} else if (import.meta.main) {
   const [source, target = path.join(import.meta.dirname, "fixtures")] = process.argv.slice(2);
   if (!source) {
     process.stderr.write(
-      "Usage: node prepare.ts <folder with api-recording, xml and expected.md> [target folder]\n",
+      "Usage: node prepare.ts <folder with api-recording, xml and expected.md> [target folder]\n       node prepare.ts --rename-product\n",
     );
     process.exit(2);
   }

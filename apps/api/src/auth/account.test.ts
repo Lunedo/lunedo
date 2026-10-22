@@ -3,8 +3,8 @@ import {
   clientAttemptLimitSetting,
   languageSetting,
   passwordMinLengthSetting,
-} from "@pagehall/server";
-import { testJobContext } from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { testJobContext } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -16,7 +16,7 @@ import {
 } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
+const SESSION_COOKIE = "__Host-lunedo-session";
 
 async function runPasswordResetJobs(test: AuthTestApp): Promise<number> {
   const jobs = await test.runtime.pool.query<{ id: string; data: { payload: { email: string } } }>(
@@ -149,7 +149,7 @@ describe.skipIf(!databaseBaseUrl)("account security", () => {
       const mail = test.mail.sent.findLast((sent) => sent.to === "Reset.Me@example.org");
       expect(mail?.subject).toBe("Reset your password for Test wiki");
       const token = linkToken(mail?.text);
-      expect(mail?.text).toContain(`https://pagehall.test/reset-password#token=${token}`);
+      expect(mail?.text).toContain(`https://lunedo.test/reset-password#token=${token}`);
 
       expect(
         (

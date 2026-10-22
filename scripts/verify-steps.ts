@@ -13,6 +13,7 @@ export function verifySteps(base: string): VerifyStep[] {
   return [
     { name: "Lint", command: "pnpm", args: ["lint"] },
     { name: "Private references", command: "pnpm", args: ["references:check"] },
+    { name: "Product name", command: "pnpm", args: ["name:check"] },
     { name: "Patched dependencies", command: "pnpm", args: ["patches:check"] },
     { name: "Playwright image", command: "pnpm", args: ["playwright-image:check"] },
     { name: "Translations", command: "pnpm", args: ["i18n:check"] },

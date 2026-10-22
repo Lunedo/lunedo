@@ -12,7 +12,7 @@ const unixUser = process.getuid !== undefined && process.getuid() !== 0;
 
 describe("checkFileStorage", () => {
   it("passes for a writable directory and reports its facts", async () => {
-    const directory = mkdtempSync(path.join(tmpdir(), "pagehall-check-"));
+    const directory = mkdtempSync(path.join(tmpdir(), "lunedo-check-"));
     const result = await checkFileStorage(directory);
     expect(result).toMatchObject({
       cause: null,
@@ -26,7 +26,7 @@ describe("checkFileStorage", () => {
   });
 
   it("explains a missing directory and how to create it", async () => {
-    const directory = path.join(mkdtempSync(path.join(tmpdir(), "pagehall-check-")), "files dir");
+    const directory = path.join(mkdtempSync(path.join(tmpdir(), "lunedo-check-")), "files dir");
     const result = await checkFileStorage(directory);
     expect(result).toMatchObject({ status: "error", cause: "missing", exists: false, writable: false });
     expect(result.fixCommand).toContain(`mkdir -p '${directory}'`);
@@ -36,7 +36,7 @@ describe("checkFileStorage", () => {
   });
 
   it.skipIf(!unixUser)("names the owner and the command when the directory is not writable", async () => {
-    const directory = mkdtempSync(path.join(tmpdir(), "pagehall-check-"));
+    const directory = mkdtempSync(path.join(tmpdir(), "lunedo-check-"));
     chmodSync(directory, 0o500);
     try {
       const result = await checkFileStorage(directory);
@@ -70,7 +70,7 @@ describe.skipIf(!baseUrl)("the system check", () => {
     const step = systemCheckStep({
       pool: test.pool,
       settings: test.settings,
-      filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-check-")),
+      filesDir: mkdtempSync(path.join(tmpdir(), "lunedo-check-")),
       configuredInstanceUrl,
     } as SetupStepDependencies);
     return step.describe({ request: { protocol: "http", host: "10.0.0.5:3000" }, state: {} }) as Promise<{

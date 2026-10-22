@@ -1,4 +1,4 @@
-import { Button, EmptyState, Spinner } from "@pagehall/ui";
+import { Button, EmptyState, Spinner } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { BellOff } from "lucide-react";

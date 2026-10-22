@@ -1,5 +1,5 @@
+import { groupDescriptionSchema, groupNameSchema } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req } from "@nestjs/common";
-import { groupDescriptionSchema, groupNameSchema } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

@@ -1,12 +1,12 @@
 import type { Readable } from "node:stream";
-import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import {
   CHANGES_PAGE_SIZE,
   FILE_NAME_MAX_LENGTH,
   MAX_ARTICLE_SECTIONS,
   MAX_CHANGES_PAGE_SIZE,
   TOMBSTONE_DAYS,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -255,7 +255,7 @@ export class ArticleApiController {
   @ApiRoute({
     summary: "Save a draft of an article",
     description:
-      "Saves title and sections as the draft of the article without publishing it; a person publishes it in Pagehall, or a caller that may publish. Type, category and lead change at once for readers, so they need permission to publish once the article is published.",
+      "Saves title and sections as the draft of the article without publishing it; a person publishes it in Lunedo, or a caller that may publish. Type, category and lead change at once for readers, so they need permission to publish once the article is published.",
     tags: [TAG],
     params: articleParams,
     body: draftSchema,

@@ -1,5 +1,5 @@
-import { totpCodeSchema } from "@pagehall/shared";
-import { Button, Field, Notice, Skeleton } from "@pagehall/ui";
+import { totpCodeSchema } from "@lunedo/shared";
+import { Button, Field, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

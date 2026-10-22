@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { emptyScene, yDocFromScene } from "@pagehall/editor-schema/scene";
+import { emptyScene, yDocFromScene } from "@lunedo/editor-schema/scene";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";

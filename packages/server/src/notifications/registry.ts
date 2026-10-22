@@ -1,4 +1,4 @@
-import type { DateFormat } from "@pagehall/shared";
+import type { DateFormat } from "@lunedo/shared";
 import type { z } from "zod";
 import type { Executor } from "../database/database.js";
 import type { Language, MailTemplate, MailTemplates } from "../mail/templates.js";

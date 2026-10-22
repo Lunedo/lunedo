@@ -1,4 +1,4 @@
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
 
 export const RUNNING_TOPICS_SECTION = "runningTopics";
 export const OPEN_TASKS_SECTION = "openTasks";

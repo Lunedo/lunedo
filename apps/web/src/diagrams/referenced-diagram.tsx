@@ -1,4 +1,4 @@
-import { Button, SkeletonText } from "@pagehall/ui";
+import { Button, SkeletonText } from "@lunedo/ui";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Network, Pencil } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";

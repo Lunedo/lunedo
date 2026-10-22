@@ -1,4 +1,4 @@
-import { Button, Combobox, type ComboboxItem, Dialog, Field, Notice, Select, useToast } from "@pagehall/ui";
+import { Button, Combobox, type ComboboxItem, Dialog, Field, Notice, Select, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";

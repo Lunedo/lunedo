@@ -1,4 +1,4 @@
-import { type NotificationEvent, notificationEventOf } from "@pagehall/shared";
+import { type NotificationEvent, notificationEventOf } from "@lunedo/shared";
 import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
@@ -15,7 +15,7 @@ import { browserPushSetting, notificationEventSettings, notificationRetentionSet
 import { isOperationsEvent, type UnsubscribeService } from "./unsubscribe.js";
 import { effectiveWatches } from "./watches.js";
 
-export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
+export const NOTIFICATIONS_CHANNEL = "lunedo_notifications";
 
 export const COMBINE_WINDOW_MINUTES = 30;
 export const COMBINE_MAX_HOURS = 24;

@@ -1,4 +1,4 @@
-import { serviceAccountDescriptionSchema, serviceAccountNameSchema } from "@pagehall/shared";
+import { serviceAccountDescriptionSchema, serviceAccountNameSchema } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -13,7 +13,7 @@ import {
   Section,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Bot, KeyRound, Plus, PowerOff, UserRound } from "lucide-react";

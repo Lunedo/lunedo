@@ -22,7 +22,7 @@ describe.skipIf(!baseUrl)("migrations", () => {
 
   async function freshDatabase(): Promise<DatabasePool> {
     database = await createTemporaryDatabase(baseUrl as string);
-    pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: database.url, applicationName: "lunedo-test" });
     return pool;
   }
 
@@ -81,7 +81,7 @@ describe.skipIf(!baseUrl)("test database", () => {
   it("is migrated once per test run", async () => {
     const target = createDatabasePool({
       connectionString: inject("databaseUrl"),
-      applicationName: "pagehall-test",
+      applicationName: "lunedo-test",
     });
     try {
       expect((await migrationStatus(target)).upToDate).toBe(true);

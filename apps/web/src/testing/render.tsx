@@ -1,4 +1,4 @@
-import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@pagehall/ui";
+import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@lunedo/ui";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { i18n } from "i18next";
@@ -117,7 +117,7 @@ export function mockApi(routes: Record<string, Handler>) {
     if (!handler) {
       return new Response(
         JSON.stringify({
-          type: "urn:pagehall:problem:notFound",
+          type: "urn:lunedo:problem:notFound",
           title: "Not found",
           status: 404,
           code: "notFound",
@@ -138,5 +138,5 @@ export function mockApi(routes: Record<string, Handler>) {
 }
 
 export function problem(status: number, code: string, extra: Record<string, unknown> = {}) {
-  return { status, body: { type: `urn:pagehall:problem:${code}`, title: code, status, code, ...extra } };
+  return { status, body: { type: `urn:lunedo:problem:${code}`, title: code, status, code, ...extra } };
 }

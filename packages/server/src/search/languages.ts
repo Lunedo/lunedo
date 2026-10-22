@@ -1,4 +1,4 @@
-import { type ContentLanguage, contentLanguageSchema, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
+import { type ContentLanguage, contentLanguageSchema, OTHER_CONTENT_LANGUAGE } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import { languageSetting } from "../settings/builtin.js";

@@ -23,7 +23,7 @@ import { detectType } from "./sniff.js";
 import { type FileStore, LocalFileStore, S3FileStore } from "./store.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const s3Endpoint = process.env.PAGEHALL_TEST_S3_ENDPOINT?.trim();
+const s3Endpoint = process.env.LUNEDO_TEST_S3_ENDPOINT?.trim();
 const logger = createLogger({ service: "test", level: "silent" });
 
 function detect(content: string | Buffer, name = "file.bin") {
@@ -97,7 +97,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-file-keys-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-file-keys-"));
     keyRing = new KeyRingHolder(new FileKeyProvider(path.join(dir, "master-keys")), logger);
     await keyRing.reload({ create: true });
   });
@@ -132,7 +132,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   }
 
   it("stores, reads and reads ranges on the local file system without plaintext on disk", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-store-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-store-"));
     const files = service(new LocalFileStore(dir));
     const stored = await roundTrips(files);
     const row = await test.database.execute<{ storage_key: string }>(
@@ -141,12 +141,12 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
     const onDisk = readFileSync(
       path.join(dir, "attachments", ...(row.rows[0]?.storage_key ?? "").split("/")),
     );
-    expect(onDisk.subarray(0, 3).toString()).toBe("PHS");
+    expect(onDisk.subarray(0, 3).toString()).toBe("LDS");
     expect(onDisk.includes(Buffer.from("data.bin"))).toBe(false);
   });
 
   it("removes location metadata only from attachments and keeps other files byte for byte", async () => {
-    const files = service(new LocalFileStore(mkdtempSync(path.join(tmpdir(), "pagehall-store-"))));
+    const files = service(new LocalFileStore(mkdtempSync(path.join(tmpdir(), "lunedo-store-"))));
     const photo = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#000000" } })
       .withExif({ IFD0: { Copyright: "Test" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "47/1 4/1 12/1" } })
       .jpeg()
@@ -165,7 +165,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   });
 
   it("refuses a file above the limit while it streams and leaves nothing behind", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-store-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-store-"));
     const files = service(new LocalFileStore(dir));
     const before = await test.database.execute<{ count: string }>(
       sql`select count(*) as count from stored_files`,
@@ -183,7 +183,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   });
 
   it("fails to read a file whose stored bytes were changed or swapped with another file", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-store-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-store-"));
     const store = new LocalFileStore(dir);
     const files = service(store);
     const first = await files.write(Readable.from([Buffer.from("first file")]), {
@@ -214,7 +214,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   });
 
   it("counts master key versions from the database and re-wraps only the header", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "pagehall-store-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "lunedo-store-"));
     const store = new LocalFileStore(dir);
     const files = service(store);
     const content = Buffer.from("rotation content");
@@ -250,14 +250,14 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   });
 
   it.skipIf(!s3Endpoint)("stores, reads and reads ranges in S3-compatible storage", async () => {
-    const bucket = `pagehall-${randomBytes(4).toString("hex")}`;
+    const bucket = `lunedo-${randomBytes(4).toString("hex")}`;
     const config = {
       kind: "s3" as const,
       bucket,
       endpoint: s3Endpoint,
       region: "us-east-1",
-      accessKeyId: new Secret(process.env.PAGEHALL_TEST_S3_ACCESS_KEY_ID ?? "pagehall"),
-      secretAccessKey: new Secret(process.env.PAGEHALL_TEST_S3_SECRET_ACCESS_KEY ?? "pagehall-s3"),
+      accessKeyId: new Secret(process.env.LUNEDO_TEST_S3_ACCESS_KEY_ID ?? "lunedo"),
+      secretAccessKey: new Secret(process.env.LUNEDO_TEST_S3_SECRET_ACCESS_KEY ?? "lunedo-s3"),
       forcePathStyle: true,
       prefix: "test/",
     };

@@ -14,7 +14,7 @@ import {
   Table,
   TableToolbar,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { CheckCircle2, ShieldCheck, Upload, Users } from "lucide-react";
@@ -479,7 +479,7 @@ export function PermissionsTab({ organizationId, entry }: { organizationId: stri
             },
             {
               key: "target",
-              header: t("imports.permissions.inPagehall"),
+              header: t("imports.permissions.inLunedo"),
               hideBelow: "md",
               cell: (row) => <span>{target(row)}</span>,
             },

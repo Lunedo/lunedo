@@ -4,7 +4,7 @@ import { request, setMaintenanceHandler } from "./request.js";
 function response(status: number, code: string) {
   return {
     response: new Response(null, { status }),
-    error: { type: `urn:pagehall:problem:${code}`, title: code, status, code },
+    error: { type: `urn:lunedo:problem:${code}`, title: code, status, code },
   };
 }
 

@@ -59,7 +59,7 @@ describe("applyAppearance", () => {
     expect(root.dataset.density).toBe("compact");
     expect(root.dataset.font).toBe("readable");
     expect(root.dataset.accent).toBe("violet");
-    expect(root.style.getPropertyValue("--ph-text-scale")).toBe("1.25");
+    expect(root.style.getPropertyValue("--ld-text-scale")).toBe("1.25");
   });
 
   it("removes attributes for the defaults", () => {
@@ -68,7 +68,7 @@ describe("applyAppearance", () => {
     applyAppearance(root, { ...defaults, accent: "petrol" }, true);
     expect(root.dataset.theme).toBe("dark");
     for (const name of ["contrast", "density", "font", "accent"]) expect(root.dataset[name]).toBeUndefined();
-    expect(root.style.getPropertyValue("--ph-text-scale")).toBe("1");
+    expect(root.style.getPropertyValue("--ld-text-scale")).toBe("1");
   });
 });
 
@@ -86,6 +86,6 @@ describe("useAppearance", () => {
     const { rerender } = render(<Probe appearance={defaults} />);
     rerender(<Probe appearance={{ ...defaults, colorMode: "dark", textSize: 0.875 }} />);
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(document.documentElement.style.getPropertyValue("--ph-text-scale")).toBe("0.875");
+    expect(document.documentElement.style.getPropertyValue("--ld-text-scale")).toBe("0.875");
   });
 });

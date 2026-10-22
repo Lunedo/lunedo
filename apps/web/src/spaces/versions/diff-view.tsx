@@ -1,4 +1,4 @@
-import { type DocumentDiff, renderDiffHtml } from "@pagehall/editor-schema";
+import { type DocumentDiff, renderDiffHtml } from "@lunedo/editor-schema";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { applyWidths, readViewContext } from "../../editor/read-view.js";
@@ -54,16 +54,16 @@ export function DiffView({
             : t("versions.changeCount", { count: diff.changes })}
         </span>
         <span>
-          <ins className="ph-diff-added">{t("versions.added")}</ins>
+          <ins className="ld-diff-added">{t("versions.added")}</ins>
         </span>
         <span>
-          <del className="ph-diff-removed">{t("versions.removed")}</del>
+          <del className="ld-diff-removed">{t("versions.removed")}</del>
         </span>
       </p>
       {diff.title ? (
         <p className="text-sm">
-          {t("versions.titleChanged")} <del className="ph-diff-removed">{diff.title.before}</del>{" "}
-          <ins className="ph-diff-added">{diff.title.after}</ins>
+          {t("versions.titleChanged")} <del className="ld-diff-removed">{diff.title.before}</del>{" "}
+          <ins className="ld-diff-added">{diff.title.after}</ins>
         </p>
       ) : null}
       {layout === "inline" ? (
@@ -88,7 +88,7 @@ function DiffHtml({ html, label, heading = false }: { html: string; label: strin
       {heading ? <h2 className="text-sm font-semibold text-text-muted">{label}</h2> : null}
       <div
         ref={container}
-        className="ph-content ph-read-view ph-diff min-w-0 rounded-md border border-border bg-surface p-4"
+        className="ld-content ld-read-view ld-diff min-w-0 rounded-md border border-border bg-surface p-4"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated documents
         dangerouslySetInnerHTML={{ __html: html }}
       />

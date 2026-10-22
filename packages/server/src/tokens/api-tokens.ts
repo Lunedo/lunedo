@@ -46,7 +46,7 @@ const TOUCH_INTERVAL_MS = 60_000;
 const REJECTION_EVENTS_PER_CLIENT_PER_MINUTE = 10;
 export const MAX_TOKEN_KNOWLEDGE_BASES = 100;
 
-import { tokenNameSchema, tokenScopesSchema } from "@pagehall/shared";
+import { tokenNameSchema, tokenScopesSchema } from "@lunedo/shared";
 
 export { tokenNameSchema, tokenScopesSchema };
 

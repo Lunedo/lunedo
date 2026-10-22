@@ -163,13 +163,13 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
   for (const [index, month] of visibleMonths.entries()) {
     const x = Math.max(LABEL_WIDTH, scale(month));
     parts.push(
-      element("line", { class: "ph-roadmap-grid", x1: x, x2: x, y1: HEADER - 6, y2: height, ...line }),
+      element("line", { class: "ld-roadmap-grid", x1: x, x2: x, y1: HEADER - 6, y2: height, ...line }),
     );
     if (index % step === 0) {
       parts.push(
         element(
           "text",
-          { class: "ph-roadmap-month", x: x + 4, y: HEADER - 10, ...muted },
+          { class: "ld-roadmap-month", x: x + 4, y: HEADER - 10, ...muted },
           escapeHtml(options.formatMonth(month)),
         ),
       );
@@ -180,7 +180,7 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
     const laneHeight = laneRows(lane) * ROW + LANE_PADDING * 2;
     const lanes = [
       element("rect", {
-        class: "ph-roadmap-lane",
+        class: "ld-roadmap-lane",
         "data-color": lane.color,
         x: 0,
         y: top,
@@ -193,7 +193,7 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
       element(
         "text",
         {
-          class: "ph-roadmap-lane-title",
+          class: "ld-roadmap-lane-title",
           "data-color": lane.color,
           x: 8,
           y: top + LANE_PADDING + ROW / 2 + 4,
@@ -211,7 +211,7 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
       const shape = [
         element("title", {}, escapeHtml(tooltip)),
         element("rect", {
-          class: "ph-roadmap-bar",
+          class: "ld-roadmap-bar",
           "data-color": lane.color,
           x,
           y,
@@ -223,7 +223,7 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
         element(
           "text",
           {
-            class: "ph-roadmap-bar-title",
+            class: "ld-roadmap-bar-title",
             "data-color": lane.color,
             x: x + 6,
             y: y + (ROW - 6) / 2 + 4,
@@ -233,9 +233,9 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
         ),
       ].join("");
       const href = bar.pageId ? options.link(bar.pageId) : null;
-      lanes.push(href ? element("a", { href, class: "ph-roadmap-link" }, shape) : element("g", {}, shape));
+      lanes.push(href ? element("a", { href, class: "ld-roadmap-link" }, shape) : element("g", {}, shape));
     }
-    parts.push(element("g", { class: "ph-roadmap-lane-group" }, lanes.join("")));
+    parts.push(element("g", { class: "ld-roadmap-lane-group" }, lanes.join("")));
     top += laneHeight;
   }
   for (const marker of roadmap.markers) {
@@ -244,7 +244,7 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
     parts.push(
       element(
         "g",
-        { class: "ph-roadmap-marker" },
+        { class: "ld-roadmap-marker" },
         `${element("title", {}, escapeHtml(`${marker.title}\n${options.formatDate(marker.date)}`))}${element("line", { x1: x, x2: x, y1: HEADER, y2: height, "stroke-dasharray": "4 3", ...(options.palette ? { stroke: options.palette("red", "text") } : {}) })}${element("text", { x: x + 4, y: HEADER + MARKER_ROW - 7, ...(options.palette ? { fill: options.palette("red", "text") } : {}) }, escapeHtml(shorten(marker.title, 160)))}`,
       ),
     );
@@ -253,7 +253,7 @@ function roadmapSvg(roadmap: Roadmap, options: RoadmapSvgOptions): string {
     "svg",
     {
       xmlns: "http://www.w3.org/2000/svg",
-      class: "ph-roadmap-image",
+      class: "ld-roadmap-image",
       viewBox: `0 0 ${ROADMAP_WIDTH} ${height}`,
       width: ROADMAP_WIDTH,
       height,
@@ -338,13 +338,13 @@ function roadmapHtml(node: ValidNode, renderer: HtmlRenderer): string {
   const caption = `${roadmap.title ? `${element("strong", {}, renderer.escape(roadmap.title))} · ` : ""}${renderer.escape(renderer.label("roadmapReadOnly"))}`;
   const list = element(
     "details",
-    { class: "ph-roadmap-list" },
+    { class: "ld-roadmap-list" },
     `${element("summary", {}, renderer.escape(renderer.label("roadmapAsList")))}${entriesHtml(roadmapEntries(roadmap, options), renderer)}`,
   );
   return element(
     "figure",
-    { class: "ph-roadmap" },
-    `${element("div", { class: "ph-roadmap-scroll" }, roadmapSvg(roadmap, options))}${element("figcaption", {}, caption)}${list}`,
+    { class: "ld-roadmap" },
+    `${element("div", { class: "ld-roadmap-scroll" }, roadmapSvg(roadmap, options))}${element("figcaption", {}, caption)}${list}`,
   );
 }
 

@@ -1,4 +1,4 @@
-import { diffDocuments } from "@pagehall/editor-schema";
+import { diffDocuments } from "@lunedo/editor-schema";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -403,8 +403,8 @@ describe("version history", () => {
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/history?from=6&to=7`);
     const changes = await screen.findByRole("region", { name: "Changes" });
-    expect(changes.querySelector("ins.ph-diff-added")?.textContent).toContain("company");
-    expect(changes.querySelector("del.ph-diff-removed")?.textContent).toContain("intranet");
+    expect(changes.querySelector("ins.ld-diff-added")?.textContent).toContain("company");
+    expect(changes.querySelector("del.ld-diff-removed")?.textContent).toContain("intranet");
     await userEvent.click(screen.getByRole("radio", { name: "Side by side" }));
     expect(await screen.findByRole("region", { name: "Version 6" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Version 7" })).toBeTruthy();

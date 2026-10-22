@@ -137,7 +137,7 @@ function panelled(node: ValidNode): boolean {
 }
 
 function includeHtml(node: ValidNode, renderer: HtmlRenderer): string {
-  const className = node.type === "includeExcerpt" ? "ph-include ph-include-excerpt" : "ph-include";
+  const className = node.type === "includeExcerpt" ? "ld-include ld-include-excerpt" : "ld-include";
   const result = resolved(node, renderer);
   if (result === undefined) {
     const label = renderer.label(node.type === "includeExcerpt" ? "includedExcerpt" : "includedPage");
@@ -161,12 +161,12 @@ function includeHtml(node: ValidNode, renderer: HtmlRenderer): string {
     return element(
       "section",
       { class: className, "aria-label": result.title || renderer.label("untitledPage") },
-      `${element("p", { class: "ph-include-title" }, href ? element("a", { href }, title) : title)}${content}`,
+      `${element("p", { class: "ld-include-title" }, href ? element("a", { href }, title) : title)}${content}`,
     );
   }
   const note = noteFor(node, result, renderer);
   return note
-    ? element("div", { class: `${className} ph-include-note` }, element("p", {}, renderer.escape(note)))
+    ? element("div", { class: `${className} ld-include-note` }, element("p", {}, renderer.escape(note)))
     : "";
 }
 
@@ -367,7 +367,7 @@ export const excerptModule = defineModule({
         return element(
           "div",
           {
-            class: "ph-excerpt",
+            class: "ld-excerpt",
             "data-name": attrOf<string | null>(node, "name"),
             "data-hidden": hidden ? "true" : null,
           },

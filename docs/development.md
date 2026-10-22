@@ -18,18 +18,18 @@
 | `docker` | Container image and Compose files |
 | `scripts` | Repository checks used in CI |
 
-The workspace is managed with pnpm and Turborepo. The compiler is TypeScript 7 (`tsc`). typescript-eslint does not support its API yet, so the root package also installs TypeScript 6 under the name `typescript` for ESLint only; `@typescript/native` provides `tsc`. Packages are built to `dist` with `tsc`. Vite and Vitest read package sources directly through the `@pagehall/source` export condition, so changes in `packages/ui` or `packages/tokens` reach the web client without a rebuild.
+The workspace is managed with pnpm and Turborepo. The compiler is TypeScript 7 (`tsc`). typescript-eslint does not support its API yet, so the root package also installs TypeScript 6 under the name `typescript` for ESLint only; `@typescript/native` provides `tsc`. Packages are built to `dist` with `tsc`. Vite and Vitest read package sources directly through the `@lunedo/source` export condition, so changes in `packages/ui` or `packages/tokens` reach the web client without a rebuild.
 
 ## Development environment
 
 `pnpm dev` runs `docker/compose.dev.yml`:
 
-- `postgres`: PostgreSQL 16 on `localhost:5432`, user, password and database `pagehall`.
+- `postgres`: PostgreSQL 16 on `localhost:5432`, user, password and database `lunedo`.
 - `mailpit`: catches all outgoing e-mail. SMTP on `localhost:1025`, web interface on `http://localhost:8025`. See [email.md](email.md).
-- `s3`: S3-compatible object storage (SeaweedFS) on `localhost:9100` (`S3_PORT`), access key `pagehall`, secret key `pagehall-s3`. The tests of the `s3` file storage and of the S3 backup target use it when `PAGEHALL_TEST_S3_ENDPOINT=http://localhost:9100` is set; each test creates its own bucket. The development instance itself stores files locally unless `PAGEHALL_FILE_STORAGE=s3` is set (see [configuration.md](configuration.md)).
+- `s3`: S3-compatible object storage (SeaweedFS) on `localhost:9100` (`S3_PORT`), access key `lunedo`, secret key `lunedo-s3`. The tests of the `s3` file storage and of the S3 backup target use it when `LUNEDO_TEST_S3_ENDPOINT=http://localhost:9100` is set; each test creates its own bucket. The development instance itself stores files locally unless `LUNEDO_FILE_STORAGE=s3` is set (see [configuration.md](configuration.md)).
 - `app`: installs dependencies inside the container and runs `pnpm dev:apps`, which starts every package's `dev` task through Turborepo.
 
-The repository is mounted into the container. Dependencies live in Docker volumes, so the container never uses packages installed for the host system. File changes are detected by polling, because file system events do not reach containers through Windows bind mounts. The Node.js processes use `pagehall-dev` from `packages/config`, which rebuilds a package on changes and restarts its process; the web client uses Vite with polling.
+The repository is mounted into the container. Dependencies live in Docker volumes, so the container never uses packages installed for the host system. File changes are detected by polling, because file system events do not reach containers through Windows bind mounts. The Node.js processes use `lunedo-dev` from `packages/config`, which rebuilds a package on changes and restarts its process; the web client uses Vite with polling.
 
 The `app` service reports healthy when web, api, collab and worker answer; see `docker/dev-healthcheck.ts`.
 
@@ -37,26 +37,26 @@ Dependencies are installed when the `app` container starts. After pulling change
 
 ### Resetting the development data
 
-`pnpm dev:reset` deletes all development data and asks for confirmation first; type `reset` to continue. It stops and removes the `app` container, drops the development database `pagehall` and every database left behind by tests (`pagehall_*test_*`, `pagehall_e2e_*`, the migrated template `pagehall_template_*` that tests copy), creates an empty development database and removes the `pagehall-data` volume with the development secrets (master keys, backup keys, metrics token) and files. Start again with `pnpm dev`; the instance then asks for setup and prints a new setup code in the log of the `app` container.
+`pnpm dev:reset` deletes all development data and asks for confirmation first; type `reset` to continue. It stops and removes the `app` container, drops the development database `lunedo` and every database left behind by tests (`lunedo_*test_*`, `lunedo_e2e_*`, the migrated template `lunedo_template_*` that tests copy), creates an empty development database and removes the `lunedo-data` volume with the development secrets (master keys, backup keys, metrics token) and files. Start again with `pnpm dev`; the instance then asks for setup and prints a new setup code in the log of the `app` container.
 
-To run everything on the host instead, start PostgreSQL, set `PAGEHALL_DATABASE_URL` and run `pnpm dev:apps`.
+To run everything on the host instead, start PostgreSQL, set `LUNEDO_DATABASE_URL` and run `pnpm dev:apps`.
 
 ### Behind a public HTTPS address
 
 Cloud identity providers such as Microsoft Entra ID accept only HTTPS redirect URIs. To test against them, put a tunnel or reverse proxy with a public HTTPS hostname in front of the Vite dev server, for example a Cloudflare Tunnel to `http://localhost:5173`, and start the environment with that address:
 
 ```sh
-PAGEHALL_INSTANCE_URL=https://pagehall-test.example.org pnpm dev
+LUNEDO_INSTANCE_URL=https://lunedo-test.example.org pnpm dev
 ```
 
-With a public address in `PAGEHALL_INSTANCE_URL`:
+With a public address in `LUNEDO_INSTANCE_URL`:
 
 - Vite accepts requests for that hostname and connects hot reload through it (`wss`, port 443).
-- The Vite proxy forwards `/api` with `X-Forwarded-For`, and with the protocol and host of the instance URL. The API trusts these headers only from the dev proxy in the same container (`PAGEHALL_TRUSTED_PROXIES=127.0.0.1,::1` in `docker/compose.dev.yml`); requests to the published port 3000 come from another address and keep their own.
+- The Vite proxy forwards `/api` with `X-Forwarded-For`, and with the protocol and host of the instance URL. The API trusts these headers only from the dev proxy in the same container (`LUNEDO_TRUSTED_PROXIES=127.0.0.1,::1` in `docker/compose.dev.yml`); requests to the published port 3000 come from another address and keep their own.
 - Until the setup assistant stores the instance URL, the API uses the configured one for redirect URIs and for the origin check of state-changing requests. Use the same address in the assistant.
 - Cookies are always `Secure` and use the `__Host-` prefix, so the browser keeps them over HTTPS and on `localhost`, but not on other plain HTTP addresses.
 
-Open Pagehall under the public address while it is set: hot reload goes through the tunnel also when the page is opened on `localhost`. Leave `PAGEHALL_INSTANCE_URL` empty for purely local work.
+Open Lunedo under the public address while it is set: hot reload goes through the tunnel also when the page is opened on `localhost`. Leave `LUNEDO_INSTANCE_URL` empty for purely local work.
 
 ### Identity providers for development and tests
 
@@ -70,12 +70,12 @@ pnpm dev:idp
 
 | Provider | Issuer | Client ID | Client secret | Administration |
 |---|---|---|---|---|
-| Keycloak | `http://keycloak.localhost:8080/realms/pagehall` | `pagehall` | `pagehall-keycloak-secret` | `http://keycloak.localhost:8080/admin`, user `admin`, password `admin` |
-| Authentik | `http://authentik.localhost:9000/application/o/pagehall/` | `pagehall` | `pagehall-authentik-secret` | `http://authentik.localhost:9000`, user `akadmin`, password `admin`, API token `pagehall-authentik-api-token` |
+| Keycloak | `http://keycloak.localhost:8080/realms/lunedo` | `lunedo` | `lunedo-keycloak-secret` | `http://keycloak.localhost:8080/admin`, user `admin`, password `admin` |
+| Authentik | `http://authentik.localhost:9000/application/o/lunedo/` | `lunedo` | `lunedo-authentik-secret` | `http://authentik.localhost:9000`, user `akadmin`, password `admin`, API token `lunedo-authentik-api-token` |
 
-Browsers and the `app` container reach both providers under the same `*.localhost` address, so the issuer in tokens matches the issuer Pagehall discovers. Browsers resolve `*.localhost` to the local machine; the `app` container maps the two names to the host. Both providers accept redirect URIs on `http://localhost:3000`, `http://localhost:5173` and `http://localhost:4310` (end-to-end tests). They are set up from `docker/idp/keycloak/pagehall-realm.json` and the Authentik blueprint `docker/idp/authentik/pagehall.yaml` at start.
+Browsers and the `app` container reach both providers under the same `*.localhost` address, so the issuer in tokens matches the issuer Lunedo discovers. Browsers resolve `*.localhost` to the local machine; the `app` container maps the two names to the host. Both providers accept redirect URIs on `http://localhost:3000`, `http://localhost:5173` and `http://localhost:4310` (end-to-end tests). They are set up from `docker/idp/keycloak/lunedo-realm.json` and the Authentik blueprint `docker/idp/authentik/lunedo.yaml` at start.
 
-Test users, all with the password `pagehall-test-password`:
+Test users, all with the password `lunedo-test-password`:
 
 | User | E-mail | Groups |
 |---|---|---|
@@ -85,15 +85,15 @@ Test users, all with the password `pagehall-test-password`:
 | `dave` | `dave@example.org` | engineering; tests disable this account |
 | `erin` | `erin@example.net` | none; e-mail outside the configured domain `example.org` |
 
-Both providers send the stable group IDs in the `groups` claim and the group names in `group_names`. Keycloak sends them without an extra scope, Authentik with the scope `groups`. In Keycloak the IDs are fixed in the realm (`engineering` is `6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f`, `admins` is `0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d`); in Authentik they are created at the first start and can be looked up by the group attribute `pagehall_test_group`.
+Both providers send the stable group IDs in the `groups` claim and the group names in `group_names`. Keycloak sends them without an extra scope, Authentik with the scope `groups`. In Keycloak the IDs are fixed in the realm (`engineering` is `6f1c2b8e-3a4d-4c5e-9f60-7a8b9c0d1e2f`, `admins` is `0b9a8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d`); in Authentik they are created at the first start and can be looked up by the group attribute `lunedo_test_group`.
 
-Back-channel logout goes to the URL in `PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL` and `PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL` when the providers start; tests set it through the administration interfaces. The providers reach Pagehall on the host as `host.docker.internal`.
+Back-channel logout goes to the URL in `LUNEDO_KEYCLOAK_BACKCHANNEL_LOGOUT_URL` and `LUNEDO_AUTHENTIK_BACKCHANNEL_LOGOUT_URL` when the providers start; tests set it through the administration interfaces. The providers reach Lunedo on the host as `host.docker.internal`.
 
-`apps/web/e2e/support/idp.ts` drives both providers in end-to-end tests: it signs in through their login forms, disables and enables users, creates and deletes users, changes group memberships and group names and sets the back-channel logout URL. Every test creates its own users with unique names and deletes them afterwards, so a test can run alone and be retried. Before the tests start, CI waits until Authentik shows its sign-in form in a browser (`apps/web/e2e/support/wait-for-authentik.ts`). The tests in `apps/web/e2e/idp` run when `PAGEHALL_E2E_IDP=1` is set, for example `PAGEHALL_E2E_IDP=1 pnpm --filter @pagehall/web exec playwright test --project=idp`.
+`apps/web/e2e/support/idp.ts` drives both providers in end-to-end tests: it signs in through their login forms, disables and enables users, creates and deletes users, changes group memberships and group names and sets the back-channel logout URL. Every test creates its own users with unique names and deletes them afterwards, so a test can run alone and be retried. Before the tests start, CI waits until Authentik shows its sign-in form in a browser (`apps/web/e2e/support/wait-for-authentik.ts`). The tests in `apps/web/e2e/idp` run when `LUNEDO_E2E_IDP=1` is set, for example `LUNEDO_E2E_IDP=1 pnpm --filter @lunedo/web exec playwright test --project=idp`.
 
-Keycloak also serves as SAML identity provider. Its metadata is at `http://keycloak.localhost:8080/realms/pagehall/protocol/saml/descriptor`. The SAML client is not part of the realm, because its entity ID contains the ID of the Pagehall provider: the end-to-end tests create the provider, load Pagehall's service provider metadata from `/api/v1/auth/providers/{id}/saml/metadata` and register it through the Keycloak administration API. To try SAML by hand, import the same metadata under Clients, Import client in the Keycloak administration, turn on "Force POST binding" and add the mappers `email` (user property) and `groups` (group list, without full path).
+Keycloak also serves as SAML identity provider. Its metadata is at `http://keycloak.localhost:8080/realms/lunedo/protocol/saml/descriptor`. The SAML client is not part of the realm, because its entity ID contains the ID of the Lunedo provider: the end-to-end tests create the provider, load Lunedo's service provider metadata from `/api/v1/auth/providers/{id}/saml/metadata` and register it through the Keycloak administration API. To try SAML by hand, import the same metadata under Clients, Import client in the Keycloak administration, turn on "Force POST binding" and add the mappers `email` (user property) and `groups` (group list, without full path).
 
-OpenLDAP runs in the same profile on `ldap://localhost:3389` (`ldap://openldap:389` from the `app` container), built from `docker/idp/openldap` with the base `dc=example,dc=org`. Pagehall connects with the service account `cn=pagehall,ou=service,dc=example,dc=org` and the password `pagehall-ldap-service-password`; the administrator is `cn=admin,dc=example,dc=org` with the password `admin`. The plain connection works only because the development environment sets `PAGEHALL_INSECURE_IDENTITY_PROVIDERS`. People live under `ou=people`, groups under `ou=groups`, and the user filter is the default `(objectClass=inetOrgPerson)`:
+OpenLDAP runs in the same profile on `ldap://localhost:3389` (`ldap://openldap:389` from the `app` container), built from `docker/idp/openldap` with the base `dc=example,dc=org`. Lunedo connects with the service account `cn=lunedo,ou=service,dc=example,dc=org` and the password `lunedo-ldap-service-password`; the administrator is `cn=admin,dc=example,dc=org` with the password `admin`. The plain connection works only because the development environment sets `LUNEDO_INSECURE_IDENTITY_PROVIDERS`. People live under `ou=people`, groups under `ou=groups`, and the user filter is the default `(objectClass=inetOrgPerson)`:
 
 | User | E-mail | Groups |
 |---|---|---|
@@ -102,9 +102,9 @@ OpenLDAP runs in the same profile on `ldap://localhost:3389` (`ldap://openldap:3
 | `nora` | `nora@directory.example.org` | staff; tests disable this account |
 | `otto` | `otto@directory.example.org` | none; disabled through `employeeType: disabled` |
 
-All of them have the password `pagehall-test-password`. Active Directory specifics (the nested group matching rule, `userAccountControl`, `accountExpires` and the sub-codes of failed binds) are tested against a fake directory in `packages/server/src/testing/fakes/ldap-directory.ts`, which evaluates real LDAP filters.
+All of them have the password `lunedo-test-password`. Active Directory specifics (the nested group matching rule, `userAccountControl`, `accountExpires` and the sub-codes of failed binds) are tested against a fake directory in `packages/server/src/testing/fakes/ldap-directory.ts`, which evaluates real LDAP filters.
 
-Microsoft Graph and the Google Directory API are replaced in tests by small local fakes in `packages/server/src/testing/fakes`, exported from `@pagehall/server/testing`. `startFakeGraph()` and `startFakeGoogleDirectory()` start them on a free port inside a test; `node --import ./packages/server/src/testing/ts-resolve.mjs packages/server/src/testing/fakes/serve.ts` runs both as a process on ports 4320 and 4321 (`PAGEHALL_FAKE_GRAPH_PORT`, `PAGEHALL_FAKE_GOOGLE_PORT`). They issue application tokens (client credentials for Graph, a service account assertion for Google), page their results like the real APIs (`@odata.nextLink`, `nextPageToken`) and contain a person with 250 groups for the Entra ID group overage, nested groups, a disabled and a suspended account. Tests change their data directly or through `/_fake/...` requests.
+Microsoft Graph and the Google Directory API are replaced in tests by small local fakes in `packages/server/src/testing/fakes`, exported from `@lunedo/server/testing`. `startFakeGraph()` and `startFakeGoogleDirectory()` start them on a free port inside a test; `node --import ./packages/server/src/testing/ts-resolve.mjs packages/server/src/testing/fakes/serve.ts` runs both as a process on ports 4320 and 4321 (`LUNEDO_FAKE_GRAPH_PORT`, `LUNEDO_FAKE_GOOGLE_PORT`). They issue application tokens (client credentials for Graph, a service account assertion for Google), page their results like the real APIs (`@odata.nextLink`, `nextPageToken`) and contain a person with 250 groups for the Entra ID group overage, nested groups, a disabled and a suspended account. Tests change their data directly or through `/_fake/...` requests.
 
 ## Operations
 
@@ -119,8 +119,8 @@ Every API route declares how it may be accessed (`@PublicRoute()`, `@MetricsToke
 `docker/Dockerfile` builds one image with all roles. The first argument selects the role:
 
 ```sh
-docker build -f docker/Dockerfile -t pagehall .
-docker run --rm -e PAGEHALL_DATABASE_URL=... -p 3000:3000 pagehall api
+docker build -f docker/Dockerfile -t lunedo .
+docker run --rm -e LUNEDO_DATABASE_URL=... -p 3000:3000 lunedo api
 ```
 
 Roles are `api`, `collab`, `worker` and `all` (default), which runs all three processes in one container.
@@ -187,15 +187,15 @@ In CI a failed test is retried once, in Vitest and in Playwright; a test that pa
 
 In CI every PostgreSQL used by tests runs with `fsync=off`, `synchronous_commit=off` and `full_page_writes=off` and keeps its data directory on tmpfs: the service containers of the unit and end-to-end jobs (`--tmpfs`, then `scripts/tune-test-postgres.ts` sets and verifies the settings), the PostgreSQL of the identity provider job (`docker/compose.ci.yml`, merged over `docker/compose.dev.yml`; the database of Authentik keeps its defaults, because sign-in through Authentik timed out with it on tmpfs and without durability) and the database of the backup round trip (`scripts/backup-roundtrip.sh` when `CI` is set). Dumps and restores still run against a real server, so the comparison is unchanged. Local development and `docker/compose.dev.yml` alone keep the normal settings.
 
-A release tag `v1.4.2` publishes `ghcr.io/pagehall/pagehall` and `ghcr.io/pagehall/render` and attaches `pagehall-versions.json` and `install.sh` to the GitHub release. The job `Check the release tag` refuses a tag whose commit is not on `main`. The images always get the tag `1.4.2`; `1.4` and `latest`, and the GitHub release as the latest one, move only when the tag is the highest release version, so a patch for an older line never moves them back. The jobs that hold `packages: write` or `contents: write` run only on GitHub-hosted `ubuntu-24.04`, never on `RUNNER_LABELS`, because the persistent self-hosted runners also run the code of pull requests; arm64 is built there with QEMU, without the layer cache. The job that reads the release notes runs the image by the digest the publish job reported, with `--pull always`, and buildx is pinned. `pnpm release-jobs:check` (`scripts/check-release-jobs.ts`) fails when a job with one of these permissions can run on a self-hosted runner or runs an image by its tag. The workflows rely on a tag ruleset for `v*` in the repository settings, so that only maintainers create, move or delete release tags.
+A release tag `v1.4.2` publishes `ghcr.io/lunedo/lunedo` and `ghcr.io/lunedo/render` and attaches `lunedo-versions.json` and `install.sh` to the GitHub release. The job `Check the release tag` refuses a tag whose commit is not on `main`. The images always get the tag `1.4.2`; `1.4` and `latest`, and the GitHub release as the latest one, move only when the tag is the highest release version, so a patch for an older line never moves them back. The jobs that hold `packages: write` or `contents: write` run only on GitHub-hosted `ubuntu-24.04`, never on `RUNNER_LABELS`, because the persistent self-hosted runners also run the code of pull requests; arm64 is built there with QEMU, without the layer cache. The job that reads the release notes runs the image by the digest the publish job reported, with `--pull always`, and buildx is pinned. `pnpm release-jobs:check` (`scripts/check-release-jobs.ts`) fails when a job with one of these permissions can run on a self-hosted runner or runs an image by its tag. The workflows rely on a tag ruleset for `v*` in the repository settings, so that only maintainers create, move or delete release tags.
 
-Every other job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","pagehall"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks; `CI result` then runs on `ubuntu-24.04` and fails, so such a pull request cannot pass the required check.
+Every other job runs on the runners named in the repository variable `RUNNER_LABELS`, a JSON array such as `["self-hosted","linux","x64","lunedo"]`. Without the variable, jobs run on GitHub-hosted `ubuntu-24.04`, so no code changes when the repository goes public. When `RUNNER_LABELS` names a self-hosted runner, no job runs for pull requests from forks; `CI result` then runs on `ubuntu-24.04` and fails, so such a pull request cannot pass the required check.
 
 Several runners can share one host. Jobs publish no fixed host ports: unit test services get random ports, and the identity provider job picks free ports with `scripts/pick-free-ports.ts`, names its compose project after the workflow run and removes only that project's containers, volumes and images. The end-to-end job runs in its own container with its services on the job's private network and its state on a tmpfs, so it shares no port, name or directory with the identity provider job, which keeps its state in the runner's temporary directory. The compose file reads the ports from `POSTGRES_PORT`, `VALKEY_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_PORT`, `KEYCLOAK_PORT`, `AUTHENTIK_PORT` and `LDAP_PORT`, defaulting to the usual ones for local development.
 
 The repository variable `CI_PARALLELISM` limits how many processes one job starts. When it is set, it caps the Vitest workers, Turborepo's task concurrency (`TURBO_CONCURRENCY`) and the threads of the TypeScript compiler (`GOMAXPROCS`) and Biome (`RAYON_NUM_THREADS`); without it every tool sizes itself to the CPU count, as on GitHub-hosted runners. Set it to the number of CPUs divided by the number of runners on the host, for example `3` for three runners on 10 vCPUs. The end-to-end job uses the repository variable `E2E_WORKERS` as the number of Playwright workers; without it, it uses `CI_PARALLELISM`, or 3 when neither is set. The projects that change instance-wide state and the identity provider tests always run on one worker.
 
-Locally, `pnpm test` and `pnpm typecheck` run Turborepo through `scripts/run-turbo.ts`, which keeps the machine usable: it derives a process budget from the logical cores (all of them on Linux and macOS, half of them on Windows, where test processes crashed under full load) and splits it into Turborepo tasks of 4 Vitest workers or compiler threads each. `PAGEHALL_PARALLELISM` sets the budget, for example `PAGEHALL_PARALLELISM=16 pnpm test`; `PAGEHALL_TEST_WORKERS` sets the Vitest workers of a single package. In CI the script changes nothing. Turborepo runs with `--continue`: every package runs to the end, and the summary lists every package that failed. A test process that ends abnormally fails its package, and Vitest names the file it was running.
+Locally, `pnpm test` and `pnpm typecheck` run Turborepo through `scripts/run-turbo.ts`, which keeps the machine usable: it derives a process budget from the logical cores (all of them on Linux and macOS, half of them on Windows, where test processes crashed under full load) and splits it into Turborepo tasks of 4 Vitest workers or compiler threads each. `LUNEDO_PARALLELISM` sets the budget, for example `LUNEDO_PARALLELISM=16 pnpm test`; `LUNEDO_TEST_WORKERS` sets the Vitest workers of a single package. In CI the script changes nothing. Turborepo runs with `--continue`: every package runs to the end, and the summary lists every package that failed. A test process that ends abnormally fails its package, and Vitest names the file it was running.
 
 Adding or removing the label `breaking-api-change` runs CI again in its own concurrency group, because it changes the result of the API check; other labels do not start a run. On self-hosted runners the backup job builds the image with the Docker daemon of the host and its local layer cache instead of the GitHub Actions cache, and a build that takes longer than 15 minutes is stopped.
 

@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyState, Input, PageHeader, Select, Skeleton } from "@pagehall/ui";
+import { Badge, Button, EmptyState, Input, PageHeader, Select, Skeleton } from "@lunedo/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { FileInput, Layers, Lock, Plus, Search, User, Users } from "lucide-react";

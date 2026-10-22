@@ -27,7 +27,7 @@ describe.skipIf(!baseUrl || !hasTools)("anonymizing after a restore", () => {
   });
 
   it("finds an old invitation through the restored address key", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "pagehall-restore-anonymize-"));
+    const dir = await mkdtemp(path.join(tmpdir(), "lunedo-restore-anonymize-"));
     dirs.push(dir);
     const masterKey = randomBytes(32);
     const masterKeys = parseKeyRing(formatKeyEntry(1, masterKey));
@@ -60,7 +60,7 @@ describe.skipIf(!baseUrl || !hasTools)("anonymizing after a restore", () => {
     );
     expect(tagged.rowCount).toBeGreaterThan(0);
 
-    const output = path.join(dir, "backup.phbak");
+    const output = path.join(dir, "backup.ldbak");
     await createBackup({
       output,
       stagingDir: path.join(path.dirname(output), "work"),
@@ -69,7 +69,7 @@ describe.skipIf(!baseUrl || !hasTools)("anonymizing after a restore", () => {
       database: new PostgresArchiver({ databaseUrl: source.url }),
       filesDir: path.join(dir, "files"),
       config: {},
-      pagehallVersion: "test",
+      lunedoVersion: "test",
       schemaVersion: currentSchemaVersion(),
       logger,
     });

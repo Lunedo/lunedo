@@ -1,12 +1,12 @@
 import { get, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import {
   accountAttemptLimitSetting,
   clientAttemptLimitSetting,
   createServerRuntime,
   membersCreateConfidentialSpacesSetting,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -20,7 +20,7 @@ import {
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 import { createTestApp } from "../testing/create-test-app.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
+const SESSION_COOKIE = "__Host-lunedo-session";
 const SECRET_TITLE = "Salary review Mila";
 const SECRET_TEXT = "Raise by four percent";
 const SPACE_NAME = "Works council";
@@ -72,7 +72,7 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
 
   async function person(member = true): Promise<Person> {
     counter += 1;
-    const email = `confidential${counter}@pagehall.test`;
+    const email = `confidential${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const account = await createAccount(test, email, password, member ? organizationId : undefined);
     return { id: account.id, email, password, client: await signedInClient(test, email, password) };

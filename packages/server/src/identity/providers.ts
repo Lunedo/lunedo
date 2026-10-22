@@ -21,7 +21,7 @@ import {
   samlConfigSchema,
   samlMetadataXmlSchema,
   uuidv7,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import * as x509 from "@peculiar/x509";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -1440,7 +1440,7 @@ export class IdentityProviderService {
         throw new OrganizationError("invalidInput", "A certificate is valid for 30 days to 3 years");
       }
       const generated = await generateCertificate({
-        commonName: `Pagehall ${provider.name}`,
+        commonName: `Lunedo ${provider.name}`,
         validDays: input.validDays,
         now,
       });

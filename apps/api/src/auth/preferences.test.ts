@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, dateFormatSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, dateFormatSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,

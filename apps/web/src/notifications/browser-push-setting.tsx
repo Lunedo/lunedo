@@ -1,4 +1,4 @@
-import { ConfirmDialog, Section, SettingRow, Switch } from "@pagehall/ui";
+import { ConfirmDialog, Section, SettingRow, Switch } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

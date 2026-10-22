@@ -12,6 +12,6 @@ RUN slapadd -f /etc/openldap/slapd.conf -l /etc/openldap/seed.ldif \
 EXPOSE 389
 
 HEALTHCHECK --interval=2s --timeout=3s --retries=30 \
-  CMD ldapwhoami -x -H ldap://127.0.0.1 -D cn=pagehall,ou=service,dc=example,dc=org -w pagehall-ldap-service-password > /dev/null || exit 1
+  CMD ldapwhoami -x -H ldap://127.0.0.1 -D cn=lunedo,ou=service,dc=example,dc=org -w lunedo-ldap-service-password > /dev/null || exit 1
 
 CMD ["slapd", "-d", "0", "-h", "ldap:///", "-f", "/etc/openldap/slapd.conf", "-u", "ldap", "-g", "ldap"]

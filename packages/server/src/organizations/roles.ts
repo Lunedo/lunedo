@@ -1,4 +1,4 @@
-import { roleNameSchema } from "@pagehall/shared";
+import { roleNameSchema } from "@lunedo/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";

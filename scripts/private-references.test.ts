@@ -50,7 +50,7 @@ describe("findPrivateReferences", () => {
 });
 
 describe("check-private-references", () => {
-  const repo = mkdtempSync(path.join(tmpdir(), "pagehall-references-"));
+  const repo = mkdtempSync(path.join(tmpdir(), "lunedo-references-"));
   after(() => rmSync(repo, { recursive: true, force: true }));
   execFileSync("git", ["init", "--quiet", repo]);
   const run = (...args: string[]) =>

@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -27,7 +27,7 @@ function body(text: string): DocumentJson {
 }
 
 function migrationsBefore(tag: string): string {
-  const folder = mkdtempSync(path.join(tmpdir(), "pagehall-migrations-"));
+  const folder = mkdtempSync(path.join(tmpdir(), "lunedo-migrations-"));
   cpSync(migrationsFolder, folder, { recursive: true });
   const journalPath = path.join(folder, "meta", "_journal.json");
   const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
@@ -86,7 +86,7 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     const first = new SearchIndexer({ database: test.database, adapter });
     const otherNode = createDatabasePool({
       connectionString: test.url,
-      applicationName: "pagehall-test-node",
+      applicationName: "lunedo-test-node",
     });
     const second = new SearchIndexer({ database: createDatabase(otherNode), adapter });
     const [a, b] = await Promise.all([first.drain(), second.drain()]).finally(() => otherNode.end());
@@ -375,7 +375,7 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     try {
       await client.query("begin");
       await client.query("select pg_advisory_xact_lock_shared(hashtextextended($1, 0))", [
-        `pagehall.search.space:${context.space.id}`,
+        `lunedo.search.space:${context.space.id}`,
       ]);
       const blocked = await test.services.search.indexer.drain();
       expect(blocked.spaces).toBe(0);
@@ -459,7 +459,7 @@ describe.skipIf(!baseUrl)("search index after the migration", () => {
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "", {
       beforeMigrations: async (url) => {
-        const pool = createDatabasePool({ connectionString: url, applicationName: "pagehall-test" });
+        const pool = createDatabasePool({ connectionString: url, applicationName: "lunedo-test" });
         try {
           await runMigrations(pool, {
             logger: createLogger({ service: "test", level: "silent" }),

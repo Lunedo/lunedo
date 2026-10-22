@@ -1,34 +1,34 @@
 {
-  "name": "@pagehall/editor-schema",
+  "name": "@lunedo/editor-schema",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     ".": {
-      "@pagehall/source": "./src/index.ts",
+      "@lunedo/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./yjs": {
-      "@pagehall/source": "./src/yjs.ts",
+      "@lunedo/source": "./src/yjs.ts",
       "types": "./dist/yjs.d.ts",
       "default": "./dist/yjs.js"
     },
     "./scene": {
-      "@pagehall/source": "./src/scene.ts",
+      "@lunedo/source": "./src/scene.ts",
       "types": "./dist/scene.d.ts",
       "default": "./dist/scene.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pagehall-dev",
+    "dev": "lunedo-dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@types/node": "^24.19.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"

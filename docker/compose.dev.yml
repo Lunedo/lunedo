@@ -1,6 +1,6 @@
-# Development environment: PostgreSQL and all Pagehall processes with hot reload.
+# Development environment: PostgreSQL and all Lunedo processes with hot reload.
 # Start with `pnpm dev` from the repository root.
-name: pagehall-dev
+name: lunedo-dev
 
 x-node-modules: &node-modules
   - ..:/repo
@@ -17,22 +17,22 @@ x-node-modules: &node-modules
   - node-modules-tokens:/repo/packages/tokens/node_modules
   - node-modules-config:/repo/packages/config/node_modules
   - node-modules-server:/repo/packages/server/node_modules
-  - pagehall-data:/var/lib/pagehall
+  - lunedo-data:/var/lib/lunedo
 
 services:
   postgres:
     image: postgres:16-alpine
     command: ["postgres", "-c", "max_connections=400"]
     environment:
-      POSTGRES_USER: pagehall
-      POSTGRES_PASSWORD: pagehall
-      POSTGRES_DB: pagehall
+      POSTGRES_USER: lunedo
+      POSTGRES_PASSWORD: lunedo
+      POSTGRES_DB: lunedo
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U pagehall -d pagehall"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U lunedo -d lunedo"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -60,8 +60,8 @@ services:
   s3:
     image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
     environment:
-      AWS_ACCESS_KEY_ID: pagehall
-      AWS_SECRET_ACCESS_KEY: pagehall-s3
+      AWS_ACCESS_KEY_ID: lunedo
+      AWS_SECRET_ACCESS_KEY: lunedo-s3
     ports:
       - "127.0.0.1:${S3_PORT:-9100}:8333"
     volumes:
@@ -82,31 +82,31 @@ services:
       && pnpm dev:apps"
     working_dir: /repo
     init: true
-    # PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS (30) plus the 10 second shutdown margin, with some room.
+    # LUNEDO_SHUTDOWN_TIMEOUT_SECONDS (30) plus the 10 second shutdown margin, with some room.
     stop_grace_period: 45s
     environment:
-      PAGEHALL_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
-      PAGEHALL_LOG_LEVEL: debug
-      PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true"
+      LUNEDO_DATABASE_URL: postgres://lunedo:lunedo@postgres:5432/lunedo
+      LUNEDO_LOG_LEVEL: debug
+      LUNEDO_INSECURE_IDENTITY_PROVIDERS: "true"
       # Optional: a fixed setup code instead of the link in the log, at least 12 characters.
-      # PAGEHALL_SETUP_CODE: choose-a-long-setup-code
-      PAGEHALL_DEV_HOST: 0.0.0.0
-      PAGEHALL_DEV_POLLING: "true"
-      PAGEHALL_DEV_API_URL: http://localhost:3000
-      PAGEHALL_REDIS_URL: redis://valkey:6379
+      # LUNEDO_SETUP_CODE: choose-a-long-setup-code
+      LUNEDO_DEV_HOST: 0.0.0.0
+      LUNEDO_DEV_POLLING: "true"
+      LUNEDO_DEV_API_URL: http://localhost:3000
+      LUNEDO_REDIS_URL: redis://valkey:6379
       # Optional: a public HTTPS address in front of the Vite dev server, for example a tunnel.
-      PAGEHALL_INSTANCE_URL: ${PAGEHALL_INSTANCE_URL:-}
+      LUNEDO_INSTANCE_URL: ${LUNEDO_INSTANCE_URL:-}
       # Only the Vite dev proxy in this container forwards the client's address and protocol.
-      PAGEHALL_TRUSTED_PROXIES: 127.0.0.1,::1
-      PAGEHALL_UPDATE_CHECK: "false"
+      LUNEDO_TRUSTED_PROXIES: 127.0.0.1,::1
+      LUNEDO_UPDATE_CHECK: "false"
       # Optional: PDF on the server through the render container of the profile "render".
-      # Set both to use it, for example PAGEHALL_RENDER_URL=http://render:3000.
-      PAGEHALL_RENDER_URL: ${PAGEHALL_RENDER_URL:-}
-      PAGEHALL_RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN:-}
+      # Set both to use it, for example LUNEDO_RENDER_URL=http://render:3000.
+      LUNEDO_RENDER_URL: ${LUNEDO_RENDER_URL:-}
+      LUNEDO_RENDER_TOKEN: ${LUNEDO_RENDER_TOKEN:-}
       # Optional: a folder for exports larger than the upload limit. Add a read-only mount
       # such as "./import:/data/import:ro" to the volumes of this service. Each organization
       # reads only its own subfolder, named after its ID, for example ./import/<organization ID>.
-      # PAGEHALL_IMPORT_DIR: /data/import
+      # LUNEDO_IMPORT_DIR: /data/import
       TURBO_TELEMETRY_DISABLED: "1"
       DO_NOT_TRACK: "1"
     ports:
@@ -131,14 +131,14 @@ services:
       retries: 3
 
   # Optional render container for PDF on the server, started with the profile "render".
-  # It needs the same token as PAGEHALL_RENDER_TOKEN of the app, at least 32 characters.
+  # It needs the same token as LUNEDO_RENDER_TOKEN of the app, at least 32 characters.
   render:
     profiles: [render]
     build:
       context: ..
       dockerfile: docker/render.Dockerfile
     environment:
-      RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN:-}
+      RENDER_TOKEN: ${LUNEDO_RENDER_TOKEN:-}
       RENDER_CONCURRENCY: ${RENDER_CONCURRENCY:-2}
       # Docker Desktop does not give containers the user namespaces Chromium's sandbox needs, so development
       # runs without it and the container logs a warning. Production setups keep the sandbox on.
@@ -147,19 +147,19 @@ services:
       - "127.0.0.1:${RENDER_PORT:-3003}:3000"
 
   # Identity providers for development and tests, started with the profile "idp".
-  # Browsers and Pagehall reach them under the same *.localhost address, so issuers match.
+  # Browsers and Lunedo reach them under the same *.localhost address, so issuers match.
   keycloak:
     profiles: [idp]
     image: quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
     command: ["start-dev", "--import-realm"]
     environment:
       KC_HOSTNAME: http://keycloak.localhost:${KEYCLOAK_PORT:-8080}
-      PAGEHALL_E2E_PORT: ${PAGEHALL_E2E_PORT:-4310}
+      LUNEDO_E2E_PORT: ${LUNEDO_E2E_PORT:-4310}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HEALTH_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL: ${PAGEHALL_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:-}
+      LUNEDO_KEYCLOAK_BACKCHANNEL_LOGOUT_URL: ${LUNEDO_KEYCLOAK_BACKCHANNEL_LOGOUT_URL:-}
     ports:
       - "127.0.0.1:${KEYCLOAK_PORT:-8080}:8080"
     volumes:
@@ -202,19 +202,19 @@ services:
     image: ghcr.io/goauthentik/server:2026.8.4@sha256:e7226ae116dac5aa0a5643803e735b010038f492c401e08e16b3bf1ac54c090c
     command: server
     environment: &authentik-environment
-      AUTHENTIK_SECRET_KEY: pagehall-development-only-secret-key-not-for-production
+      AUTHENTIK_SECRET_KEY: lunedo-development-only-secret-key-not-for-production
       AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
       AUTHENTIK_POSTGRESQL__USER: authentik
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: authentik
       AUTHENTIK_BOOTSTRAP_PASSWORD: admin
-      AUTHENTIK_BOOTSTRAP_TOKEN: pagehall-authentik-api-token
+      AUTHENTIK_BOOTSTRAP_TOKEN: lunedo-authentik-api-token
       AUTHENTIK_BOOTSTRAP_EMAIL: admin@example.org
       AUTHENTIK_LOG_LEVEL: warning
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
       AUTHENTIK_DISABLE_UPDATE_CHECK: "true"
       AUTHENTIK_DISABLE_STARTUP_ANALYTICS: "true"
-      PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL: ${PAGEHALL_AUTHENTIK_BACKCHANNEL_LOGOUT_URL:-}
+      LUNEDO_AUTHENTIK_BACKCHANNEL_LOGOUT_URL: ${LUNEDO_AUTHENTIK_BACKCHANNEL_LOGOUT_URL:-}
     ports:
       - "127.0.0.1:${AUTHENTIK_PORT:-9000}:9000"
     volumes:
@@ -254,4 +254,4 @@ volumes:
   node-modules-tokens:
   node-modules-config:
   node-modules-server:
-  pagehall-data:
+  lunedo-data:

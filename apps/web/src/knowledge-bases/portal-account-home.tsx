@@ -1,4 +1,4 @@
-import { Button, EmptyState, List, ListRow, PageHeader, Section, Skeleton } from "@pagehall/ui";
+import { Button, EmptyState, List, ListRow, PageHeader, Section, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { BookOpen, ExternalLink, LifeBuoy, LogOut } from "lucide-react";

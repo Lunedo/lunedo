@@ -1,4 +1,4 @@
-import type { BadgeVariant } from "@pagehall/ui";
+import type { BadgeVariant } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { translateKey } from "../i18n/translate.js";
 import type { ImportState, ImportView } from "./imports-api.js";

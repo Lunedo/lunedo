@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Menu, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, IconButton, Menu, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,

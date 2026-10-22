@@ -1,4 +1,4 @@
-import { Button, Combobox, type ComboboxItem, Dialog, Field, Notice, RadioGroup } from "@pagehall/ui";
+import { Button, Combobox, type ComboboxItem, Dialog, Field, Notice, RadioGroup } from "@lunedo/ui";
 import { useQueries } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

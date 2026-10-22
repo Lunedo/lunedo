@@ -1,4 +1,4 @@
-import { MAX_DEPTH, type NodeJson, validateDocument } from "@pagehall/editor-schema";
+import { MAX_DEPTH, type NodeJson, validateDocument } from "@lunedo/editor-schema";
 import { describe, expect, it } from "vitest";
 import { syntheticExport } from "../testing/fixture.js";
 import {

@@ -17,7 +17,7 @@ All four answer on every host name, also on own domains of knowledge base portal
 
 ## Metrics
 
-`/metrics` needs the header `Authorization: Bearer <token>`. The token is `PAGEHALL_METRICS_TOKEN`; without it, Pagehall generates one into `metrics-token` in the secrets directory (`docker compose exec pagehall cat /var/lib/pagehall/secrets/metrics-token`). The setup script writes one into `.env`. A request without the right token gets `401`.
+`/metrics` needs the header `Authorization: Bearer <token>`. The token is `LUNEDO_METRICS_TOKEN`; without it, Lunedo generates one into `metrics-token` in the secrets directory (`docker compose exec lunedo cat /var/lib/lunedo/secrets/metrics-token`). The setup script writes one into `.env`. A request without the right token gets `401`.
 
 Scrape the API: it exposes the values of the whole instance. The worker and the collaboration server expose the metrics of their own process (HTTP, database pool, job durations, open editors). Every series has the label `service` (`api`, `worker` or `collab`).
 
@@ -27,25 +27,25 @@ No metric has a label with personal data, a page title, a space name or another 
 
 | Metric | Type | Meaning |
 |---|---|---|
-| `pagehall_build_info{version}` | gauge | Always 1; `version` is the running version. All processes. |
-| `pagehall_jobs{queue,state}` | gauge | Jobs per queue in the states `queued`, `active`, `deferred` (scheduled for later) and `failed` (failed after all attempts and still kept). |
-| `pagehall_collab_up` | gauge | 1 when the collaboration server answers its readiness check, 0 otherwise. |
-| `pagehall_mail_delivery_failures_total` | counter | Failed attempts to deliver an e-mail. Each mail is tried up to 9 times. |
-| `pagehall_mail_undelivered_total` | counter | E-mails given up after the last attempt. |
-| `pagehall_mail_last_success_timestamp_seconds` | gauge | Time of the last delivered e-mail, as a Unix timestamp. |
-| `pagehall_mail_last_failure_timestamp_seconds` | gauge | Time of the last failed attempt. Missing until one fails. |
-| `pagehall_storage_used_bytes` | gauge | Bytes used in the file store: on the volume for local storage, the running total of stored files for S3. |
-| `pagehall_storage_size_bytes` | gauge | Size of the volume, or the configured limit for S3. |
-| `pagehall_storage_usage_ratio` | gauge | Used share from 0 to 1. Missing for S3 without a limit. |
-| `pagehall_storage_level` | gauge | Active storage warning level: 0 none, 1 warning, 2 large writes paused, 3 critical. See [storage.md](storage.md). |
-| `pagehall_database_size_bytes` | gauge | Size of the Pagehall database. |
-| `pagehall_backup_last_success_timestamp_seconds` | gauge | Time of the last successful backup. |
-| `pagehall_backup_failures_total` | counter | Backups that failed. |
-| `pagehall_backup_scheduled` | gauge | 1 when scheduled backups are on and have a target. |
-| `pagehall_search_pending_items` | gauge | Items waiting to be indexed for search. |
-| `pagehall_search_failing_items` | gauge | Items whose indexing failed at least once and is retried. |
-| `pagehall_maintenance_mode` | gauge | 1 while maintenance mode is on. |
-| `pagehall_update_available` | gauge | 1 when a newer release is available. Only exposed while the update check is on. |
+| `lunedo_build_info{version}` | gauge | Always 1; `version` is the running version. All processes. |
+| `lunedo_jobs{queue,state}` | gauge | Jobs per queue in the states `queued`, `active`, `deferred` (scheduled for later) and `failed` (failed after all attempts and still kept). |
+| `lunedo_collab_up` | gauge | 1 when the collaboration server answers its readiness check, 0 otherwise. |
+| `lunedo_mail_delivery_failures_total` | counter | Failed attempts to deliver an e-mail. Each mail is tried up to 9 times. |
+| `lunedo_mail_undelivered_total` | counter | E-mails given up after the last attempt. |
+| `lunedo_mail_last_success_timestamp_seconds` | gauge | Time of the last delivered e-mail, as a Unix timestamp. |
+| `lunedo_mail_last_failure_timestamp_seconds` | gauge | Time of the last failed attempt. Missing until one fails. |
+| `lunedo_storage_used_bytes` | gauge | Bytes used in the file store: on the volume for local storage, the running total of stored files for S3. |
+| `lunedo_storage_size_bytes` | gauge | Size of the volume, or the configured limit for S3. |
+| `lunedo_storage_usage_ratio` | gauge | Used share from 0 to 1. Missing for S3 without a limit. |
+| `lunedo_storage_level` | gauge | Active storage warning level: 0 none, 1 warning, 2 large writes paused, 3 critical. See [storage.md](storage.md). |
+| `lunedo_database_size_bytes` | gauge | Size of the Lunedo database. |
+| `lunedo_backup_last_success_timestamp_seconds` | gauge | Time of the last successful backup. |
+| `lunedo_backup_failures_total` | counter | Backups that failed. |
+| `lunedo_backup_scheduled` | gauge | 1 when scheduled backups are on and have a target. |
+| `lunedo_search_pending_items` | gauge | Items waiting to be indexed for search. |
+| `lunedo_search_failing_items` | gauge | Items whose indexing failed at least once and is retried. |
+| `lunedo_maintenance_mode` | gauge | 1 while maintenance mode is on. |
+| `lunedo_update_available` | gauge | 1 when a newer release is available. Only exposed while the update check is on. |
 
 Values that are not known are left out instead of reported as 0, for example the storage usage of S3 without a limit. The values are read from the database at most every 10 seconds.
 
@@ -53,13 +53,13 @@ Values that are not known are left out instead of reported as 0, for example the
 
 | Metric | Type | Meaning |
 |---|---|---|
-| `pagehall_http_requests_total{method,route,status}` | counter | HTTP requests by route template. |
-| `pagehall_http_request_duration_seconds{method,route,status}` | histogram | Request latency. |
-| `pagehall_job_duration_seconds{queue,state}` | histogram | Duration of job attempts on this worker, by outcome. |
-| `pagehall_db_pool_connections{state}` | gauge | Database connections of this process: `total`, `idle`, `waiting`. |
-| `pagehall_log_errors_total{type}` | counter | Error-level log events by their fixed text, the same as under [Recent errors](#recent-errors). |
-| `pagehall_collab_connections` | gauge | Open editor connections (collaboration server). |
-| `pagehall_collab_documents` | gauge | Documents the collaboration server holds open. |
+| `lunedo_http_requests_total{method,route,status}` | counter | HTTP requests by route template. |
+| `lunedo_http_request_duration_seconds{method,route,status}` | histogram | Request latency. |
+| `lunedo_job_duration_seconds{queue,state}` | histogram | Duration of job attempts on this worker, by outcome. |
+| `lunedo_db_pool_connections{state}` | gauge | Database connections of this process: `total`, `idle`, `waiting`. |
+| `lunedo_log_errors_total{type}` | counter | Error-level log events by their fixed text, the same as under [Recent errors](#recent-errors). |
+| `lunedo_collab_connections` | gauge | Open editor connections (collaboration server). |
+| `lunedo_collab_documents` | gauge | Documents the collaboration server holds open. |
 
 The default metrics of Node.js (`process_*`, `nodejs_*`) come with every process.
 
@@ -67,14 +67,14 @@ The default metrics of Node.js (`process_*`, `nodejs_*`) come with every process
 
 ```yaml
 scrape_configs:
-  - job_name: pagehall
+  - job_name: lunedo
     scheme: http
     metrics_path: /metrics
     authorization:
       type: Bearer
-      credentials_file: /etc/prometheus/pagehall-metrics-token
+      credentials_file: /etc/prometheus/lunedo-metrics-token
     static_configs:
-      - targets: ["pagehall:3000"]
+      - targets: ["lunedo:3000"]
 ```
 
 Scrape the address inside the network, not through the public address of the reverse proxy; or block `/metrics` on the proxy for everyone else.
@@ -83,33 +83,33 @@ Suggested alerts:
 
 ```yaml
 groups:
-  - name: pagehall
+  - name: lunedo
     rules:
-      - alert: PagehallNotReady
-        expr: up{job="pagehall"} == 0 or pagehall_collab_up == 0
+      - alert: LunedoNotReady
+        expr: up{job="lunedo"} == 0 or lunedo_collab_up == 0
         for: 5m
-      - alert: PagehallNoRecentBackup
-        expr: time() - pagehall_backup_last_success_timestamp_seconds > 26 * 3600
-      - alert: PagehallBackupFailed
-        expr: increase(pagehall_backup_failures_total[1d]) > 0
-      - alert: PagehallStorageFilling
-        expr: pagehall_storage_level >= 1
+      - alert: LunedoNoRecentBackup
+        expr: time() - lunedo_backup_last_success_timestamp_seconds > 26 * 3600
+      - alert: LunedoBackupFailed
+        expr: increase(lunedo_backup_failures_total[1d]) > 0
+      - alert: LunedoStorageFilling
+        expr: lunedo_storage_level >= 1
         for: 10m
-      - alert: PagehallFailedJobs
-        expr: sum by (queue) (pagehall_jobs{state="failed"}) > 0
+      - alert: LunedoFailedJobs
+        expr: sum by (queue) (lunedo_jobs{state="failed"}) > 0
         for: 30m
-      - alert: PagehallJobBacklog
-        expr: sum(pagehall_jobs{state="queued"}) > 1000
+      - alert: LunedoJobBacklog
+        expr: sum(lunedo_jobs{state="queued"}) > 1000
         for: 15m
-      - alert: PagehallMailFailing
-        expr: increase(pagehall_mail_undelivered_total[1h]) > 0
-      - alert: PagehallMaintenanceForgotten
-        expr: pagehall_maintenance_mode == 1
+      - alert: LunedoMailFailing
+        expr: increase(lunedo_mail_undelivered_total[1h]) > 0
+      - alert: LunedoMaintenanceForgotten
+        expr: lunedo_maintenance_mode == 1
         for: 4h
-      - alert: PagehallErrors
-        expr: sum(increase(pagehall_log_errors_total[15m])) > 20
-      - alert: PagehallUpdateAvailable
-        expr: pagehall_update_available == 1
+      - alert: LunedoErrors
+        expr: sum(increase(lunedo_log_errors_total[15m])) > 20
+      - alert: LunedoUpdateAvailable
+        expr: lunedo_update_available == 1
         for: 7d
 ```
 
@@ -119,22 +119,22 @@ The thresholds are starting points. Backups run once a day, so 26 hours leaves r
 
 Zabbix reads the metrics with an HTTP agent item and splits them with Prometheus preprocessing; no template is needed.
 
-1. Create a host for the instance and a macro `{$PAGEHALL.METRICS.TOKEN}` of the type secret text with the token.
-2. Add a master item of the type **HTTP agent**: URL `http://pagehall:3000/metrics`, request type GET, header `Authorization` with the value `Bearer {$PAGEHALL.METRICS.TOKEN}`, type of information **Text**, update interval `1m`, history `0` (keep only the dependent items).
+1. Create a host for the instance and a macro `{$LUNEDO.METRICS.TOKEN}` of the type secret text with the token.
+2. Add a master item of the type **HTTP agent**: URL `http://lunedo:3000/metrics`, request type GET, header `Authorization` with the value `Bearer {$LUNEDO.METRICS.TOKEN}`, type of information **Text**, update interval `1m`, history `0` (keep only the dependent items).
 3. Add a **dependent item** per value with the preprocessing step **Prometheus pattern**, for example:
 
 | Item | Pattern | Type |
 |---|---|---|
-| Storage used | `pagehall_storage_usage_ratio` | Numeric (float); add a custom multiplier 100 for percent |
-| Storage level | `pagehall_storage_level` | Numeric (unsigned) |
-| Last backup | `pagehall_backup_last_success_timestamp_seconds` | Numeric (unsigned), unit `unixtime` |
-| Failed mails | `pagehall_mail_undelivered_total` | Numeric (unsigned), then **Change per second** or **Simple change** |
-| Maintenance mode | `pagehall_maintenance_mode` | Numeric (unsigned) |
-| Collaboration server | `pagehall_collab_up` | Numeric (unsigned) |
-| Version | `pagehall_build_info` with the label `version` as output | Character |
+| Storage used | `lunedo_storage_usage_ratio` | Numeric (float); add a custom multiplier 100 for percent |
+| Storage level | `lunedo_storage_level` | Numeric (unsigned) |
+| Last backup | `lunedo_backup_last_success_timestamp_seconds` | Numeric (unsigned), unit `unixtime` |
+| Failed mails | `lunedo_mail_undelivered_total` | Numeric (unsigned), then **Change per second** or **Simple change** |
+| Maintenance mode | `lunedo_maintenance_mode` | Numeric (unsigned) |
+| Collaboration server | `lunedo_collab_up` | Numeric (unsigned) |
+| Version | `lunedo_build_info` with the label `version` as output | Character |
 
-4. For the job queues, add a discovery rule as a dependent item with the preprocessing **Prometheus to JSON** and the pattern `pagehall_jobs{state="failed"}`, the LLD macro `{#QUEUE}` from `$.labels.queue`, and an item prototype with the pattern `pagehall_jobs{queue="{#QUEUE}",state="failed"}`.
-5. Triggers with the thresholds of the Prometheus alerts above, for example `now() - last(/pagehall/backup.last) > 26h` and `last(/pagehall/storage.level) >= 1`.
+4. For the job queues, add a discovery rule as a dependent item with the preprocessing **Prometheus to JSON** and the pattern `lunedo_jobs{state="failed"}`, the LLD macro `{#QUEUE}` from `$.labels.queue`, and an item prototype with the pattern `lunedo_jobs{queue="{#QUEUE}",state="failed"}`.
+5. Triggers with the thresholds of the Prometheus alerts above, for example `now() - last(/lunedo/backup.last) > 26h` and `last(/lunedo/storage.level) >= 1`.
 
 The host itself (CPU, memory, disk of the volumes) is monitored by the Zabbix agent as usual.
 
@@ -158,24 +158,24 @@ Each check says `ok`, `warning` or `error` with a short reason, the values it me
 | HTTPS | The instance address is not set or does not use HTTPS. |
 | E-mail | E-mail is not set up, or the last delivery failed. |
 | Encryption | The master key is not loaded (error), or the master keys live only in the secrets volume and their backup was not confirmed during setup. |
-| Clock | The clocks of Pagehall and the database differ by more than 5 seconds. |
+| Clock | The clocks of Lunedo and the database differ by more than 5 seconds. |
 | File directory | The file directory is missing, not writable or has less than 1 GiB free (local storage only). |
 
 ### Recent errors
 
-The list shows the error-level log events of the last 24 hours by type: the fixed text of the event (for example `Request failed`), the error code or class if the event had one, the processes that logged it, how often and when last. Texts that could contain data, such as names, addresses or paths, are counted as `Other error`. The full events are in the container logs (`docker compose logs pagehall`); search them for the text. Counts are kept for 7 days.
+The list shows the error-level log events of the last 24 hours by type: the fixed text of the event (for example `Request failed`), the error code or class if the event had one, the processes that logged it, how often and when last. Texts that could contain data, such as names, addresses or paths, are counted as `Other error`. The full events are in the container logs (`docker compose logs lunedo`); search them for the text. Counts are kept for 7 days.
 
 ## Maintenance mode
 
 Maintenance mode makes the instance read-only while you work on it, for example during a data migration or before an update that needs manual steps. Switch it on under **Instance settings → Maintenance mode**, with `PUT /api/v1/instance/maintenance`, or from a script:
 
 ```sh
-./pagehall maintenance on --message "Update until 18:00" --block-sign-in
-./pagehall maintenance status
-./pagehall maintenance off
+./lunedo maintenance on --message "Update until 18:00" --block-sign-in
+./lunedo maintenance status
+./lunedo maintenance off
 ```
 
-`./pagehall` is the command the setup script installs; with your own Compose file, run `docker compose exec pagehall pagehall maintenance on`.
+`./lunedo` is the command the setup script installs; with your own Compose file, run `docker compose exec lunedo lunedo maintenance on`.
 
 While it is on:
 
@@ -185,20 +185,20 @@ While it is on:
 - Background jobs that change content wait in their queues: imports, copies, versions of live pages, scheduled blog publication, trash retention, template file adoption, image versions, removal of orphaned files, rendering of portal articles, key rotation and the pruning of removed articles. A job that was already running finishes. Backups, mail and notification delivery, search indexing, storage checks, retention sweeps, identity provider synchronization, SCIM and the expiry of guest memberships and tokens keep running, so access is still removed when someone leaves.
 - With **Pause signing in** (`--block-sign-in`), only instance administrators can sign in. People who are signed in stay signed in and can read.
 
-Switching on, changing the message and switching off are recorded in the audit log (`maintenance.started`, `maintenance.changed`, `maintenance.ended`), shown on the system status page and in the metric `pagehall_maintenance_mode`.
+Switching on, changing the message and switching off are recorded in the audit log (`maintenance.started`, `maintenance.changed`, `maintenance.ended`), shown on the system status page and in the metric `lunedo_maintenance_mode`.
 
 ## Updates
 
-Pagehall is updated by starting a newer image; it applies migrations at start. [setup.md](setup.md#updates) describes the update command, the manual update and the rollback.
+Lunedo is updated by starting a newer image; it applies migrations at start. [setup.md](setup.md#updates) describes the update command, the manual update and the rollback.
 
 ### Update check
 
-The update check tells instance administrators about new versions. Once a day the worker downloads the public version file, by default `https://github.com/pagehall/pagehall/releases/latest/download/pagehall-versions.json`. The request carries no data about the instance: no address, no version, no identifier, only the HTTP request itself with the user agent `Pagehall update check`. It is on by default.
+The update check tells instance administrators about new versions. Once a day the worker downloads the public version file, by default `https://github.com/lunedo/lunedo/releases/latest/download/lunedo-versions.json`. The request carries no data about the instance: no address, no version, no identifier, only the HTTP request itself with the user agent `Lunedo update check`. It is on by default.
 
-- Turn it off under **Instance settings → Updates**, or completely with `PAGEHALL_UPDATE_CHECK=false`: then Pagehall makes no request for it at all, and the setting cannot turn it on.
-- `PAGEHALL_UPDATE_CHECK_URL` points it to a mirror. A mirror in a private network must be listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`; public addresses must use HTTPS.
+- Turn it off under **Instance settings → Updates**, or completely with `LUNEDO_UPDATE_CHECK=false`: then Lunedo makes no request for it at all, and the setting cannot turn it on.
+- `LUNEDO_UPDATE_CHECK_URL` points it to a mirror. A mirror in a private network must be listed in `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`; public addresses must use HTTPS.
 - When a new version is found, instance administrators get a notification once per version.
-- **Instance settings → Updates** shows the running version, what is new in it, the releases after it with their changes, breaking changes and manual steps, and the commands to update, built for the installation method in `PAGEHALL_INSTALL_METHOD`. The commands come from Pagehall, never from the version file, and text from the file is shown as plain text only.
+- **Instance settings → Updates** shows the running version, what is new in it, the releases after it with their changes, breaking changes and manual steps, and the commands to update, built for the installation method in `LUNEDO_INSTALL_METHOD`. The commands come from Lunedo, never from the version file, and text from the file is shown as plain text only.
 - A failed check is shown there with its reason and logged as one warning; the next check runs a day later, or at once with **Check now**.
 
 **What's new** shows the changelog section of the running version from the changelog in the image. It works with the update check off and without network access.
@@ -222,4 +222,4 @@ Update from 1.3.0 or later.
 ### Manual steps
 ```
 
-The groups are optional and only these five are allowed. `Update from … or later.` is optional and names the oldest version that can update to this release directly; the update command refuses to skip it. Unreleased changes collect under `## Unreleased`. For every release, CI builds the image, reads the version file from it (`pagehall release-notes --json`) and attaches it and `install.sh` to the GitHub release.
+The groups are optional and only these five are allowed. `Update from … or later.` is optional and names the oldest version that can update to this release directly; the update command refuses to skip it. Unreleased changes collect under `## Unreleased`. For every release, CI builds the image, reads the version file from it (`lunedo release-notes --json`) and attaches it and `install.sh` to the GitHub release.

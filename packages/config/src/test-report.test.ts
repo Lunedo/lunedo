@@ -25,7 +25,7 @@ describe("recordTestResult", () => {
     recordTestResult(
       "vitest",
       { kind: "flaky", file: "a.ts", test: "t" },
-      { PAGEHALL_TEST_REPORT_DIR: directory },
+      { LUNEDO_TEST_REPORT_DIR: directory },
     );
     const file = join(directory, `vitest-${process.pid}.jsonl`);
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({ kind: "flaky", file: "a.ts", test: "t" });
@@ -36,7 +36,7 @@ describe("recordTestResult", () => {
     recordTestResult(
       "vitest",
       { kind: "flaky", file: "a.ts", test: "t" },
-      { PAGEHALL_TEST_REPORT_DIR: directory, PAGEHALL_TEST_JOB: "Unit tests (2 of 3)" },
+      { LUNEDO_TEST_REPORT_DIR: directory, LUNEDO_TEST_JOB: "Unit tests (2 of 3)" },
     );
     const file = join(directory, `vitest-${process.pid}.jsonl`);
     expect(JSON.parse(readFileSync(file, "utf8")).job).toBe("Unit tests (2 of 3)");

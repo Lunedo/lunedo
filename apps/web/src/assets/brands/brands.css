@@ -10,8 +10,8 @@
 }
 
 .brand-sign-in:focus-visible {
-  outline: var(--ph-focus-width) solid var(--ph-color-accent);
-  outline-offset: var(--ph-focus-offset);
+  outline: var(--ld-focus-width) solid var(--ld-color-accent);
+  outline-offset: var(--ld-focus-offset);
 }
 
 .brand-sign-in:disabled {

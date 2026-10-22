@@ -1,4 +1,4 @@
-import { Checkbox, Field, Input, Select, TimeZoneCombobox } from "@pagehall/ui";
+import { Checkbox, Field, Input, Select, TimeZoneCombobox } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { dayInZone } from "../format/zoned.js";

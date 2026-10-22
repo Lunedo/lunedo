@@ -1,4 +1,4 @@
-import { emailSchema } from "@pagehall/shared";
+import { emailSchema } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -10,7 +10,7 @@ import {
   SegmentedControl,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,4 +1,4 @@
-import { Avatar, Menu, RailButton } from "@pagehall/ui";
+import { Avatar, Menu, RailButton } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { LockKeyhole, LogOut, Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";

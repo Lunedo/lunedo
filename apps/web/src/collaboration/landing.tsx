@@ -1,4 +1,4 @@
-import { Skeleton } from "@pagehall/ui";
+import { Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useOrganizationState } from "../shell/shell-context.js";

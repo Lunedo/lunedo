@@ -1,4 +1,4 @@
-import { Button, Dialog, Notice, Skeleton } from "@pagehall/ui";
+import { Button, Dialog, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

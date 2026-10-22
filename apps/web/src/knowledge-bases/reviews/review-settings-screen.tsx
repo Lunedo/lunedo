@@ -1,4 +1,4 @@
-import { type SaveState, SaveStatus, Section, Select, SettingRow, Skeleton } from "@pagehall/ui";
+import { type SaveState, SaveStatus, Section, Select, SettingRow, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck } from "lucide-react";
 import { useState } from "react";

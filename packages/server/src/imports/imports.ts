@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -1419,20 +1419,20 @@ export class ImportService {
         throw new ImportError(
           row.state === "analyzing" ? "importNotReady" : "importStarted",
           row.state === "analyzing"
-            ? "Pagehall is still reading the export. Start the import when it is done."
+            ? "Lunedo is still reading the export. Start the import when it is done."
             : "The import cannot be started in its current state.",
         );
       }
       if (!row.people_source && inputOf(row.source) === "export") {
         throw new ImportError(
           "peopleSourceMissing",
-          "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation.",
+          "Choose how Lunedo recognizes people: an API token, a user list, or skip with confirmation.",
         );
       }
       if (row.people_source === "token" && row.credential_site === null && row.connection_site === null) {
         throw new ImportError(
           "tokenMissing",
-          "Pagehall deleted the API token of this draft. Enter the token again to continue.",
+          "Lunedo deleted the API token of this draft. Enter the token again to continue.",
         );
       }
       if (row.target_space_id) {
@@ -1505,7 +1505,7 @@ export class ImportService {
         if (row.phase !== "compare") {
           throw new ImportError(
             "reimportApplying",
-            "Pagehall is applying the changes; this cannot be stopped. Wait until it is done.",
+            "Lunedo is applying the changes; this cannot be stopped. Wait until it is done.",
           );
         }
         await this.#closeReimport(tx, actor, row, "stopped");

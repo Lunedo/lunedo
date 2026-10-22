@@ -1,4 +1,4 @@
-import { accountNameSchema, emailSchema } from "@pagehall/shared";
+import { accountNameSchema, emailSchema } from "@lunedo/shared";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { PasswordHasher, PasswordProblem } from "../auth/passwords.js";

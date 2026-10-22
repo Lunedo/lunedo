@@ -1,18 +1,4 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Inject,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Req,
-  Res,
-} from "@nestjs/common";
-import {
   accentColorSetting,
   InstanceAddressConfiguredError,
   InstanceAddressInvalidError,
@@ -22,7 +8,7 @@ import {
   passwordMinLengthSetting,
   roleNameSchema,
   supportedLanguages,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import {
   accentColors,
   accountNameSchema,
@@ -36,7 +22,21 @@ import {
   smtpInputSchema,
   smtpTestInputSchema,
   smtpTestResultSchema,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -79,12 +79,12 @@ const TAG = "Instance";
 
 const addressSchema = z
   .object({
-    url: z.string().nullable().describe("The address people open Pagehall at, or null while it is not set."),
+    url: z.string().nullable().describe("The address people open Lunedo at, or null while it is not set."),
     source: z
       .enum(["environment", "setting"])
       .nullable()
       .describe(
-        "Where the address comes from: `environment` when PAGEHALL_INSTANCE_URL is set on the server, then it cannot be changed here; `setting` when it was set here.",
+        "Where the address comes from: `environment` when LUNEDO_INSTANCE_URL is set on the server, then it cannot be changed here; `setting` when it was set here.",
       ),
   })
   .describe("The address of the instance.");
@@ -244,7 +244,7 @@ const graphMailInputSchema = z
   .object({
     tenantId: z.string().describe("Directory (tenant) ID of the app registration."),
     clientId: z.string().describe("Application (client) ID of the app registration."),
-    sender: z.string().describe("The mailbox Pagehall sends from. The app may send only as this mailbox."),
+    sender: z.string().describe("The mailbox Lunedo sends from. The app may send only as this mailbox."),
     senderName: z
       .string()
       .nullable()
@@ -295,7 +295,7 @@ const mailCredentialInputSchema = z
       .strict(),
     z
       .object({
-        kind: z.literal("certificate").describe("A certificate Pagehall creates."),
+        kind: z.literal("certificate").describe("A certificate Lunedo creates."),
         validDays: z.number().int().min(30).max(1095).describe("How long the certificate is valid, in days."),
       })
       .strict(),
@@ -577,7 +577,7 @@ export class InstanceController {
     const pem = await this.#services.mail.graphCertificate(credentialId);
     reply
       .type("application/x-pem-file")
-      .header("content-disposition", 'attachment; filename="pagehall-mail.pem"');
+      .header("content-disposition", 'attachment; filename="lunedo-mail.pem"');
     return pem;
   }
 
@@ -743,7 +743,7 @@ export class InstanceController {
   @ApiRoute({
     summary: "Anonymize an account",
     description:
-      "Removes the name, e-mail address, sign-in names and profile of the account for good, and deletes its identities, sessions, tokens, passkeys, second factors and personal settings. Its memberships end. The account stays as a former user with its ID; content keeps this pseudonym, and the audit log can no longer show its personal data. Copies of the audit log exported or streamed before are outside Pagehall. Needs a signed-in session with a recent confirmation of identity.",
+      "Removes the name, e-mail address, sign-in names and profile of the account for good, and deletes its identities, sessions, tokens, passkeys, second factors and personal settings. Its memberships end. The account stays as a former user with its ID; content keeps this pseudonym, and the audit log can no longer show its personal data. Copies of the audit log exported or streamed before are outside Lunedo. Needs a signed-in session with a recent confirmation of identity.",
     tags: [TAG],
     status: 200,
     params: z.object({ accountId: uuid("ID of the account.") }).strict(),
@@ -1011,7 +1011,7 @@ export class InstanceController {
   @ApiRoute({
     summary: "Move the instance to a new address",
     description:
-      "Changes the address people open Pagehall at. Every session ends, passkeys registered under the old address stop working, and the redirect and reply URLs at every identity provider must be updated.",
+      "Changes the address people open Lunedo at. Every session ends, passkeys registered under the old address stop working, and the redirect and reply URLs at every identity provider must be updated.",
     tags: [TAG],
     body: addressChangeSchema,
     bodyExample: { url: "https://wiki.example.org" },
@@ -1029,7 +1029,7 @@ export class InstanceController {
       if (error instanceof InstanceAddressConfiguredError) {
         throw new ProblemException(
           "instanceUrlFromEnvironment",
-          "PAGEHALL_INSTANCE_URL sets the address. Change it in the server environment and restart Pagehall.",
+          "LUNEDO_INSTANCE_URL sets the address. Change it in the server environment and restart Lunedo.",
         );
       }
       if (error instanceof InstanceAddressInvalidError)

@@ -1,4 +1,4 @@
-import { Button, Notice, SegmentedControl, Textarea } from "@pagehall/ui";
+import { Button, Notice, SegmentedControl, Textarea } from "@lunedo/ui";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { Check, Network, Pencil, Workflow } from "lucide-react";
 import { lazy, type ReactNode, Suspense, useEffect, useId, useRef, useState } from "react";
@@ -108,7 +108,7 @@ export function DrawioView({ node, selected, editor, updateAttributes }: NodeVie
 
   return (
     <NodeViewWrapper
-      className={`ph-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ph-node-selected" : ""}`}
+      className={`ld-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-diagram="drawio"
       data-diagram-id={blockId}
@@ -159,7 +159,7 @@ export function DrawioView({ node, selected, editor, updateAttributes }: NodeVie
 export function DrawioReferenceView({ node, selected }: NodeViewProps) {
   return (
     <NodeViewWrapper
-      className={`ph-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ph-node-selected" : ""}`}
+      className={`ld-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-diagram="drawioReference"
     >
@@ -302,7 +302,7 @@ export function TextDiagramView({ node, selected, editor, updateAttributes, dele
 
   return (
     <NodeViewWrapper
-      className={`ph-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ph-node-selected" : ""}`}
+      className={`ld-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-diagram={type}
       data-diagram-id={blockId}
@@ -397,7 +397,7 @@ export function TextDiagramView({ node, selected, editor, updateAttributes, dele
             </p>
           ) : null}
           {stored.length > 0 ? (
-            <pre className="ph-code-block m-3 overflow-auto">
+            <pre className="ld-code-block m-3 overflow-auto">
               <code>{stored}</code>
             </pre>
           ) : null}

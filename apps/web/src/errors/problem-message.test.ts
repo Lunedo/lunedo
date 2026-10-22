@@ -7,7 +7,7 @@ import { problemMessage } from "./problem-message.js";
 
 function problem(code: string, extensions: Record<string, unknown> = {}) {
   return new ApiError(403, {
-    type: `urn:pagehall:problem:${code}`,
+    type: `urn:lunedo:problem:${code}`,
     title: code,
     status: 403,
     code,

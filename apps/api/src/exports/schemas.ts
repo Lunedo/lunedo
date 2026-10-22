@@ -1,4 +1,4 @@
-import { exportFormats, exportScopes, exportStates, orientations, paperSizes } from "@pagehall/server";
+import { exportFormats, exportScopes, exportStates, orientations, paperSizes } from "@lunedo/server";
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 

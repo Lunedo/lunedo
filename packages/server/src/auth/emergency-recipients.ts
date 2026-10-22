@@ -1,4 +1,4 @@
-import { emailSchema, idSchema } from "@pagehall/shared";
+import { emailSchema, idSchema } from "@lunedo/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";

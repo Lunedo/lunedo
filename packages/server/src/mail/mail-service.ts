@@ -10,8 +10,8 @@ import {
   type SmtpOAuth2Configuration,
   smtpConfigurationSchema,
   uuidv7,
-} from "@pagehall/shared";
-import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
+} from "@lunedo/shared";
+import designTokens from "@lunedo/tokens/design-tokens.json" with { type: "json" };
 import { and, desc, eq, gt, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -449,7 +449,7 @@ export class MailService {
 
   async #messageId(mailId: string): Promise<string> {
     const url = await this.#settings.get(instanceUrlSetting, {});
-    const host = url ? new URL(url).hostname : "pagehall.invalid";
+    const host = url ? new URL(url).hostname : "lunedo.invalid";
     return `<${mailId}@${host}>`;
   }
 
@@ -742,7 +742,7 @@ export class MailService {
         throw new OrganizationError("invalidInput", "A certificate is valid for 30 days to 3 years");
       }
       const generated = await generateCertificate({
-        commonName: "Pagehall e-mail",
+        commonName: "Lunedo e-mail",
         validDays: input.validDays,
       });
       secret = generated.privateKey;

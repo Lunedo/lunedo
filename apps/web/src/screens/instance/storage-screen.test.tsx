@@ -140,7 +140,7 @@ describe("the storage settings", () => {
     await renderAt("/settings/instance/storage");
     expect(await screen.findByText("Storage warning inactive")).toBeTruthy();
     expect(
-      screen.getAllByText(/S3 does not report free space. Set a limit so Pagehall can warn you./),
+      screen.getAllByText(/S3 does not report free space. Set a limit so Lunedo can warn you./),
     ).not.toHaveLength(0);
     const limit = screen.getByLabelText("Limit for stored files");
     await userEvent.type(limit, "abc");

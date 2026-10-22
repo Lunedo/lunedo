@@ -1,4 +1,4 @@
-import { Button, type CommandGroup, type CommandItem, CommandPalette, Highlighted, Kbd } from "@pagehall/ui";
+import { Button, type CommandGroup, type CommandItem, CommandPalette, Highlighted, Kbd } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { Bookmark, Clock, Globe, History, Layers, Search, SearchX, UserRound, X } from "lucide-react";

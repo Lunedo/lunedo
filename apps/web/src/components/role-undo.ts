@@ -1,4 +1,4 @@
-import { useToast } from "@pagehall/ui";
+import { useToast } from "@lunedo/ui";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";

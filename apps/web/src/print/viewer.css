@@ -1,4 +1,4 @@
-@import "@pagehall/tokens/theme.css";
+@import "@lunedo/tokens/theme.css";
 
 html,
 body {
@@ -15,7 +15,7 @@ body {
   #viewport[data-vivliostyle-viewer-viewport] {
     display: block;
     overflow: auto;
-    background-color: var(--ph-color-surface-sunken);
+    background-color: var(--ld-color-surface-sunken);
   }
 
   [data-vivliostyle-outer-zoom-box] {
@@ -34,6 +34,6 @@ body {
   [data-vivliostyle-page-container] {
     display: block !important;
     flex: none;
-    outline: 1px solid var(--ph-color-border);
+    outline: 1px solid var(--ld-color-border);
   }
 }

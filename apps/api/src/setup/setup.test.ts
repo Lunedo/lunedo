@@ -1,4 +1,4 @@
-import { createLogger } from "@pagehall/server";
+import { createLogger } from "@lunedo/server";
 import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -10,7 +10,7 @@ import {
 } from "../testing/auth-app.js";
 
 const CLIENT_IP = "198.51.100.10";
-const behindProxy = { host: "pagehall.test", "x-forwarded-proto": "https" };
+const behindProxy = { host: "lunedo.test", "x-forwarded-proto": "https" };
 
 async function issueCode(test: AuthTestApp): Promise<string> {
   const lines: string[] = [];
@@ -30,7 +30,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
   let client: TestClient;
 
   beforeAll(async () => {
-    test = await createAuthTestApp({ PAGEHALL_TRUSTED_PROXIES: CLIENT_IP });
+    test = await createAuthTestApp({ LUNEDO_TRUSTED_PROXIES: CLIENT_IP });
     client = new TestClient(test.app, { remoteAddress: CLIENT_IP });
   });
 
@@ -55,7 +55,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     expect(started.statusCode).toBe(204);
     expect(started.headers["set-cookie"]).toEqual([
       expect.stringMatching(
-        /^__Host-pagehall-setup=[\w-]{43}; Path=\/; Max-Age=\d+; HttpOnly; Secure; SameSite=Lax$/,
+        /^__Host-lunedo-setup=[\w-]{43}; Path=\/; Max-Age=\d+; HttpOnly; Secure; SameSite=Lax$/,
       ),
     ]);
     expect(
@@ -141,11 +141,11 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     expect((await ownerStep()).completed).toBe(true);
 
     const mail = await post("/api/v1/setup/steps/mail/save", {
-      host: "smtp.pagehall.test",
+      host: "smtp.lunedo.test",
       port: 25,
       security: "none",
       username: null,
-      from: "wiki@pagehall.test",
+      from: "wiki@lunedo.test",
     });
     expect(mail.statusCode).toBe(404);
 
@@ -154,9 +154,9 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     });
     const download = await post("/api/v1/setup/steps/keyBackup/download");
     expect(download.statusCode).toBe(200);
-    expect(download.headers["content-disposition"]).toBe('attachment; filename="pagehall-keys.env"');
-    expect(download.body).toMatch(/^PAGEHALL_MASTER_KEYS=1:[A-Za-z0-9+/=]{44}$/m);
-    expect(download.body).toMatch(/^PAGEHALL_BACKUP_KEY=1:[A-Za-z0-9+/=]{44}$/m);
+    expect(download.headers["content-disposition"]).toBe('attachment; filename="lunedo-keys.env"');
+    expect(download.body).toMatch(/^LUNEDO_MASTER_KEYS=1:[A-Za-z0-9+/=]{44}$/m);
+    expect(download.body).toMatch(/^LUNEDO_BACKUP_KEY=1:[A-Za-z0-9+/=]{44}$/m);
     expect((await post("/api/v1/setup/steps/keyBackup/download")).json()).toMatchObject({
       code: "keysAlreadyDownloaded",
     });
@@ -249,12 +249,12 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     expect((await get("/api/v1/setup/steps")).json().ready).toBe(true);
 
     expect((await post("/api/v1/setup/complete")).statusCode).toBe(204);
-    expect(client.cookies.has("__Host-pagehall-setup")).toBe(false);
+    expect(client.cookies.has("__Host-lunedo-setup")).toBe(false);
   });
 
   it("answers as if the setup endpoints did not exist afterwards", async () => {
     expect((await get("/api/v1/unknown")).json()).toEqual({
-      type: "urn:pagehall:problem:notFound",
+      type: "urn:lunedo:problem:notFound",
       title: "Not found",
       status: 404,
       code: "notFound",
@@ -269,7 +269,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       const response = method === "GET" ? await get(url) : await post(url, { code: "AAAA-AAAA-AAAA-AAAA" });
       expect(response.statusCode, url).toBe(404);
       expect(response.json(), url).toEqual({
-        type: "urn:pagehall:problem:notFound",
+        type: "urn:lunedo:problem:notFound",
         title: "Not found",
         status: 404,
         code: "notFound",
@@ -325,7 +325,7 @@ describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from 
   let test: AuthTestApp;
 
   beforeAll(async () => {
-    test = await createAuthTestApp({ PAGEHALL_TRUSTED_PROXIES: CLIENT_IP });
+    test = await createAuthTestApp({ LUNEDO_TRUSTED_PROXIES: CLIENT_IP });
   });
 
   afterAll(async () => {

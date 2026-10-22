@@ -1,4 +1,4 @@
-import { proposeFormats } from "@pagehall/shared";
+import { proposeFormats } from "@lunedo/shared";
 
 export interface FormatEntry {
   key: string;

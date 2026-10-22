@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { EMBED_ALLOW, EMBED_SANDBOX } from "@pagehall/editor-schema";
+import { EMBED_ALLOW, EMBED_SANDBOX } from "@lunedo/editor-schema";
 import { portalStyle } from "./styles.js";
 
 const require = createRequire(import.meta.url);
@@ -99,7 +99,7 @@ const SCRIPT = `(() => {
       }
     });
   }
-  for (const frame of document.querySelectorAll(".ph-embed-frame[data-src]")) {
+  for (const frame of document.querySelectorAll(".ld-embed-frame[data-src]")) {
     const iframe = document.createElement("iframe");
     iframe.src = frame.dataset.src;
     iframe.title = frame.dataset.title || "";
@@ -114,7 +114,7 @@ const SCRIPT = `(() => {
   const feedback = document.querySelector("[data-feedback]");
   if (!feedback) return;
   const itemId = feedback.dataset.feedback;
-  const key = "pagehall.rated." + itemId;
+  const key = "lunedo.rated." + itemId;
   const remember = () => { try { localStorage.setItem(key, "1"); } catch {} };
   const rated = () => { try { return localStorage.getItem(key) === "1"; } catch { return false; } };
   const steps = feedback.querySelectorAll("[data-step]");
@@ -128,7 +128,7 @@ const SCRIPT = `(() => {
       const response = await fetch(feedback.dataset.endpoint, {
         method: "POST",
         credentials: "same-origin",
-        headers: { "content-type": "application/json", "x-pagehall-request": "1" },
+        headers: { "content-type": "application/json", "x-lunedo-request": "1" },
         body: JSON.stringify({ itemId, ...body }),
       });
       if (!response.ok) {

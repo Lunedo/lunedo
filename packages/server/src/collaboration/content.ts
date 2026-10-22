@@ -10,8 +10,8 @@ import {
   type NodeJson,
   normalizeDecisionIds,
   normalizeTaskIds,
-} from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { accountPrincipal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

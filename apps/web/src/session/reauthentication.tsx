@@ -1,5 +1,5 @@
-import { passwordSchema, totpCodeSchema } from "@pagehall/shared";
-import { Button, Dialog, Field, Notice, PasswordInput, SegmentedControl } from "@pagehall/ui";
+import { passwordSchema, totpCodeSchema } from "@lunedo/shared";
+import { Button, Dialog, Field, Notice, PasswordInput, SegmentedControl } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fingerprint } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState, useSyncExternalStore } from "react";

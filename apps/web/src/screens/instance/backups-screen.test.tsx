@@ -10,7 +10,7 @@ const OLIVIA = {
   email: "olivia@example.org",
   name: "Olivia Owner",
 };
-const NAME = "pagehall-backup-20261021T000000Z-manual-0a1b2c3d.phbak";
+const NAME = "lunedo-backup-20261021T000000Z-manual-0a1b2c3d.ldbak";
 
 type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
 
@@ -27,7 +27,7 @@ function overview(overrides: Record<string, unknown> = {}) {
       missingDays: 2,
       autoTestRestore: true,
     },
-    target: { kind: "local", path: "/var/lib/pagehall/backups", sameVolumeAsFiles: true },
+    target: { kind: "local", path: "/var/lib/lunedo/backups", sameVolumeAsFiles: true },
     timeZone: "Europe/Vienna",
     nextRunAt: "2026-10-22T00:00:00.000Z",
     beforeUpdate: { enabled: true, disabledBy: null },
@@ -54,7 +54,7 @@ function files() {
         createdAt: "2026-10-21T00:00:00.000Z",
         sizeBytes: 10 * 1024 * 1024,
         readable: true,
-        pagehallVersion: "1.0.0",
+        lunedoVersion: "1.0.0",
         schemaVersion: "0094_backup_schedules",
         scope: "all",
         testRestore: {
@@ -64,7 +64,7 @@ function files() {
           stage: "done",
           checks: [
             { check: "verify", passed: true, detail: { entries: 3 } },
-            { check: "privilege", passed: false, detail: { grant: 'ALTER ROLE "pagehall" CREATEDB;' } },
+            { check: "privilege", passed: false, detail: { grant: 'ALTER ROLE "lunedo" CREATEDB;' } },
           ],
           error: null,
           actor: { id: OLIVIA.id, name: OLIVIA.name },
@@ -220,11 +220,11 @@ describe("the backup settings", () => {
     expect(await screen.findByText("Enter the secret key.")).toBeTruthy();
     expect(mocked.requests.some((request) => request.method === "PUT")).toBe(false);
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    await userEvent.type(screen.getByLabelText("Prefix"), "pagehall/");
+    await userEvent.type(screen.getByLabelText("Prefix"), "lunedo/");
     await userEvent.click(screen.getByRole("button", { name: "Save target" }));
     await waitFor(() => expect(mocked.requests.some((request) => request.method === "PUT")).toBe(true));
     const put = mocked.requests.find((request) => request.method === "PUT");
-    expect(put?.body).toMatchObject({ prefix: "pagehall/" });
+    expect(put?.body).toMatchObject({ prefix: "lunedo/" });
     expect(put?.body).not.toHaveProperty("secretAccessKey");
   });
 
@@ -260,7 +260,7 @@ describe("the backup settings", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Test connection" }));
     expect(
       await screen.findByText(
-        "Writing failed: the endpoint resolves to 172.18.0.7, which is in a private network. If Pagehall should reach it, add 172.18.0.7/32 or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS and restart Pagehall.",
+        "Writing failed: the endpoint resolves to 172.18.0.7, which is in a private network. If Lunedo should reach it, add 172.18.0.7/32 or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.",
       ),
     ).toBeTruthy();
   });
@@ -283,7 +283,7 @@ describe("the backup settings", () => {
     await renderAt("/settings/instance/backups");
     await userEvent.click(await screen.findByRole("button", { name: `Actions for ${NAME}` }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Show test restore result" }));
-    expect(await screen.findByText('ALTER ROLE "pagehall" CREATEDB;')).toBeTruthy();
+    expect(await screen.findByText('ALTER ROLE "lunedo" CREATEDB;')).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy SQL" })).toBeTruthy();
   });
 

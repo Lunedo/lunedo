@@ -10,7 +10,7 @@ test("invites a member who accepts and signs in", async ({ page, browser, organi
   const suffix = unique();
   const member = {
     name: `Max Member ${suffix}`,
-    email: `max.member.${suffix.toLowerCase()}@pagehall.test`,
+    email: `max.member.${suffix.toLowerCase()}@lunedo.test`,
     password: "member passphrase for testing",
   };
   await page.goto("/settings/preferences");
@@ -107,7 +107,7 @@ test("creates a personal API token and revokes it", async ({ page, organization 
   await dialog.getByRole("button", { name: "Create token" }).click();
   const secret =
     (await page.getByRole("dialog", { name: "Your new token" }).locator("code").textContent()) ?? "";
-  expect(secret).toMatch(/^ph_/);
+  expect(secret).toMatch(/^ld_/);
   await page.getByRole("button", { name: "Done" }).click();
   const row = page.getByRole("listitem").filter({ hasText: tokenName });
   await expect(row).toBeVisible();

@@ -4,7 +4,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
 import type { NotificationListener } from "../database/notifications.js";
 
-export const MAINTENANCE_CHANNEL = "pagehall_maintenance";
+export const MAINTENANCE_CHANNEL = "lunedo_maintenance";
 export const MAINTENANCE_MESSAGE_MAX_LENGTH = 500;
 const MINUTE_MS = 60_000;
 

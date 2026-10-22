@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { crc32 } from "node:zlib";
 
 const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const PREFIX = "ph_";
+const PREFIX = "ld_";
 const SECRET_LENGTH = 43;
 const CHECKSUM_LENGTH = 6;
 const PATTERN = new RegExp(`^${PREFIX}[0-9A-Za-z]{${SECRET_LENGTH}}[0-9A-Za-z]{${CHECKSUM_LENGTH}}$`);

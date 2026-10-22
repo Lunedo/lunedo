@@ -1,7 +1,7 @@
 import { Parser } from "htmlparser2";
 import { attachmentImage, element, text } from "../storage-writer.js";
 
-export const MEDIA_PREFIX = "pagehall-media:";
+export const MEDIA_PREFIX = "lunedo-media:";
 
 interface HtmlNode {
   readonly name: string;

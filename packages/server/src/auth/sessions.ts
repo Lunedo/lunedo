@@ -20,7 +20,7 @@ import { generateToken, hashToken, isWellFormedToken } from "./tokens.js";
 const MINUTE = 60_000;
 const TOUCH_INTERVAL = MINUTE;
 
-export const SESSION_COOKIE = "__Host-pagehall-session";
+export const SESSION_COOKIE = "__Host-lunedo-session";
 
 export type SessionKind = (typeof sessions.$inferSelect)["kind"];
 

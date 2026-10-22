@@ -1,4 +1,4 @@
-import { spaceChatEvents } from "@pagehall/shared";
+import { spaceChatEvents } from "@lunedo/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -79,7 +79,7 @@ describe("chat channels", () => {
       within(dialog).getByRole("textbox", { name: "Webhook address" }),
       "https://hooks.example.com/x",
     );
-    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name in Pagehall" }), "Automation");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name in Lunedo" }), "Automation");
     await userEvent.click(within(dialog).getByRole("button", { name: "Send test message" }));
     expect(
       await within(dialog).findByText(
@@ -119,10 +119,10 @@ describe("chat channels", () => {
     const dialog = await screen.findByRole("dialog", { name: "Connect a channel" });
     const address = within(dialog).getByRole("textbox", { name: "Webhook address" });
     await userEvent.type(address, "hooks.invalid/workflows/abc");
-    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name in Pagehall" }), "IT-Ops");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name in Lunedo" }), "IT-Ops");
     await userEvent.click(within(dialog).getByRole("button", { name: "Connect" }));
     const reason =
-      "Pagehall could not find this host. Check the address for typos, and that this server can reach the internet.";
+      "Lunedo could not find this host. Check the address for typos, and that this server can reach the internet.";
     expect(await within(dialog).findByText(reason)).toBeTruthy();
     expect(address.getAttribute("aria-invalid")).toBe("true");
     await waitFor(() => expect(document.activeElement).toBe(address));
@@ -159,7 +159,7 @@ describe("chat channels", () => {
     const rows = within(list).getAllByRole("listitem");
     expect(within(rows[0] as HTMLElement).getByText("Not tested yet")).toBeTruthy();
     expect(within(rows[1] as HTMLElement).getByText("Last test failed")).toBeTruthy();
-    expect(within(rows[1] as HTMLElement).getByText(/Pagehall could not reach Slack/)).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText(/Lunedo could not reach Slack/)).toBeTruthy();
     expect(within(rows[2] as HTMLElement).getByText("Working")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Connect a channel" }).className).not.toContain("bg-accent");
   });

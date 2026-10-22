@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxFileSizeSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxFileSizeSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -51,7 +51,7 @@ describe.skipIf(!databaseBaseUrl)("attachments through the API", () => {
 
   async function person() {
     counter += 1;
-    const email = `files${counter}@pagehall.test`;
+    const email = `files${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const { id } = await createAccount(test, email, password);
     return { id, client: await signedInClient(test, email, password) };

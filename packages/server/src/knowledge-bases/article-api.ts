@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -512,7 +512,7 @@ export class ArticleApiService {
     if (!decision.allowed) {
       throw new SpaceError(
         "publishNotAllowed",
-        "This token or account may only save drafts. A person publishes them in Pagehall.",
+        "This token or account may only save drafts. A person publishes them in Lunedo.",
       );
     }
   }

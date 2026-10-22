@@ -1,4 +1,4 @@
-import { Button, type ButtonVariant } from "@pagehall/ui";
+import { Button, type ButtonVariant } from "@lunedo/ui";
 import type { LucideIcon } from "lucide-react";
 import { useRef } from "react";
 

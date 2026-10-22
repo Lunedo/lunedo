@@ -117,7 +117,7 @@ describe.skipIf(!databaseUrl)("MailService", () => {
   });
 
   beforeAll(async () => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     await service().configureSmtp(
       { host: "smtp.example.org", port: 25, security: "none", username: null, from: "wiki@example.org" },

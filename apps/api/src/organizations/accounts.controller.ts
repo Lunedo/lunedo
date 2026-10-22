@@ -1,11 +1,11 @@
-import { Body, Controller, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import {
   accountNameSchema,
   idSchema,
   linkTokenSchema,
   passwordSchema,
   signInEmailSchema,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
+import { Body, Controller, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";

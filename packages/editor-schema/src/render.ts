@@ -67,13 +67,13 @@ export const defaultLabels: RenderLabels = {
   reportDue: "Due",
   reportPage: "Page",
   templateButton: "Create from template",
-  unavailableHere: "{name} cannot be shown in this format. Open the page in Pagehall to see it.",
+  unavailableHere: "{name} cannot be shown in this format. Open the page in Lunedo to see it.",
   pageProperties: "Page properties",
   propertiesReport: "Page properties report",
   noReportedProperties: "No pages with page properties match the filters",
   propertiesReportCreator: "Creator",
   propertiesReportLabels: "Labels",
-  propertiesReportMore: "{shown} of {total} pages. Open the page in Pagehall to see all.",
+  propertiesReportMore: "{shown} of {total} pages. Open the page in Lunedo to see all.",
   importedQuery:
     "Imported with a query that could not be converted: {query}. Check the labels and spaces of this block.",
   contentByLabel: "Content by label",
@@ -310,8 +310,8 @@ export class HtmlRendererImpl extends Renderer implements HtmlRenderer {
       if (definition.print !== "unsupported") return definition.print(node, this);
       const text = escapeHtml(this.unavailableHere(node.type));
       return definition.spec.inline
-        ? `<span class="ph-unavailable" data-node="${escapeHtml(node.type)}">${text}</span>`
-        : `<div class="ph-unavailable" data-node="${escapeHtml(node.type)}"><p>${text}</p></div>`;
+        ? `<span class="ld-unavailable" data-node="${escapeHtml(node.type)}">${text}</span>`
+        : `<div class="ld-unavailable" data-node="${escapeHtml(node.type)}"><p>${text}</p></div>`;
     }
     return definition.html(node, this);
   }

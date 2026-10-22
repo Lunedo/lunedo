@@ -104,7 +104,7 @@ describe("the unsubscribe link", () => {
         "GET /api/v1/notifications/unsubscribe/forged": () => ({
           status: 400,
           body: {
-            type: "urn:pagehall:problem:invalidToken",
+            type: "urn:lunedo:problem:invalidToken",
             title: "The link or code is not valid",
             status: 400,
             code: "invalidToken",
@@ -150,7 +150,7 @@ describe("a notification link from an e-mail", () => {
     api({
       [`GET /api/v1/notifications/${NOTIFICATION}`]: () => ({
         status: 404,
-        body: { type: "urn:pagehall:problem:notFound", title: "Not found", status: 404, code: "notFound" },
+        body: { type: "urn:lunedo:problem:notFound", title: "Not found", status: 404, code: "notFound" },
       }),
     });
     await open(`/notifications/${NOTIFICATION}`);

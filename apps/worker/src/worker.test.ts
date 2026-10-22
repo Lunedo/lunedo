@@ -1,5 +1,5 @@
-import { createLogger, Metrics } from "@pagehall/server";
-import type { HealthCheck } from "@pagehall/shared";
+import { createLogger, Metrics } from "@lunedo/server";
+import type { HealthCheck } from "@lunedo/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { createOperationsServer, type OperationsServer } from "./worker.js";
 

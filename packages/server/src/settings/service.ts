@@ -15,8 +15,8 @@ import { settingValues } from "./schema.js";
 /** Scope ID of the instance level. */
 export const INSTANCE_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
 
-const CHANNEL = "pagehall_settings";
-export const SETTING_CHANGES_CHANNEL = "pagehall_setting_changes";
+const CHANNEL = "lunedo_settings";
+export const SETTING_CHANGES_CHANNEL = "lunedo_setting_changes";
 
 export interface SettingChangeSignal {
   level: SettingLevel;

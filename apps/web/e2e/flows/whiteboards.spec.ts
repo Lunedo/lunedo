@@ -154,7 +154,7 @@ test("inserts a drawing block into a page and shows its image to readers", async
   await drawRectangle(page);
   await editor.getByRole("button", { name: "Save drawing" }).click();
   await expect(editor).toBeHidden({ timeout: 20_000 });
-  await expect(page.locator(".ph-drawing img")).toBeVisible();
+  await expect(page.locator(".ld-drawing img")).toBeVisible();
   await expect(page.getByRole("status").getByText("Saved", { exact: true })).toBeVisible({ timeout: 20_000 });
 
   const attachments = (await (await page.request.get(`/api/v1/pages/${created.id}/attachments`)).json()) as {
@@ -165,7 +165,7 @@ test("inserts a drawing block into a page and shows its image to readers", async
     expect.stringMatching(/^drawing-[0-9a-f-]+\.svg$/),
   ]);
   await page.goto(created.path);
-  await expect(page.locator("figure.ph-drawing img")).toBeVisible();
+  await expect(page.locator("figure.ld-drawing img")).toBeVisible();
 });
 
 test("shows the stored scene after a reload and to a person who joins later, and both see live changes", async ({

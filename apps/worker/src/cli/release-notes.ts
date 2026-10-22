@@ -8,7 +8,7 @@ import {
   RELEASES_URL,
   releaseNotesText,
   versionFileOf,
-} from "@pagehall/server";
+} from "@lunedo/server";
 
 export interface ReleaseNotesCommand {
   since: string | null;
@@ -25,7 +25,7 @@ export async function releaseNotes(
   command: ReleaseNotesCommand,
   write: (line: string) => void,
 ): Promise<void> {
-  const sections = parseChangelog(await readFile(changelogFileOf(env.PAGEHALL_CHANGELOG_FILE), "utf8"));
+  const sections = parseChangelog(await readFile(changelogFileOf(env.LUNEDO_CHANGELOG_FILE), "utf8"));
   if (command.json) {
     write(
       JSON.stringify(
@@ -41,7 +41,7 @@ export async function releaseNotes(
     const required = minimumUpdateFrom(sections, from);
     if (required) {
       throw new UpdateStepError(
-        `Pagehall ${required.target} can only be installed from ${required.minimum} or later, and ${from} is installed. Update to ${required.minimum} first, for example with ./pagehall update ${required.minimum}, then to ${required.target}.`,
+        `Lunedo ${required.target} can only be installed from ${required.minimum} or later, and ${from} is installed. Update to ${required.minimum} first, for example with ./lunedo update ${required.minimum}, then to ${required.target}.`,
       );
     }
   }

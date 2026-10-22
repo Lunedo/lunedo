@@ -1,4 +1,4 @@
-import { classNames } from "@pagehall/ui";
+import { classNames } from "@lunedo/ui";
 import type { LucideIcon } from "lucide-react";
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 
@@ -77,7 +77,7 @@ export const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListPro
   return (
     <div
       ref={container}
-      className="ph-suggestions max-h-card w-card overflow-y-auto rounded-md border border-border bg-surface p-1 text-text shadow-popover"
+      className="ld-suggestions max-h-card w-card overflow-y-auto rounded-md border border-border bg-surface p-1 text-text shadow-popover"
     >
       <div role="listbox" id={listId} aria-label={label}>
         {items.length === 0 ? (

@@ -39,7 +39,7 @@ Update from 1.3.0 or later.
 
 ### Manual steps
 
-- Set \`PAGEHALL_TRUSTED_PROXIES\` to the subnet of the proxy.
+- Set \`LUNEDO_TRUSTED_PROXIES\` to the subnet of the proxy.
 
 ## 1.4.2 · 2026-10-01
 
@@ -71,7 +71,7 @@ describe("parseChangelog", () => {
         improved: [],
         fixed: [],
         breaking: ["The metrics port moved."],
-        manualSteps: ["Set `PAGEHALL_TRUSTED_PROXIES` to the subnet of the proxy."],
+        manualSteps: ["Set `LUNEDO_TRUSTED_PROXIES` to the subnet of the proxy."],
       },
     });
     expect(sections[2]?.notes.fixed).toEqual(["Uploads through Nginx."]);
@@ -98,11 +98,11 @@ describe("versionFileOf", () => {
   it("lists every released version with its notes and a link, and leaves out unreleased changes", () => {
     const file = versionFileOf(
       parseChangelog(CHANGELOG),
-      (version) => `https://github.com/pagehall/pagehall/releases/tag/v${version}`,
+      (version) => `https://github.com/lunedo/lunedo/releases/tag/v${version}`,
     );
     expect(file.schema).toBe(1);
     expect(file.releases.map((entry) => entry.version)).toEqual(["1.5.0", "1.4.2"]);
-    expect(file.releases[0]?.url).toBe("https://github.com/pagehall/pagehall/releases/tag/v1.5.0");
+    expect(file.releases[0]?.url).toBe("https://github.com/lunedo/lunedo/releases/tag/v1.5.0");
     expect(versionFileSchema.parse(JSON.parse(JSON.stringify(file)))).toEqual(file);
   });
 
@@ -137,7 +137,7 @@ describe("newerReleases", () => {
 
 describe("runningChangelog", () => {
   it("shows the section of the running version, or the unreleased one for builds without a release", async () => {
-    const directory = mkdtempSync(path.join(tmpdir(), "pagehall-changelog-"));
+    const directory = mkdtempSync(path.join(tmpdir(), "lunedo-changelog-"));
     const file = path.join(directory, "CHANGELOG.md");
     writeFileSync(file, CHANGELOG);
     expect((await runningChangelog(file, "1.4.2")).section?.notes.fixed).toEqual(["Uploads through Nginx."]);

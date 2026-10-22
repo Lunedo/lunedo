@@ -1,4 +1,4 @@
-import { accountNameSchema, emailSchema } from "@pagehall/shared";
+import { accountNameSchema, emailSchema } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -12,7 +12,7 @@ import {
   Textarea,
   Tooltip,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { House } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

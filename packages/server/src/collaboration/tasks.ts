@@ -1,5 +1,5 @@
-import type { TaskReportDue, TaskReportStatus } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import type { TaskReportDue, TaskReportStatus } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";

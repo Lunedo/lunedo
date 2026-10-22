@@ -141,7 +141,7 @@ describe("the web client", () => {
 
     expect(await screen.findByRole("heading", { name: "Security", level: 1 })).toBeTruthy();
     const signIn = requests.find((request) => request.path === "/api/v1/auth/sign-in");
-    expect(signIn?.headers.get("X-Pagehall-Request")).toBe("1");
+    expect(signIn?.headers.get("X-Lunedo-Request")).toBe("1");
   });
 
   it("makes the language chosen on the sign-in page the person's own when they have none", async () => {
@@ -173,10 +173,10 @@ describe("the web client", () => {
         body: [{ ...preference("locale.language", "en"), source: "user" }],
       }),
     });
-    localStorage.setItem("pagehall.chosenLanguage", "de");
+    localStorage.setItem("lunedo.chosenLanguage", "de");
     await renderApp("/settings/preferences");
     expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
-    await waitFor(() => expect(localStorage.getItem("pagehall.chosenLanguage")).toBeNull());
+    await waitFor(() => expect(localStorage.getItem("lunedo.chosenLanguage")).toBeNull());
     expect(requests.some((request) => request.method === "PUT")).toBe(false);
   });
 
@@ -186,7 +186,7 @@ describe("the web client", () => {
     expect(await screen.findByRole("heading", { name: "Preferences", level: 1 })).toBeTruthy();
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
     expect(document.documentElement.dataset.accent).toBe("violet");
-    expect(document.documentElement.style.getPropertyValue("--ph-text-scale")).toBe("1.25");
+    expect(document.documentElement.style.getPropertyValue("--ld-text-scale")).toBe("1.25");
     expect(await screen.findByRole("button", { name: "Notifications, 2 unread" })).toBeTruthy();
     const navigation = screen.getByRole("navigation", { name: "Settings" });
     expect(within(navigation).getByRole("link", { name: "Members" })).toBeTruthy();
@@ -318,7 +318,7 @@ describe("the web client", () => {
               body: {
                 id: "01929b1e-0000-7000-8000-0000000000f9",
                 name: "Chatbot",
-                token: "ph_created_secret",
+                token: "ld_created_secret",
                 scopes: { organization: { members: "view" } },
                 contentLevel: "read",
                 knowledgeBaseIds: null,
@@ -347,7 +347,7 @@ describe("the web client", () => {
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await userEvent.type(within(confirm).getByLabelText("Password"), "correct horse battery");
     await userEvent.click(within(confirm).getByRole("button", { name: "Confirm" }));
-    expect(await screen.findByText("ph_created_secret")).toBeTruthy();
+    expect(await screen.findByText("ld_created_secret")).toBeTruthy();
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 });

@@ -5,8 +5,8 @@ import {
   renderHtml,
   resolveEmbed,
   type TextAnchor,
-} from "@pagehall/editor-schema";
-import { Button, useToast } from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Button, useToast } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { MessageSquarePlus } from "lucide-react";
 import {
@@ -181,10 +181,10 @@ export function readViewContext(
 }
 
 export function applyWidths(root: HTMLElement): void {
-  for (const column of Array.from(root.querySelectorAll<HTMLElement>(".ph-column[data-width]"))) {
+  for (const column of Array.from(root.querySelectorAll<HTMLElement>(".ld-column[data-width]"))) {
     column.style.setProperty("--column-width", `${Number(column.dataset.width)}%`);
   }
-  for (const table of Array.from(root.querySelectorAll<HTMLTableElement>(".ph-table table"))) {
+  for (const table of Array.from(root.querySelectorAll<HTMLTableElement>(".ld-table table"))) {
     const firstRow = table.rows[0];
     if (!firstRow) continue;
     const widths: (number | null)[] = [];
@@ -296,31 +296,31 @@ export function PageReadView({
       for (const element of found) element.replaceChildren();
       return found;
     };
-    setReports(placeholders(".ph-task-report"));
-    setChildPages(placeholders(".ph-child-pages"));
-    setAttachmentLists(placeholders(".ph-attachment-list"));
-    setPageReports(placeholders(".ph-page-report"));
-    setDecisionReports(placeholders(".ph-decision-report"));
-    setTemplateButtons(placeholders(".ph-template-button"));
-    setPropertiesReports(placeholders(".ph-properties-report"));
-    setLabelLists(placeholders(".ph-content-by-label"));
-    setRelatedLabels(placeholders(".ph-related-labels"));
-    setIncludes(placeholders(".ph-include"));
-    setDiagramReferences(placeholders(".ph-diagram-reference"));
-    setEmbeds(placeholders(".ph-embed-frame[data-src]"));
-    setWhiteboards(placeholders(".ph-whiteboard[data-whiteboard-id]"));
+    setReports(placeholders(".ld-task-report"));
+    setChildPages(placeholders(".ld-child-pages"));
+    setAttachmentLists(placeholders(".ld-attachment-list"));
+    setPageReports(placeholders(".ld-page-report"));
+    setDecisionReports(placeholders(".ld-decision-report"));
+    setTemplateButtons(placeholders(".ld-template-button"));
+    setPropertiesReports(placeholders(".ld-properties-report"));
+    setLabelLists(placeholders(".ld-content-by-label"));
+    setRelatedLabels(placeholders(".ld-related-labels"));
+    setIncludes(placeholders(".ld-include"));
+    setDiagramReferences(placeholders(".ld-diagram-reference"));
+    setEmbeds(placeholders(".ld-embed-frame[data-src]"));
+    setWhiteboards(placeholders(".ld-whiteboard[data-whiteboard-id]"));
     setSectionIcons(
-      Array.from(root.querySelectorAll<HTMLElement>(".ph-section[data-icon] > h2")).map((heading) => {
+      Array.from(root.querySelectorAll<HTMLElement>(".ld-section[data-icon] > h2")).map((heading) => {
         const slot = document.createElement("span");
-        slot.className = "ph-section-icon-slot";
+        slot.className = "ld-section-icon-slot";
         heading.prepend(slot);
         return slot;
       }),
     );
     setFilePreviews(
-      Array.from(root.querySelectorAll<HTMLElement>(".ph-file[data-preview]")).map((file) => {
+      Array.from(root.querySelectorAll<HTMLElement>(".ld-file[data-preview]")).map((file) => {
         const slot = document.createElement("div");
-        slot.className = "ph-file-preview-slot";
+        slot.className = "ld-file-preview-slot";
         file.append(slot);
         return slot;
       }),
@@ -342,7 +342,7 @@ export function PageReadView({
     const root = container.current;
     if (!root || html === null) return;
     for (const input of Array.from(
-      root.querySelectorAll<HTMLInputElement>(".ph-task-item[data-task-id] > input"),
+      root.querySelectorAll<HTMLInputElement>(".ld-task-item[data-task-id] > input"),
     )) {
       const item = input.parentElement as HTMLElement;
       const id = item.dataset.taskId ?? "";
@@ -366,13 +366,13 @@ export function PageReadView({
   const onClick = async (event: MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
     if (target instanceof HTMLInputElement && target.type === "checkbox") {
-      const id = target.closest<HTMLElement>(".ph-task-item")?.dataset.taskId;
+      const id = target.closest<HTMLElement>(".ld-task-item")?.dataset.taskId;
       if (id) onToggleTask?.(id, target.checked);
       return;
     }
     if (handleTabsClick(target)) return;
-    if (target.closest(".ph-file-preview-slot")) return;
-    const file = target.closest<HTMLElement>(".ph-file[data-attachment-id]");
+    if (target.closest(".ld-file-preview-slot")) return;
+    const file = target.closest<HTMLElement>(".ld-file[data-attachment-id]");
     if (file && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       openAttachment(file.dataset.attachmentId ?? "");
@@ -449,7 +449,7 @@ export function PageReadView({
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: the links and checkboxes inside handle their own keyboard input */}
       <div
         ref={container}
-        className="ph-content ph-read-view"
+        className="ld-content ld-read-view"
         data-comment-scope={scope}
         onClick={(event) => void onClick(event)}
         onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => handleTabsKey(event)}
@@ -533,7 +533,7 @@ export function PageReadView({
         createPortal(
           <IncludedContent
             include={includeFromAttrs(
-              element.classList.contains("ph-include-excerpt") ? "includeExcerpt" : "includePage",
+              element.classList.contains("ld-include-excerpt") ? "includeExcerpt" : "includePage",
               element.dataset,
             )}
             hostId={pageId}
@@ -571,7 +571,7 @@ export function PageReadView({
         createPortal(
           <NamedIcon
             name={(element.parentElement?.parentElement as HTMLElement | null)?.dataset.icon}
-            className="ph-section-icon"
+            className="ld-section-icon"
           />,
           element,
         ),

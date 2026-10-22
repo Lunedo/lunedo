@@ -1,4 +1,4 @@
-import { IconButton, Popover, Tooltip, useToast } from "@pagehall/ui";
+import { IconButton, Popover, Tooltip, useToast } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, SmilePlus } from "lucide-react";
 import { useState } from "react";

@@ -39,7 +39,7 @@ export class BackupConfigurationError extends Error {
   override name = "BackupConfigurationError";
 
   constructor(message: string) {
-    super(`PAGEHALL_DATABASE_URL: ${message}`);
+    super(`LUNEDO_DATABASE_URL: ${message}`);
   }
 }
 
@@ -166,7 +166,7 @@ export class PostgresArchiver implements DatabaseArchiver {
   async #query<T extends pg.QueryResultRow>(text: string): Promise<T[]> {
     const client = new pg.Client({
       connectionString: this.#databaseUrl,
-      application_name: "pagehall-backup",
+      application_name: "lunedo-backup",
     });
     await client.connect();
     try {

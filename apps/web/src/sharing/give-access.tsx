@@ -8,7 +8,7 @@ import {
   RadioGroup,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, UserPlus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";

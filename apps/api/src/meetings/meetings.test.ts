@@ -44,7 +44,7 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
 
   async function person(home?: string): Promise<Person> {
     counter += 1;
-    const email = `meetings${counter}@pagehall.test`;
+    const email = `meetings${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const account = await createAccount(test, email, password, home ?? organizationId);
     return { id: account.id, client: await signedInClient(test, email, password) };

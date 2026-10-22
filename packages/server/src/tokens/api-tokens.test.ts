@@ -15,7 +15,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 describe("API token format", () => {
   it("has the prefix, 256 bits of randomness and a checksum", () => {
     const token = generateApiToken();
-    expect(token).toMatch(/^ph_[0-9A-Za-z]{49}$/);
+    expect(token).toMatch(/^ld_[0-9A-Za-z]{49}$/);
     expect(isValidApiTokenFormat(token)).toBe(true);
     expect(apiTokenPrefix(token)).toBe(token.slice(0, 9));
     expect(generateApiToken()).not.toBe(token);
@@ -388,7 +388,7 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     await expect(test.services.apiTokens.authenticate(generateApiToken(), undefined)).rejects.toMatchObject({
       reason: "unknown",
     });
-    await expect(test.services.apiTokens.authenticate("ph_short", undefined)).rejects.toMatchObject({
+    await expect(test.services.apiTokens.authenticate("ld_short", undefined)).rejects.toMatchObject({
       reason: "malformed",
     });
     const events = await test.pool.query<{ fields: { reason: string } }>(

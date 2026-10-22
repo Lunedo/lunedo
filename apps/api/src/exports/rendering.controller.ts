@@ -1,5 +1,5 @@
+import type { RenderStatus } from "@lunedo/server";
 import { Controller, Get, Inject } from "@nestjs/common";
-import type { RenderStatus } from "@pagehall/server";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
@@ -22,7 +22,7 @@ const renderingSchema = z
         url: z
           .string()
           .nullable()
-          .describe("Address of the render container, set through PAGEHALL_RENDER_URL."),
+          .describe("Address of the render container, set through LUNEDO_RENDER_URL."),
         checkedAt: timestamp("When the container was asked.").nullable(),
         version: z.string().nullable().describe("Version of the render container."),
         browser: z.string().nullable().describe("Browser engine of the render container and its version."),
@@ -47,9 +47,7 @@ const renderingSchema = z
       .describe("The optional render container that creates PDF files on the server."),
     word: z
       .object({
-        available: z
-          .boolean()
-          .describe("Word documents are created by Pagehall itself and always available."),
+        available: z.boolean().describe("Word documents are created by Lunedo itself and always available."),
       })
       .describe("Word documents."),
   })
@@ -59,7 +57,7 @@ const exampleRendering = {
   pdf: {
     state: "healthy",
     reason: null,
-    url: "http://pagehall-render:3000",
+    url: "http://lunedo-render:3000",
     checkedAt: "2026-10-16T09:00:00.000Z",
     version: "1.0.2",
     browser: "Chromium 140.0.7339.80",

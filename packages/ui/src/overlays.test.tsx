@@ -253,7 +253,7 @@ function FailureProbe({ retry }: { retry: () => void }) {
       onClick={() =>
         toast({
           title: "The role was not saved",
-          description: "Pagehall cannot be reached.",
+          description: "Lunedo cannot be reached.",
           variant: "error",
           action: { label: "Retry", onSelect: retry },
         })
@@ -269,7 +269,7 @@ describe("Toast", () => {
     const retry = vi.fn();
     renderUi(<FailureProbe retry={retry} />);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Pagehall cannot be reached.")).toBeDefined();
+    expect(await screen.findByText("Lunedo cannot be reached.")).toBeDefined();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retry).toHaveBeenCalledOnce();
   });
@@ -316,11 +316,11 @@ describe("Undo toast", () => {
     try {
       renderUi(<FailureProbe retry={() => {}} />);
       await userEvent.click(screen.getByRole("button", { name: "Save" }));
-      await screen.findByText("Pagehall cannot be reached.");
+      await screen.findByText("Lunedo cannot be reached.");
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60_000);
       });
-      expect(screen.getByText("Pagehall cannot be reached.")).toBeDefined();
+      expect(screen.getByText("Lunedo cannot be reached.")).toBeDefined();
     } finally {
       vi.useRealTimers();
     }

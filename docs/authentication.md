@@ -13,7 +13,7 @@ The instance records its owner, the account created during setup. The owner alwa
 ## Passwords
 
 - Passwords are hashed with Argon2id at 19 MiB memory, 2 iterations and 1 lane, the recommendation of the OWASP Password Storage Cheat Sheet. Each hash records its parameters. When the parameters change, the hash is replaced at the next successful sign-in.
-- At most `PAGEHALL_PASSWORD_HASH_CONCURRENCY` hashes are computed at once per process. Further requests wait in a short queue; beyond it they are answered with `503` and `Retry-After`. Passwords longer than 256 characters are rejected before hashing.
+- At most `LUNEDO_PASSWORD_HASH_CONCURRENCY` hashes are computed at once per process. Further requests wait in a short queue; beyond it they are answered with `503` and `Retry-After`. Passwords longer than 256 characters are rejected before hashing.
 - The minimum length is the setting `auth.passwordMinLength` (default 12, at least 8). There are no composition rules. Passwords on a bundled list of about 38,000 common passwords are rejected; the check runs locally, nothing is sent anywhere.
 - A forgotten password is reset with a link sent by e-mail. The link holds a single-use token that is valid for 30 minutes; only its hash is stored. The request is answered the same way whether the address belongs to an account or not, because the lookup runs in a background job. A reset ends all sessions of the account and clears its failed sign-ins.
 - Changing the password requires a recent re-authentication and ends all other sessions.
@@ -58,17 +58,17 @@ Wrong second factors and failed re-authentications count as failures. A successf
 
 ### Client address
 
-The client address comes from `X-Forwarded-For` and the protocol from `X-Forwarded-Proto` only when the request arrives from a proxy listed in `PAGEHALL_TRUSTED_PROXIES`. Otherwise the address of the connection is used.
+The client address comes from `X-Forwarded-For` and the protocol from `X-Forwarded-Proto` only when the request arrives from a proxy listed in `LUNEDO_TRUSTED_PROXIES`. Otherwise the address of the connection is used.
 
 ## Sessions
 
-Sessions are stored in PostgreSQL. The browser holds a random 256-bit session ID in the cookie `__Host-pagehall-session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`); the database stores only its SHA-256 hash. The session ID changes at sign-in, after the second factor and after every re-authentication.
+Sessions are stored in PostgreSQL. The browser holds a random 256-bit session ID in the cookie `__Host-lunedo-session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`); the database stores only its SHA-256 hash. The session ID changes at sign-in, after the second factor and after every re-authentication.
 
-Browsers store `Secure` cookies only over HTTPS, with `localhost` as the exception, so signing in requires HTTPS. Put Pagehall behind a reverse proxy with TLS and list the proxy in `PAGEHALL_TRUSTED_PROXIES`.
+Browsers store `Secure` cookies only over HTTPS, with `localhost` as the exception, so signing in requires HTTPS. Put Lunedo behind a reverse proxy with TLS and list the proxy in `LUNEDO_TRUSTED_PROXIES`.
 
 Each session records when it was created and last used, the client address, browser and operating system, and the sign-in methods. The time of last use is written at most once a minute.
 
-The cookie `__Host-pagehall-device` identifies the browser. A new sign-in from the same browser replaces its previous session.
+The cookie `__Host-lunedo-device` identifies the browser. A new sign-in from the same browser replaces its previous session.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -87,7 +87,7 @@ Sensitive actions answer `403` with the code `reauthenticationRequired` unless t
 
 ## CSRF protection
 
-State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Pagehall-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`. Requests with an API token and without session cookies are exempt, because browsers do not attach tokens on their own (see [api.md](api.md)). Back-channel logout requests of identity providers without cookies are exempt too; they are authenticated by the signed logout token.
+State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must carry the header `X-Lunedo-Request: 1` and an `Origin` header equal to the instance URL. Before the instance URL is set during setup, the origin must match the host the request was sent to. Until setup is complete, setup requests also pass with the origin the setup session was started from, and entering the setup code passes with the origin of the host the request was sent to, so a wrong instance URL can still be corrected. Other requests are answered with `403` and the code `csrfRejected`. Requests with an API token and without session cookies are exempt, because browsers do not attach tokens on their own (see [api.md](api.md)). Back-channel logout requests of identity providers without cookies are exempt too; they are authenticated by the signed logout token.
 
 ## Endpoints
 
@@ -109,4 +109,4 @@ All endpoints are internal: they serve the web client and are not part of the pu
 | `POST /api/v1/account/recovery-codes` | session, recent authentication |
 | `GET /api/v1/account/sessions`, `DELETE /api/v1/account/sessions/{id}`, `POST /api/v1/account/sessions/end-others` | session |
 
-Errors are Problem Details (RFC 9457) with a stable `type` such as `urn:pagehall:problem:invalidCredentials` and the same value as `code`, for example `invalidCredentials`, `invalidSecondFactor`, `locked`, `rateLimited`, `challengeExpired`, `passwordPolicy`, `reauthenticationRequired` or `secondFactorSetupRequired`. `locked` and `rateLimited` come with `Retry-After`.
+Errors are Problem Details (RFC 9457) with a stable `type` such as `urn:lunedo:problem:invalidCredentials` and the same value as `code`, for example `invalidCredentials`, `invalidSecondFactor`, `locked`, `rateLimited`, `challengeExpired`, `passwordPolicy`, `reauthenticationRequired` or `secondFactorSetupRequired`. `locked` and `rateLimited` come with `Retry-After`.

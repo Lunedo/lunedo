@@ -1,4 +1,4 @@
-import { PageHeader, SegmentedControl } from "@pagehall/ui";
+import { PageHeader, SegmentedControl } from "@lunedo/ui";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";

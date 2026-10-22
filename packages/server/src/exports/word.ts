@@ -1,5 +1,5 @@
-import type { WordBlock, WordInline, WordListItem, WordTableCell } from "@pagehall/editor-schema";
-import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
+import type { WordBlock, WordInline, WordListItem, WordTableCell } from "@lunedo/editor-schema";
+import designTokens from "@lunedo/tokens/design-tokens.json" with { type: "json" };
 import {
   AlignmentType,
   BorderStyle,
@@ -79,7 +79,7 @@ const PAPER: Record<PaperSize, { width: number; height: number }> = {
 };
 const CODE_FONT = "Consolas";
 const CODE_STYLE = "Code";
-const BULLETS = "pagehall-bullets";
+const BULLETS = "lunedo-bullets";
 const MAX_LEVEL = 8;
 const LIST_INDENT = 360;
 const HEADINGS = [
@@ -296,7 +296,7 @@ class WordWriter {
     const depth = Math.min(level, MAX_LEVEL);
     let reference = BULLETS;
     if (ordered) {
-      reference = this.#orderedStarts.get(start) ?? `pagehall-ordered-${start}`;
+      reference = this.#orderedStarts.get(start) ?? `lunedo-ordered-${start}`;
       this.#orderedStarts.set(start, reference);
     }
     this.#instance += 1;
@@ -617,7 +617,7 @@ class WordWriter {
     const headerText = [...this.#document.path, this.#document.title].join(" › ");
     const document = new Document({
       title: this.#document.title,
-      creator: "Pagehall",
+      creator: "Lunedo",
       styles: {
         paragraphStyles: [
           {

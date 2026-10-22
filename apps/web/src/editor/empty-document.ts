@@ -1,4 +1,4 @@
-import type { NodeJson } from "@pagehall/editor-schema";
+import type { NodeJson } from "@lunedo/editor-schema";
 
 function isBlank(node: NodeJson): boolean {
   if (node.type === "text") return (node.text ?? "").trim() === "";

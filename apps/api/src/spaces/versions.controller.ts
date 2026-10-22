@@ -1,5 +1,5 @@
+import { VERSION_NOTE_MAX_LENGTH, versionReasons } from "@lunedo/server";
 import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
-import { VERSION_NOTE_MAX_LENGTH, versionReasons } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

@@ -12,9 +12,9 @@ import {
   portableTemplateDocument,
   resolveEmbed,
   validateDocument,
-} from "@pagehall/editor-schema";
-import { type Scene, validateScene, visibleScene } from "@pagehall/editor-schema/scene";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { type Scene, validateScene, visibleScene } from "@lunedo/editor-schema/scene";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -365,7 +365,7 @@ export class TemplateTransferService {
     actor: Principal,
     source: ExportSource,
     templateIds: readonly string[] | null,
-    pagehallVersion: string,
+    lunedoVersion: string,
   ): Promise<TemplateExport> {
     const templates = await this.#source(source, templateIds);
     if (templates.length === 0) {
@@ -399,7 +399,7 @@ export class TemplateTransferService {
       format: TEMPLATE_FORMAT,
       formatVersion: TEMPLATE_FORMAT_VERSION,
       schemaVersion: editorSchemaVersion,
-      pagehallVersion: pagehallVersion.slice(0, 100) || "dev",
+      lunedoVersion: lunedoVersion.slice(0, 100) || "dev",
       templates: exported.map((item) => item.entry),
     };
     const json = serializeManifest(manifest);
@@ -470,7 +470,7 @@ export class TemplateTransferService {
     } catch {
       throw new TemplateFileError(
         "invalidTemplateFile",
-        "The file is neither a Pagehall template file in JSON nor a ZIP archive with template.json.",
+        "The file is neither a Lunedo template file in JSON nor a ZIP archive with template.json.",
       );
     }
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -480,14 +480,14 @@ export class TemplateTransferService {
     if (manifest.format !== TEMPLATE_FORMAT) {
       throw new TemplateFileError(
         "invalidTemplateFile",
-        `The file is not a Pagehall template file: "format" must be "${TEMPLATE_FORMAT}".`,
+        `The file is not a Lunedo template file: "format" must be "${TEMPLATE_FORMAT}".`,
       );
     }
     const formatVersion = manifest.formatVersion;
     if (typeof formatVersion === "number" && formatVersion > TEMPLATE_FORMAT_VERSION) {
       throw new TemplateFileError(
         "newerTemplateFormat",
-        `The file uses template format version ${formatVersion}; this Pagehall reads version ${TEMPLATE_FORMAT_VERSION}. Update Pagehall to import it.`,
+        `The file uses template format version ${formatVersion}; this Lunedo reads version ${TEMPLATE_FORMAT_VERSION}. Update Lunedo to import it.`,
         { fileVersion: formatVersion, supportedVersion: TEMPLATE_FORMAT_VERSION },
       );
     }
@@ -495,12 +495,12 @@ export class TemplateTransferService {
     if (typeof schemaVersion === "number" && schemaVersion > editorSchemaVersion) {
       throw new TemplateFileError(
         "newerTemplateFormat",
-        `The content uses editor schema version ${schemaVersion}; this Pagehall supports up to version ${editorSchemaVersion}. Update Pagehall to import it.`,
+        `The content uses editor schema version ${schemaVersion}; this Lunedo supports up to version ${editorSchemaVersion}. Update Lunedo to import it.`,
         { fileVersion: schemaVersion, supportedVersion: editorSchemaVersion },
       );
     }
     const unknown = Object.keys(manifest).filter(
-      (key) => !["format", "formatVersion", "schemaVersion", "pagehallVersion", "templates"].includes(key),
+      (key) => !["format", "formatVersion", "schemaVersion", "lunedoVersion", "templates"].includes(key),
     );
     if (unknown.length > 0) {
       throw new TemplateFileError(
@@ -520,11 +520,11 @@ export class TemplateTransferService {
         `"schemaVersion" must be a whole number of at least 1.`,
       );
     }
-    const version = manifest.pagehallVersion;
+    const version = manifest.lunedoVersion;
     if (typeof version !== "string" || version.length === 0 || version.length > 100) {
       throw new TemplateFileError(
         "invalidTemplateFile",
-        `"pagehallVersion" must be a text of 1 to 100 characters.`,
+        `"lunedoVersion" must be a text of 1 to 100 characters.`,
       );
     }
     const templates = manifest.templates;

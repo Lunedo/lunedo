@@ -1,4 +1,4 @@
-import { Button, Checkbox, IconButton, Input } from "@pagehall/ui";
+import { Button, Checkbox, IconButton, Input } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
@@ -40,7 +40,7 @@ export function FindBar({ editor, onClose }: { editor: Editor; onClose: () => vo
   return (
     <search
       aria-label={t("editor.find.label")}
-      className="ph-find-bar flex flex-wrap items-center gap-2 border-t border-border pt-2"
+      className="ld-find-bar flex flex-wrap items-center gap-2 border-t border-border pt-2"
       onKeyDown={onKeyDown}
     >
       <div className="flex min-w-0 flex-1 items-center gap-1">

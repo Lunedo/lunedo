@@ -1,4 +1,4 @@
-import { Button, EmptyState, Field, Input, Select, Skeleton } from "@pagehall/ui";
+import { Button, EmptyState, Field, Input, Select, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Flag, ListFilter } from "lucide-react";

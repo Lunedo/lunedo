@@ -1,4 +1,4 @@
-import { isUuid } from "@pagehall/shared";
+import { isUuid } from "@lunedo/shared";
 import type { TFunction } from "i18next";
 import type { paths } from "../api/generated/schema.js";
 import type { Formatter } from "../format/format.js";

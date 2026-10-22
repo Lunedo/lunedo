@@ -15,7 +15,7 @@ import {
   TableToolbar,
   Tabs,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { MoreHorizontal, Plus, Users } from "lucide-react";

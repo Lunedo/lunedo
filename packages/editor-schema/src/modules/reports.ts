@@ -316,7 +316,7 @@ function reportAttributes(node: ValidNode): Record<string, string | null> {
 function taskReportHtml(tasks: readonly ReportedTask[] | null, renderer: HtmlRenderer): string {
   if (tasks === null) return element("p", {}, renderer.escape(renderer.label("taskReport")));
   if (tasks.length === 0) {
-    return element("p", { class: "ph-listing-empty" }, renderer.escape(renderer.label("noReportedTasks")));
+    return element("p", { class: "ld-listing-empty" }, renderer.escape(renderer.label("noReportedTasks")));
   }
   const head = element(
     "thead",
@@ -460,7 +460,7 @@ export const taskReportModule = defineModule({
         element(
           "div",
           {
-            class: "ph-task-report",
+            class: "ld-task-report",
             ...reportAttributes(node),
             "data-series-id": attrOf<string | null>(node, "seriesId"),
             "data-page-ids": attrOf<string[]>(node, "pageIds").join(",") || null,
@@ -525,14 +525,14 @@ export const pageReportModule = defineModule({
             : rows.length === 0
               ? element(
                   "p",
-                  { class: "ph-listing-empty" },
+                  { class: "ld-listing-empty" },
                   renderer.escape(renderer.label("noReportedPages")),
                 )
               : element("table", {}, `${head}${element("tbody", {}, rows.join(""))}`);
         return element(
           "section",
           {
-            class: "ph-page-report",
+            class: "ld-page-report",
             "aria-label": renderer.label("pageReport"),
             ...reportAttributes(node),
             "data-sort": request.sort,
@@ -602,7 +602,7 @@ export const decisionReportModule = defineModule({
           return element(
             "li",
             {},
-            `${element("p", {}, renderer.escape(decision.text))}${element("p", { class: "ph-decision-source" }, `${href ? element("a", { href }, title) : title} · ${renderer.escape(formatDay(decision.date, renderer))}`)}`,
+            `${element("p", {}, renderer.escape(decision.text))}${element("p", { class: "ld-decision-source" }, `${href ? element("a", { href }, title) : title} · ${renderer.escape(formatDay(decision.date, renderer))}`)}`,
           );
         });
         const content =
@@ -611,14 +611,14 @@ export const decisionReportModule = defineModule({
             : items.length === 0
               ? element(
                   "p",
-                  { class: "ph-listing-empty" },
+                  { class: "ld-listing-empty" },
                   renderer.escape(renderer.label("noReportedDecisions")),
                 )
               : element("ul", {}, items.join(""));
         return element(
           "section",
           {
-            class: "ph-decision-report",
+            class: "ld-decision-report",
             "aria-label": renderer.label("decisionReport"),
             ...reportAttributes(node),
             "data-parent-id": request.parentId,

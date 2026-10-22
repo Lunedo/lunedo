@@ -78,12 +78,12 @@ export type TargetStep = "write" | "read" | "delete" | "list";
 const FAILURE_TEXTS: Record<TargetFailure, string> = {
   notFound: "The directory does not exist in the container. Create it or mount the volume there.",
   permission:
-    "Pagehall is not allowed to do this. Give the container user, or the access key, write, read, list and delete permission.",
+    "Lunedo is not allowed to do this. Give the container user, or the access key, write, read, list and delete permission.",
   readOnly: "The file system is mounted read-only. Mount it writable.",
   full: "The target is full. Free up space or choose another target.",
   dns: "The host name of the endpoint could not be resolved. Check the endpoint address.",
   blockedAddress:
-    "The endpoint is in a private network. Add its address to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS if it is meant to be reached.",
+    "The endpoint is in a private network. Add its address to LUNEDO_OUTBOUND_ALLOWED_NETWORKS if it is meant to be reached.",
   insecureAddress: "Public endpoints need HTTPS. Use an https:// address.",
   connection: "The endpoint could not be reached. Check the address, the port and the firewall.",
   tls: "The TLS certificate of the endpoint is not trusted. Check the certificate or the endpoint address.",
@@ -120,7 +120,7 @@ export class BackupTargetError extends Error {
 
   get explanation(): string {
     if (this.blockedAddress === null) return this.message;
-    return `${STEP_TEXTS[this.step]} failed: The endpoint resolves to ${this.blockedAddress}, which is in a private network. If Pagehall should reach it, add ${this.allowedNetwork} or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS and restart Pagehall.`;
+    return `${STEP_TEXTS[this.step]} failed: The endpoint resolves to ${this.blockedAddress}, which is in a private network. If Lunedo should reach it, add ${this.allowedNetwork} or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.`;
   }
 }
 
@@ -131,8 +131,8 @@ function blockedAddressOf(error: unknown): string | null {
   return null;
 }
 
-const TEST_CONTENT = "Pagehall backup target test\n";
-const PARTIAL = /^(pagehall-backup-.+\.phbak)\.[0-9a-f-]{36}\.partial$/;
+const TEST_CONTENT = "Lunedo backup target test\n";
+const PARTIAL = /^(lunedo-backup-.+\.ldbak)\.[0-9a-f-]{36}\.partial$/;
 
 function localFailure(error: unknown): TargetFailure {
   switch ((error as NodeJS.ErrnoException).code) {
@@ -162,7 +162,7 @@ async function guardLocal<T>(step: TargetStep, action: () => Promise<T>): Promis
 }
 
 function checkName(name: string): void {
-  if (!parseBackupName(name)) throw new BackupError(`${name} is not the name of a Pagehall backup`);
+  if (!parseBackupName(name)) throw new BackupError(`${name} is not the name of a Lunedo backup`);
 }
 
 export class LocalBackupTarget implements BackupTarget {
@@ -261,7 +261,7 @@ export class LocalBackupTarget implements BackupTarget {
   }
 
   async test(): Promise<void> {
-    const name = `.pagehall-target-test-${randomBytes(6).toString("hex")}`;
+    const name = `.lunedo-target-test-${randomBytes(6).toString("hex")}`;
     const file = path.join(this.#dir, name);
     await guardLocal("write", async () => {
       if (!(await stat(this.#dir)).isDirectory()) throw Object.assign(new Error(), { code: "ENOTDIR" });
@@ -550,7 +550,7 @@ export class S3BackupTarget implements BackupTarget {
   }
 
   async test(): Promise<void> {
-    const key = `${this.#config.prefix}.pagehall-target-test-${randomBytes(6).toString("hex")}`;
+    const key = `${this.#config.prefix}.lunedo-target-test-${randomBytes(6).toString("hex")}`;
     await guardS3("write", () =>
       this.#client.send(new PutObjectCommand({ Bucket: this.#config.bucket, Key: key, Body: TEST_CONTENT })),
     );

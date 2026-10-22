@@ -9,7 +9,7 @@ describe("the owner step", () => {
     const { requests } = mockApi({
       "GET /api/v1/instance/info": () => ({
         body: {
-          name: "Pagehall",
+          name: "Lunedo",
           setupComplete: false,
           language: "en",
           accentColor: "petrol",

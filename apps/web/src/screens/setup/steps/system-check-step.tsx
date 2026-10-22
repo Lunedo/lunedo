@@ -1,5 +1,5 @@
-import type { SetupStepDetails } from "@pagehall/shared";
-import { Badge, Button, ErrorState, List, ListRow, Notice } from "@pagehall/ui";
+import type { SetupStepDetails } from "@lunedo/shared";
+import { Badge, Button, ErrorState, List, ListRow, Notice } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { CircleAlert, CircleCheck, CircleDashed, CircleX, RotateCcw } from "lucide-react";
 import { useState } from "react";

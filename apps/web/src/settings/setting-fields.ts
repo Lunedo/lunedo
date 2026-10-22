@@ -1,4 +1,4 @@
-import { accentColors, colorModes, densities, fonts } from "@pagehall/shared";
+import { accentColors, colorModes, densities, fonts } from "@lunedo/shared";
 
 export type SettingFieldType =
   | { kind: "boolean" }

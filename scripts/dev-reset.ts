@@ -1,7 +1,7 @@
 const TEST_DATABASE =
-  /^pagehall_(?:(?:[a-z]+_)*(?:test|e2e)_\d+(?:_[0-9a-f]+)?|template_[0-9a-f]{16}(?:_building)?)$/;
+  /^lunedo_(?:(?:[a-z]+_)*(?:test|e2e)_\d+(?:_[0-9a-f]+)?|template_[0-9a-f]{16}(?:_building)?)$/;
 
-export const DEV_DATABASE = "pagehall";
+export const DEV_DATABASE = "lunedo";
 export const CONFIRMATION = "reset";
 
 export function testDatabases(names: string[]): string[] {

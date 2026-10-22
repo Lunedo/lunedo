@@ -4,8 +4,8 @@ import {
   accountPrincipal,
   type ServerRuntime,
   SPACE_CHANGES_CHANNEL,
-} from "@pagehall/server";
-import { testDatabaseBaseUrl } from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type Client,
@@ -19,7 +19,7 @@ import {
 
 const baseUrl = testDatabaseBaseUrl();
 
-const DELIVERED_CHANNEL = "pagehall_test_recheck_order";
+const DELIVERED_CHANNEL = "lunedo_test_recheck_order";
 const RECHECKED = "Collaboration permission rechecked";
 
 describe.skipIf(!baseUrl)("recheck order", () => {

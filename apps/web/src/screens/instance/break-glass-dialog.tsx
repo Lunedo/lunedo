@@ -1,5 +1,5 @@
-import { breakGlassReasonSchema } from "@pagehall/shared";
-import { Button, Dialog, Field, Notice, Textarea } from "@pagehall/ui";
+import { breakGlassReasonSchema } from "@lunedo/shared";
+import { Button, Dialog, Field, Notice, Textarea } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";

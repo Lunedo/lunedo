@@ -80,7 +80,7 @@ export class PgBossQueue implements JobQueue {
     this.#boss = new PgBoss({
       connectionString: options.connectionString,
       schema: SCHEMA,
-      application_name: `pagehall-jobs-${options.role}`,
+      application_name: `lunedo-jobs-${options.role}`,
       max: 4,
       supervise: worker,
       schedule: worker,

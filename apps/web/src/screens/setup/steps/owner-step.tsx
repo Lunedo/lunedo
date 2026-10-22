@@ -1,5 +1,5 @@
-import { accountNameSchema, emailSchema, PASSWORD_MAX_LENGTH } from "@pagehall/shared";
-import { Button, Field, Input, Notice, PasswordInput, Skeleton } from "@pagehall/ui";
+import { accountNameSchema, emailSchema, PASSWORD_MAX_LENGTH } from "@lunedo/shared";
+import { Button, Field, Input, Notice, PasswordInput, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { CircleCheck } from "lucide-react";
 import { useState } from "react";

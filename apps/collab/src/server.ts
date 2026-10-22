@@ -7,7 +7,7 @@ import {
   type onStoreDocumentPayload,
   Server,
 } from "@hocuspocus/server";
-import { migrateYDoc } from "@pagehall/editor-schema/yjs";
+import { migrateYDoc } from "@lunedo/editor-schema/yjs";
 import {
   AUDIT_CHANGES_CHANNEL,
   type AuditChangeSignal,
@@ -27,8 +27,8 @@ import {
   type ServerRuntime,
   SPACE_CHANGES_CHANNEL,
   trustedProxyList,
-} from "@pagehall/server";
-import { isUuid } from "@pagehall/shared";
+} from "@lunedo/server";
+import { isUuid } from "@lunedo/shared";
 import * as Y from "yjs";
 import { DocumentGuard, pageValidator, sceneValidator } from "./guard.js";
 import {
@@ -417,8 +417,8 @@ export async function createCollabServer(options: {
     if (state) Y.applyUpdate(document, state, STORE_ORIGIN);
   }
 
-  const pagehall: Extension = {
-    extensionName: "Pagehall",
+  const lunedo: Extension = {
+    extensionName: "Lunedo",
     async onUpgrade({ request, socket }) {
       const path = new URL(request.url ?? "/", "http://localhost").pathname;
       if (path !== COLLAB_PATH) {
@@ -615,7 +615,7 @@ export async function createCollabServer(options: {
   };
 
   const server = new Server<CollabContext>({
-    name: "pagehall-collab",
+    name: "lunedo-collab",
     port: options.port,
     address: options.host,
     quiet: true,
@@ -623,7 +623,7 @@ export async function createCollabServer(options: {
     debounce: STORE_DEBOUNCE_MS,
     maxDebounce: STORE_MAX_DEBOUNCE_MS,
     websocketOptions: { maxPayload: MAX_FRAME_BYTES },
-    extensions: [pagehall, ...(redis ? [redis] : [])],
+    extensions: [lunedo, ...(redis ? [redis] : [])],
   });
   const instance = server.hocuspocus;
   services.maintenance.onChange((status) => {

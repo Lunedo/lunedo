@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { isUuid } from "@pagehall/shared";
+import { isUuid } from "@lunedo/shared";
 import { and, asc, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
@@ -28,7 +28,7 @@ export const INSTANCE_AUDIT_SCOPE: AuditScope = { type: "instance", id: INSTANCE
 
 export type AuditEvents = AuditEventInput<AuditEventName>[];
 
-export const AUDIT_CHANGES_CHANNEL = "pagehall_audit_changes";
+export const AUDIT_CHANGES_CHANNEL = "lunedo_audit_changes";
 
 export interface AuditChangeSignal {
   scope: "instance" | "organization";

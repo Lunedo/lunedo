@@ -1,6 +1,6 @@
+import { treeItemKinds, type WatchTarget } from "@lunedo/server";
+import { watchStates } from "@lunedo/shared";
 import { Body, Controller, Delete, Get, Inject, Param, Put, Req } from "@nestjs/common";
-import { treeItemKinds, type WatchTarget } from "@pagehall/server";
-import { watchStates } from "@pagehall/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";

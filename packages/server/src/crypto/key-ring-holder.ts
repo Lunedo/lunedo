@@ -5,7 +5,7 @@ import type { Logger } from "../logging/logger.js";
 import type { KeyProvider } from "./key-provider.js";
 import { type KeyRing, KeyRingError } from "./key-ring.js";
 
-export const KEY_RING_CHANNEL = "pagehall_key_ring";
+export const KEY_RING_CHANNEL = "lunedo_key_ring";
 
 /**
  * Holds the loaded key ring of this process. All nodes reload it when a new key version

@@ -10,7 +10,7 @@ import {
   IconButton,
   Menu,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ChevronDown, EyeOff, FileText, Link2, X } from "lucide-react";
@@ -93,7 +93,7 @@ function IntervalControl({
       trigger={
         <button
           type="button"
-          className="ph-inline-button inline-flex min-h-hit items-center gap-1 rounded-sm px-1 hover:bg-hover focus-visible:focus-ring"
+          className="ld-inline-button inline-flex min-h-hit items-center gap-1 rounded-sm px-1 hover:bg-hover focus-visible:focus-ring"
           aria-label={t("reviews.article.changeInterval", { interval: label })}
         >
           {label}

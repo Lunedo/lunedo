@@ -1,4 +1,4 @@
-import { Notice, Section } from "@pagehall/ui";
+import { Notice, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { SlidersHorizontal } from "lucide-react";

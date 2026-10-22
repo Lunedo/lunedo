@@ -35,8 +35,8 @@ async function exists(name: string): Promise<boolean> {
 }
 
 function restoreRun(previous: string | undefined) {
-  if (previous === undefined) delete process.env.PAGEHALL_TEST_DATABASE_RUN;
-  else process.env.PAGEHALL_TEST_DATABASE_RUN = previous;
+  if (previous === undefined) delete process.env.LUNEDO_TEST_DATABASE_RUN;
+  else process.env.LUNEDO_TEST_DATABASE_RUN = previous;
 }
 
 describe.skipIf(!baseUrl)("createMigratedDatabase", () => {
@@ -51,7 +51,7 @@ describe.skipIf(!baseUrl)("createMigratedDatabase", () => {
 
   it("gives every caller its own database with all migrations, also when they start at once", async () => {
     const databases = await Promise.all(
-      Array.from({ length: 4 }, () => createMigratedDatabase(baseUrl ?? "", "pagehall_migrated_test")),
+      Array.from({ length: 4 }, () => createMigratedDatabase(baseUrl ?? "", "lunedo_migrated_test")),
     );
     try {
       expect(new Set(databases.map((database) => database.name)).size).toBe(4);
@@ -65,11 +65,11 @@ describe.skipIf(!baseUrl)("createMigratedDatabase", () => {
   });
 
   it("tags the databases of a run so that the end of the run removes those still left", async () => {
-    const previous = process.env.PAGEHALL_TEST_DATABASE_RUN;
+    const previous = process.env.LUNEDO_TEST_DATABASE_RUN;
     const finishRun = startDatabaseRun(baseUrl ?? "");
-    const run = process.env.PAGEHALL_TEST_DATABASE_RUN ?? "";
+    const run = process.env.LUNEDO_TEST_DATABASE_RUN ?? "";
     try {
-      const database = await createTemporaryDatabase(baseUrl ?? "", "pagehall_left_test");
+      const database = await createTemporaryDatabase(baseUrl ?? "", "lunedo_left_test");
       expect(database.name).toContain(`_${run}_`);
       left.push({ name: database.name, finishRun });
     } finally {

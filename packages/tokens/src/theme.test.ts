@@ -202,27 +202,27 @@ describe("generateThemeCss", () => {
   const css = generateThemeCss(tokens);
 
   it("defines light variables on the root and dark variables for the dark theme", () => {
-    expect(ruleBody(css, '[data-theme="light"]')).toContain("--ph-color-accent: #0B6F78;");
-    expect(ruleBody(css, '[data-theme="dark"]')).toContain("--ph-color-accent: #5DB9C2;");
+    expect(ruleBody(css, '[data-theme="light"]')).toContain("--ld-color-accent: #0B6F78;");
+    expect(ruleBody(css, '[data-theme="dark"]')).toContain("--ld-color-accent: #5DB9C2;");
     expect(ruleBody(css, '[data-theme="dark"]')).toContain("color-scheme: dark;");
   });
 
   it("follows the system preference unless a theme is selected explicitly", () => {
     const media = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
     expect(media).toContain(':root:not([data-theme="light"]) {');
-    expect(media).toContain("--ph-color-bg: #151617;");
+    expect(media).toContain("--ld-color-bg: #151617;");
   });
 
   it("maps every color variable into the Tailwind theme", () => {
     const theme = ruleBody(css, "@theme inline");
     for (const key of Object.keys(tokens.color.light)) {
       const name = key.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-      expect(theme).toContain(`--color-${name}: var(--ph-color-${name});`);
+      expect(theme).toContain(`--color-${name}: var(--ld-color-${name});`);
     }
-    expect(theme).toContain("--color-palette-petrol: var(--ph-palette-petrol);");
-    expect(theme).toContain("--color-status-in-progress-bg: var(--ph-status-in-progress-bg);");
-    expect(theme).toContain("--color-content-red-text: var(--ph-content-red-text);");
-    expect(theme).toContain("--color-content-yellow-background: var(--ph-content-yellow-background);");
+    expect(theme).toContain("--color-palette-petrol: var(--ld-palette-petrol);");
+    expect(theme).toContain("--color-status-in-progress-bg: var(--ld-status-in-progress-bg);");
+    expect(theme).toContain("--color-content-red-text: var(--ld-content-red-text);");
+    expect(theme).toContain("--color-content-yellow-background: var(--ld-content-yellow-background);");
   });
 
   it("resets the default Tailwind scales so that only token values exist", () => {
@@ -244,25 +244,25 @@ describe("generateThemeCss", () => {
   });
 
   it("switches to high contrast for light, dark and the system preference", () => {
-    expect(ruleBody(css, ':root[data-contrast="high"]')).toContain("--ph-color-text: #000000;");
+    expect(ruleBody(css, ':root[data-contrast="high"]')).toContain("--ld-color-text: #000000;");
     expect(ruleBody(css, ':root[data-contrast="high"][data-theme="dark"]')).toContain(
-      "--ph-color-text: #FFFFFF;",
+      "--ld-color-text: #FFFFFF;",
     );
     expect(ruleBody(css, ':root[data-contrast="high"]:not([data-theme="light"])')).toContain(
-      "--ph-color-bg: #000000;",
+      "--ld-color-bg: #000000;",
     );
-    expect(ruleBody(css, ':root[data-contrast="high"]')).toContain("--ph-focus-width: 0.1875rem;");
+    expect(ruleBody(css, ':root[data-contrast="high"]')).toContain("--ld-focus-width: 0.1875rem;");
   });
 
   it("scales the root font size with the text scale", () => {
-    expect(ruleBody(css, ":root")).toContain("font-size: calc(var(--ph-text-scale, 1) * 100%);");
+    expect(ruleBody(css, ":root")).toContain("font-size: calc(var(--ld-text-scale, 1) * 100%);");
   });
 
   it("shrinks rows and controls in the compact density", () => {
     const compact = ruleBody(css, ':root[data-density="compact"]');
-    expect(compact).toContain("--ph-row: 1.75rem;");
-    expect(compact).toContain("--ph-control-field: 2rem;");
-    expect(ruleBody(css, "@theme inline")).toContain("--spacing-control-md: var(--ph-control-md);");
+    expect(compact).toContain("--ld-row: 1.75rem;");
+    expect(compact).toContain("--ld-control-field: 2rem;");
+    expect(ruleBody(css, "@theme inline")).toContain("--spacing-control-md: var(--ld-control-md);");
   });
 
   it("keeps rows at least 24 pixels high at the smallest text size", () => {
@@ -285,18 +285,18 @@ describe("generateThemeCss", () => {
 
   it("switches the font for the reading-friendly option", () => {
     expect(ruleBody(css, ':root[data-font="readable"]')).toContain("Atkinson Hyperlegible Next");
-    expect(ruleBody(css, "@theme inline")).toContain("--font-sans: var(--ph-font-sans);");
+    expect(ruleBody(css, "@theme inline")).toContain("--font-sans: var(--ld-font-sans);");
   });
 
   it("derives every accent but the default from the palette, outside high contrast", () => {
     for (const key of accentKeys.filter((candidate) => candidate !== "petrol")) {
       const selector = `:root[data-accent="${key}"]:not([data-contrast="high"])`;
-      expect(ruleBody(css, selector)).toContain(`--ph-color-accent: ${tokens.color.palette.light[key]};`);
+      expect(ruleBody(css, selector)).toContain(`--ld-color-accent: ${tokens.color.palette.light[key]};`);
       expect(ruleBody(css, `${selector}[data-theme="dark"]`)).toContain(
-        `--ph-color-accent: ${tokens.color.palette.dark[key]};`,
+        `--ld-color-accent: ${tokens.color.palette.dark[key]};`,
       );
       expect(ruleBody(css, `${selector}:not([data-theme="light"])`)).toContain(
-        `--ph-color-on-accent: ${tokens.color.dark.onAccent};`,
+        `--ld-color-on-accent: ${tokens.color.dark.onAccent};`,
       );
     }
     expect(css).not.toContain('[data-accent="petrol"]');
@@ -314,14 +314,14 @@ describe("generateThemeCss", () => {
 
   it("defines a focus ring utility from tokens", () => {
     expect(css).toContain("@utility focus-ring {");
-    expect(css).toContain("outline: var(--ph-focus-width) solid var(--ph-color-accent);");
+    expect(css).toContain("outline: var(--ld-focus-width) solid var(--ld-color-accent);");
   });
 
   it("reflects token changes", () => {
     const changed: DesignTokens = structuredClone(tokens);
     changed.color.light.accent = "#123456";
     expect(ruleBody(generateThemeCss(changed), '[data-theme="light"]')).toContain(
-      "--ph-color-accent: #123456;",
+      "--ld-color-accent: #123456;",
     );
   });
 });

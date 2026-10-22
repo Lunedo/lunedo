@@ -27,7 +27,7 @@ export function parallelismLimit(env: NodeJS.ProcessEnv = process.env): number |
 }
 
 export function localBudget(env: NodeJS.ProcessEnv = process.env, host: Host = currentHost()): number {
-  const override = positiveInteger(env.PAGEHALL_PARALLELISM);
+  const override = positiveInteger(env.LUNEDO_PARALLELISM);
   if (override !== undefined) return override;
   return Math.max(1, host.platform === "win32" ? Math.floor(host.cores / 2) : host.cores);
 }
@@ -49,11 +49,11 @@ export function vitestWorkers(
   const limit = parallelismLimit(env);
   if (limit !== undefined) return limit;
   if (env.CI) return undefined;
-  return positiveInteger(env.PAGEHALL_TEST_WORKERS) ?? localBudget(env, host);
+  return positiveInteger(env.LUNEDO_TEST_WORKERS) ?? localBudget(env, host);
 }
 
 export function endToEndWorkers(env: NodeJS.ProcessEnv = process.env): number {
-  const workers = positiveInteger(env.PAGEHALL_E2E_WORKERS);
+  const workers = positiveInteger(env.LUNEDO_E2E_WORKERS);
   if (workers !== undefined) return workers;
   if (env.CI) return parallelismLimit(env) ?? DEFAULT_END_TO_END_WORKERS;
   return DEFAULT_END_TO_END_WORKERS;

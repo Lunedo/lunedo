@@ -79,8 +79,8 @@ function embedHtml(node: ValidNode, renderer: HtmlRenderer): string {
   if (resolved === null) {
     return element(
       "div",
-      { class: "ph-embed ph-embed-blocked", "data-url": url },
-      `${element("p", { class: "ph-embed-link" }, linkHtml(node, renderer, url))}${element("p", { class: "ph-embed-hint" }, renderer.escape(renderer.label("embedNotAllowed")))}`,
+      { class: "ld-embed ld-embed-blocked", "data-url": url },
+      `${element("p", { class: "ld-embed-link" }, linkHtml(node, renderer, url))}${element("p", { class: "ld-embed-hint" }, renderer.escape(renderer.label("embedNotAllowed")))}`,
     );
   }
   const caption = element(
@@ -90,7 +90,7 @@ function embedHtml(node: ValidNode, renderer: HtmlRenderer): string {
       resolved
         ? element(
             "span",
-            { class: "ph-embed-service" },
+            { class: "ld-embed-service" },
             renderer.escape(renderer.label("embedFrom", { service: resolved.service.name })),
           )
         : ""
@@ -98,7 +98,7 @@ function embedHtml(node: ValidNode, renderer: HtmlRenderer): string {
   );
   const frame = resolved
     ? element("div", {
-        class: "ph-embed-frame",
+        class: "ld-embed-frame",
         "data-src": resolved.src,
         "data-referrer-policy": resolved.referrerPolicy,
         "data-title": title,
@@ -107,7 +107,7 @@ function embedHtml(node: ValidNode, renderer: HtmlRenderer): string {
     : "";
   return element(
     "figure",
-    { class: "ph-embed", "data-url": url, "data-service": resolved?.service.id ?? null },
+    { class: "ld-embed", "data-url": url, "data-service": resolved?.service.id ?? null },
     `${frame}${caption}`,
   );
 }
@@ -118,7 +118,7 @@ function embedPrint(node: ValidNode, renderer: HtmlRenderer): string {
   const url = attrOf<string>(node, "url");
   return element(
     "figure",
-    { class: "ph-embed ph-embed-print" },
+    { class: "ld-embed ld-embed-print" },
     `${image ? `<img${htmlAttributes({ src: image, alt: title })}>` : ""}${element(
       "figcaption",
       {},

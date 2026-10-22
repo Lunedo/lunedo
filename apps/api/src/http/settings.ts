@@ -4,7 +4,7 @@ import type {
   SettingLevel,
   SettingsRegistry,
   SettingsService,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { z } from "zod";
 import { ProblemException } from "./problems.js";
 

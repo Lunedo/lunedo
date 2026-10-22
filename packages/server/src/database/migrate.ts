@@ -9,7 +9,7 @@ export const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.me
 
 const MIGRATIONS_SCHEMA = "drizzle";
 const MIGRATIONS_TABLE = "__drizzle_migrations";
-const LOCK_NAME = "pagehall.migrations";
+const LOCK_NAME = "lunedo.migrations";
 
 interface JournalEntry {
   idx: number;

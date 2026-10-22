@@ -1,28 +1,28 @@
 {
-  "name": "@pagehall/collab",
+  "name": "@lunedo/collab",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pagehall-dev --start dist/main.js --watch src --watch node_modules/@pagehall/shared/dist --watch node_modules/@pagehall/server/dist",
+    "dev": "lunedo-dev --start dist/main.js --watch src --watch node_modules/@lunedo/shared/dist --watch node_modules/@lunedo/server/dist",
     "start": "node --enable-source-maps dist/main.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@hocuspocus/server": "^4.7.1",
-    "@pagehall/editor-schema": "workspace:*",
-    "@pagehall/server": "workspace:*",
-    "@pagehall/shared": "workspace:*",
+    "@lunedo/editor-schema": "workspace:*",
+    "@lunedo/server": "workspace:*",
+    "@lunedo/shared": "workspace:*",
     "ioredis": "^6.0.0",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.33"
   },
   "devDependencies": {
     "@hocuspocus/provider": "^4.7.1",
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@types/node": "^24.19.2",
     "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",

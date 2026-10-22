@@ -35,24 +35,24 @@ describe("backup names", () => {
     for (const backupClass of ["daily", "weekly", "monthly", "manual", "beforeUpdate"] as const) {
       const parsed = parseBackupName(backupName(backupClass, created, "0a1b2c3d"));
       expect(parsed).toEqual({
-        name: expect.stringMatching(/^pagehall-backup-20261021T020007Z-/),
+        name: expect.stringMatching(/^lunedo-backup-20261021T020007Z-/),
         backupClass,
         createdAt: new Date("2026-10-21T02:00:07.000Z"),
       });
     }
     expect(backupName("beforeUpdate", created, "0a1b2c3d")).toBe(
-      "pagehall-backup-20261021T020007Z-before-update-0a1b2c3d.phbak",
+      "lunedo-backup-20261021T020007Z-before-update-0a1b2c3d.ldbak",
     );
   });
 
   it.each([
-    "backup.phbak",
-    "pagehall-backup-20261021T020007Z-daily-0a1b2c3d.phbak.partial",
-    "pagehall-backup-20261021T020007Z-hourly-0a1b2c3d.phbak",
-    "pagehall-backup-20261021T020007Z-daily-0A1B2C3D.phbak",
-    "../pagehall-backup-20261021T020007Z-daily-0a1b2c3d.phbak",
-    "pagehall-backup-20261341T020007Z-daily-0a1b2c3d.phbak",
-    "notes/pagehall-backup-20261021T020007Z-daily-0a1b2c3d.phbak",
+    "backup.ldbak",
+    "lunedo-backup-20261021T020007Z-daily-0a1b2c3d.ldbak.partial",
+    "lunedo-backup-20261021T020007Z-hourly-0a1b2c3d.ldbak",
+    "lunedo-backup-20261021T020007Z-daily-0A1B2C3D.ldbak",
+    "../lunedo-backup-20261021T020007Z-daily-0a1b2c3d.ldbak",
+    "lunedo-backup-20261341T020007Z-daily-0a1b2c3d.ldbak",
+    "notes/lunedo-backup-20261021T020007Z-daily-0a1b2c3d.ldbak",
   ])("does not recognize %s", (name) => {
     expect(parseBackupName(name)).toBeNull();
   });

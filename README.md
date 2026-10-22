@@ -1,12 +1,12 @@
-# Pagehall
+# Lunedo
 
-Pagehall is a self-hosted wiki, knowledge base and project planning tool for teams and companies. It covers documentation, knowledge sharing and development planning in one application.
+Lunedo is a self-hosted wiki, knowledge base and project planning tool for teams and companies. It covers documentation, knowledge sharing and development planning in one application.
 
-Pagehall is free software under the [GNU Affero General Public License v3.0](LICENSE). Every feature is available to every installation. There are no paid tiers, no license keys and no seat counting.
+Lunedo is free software under the [GNU Affero General Public License v3.0](LICENSE). Every feature is available to every installation. There are no paid tiers, no license keys and no seat counting.
 
 ## Status
 
-Pagehall is in development and not ready for use. There are no releases yet.
+Lunedo is in development and not ready for use. There are no releases yet.
 
 ## Development
 
@@ -23,7 +23,7 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` starts PostgreSQL and all Pagehall processes in Docker with hot reload:
+`pnpm dev` starts PostgreSQL and all Lunedo processes in Docker with hot reload:
 
 | Process | URL |
 |---|---|
@@ -47,8 +47,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions and [docs/](docs/) for de
 
 ## Use of AI tools
 
-AI tools are used in the development of Pagehall. Every change is reviewed and tested by a maintainer before it is merged, and the maintainer is responsible for it.
+AI tools are used in the development of Lunedo. Every change is reviewed and tested by a maintainer before it is merged, and the maintainer is responsible for it.
 
 ## License
 
-Pagehall is licensed under the [AGPL-3.0](LICENSE). Contributions are accepted under the [Developer Certificate of Origin](CONTRIBUTING.md#developer-certificate-of-origin).
+Lunedo is licensed under the [AGPL-3.0](LICENSE). Contributions are accepted under the [Developer Certificate of Origin](CONTRIBUTING.md#developer-certificate-of-origin).

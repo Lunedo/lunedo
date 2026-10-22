@@ -1,4 +1,4 @@
-import { Badge, Button, ConfirmDialog, EmptyState, Field, Notice, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, ConfirmDialog, EmptyState, Field, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck } from "lucide-react";

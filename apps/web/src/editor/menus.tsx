@@ -1,5 +1,5 @@
-import { contentColors } from "@pagehall/editor-schema";
-import { Menu, Tooltip } from "@pagehall/ui";
+import { contentColors } from "@lunedo/editor-schema";
+import { Menu, Tooltip } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
 import { useEditorState } from "@tiptap/react";
@@ -147,7 +147,7 @@ export function TableMenu({ editor }: { editor: Editor }) {
     <div
       role="toolbar"
       aria-label={t("editor.table.label")}
-      className="ph-table-menu flex flex-wrap items-center gap-1 border-t border-border pt-1"
+      className="ld-table-menu flex flex-wrap items-center gap-1 border-t border-border pt-1"
     >
       <Menu
         align="start"

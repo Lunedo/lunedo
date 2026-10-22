@@ -1,4 +1,4 @@
-import { type DocumentJson, extractSections } from "@pagehall/editor-schema";
+import { type DocumentJson, extractSections } from "@lunedo/editor-schema";
 import { codePointBoundary } from "./extraction/text.js";
 
 export const MAX_CHUNK_LENGTH = 2000;

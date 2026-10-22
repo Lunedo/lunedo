@@ -1,4 +1,4 @@
-import { Button, Notice } from "@pagehall/ui";
+import { Button, Notice } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";

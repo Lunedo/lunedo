@@ -1,4 +1,4 @@
-import { Combobox, type ComboboxItem, Select } from "@pagehall/ui";
+import { Combobox, type ComboboxItem, Select } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";

@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Transform } from "node:stream";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { currentSchemaVersion, runMigrations } from "../database/migrate.js";
@@ -31,7 +31,7 @@ function failAfter(limit: number): Transform {
 }
 
 describe("libpqEnvironment", () => {
-  const base = "postgres://user%40x:p%40ss@db.example:6543/pagehall";
+  const base = "postgres://user%40x:p%40ss@db.example:6543/lunedo";
 
   it("passes credentials through the environment", () => {
     expect(libpqEnvironment(base)).toEqual({
@@ -39,13 +39,13 @@ describe("libpqEnvironment", () => {
       PGPORT: "6543",
       PGUSER: "user@x",
       PGPASSWORD: "p@ss",
-      PGDATABASE: "pagehall",
+      PGDATABASE: "lunedo",
     });
   });
 
   it("strips the brackets of IPv6 hosts", () => {
-    expect(libpqEnvironment("postgres://u:p@[::1]:5432/pagehall").PGHOST).toBe("::1");
-    expect(libpqEnvironment("postgres://u:p@[2001:db8::5]/pagehall").PGHOST).toBe("2001:db8::5");
+    expect(libpqEnvironment("postgres://u:p@[::1]:5432/lunedo").PGHOST).toBe("::1");
+    expect(libpqEnvironment("postgres://u:p@[2001:db8::5]/lunedo").PGHOST).toBe("2001:db8::5");
   });
 
   it.each([
@@ -84,14 +84,14 @@ describe("libpqEnvironment", () => {
 
   it("passes certificate files and the application name", () => {
     const env = libpqEnvironment(
-      `${base}?sslmode=verify-full&sslrootcert=/run/secrets/ca.pem&sslcert=/run/secrets/client.pem&sslkey=/run/secrets/client.key&application_name=pagehall`,
+      `${base}?sslmode=verify-full&sslrootcert=/run/secrets/ca.pem&sslcert=/run/secrets/client.pem&sslkey=/run/secrets/client.key&application_name=lunedo`,
     );
     expect(env).toMatchObject({
       PGSSLMODE: "verify-full",
       PGSSLROOTCERT: "/run/secrets/ca.pem",
       PGSSLCERT: "/run/secrets/client.pem",
       PGSSLKEY: "/run/secrets/client.key",
-      PGAPPNAME: "pagehall",
+      PGAPPNAME: "lunedo",
     });
   });
 
@@ -101,7 +101,7 @@ describe("libpqEnvironment", () => {
     ["sslmode=allow", "the backup tools do not support sslmode=allow"],
     ["ssl=false", "the backup tools do not support ssl=false; use sslmode=disable instead"],
   ])("rejects %s with a message naming the parameter", (query, message) => {
-    expect(() => libpqEnvironment(`${base}?${query}`)).toThrow(`PAGEHALL_DATABASE_URL: ${message}`);
+    expect(() => libpqEnvironment(`${base}?${query}`)).toThrow(`LUNEDO_DATABASE_URL: ${message}`);
   });
 });
 
@@ -121,9 +121,9 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
   }
 
   it("backs up a database and restores it into a fresh one", async () => {
-    dir = await mkdtemp(path.join(tmpdir(), "pagehall-pg-backup-"));
+    dir = await mkdtemp(path.join(tmpdir(), "lunedo-pg-backup-"));
     const source = await database();
-    const sourcePool = createDatabasePool({ connectionString: source.url, applicationName: "pagehall-test" });
+    const sourcePool = createDatabasePool({ connectionString: source.url, applicationName: "lunedo-test" });
     await runMigrations(sourcePool, { logger });
     const scopeId = uuidv7();
     const secret = randomBytes(512 * 1024);
@@ -136,7 +136,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     await sourcePool.end();
 
     const backupKeys = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
-    const output = path.join(dir, "backup.phbak");
+    const output = path.join(dir, "backup.ldbak");
     await createBackup({
       output,
       stagingDir: path.join(path.dirname(output), "work"),
@@ -145,7 +145,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
       database: new PostgresArchiver({ databaseUrl: source.url }),
       filesDir: path.join(dir, "files"),
       config: {},
-      pagehallVersion: "test",
+      lunedoVersion: "test",
       schemaVersion: currentSchemaVersion(),
       logger,
     });
@@ -165,7 +165,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     });
     expect(await archiver.isEmpty()).toBe(false);
 
-    const targetPool = createDatabasePool({ connectionString: target.url, applicationName: "pagehall-test" });
+    const targetPool = createDatabasePool({ connectionString: target.url, applicationName: "lunedo-test" });
     try {
       const settings = await targetPool.query(
         "select scope_id, key, value, locked from setting_values where scope_id = $1",
@@ -208,7 +208,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
       logger,
     });
 
-    const before = createDatabasePool({ connectionString: target.url, applicationName: "pagehall-test" });
+    const before = createDatabasePool({ connectionString: target.url, applicationName: "lunedo-test" });
     try {
       await before.query("create table test_existing (id int primary key)");
       await before.query("insert into test_existing values (1)");
@@ -246,7 +246,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
           logger,
         }),
       ).rejects.toThrow(message);
-      const after = createDatabasePool({ connectionString: target.url, applicationName: "pagehall-test" });
+      const after = createDatabasePool({ connectionString: target.url, applicationName: "lunedo-test" });
       try {
         expect((await after.query("select id from test_existing")).rows).toEqual([{ id: 1 }]);
         const blobs = await after.query<{ content: Buffer }>("select content from test_blobs");

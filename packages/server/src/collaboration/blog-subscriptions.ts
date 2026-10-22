@@ -5,7 +5,7 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf } from "../spaces/common.js";
 
-export const BLOG_ANNOUNCEMENTS_CHANNEL = "pagehall_blog_announcements";
+export const BLOG_ANNOUNCEMENTS_CHANNEL = "lunedo_blog_announcements";
 export const ANNOUNCEMENT_BATCH = 200;
 const MAX_FOLLOWED_BLOGS = 500;
 

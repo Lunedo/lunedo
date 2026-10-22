@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Read the release notes
         run: |
-          docker run --rm "$IMAGE:\${TAG#v}" release-notes --json > pagehall-versions.json
+          docker run --rm "$IMAGE:\${TAG#v}" release-notes --json > lunedo-versions.json
 `;
 
 const isolated = `name: Image
@@ -45,7 +45,7 @@ jobs:
       contents: write
     steps:
       - run: |
-          docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --json > pagehall-versions.json
+          docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --json > lunedo-versions.json
 `;
 
 describe("release jobs", () => {

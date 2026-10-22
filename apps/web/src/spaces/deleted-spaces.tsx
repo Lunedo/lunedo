@@ -1,4 +1,4 @@
-import { Button, EmptyState, useToast } from "@pagehall/ui";
+import { Button, EmptyState, useToast } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";

@@ -16,14 +16,14 @@ postgres_image="postgres:16-alpine"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 docs="$root/docs/reverse-proxy.md"
 suffix="$$"
-network="pagehall-proxy-${suffix}"
+network="lunedo-proxy-${suffix}"
 subnet="172.30.$((suffix % 200 + 20)).0/24"
 proxy_address="172.30.$((suffix % 200 + 20)).10"
-postgres="pagehall-proxy-db-${suffix}"
-app="pagehall-proxy-app-${suffix}"
-proxy="pagehall-proxy-${suffix}"
+postgres="lunedo-proxy-db-${suffix}"
+app="lunedo-proxy-app-${suffix}"
+proxy="lunedo-proxy-${suffix}"
 password="proxy-${suffix}"
-work="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-proxy-${suffix}-XXXX")"
+work="$(mktemp -d "${TMPDIR:-/tmp}/lunedo-proxy-${suffix}-XXXX")"
 chmod 755 "$work"
 if command -v cygpath >/dev/null; then work="$(cygpath -m "$work")"; fi
 failures=0
@@ -44,7 +44,7 @@ block() {
 }
 
 psql_in() {
-  docker exec -i -e PGPASSWORD="$password" "$postgres" psql -v ON_ERROR_STOP=1 -qAt -U pagehall -d pagehall "$@"
+  docker exec -i -e PGPASSWORD="$password" "$postgres" psql -v ON_ERROR_STOP=1 -qAt -U lunedo -d lunedo "$@"
 }
 
 client() {
@@ -64,30 +64,30 @@ expect_status() {
   if [ "$status" = "$expected" ]; then echo "  ok: $description ($status)"; else fail "$description: expected $expected, got $status"; fi
 }
 
-echo "Starting PostgreSQL and Pagehall"
+echo "Starting PostgreSQL and Lunedo"
 docker network create --subnet "$subnet" "$network" >/dev/null
 docker run -d --name "$postgres" --network "$network" --tmpfs /var/lib/postgresql/data \
-  -e POSTGRES_USER=pagehall -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=pagehall \
+  -e POSTGRES_USER=lunedo -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=lunedo \
   "$postgres_image" -c fsync=off >/dev/null
 for _ in $(seq 1 60); do
-  docker exec "$postgres" pg_isready -h 127.0.0.1 -U pagehall -d pagehall >/dev/null 2>&1 && break
+  docker exec "$postgres" pg_isready -h 127.0.0.1 -U lunedo -d lunedo >/dev/null 2>&1 && break
   sleep 1
 done
-docker run -d --name "$app" --network "$network" --network-alias pagehall \
-  -e PAGEHALL_DATABASE_URL="postgres://pagehall:${password}@${postgres}:5432/pagehall" \
-  -e PAGEHALL_INSTANCE_URL=https://wiki.example.org -e PAGEHALL_TRUSTED_PROXIES="$proxy_address/32" \
-  -e PAGEHALL_UPDATE_CHECK=false \
-  -e PAGEHALL_OWNER_EMAIL=owner@example.org -e PAGEHALL_OWNER_NAME=Owner \
-  -e PAGEHALL_OWNER_PASSWORD="proxy owner ${suffix}" -e PAGEHALL_ORGANIZATION_NAME=Proxy \
+docker run -d --name "$app" --network "$network" --network-alias lunedo \
+  -e LUNEDO_DATABASE_URL="postgres://lunedo:${password}@${postgres}:5432/lunedo" \
+  -e LUNEDO_INSTANCE_URL=https://wiki.example.org -e LUNEDO_TRUSTED_PROXIES="$proxy_address/32" \
+  -e LUNEDO_UPDATE_CHECK=false \
+  -e LUNEDO_OWNER_EMAIL=owner@example.org -e LUNEDO_OWNER_NAME=Owner \
+  -e LUNEDO_OWNER_PASSWORD="proxy owner ${suffix}" -e LUNEDO_ORGANIZATION_NAME=Proxy \
   "$image" >/dev/null
 ready=""
 for _ in $(seq 1 120); do
-  if client -sf -o /dev/null --max-time 2 http://pagehall:3000/health/ready 2>/dev/null; then ready=1; break; fi
+  if client -sf -o /dev/null --max-time 2 http://lunedo:3000/health/ready 2>/dev/null; then ready=1; break; fi
   sleep 1
 done
 if [ -z "$ready" ]; then
   docker logs --tail 50 "$app" >&2
-  echo "Pagehall did not become ready" >&2
+  echo "Lunedo did not become ready" >&2
   exit 1
 fi
 psql_in -c "insert into portal_domains (domain, organization_id) select 'help.example.org', id from organizations limit 1"
@@ -107,12 +107,12 @@ start_caddy() {
 }
 
 start_nginx() {
-  block nginx | sed 's/server 127\.0\.0\.1:3000;/server pagehall:3000;/' > "$work/pagehall.conf"
+  block nginx | sed 's/server 127\.0\.0\.1:3000;/server lunedo:3000;/' > "$work/lunedo.conf"
   docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org \
-    -v "$work/pagehall.conf:/etc/nginx/conf.d/default.conf:ro" \
-    -v "$work/fullchain.pem:/etc/ssl/pagehall/fullchain.pem:ro" \
-    -v "$work/privkey.pem:/etc/ssl/pagehall/privkey.pem:ro" "$nginx_image" >/dev/null
+    -v "$work/lunedo.conf:/etc/nginx/conf.d/default.conf:ro" \
+    -v "$work/fullchain.pem:/etc/ssl/lunedo/fullchain.pem:ro" \
+    -v "$work/privkey.pem:/etc/ssl/lunedo/privkey.pem:ro" "$nginx_image" >/dev/null
 }
 
 start_traefik() {
@@ -162,12 +162,12 @@ check_proxy() {
   esac
   local upload
   upload="$(client -sk -o /dev/null -w '%{http_code} %{content_type}' --max-time 120 -X POST \
-    -H "Content-Type: application/octet-stream" -H "Origin: https://wiki.example.org" -H "x-pagehall-request: 1" \
+    -H "Content-Type: application/octet-stream" -H "Origin: https://wiki.example.org" -H "x-lunedo-request: 1" \
     --data-binary @/work/upload.bin \
     "https://wiki.example.org/api/v1/pages/0192f0e0-0000-7000-8000-000000000001/attachments?name=large.bin" || true)"
   case "$upload" in
-    "401 application/problem+json"* | "403 application/problem+json"*) echo "  ok: a 60 MB upload reaches Pagehall ($upload)" ;;
-    *) fail "a 60 MB upload did not reach Pagehall: $upload" ;;
+    "401 application/problem+json"* | "403 application/problem+json"*) echo "  ok: a 60 MB upload reaches Lunedo ($upload)" ;;
+    *) fail "a 60 MB upload did not reach Lunedo: $upload" ;;
   esac
   expect_status "the certificate check allows a portal domain" 200 "https://wiki.example.org/tls/ask?domain=help.example.org"
   expect_status "the certificate check refuses other domains" 404 "https://wiki.example.org/tls/ask?domain=other.example.org"

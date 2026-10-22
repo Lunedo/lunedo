@@ -13,7 +13,7 @@ const baseUrl = testDatabaseBaseUrl();
 const migrations = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 function foldersBefore(tag: string): string {
-  const folder = mkdtempSync(path.join(tmpdir(), "pagehall-migrations-"));
+  const folder = mkdtempSync(path.join(tmpdir(), "lunedo-migrations-"));
   cpSync(migrations, folder, { recursive: true });
   const journalFile = path.join(folder, "meta", "_journal.json");
   const journal = JSON.parse(readFileSync(journalFile, "utf8")) as { entries: { tag: string }[] };
@@ -40,7 +40,7 @@ describe.skipIf(!baseUrl)("knowledge base data migrations", () => {
 
   async function migratedBefore(tag: string): Promise<DatabasePool> {
     database = await createTemporaryDatabase(baseUrl as string);
-    pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: database.url, applicationName: "lunedo-test" });
     folder = foldersBefore(tag);
     await runMigrations(pool, { logger: createLogger({ service: "test", level: "silent" }), folder });
     return pool;

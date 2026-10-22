@@ -39,28 +39,28 @@ describe("the tabs block", () => {
 
   it("renders a tab list with the first tab selected and the other panels hidden", () => {
     const html = renderHtml(document);
-    expect(html).toContain('<div class="ph-tabs-list" role="tablist">');
+    expect(html).toContain('<div class="ld-tabs-list" role="tablist">');
     expect(html).toContain(
-      '<button type="button" role="tab" class="ph-tab-button" data-index="0" aria-selected="true" tabindex="0">Windows</button>',
+      '<button type="button" role="tab" class="ld-tab-button" data-index="0" aria-selected="true" tabindex="0">Windows</button>',
     );
     expect(html).toContain(
-      '<button type="button" role="tab" class="ph-tab-button" data-index="1" aria-selected="false" tabindex="-1">macOS</button>',
+      '<button type="button" role="tab" class="ld-tab-button" data-index="1" aria-selected="false" tabindex="-1">macOS</button>',
     );
-    expect(html).toContain('<div class="ph-tab-panel" role="tabpanel" tabindex="0" data-index="0">');
-    expect(html).toContain('<div class="ph-tab-panel" role="tabpanel" tabindex="0" data-index="1" hidden>');
-    expect(html).toContain('class="ph-tab-toggle" data-index="0" aria-expanded="true"');
-    expect(html).toContain('class="ph-tab-toggle" data-index="1" aria-expanded="false"');
+    expect(html).toContain('<div class="ld-tab-panel" role="tabpanel" tabindex="0" data-index="0">');
+    expect(html).toContain('<div class="ld-tab-panel" role="tabpanel" tabindex="0" data-index="1" hidden>');
+    expect(html).toContain('class="ld-tab-toggle" data-index="0" aria-expanded="true"');
+    expect(html).toContain('class="ld-tab-toggle" data-index="1" aria-expanded="false"');
   });
 
   it("prints all tabs one after another with their names as headings", () => {
     const html = renderHtml(document, { target: "print" });
     expect(html).not.toContain("hidden");
     expect(html).not.toContain("tablist");
-    expect(html.indexOf('<h4 class="ph-tab-title">Windows</h4>')).toBeLessThan(
+    expect(html.indexOf('<h4 class="ld-tab-title">Windows</h4>')).toBeLessThan(
       html.indexOf("Open the settings."),
     );
     expect(html.indexOf("Open the settings.")).toBeLessThan(
-      html.indexOf('<h4 class="ph-tab-title">macOS</h4>'),
+      html.indexOf('<h4 class="ld-tab-title">macOS</h4>'),
     );
   });
 
@@ -126,7 +126,7 @@ describe("the whiteboard block", () => {
 
   it("shows the preview and title and opens the whiteboard on click", () => {
     const html = renderHtml(document, visible);
-    expect(html).toContain(`<a href="/spaces/IT/whiteboards/${BOARD}" class="ph-whiteboard-link">`);
+    expect(html).toContain(`<a href="/spaces/IT/whiteboards/${BOARD}" class="ld-whiteboard-link">`);
     expect(html).toContain(`<img src="/api/v1/whiteboards/${BOARD}/preview" alt="" loading="lazy">`);
     expect(html).toContain("<figcaption>Network 2027</figcaption>");
   });
@@ -244,10 +244,10 @@ describe("numbered headings", () => {
 
   it("numbers headings in view, print, Word and Markdown when the page asks for it", () => {
     const html = renderHtml(document, { numberHeadings: true });
-    expect(html).toContain('<h1 id="overview"><span class="ph-heading-number">1 </span>Overview</h1>');
-    expect(html).toContain('<h2 id="scope"><span class="ph-heading-number">1.1 </span>Scope</h2>');
-    expect(html).toContain('<h2 id="cause"><span class="ph-heading-number">1.2 </span>Cause</h2>');
-    expect(html).toContain('<span class="ph-heading-number">2 </span>Plan');
+    expect(html).toContain('<h1 id="overview"><span class="ld-heading-number">1 </span>Overview</h1>');
+    expect(html).toContain('<h2 id="scope"><span class="ld-heading-number">1.1 </span>Scope</h2>');
+    expect(html).toContain('<h2 id="cause"><span class="ld-heading-number">1.2 </span>Cause</h2>');
+    expect(html).toContain('<span class="ld-heading-number">2 </span>Plan');
     expect(renderHtml(document, { numberHeadings: true, target: "print" })).toContain("1.1 </span>Scope");
     const word = renderWord(document, { numberHeadings: true });
     expect(word[0]).toMatchObject({ type: "heading", content: [{ text: "1 " }, { text: "Overview" }] });
@@ -256,7 +256,7 @@ describe("numbered headings", () => {
   });
 
   it("leaves headings unnumbered by default", () => {
-    expect(renderHtml(document)).not.toContain("ph-heading-number");
+    expect(renderHtml(document)).not.toContain("ld-heading-number");
     expect(renderMarkdown(document)).toContain("## Scope");
   });
 });

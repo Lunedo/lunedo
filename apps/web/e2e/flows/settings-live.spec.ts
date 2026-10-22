@@ -75,7 +75,7 @@ test("applies appearance changes to the other open sessions of the same person",
     await expect
       .poll(() =>
         second.page.evaluate(() =>
-          getComputedStyle(document.documentElement).getPropertyValue("--ph-text-scale").trim(),
+          getComputedStyle(document.documentElement).getPropertyValue("--ld-text-scale").trim(),
         ),
       )
       .toBe("1.125");

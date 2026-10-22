@@ -1,4 +1,4 @@
-import { contentColors, textAlignments } from "@pagehall/editor-schema";
+import { contentColors, textAlignments } from "@lunedo/editor-schema";
 import type { Editor } from "@tiptap/core";
 import type { TFunction } from "i18next";
 import {

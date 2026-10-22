@@ -34,7 +34,7 @@ function fakeFileSystem(root: string, uid: number, tree: Tree): OwnerFileSystem 
   };
 }
 
-const workspace = path.join(path.sep, "work", "pagehall");
+const workspace = path.join(path.sep, "work", "lunedo");
 
 describe("foreignEntries", () => {
   it("finds nothing when everything belongs to the runner user", () => {
@@ -79,9 +79,9 @@ describe("foreignEntries", () => {
 
 describe("foreignReport", () => {
   it("names each entry with its owner and says what to do", () => {
-    const report = foreignReport([{ path: "/work/pagehall/.cache", uid: 0 }], 1001);
+    const report = foreignReport([{ path: "/work/lunedo/.cache", uid: 0 }], 1001);
     assert.match(report, /^One entry belongs to another user than 1001/);
     assert.match(report, /Run containers with the runner's UID and GID/);
-    assert.match(report, /\/work\/pagehall\/\.cache \(UID 0\)/);
+    assert.match(report, /\/work\/lunedo\/\.cache \(UID 0\)/);
   });
 });

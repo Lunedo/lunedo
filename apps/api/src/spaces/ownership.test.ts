@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -34,7 +34,7 @@ describe.skipIf(!databaseBaseUrl)("ownership and page status through the API", (
 
   async function person() {
     counter += 1;
-    const email = `owner${counter}@pagehall.test`;
+    const email = `owner${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const id = (await createAccount(test, email, password)).id;
     return { id, client: await signedInClient(test, email, password) };

@@ -51,7 +51,7 @@ describe("Markdown front matter", () => {
         ["owner", "Team Blue"],
         ["priority", "3"],
       ],
-      pagehall: null,
+      lunedo: null,
     });
   });
 

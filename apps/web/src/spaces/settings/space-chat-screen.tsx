@@ -1,4 +1,4 @@
-import { spaceChatEvents } from "@pagehall/shared";
+import { spaceChatEvents } from "@lunedo/shared";
 import { MessagesSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ChatChannelsPanel } from "../../chat/chat-channels-panel.js";

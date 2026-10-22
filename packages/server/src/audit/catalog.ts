@@ -1,4 +1,4 @@
-import { chatChannelKinds, smtpOAuth2Providers } from "@pagehall/shared";
+import { chatChannelKinds, smtpOAuth2Providers } from "@lunedo/shared";
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 import { exportFormats } from "../exports/options.js";
@@ -1910,7 +1910,7 @@ export const auditCatalog = {
       spaceId: z.uuid(),
       created: z.number().int().nonnegative(),
       updated: z.number().int().nonnegative(),
-      keptPagehall: z.number().int().nonnegative(),
+      keptLunedo: z.number().int().nonnegative(),
       tookSource: z.number().int().nonnegative(),
       keptBoth: z.number().int().nonnegative(),
       trashed: z.number().int().nonnegative(),
@@ -1926,7 +1926,7 @@ export const auditCatalog = {
     actor: ["account"],
     target: "import",
     fields: z.object({
-      decision: z.enum(["pagehall", "source", "both", "trash", "keep", "undecided"]),
+      decision: z.enum(["lunedo", "source", "both", "trash", "keep", "undecided"]),
       conflicts: z.number().int().nonnegative(),
       deletions: z.number().int().nonnegative(),
       bulk: z.boolean(),

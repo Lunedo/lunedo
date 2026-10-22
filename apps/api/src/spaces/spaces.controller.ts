@@ -1,5 +1,5 @@
+import { isValidSpaceKey, normalizeSpaceKey, type SpaceWithRole } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
-import { isValidSpaceKey, normalizeSpaceKey, type SpaceWithRole } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

@@ -1,6 +1,6 @@
+import { createLogger, Metrics, Secret } from "@lunedo/server";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Test } from "@nestjs/testing";
-import { createLogger, Metrics, Secret } from "@pagehall/server";
 import { configureApp, createFastifyAdapter } from "../app.js";
 import { AppModule } from "../app.module.js";
 import type { ApiContext } from "../context.js";

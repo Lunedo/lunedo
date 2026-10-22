@@ -1,5 +1,5 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { initialsOf, Tooltip } from "@pagehall/ui";
+import { initialsOf, Tooltip } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from "@tiptap/y-tiptap";
 import { type CSSProperties, type RefObject, useEffect, useState } from "react";
@@ -31,12 +31,12 @@ export function cursorColor(accountId: string): string {
 
 export function selectionAttributes(user: Record<string, unknown>) {
   const color = presenceColors.includes(user.color as PresenceColor) ? String(user.color) : "petrol";
-  return { class: "ph-remote-selection", "data-color": color };
+  return { class: "ld-remote-selection", "data-color": color };
 }
 
 export function hiddenCaret(): HTMLElement {
   const element = document.createElement("span");
-  element.className = "ph-remote-caret-anchor";
+  element.className = "ld-remote-caret-anchor";
   return element;
 }
 
@@ -108,7 +108,7 @@ export function AvatarStack({
                     style: { "--presence-color": colorFor(user) } as CSSProperties,
                   }
                 : { "data-color": user.color })}
-              className={`ph-presence-avatar${colorFor ? " ph-presence-avatar-cursor" : ""} inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
+              className={`ld-presence-avatar${colorFor ? " ld-presence-avatar-cursor" : ""} inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
             >
               <span aria-hidden="true">{initialsOf(user.name)}</span>
               <span className="sr-only">{user.name}</span>
@@ -200,10 +200,10 @@ export function RemoteCarets({
         <div
           key={caret.clientId}
           data-color={caret.user.color}
-          className="ph-remote-caret"
+          className="ld-remote-caret"
           style={{ transform: `translate(${caret.left}px, ${caret.top}px)`, height: `${caret.height}px` }}
         >
-          <span className="ph-remote-caret-label">{caret.user.name}</span>
+          <span className="ld-remote-caret-label">{caret.user.name}</span>
         </div>
       ))}
     </div>

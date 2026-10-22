@@ -54,13 +54,13 @@ describe("content by label", () => {
         ],
       },
     );
-    expect(html).not.toContain("ph-listing-meta");
+    expect(html).not.toContain("ld-listing-meta");
     expect(html).toContain('data-kind="blogPost"');
   });
 
   it("leave a placeholder for the web client", () => {
     expect(renderHtml(document)).toContain(
-      'class="ph-content-by-label" aria-label="Guides" data-labels="[&quot;how-to&quot;]" data-kinds="[&quot;page&quot;,&quot;blogPost&quot;]"',
+      'class="ld-content-by-label" aria-label="Guides" data-labels="[&quot;how-to&quot;]" data-kinds="[&quot;page&quot;,&quot;blogPost&quot;]"',
     );
   });
 });

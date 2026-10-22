@@ -1,4 +1,4 @@
-import type { CalloutVariant, ContentColor, DocumentJson, NodeJson } from "@pagehall/editor-schema";
+import type { CalloutVariant, ContentColor, DocumentJson, NodeJson } from "@lunedo/editor-schema";
 
 export type Inline = string | NodeJson;
 export type Cell = Inline | Inline[];

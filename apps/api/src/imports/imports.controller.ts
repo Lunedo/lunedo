@@ -1,5 +1,11 @@
 import { Readable } from "node:stream";
 import {
+  CONFLUENCE_LINK_MAX_LENGTH,
+  type ConfluenceSpaceSummary,
+  type ConfluenceTree,
+  MAX_USER_LIST_BYTES,
+} from "@lunedo/server";
+import {
   Body,
   Controller,
   Delete,
@@ -13,12 +19,6 @@ import {
   Req,
   Res,
 } from "@nestjs/common";
-import {
-  CONFLUENCE_LINK_MAX_LENGTH,
-  type ConfluenceSpaceSummary,
-  type ConfluenceTree,
-  MAX_USER_LIST_BYTES,
-} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission } from "../access/route-access.js";
@@ -146,7 +146,7 @@ const exampleChange = {
   permission: null,
   held: false,
   heldFor: null,
-  decisions: ["pagehall", "source", "both"],
+  decisions: ["lunedo", "source", "both"],
   decision: null,
   decidedBy: null,
   decidedAt: null,
@@ -701,7 +701,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Connect an import to Confluence",
     description:
-      "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Pagehall tests the connection at once, stores the token encrypted, uses it only for this import and the imports of further spaces chosen with it, and deletes it when the last of them is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.",
+      "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Lunedo tests the connection at once, stores the token encrypted, uses it only for this import and the imports of further spaces chosen with it, and deletes it when the last of them is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.",
     tags: [TAG],
     params: importParams,
     body: connectionSchema,
@@ -743,7 +743,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Choose the Confluence spaces to import",
     description:
-      "Chooses one or more spaces of the connection of an import draft. Each space is imported on its own, into its own new space, with its own check, dry run, report and re-import. The import keeps its space when it is chosen; Pagehall creates a draft for every other space that shares the connection and its token, and removes the drafts of spaces no longer chosen. Imports sharing a connection read and run one after another. The shared token is deleted when the last of them has ended or been removed. A re-import reads only the space it came from.",
+      "Chooses one or more spaces of the connection of an import draft. Each space is imported on its own, into its own new space, with its own check, dry run, report and re-import. The import keeps its space when it is chosen; Lunedo creates a draft for every other space that shares the connection and its token, and removes the drafts of spaces no longer chosen. Imports sharing a connection read and run one after another. The shared token is deleted when the last of them has ended or been removed. A re-import reads only the space it came from.",
     tags: [TAG],
     params: importParams,
     body: spaceSelectionSchema,
@@ -830,7 +830,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Choose how people are recognized",
     description:
-      "Sets the user source of an import draft. With `token`, Pagehall checks the read-only Atlassian API token against the given site at once, stores it encrypted, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted. With `skip`, every author becomes a placeholder. A user list is sent to `people-source/user-list`.",
+      "Sets the user source of an import draft. With `token`, Lunedo checks the read-only Atlassian API token against the given site at once, stores it encrypted, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted. With `skip`, every author becomes a placeholder. A user list is sent to `people-source/user-list`.",
     tags: [TAG],
     params: importParams,
     body: peopleSourceSchema,
@@ -1223,11 +1223,11 @@ export class ImportsController {
   @ApiRoute({
     summary: "Decide changes of a re-import",
     description:
-      "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then. While a conflict waits for a restriction applied at the source, only `pagehall` is accepted for it.",
+      "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then. While a conflict waits for a restriction applied at the source, only `lunedo` is accepted for it.",
     tags: [TAG],
     params: importParams,
     body: decisionsSchema,
-    bodyExample: { ids: [exampleChange.id], decision: "pagehall" },
+    bodyExample: { ids: [exampleChange.id], decision: "lunedo" },
     response: {
       description: "How many changes were decided.",
       schema: decidedSchema,
@@ -1274,7 +1274,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Compare a conflict",
     description:
-      "Compares the current content of a page or space template in Pagehall with the content of the new export, converted as it would be applied, without applying anything. The Pagehall side is the draft for people who may edit the page, otherwise its latest version. The source of a page restricted further at the source is shown only to people who keep access once the restriction is applied.",
+      "Compares the current content of a page or space template in Lunedo with the content of the new export, converted as it would be applied, without applying anything. The Lunedo side is the draft for people who may edit the page, otherwise its latest version. The source of a page restricted further at the source is shown only to people who keep access once the restriction is applied.",
     tags: [TAG],
     params: changeParams,
     response: {
@@ -1282,9 +1282,9 @@ export class ImportsController {
       schema: changeComparisonSchema,
       example: {
         kind: "page",
-        pagehall: { title: "Release plan", version: null },
+        lunedo: { title: "Release plan", version: null },
         source: { title: "Release plan", version: 7 },
-        decisions: ["pagehall", "source", "both"],
+        decisions: ["lunedo", "source", "both"],
         decision: null,
         diff: { title: null, blocks: [], changes: 0 },
         before: { type: "doc", content: [] },
@@ -1338,7 +1338,7 @@ export class ImportsController {
         page: null,
       },
     },
-    errors: ["changeNotFound", "changeApplied", "holderNotInPagehall", "reimportNotInReview"],
+    errors: ["changeNotFound", "changeApplied", "holderNotInLunedo", "reimportNotInReview"],
   })
   async previewDifference(
     @Param("importId") importId: string,
@@ -1359,7 +1359,7 @@ export class ImportsController {
     status: 204,
     errors: [
       "changeNotFound",
-      "holderNotInPagehall",
+      "holderNotInLunedo",
       "differenceResolved",
       "reimportNotInReview",
       "lastSpaceAdmin",

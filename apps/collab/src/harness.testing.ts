@@ -3,13 +3,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from "@hocuspocus/provider";
 import type { Server } from "@hocuspocus/server";
-import { createServerRuntime, Metrics, SESSION_COOKIE, type ServerRuntime } from "@pagehall/server";
-import { createMigratedDatabase, spaceFixtures, type TemporaryDatabase } from "@pagehall/server/testing";
+import { createServerRuntime, Metrics, SESSION_COOKIE, type ServerRuntime } from "@lunedo/server";
+import { createMigratedDatabase, spaceFixtures, type TemporaryDatabase } from "@lunedo/server/testing";
 import WebSocket from "ws";
 import * as Y from "yjs";
 import { type CollabContext, createCollabServer } from "./server.js";
 
-export const ORIGIN = "https://pagehall.test";
+export const ORIGIN = "https://lunedo.test";
 
 export async function waitFor(check: () => boolean | Promise<boolean>, timeoutMs = 10_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -45,15 +45,15 @@ function nextClientAddress(): string {
 }
 
 export async function createCluster(baseUrl: string, runtimes = 2): Promise<Cluster> {
-  const database = await createMigratedDatabase(baseUrl, "pagehall_collab_test");
-  const dataDir = mkdtempSync(path.join(tmpdir(), "pagehall-collab-"));
+  const database = await createMigratedDatabase(baseUrl, "lunedo_collab_test");
+  const dataDir = mkdtempSync(path.join(tmpdir(), "lunedo-collab-"));
   const env = {
-    PAGEHALL_DATABASE_URL: database.url,
-    PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
-    PAGEHALL_FILES_DIR: dataDir,
-    PAGEHALL_LOG_LEVEL: "silent",
-    PAGEHALL_DATABASE_POOL_SIZE: "6",
-    PAGEHALL_INSTANCE_URL: ORIGIN,
+    LUNEDO_DATABASE_URL: database.url,
+    LUNEDO_SECRETS_DIR: path.join(dataDir, "secrets"),
+    LUNEDO_FILES_DIR: dataDir,
+    LUNEDO_LOG_LEVEL: "silent",
+    LUNEDO_DATABASE_POOL_SIZE: "6",
+    LUNEDO_INSTANCE_URL: ORIGIN,
   };
   const started: ServerRuntime[] = [];
   for (let index = 0; index < runtimes; index++) {

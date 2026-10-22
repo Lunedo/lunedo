@@ -1,6 +1,6 @@
 import { chromium } from "@playwright/test";
 
-const base = process.env.PAGEHALL_E2E_AUTHENTIK_URL || "http://authentik.localhost:9000";
+const base = process.env.LUNEDO_E2E_AUTHENTIK_URL || "http://authentik.localhost:9000";
 const deadline = Date.now() + 5 * 60_000;
 const log = (line: string) => process.stdout.write(`${line}\n`);
 

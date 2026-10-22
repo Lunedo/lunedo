@@ -112,19 +112,19 @@ function taskMeta(node: ValidNode, renderer: HtmlRenderer): string {
     assignee
       ? element(
           "span",
-          { class: "ph-task-assignee", "data-account-id": assignee },
+          { class: "ld-task-assignee", "data-account-id": assignee },
           renderer.escape(`@${renderer.mentionName(assignee)}`),
         )
       : "",
     dueDate
       ? element(
           "time",
-          { class: "ph-task-due", datetime: dueDate },
+          { class: "ld-task-due", datetime: dueDate },
           renderer.escape(renderer.formatDate(dueDate)),
         )
       : "",
   ].join("");
-  return parts ? element("span", { class: "ph-task-meta" }, parts) : "";
+  return parts ? element("span", { class: "ld-task-meta" }, parts) : "";
 }
 
 function taskItem(node: ValidNode, renderer: WordRenderer): WordListItem {
@@ -152,7 +152,7 @@ export const tasksModule = defineModule({
     {
       name: "taskList",
       spec: { content: "taskItem+", group: "block" },
-      html: (node, renderer) => element("ul", { class: "ph-task-list" }, renderer.children(node)),
+      html: (node, renderer) => element("ul", { class: "ld-task-list" }, renderer.children(node)),
       word: (node, renderer) => taskList(node.content.map((item) => taskItem(item, renderer))),
       markdown: (node, renderer) => node.content.map((item) => taskMarkdown(item, renderer)).join("\n"),
     },
@@ -174,7 +174,7 @@ export const tasksModule = defineModule({
         return element(
           "li",
           {
-            class: "ph-task-item",
+            class: "ld-task-item",
             "data-checked": done ? "true" : "false",
             "data-task-id": attrOf<string | null>(node, "id"),
             "data-assignee": attrOf<string | null>(node, "assignee"),

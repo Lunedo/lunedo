@@ -1,4 +1,4 @@
-import type { ChatEvent } from "@pagehall/shared";
+import type { ChatEvent } from "@lunedo/shared";
 import type { Language } from "../mail/templates.js";
 
 export interface ChatTextInput {
@@ -79,7 +79,7 @@ function english(event: ChatEvent | "test", input: ChatTextInput): Omit<ChatText
       return { heading: `Announcement from ${input.organizationName}`, detail: null };
     case "test":
       return {
-        heading: "Test message from Pagehall",
+        heading: "Test message from Lunedo",
         detail: `This channel is connected as “${input.channelName}”. Messages you chose will appear here.`,
       };
   }
@@ -121,7 +121,7 @@ function german(event: ChatEvent | "test", input: ChatTextInput): Omit<ChatTexts
       return { heading: `Ankündigung von ${input.organizationName}`, detail: null };
     case "test":
       return {
-        heading: "Testnachricht von Pagehall",
+        heading: "Testnachricht von Lunedo",
         detail: `Dieser Kanal ist als „${input.channelName}“ verbunden. Die gewählten Nachrichten erscheinen hier.`,
       };
   }
@@ -129,5 +129,5 @@ function german(event: ChatEvent | "test", input: ChatTextInput): Omit<ChatTexts
 
 export function chatTexts(event: ChatEvent | "test", language: Language, input: ChatTextInput): ChatTexts {
   const texts = language === "de" ? german(event, input) : english(event, input);
-  return { ...texts, linkLabel: language === "de" ? "In Pagehall öffnen" : "Open in Pagehall" };
+  return { ...texts, linkLabel: language === "de" ? "In Lunedo öffnen" : "Open in Lunedo" };
 }

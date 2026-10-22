@@ -42,7 +42,7 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
   const finished: JobFinishedEvent[] = [];
 
   beforeAll(async () => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     worker = new PgBossQueue({
       connectionString: databaseUrl,
@@ -236,7 +236,7 @@ describe.skipIf(!databaseUrl)("graceful shutdown", () => {
   let database: Database;
 
   beforeAll(() => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
   });
 

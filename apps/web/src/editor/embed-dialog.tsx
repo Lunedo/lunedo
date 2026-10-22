@@ -1,5 +1,5 @@
-import { isEmbeddableUrl, MAX_EMBED_TITLE, resolveEmbed } from "@pagehall/editor-schema";
-import { Button, Dialog, Field, focusFirstInvalidSoon, Input } from "@pagehall/ui";
+import { isEmbeddableUrl, MAX_EMBED_TITLE, resolveEmbed } from "@lunedo/editor-schema";
+import { Button, Dialog, Field, focusFirstInvalidSoon, Input } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

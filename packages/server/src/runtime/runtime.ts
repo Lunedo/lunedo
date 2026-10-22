@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { HealthCheck } from "@pagehall/shared";
+import type { HealthCheck } from "@lunedo/shared";
 import { instanceSettings } from "../accounts/instance-settings.js";
 import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { auditRetentionSetting } from "../audit/retention.js";
@@ -123,7 +123,7 @@ export function resolveGeneratedSecrets(config: ServerConfig): {
   try {
     return { metricsToken, backupKeys: parseKeyRing(backupKeys.reveal()) };
   } catch (error) {
-    throw new KeyRingError(`PAGEHALL_BACKUP_KEY: ${(error as Error).message}`);
+    throw new KeyRingError(`LUNEDO_BACKUP_KEY: ${(error as Error).message}`);
   }
 }
 
@@ -139,7 +139,7 @@ export async function availableMasterKeys(config: ServerConfig): Promise<KeyRing
 export function startupWarnings(config: Pick<ServerConfig, "insecureIdentityProviders">): string[] {
   return config.insecureIdentityProviders
     ? [
-        "PAGEHALL_INSECURE_IDENTITY_PROVIDERS is set: identity providers may use plain HTTP and any host. Use it only for local tests.",
+        "LUNEDO_INSECURE_IDENTITY_PROVIDERS is set: identity providers may use plain HTTP and any host. Use it only for local tests.",
       ]
     : [];
 }
@@ -168,7 +168,7 @@ export async function createServerRuntime(options: {
   const connectionString = config.database.url.reveal();
   const pool = createDatabasePool({
     connectionString,
-    applicationName: `pagehall-${role}`,
+    applicationName: `lunedo-${role}`,
     max: config.database.poolSize,
   });
   pool.on("error", (error) => logger.warn({ err: error }, "Idle database connection failed"));
@@ -200,7 +200,7 @@ export async function createServerRuntime(options: {
             masterKeys: () => availableMasterKeys(config),
             workDir: config.paths.work,
             configuration: configurationForBackup(options.env),
-            pagehallVersion: options.env.PAGEHALL_VERSION ?? "dev",
+            lunedoVersion: options.env.LUNEDO_VERSION ?? "dev",
             schemaVersion: knownSchemaVersions()[applied - 1] ?? currentSchemaVersion(),
             logger,
           },
@@ -310,7 +310,7 @@ export async function createServerRuntime(options: {
         workDir: config.paths.work,
         secretsDir: config.paths.secrets,
         configuration: configurationForBackup(options.env),
-        pagehallVersion: options.env.PAGEHALL_VERSION ?? "dev",
+        lunedoVersion: options.env.LUNEDO_VERSION ?? "dev",
         beforeUpdateEnvironment: config.backupBeforeUpdate,
       },
     });

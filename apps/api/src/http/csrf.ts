@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 
-export const CSRF_HEADER = "x-pagehall-request";
+export const CSRF_HEADER = "x-lunedo-request";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

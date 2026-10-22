@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "../logging/logger.js";
 import { NotificationListener, notify } from "./notifications.js";
 
-const url = process.env.PAGEHALL_TEST_DATABASE_URL;
+const url = process.env.LUNEDO_TEST_DATABASE_URL;
 
 describe.skipIf(!url)("notification listener", () => {
   const listeners: NotificationListener[] = [];

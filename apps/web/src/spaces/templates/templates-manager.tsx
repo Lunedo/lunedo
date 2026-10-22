@@ -15,7 +15,7 @@ import {
   Table,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { Download, FileUp, LayoutTemplate, Pencil, Plus, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";

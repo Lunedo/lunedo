@@ -102,7 +102,7 @@ async function download(url: string, body: unknown): Promise<void> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  downloadBlob(fileNameOf(response, "templates.pagehall-template.json"), await response.blob());
+  downloadBlob(fileNameOf(response, "templates.lunedo-template.json"), await response.blob());
 }
 
 export function templateLevelApi(base: string, options: { builtIn?: boolean } = {}): TemplateLevelApi {

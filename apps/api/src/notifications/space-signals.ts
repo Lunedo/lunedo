@@ -1,4 +1,4 @@
-import type { NotificationHub, SpaceChangeSignal } from "@pagehall/server";
+import type { NotificationHub, SpaceChangeSignal } from "@lunedo/server";
 
 export const SPACE_AUDIENCE_MS = 10_000;
 export const COALESCE_MS = 1500;

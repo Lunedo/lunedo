@@ -1,4 +1,4 @@
-import { contentLanguages } from "@pagehall/shared";
+import { contentLanguages } from "@lunedo/shared";
 import { z } from "zod";
 
 export const searchTypes = [

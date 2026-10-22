@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyState, List, ListRow, Notice, Section, Skeleton } from "@pagehall/ui";
+import { Badge, Button, EmptyState, List, ListRow, Notice, Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";

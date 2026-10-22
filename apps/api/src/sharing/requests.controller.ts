@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
+import { ACCESS_REQUEST_MESSAGE_MAX_LENGTH } from "@lunedo/server";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
-import { ACCESS_REQUEST_MESSAGE_MAX_LENGTH } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

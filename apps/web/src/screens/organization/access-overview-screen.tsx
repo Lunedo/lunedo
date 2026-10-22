@@ -1,4 +1,4 @@
-import { Badge, EmptyState, Field, Skeleton } from "@pagehall/ui";
+import { Badge, EmptyState, Field, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { Download, Lock, UserSearch } from "lucide-react";

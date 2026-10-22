@@ -1,4 +1,4 @@
-import { Button, Notice, Spinner } from "@pagehall/ui";
+import { Button, Notice, Spinner } from "@lunedo/ui";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";

@@ -9,7 +9,7 @@ import {
   smtpPresetOf,
   smtpPresets,
   smtpSecurityModes,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import {
   Button,
   ErrorState,
@@ -19,7 +19,7 @@ import {
   PasswordInput,
   SegmentedControl,
   Select,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { Send } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Controller } from "react-hook-form";

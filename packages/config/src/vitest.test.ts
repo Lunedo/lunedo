@@ -10,7 +10,7 @@ describe("createVitestConfig", () => {
   it("uses the workers that the local budget gives each package", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("CI_PARALLELISM", "");
-    vi.stubEnv("PAGEHALL_TEST_WORKERS", "3");
+    vi.stubEnv("LUNEDO_TEST_WORKERS", "3");
     expect(createVitestConfig().test?.maxWorkers).toBe(3);
   });
 });

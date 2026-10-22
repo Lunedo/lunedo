@@ -105,7 +105,7 @@ export const templatesModule = defineModule({
       },
       html: (node, renderer) =>
         renderer.context.showPlaceholders
-          ? element("span", { class: "ph-placeholder" }, renderer.escape(attrOf<string>(node, "text")))
+          ? element("span", { class: "ld-placeholder" }, renderer.escape(attrOf<string>(node, "text")))
           : "",
       word: (node, renderer) =>
         renderer.context.showPlaceholders
@@ -121,7 +121,7 @@ export const templatesModule = defineModule({
       html: (node, renderer) =>
         element(
           "span",
-          { class: "ph-template-field", "data-field": attrOf<string>(node, "field") },
+          { class: "ld-template-field", "data-field": attrOf<string>(node, "field") },
           renderer.escape(`{${attrOf<string>(node, "field")}}`),
         ),
       word: (node) => [wordText(`{${attrOf<string>(node, "field")}}`, { code: true })],
@@ -154,12 +154,12 @@ export const templateButtonModule = defineModule({
         return element(
           "div",
           {
-            class: "ph-template-button",
+            class: "ld-template-button",
             "data-template-id": attrOf<string>(node, "templateId"),
             "data-label": attrOf<string>(node, "label") || null,
             "data-title": attrOf<string>(node, "title") || null,
           },
-          element("span", { class: "ph-template-button-label" }, renderer.escape(label)),
+          element("span", { class: "ld-template-button-label" }, renderer.escape(label)),
         );
       },
       word: (node, renderer) => [

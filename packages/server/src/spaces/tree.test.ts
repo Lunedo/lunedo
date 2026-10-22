@@ -1,5 +1,5 @@
-import { validateDocument } from "@pagehall/editor-schema";
-import { applyDocument, documentFromYDoc } from "@pagehall/editor-schema/yjs";
+import { validateDocument } from "@lunedo/editor-schema";
+import { applyDocument, documentFromYDoc } from "@lunedo/editor-schema/yjs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as Y from "yjs";

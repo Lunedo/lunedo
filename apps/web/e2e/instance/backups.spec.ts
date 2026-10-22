@@ -21,7 +21,7 @@ test("configures a local target and a schedule, backs up now and test-restores t
   await directory.fill(target);
   await page.getByRole("button", { name: "Test connection" }).click();
   await expect(
-    page.getByText("Pagehall wrote, read, listed and deleted a test object. The target works."),
+    page.getByText("Lunedo wrote, read, listed and deleted a test object. The target works."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Save target" }).click();
   await expect(page.getByRole("button", { name: "Save target" })).toHaveCount(0);
@@ -38,7 +38,7 @@ test("configures a local target and a schedule, backs up now and test-restores t
     page.getByText("The backup has started. It appears in the list when it is done."),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Manual backups" })).toBeVisible({ timeout: 120_000 });
-  const actions = page.getByRole("button", { name: /^Actions for pagehall-backup-.*-manual-/ }).first();
+  const actions = page.getByRole("button", { name: /^Actions for lunedo-backup-.*-manual-/ }).first();
   await expect(actions).toBeVisible();
 
   await actions.click();

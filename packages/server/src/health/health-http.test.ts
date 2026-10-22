@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { HealthCheck } from "@pagehall/shared";
+import type { HealthCheck } from "@lunedo/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { createLogger } from "../logging/logger.js";
 import { isAuthorizedMetricsRequest, Metrics } from "../observability/metrics.js";
@@ -85,10 +85,10 @@ describe("Metrics", () => {
     metrics.observeJob({ name: "test.job", state: "failed", durationSeconds: 2 });
     const output = await metrics.render();
     expect(output).toMatch(
-      /pagehall_http_requests_total\{[^}]*method="GET",route="\/health\/ready",status="200"[^}]*\} 1/,
+      /lunedo_http_requests_total\{[^}]*method="GET",route="\/health\/ready",status="200"[^}]*\} 1/,
     );
     expect(output).toMatch(
-      /pagehall_job_duration_seconds_count\{[^}]*queue="test\.job",state="failed"[^}]*\} 1/,
+      /lunedo_job_duration_seconds_count\{[^}]*queue="test\.job",state="failed"[^}]*\} 1/,
     );
   });
 
@@ -99,12 +99,12 @@ describe("Metrics", () => {
       counts: async () => ({ "test.job": { queued: 4, active: 1, deferred: 0, failed: 2 } }),
     } as never);
     const output = await metrics.render();
-    expect(output).toContain('pagehall_db_pool_connections{state="idle",service="worker"} 3');
-    expect(output).toContain('pagehall_jobs{queue="test.job",state="failed",service="worker"} 2');
+    expect(output).toContain('lunedo_db_pool_connections{state="idle",service="worker"} 3');
+    expect(output).toContain('lunedo_jobs{queue="test.job",state="failed",service="worker"} 2');
   });
 });
 
-describe("Pagehall metrics", () => {
+describe("Lunedo metrics", () => {
   const snapshot = {
     databaseSizeBytes: 5_000_000,
     storage: { usedBytes: 800, totalBytes: 1000, ratio: 0.8, level: 1 },
@@ -129,37 +129,37 @@ describe("Pagehall metrics", () => {
     metrics.countLoggedError({ type: "Request failed", code: null });
     metrics.observeCollaboration(() => ({ connections: 3, documents: 2 }));
     const output = await metrics.render();
-    expect(output).toContain('pagehall_build_info{version="1.4.2",service="collab"} 1');
-    expect(output).toContain('pagehall_log_errors_total{type="Request failed",service="collab"} 2');
-    expect(output).toContain('pagehall_collab_connections{service="collab"} 3');
-    expect(output).toContain('pagehall_collab_documents{service="collab"} 2');
+    expect(output).toContain('lunedo_build_info{version="1.4.2",service="collab"} 1');
+    expect(output).toContain('lunedo_log_errors_total{type="Request failed",service="collab"} 2');
+    expect(output).toContain('lunedo_collab_connections{service="collab"} 3');
+    expect(output).toContain('lunedo_collab_documents{service="collab"} 2');
   });
 
-  it("exposes the instance values only Pagehall knows", async () => {
+  it("exposes the instance values only Lunedo knows", async () => {
     const metrics = new Metrics("api");
     metrics.observeInstance(async () => snapshot);
     const output = await metrics.render();
     for (const line of [
-      'pagehall_database_size_bytes{service="api"} 5000000',
-      'pagehall_storage_used_bytes{service="api"} 800',
-      'pagehall_storage_size_bytes{service="api"} 1000',
-      'pagehall_storage_usage_ratio{service="api"} 0.8',
-      'pagehall_storage_level{service="api"} 1',
-      'pagehall_backup_last_success_timestamp_seconds{service="api"} 1792551600',
-      'pagehall_backup_failures_total{service="api"} 2',
-      'pagehall_backup_scheduled{service="api"} 1',
-      'pagehall_mail_delivery_failures_total{service="api"} 7',
-      'pagehall_mail_undelivered_total{service="api"} 1',
-      'pagehall_mail_last_success_timestamp_seconds{service="api"} 1792566000',
-      'pagehall_search_pending_items{service="api"} 4',
-      'pagehall_search_failing_items{service="api"} 1',
-      'pagehall_collab_up{service="api"} 1',
-      'pagehall_maintenance_mode{service="api"} 1',
-      'pagehall_update_available{service="api"} 1',
+      'lunedo_database_size_bytes{service="api"} 5000000',
+      'lunedo_storage_used_bytes{service="api"} 800',
+      'lunedo_storage_size_bytes{service="api"} 1000',
+      'lunedo_storage_usage_ratio{service="api"} 0.8',
+      'lunedo_storage_level{service="api"} 1',
+      'lunedo_backup_last_success_timestamp_seconds{service="api"} 1792551600',
+      'lunedo_backup_failures_total{service="api"} 2',
+      'lunedo_backup_scheduled{service="api"} 1',
+      'lunedo_mail_delivery_failures_total{service="api"} 7',
+      'lunedo_mail_undelivered_total{service="api"} 1',
+      'lunedo_mail_last_success_timestamp_seconds{service="api"} 1792566000',
+      'lunedo_search_pending_items{service="api"} 4',
+      'lunedo_search_failing_items{service="api"} 1',
+      'lunedo_collab_up{service="api"} 1',
+      'lunedo_maintenance_mode{service="api"} 1',
+      'lunedo_update_available{service="api"} 1',
     ]) {
       expect(output).toContain(line);
     }
-    expect(output).not.toMatch(/^pagehall_mail_last_failure_timestamp_seconds\{/m);
+    expect(output).not.toMatch(/^lunedo_mail_last_failure_timestamp_seconds\{/m);
   });
 
   it("leaves out values that are not known", async () => {
@@ -172,12 +172,12 @@ describe("Pagehall metrics", () => {
       updateAvailable: null,
     }));
     const output = await metrics.render();
-    expect(output).toContain('pagehall_storage_level{service="api"} 1');
+    expect(output).toContain('lunedo_storage_level{service="api"} 1');
     for (const name of [
-      "pagehall_storage_used_bytes",
-      "pagehall_backup_last_success_timestamp_seconds",
-      "pagehall_collab_up",
-      "pagehall_update_available",
+      "lunedo_storage_used_bytes",
+      "lunedo_backup_last_success_timestamp_seconds",
+      "lunedo_collab_up",
+      "lunedo_update_available",
     ]) {
       expect(output).not.toMatch(new RegExp(`^${name}{`, "m"));
     }

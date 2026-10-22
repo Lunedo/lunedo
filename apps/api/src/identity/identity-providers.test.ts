@@ -1,4 +1,4 @@
-import { type FakeOidcProvider, startFakeOidcProvider } from "@pagehall/server/testing";
+import { type FakeOidcProvider, startFakeOidcProvider } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -25,7 +25,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
   let providerId: string;
 
   beforeAll(async () => {
-    test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true" });
+    test = await createAuthTestApp({ ...configuredSetupEnv, LUNEDO_INSECURE_IDENTITY_PROVIDERS: "true" });
     await completeConfiguredSetup(test);
     idp = await startFakeOidcProvider();
     owner = new TestClient(test.app);
@@ -39,7 +39,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
         preset: "generic",
         issuer: idp.issuer,
         clientId: idp.clientId,
-        domains: ["pagehall.test"],
+        domains: ["lunedo.test"],
         accountCreation: { enabled: true, requiredGroups: [] },
       },
       credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
@@ -75,7 +75,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     });
     const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.40" });
     expect(
-      (await visitor.post("/api/v1/auth/sign-in/discover", { email: "Anyone@PAGEHALL.test" })).json(),
+      (await visitor.post("/api/v1/auth/sign-in/discover", { email: "Anyone@LUNEDO.test" })).json(),
     ).toEqual({
       step: "provider",
       providerId,
@@ -90,12 +90,12 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const taken = await owner.post("/api/v1/instance/identity-providers", {
       type: "oidc",
       name: "Second login",
-      config: { preset: "generic", issuer: idp.issuer, clientId: "second", domains: ["pagehall.test"] },
+      config: { preset: "generic", issuer: idp.issuer, clientId: "second", domains: ["lunedo.test"] },
       credential: { kind: "clientSecret", secret: "second-secret", expiresAt: null },
     });
     expect(taken.statusCode).toBe(409);
     expect(taken.json()).toMatchObject({ code: "domainInUse" });
-    const member = await createAccount(test, "plain.member@pagehall.test");
+    const member = await createAccount(test, "plain.member@lunedo.test");
     const client = await signedInClient(test, member.email, member.password);
     expect((await client.get("/api/v1/instance/identity-providers")).statusCode).toBe(403);
     expect((await owner.get("/api/v1/instance/identity-providers")).json()).toEqual([
@@ -190,7 +190,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     );
     expect(chosen.statusCode).toBe(200);
     expect(inUse(chosen.json())).toEqual([original.id]);
-    const member = await createAccount(test, "credential.viewer@pagehall.test");
+    const member = await createAccount(test, "credential.viewer@lunedo.test");
     const client = await signedInClient(test, member.email, member.password);
     expect(
       (
@@ -211,7 +211,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, {
       sub: "new-person",
-      email: "new.person@pagehall.test",
+      email: "new.person@lunedo.test",
       name: "New Person",
     });
     expect(response.statusCode).toBe(303);
@@ -219,10 +219,10 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const session = await browser.get("/api/v1/auth/session");
     expect(session.json()).toMatchObject({
       sessionKind: "full",
-      account: { email: "new.person@pagehall.test" },
+      account: { email: "new.person@lunedo.test" },
     });
     expect(String(response.headers["set-cookie"])).toContain(
-      `__Host-pagehall-last-provider=${providerId}; Path=/; Max-Age=15552000; HttpOnly; Secure; SameSite=Lax`,
+      `__Host-lunedo-last-provider=${providerId}; Path=/; Max-Age=15552000; HttpOnly; Secure; SameSite=Lax`,
     );
     expect((await browser.get("/api/v1/auth/sign-in-options")).json()).toMatchObject({
       lastProvider: { id: providerId, name: "Company login" },
@@ -232,7 +232,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const started = await browser.post(`/api/v1/auth/providers/${providerId}/start`, {});
     const callback = await idp.authorize(started.json().url, {
       sub: "new-person",
-      email: "new.person@pagehall.test",
+      email: "new.person@lunedo.test",
     });
     const stolen = await withoutFlow.get(`${callback.pathname}${callback.search}`);
     expect(stolen.headers.location).toBe("/sign-in?error=challengeExpired");
@@ -243,14 +243,14 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(security.statusCode).toBe(200);
     expect(security.json()).toEqual({ insecureIdentityProviders: true });
     const person = new TestClient(test.app);
-    await signInThroughProvider(person, { sub: "security-reader", email: "reader@pagehall.test" });
+    await signInThroughProvider(person, { sub: "security-reader", email: "reader@lunedo.test" });
     expect((await person.get("/api/v1/instance/sign-in-security")).statusCode).toBe(403);
     const withheld = await person.get("/api/v1/account/withheld-roles");
     expect(withheld.statusCode).toBe(200);
     expect(withheld.json()).toEqual([]);
   });
 
-  it("sends people to the second factor of Pagehall when the provider asks for it", async () => {
+  it("sends people to the second factor of Lunedo when the provider asks for it", async () => {
     const created = await owner.post("/api/v1/instance/identity-providers", {
       type: "oidc",
       name: "Second factor login",
@@ -258,13 +258,13 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
         preset: "generic",
         issuer: idp.issuer,
         clientId: idp.clientId,
-        domains: ["factor.pagehall.test"],
+        domains: ["factor.lunedo.test"],
         accountCreation: { enabled: true, requiredGroups: [] },
-        secondFactor: { mode: "pagehall" },
+        secondFactor: { mode: "lunedo" },
       },
       credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
     });
-    expect(created.json().provider.config.secondFactor).toEqual({ mode: "pagehall", proofValues: ["mfa"] });
+    expect(created.json().provider.config.secondFactor).toEqual({ mode: "lunedo", proofValues: ["mfa"] });
     const factorProvider = created.json().provider.id;
     const signInOnce = async (client: TestClient) => {
       const started = await client.post(`/api/v1/auth/providers/${factorProvider}/start`, {
@@ -272,7 +272,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       });
       const callback = await idp.authorize(started.json().url, {
         sub: "factor-person",
-        email: "person@factor.pagehall.test",
+        email: "person@factor.lunedo.test",
         amr: ["mfa"],
       });
       return client.get(`${callback.pathname}${callback.search}`);
@@ -290,7 +290,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(response.headers.location).toBe(
       `/sign-in/verify?${new URLSearchParams({ factors: '["totp","recoveryCode"]', redirect: "/settings/security" })}`,
     );
-    expect(String(response.headers["set-cookie"])).toContain("__Host-pagehall-pending=");
+    expect(String(response.headers["set-cookie"])).toContain("__Host-lunedo-pending=");
     expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
     expect((await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`)).statusCode).toBe(
       204,
@@ -302,7 +302,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     await signInThroughProvider(browser, {
       sub: "logout-person",
       sid: "idp-session-1",
-      email: "logout@pagehall.test",
+      email: "logout@lunedo.test",
     });
     expect((await browser.get("/api/v1/auth/session")).statusCode).toBe(200);
     const response = await test.app.inject({
@@ -325,12 +325,12 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
   });
 
   it("links an existing account after its password and shows linked identities", async () => {
-    const existing = await createAccount(test, "existing.person@pagehall.test");
+    const existing = await createAccount(test, "existing.person@lunedo.test");
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, { sub: "existing-subject", email: existing.email });
     expect(response.headers.location).toBe("/sign-in/link");
     expect([response.headers["set-cookie"]].flat()).toContainEqual(
-      expect.stringMatching(/^__Host-pagehall-link=[\w-]+; Path=\/; Max-Age=900; /),
+      expect.stringMatching(/^__Host-lunedo-link=[\w-]+; Path=\/; Max-Age=900; /),
     );
     expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
       providerName: "Company login",
@@ -388,14 +388,14 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       sub: "foreign-subject",
       email: "someone@foreign.test",
     });
-    const refused = new URL(String(response.headers.location), "https://pagehall.test");
+    const refused = new URL(String(response.headers.location), "https://lunedo.test");
     expect(refused.pathname).toBe("/sign-in/refused");
     expect(refused.searchParams.get("reason")).toBe("domainNotAllowed");
     expect(refused.searchParams.get("provider")).toBe(providerId);
   });
 
   it("lets a person decline a link after a wrong password", async () => {
-    const existing = await createAccount(test, "declining.person@pagehall.test");
+    const existing = await createAccount(test, "declining.person@lunedo.test");
     const browser = new TestClient(test.app);
     await signInThroughProvider(browser, { sub: "declining-subject", email: existing.email });
     expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
@@ -407,7 +407,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
   it("answers the same for known and unknown addresses and limits the questions per client", async () => {
     const known = await createAccount(test, "known.person@other.test");
     const client = new TestClient(test.app, { remoteAddress: "198.51.100.41" });
-    for (const domain of ["other.test", "pagehall.test"]) {
+    for (const domain of ["other.test", "lunedo.test"]) {
       const withAccount = await client.post("/api/v1/auth/sign-in/discover", {
         email: `known.person@${domain}`,
       });
@@ -428,7 +428,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
   });
 
   it("turns password sign-in off for the instance, except for the instance owner", async () => {
-    const member = await createAccount(test, "password.member@pagehall.test");
+    const member = await createAccount(test, "password.member@lunedo.test");
     const organizationLevel = await owner.put(
       `/api/v1/organizations/${organizationId}/settings/auth.passwordSignIn`,
       { value: false },
@@ -470,7 +470,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
       config: {
         preset: "generic",
         issuer: "http://127.0.0.1:9/realms/gone",
-        clientId: "pagehall",
+        clientId: "lunedo",
         domains: ["unreachable.test"],
         accountCreation: { enabled: true, requiredGroups: [] },
       },
@@ -486,7 +486,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
 
     const callback = await signInThroughProvider(new TestClient(test.app), {
       sub: crypto.randomUUID(),
-      email: "long.name@pagehall.test",
+      email: "long.name@lunedo.test",
       name: "x".repeat(300),
     });
     expect(callback.statusCode).toBe(303);

@@ -1,4 +1,4 @@
-import { Badge, Section, SettingRow } from "@pagehall/ui";
+import { Badge, Section, SettingRow } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";

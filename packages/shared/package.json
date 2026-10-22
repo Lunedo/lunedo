@@ -1,24 +1,24 @@
 {
-  "name": "@pagehall/shared",
+  "name": "@lunedo/shared",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     ".": {
-      "@pagehall/source": "./src/index.ts",
+      "@lunedo/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pagehall-dev",
+    "dev": "lunedo-dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
     "typescript": "^7.0.2",

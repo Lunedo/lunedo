@@ -1,9 +1,9 @@
-import { vitestWorkers } from "@pagehall/config/parallelism";
-import { retriesFromEnv } from "@pagehall/config/test-report";
+import { vitestWorkers } from "@lunedo/config/parallelism";
+import { retriesFromEnv } from "@lunedo/config/test-report";
 import { defaultClientConditions, defaultServerConditions } from "vite";
 import { defineProject, type UserWorkspaceConfig } from "vitest/config";
 
-export const sourceCondition = "@pagehall/source";
+export const sourceCondition = "@lunedo/source";
 
 export interface VitestPresetOptions {
   environment?: "node" | "happy-dom";

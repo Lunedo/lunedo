@@ -1,4 +1,4 @@
-import { Button, formatDuration, IconButton, useToast } from "@pagehall/ui";
+import { Button, formatDuration, IconButton, useToast } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { Bell, BellOff, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";

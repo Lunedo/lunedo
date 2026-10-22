@@ -15,7 +15,7 @@ const CLASSES = new Map(
 );
 
 const NAME =
-  /^pagehall-backup-(\d{8}T\d{6}Z)-(daily|weekly|monthly|manual|before-update)-([0-9a-f]{8})\.phbak$/;
+  /^lunedo-backup-(\d{8}T\d{6}Z)-(daily|weekly|monthly|manual|before-update)-([0-9a-f]{8})\.ldbak$/;
 export const BACKUP_NAME_PATTERN = NAME;
 
 export interface BackupName {
@@ -36,7 +36,7 @@ export function backupName(
   createdAt: Date,
   suffix = randomBytes(4).toString("hex"),
 ) {
-  return `pagehall-backup-${stamp(createdAt)}-${SLUGS[backupClass]}-${suffix}.phbak`;
+  return `lunedo-backup-${stamp(createdAt)}-${SLUGS[backupClass]}-${suffix}.ldbak`;
 }
 
 export function parseBackupName(name: string): BackupName | null {

@@ -10,7 +10,7 @@ import {
   Notice,
   Select,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Link2, Unlink } from "lucide-react";
 import { useState } from "react";

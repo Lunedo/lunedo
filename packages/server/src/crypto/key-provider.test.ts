@@ -16,7 +16,7 @@ afterEach(() => {
 
 describe("FileKeyProvider", () => {
   it("generates version 1 on first use and keeps it", async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-keys-"));
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-keys-"));
     const file = path.join(dir, "secrets", "master-keys");
     const provider = new FileKeyProvider(file);
     const first = await provider.load({ create: true });
@@ -26,7 +26,7 @@ describe("FileKeyProvider", () => {
   });
 
   it("never creates a key unless asked to", async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-keys-"));
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-keys-"));
     const file = path.join(dir, "master-keys");
     await expect(new FileKeyProvider(file).load()).rejects.toThrow(
       `The master key ring ${file} does not exist`,
@@ -36,7 +36,7 @@ describe("FileKeyProvider", () => {
   });
 
   it("appends a new version and keeps the old ones", async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-keys-"));
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-keys-"));
     const provider = new FileKeyProvider(path.join(dir, "master-keys"));
     const first = await provider.load({ create: true });
     const rotated = await provider.addVersion();

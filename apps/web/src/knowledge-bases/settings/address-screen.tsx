@@ -8,7 +8,7 @@ import {
   Select,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Globe, Pencil } from "lucide-react";
 import { useState } from "react";

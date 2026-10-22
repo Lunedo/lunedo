@@ -1,4 +1,4 @@
-import { type ContentLanguage, uuidv7 } from "@pagehall/shared";
+import { type ContentLanguage, uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";

@@ -1,4 +1,4 @@
-import { PageHeader, Tabs } from "@pagehall/ui";
+import { PageHeader, Tabs } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";

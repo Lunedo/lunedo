@@ -33,7 +33,7 @@ describe("the default embed services", () => {
     ],
     [
       "https://www.figma.com/design/AbC123/Network-plan?node-id=1-2",
-      `https://www.figma.com/embed?embed_host=pagehall&url=${encodeURIComponent("https://www.figma.com/design/AbC123/Network-plan?node-id=1-2")}`,
+      `https://www.figma.com/embed?embed_host=lunedo&url=${encodeURIComponent("https://www.figma.com/design/AbC123/Network-plan?node-id=1-2")}`,
     ],
     ["https://miro.com/app/board/uXjVOabc=/", "https://miro.com/app/live-embed/uXjVOabc=/"],
     ["https://docs.google.com/document/d/1AbC/edit", "https://docs.google.com/document/d/1AbC/preview"],
@@ -257,7 +257,7 @@ describe("the embed block", () => {
 
   it("shows a link with a hint for an address that is not on the allowlist", () => {
     const html = renderHtml(embedDoc({ url: "https://videos.example.net/w/8812" }), context);
-    expect(html).toContain('class="ph-embed ph-embed-blocked"');
+    expect(html).toContain('class="ld-embed ld-embed-blocked"');
     expect(html).toContain('href="https://videos.example.net/w/8812"');
     expect(html).toContain("Not on the embed allowlist");
     expect(html).not.toContain("data-src");

@@ -1,4 +1,4 @@
-import { formatDate, notificationParamSchemas } from "@pagehall/shared";
+import { formatDate, notificationParamSchemas } from "@lunedo/shared";
 import { defineNotificationType } from "../notifications/registry.js";
 
 const visible = (context: { can(action: string, resource: { type: string }): Promise<boolean> }) =>

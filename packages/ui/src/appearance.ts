@@ -32,7 +32,7 @@ export function applyAppearance(
     "data-accent",
     appearance.accent && appearance.accent !== DEFAULT_ACCENT ? appearance.accent : null,
   );
-  root.style.setProperty("--ph-text-scale", String(appearance.textSize));
+  root.style.setProperty("--ld-text-scale", String(appearance.textSize));
 }
 
 export function useAppearance(appearance: Appearance, root: HTMLElement = document.documentElement): void {

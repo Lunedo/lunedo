@@ -1,4 +1,4 @@
-import { SYSTEM } from "@pagehall/server";
+import { SYSTEM } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { completeConfiguredSetup, configuredSetupEnv, firstOrganizationId } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl } from "../testing/auth-app.js";
@@ -55,7 +55,7 @@ describe.skipIf(!databaseBaseUrl)("the TLS ask endpoint", () => {
     const allowed = await ask("Help.Example.org.");
     expect(allowed.statusCode).toBe(200);
     expect(allowed.body).toBe("");
-    for (const domain of ["other.example.org", "pagehall.test", "", "not a domain", "help.example.org/x"]) {
+    for (const domain of ["other.example.org", "lunedo.test", "", "not a domain", "help.example.org/x"]) {
       const response = await ask(domain);
       expect(response.statusCode, domain).toBe(404);
       expect(response.body).toBe("");

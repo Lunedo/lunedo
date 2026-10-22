@@ -1,4 +1,4 @@
-import { Notice } from "@pagehall/ui";
+import { Notice } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";

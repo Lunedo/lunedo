@@ -1,4 +1,4 @@
-import { renderHtml } from "@pagehall/editor-schema";
+import { renderHtml } from "@lunedo/editor-schema";
 import {
   Button,
   Combobox,
@@ -10,7 +10,7 @@ import {
   Select,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { FilePlus, LayoutTemplate, Search } from "lucide-react";
@@ -438,7 +438,7 @@ function TemplatePreview({ template, spaceId }: { template: PageTemplate; spaceI
       <div
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the preview scrolls and must be reachable by keyboard
         tabIndex={0}
-        className="ph-content ph-read-view max-h-dialog-sm overflow-y-auto rounded-md border border-border bg-surface p-3 text-sm"
+        className="ld-content ld-read-view max-h-dialog-sm overflow-y-auto rounded-md border border-border bg-surface p-3 text-sm"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated template
         dangerouslySetInnerHTML={{ __html: html ?? "" }}
       />

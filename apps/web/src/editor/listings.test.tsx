@@ -81,7 +81,7 @@ describe("child pages in the read view", () => {
     await read([{ type: "childPages", attrs: { depth: 2 } }]);
     const firewall = await screen.findByRole("link", { name: "Firewall" });
     expect(firewall.getAttribute("href")).toBe(`/spaces/OPS/pages/${FIREWALL}/firewall`);
-    const list = firewall.closest("nav.ph-child-pages") as HTMLElement;
+    const list = firewall.closest("nav.ld-child-pages") as HTMLElement;
     expect(Array.from(list.querySelectorAll("a")).map((link) => link.textContent)).toEqual([
       "Network",
       "Firewall",
@@ -95,8 +95,8 @@ describe("child pages in the read view", () => {
       { type: "childPages", attrs: { depth: 1, sort: "title" } },
       { type: "childPages", attrs: { depth: 1, sort: "modified", reverse: true } },
     ]);
-    await waitFor(() => expect(document.querySelectorAll("nav.ph-child-pages a")).toHaveLength(4));
-    const [byTitle, byChange] = Array.from(document.querySelectorAll("nav.ph-child-pages")).map((list) =>
+    await waitFor(() => expect(document.querySelectorAll("nav.ld-child-pages a")).toHaveLength(4));
+    const [byTitle, byChange] = Array.from(document.querySelectorAll("nav.ld-child-pages")).map((list) =>
       Array.from(list.querySelectorAll("a")).map((link) => link.textContent),
     );
     expect(byTitle).toEqual(["Backup", "Network"]);

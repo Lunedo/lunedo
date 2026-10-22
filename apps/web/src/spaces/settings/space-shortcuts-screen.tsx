@@ -10,7 +10,7 @@ import {
   Skeleton,
   TruncatedText,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { ArrowDown, ArrowUp, EyeOff, Link2, Pencil, Plus, Trash2 } from "lucide-react";

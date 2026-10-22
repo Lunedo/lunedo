@@ -1,4 +1,4 @@
-import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@pagehall/ui";
+import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@lunedo/ui";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import type { i18n } from "i18next";

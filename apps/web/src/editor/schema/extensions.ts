@@ -1,4 +1,4 @@
-import { codeLanguages, commentKit, isAllowedHref } from "@pagehall/editor-schema";
+import { codeLanguages, commentKit, isAllowedHref } from "@lunedo/editor-schema";
 import { type AnyExtension, Mark, mergeAttributes, Node, textblockTypeInputRule } from "@tiptap/core";
 import Blockquote from "@tiptap/extension-blockquote";
 import Bold from "@tiptap/extension-bold";
@@ -260,7 +260,7 @@ export const TextColor = Mark.create({
       "span",
       mergeAttributes(HTMLAttributes, {
         "data-text-color": String(mark.attrs.color),
-        class: "ph-text-color",
+        class: "ld-text-color",
       }),
       0,
     ];
@@ -276,7 +276,7 @@ export const HighlightMark = Highlight.extend({
     return [{ tag: "mark" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["mark", mergeAttributes(HTMLAttributes, { class: "ph-highlight" }), 0];
+    return ["mark", mergeAttributes(HTMLAttributes, { class: "ld-highlight" }), 0];
   },
 }).configure({ multicolor: true });
 
@@ -295,7 +295,7 @@ export const InlineComment = Mark.create({
     ];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["span", mergeAttributes(HTMLAttributes, { class: "ph-comment" }), 0];
+    return ["span", mergeAttributes(HTMLAttributes, { class: "ld-comment" }), 0];
   },
 });
 

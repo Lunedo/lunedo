@@ -1,5 +1,5 @@
 {
-  "name": "@pagehall/config",
+  "name": "@lunedo/config",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
@@ -24,6 +24,6 @@
     "vitest": "^5.0.5"
   },
   "bin": {
-    "pagehall-dev": "./src/dev-runner.ts"
+    "lunedo-dev": "./src/dev-runner.ts"
   }
 }

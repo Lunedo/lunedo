@@ -1,11 +1,6 @@
 import type { Readable } from "node:stream";
+import { type AttachmentView, accountPrincipal, FILE_NAME_MAX_LENGTH, type Principal } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
-import {
-  type AttachmentView,
-  accountPrincipal,
-  FILE_NAME_MAX_LENGTH,
-  type Principal,
-} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";

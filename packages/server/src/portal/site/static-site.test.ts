@@ -181,7 +181,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const renamedNumber = numbers.rows.find((row) => row.item_id === renamed)?.number;
     const backupNumber = numbers.rows.find((row) => row.item_id === backup)?.number;
 
-    const root = await mkdtemp(join(tmpdir(), "pagehall-site-"));
+    const root = await mkdtemp(join(tmpdir(), "lunedo-site-"));
     try {
       for (const [path, content] of files) {
         await mkdir(dirname(join(root, path)), { recursive: true });

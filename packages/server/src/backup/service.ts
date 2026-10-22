@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { and, desc, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { Principal } from "../accounts/principal.js";
@@ -184,7 +184,7 @@ export interface BackupListEntry {
   createdAt: Date;
   sizeBytes: number;
   readable: boolean;
-  pagehallVersion: string | null;
+  lunedoVersion: string | null;
   schemaVersion: string | null;
   scope: BackupScope | null;
   testRestore: TestRestoreView | null;
@@ -480,13 +480,13 @@ export class BackupService {
 
   async updateSettings(actor: Principal, input: SettingsInput): Promise<BackupOverview> {
     await this.#database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('pagehall.backup-configuration'))`);
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('lunedo.backup-configuration'))`);
       const current = await this.configuration(tx);
       const next = this.#validateSettings(current.settings, input);
       if (next.enabled && !current.settings.enabled && !current.target) {
         throw new BackupSettingsError(
           "noTarget",
-          "Set up a backup target first. Backups can be turned on once Pagehall knows where to write them.",
+          "Set up a backup target first. Backups can be turned on once Lunedo knows where to write them.",
           ["enabled"],
         );
       }
@@ -562,7 +562,7 @@ export class BackupService {
       if (problem === "relative") {
         throw new BackupSettingsError(
           "invalidPath",
-          "Enter an absolute path inside the container, for example /var/lib/pagehall/backups.",
+          "Enter an absolute path inside the container, for example /var/lib/lunedo/backups.",
           ["path"],
         );
       }
@@ -659,7 +659,7 @@ export class BackupService {
     const target = this.#validateTarget(input);
     const secret = this.#newSecret(input);
     await this.#database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('pagehall.backup-configuration'))`);
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('lunedo.backup-configuration'))`);
       if (target.kind === "s3" && secret === undefined && (await this.#reusableSecret(target, tx)) === null) {
         throw new BackupSettingsError("secretKeyRequired", "Enter the secret key.", ["secretAccessKey"]);
       }
@@ -756,7 +756,7 @@ export class BackupService {
 
   async confirmTarget(actor: Principal): Promise<BackupOverview> {
     await this.#database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('pagehall.backup-configuration'))`);
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('lunedo.backup-configuration'))`);
       const { target } = await this.configuration(tx);
       if (!target) {
         throw new BackupSettingsError("noTarget", "Set up a backup target first.", ["target"]);
@@ -855,7 +855,7 @@ export class BackupService {
           createdAt: backup.header ? new Date(backup.header.createdAt) : backup.createdAt,
           sizeBytes: backup.sizeBytes,
           readable: backup.header !== null,
-          pagehallVersion: backup.header?.pagehallVersion ?? null,
+          lunedoVersion: backup.header?.lunedoVersion ?? null,
           schemaVersion: backup.header?.schemaVersion ?? null,
           scope: backup.header ? (backup.header.scope ?? "all") : null,
           testRestore: tests.get(backup.name) ?? null,

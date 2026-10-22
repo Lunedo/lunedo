@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
+import { diagramTypes } from "@lunedo/server";
 import { Controller, Get, Inject, Param, Put, Query, Req } from "@nestjs/common";
-import { diagramTypes } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

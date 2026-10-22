@@ -1,4 +1,4 @@
-import { tokens } from "@pagehall/tokens";
+import { tokens } from "@lunedo/tokens";
 import type { LucideIcon } from "lucide-react";
 import { classNames } from "./class-names.js";
 

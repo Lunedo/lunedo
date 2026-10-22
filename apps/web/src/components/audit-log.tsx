@@ -1,4 +1,4 @@
-import { auditEventNames } from "@pagehall/shared";
+import { auditEventNames } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -9,7 +9,7 @@ import {
   Table,
   TableToolbar,
   TruncatedText,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -131,7 +131,7 @@ export function AuditLog({
             })
           : api.GET("/api/v1/instance/audit-events/export", { params: { query }, parseAs: "blob" }),
       );
-      downloadBlob(`pagehall-audit-${new Date().toISOString().slice(0, 10)}.csv`, blob as Blob);
+      downloadBlob(`lunedo-audit-${new Date().toISOString().slice(0, 10)}.csv`, blob as Blob);
     } catch (failure) {
       showFailure(t("failures.exportAudit"), failure, () => void exportCsv());
     } finally {

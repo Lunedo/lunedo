@@ -5,8 +5,8 @@ import {
   type NotificationEventGroup,
   notificationChannelSettingKey,
   notificationEvents,
-} from "@pagehall/shared";
-import { Button, Notice, Section, Select, Skeleton, Switch } from "@pagehall/ui";
+} from "@lunedo/shared";
+import { Button, Notice, Section, Select, Skeleton, Switch } from "@lunedo/ui";
 import { Building2, Lock, PenLine, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";

@@ -2,17 +2,8 @@ import {
   MAX_TEMPLATE_BUTTON_LABEL,
   MAX_TEMPLATE_TITLE_PATTERN,
   titlePatternFields,
-} from "@pagehall/editor-schema";
-import {
-  Button,
-  Dialog,
-  Field,
-  focusFirstInvalidSoon,
-  Input,
-  Select,
-  Skeleton,
-  useToast,
-} from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Button, Dialog, Field, focusFirstInvalidSoon, Input, Select, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { FilePlus } from "lucide-react";
@@ -364,7 +355,7 @@ export function TemplateButtonView({ node, editor, updateAttributes, selected }:
   const button = templateButtonFromAttrs(node.attrs);
   return (
     <NodeViewWrapper
-      className={`ph-template-button-block flex flex-col gap-3${selected ? " ph-node-selected" : ""}`}
+      className={`ld-template-button-block flex flex-col gap-3${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="templateButton"
     >

@@ -7,7 +7,7 @@ export function TaskReportView({ node, editor, updateAttributes, selected }: Nod
   const page = usePageContext();
   return (
     <NodeViewWrapper
-      className={`ph-task-report-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-task-report-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="taskReport"
     >

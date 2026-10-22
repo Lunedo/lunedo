@@ -8,7 +8,7 @@ import {
   Input,
   Select,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ListFilter, Plus, Repeat } from "lucide-react";

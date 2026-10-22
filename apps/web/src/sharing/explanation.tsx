@@ -1,4 +1,4 @@
-import { Notice } from "@pagehall/ui";
+import { Notice } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { translateKey } from "../i18n/translate.js";

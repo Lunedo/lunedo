@@ -18,8 +18,8 @@ export const topicUpdateModule = defineModule({
         const title = renderer.topicTitle(topicId);
         return element(
           "section",
-          { class: "ph-topic-update", "data-topic-id": topicId },
-          `${element("p", { class: "ph-topic-update-title" }, renderer.escape(title))}${element("div", { class: "ph-topic-update-content" }, renderer.children(node))}`,
+          { class: "ld-topic-update", "data-topic-id": topicId },
+          `${element("p", { class: "ld-topic-update-title" }, renderer.escape(title))}${element("div", { class: "ld-topic-update-content" }, renderer.children(node))}`,
         );
       },
       word: (node, renderer) => [
@@ -76,13 +76,13 @@ export const decisionModule = defineModule({
         element(
           "aside",
           {
-            class: "ph-decision",
+            class: "ld-decision",
             "data-decision-id": attrOf<string | null>(node, "id"),
             "data-topic-id": attrOf<string | null>(node, "topicId"),
             role: "note",
             "aria-label": renderer.label("decision"),
           },
-          `${element("span", { class: "ph-decision-label" }, renderer.escape(renderer.label("decision")))}${element("div", { class: "ph-decision-content" }, renderer.children(node))}`,
+          `${element("span", { class: "ld-decision-label" }, renderer.escape(renderer.label("decision")))}${element("div", { class: "ld-decision-content" }, renderer.children(node))}`,
         ),
       word: (node, renderer) => [
         {

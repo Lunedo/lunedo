@@ -1,4 +1,4 @@
-import { Button, Field, Input, Notice, RadioGroup, Switch, useToast } from "@pagehall/ui";
+import { Button, Field, Input, Notice, RadioGroup, Switch, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Settings } from "lucide-react";

@@ -1,4 +1,4 @@
-import type { HealthCheck } from "@pagehall/shared";
+import type { HealthCheck } from "@lunedo/shared";
 import type { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { migrationStatus } from "../database/migrate.js";
 import { type DatabasePool, pingDatabase } from "../database/pool.js";

@@ -9,12 +9,12 @@ import type {
   onChangePayload,
   onConfigurePayload,
 } from "@hocuspocus/server";
-import type { Logger } from "@pagehall/server";
+import type { Logger } from "@lunedo/server";
 import { Redis } from "ioredis";
 import { applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
 import * as Y from "yjs";
 
-const PREFIX = "pagehall:collab:";
+const PREFIX = "lunedo:collab:";
 
 const kinds = {
   update: 0,
@@ -48,7 +48,7 @@ function unframe(message: Buffer): { kind: number; node: string; payload: Uint8A
 }
 
 export class RedisSync implements Extension {
-  extensionName = "PagehallRedisSync";
+  extensionName = "LunedoRedisSync";
   priority = 1000;
   readonly #publisher: Redis;
   readonly #subscriber: Redis;

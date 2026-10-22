@@ -7,7 +7,7 @@ import {
   isUuid,
   MICROSOFT_GRAPH,
   type OidcConfig,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { importPKCS8, SignJWT } from "jose";
 import { type ProviderCredential, type ProviderGroup, ProviderResponseError } from "./adapter.js";
 import { requestGraphToken } from "./graph-token.js";

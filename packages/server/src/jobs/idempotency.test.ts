@@ -28,7 +28,7 @@ describe.skipIf(!databaseUrl)("idempotency keys", () => {
   let worker: PgBossQueue;
 
   beforeAll(async () => {
-    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "lunedo-test" });
     database = createDatabase(pool);
     nodeA = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "producer" });
     nodeB = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "producer" });

@@ -58,10 +58,10 @@ export async function createTestServices(
   } = {},
 ): Promise<TestServices> {
   const temporary: TemporaryDatabase = options.beforeMigrations
-    ? await createTemporaryDatabase(baseUrl, "pagehall_services_test")
-    : await createMigratedDatabase(baseUrl, "pagehall_services_test");
+    ? await createTemporaryDatabase(baseUrl, "lunedo_services_test")
+    : await createMigratedDatabase(baseUrl, "lunedo_services_test");
   await options.beforeMigrations?.(temporary.url);
-  const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
+  const pool = createDatabasePool({ connectionString: temporary.url, applicationName: "lunedo-test" });
   const logger = createLogger({ service: "test", level: "silent" });
   await runMigrations(pool, { logger });
   const database = createDatabase(pool);
@@ -76,7 +76,7 @@ export async function createTestServices(
   const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
   const mail = new CapturingTransport();
   const backupKeys = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
-  const filesDir = mkdtempSync(path.join(tmpdir(), "pagehall-files-"));
+  const filesDir = mkdtempSync(path.join(tmpdir(), "lunedo-files-"));
   const build = () =>
     createAccountServices({
       database,

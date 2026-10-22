@@ -1,4 +1,4 @@
-import { slugify } from "@pagehall/editor-schema";
+import { slugify } from "@lunedo/editor-schema";
 import {
   Badge,
   Button,
@@ -15,7 +15,7 @@ import {
   Table,
   Tabs,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
@@ -46,7 +46,7 @@ import {
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId");
 
-const CONFLICT_DECISIONS: readonly ChangeDecision[] = ["pagehall", "source", "both"];
+const CONFLICT_DECISIONS: readonly ChangeDecision[] = ["lunedo", "source", "both"];
 const DELETE_DECISIONS: readonly ChangeDecision[] = ["trash", "keep"];
 const UNDECIDED = "later";
 
@@ -773,7 +773,7 @@ function PermissionsTab({ entry }: { entry: ImportView }) {
                 </Button>
               ) : (
                 <span className="text-sm text-text-muted">
-                  {t("imports.reimport.permissions.notInPagehall")}
+                  {t("imports.reimport.permissions.notInLunedo")}
                 </span>
               ),
           },

@@ -1,5 +1,5 @@
+import { createServerRuntime, instanceUrlSetting, type ServerRuntime } from "@lunedo/server";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { createServerRuntime, instanceUrlSetting, type ServerRuntime } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -20,7 +20,7 @@ import {
 } from "../testing/auth-app.js";
 import { createTestApp } from "../testing/create-test-app.js";
 
-const NEW_ADDRESS = "https://new.pagehall.test";
+const NEW_ADDRESS = "https://new.lunedo.test";
 
 describe.skipIf(!databaseBaseUrl)("the address of the instance", () => {
   let test: AuthTestApp;
@@ -84,7 +84,7 @@ describe.skipIf(!databaseBaseUrl)("the address of the instance", () => {
 
     it("moves the instance, ends every session and records it", async () => {
       const owner = await signedInOwner(app);
-      const person = await createAccount(test, "address-change@pagehall.test");
+      const person = await createAccount(test, "address-change@lunedo.test");
       const other = await signedInClient(test, person.email, person.password);
       expect((await owner.get("/api/v1/instance/address")).json()).toEqual({
         url: TEST_ORIGIN,

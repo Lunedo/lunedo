@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { webcrypto } from "node:crypto";
 import { type AddressInfo, createServer as createNetServer } from "node:net";
 import { createServer, type Server } from "node:tls";
-import { ldapConfigSchema } from "@pagehall/shared";
+import { ldapConfigSchema } from "@lunedo/shared";
 import * as x509 from "@peculiar/x509";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DirectoryConnectionError, type LdapProviderDefinition } from "./adapter.js";
@@ -34,7 +34,7 @@ async function authorityAndServer() {
   const now = Date.now();
   const authority = await x509.X509CertificateGenerator.createSelfSigned({
     serialNumber: "01",
-    name: "CN=Pagehall Test CA",
+    name: "CN=Lunedo Test CA",
     notBefore: new Date(now - 60_000),
     notAfter: new Date(now + 86_400_000),
     signingAlgorithm: ALGORITHM,
@@ -157,9 +157,9 @@ describe("directory connections", () => {
     const groupId = "6c7e9e97-f5c3-4b1a-8d2e-00000000ff80";
     try {
       for (const bindDn of [
-        "CN=svc-pagehall,OU=Service,DC=pagehall,DC=lab",
-        "svc-pagehall@pagehall.lab",
-        "PAGEHALL\\svc-pagehall",
+        "CN=svc-lunedo,OU=Service,DC=lunedo,DC=lab",
+        "svc-lunedo@lunedo.lab",
+        "LUNEDO\\svc-lunedo",
       ]) {
         received.length = 0;
         const provider: LdapProviderDefinition = {
@@ -172,8 +172,8 @@ describe("directory connections", () => {
             preset: "activeDirectory",
             url: `ldap://127.0.0.1:${port}`,
             bindDn,
-            userBaseDn: "OU=Users,DC=pagehall,DC=lab",
-            groupBaseDn: "OU=Groups,DC=pagehall,DC=lab",
+            userBaseDn: "OU=Users,DC=lunedo,DC=lab",
+            groupBaseDn: "OU=Groups,DC=lunedo,DC=lab",
           }),
         };
         const credential = {
@@ -255,7 +255,7 @@ describe("directory connections", () => {
   });
 
   it("accepts only certificates of authorities as uploaded trust", () => {
-    expect(parseCaCertificates(authority).info.subject).toBe("CN=Pagehall Test CA");
+    expect(parseCaCertificates(authority).info.subject).toBe("CN=Lunedo Test CA");
     expect(() => parseCaCertificates(serverCertificate)).toThrow(/certificate authority/);
     expect(() => parseCaCertificates("not a certificate")).toThrow();
   });

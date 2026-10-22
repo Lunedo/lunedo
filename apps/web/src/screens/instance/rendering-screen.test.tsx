@@ -93,11 +93,11 @@ describe("the rendering settings", () => {
     await renderScreen();
     expect(await screen.findByText("Not configured")).toBeTruthy();
     expect(screen.getByText("Interactive export works without it.")).toBeTruthy();
-    expect(screen.getByText(/PAGEHALL_RENDER_URL: http:\/\/pagehall-render:3000/)).toBeTruthy();
+    expect(screen.getByText(/LUNEDO_RENDER_URL: http:\/\/lunedo-render:3000/)).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "How to set up the render container" }).getAttribute("href"),
     ).toContain("docs/rendering.md");
-    expect(screen.getByText("Created by Pagehall itself. Always available.")).toBeTruthy();
+    expect(screen.getByText("Created by Lunedo itself. Always available.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Check again" })).toBeNull();
   });
 
@@ -105,7 +105,7 @@ describe("the rendering settings", () => {
     const { requests } = api(
       rendering({
         state: "healthy",
-        url: "http://pagehall-render:3000",
+        url: "http://lunedo-render:3000",
         checkedAt: new Date().toISOString(),
         version: "1.0.2",
         browser: "Chromium 140.0.7339.80",
@@ -118,7 +118,7 @@ describe("the rendering settings", () => {
     );
     await renderScreen();
     expect(await screen.findByText("Healthy")).toBeTruthy();
-    expect(screen.getByText("http://pagehall-render:3000")).toBeTruthy();
+    expect(screen.getByText("http://lunedo-render:3000")).toBeTruthy();
     expect(screen.getByText("1.0.2")).toBeTruthy();
     expect(screen.getByText("Chromium 140.0.7339.80")).toBeTruthy();
     expect(screen.getByText("1 rendering, 3 waiting")).toBeTruthy();
@@ -137,14 +137,14 @@ describe("the rendering settings", () => {
       rendering({
         state: "unreachable",
         reason: "token",
-        url: "http://pagehall-render:3000",
+        url: "http://lunedo-render:3000",
         checkedAt: new Date().toISOString(),
       }),
     );
     await renderScreen();
     expect(await screen.findAllByText("Unreachable")).toHaveLength(2);
     expect(
-      screen.getByText(/Set the same token in PAGEHALL_RENDER_TOKEN of Pagehall and RENDER_TOKEN/),
+      screen.getByText(/Set the same token in LUNEDO_RENDER_TOKEN of Lunedo and RENDER_TOKEN/),
     ).toBeTruthy();
   });
 });

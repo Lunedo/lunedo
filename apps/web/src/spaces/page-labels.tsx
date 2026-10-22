@@ -1,4 +1,4 @@
-import { Button, Combobox, Popover, useToast } from "@pagehall/ui";
+import { Button, Combobox, Popover, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Plus, Tag, X } from "lucide-react";

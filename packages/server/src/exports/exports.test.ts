@@ -112,7 +112,7 @@ describe.skipIf(!baseUrl)("exports", () => {
       expect(all).not.toContain("Never published");
     });
 
-    it("rewrites links inside the export to relative paths and points the rest to Pagehall", () => {
+    it("rewrites links inside the export to relative paths and points the rest to Lunedo", () => {
       const html = textOf(files, "Welcome/Welcome.html");
       const markdown = textOf(files, "Welcome/Welcome.md");
       expect(html).toContain('href="../Network-%20setup-guide/Network-%20setup-guide.html"');
@@ -129,7 +129,7 @@ describe.skipIf(!baseUrl)("exports", () => {
     it("renders modules as static content with the exporter's permissions", () => {
       const html = textOf(files, "Welcome/Welcome.html");
       expect(html).toContain("@Rita Reader</span>");
-      expect(html).toContain('class="ph-page-report"');
+      expect(html).toContain('class="ld-page-report"');
       expect(html).toContain("Renew certificate");
       expect(html).toContain('<a href="../Ops/Ops.html">Ops</a>');
       expect(textOf(files, "Welcome/Welcome.md")).toContain("| Task | Assigned to | Due | Page |");
@@ -152,7 +152,7 @@ describe.skipIf(!baseUrl)("exports", () => {
     expect(textOf(files, "Welcome/Welcome.html")).toContain('href="../Salaries%202027/Salaries%202027.html"');
   });
 
-  it("leaves drafts and unpublished pages out for space admins, who could see them in Pagehall", async () => {
+  it("leaves drafts and unpublished pages out for space admins, who could see them in Lunedo", async () => {
     const context = await setup();
     const { files } = await exported(context.steward, { spaceId: context.space.id });
     const all = everything(files);

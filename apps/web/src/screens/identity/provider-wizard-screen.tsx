@@ -1,4 +1,4 @@
-import { identityProviderNameSchema } from "@pagehall/shared";
+import { identityProviderNameSchema } from "@lunedo/shared";
 import {
   Button,
   buttonClassName,
@@ -10,7 +10,7 @@ import {
   Notice,
   Section,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Check, Download, KeyRound } from "lucide-react";

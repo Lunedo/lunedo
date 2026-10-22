@@ -31,7 +31,7 @@ import {
 /*
  * Backup file layout:
  *
- *   0   magic "PHBK"            4 bytes
+ *   0   magic "LDBK"            4 bytes
  *   4   format version           uint16, big endian
  *   6   header length n          uint32, big endian
  *   10  header                   n bytes of UTF-8 JSON, not encrypted
@@ -43,7 +43,7 @@ import {
 export const BACKUP_FORMAT_VERSION = 1;
 export const backupScopes = ["all", "database"] as const;
 export type BackupScope = (typeof backupScopes)[number];
-const MAGIC = Buffer.from("PHBK");
+const MAGIC = Buffer.from("LDBK");
 const PREFIX_LENGTH = 10;
 const MAX_HEADER_LENGTH = 64 * 1024;
 const CIPHER = "AES-256-GCM";
@@ -53,7 +53,7 @@ const CONFIG_PREFIX = "config/";
 const MANIFEST_ENTRY = "manifest.json";
 
 const headerSchema = z.object({
-  pagehallVersion: z.string(),
+  lunedoVersion: z.string(),
   schemaVersion: z.string(),
   createdAt: z.iso.datetime(),
   key: z.object({
@@ -73,7 +73,7 @@ export type BackupHeader = z.infer<typeof headerSchema>;
 
 const manifestSchema = z.object({
   format: z.literal(BACKUP_FORMAT_VERSION),
-  pagehallVersion: z.string(),
+  lunedoVersion: z.string(),
   schemaVersion: z.string(),
   createdAt: z.iso.datetime(),
   entries: z.array(
@@ -158,12 +158,12 @@ async function readHeaderFrom(
   const prefix = Buffer.alloc(PREFIX_LENGTH);
   const { bytesRead } = await read(prefix, 0);
   if (bytesRead < PREFIX_LENGTH || !prefix.subarray(0, 4).equals(MAGIC)) {
-    throw new BackupError(`${name} is not a Pagehall backup`);
+    throw new BackupError(`${name} is not a Lunedo backup`);
   }
   const formatVersion = prefix.readUInt16BE(4);
   if (formatVersion !== BACKUP_FORMAT_VERSION) {
     throw new BackupError(
-      `The backup uses format version ${formatVersion}, which this Pagehall version cannot read. Restore it with the Pagehall version that created it or a newer one.`,
+      `The backup uses format version ${formatVersion}, which this Lunedo version cannot read. Restore it with the Lunedo version that created it or a newer one.`,
     );
   }
   const length = prefix.readUInt32BE(6);
@@ -233,18 +233,18 @@ export function checkBackupHeader(
 ): void {
   if (header.cipher !== CIPHER) {
     throw new BackupError(
-      `The backup is encrypted with ${header.cipher}, which this Pagehall version does not support. Restore it with the Pagehall version that created it or a newer one.`,
+      `The backup is encrypted with ${header.cipher}, which this Lunedo version does not support. Restore it with the Lunedo version that created it or a newer one.`,
     );
   }
   if (!options.knownSchemaVersions.includes(header.schemaVersion)) {
     throw new BackupError(
-      `The backup was created by Pagehall ${header.pagehallVersion} with schema version ${header.schemaVersion}, which is newer than this Pagehall version supports. Update Pagehall to version ${header.pagehallVersion} or newer and run the command again.`,
+      `The backup was created by Lunedo ${header.lunedoVersion} with schema version ${header.schemaVersion}, which is newer than this Lunedo version supports. Update Lunedo to version ${header.lunedoVersion} or newer and run the command again.`,
     );
   }
   const { version, fingerprint } = header.key;
   if (!options.backupKeys.has(version)) {
     throw new BackupError(
-      `The backup is encrypted with backup key version ${version} (fingerprint ${fingerprint}), which is not configured. Add this key version to PAGEHALL_BACKUP_KEY or to the backup-keys file in the secrets directory and run the command again.`,
+      `The backup is encrypted with backup key version ${version} (fingerprint ${fingerprint}), which is not configured. Add this key version to LUNEDO_BACKUP_KEY or to the backup-keys file in the secrets directory and run the command again.`,
     );
   }
   const configured = backupKeyFingerprint(options.backupKeys.get(version)).toString("hex");
@@ -255,7 +255,7 @@ export function checkBackupHeader(
   }
   if (options.masterKeys === undefined) return;
   const copyKeys =
-    "Copy the master key ring of the instance the backup comes from (master-keys in its secrets directory, or PAGEHALL_MASTER_KEYS) to this instance and run the restore again.";
+    "Copy the master key ring of the instance the backup comes from (master-keys in its secrets directory, or LUNEDO_MASTER_KEYS) to this instance and run the restore again.";
   for (const required of header.masterKeys) {
     if (!options.masterKeys?.has(required.version)) {
       throw new BackupError(
@@ -283,14 +283,14 @@ export function openBackupArchive(options: {
   output: string | Writable;
   backupKeys: KeyRing;
   masterKeys: BackupHeader["masterKeys"];
-  pagehallVersion: string;
+  lunedoVersion: string;
   schemaVersion: string;
   scope?: BackupScope;
   chunkSize?: number;
 }): BackupArchiveWriter {
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
   const header: BackupHeader = {
-    pagehallVersion: options.pagehallVersion,
+    lunedoVersion: options.lunedoVersion,
     schemaVersion: options.schemaVersion,
     createdAt: new Date().toISOString(),
     key: {
@@ -380,7 +380,7 @@ export interface CreateBackupOptions {
   scope?: BackupScope | undefined;
   /** Configuration files to include, by name. They must not contain the master or backup key. */
   config: Record<string, string>;
-  pagehallVersion: string;
+  lunedoVersion: string;
   schemaVersion: string;
   logger: Logger;
 }
@@ -416,7 +416,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
       output: destination.open(),
       backupKeys: options.backupKeys,
       masterKeys: options.masterKeys,
-      pagehallVersion: options.pagehallVersion,
+      lunedoVersion: options.lunedoVersion,
       schemaVersion: options.schemaVersion,
       scope,
     });
@@ -451,7 +451,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
 
     const manifest: BackupManifest = {
       format: BACKUP_FORMAT_VERSION,
-      pagehallVersion: header.pagehallVersion,
+      lunedoVersion: header.lunedoVersion,
       schemaVersion: header.schemaVersion,
       createdAt: header.createdAt,
       entries,
@@ -532,7 +532,7 @@ async function readArchive(
   if (!manifest) throw new BackupError("The backup has no manifest; it may be truncated");
   if (
     manifest.schemaVersion !== header.schemaVersion ||
-    manifest.pagehallVersion !== header.pagehallVersion ||
+    manifest.lunedoVersion !== header.lunedoVersion ||
     manifest.createdAt !== header.createdAt
   ) {
     throw new BackupError("The backup manifest does not match its header");
@@ -658,7 +658,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
   } catch (error) {
     if (databaseRestored) {
       throw new BackupError(
-        `The database was restored, but the restore did not complete: ${(error as Error).message}. Pagehall does not start until the restore is run again with --force.`,
+        `The database was restored, but the restore did not complete: ${(error as Error).message}. Lunedo does not start until the restore is run again with --force.`,
         { cause: error },
       );
     }

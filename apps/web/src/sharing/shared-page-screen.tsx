@@ -1,4 +1,4 @@
-import { Badge, Button, PageHeader, Skeleton } from "@pagehall/ui";
+import { Badge, Button, PageHeader, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Check, FileText, Newspaper, Pencil } from "lucide-react";

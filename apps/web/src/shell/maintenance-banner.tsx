@@ -1,4 +1,4 @@
-import { Notice } from "@pagehall/ui";
+import { Notice } from "@lunedo/ui";
 import { useTranslation } from "react-i18next";
 import { useMaintenance } from "../api/maintenance.js";
 

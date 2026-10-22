@@ -1,4 +1,4 @@
-import { organizationChatEvents } from "@pagehall/shared";
+import { organizationChatEvents } from "@lunedo/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Megaphone } from "lucide-react";

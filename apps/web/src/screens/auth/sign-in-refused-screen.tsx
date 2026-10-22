@@ -1,4 +1,4 @@
-import { Button, Notice } from "@pagehall/ui";
+import { Button, Notice } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, RotateCcw } from "lucide-react";

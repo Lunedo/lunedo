@@ -1,5 +1,5 @@
-import { signInEmailSchema } from "@pagehall/shared";
-import { Button, Field, Input, Notice } from "@pagehall/ui";
+import { signInEmailSchema } from "@lunedo/shared";
+import { Button, Field, Input, Notice } from "@lunedo/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";

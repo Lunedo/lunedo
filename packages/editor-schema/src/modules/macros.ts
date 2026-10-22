@@ -33,7 +33,7 @@ export const MAX_LATEX_LENGTH = 10_000;
 const encoder = new TextEncoder();
 
 const CALLOUT_ICON =
-  '<svg class="ph-callout-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
+  '<svg class="ld-callout-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
 
 function renderMath(latex: string, displayMode: boolean, renderer: HtmlRenderer): string {
   const rendered = renderer.spendRenderBudget(latex.length)
@@ -49,7 +49,7 @@ function renderMath(latex: string, displayMode: boolean, renderer: HtmlRenderer)
     : element("code", {}, escapeHtml(latex));
   return element(
     displayMode ? "div" : "span",
-    { class: displayMode ? "ph-math ph-math-block" : "ph-math", "data-latex": latex },
+    { class: displayMode ? "ld-math ld-math-block" : "ld-math", "data-latex": latex },
     rendered,
   );
 }
@@ -181,12 +181,12 @@ export const calloutModule = defineModule({
         return element(
           "aside",
           {
-            class: "ph-callout",
+            class: "ld-callout",
             "data-variant": variant,
             role: "note",
             "aria-label": renderer.calloutLabel(variant),
           },
-          `${element("div", { class: "ph-callout-control" }, element("span", { class: "ph-callout-label" }, `${CALLOUT_ICON}${renderer.escape(renderer.calloutLabel(variant))}`))}${element("div", { class: "ph-callout-content" }, renderer.children(node))}`,
+          `${element("div", { class: "ld-callout-control" }, element("span", { class: "ld-callout-label" }, `${CALLOUT_ICON}${renderer.escape(renderer.calloutLabel(variant))}`))}${element("div", { class: "ld-callout-content" }, renderer.children(node))}`,
         );
       },
       markdown: (node, renderer) => {
@@ -219,14 +219,14 @@ export const expandModule = defineModule({
       html: (node, renderer) =>
         element(
           "details",
-          { class: "ph-expand" },
+          { class: "ld-expand" },
           `${element("summary", {}, renderer.escape(attrOf<string>(node, "title")))}${element("div", {}, renderer.children(node))}`,
         ),
       print: (node, renderer) =>
         element(
           "section",
-          { class: "ph-expand" },
-          `${element("p", { class: "ph-expand-title" }, renderer.escape(attrOf<string>(node, "title")))}${element("div", {}, renderer.children(node))}`,
+          { class: "ld-expand" },
+          `${element("p", { class: "ld-expand-title" }, renderer.escape(attrOf<string>(node, "title")))}${element("div", {}, renderer.children(node))}`,
         ),
       word: (node, renderer) => {
         const title = attrOf<string>(node, "title");
@@ -265,7 +265,7 @@ export const statusModule = defineModule({
       html: (node, renderer) =>
         element(
           "span",
-          { class: "ph-status", "data-color": attrOf<string>(node, "color") },
+          { class: "ld-status", "data-color": attrOf<string>(node, "color") },
           renderer.escape(attrOf<string>(node, "text")),
         ),
       word: (node) => [
@@ -333,7 +333,7 @@ export const tableOfContentsModule = defineModule({
       html: (node, renderer) =>
         element(
           "nav",
-          { class: "ph-toc", "aria-label": renderer.label("tableOfContents") },
+          { class: "ld-toc", "aria-label": renderer.label("tableOfContents") },
           tocHtml(tocTree(renderer.headings, node), renderer.escape),
         ),
       word: (node) => [
@@ -370,7 +370,7 @@ export const columnsModule = defineModule({
         return Math.abs(total - 100) <= 1 ? null : "The widths of the columns must add up to 100";
       },
       html: (node, renderer) =>
-        element("div", { class: "ph-columns", "data-count": node.content.length }, renderer.children(node)),
+        element("div", { class: "ld-columns", "data-count": node.content.length }, renderer.children(node)),
       word: (node, renderer) => [
         {
           type: "table",
@@ -398,7 +398,7 @@ export const columnsModule = defineModule({
       html: (node, renderer) =>
         element(
           "div",
-          { class: "ph-column", "data-width": attrOf<number>(node, "width") },
+          { class: "ld-column", "data-width": attrOf<number>(node, "width") },
           renderer.children(node),
         ),
       word: (node, renderer) => renderer.blocks(node),
@@ -460,7 +460,7 @@ export const unsupportedMacroModule = defineModule({
         const name = attrOf<string>(node, "name");
         return element(
           "div",
-          { class: "ph-unsupported-macro", "data-macro": name },
+          { class: "ld-unsupported-macro", "data-macro": name },
           element("p", {}, renderer.escape(renderer.label("unsupportedMacro", { name }))),
         );
       },

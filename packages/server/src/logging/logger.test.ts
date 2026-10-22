@@ -114,7 +114,7 @@ describe("error events", () => {
       type: OTHER_ERROR_TYPE,
       code: null,
     });
-    expect(loggedErrorOf([{}, "Cannot read /var/lib/pagehall"])).toEqual({
+    expect(loggedErrorOf([{}, "Cannot read /var/lib/lunedo"])).toEqual({
       type: OTHER_ERROR_TYPE,
       code: null,
     });

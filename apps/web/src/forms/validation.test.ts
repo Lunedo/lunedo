@@ -1,4 +1,4 @@
-import { emailSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
+import { emailSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@lunedo/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { initI18n } from "../i18n/index.js";

@@ -1,4 +1,4 @@
-import type { Areas, RoleScope } from "@pagehall/shared";
+import type { Areas, RoleScope } from "@lunedo/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
@@ -12,7 +12,7 @@ import {
 import { isAccentColor } from "../preferences/preferences.js";
 import { setAccentColor } from "../preferences/preferences-provider.js";
 
-const STORAGE_PREFIX = "pagehall.organization.";
+const STORAGE_PREFIX = "lunedo.organization.";
 
 export interface OrganizationState {
   session: SessionInfo;

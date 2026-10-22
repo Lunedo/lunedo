@@ -1,4 +1,4 @@
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
 
 export const SAMPLE_PAGE = "01929b1e-0000-7000-8000-000000000a01";
 export const SAMPLE_PERSON = "01929b1e-0000-7000-8000-000000000a02";

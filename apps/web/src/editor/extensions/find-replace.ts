@@ -176,7 +176,7 @@ export const FindReplace = Extension.create<{ onOpen: () => void }>({
               state.doc,
               find.matches.map((match, index) =>
                 Decoration.inline(match.from, match.to, {
-                  class: index === find.current ? "ph-find-match ph-find-current" : "ph-find-match",
+                  class: index === find.current ? "ld-find-match ld-find-current" : "ld-find-match",
                 }),
               ),
             );

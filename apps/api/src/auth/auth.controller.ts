@@ -1,4 +1,3 @@
-import { Body, Controller, Get, Inject, Post, Req, Res } from "@nestjs/common";
 import {
   type AccountServices,
   type AuthenticationResponseJSON,
@@ -7,7 +6,8 @@ import {
   type Session,
   type SessionKind,
   sessionLifetimeSetting,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Get, Inject, Post, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { InternalRoute, PublicRoute, SessionRoute } from "../access/route-access.js";

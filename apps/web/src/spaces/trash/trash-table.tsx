@@ -1,4 +1,4 @@
-import { Badge, Button, Table, type TableColumn } from "@pagehall/ui";
+import { Badge, Button, Table, type TableColumn } from "@lunedo/ui";
 import { Layers } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";

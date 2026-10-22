@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 
-export const IMPORT_CHANGES_CHANNEL = "pagehall_imports";
+export const IMPORT_CHANGES_CHANNEL = "lunedo_imports";
 
 export interface ImportChangeSignal {
   importId: string;

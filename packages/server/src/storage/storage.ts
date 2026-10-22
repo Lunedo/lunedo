@@ -1,4 +1,4 @@
-import { emailSchema, uuidv7 } from "@pagehall/shared";
+import { emailSchema, uuidv7 } from "@lunedo/shared";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";

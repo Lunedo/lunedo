@@ -1,22 +1,22 @@
 {
-  "name": "@pagehall/worker",
+  "name": "@lunedo/worker",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pagehall-dev --start dist/main.js --watch src --watch node_modules/@pagehall/shared/dist --watch node_modules/@pagehall/server/dist",
+    "dev": "lunedo-dev --start dist/main.js --watch src --watch node_modules/@lunedo/shared/dist --watch node_modules/@lunedo/server/dist",
     "start": "node --enable-source-maps dist/main.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@pagehall/server": "workspace:*",
-    "@pagehall/shared": "workspace:*"
+    "@lunedo/server": "workspace:*",
+    "@lunedo/shared": "workspace:*"
   },
   "devDependencies": {
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@types/node": "^24.19.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"

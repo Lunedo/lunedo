@@ -1,5 +1,5 @@
 import { createPrivateKey, webcrypto } from "node:crypto";
-import type { OidcConfig } from "@pagehall/shared";
+import type { OidcConfig } from "@lunedo/shared";
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from "jose";
 import * as client from "openid-client";
 import {

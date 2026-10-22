@@ -1,4 +1,4 @@
-import { Dialog, Input, Spinner } from "@pagehall/ui";
+import { Dialog, Input, Spinner } from "@lunedo/ui";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -152,7 +152,7 @@ export function EmojiPicker({
         ) : shown.length === 0 ? (
           <p className="text-sm text-text-muted">{t("editor.emoji.empty")}</p>
         ) : (
-          <fieldset ref={grid} className="ph-emoji-grid max-h-card overflow-y-auto" onKeyDown={onGridKeyDown}>
+          <fieldset ref={grid} className="ld-emoji-grid max-h-card overflow-y-auto" onKeyDown={onGridKeyDown}>
             <legend className="sr-only">{t("editor.emoji.results", { count: shown.length })}</legend>
             {shown.map((entry, index) => (
               <button

@@ -112,7 +112,7 @@ export async function setAppearance(
   const put = async (key: string, value: unknown) => {
     const response = await page.request.put(`/api/v1/account/preferences/${key}`, {
       data: { value },
-      headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
+      headers: { "X-Lunedo-Request": "1", origin: new URL(page.url()).origin },
     });
     expect(response.status(), key).toBe(204);
   };
@@ -144,7 +144,7 @@ export async function callApi(
   const response = await page.request.fetch(path, {
     method,
     ...(data === undefined ? {} : { data }),
-    headers: { "X-Pagehall-Request": "1", origin: new URL(page.url()).origin },
+    headers: { "X-Lunedo-Request": "1", origin: new URL(page.url()).origin },
   });
   expect(response.status(), `${method} ${path}: ${await response.text()}`).toBeLessThan(300);
   return response.status() === 204 ? null : ((await response.json()) as unknown);

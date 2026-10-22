@@ -6,7 +6,7 @@ import {
   timeFormats,
   type WeekStart,
   weekStarts,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import type { TFunction } from "i18next";
 import { createFormatter, defaultFormatSettings, type Formatter } from "../format/format.js";
 import { timeZoneOptions } from "../format/time-zones.js";

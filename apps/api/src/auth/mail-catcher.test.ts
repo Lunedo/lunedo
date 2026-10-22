@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { createServerRuntime, type ServerRuntime } from "@pagehall/server";
-import { Mailpit, testMailpitUrl } from "@pagehall/server/testing";
+import { createServerRuntime, type ServerRuntime } from "@lunedo/server";
+import { Mailpit, testMailpitUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   completeConfiguredSetup,
@@ -28,10 +28,10 @@ describe.skipIf(!databaseBaseUrl || !mailpitUrl)("mail end to end", () => {
     test = await createAuthTestApp(
       {
         ...configuredSetupEnv,
-        PAGEHALL_SMTP_HOST: mailpit.smtpHost,
-        PAGEHALL_SMTP_PORT: String(mailpit.smtpPort),
-        PAGEHALL_SMTP_SECURITY: "none",
-        PAGEHALL_SMTP_FROM: "wiki@pagehall.test",
+        LUNEDO_SMTP_HOST: mailpit.smtpHost,
+        LUNEDO_SMTP_PORT: String(mailpit.smtpPort),
+        LUNEDO_SMTP_SECURITY: "none",
+        LUNEDO_SMTP_FROM: "wiki@lunedo.test",
       },
       { captureMail: false },
     );
@@ -53,8 +53,8 @@ describe.skipIf(!databaseBaseUrl || !mailpitUrl)("mail end to end", () => {
 
     const mail = await mailpit.waitFor(email, { after: started - 1000 });
     expect(mail.subject).toBe("Reset your password for Test wiki");
-    expect(mail.from).toBe("wiki@pagehall.test");
-    expect(mail.html).toContain('<a href="https://pagehall.test/reset-password#token=');
+    expect(mail.from).toBe("wiki@lunedo.test");
+    expect(mail.html).toContain('<a href="https://lunedo.test/reset-password#token=');
     const token = linkToken(mail.text);
 
     expect(

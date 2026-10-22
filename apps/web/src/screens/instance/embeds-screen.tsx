@@ -1,5 +1,5 @@
-import type { EmbedService } from "@pagehall/editor-schema";
-import { Section, Skeleton } from "@pagehall/ui";
+import type { EmbedService } from "@lunedo/editor-schema";
+import { Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppWindow } from "lucide-react";
 import { useTranslation } from "react-i18next";

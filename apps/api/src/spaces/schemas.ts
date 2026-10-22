@@ -15,8 +15,8 @@ import {
   spaceTypes,
   spaceVisibilities,
   treeItemKinds,
-} from "@pagehall/server";
-import { contentLanguages } from "@pagehall/shared";
+} from "@lunedo/server";
+import { contentLanguages } from "@lunedo/shared";
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 
@@ -33,7 +33,7 @@ export const spaceTypeSchema = extensibleEnum(
 
 export const audienceSchema = extensibleEnum(
   knowledgeBaseAudiences,
-  "Who may read a knowledge base: `public` (everyone, also without signing in, once the portal exists; in Pagehall all internal users), `signedIn` (all internal users of the instance), `groups` (members of the groups that hold the reader role) or `portal` (portal accounts; in Pagehall only holders of a role). Categories and articles can narrow it with view restrictions, never widen it.",
+  "Who may read a knowledge base: `public` (everyone, also without signing in, once the portal exists; in Lunedo all internal users), `signedIn` (all internal users of the instance), `groups` (members of the groups that hold the reader role) or `portal` (portal accounts; in Lunedo only holders of a role). Categories and articles can narrow it with view restrictions, never widen it.",
 );
 
 export const articleTypeSchema = extensibleEnum(

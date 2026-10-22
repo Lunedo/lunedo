@@ -1,4 +1,4 @@
-import type { BadgeVariant } from "@pagehall/ui";
+import type { BadgeVariant } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import type { IdentityProvider, ProviderPreset, ProviderType } from "../../api/identity-queries.js";
 import type { Formatter } from "../../format/format.js";

@@ -7,7 +7,7 @@ import {
   type SaveState,
   SaveStatus,
   Textarea,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";

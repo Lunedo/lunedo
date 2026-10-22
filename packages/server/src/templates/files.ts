@@ -4,9 +4,9 @@ import {
   type DocumentJson,
   documentAttachments,
   rewriteFileReferences,
-} from "@pagehall/editor-schema";
-import { MAX_SCENE_BYTES } from "@pagehall/editor-schema/scene";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { MAX_SCENE_BYTES } from "@lunedo/editor-schema/scene";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { Database, Executor, Transaction } from "../database/database.js";

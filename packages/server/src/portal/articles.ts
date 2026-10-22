@@ -11,7 +11,7 @@ import {
   type RenderContext,
   renderHtml,
   resolveEmbed,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ANONYMOUS, type Principal } from "../accounts/principal.js";

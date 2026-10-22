@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { type AuditLog } from "../audit/audit-log.js";

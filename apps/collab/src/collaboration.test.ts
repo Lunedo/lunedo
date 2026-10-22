@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
+import { documentFromYDoc } from "@lunedo/editor-schema/yjs";
 import {
   AUDIT_CHANGES_CHANNEL,
   accountPrincipal,
   type ServerRuntime,
   SPACE_CHANGES_CHANNEL,
   SYSTEM,
-} from "@pagehall/server";
-import { testDatabaseBaseUrl, testRedisUrl } from "@pagehall/server/testing";
+} from "@lunedo/server";
+import { testDatabaseBaseUrl, testRedisUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import {
@@ -26,7 +26,7 @@ import { MAX_UPDATE_BYTES, STORE_DEBOUNCE_MS } from "./limits.js";
 const baseUrl = testDatabaseBaseUrl();
 const redisUrl = testRedisUrl();
 
-const DELIVERED_CHANNEL = "pagehall_test_delivered";
+const DELIVERED_CHANNEL = "lunedo_test_delivered";
 
 function textOf(doc: Y.Doc): string {
   return JSON.stringify(documentFromYDoc(doc));
@@ -245,7 +245,7 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       );
       expect(await refusal(open(first.url, itemId, { token, origin: null }))).toBe("originNotAllowed");
       expect(
-        await refusal(open(first.url, itemId, { token, headers: { authorization: "Bearer ph_token" } })),
+        await refusal(open(first.url, itemId, { token, headers: { authorization: "Bearer ld_token" } })),
       ).toBe("tokenNotAllowed");
       expect(await refusal(open(first.url, itemId, { token }))).toBe("accepted");
     });
@@ -256,7 +256,7 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       await runtime.pool.query("delete from sessions where account_id = $1", [account]);
       expect(await refusal(open(first.url, itemId, { token }))).toBe("notSignedIn");
       expect(await refusal(open(first.url, itemId, {}))).toBe("notSignedIn");
-      expect(ORIGIN).toBe("https://pagehall.test");
+      expect(ORIGIN).toBe("https://lunedo.test");
     });
 
     it("on other paths", async () => {

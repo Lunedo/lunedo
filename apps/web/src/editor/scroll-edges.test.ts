@@ -3,7 +3,7 @@ import { markScrollEdges } from "./scroll-edges.js";
 
 function scroller(scrollWidth: number, clientWidth: number): HTMLElement {
   const element = document.createElement("div");
-  element.className = "ph-roadmap-scroll";
+  element.className = "ld-roadmap-scroll";
   Object.defineProperty(element, "scrollWidth", { value: scrollWidth });
   Object.defineProperty(element, "clientWidth", { value: clientWidth });
   return element;

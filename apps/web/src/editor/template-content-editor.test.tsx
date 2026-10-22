@@ -55,7 +55,7 @@ describe("template content editor", () => {
       try {
         if (running > 1) {
           throw new ApiError(503, {
-            type: "urn:pagehall:problem:busy",
+            type: "urn:lunedo:problem:busy",
             title: "The server is busy",
             status: 503,
             code: "busy",

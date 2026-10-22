@@ -29,8 +29,8 @@ export {
   pageReportSorts,
   taskReportDueWindows,
   taskReportStatuses,
-} from "@pagehall/editor-schema";
-export type { SceneProblem, SceneProblemCode } from "@pagehall/editor-schema/scene";
+} from "@lunedo/editor-schema";
+export type { SceneProblem, SceneProblemCode } from "@lunedo/editor-schema/scene";
 export {
   type Account,
   AccountService,
@@ -745,7 +745,7 @@ export {
   compareVersions,
   DEVELOPMENT_VERSION,
   formatVersion,
-  pagehallVersion,
+  lunedoVersion,
   parseReleaseVersion,
   type ReleaseVersion,
 } from "./operations/version.js";

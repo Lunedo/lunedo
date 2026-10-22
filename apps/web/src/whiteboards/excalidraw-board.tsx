@@ -18,7 +18,7 @@ import type {
   SocketId,
 } from "@excalidraw/excalidraw/types";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { Scene, SceneFile } from "@pagehall/editor-schema/scene";
+import type { Scene, SceneFile } from "@lunedo/editor-schema/scene";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type * as Y from "yjs";
@@ -376,7 +376,7 @@ export function ExcalidrawBoard({
   );
 
   return (
-    <div ref={container} className="ph-whiteboard h-full w-full">
+    <div ref={container} className="ld-whiteboard h-full w-full">
       <Excalidraw
         excalidrawAPI={setApi}
         initialData={initialData}

@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 function problem(status: number, code: string) {
-  return { status, body: { type: `urn:pagehall:problem:${code}`, title: code, status, code } };
+  return { status, body: { type: `urn:lunedo:problem:${code}`, title: code, status, code } };
 }
 
 function api() {
@@ -26,7 +26,7 @@ function api() {
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
-        name: "Pagehall",
+        name: "Lunedo",
         setupComplete: true,
         language: "en",
         accentColor: "petrol",
@@ -73,7 +73,7 @@ describe("linking an identity to an existing account", () => {
     await userEvent.click(screen.getByRole("button", { name: "Confirm and link" }));
     expect(
       await screen.findByText(
-        'This is not the Pagehall password of Lena Lind. Enter it again, or reset it with "Forgot password?" on the sign-in page.',
+        'This is not the Lunedo password of Lena Lind. Enter it again, or reset it with "Forgot password?" on the sign-in page.',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/e-mail address or the password/)).toBeNull();
@@ -84,7 +84,7 @@ describe("linking an identity to an existing account", () => {
     await open();
     await userEvent.type(await screen.findByLabelText("Password of Lena Lind"), "wrong password");
     await userEvent.click(screen.getByRole("button", { name: "Confirm and link" }));
-    await screen.findByText(/This is not the Pagehall password/);
+    await screen.findByText(/This is not the Lunedo password/);
     await userEvent.click(screen.getByRole("button", { name: "This is not my account" }));
     expect(await screen.findByText("E2M1-855D")).toBeTruthy();
     expect(screen.queryByText("This link has expired")).toBeNull();

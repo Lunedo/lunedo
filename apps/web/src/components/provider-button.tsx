@@ -1,4 +1,4 @@
-import { Button } from "@pagehall/ui";
+import { Button } from "@lunedo/ui";
 import { KeyRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { providerLogoUrl, type SignInProvider } from "../api/identity-queries.js";

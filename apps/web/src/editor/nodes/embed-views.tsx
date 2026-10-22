@@ -8,8 +8,8 @@ import {
   MIN_EMBED_HEIGHT,
   MIN_PREVIEW_HEIGHT,
   resolveEmbed,
-} from "@pagehall/editor-schema";
-import { Button, Checkbox, Combobox, Field, Input, Select, useToast } from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Button, Checkbox, Combobox, Field, Input, Select, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
@@ -141,7 +141,7 @@ export function EmbedView({ node, editor, updateAttributes, selected }: NodeView
   const resolved = services ? resolveEmbed(url, services) : null;
   return (
     <NodeViewWrapper
-      className={`ph-embed-block ph-include-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-embed-block ld-include-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="embed"
     >
@@ -198,7 +198,7 @@ export function WhiteboardView({ node, editor, updateAttributes, selected }: Nod
   });
   return (
     <NodeViewWrapper
-      className={`ph-whiteboard-block ph-include-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-whiteboard-block ld-include-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="whiteboard"
     >
@@ -245,7 +245,7 @@ export function FileView({ node, editor, updateAttributes, selected }: NodeViewP
   const limits = { min: MIN_PREVIEW_HEIGHT, max: MAX_PREVIEW_HEIGHT };
   return (
     <NodeViewWrapper
-      className={`ph-file${showPreview ? " ph-file-with-preview" : ""}${selected ? " ph-node-selected" : ""}`}
+      className={`ld-file${showPreview ? " ld-file-with-preview" : ""}${selected ? " ld-node-selected" : ""}`}
       data-preview={showPreview ? "true" : undefined}
       contentEditable={false}
     >
@@ -390,11 +390,11 @@ export function TabsView({ node, editor, getPos, selected }: NodeViewProps) {
 
   return (
     <NodeViewWrapper
-      className={`ph-tabs-editor${selected ? " ph-node-selected" : ""}`}
+      className={`ld-tabs-editor${selected ? " ld-node-selected" : ""}`}
       data-active={current}
       data-type="tabs"
     >
-      <div contentEditable={false} className="ph-tabs-editor-header flex flex-col gap-2">
+      <div contentEditable={false} className="ld-tabs-editor-header flex flex-col gap-2">
         <div
           className="flex items-center gap-1 overflow-x-auto"
           role="toolbar"
@@ -411,7 +411,7 @@ export function TabsView({ node, editor, getPos, selected }: NodeViewProps) {
                 setActive(index);
                 setName(null);
               }}
-              className="ph-tab-button"
+              className="ld-tab-button"
             >
               {title}
             </button>
@@ -468,7 +468,7 @@ export function TabsView({ node, editor, getPos, selected }: NodeViewProps) {
           </div>
         ) : null}
       </div>
-      <NodeViewContent className="ph-tabs-editor-content" />
+      <NodeViewContent className="ld-tabs-editor-content" />
     </NodeViewWrapper>
   );
 }

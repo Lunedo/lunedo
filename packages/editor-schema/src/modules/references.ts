@@ -28,7 +28,7 @@ export const mentionModule = defineModule({
       html: (node, renderer) =>
         element(
           "span",
-          { class: "ph-mention", "data-account-id": attrOf<string>(node, "id") },
+          { class: "ld-mention", "data-account-id": attrOf<string>(node, "id") },
           renderer.escape(`@${renderer.mentionName(attrOf<string>(node, "id"))}`),
         ),
       word: (node, renderer) => [
@@ -68,7 +68,7 @@ export const pageLinkModule = defineModule({
         if (resolved?.inTrash) {
           return element(
             "span",
-            { class: "ph-page-link", "data-state": "trash" },
+            { class: "ld-page-link", "data-state": "trash" },
             renderer.escape(
               `${resolved.title || renderer.label("untitledPage")} (${renderer.label("inTrash")})`,
             ),
@@ -77,16 +77,16 @@ export const pageLinkModule = defineModule({
         if (resolved && !resolved.accessible) {
           return element(
             "span",
-            { class: "ph-page-link", "data-access": "none" },
+            { class: "ld-page-link", "data-access": "none" },
             renderer.escape(renderer.label("noAccess")),
           );
         }
         const title = resolved?.title || target.title || renderer.label("untitledPage");
         const href = resolved ? renderer.safeHref(resolved.href) : null;
         if (!href) {
-          return element("span", { class: "ph-page-link", "data-missing": missing }, renderer.escape(title));
+          return element("span", { class: "ld-page-link", "data-missing": missing }, renderer.escape(title));
         }
-        return element("a", { class: "ph-page-link", href, "data-missing": missing }, renderer.escape(title));
+        return element("a", { class: "ld-page-link", href, "data-missing": missing }, renderer.escape(title));
       },
       word: (node, renderer) => {
         const target = linkTarget(node);
@@ -131,7 +131,7 @@ export const emojiModule = defineModule({
       spec: inlineAtom,
       attrs: { emoji: required(emojiValue) },
       html: (node, renderer) =>
-        element("span", { class: "ph-emoji" }, renderer.escape(attrOf<string>(node, "emoji"))),
+        element("span", { class: "ld-emoji" }, renderer.escape(attrOf<string>(node, "emoji"))),
       word: (node) => [wordText(attrOf<string>(node, "emoji"))],
       markdown: (node) => attrOf<string>(node, "emoji"),
       text: (node) => attrOf<string>(node, "emoji"),
@@ -150,7 +150,7 @@ export const dateModule = defineModule({
         const date = attrOf<string>(node, "date");
         return element(
           "time",
-          { class: "ph-date", datetime: date },
+          { class: "ld-date", datetime: date },
           renderer.escape(renderer.formatDate(date)),
         );
       },

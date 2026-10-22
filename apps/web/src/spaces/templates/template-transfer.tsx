@@ -1,4 +1,4 @@
-import { renderHtml } from "@pagehall/editor-schema";
+import { renderHtml } from "@lunedo/editor-schema";
 import {
   Badge,
   Button,
@@ -16,7 +16,7 @@ import {
   Select,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Download, FileUp, Upload } from "lucide-react";
 import { useId, useMemo, useRef, useState } from "react";
@@ -305,7 +305,7 @@ function TemplatePreviewCard({
           <div
             // biome-ignore lint/a11y/noNoninteractiveTabindex: the preview scrolls and must be reachable by keyboard
             tabIndex={0}
-            className="ph-content ph-read-view mt-2 max-h-dialog-sm overflow-y-auto rounded-md border border-border bg-surface p-3 text-sm"
+            className="ld-content ld-read-view mt-2 max-h-dialog-sm overflow-y-auto rounded-md border border-border bg-surface p-3 text-sm"
             // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the checked template
             dangerouslySetInnerHTML={{ __html: html }}
           />

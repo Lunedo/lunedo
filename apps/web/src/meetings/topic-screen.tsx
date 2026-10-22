@@ -1,4 +1,4 @@
-import { type DocumentJson, renderHtml } from "@pagehall/editor-schema";
+import { type DocumentJson, renderHtml } from "@lunedo/editor-schema";
 import {
   Badge,
   Button,
@@ -13,7 +13,7 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { CheckCircle2, Flag, Repeat, RotateCcw } from "lucide-react";
@@ -85,7 +85,7 @@ function UpdateContent({ content }: { content: unknown[] }) {
   );
   return (
     // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated update
-    <div className="ph-content" dangerouslySetInnerHTML={{ __html: html }} />
+    <div className="ld-content" dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
 
@@ -230,8 +230,8 @@ function TopicView({ topic }: { topic: TopicDetails }) {
           </div>
         </dl>
         {topic.decision ? (
-          <section aria-labelledby="topic-decision" className="ph-decision">
-            <h2 id="topic-decision" className="ph-decision-label">
+          <section aria-labelledby="topic-decision" className="ld-decision">
+            <h2 id="topic-decision" className="ld-decision-label">
               <Flag aria-hidden className="size-icon-sm" />
               {t("meetings.topic.decision")}
             </h2>

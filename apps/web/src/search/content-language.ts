@@ -1,4 +1,4 @@
-import { type ContentLanguage, contentLanguages, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
+import { type ContentLanguage, contentLanguages, OTHER_CONTENT_LANGUAGE } from "@lunedo/shared";
 import type { TFunction } from "i18next";
 
 export function contentLanguageLabel(t: TFunction, value: unknown, uiLanguage: string): string {

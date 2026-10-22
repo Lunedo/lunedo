@@ -56,7 +56,7 @@ function editor(page: Page) {
 async function documentText(page: Page): Promise<string> {
   return editor(page).evaluate((element) => {
     const copy = element.cloneNode(true) as HTMLElement;
-    for (const caret of copy.querySelectorAll(".ph-remote-caret-anchor")) caret.remove();
+    for (const caret of copy.querySelectorAll(".ld-remote-caret-anchor")) caret.remove();
     return (copy.textContent ?? "").replace(/[\u2060\s]+/g, " ").trim();
   });
 }
@@ -164,18 +164,18 @@ test("writes a page with blocks and shows it in the read view", async ({ page, o
   await page.keyboard.press("Enter");
   await page.keyboard.type("Never send a private key by e-mail.");
   await waitSaved(page);
-  await expect(page.locator(".ph-callout-label").filter({ hasText: "Info" })).toBeVisible();
+  await expect(page.locator(".ld-callout-label").filter({ hasText: "Info" })).toBeVisible();
   const editing = await content.locator("p").first().boundingBox();
-  const bar = await page.locator(".ph-editor-bar").boundingBox();
+  const bar = await page.locator(".ld-editor-bar").boundingBox();
   expect(bar?.x).toBeCloseTo(editing?.x ?? -1, 0);
   expect(bar?.width).toBeCloseTo(editing?.width ?? -1, 0);
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByRole("heading", { name: "Set up a new device", level: 2 })).toBeVisible();
-  const reading = await page.locator(".ph-read-view p").first().boundingBox();
+  const reading = await page.locator(".ld-read-view p").first().boundingBox();
   expect(editing).not.toBeNull();
   expect(reading?.x).toBeCloseTo(editing?.x ?? -1, 0);
   expect(reading?.width).toBeCloseTo(editing?.width ?? -1, 0);
-  await expect(page.locator(".ph-read-view .ph-callout-label")).toHaveText("Info");
+  await expect(page.locator(".ld-read-view .ld-callout-label")).toHaveText("Info");
   await expect(page.locator("strong", { hasText: "company portal" })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Copy its public key" })).toBeVisible();
   await expect(page.getByRole("note", { name: "Info" })).toContainText("Never send a private key by e-mail.");

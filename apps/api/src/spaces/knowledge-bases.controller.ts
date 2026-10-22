@@ -1,5 +1,5 @@
+import { MAX_AUDIENCE_GROUPS } from "@lunedo/server";
 import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
-import { MAX_AUDIENCE_GROUPS } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -438,7 +438,7 @@ const templateSectionsSchema = z
         templateId: z.string().describe("ID of the template."),
         name: z.string().describe("Name of the template."),
         articleType: articleTypeSchema.nullable().describe("Type the template gives its articles, or null."),
-        builtIn: z.boolean().describe("Whether the template ships with Pagehall."),
+        builtIn: z.boolean().describe("Whether the template ships with Lunedo."),
         sections: z
           .array(
             z
@@ -564,7 +564,7 @@ export class KnowledgeBasesController {
   @ApiRoute({
     summary: "Set the contact address of a knowledge base",
     description:
-      "Sets the address used for articles whose categories have none. Pagehall sends nothing itself.",
+      "Sets the address used for articles whose categories have none. Lunedo sends nothing itself.",
     tags: [TAG],
     params: spaceParams,
     body: contactBodySchema,

@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 
-export const SPACE_CHANGES_CHANNEL = "pagehall_space_changes";
-export const DOCUMENT_CHANGES_CHANNEL = "pagehall_document_changes";
+export const SPACE_CHANGES_CHANNEL = "lunedo_space_changes";
+export const DOCUMENT_CHANGES_CHANNEL = "lunedo_document_changes";
 
 export const spaceChangeKinds = [
   "space",

@@ -4,7 +4,7 @@ import {
   createServerRuntime,
   registerShutdown,
   StartupError,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { createOperationsServer } from "./worker.js";
 
 let runtime: Awaited<ReturnType<typeof createServerRuntime>>;

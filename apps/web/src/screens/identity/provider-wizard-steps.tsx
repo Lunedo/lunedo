@@ -4,7 +4,7 @@ import {
   domainSchema,
   identityProviderNameSchema,
   ldapServerAddress,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import {
   Button,
   Field,
@@ -14,7 +14,7 @@ import {
   PasswordInput,
   SegmentedControl,
   Switch,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { ArrowLeft, FileUp } from "lucide-react";

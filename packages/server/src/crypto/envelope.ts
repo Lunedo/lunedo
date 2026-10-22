@@ -4,7 +4,7 @@ import { KEY_LENGTH, type KeyRing, type SecretKey } from "./key-ring.js";
 /*
  * Envelope format, version 1:
  *
- *   0  magic "PHE"           3 bytes
+ *   0  magic "LDE"           3 bytes
  *   3  format version (1)    1 byte
  *   4  master key version    uint32, big endian
  *   8  wrap IV               12 bytes
@@ -19,7 +19,7 @@ import { KEY_LENGTH, type KeyRing, type SecretKey } from "./key-ring.js";
  * bytes 0-3 and the caller's context, so a value cannot be moved to another row or column.
  * Rotation replaces bytes 4-67 only.
  */
-const MAGIC = Buffer.from("PHE");
+const MAGIC = Buffer.from("LDE");
 const FORMAT_VERSION = 1;
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;

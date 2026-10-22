@@ -1,6 +1,6 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { SYSTEM } from "../accounts/principal.js";
@@ -28,7 +28,7 @@ import {
 import { type BackupTarget, ensureDirectory, LocalBackupTarget } from "./targets.js";
 
 export const SKIP_BEFORE_UPDATE_MARKER = "skip-backup-before-update.json";
-export const SKIP_COMMAND = "docker compose run --rm pagehall backup skip-before-update";
+export const SKIP_COMMAND = "docker compose run --rm lunedo backup skip-before-update";
 
 const skipMarkerSchema = z.object({ version: z.string().min(1), createdAt: z.string() });
 
@@ -258,7 +258,7 @@ export async function backupBeforeMigrations(
   const { logger } = options;
   if (!options.environmentAllows) {
     logger.warn(
-      "Migrations are pending; the backup before the update is turned off by PAGEHALL_BACKUP_BEFORE_UPDATE",
+      "Migrations are pending; the backup before the update is turned off by LUNEDO_BACKUP_BEFORE_UPDATE",
     );
     return;
   }
@@ -276,7 +276,7 @@ export async function backupBeforeMigrations(
   } catch (error) {
     logger.error({ reason: describeFailure(error) }, "The backup before the update failed");
     throw new BackupBeforeUpdateError(
-      `The backup before the database update failed, so the migrations were not run: ${describeFailure(error)} Fix the cause and start Pagehall again, or start once without this backup after running: ${SKIP_COMMAND}`,
+      `The backup before the database update failed, so the migrations were not run: ${describeFailure(error)} Fix the cause and start Lunedo again, or start once without this backup after running: ${SKIP_COMMAND}`,
     );
   }
 }

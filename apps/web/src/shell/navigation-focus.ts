@@ -1,4 +1,4 @@
-import { focusMainHeading, mainHeading } from "@pagehall/ui";
+import { focusMainHeading, mainHeading } from "@lunedo/ui";
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 

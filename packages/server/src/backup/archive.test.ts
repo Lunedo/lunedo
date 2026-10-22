@@ -81,12 +81,12 @@ const schemaVersion = "0000_foundation";
 const knownSchemaVersions = [schemaVersion];
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-"));
+  dir = await mkdtemp(path.join(tmpdir(), "lunedo-backup-"));
   key1 = randomBytes(32);
   backupKeys = ring([1, key1]);
   masterKeys = ring([1, randomBytes(32)]);
   filesDir = path.join(dir, "files");
-  archivePath = path.join(dir, "backup.phbak");
+  archivePath = path.join(dir, "backup.ldbak");
   await mkdir(path.join(filesDir, "attachments", "2026"), { recursive: true });
   await writeFile(path.join(filesDir, "attachments", "2026", "report.pdf"), "marker-file-content");
   await writeFile(path.join(filesDir, "logo.png"), randomBytes(2 * 1024 * 1024));
@@ -111,8 +111,8 @@ async function create(options: { schemaVersion?: string; keys?: KeyRing; masterK
     masterKeys: requiredMasterKeys(options.masterKeys),
     database: new FakeDatabase(databaseDump),
     filesDir,
-    config: { "environment.json": '{"PAGEHALL_HOST":"0.0.0.0"}\n' },
-    pagehallVersion: "1.0.0",
+    config: { "environment.json": '{"LUNEDO_HOST":"0.0.0.0"}\n' },
+    lunedoVersion: "1.0.0",
     schemaVersion: options.schemaVersion ?? schemaVersion,
     logger,
   });
@@ -184,7 +184,7 @@ describe("backups", () => {
       database,
       filesDir,
       config: {},
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion,
       logger,
     });
@@ -231,10 +231,10 @@ describe("backups", () => {
   it("start with a readable, unencrypted header", async () => {
     const created = await create();
     const { header, bytes } = await readBackupHeader(archivePath);
-    expect(bytes.subarray(0, 4).toString()).toBe("PHBK");
+    expect(bytes.subarray(0, 4).toString()).toBe("LDBK");
     expect(bytes.readUInt16BE(4)).toBe(1);
     expect(header).toEqual({
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion,
       createdAt: created.createdAt,
       key: { version: 1, fingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) },
@@ -249,7 +249,7 @@ describe("backups", () => {
     const raw = await readFile(archivePath);
     const { bytes } = await readBackupHeader(archivePath);
     const body = raw.subarray(bytes.length);
-    expect(body.subarray(0, 3).toString()).toBe("PHS");
+    expect(body.subarray(0, 3).toString()).toBe("LDS");
     for (const marker of ["marker-file-content", "marker-database-content", "report.pdf"]) {
       expect(raw.includes(marker)).toBe(false);
     }
@@ -268,7 +268,7 @@ describe("backups", () => {
       (await readFile(path.join(target, "logo.png"))).equals(await readFile(path.join(filesDir, "logo.png"))),
     ).toBe(true);
     expect(await readFile(path.join(dir, "restored-config", "environment.json"), "utf8")).toContain(
-      "PAGEHALL_HOST",
+      "LUNEDO_HOST",
     );
   });
 
@@ -284,7 +284,7 @@ describe("backups", () => {
       filesDir,
       objectStore: source,
       config: {},
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion,
       logger,
     });
@@ -361,7 +361,7 @@ describe("backups without the file store", () => {
       filesDir,
       scope: "database",
       config: {},
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion,
       logger,
     });
@@ -402,7 +402,7 @@ describe("reading a backup for a restore", () => {
 
   it("stops before the database is touched when the backup changes between the passes", async () => {
     await create();
-    const other = path.join(dir, "other.phbak");
+    const other = path.join(dir, "other.ldbak");
     await createBackup({
       output: other,
       stagingDir: path.join(dir, "work"),
@@ -411,7 +411,7 @@ describe("reading a backup for a restore", () => {
       database: new FakeDatabase(Buffer.from("PGDMP another dump")),
       filesDir,
       config: {},
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion,
       logger,
     });
@@ -472,14 +472,14 @@ describe("the backup header", () => {
     raw.writeUInt16BE(2, 4);
     await writeFile(archivePath, raw);
     await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
-      "The backup uses format version 2, which this Pagehall version cannot read.",
+      "The backup uses format version 2, which this Lunedo version cannot read.",
     );
   });
 
   it("refuses files that are not backups", async () => {
     await writeFile(archivePath, "not a backup");
     await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
-      "is not a Pagehall backup",
+      "is not a Lunedo backup",
     );
   });
 
@@ -491,7 +491,7 @@ describe("the backup header", () => {
       () => restoreInto(path.join(dir, "target"), new FakeDatabase(Buffer.alloc(0))),
     ]) {
       await expect(run()).rejects.toThrow(
-        "The backup was created by Pagehall 1.0.0 with schema version 0099_future, which is newer than this Pagehall version supports. Update Pagehall to version 1.0.0 or newer and run the command again.",
+        "The backup was created by Lunedo 1.0.0 with schema version 0099_future, which is newer than this Lunedo version supports. Update Lunedo to version 1.0.0 or newer and run the command again.",
       );
     }
   });
@@ -500,7 +500,7 @@ describe("the backup header", () => {
     await create({ keys: ring([1, key1], [2, randomBytes(32)]) });
     await destroyData();
     await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow(
-      /^The backup is encrypted with backup key version 2 \(fingerprint [0-9a-f]{16}\), which is not configured\. Add this key version to PAGEHALL_BACKUP_KEY/,
+      /^The backup is encrypted with backup key version 2 \(fingerprint [0-9a-f]{16}\), which is not configured\. Add this key version to LUNEDO_BACKUP_KEY/,
     );
   });
 
@@ -551,7 +551,7 @@ describe("interrupted restores", () => {
     const refused = await checkRestoreComplete(target).catch((error: unknown) => error);
     expect(refused).toBeInstanceOf(IncompleteRestoreError);
     expect((refused as Error).message).toContain(`The restore of the backup ${archivePath}, started at `);
-    expect((refused as Error).message).toContain(`pagehall backup restore --input ${archivePath} --force`);
+    expect((refused as Error).message).toContain(`lunedo backup restore --input ${archivePath} --force`);
 
     await rm(configDir);
     await restoreInto(target, database, { force: true });
@@ -560,7 +560,7 @@ describe("interrupted restores", () => {
   });
 
   it("keep the marker of an earlier incomplete restore when the next one fails early", async () => {
-    await writeRestoreMarker(target, "earlier.phbak");
+    await writeRestoreMarker(target, "earlier.ldbak");
     await expect(restoreInto(target, failingDatabase(), { force: true })).rejects.toThrow(
       "connection to the database lost",
     );
@@ -569,7 +569,7 @@ describe("interrupted restores", () => {
 
   it("ignore what an interrupted restore left in the file store", async () => {
     await rm(path.join(target, "stale.txt"));
-    await writeRestoreMarker(target, "earlier.phbak");
+    await writeRestoreMarker(target, "earlier.ldbak");
     await mkdir(path.join(target, RESTORE_STAGING, "attachments"), { recursive: true });
     await writeFile(path.join(target, RESTORE_STAGING, "attachments", "partial.bin"), "partial");
 
@@ -579,7 +579,7 @@ describe("interrupted restores", () => {
   });
 
   it("are left out of backups", async () => {
-    await writeRestoreMarker(filesDir, "earlier.phbak");
+    await writeRestoreMarker(filesDir, "earlier.ldbak");
     await mkdir(path.join(filesDir, RESTORE_STAGING));
     await writeFile(path.join(filesDir, RESTORE_STAGING, "partial.bin"), "partial");
     const created = await create();
@@ -635,7 +635,7 @@ describe("archive entries", () => {
       output: archivePath,
       backupKeys,
       masterKeys: [],
-      pagehallVersion: "1.0.0",
+      lunedoVersion: "1.0.0",
       schemaVersion,
     });
     for (const entry of entries) {
@@ -704,21 +704,21 @@ describe("isSafeRelativePath", () => {
 
 describe("configurationForBackup", () => {
   it("removes key settings and masks secret values", async () => {
-    const configFile = path.join(dir, "pagehall.json");
+    const configFile = path.join(dir, "lunedo.json");
     await writeFile(
       configFile,
       JSON.stringify({
-        PAGEHALL_API_PORT: 4000,
-        PAGEHALL_BACKUP_KEY: "backup-secret",
-        PAGEHALL_MASTER_KEYS: "1:x",
+        LUNEDO_API_PORT: 4000,
+        LUNEDO_BACKUP_KEY: "backup-secret",
+        LUNEDO_MASTER_KEYS: "1:x",
       }),
     );
     const files = configurationForBackup({
-      PAGEHALL_CONFIG_FILE: configFile,
-      PAGEHALL_DATABASE_URL: "postgres://u:db-secret@h/d",
-      PAGEHALL_METRICS_TOKEN_FILE: "/run/secrets/metrics",
-      PAGEHALL_MASTER_KEYS_PATH: "/secrets/master-keys",
-      PAGEHALL_LOG_LEVEL: "debug",
+      LUNEDO_CONFIG_FILE: configFile,
+      LUNEDO_DATABASE_URL: "postgres://u:db-secret@h/d",
+      LUNEDO_METRICS_TOKEN_FILE: "/run/secrets/metrics",
+      LUNEDO_MASTER_KEYS_PATH: "/secrets/master-keys",
+      LUNEDO_LOG_LEVEL: "debug",
     });
     const all = Object.values(files).join("\n");
     expect(all).not.toContain("backup-secret");
@@ -726,11 +726,11 @@ describe("configurationForBackup", () => {
     expect(all).not.toContain("db-secret");
     expect(all).not.toContain("master-keys");
     expect(JSON.parse(files["environment.json"] ?? "{}")).toEqual({
-      PAGEHALL_CONFIG_FILE: configFile,
-      PAGEHALL_LOG_LEVEL: "debug",
-      PAGEHALL_DATABASE_URL: "[set]",
-      PAGEHALL_METRICS_TOKEN_FILE: "/run/secrets/metrics",
+      LUNEDO_CONFIG_FILE: configFile,
+      LUNEDO_LOG_LEVEL: "debug",
+      LUNEDO_DATABASE_URL: "[set]",
+      LUNEDO_METRICS_TOKEN_FILE: "/run/secrets/metrics",
     });
-    expect(JSON.parse(files["pagehall.json"] ?? "{}")).toEqual({ PAGEHALL_API_PORT: 4000 });
+    expect(JSON.parse(files["lunedo.json"] ?? "{}")).toEqual({ LUNEDO_API_PORT: 4000 });
   });
 });

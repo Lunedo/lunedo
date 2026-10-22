@@ -28,23 +28,23 @@ function release(version: string, notes: Partial<Release["notes"]> = {}): Releas
     version,
     date: "2026-11-02",
     minimumUpdateFrom: null,
-    url: `https://github.com/pagehall/pagehall/releases/tag/v${version}`,
+    url: `https://github.com/lunedo/lunedo/releases/tag/v${version}`,
     notes: { new: [], improved: [], fixed: [], breaking: [], manualSteps: [], ...notes },
   };
 }
 
 describe("updateCommands", () => {
   it("builds the commands from the installation method and a release version only", () => {
-    expect(updateCommands("script", "/opt/pagehall", "1.5.0")).toEqual({
+    expect(updateCommands("script", "/opt/lunedo", "1.5.0")).toEqual({
       method: "script",
       steps: [
-        { kind: "command", text: "cd /opt/pagehall" },
-        { kind: "command", text: "./pagehall update 1.5.0" },
+        { kind: "command", text: "cd /opt/lunedo" },
+        { kind: "command", text: "./lunedo update 1.5.0" },
       ],
     });
     const compose = updateCommands("compose", undefined, "1.5.0");
     expect(compose.steps.map((step) => step.text)).toContain(
-      `Set the image of the pagehall service to ${IMAGE_REPOSITORY}:1.5.0.`,
+      `Set the image of the lunedo service to ${IMAGE_REPOSITORY}:1.5.0.`,
     );
     expect(updateCommands(undefined, undefined, "1.5.0").method).toBe("unknown");
   });
@@ -52,19 +52,19 @@ describe("updateCommands", () => {
 
 describe("update commands and the shown address", () => {
   it("quotes an installation directory with spaces or quotes", () => {
-    expect(updateCommands("script", "/home/ops/Pagehall Wiki", "1.5.0").steps[0]).toEqual({
+    expect(updateCommands("script", "/home/ops/Lunedo Wiki", "1.5.0").steps[0]).toEqual({
       kind: "command",
-      text: "cd '/home/ops/Pagehall Wiki'",
+      text: "cd '/home/ops/Lunedo Wiki'",
     });
     expect(updateCommands("compose", "/srv/it's here", "1.5.0").steps[0]?.text).toBe(
       "cd '/srv/it'\\''s here'",
     );
-    expect(updateCommands("script", "/opt/pagehall", "1.5.0").steps[0]?.text).toBe("cd /opt/pagehall");
+    expect(updateCommands("script", "/opt/lunedo", "1.5.0").steps[0]?.text).toBe("cd /opt/lunedo");
   });
 
   it("shows only the scheme, host and path of the version file address", () => {
-    expect(displayedUrl("https://mirror.example.org:8443/pagehall/versions.json")).toBe(
-      "https://mirror.example.org:8443/pagehall/versions.json",
+    expect(displayedUrl("https://mirror.example.org:8443/lunedo/versions.json")).toBe(
+      "https://mirror.example.org:8443/lunedo/versions.json",
     );
     expect(displayedUrl("https://user:secret@mirror.example.org/v.json?token=abc#x")).toBe(
       "https://mirror.example.org/v.json",
@@ -84,12 +84,12 @@ describe("downloadVersionFile", () => {
     await server?.close();
   });
 
-  const url = (file = "/pagehall-versions.json") => `${server?.url ?? ""}${file}`;
+  const url = (file = "/lunedo-versions.json") => `${server?.url ?? ""}${file}`;
 
   it("follows redirects like the ones of GitHub release downloads and reads the releases", async () => {
     handler = (request) =>
       request.url.pathname === "/latest"
-        ? { status: 302, headers: { location: "/assets/pagehall-versions.json" } }
+        ? { status: 302, headers: { location: "/assets/lunedo-versions.json" } }
         : { status: 200, body: { schema: 1, releases: [release("1.5.0")] } };
     expect((await downloadVersionFile(localPolicy, url("/latest"))).map((entry) => entry.version)).toEqual([
       "1.5.0",
@@ -129,7 +129,7 @@ describe("downloadVersionFile", () => {
     handler = () => ({ status: 302, headers: { location: "/loop" } });
     expect(await reason(url())).toBe("tooManyRedirects");
     expect(await reason(url(), outboundPolicy([]))).toBe("blockedAddress");
-    expect(await reason("http://127.0.0.1:9/pagehall-versions.json")).toBe("unreachable");
+    expect(await reason("http://127.0.0.1:9/lunedo-versions.json")).toBe("unreachable");
   });
 });
 
@@ -164,7 +164,7 @@ describe.skipIf(!baseUrl)("UpdateCheckService", () => {
         check,
         url: DEFAULT_UPDATE_CHECK_URL,
         installMethod: "script",
-        installDir: "/opt/pagehall",
+        installDir: "/opt/lunedo",
         changelogFile: "CHANGELOG.md",
       },
       running: () => running,
@@ -220,7 +220,7 @@ describe.skipIf(!baseUrl)("UpdateCheckService", () => {
       latest: "1.5.0",
       commands: {
         method: "script",
-        steps: [{ text: "cd /opt/pagehall" }, { text: "./pagehall update 1.5.0" }],
+        steps: [{ text: "cd /opt/lunedo" }, { text: "./lunedo update 1.5.0" }],
       },
     });
     expect(status.available.map((entry) => entry.version)).toEqual(["1.5.0"]);

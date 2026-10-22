@@ -5,8 +5,8 @@ import {
   EMBED_SANDBOX,
   type EmbedReferrerPolicy,
   type EmbedService,
-} from "@pagehall/editor-schema";
-import { Skeleton } from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Presentation } from "lucide-react";
 import { type CSSProperties, type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
@@ -98,7 +98,7 @@ export function EmbedFrame({
   return (
     <div
       ref={target}
-      className="ph-embed-box"
+      className="ld-embed-box"
       style={heightStyle("--embed-height", height, DEFAULT_EMBED_HEIGHT)}
       data-loaded={visible ? "true" : "false"}
     >
@@ -181,7 +181,7 @@ export function InlineFilePreview({
   return (
     <div
       ref={target}
-      className="ph-file-preview-box"
+      className="ld-file-preview-box"
       style={heightStyle("--preview-height", height, DEFAULT_PREVIEW_HEIGHT)}
     >
       {body}
@@ -237,7 +237,7 @@ export function WhiteboardBlock({
     <a
       href={href}
       onClick={follow}
-      className="ph-whiteboard-card flex flex-col gap-2 rounded-md border border-border p-2 hover:bg-hover focus-visible:focus-ring"
+      className="ld-whiteboard-card flex flex-col gap-2 rounded-md border border-border p-2 hover:bg-hover focus-visible:focus-ring"
     >
       {preview ? (
         <img

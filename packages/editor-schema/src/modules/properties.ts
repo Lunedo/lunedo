@@ -160,7 +160,7 @@ function propertiesHtml(node: ValidNode, renderer: HtmlRenderer): string {
   return element(
     "section",
     {
-      class: "ph-page-properties",
+      class: "ld-page-properties",
       "aria-label": renderer.label("pageProperties"),
       "data-set-id": attrOf<string | null>(node, "setId"),
       "data-hidden": attrOf<boolean>(node, "hidden") ? "true" : null,
@@ -246,7 +246,7 @@ function propertiesReportHtml(node: ValidNode, renderer: HtmlRenderer): string {
   } else if (report.rows.length === 0) {
     content = element(
       "p",
-      { class: "ph-listing-empty" },
+      { class: "ld-listing-empty" },
       renderer.escape(renderer.label("noReportedProperties")),
     );
   } else {
@@ -275,11 +275,11 @@ function propertiesReportHtml(node: ValidNode, renderer: HtmlRenderer): string {
       return element("tr", {}, cells.map((cell) => element("td", {}, cell)).join(""));
     });
     const more = moreNote(report, renderer);
-    content = `${element("table", {}, `${head}${element("tbody", {}, rows.join(""))}`)}${more ? element("p", { class: "ph-listing-more" }, renderer.escape(more)) : ""}`;
+    content = `${element("table", {}, `${head}${element("tbody", {}, rows.join(""))}`)}${more ? element("p", { class: "ld-listing-more" }, renderer.escape(more)) : ""}`;
   }
   return element(
     "section",
-    { class: "ph-properties-report", "aria-label": label, ...reportAttributes(node) },
+    { class: "ld-properties-report", "aria-label": label, ...reportAttributes(node) },
     content,
   );
 }

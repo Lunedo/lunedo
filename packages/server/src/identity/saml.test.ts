@@ -1,11 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
-import {
-  ADFS_GROUP_CLAIMS,
-  ENTRA_SAML_CLAIMS,
-  type SamlConfigInput,
-  samlConfigSchema,
-} from "@pagehall/shared";
+import { ADFS_GROUP_CLAIMS, ENTRA_SAML_CLAIMS, type SamlConfigInput, samlConfigSchema } from "@lunedo/shared";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createFakeSamlIdp, type FakeSamlIdp, PERSISTENT } from "../testing/fakes/saml-idp.js";
 import type { ProviderCredential, SamlProviderDefinition } from "./adapter.js";
@@ -14,7 +9,7 @@ import { generateCertificate } from "./certificates.js";
 import { SamlAdapter, samlCapabilities, samlEntityId, samlPaths } from "./saml.js";
 import { parseSamlMetadata, SamlMetadataError } from "./saml-metadata.js";
 
-const BASE = "https://wiki.pagehall.test";
+const BASE = "https://wiki.lunedo.test";
 
 let idp: FakeSamlIdp;
 let credentials: ProviderCredential[];
@@ -22,7 +17,7 @@ let signingCertificate: string;
 
 beforeAll(async () => {
   idp = await createFakeSamlIdp();
-  const signing = await generateCertificate({ commonName: "Pagehall test", validDays: 365 });
+  const signing = await generateCertificate({ commonName: "Lunedo test", validDays: 365 });
   signingCertificate = signing.certificate;
   credentials = [
     {
@@ -85,7 +80,7 @@ async function start(definition: SamlProviderDefinition, reauthenticate = false)
   };
 }
 
-const person = { nameId: "person-1", attributes: { email: ["ada@pagehall.test"], groups: ["staff"] } };
+const person = { nameId: "person-1", attributes: { email: ["ada@lunedo.test"], groups: ["staff"] } };
 
 describe("SAML sign-in", () => {
   it("signs the request with SHA-256 and asks for a fresh sign-in when re-authenticating", async () => {
@@ -116,7 +111,7 @@ describe("SAML sign-in", () => {
     );
     expect(result.profile).toEqual({
       subject: "person-1",
-      email: "ada@pagehall.test",
+      email: "ada@lunedo.test",
       signInName: null,
       displayName: null,
       groups: [{ id: "staff", name: "staff" }],
@@ -187,16 +182,16 @@ describe("SAML sign-in", () => {
     const flow = await start(provider());
     const response = await idp.response({
       ...person,
-      nameIdXml: `<saml:NameID Format="${PERSISTENT}">admin@pagehall.test<!-- comment -->.evil.example</saml:NameID>`,
+      nameIdXml: `<saml:NameID Format="${PERSISTENT}">admin@lunedo.test<!-- comment -->.evil.example</saml:NameID>`,
       audience: flow.audience,
       recipient: flow.acs,
       requestId: flow.requestId,
     });
     const result = await flow.complete(response);
-    expect(result.profile.subject).toBe("admin@pagehall.test.evil.example");
+    expect(result.profile.subject).toBe("admin@lunedo.test.evil.example");
   });
 
-  it("refuses a response that does not answer the request Pagehall sent", async () => {
+  it("refuses a response that does not answer the request Lunedo sent", async () => {
     const flow = await start(provider());
     const common = { ...person, audience: flow.audience, recipient: flow.acs };
     await expect(flow.complete(await idp.response({ ...common, requestId: "_other" }))).rejects.toThrow(
@@ -325,7 +320,7 @@ describe("SAML sign-in", () => {
     const attributes = {
       [ENTRA_SAML_CLAIMS.tenantId]: [tenant],
       [ENTRA_SAML_CLAIMS.objectId]: [objectId],
-      [ENTRA_SAML_CLAIMS.email]: ["ada@pagehall.test"],
+      [ENTRA_SAML_CLAIMS.email]: ["ada@lunedo.test"],
       [ENTRA_SAML_CLAIMS.groups]: ["G1"],
     };
     const result = await flow.complete(await idp.response({ ...common, attributes }));
@@ -419,7 +414,7 @@ describe("SAML sign-in", () => {
       }),
     );
     expect(result.claims).toEqual([
-      { name: "email", values: ["ada@pagehall.test"] },
+      { name: "email", values: ["ada@lunedo.test"] },
       { name: "groups", values: ["staff"] },
     ]);
     expect(JSON.stringify(result.claims)).not.toContain("secret-value");

@@ -216,7 +216,7 @@ function nextPath(next: string | null | undefined): string | null {
   if (!next) return null;
   const path = next.startsWith("/wiki/") ? next.slice("/wiki".length) : next;
   if (path.startsWith("/api/v2/") || path.startsWith("/rest/api/")) return path;
-  throw new ImportFormatError("confluenceInvalidResponse", "Confluence sent a link Pagehall cannot follow.");
+  throw new ImportFormatError("confluenceInvalidResponse", "Confluence sent a link Lunedo cannot follow.");
 }
 
 function escapeHtml(value: string): string {

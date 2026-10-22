@@ -1,4 +1,4 @@
-import { classNames, PageHeader } from "@pagehall/ui";
+import { classNames, PageHeader } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { type ReactNode, useEffect } from "react";

@@ -9,9 +9,9 @@ let app: NestFastifyApplication;
 let webRoot: string;
 
 beforeAll(async () => {
-  webRoot = mkdtempSync(path.join(tmpdir(), "pagehall-web-"));
+  webRoot = mkdtempSync(path.join(tmpdir(), "lunedo-web-"));
   mkdirSync(path.join(webRoot, "assets"));
-  writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Pagehall</title>");
+  writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Lunedo</title>");
   writeFileSync(path.join(webRoot, "assets", "app-1234.js"), "console.log(1)");
   writeFileSync(path.join(webRoot, "preview.html"), "<!doctype html><title>Preview</title>");
   writeFileSync(path.join(webRoot, "print.html"), "<!doctype html><title>Print</title>");
@@ -36,7 +36,7 @@ describe("web client", () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toContain("text/html");
     expect(response.headers["cache-control"]).toBe("no-cache");
-    expect(response.body).toContain("<title>Pagehall</title>");
+    expect(response.body).toContain("<title>Lunedo</title>");
   });
 
   it("serves hashed assets with long caching", async () => {
@@ -94,7 +94,7 @@ describe("web client", () => {
     expect(script.headers["x-content-type-options"]).toBe("nosniff");
     const missing = await app.inject({ method: "GET", url: "/drawio/31.4.6/js/missing.js" });
     expect(missing.statusCode).toBe(404);
-    expect(missing.body).not.toContain("<title>Pagehall</title>");
+    expect(missing.body).not.toContain("<title>Lunedo</title>");
   });
 
   it("renders text diagrams in a sandbox without any network access", async () => {

@@ -1,6 +1,6 @@
 # Imports
 
-Organization administrators import into a new space: a Confluence space from its XML or CSV export, from an XML site backup or directly through the API of Confluence Cloud and Data Center, a folder of Markdown files, or Word documents. [What Pagehall takes over from Confluence](#what-pagehall-takes-over-from-confluence) lists every item and its fallback.
+Organization administrators import into a new space: a Confluence space from its XML or CSV export, from an XML site backup or directly through the API of Confluence Cloud and Data Center, a folder of Markdown files, or Word documents. [What Lunedo takes over from Confluence](#what-lunedo-takes-over-from-confluence) lists every item and its fallback.
 
 ## Flow
 
@@ -27,22 +27,22 @@ The first step of the assistant chooses where the content comes from. All source
 
 ### Site backups
 
-A site backup of Confluence (Confluence administration › Backup and restore) contains every space of the site, including personal spaces. Upload it like a space export. After reading it, the step Source lists its spaces; choose the one to import, and Pagehall reads the backup again for that space. Each import takes one space into a new space; import further spaces of the same backup one after another. Permissions of the whole site, such as who may use Confluence, are not taken over.
+A site backup of Confluence (Confluence administration › Backup and restore) contains every space of the site, including personal spaces. Upload it like a space export. After reading it, the step Source lists its spaces; choose the one to import, and Lunedo reads the backup again for that space. Each import takes one space into a new space; import further spaces of the same backup one after another. Permissions of the whole site, such as who may use Confluence, are not taken over.
 
 ### Confluence Cloud and Data Center through the API
 
 The connection step tests the connection before anything is stored: it reads the account the token belongs to and refuses a wrong token at once. The token is stored with envelope encryption, used only for this import and the imports of further spaces chosen with it, and deleted when the last of them is accepted, discarded, stopped, fails or is removed, when the importer loses the permission to import or leaves the organization, and when every draft using it was not touched for 7 days. A started import keeps the token while it is held, so that another administrator can take it over. A draft whose token was deleted says so and asks for the token again.
 
-- Cloud: the site must be an `https` host under `atlassian.net` or a host the instance administrators allowed in the import settings. Pagehall authenticates with the e-mail address and the API token.
-- Data Center and Server 7.9 or newer: the base address includes the context path, such as `https://wiki.example.com/confluence`. The host must be allowed in the import settings. Pagehall authenticates with a personal access token. For servers with a certificate from an own certificate authority, paste the certificate of the authority under Advanced; it is kept and deleted with the token.
+- Cloud: the site must be an `https` host under `atlassian.net` or a host the instance administrators allowed in the import settings. Lunedo authenticates with the e-mail address and the API token.
+- Data Center and Server 7.9 or newer: the base address includes the context path, such as `https://wiki.example.com/confluence`. The host must be allowed in the import settings. Lunedo authenticates with a personal access token. For servers with a certificate from an own certificate authority, paste the certificate of the authority under Advanced; it is kept and deleted with the token.
 
-Outgoing requests go only to the configured host, through the same protection as chat and mail deliveries: addresses in private or reserved networks are refused unless `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS` allows them, which a Data Center in the own network usually needs. Redirects are not followed. The only exception are attachment downloads from Confluence Cloud, which Atlassian answers with a redirect to its media service `api.media.atlassian.com`; that one redirect is followed over HTTPS without the credentials. The token never appears in responses, logs, error messages, job payloads, audit entries or the report.
+Outgoing requests go only to the configured host, through the same protection as chat and mail deliveries: addresses in private or reserved networks are refused unless `LUNEDO_OUTBOUND_ALLOWED_NETWORKS` allows them, which a Data Center in the own network usually needs. Redirects are not followed. The only exception are attachment downloads from Confluence Cloud, which Atlassian answers with a redirect to its media service `api.media.atlassian.com`; that one redirect is followed over HTTPS without the credentials. The token never appears in responses, logs, error messages, job payloads, audit entries or the report.
 
 The selection step lists the spaces the token can read; choose one or more. Each space becomes an import of its own, into its own new space, with its own check, dry run, report and later re-import. Further spaces appear as drafts in the import list, sharing the connection and its token; taking a space out of the selection removes its draft. Imports over one connection read and run one after another, and the waiting ones say which space goes first. For the space of the current import, the step shows the page trees below the home page with their page counts and attachment sizes: import the whole space, or only chosen page trees. The page trees of the other spaces are chosen in their own imports. Blog posts come with the whole space. A re-import reads only the space it came from. Page history is optional and takes noticeably longer.
 
-Pagehall reads the same content as an XML export of the space contains, into the same records, so the converters, the report and the result are the same: pages, blog posts, folders, smart links, whiteboards and databases with their tree, archived pages, bodies in the storage format, attachments with all their versions, page and inline comments with their resolution, labels, page states, page restrictions, space permissions and roles (only for tokens of space administrators; otherwise the report says so), templates and, when chosen, the earlier versions. Confluence Cloud is read through its REST API v2; only page restrictions and templates come from the REST API v1, which has no v2 counterpart for them. Data Center is read through its REST API. Confluence lists only what the token can read; content that refuses to be read later is skipped and listed in the report. Likes and watchers are not read through the API; the report says so once per import.
+Lunedo reads the same content as an XML export of the space contains, into the same records, so the converters, the report and the result are the same: pages, blog posts, folders, smart links, whiteboards and databases with their tree, archived pages, bodies in the storage format, attachments with all their versions, page and inline comments with their resolution, labels, page states, page restrictions, space permissions and roles (only for tokens of space administrators; otherwise the report says so), templates and, when chosen, the earlier versions. Confluence Cloud is read through its REST API v2; only page restrictions and templates come from the REST API v1, which has no v2 counterpart for them. Data Center is read through its REST API. Confluence lists only what the token can read; content that refuses to be read later is skipped and listed in the report. Likes and watchers are not read through the API; the report says so once per import.
 
-Reading is resumable: after a restart Pagehall continues with the next page of results or the next page, never from the start. When Confluence asks to slow down, Pagehall waits as long as `Retry-After` or Atlassian's rate limit headers ask, up to 5 minutes per wait, and shows "Confluence asked to slow down" while waiting. Longer pauses hand the work back to the job queue. Attachments are streamed into the file storage; no space is held in memory as a whole.
+Reading is resumable: after a restart Lunedo continues with the next page of results or the next page, never from the start. When Confluence asks to slow down, Lunedo waits as long as `Retry-After` or Atlassian's rate limit headers ask, up to 5 minutes per wait, and shows "Confluence asked to slow down" while waiting. Longer pauses hand the work back to the job queue. Attachments are streamed into the file storage; no space is held in memory as a whole.
 
 A space imported from its XML export can be re-imported through the API and the other way round, because both carry the same Confluence IDs.
 
@@ -55,28 +55,28 @@ Upload the folder as one ZIP file, or place it in the import folder. A single to
 - CommonMark with GitHub tables, strikethrough, task lists and autolinks is converted. Code blocks keep their language; `mermaid` code blocks become Mermaid diagrams.
 - Relative links between files become page links, also to a folder; links to other files and images become attachments of the page that uses them. Obsidian `[[wiki links]]` and `[[page|text]]` find the page by file name, preferring the same folder; `![[image.png]]` embeds an image, `![[note]]` alone in a paragraph includes the other page.
 - Files no page refers to become attachments of their folder's page. Hidden files and folders (such as `.obsidian` or `.git`) are ignored.
-- Raw HTML and other constructs Pagehall cannot convert stay as text with a report entry; links to missing files keep their text with a report entry. Markdown files larger than 5 MB are not converted and are listed in the report.
-- A file named like its folder (`Network/Network.md`, as written by the Pagehall export) is the page of that folder, like `index.md`. A re-import keeps the empty folder page of an earlier import that made one for that folder; the file then stays a page below it, so no page moves out from under the folder page and its restrictions.
-- Section comments written by the Pagehall export (`<!-- pagehall:section key="…" icon="…" -->` … `<!-- /pagehall:section -->`) become sections again; the `pagehall` block of the front matter is read, not turned into page properties.
-- **Import as a knowledge base** (`options.knowledgeBase`, only for Markdown folders) creates a knowledge base instead of a space. Folders become categories; files become articles, with the article type, language and translations from the `pagehall` front matter. The page of a folder (`index.md`, `README.md`) becomes an article in its category, unless the front matter marks it as an article with translations below it. The knowledge base takes its default language from the first article that names one, otherwise from the organization, and turns on the languages of the translations. A file is imported as a translation only into a language Pagehall offers that differs from the language of its article and is not taken by another file of the same article; other files become separate articles in the category and are listed in the report (`translationNotImported`). The quarantine knowledge base has no portal; after accepting, only the people and groups given a role read it until its audience is changed in its settings. See [knowledge-bases.md](knowledge-bases.md#moving-a-knowledge-base-to-another-instance).
+- Raw HTML and other constructs Lunedo cannot convert stay as text with a report entry; links to missing files keep their text with a report entry. Markdown files larger than 5 MB are not converted and are listed in the report.
+- A file named like its folder (`Network/Network.md`, as written by the Lunedo export) is the page of that folder, like `index.md`. A re-import keeps the empty folder page of an earlier import that made one for that folder; the file then stays a page below it, so no page moves out from under the folder page and its restrictions.
+- Section comments written by the Lunedo export (`<!-- lunedo:section key="…" icon="…" -->` … `<!-- /lunedo:section -->`) become sections again; the `lunedo` block of the front matter is read, not turned into page properties.
+- **Import as a knowledge base** (`options.knowledgeBase`, only for Markdown folders) creates a knowledge base instead of a space. Folders become categories; files become articles, with the article type, language and translations from the `lunedo` front matter. The page of a folder (`index.md`, `README.md`) becomes an article in its category, unless the front matter marks it as an article with translations below it. The knowledge base takes its default language from the first article that names one, otherwise from the organization, and turns on the languages of the translations. A file is imported as a translation only into a language Lunedo offers that differs from the language of its article and is not taken by another file of the same article; other files become separate articles in the category and are listed in the report (`translationNotImported`). The quarantine knowledge base has no portal; after accepting, only the people and groups given a role read it until its audience is changed in its settings. See [knowledge-bases.md](knowledge-bases.md#moving-a-knowledge-base-to-another-instance).
 
 ### Word documents
 
 Add one or more `.docx` files, up to 50 per import and 100 MB each. Each document becomes a page named after its title, or after the file name when it has none. Headings, paragraphs, bulleted and numbered lists, tables, links and images are taken over; images become attachments of the page, footnotes and endnotes become numbered notes at the end of the page. Optionally every top-level heading starts a subpage of the document's page.
 
-Pagehall converts documents with [mammoth](https://github.com/mwilliamson/mammoth.js) on the server, without a browser or office suite. Embedded objects such as spreadsheets become attachments with a report entry; Word comments are left out with a report entry. Documents with macros are never run or imported: `.docm` files are refused when they are added, and documents with macro parts are refused while reading. Encrypted, damaged and old `.doc` files fail with a message that names the file. Before mammoth reads a document, Pagehall checks the archive with the same limits as exports and rebuilds it without embedded objects and macro parts.
+Lunedo converts documents with [mammoth](https://github.com/mwilliamson/mammoth.js) on the server, without a browser or office suite. Embedded objects such as spreadsheets become attachments with a report entry; Word comments are left out with a report entry. Documents with macros are never run or imported: `.docm` files are refused when they are added, and documents with macro parts are refused while reading. Encrypted, damaged and old `.doc` files fail with a message that names the file. Before mammoth reads a document, Lunedo checks the archive with the same limits as exports and rebuilds it without embedded objects and macro parts.
 
-## What Pagehall takes over from Confluence
+## What Lunedo takes over from Confluence
 
 The table covers the XML and CSV exports of Confluence Cloud, the XML exports of Data Center and Server, the site backup and the API. "Exports" means all export formats.
 
-| Confluence | Becomes in Pagehall | Fallback |
+| Confluence | Becomes in Lunedo | Fallback |
 |---|---|---|
 | Pages and their tree, home page | Pages in the same tree; the home page becomes the overview page of the space | |
 | Live docs | Pages | |
 | Blog posts | Blog posts with their date | |
 | Folders (Cloud) | Folders | |
-| Smart links in the page tree (Cloud) | Links to their address | A page with the link when the smart link has subpages or an address Pagehall does not accept |
+| Smart links in the page tree (Cloud) | Links to their address | A page with the link when the smart link has subpages or an address Lunedo does not accept |
 | Whiteboards and databases (Cloud) | A page in their place with the note "Confluence whiteboard not imported" or "Confluence database not imported" | Listed in the report; exports and the API do not contain their content |
 | Archived pages | Archived pages, with their subpages | |
 | Pages in the trash | Not imported | Listed in the report |
@@ -87,7 +87,7 @@ The table covers the XML and CSV exports of Confluence Cloud, the XML exports of
 | Attachments | Attachments with all their versions | Missing files are listed in the report |
 | Images and files of other spaces | | A placeholder with the file name, listed in the report |
 | Labels | Labels | Personal labels (`my:`) are left out |
-| Page restrictions | View and edit restrictions with the same people and groups | Exports of Confluence Cloud mark a removed restriction with the group "tombstone". Pagehall keeps such a page restricted and lists all of them in one report entry; the API reports only the restrictions that apply. |
+| Page restrictions | View and edit restrictions with the same people and groups | Exports of Confluence Cloud mark a removed restriction with the group "tombstone". Lunedo keeps such a page restricted and lists all of them in one report entry; the API reports only the restrictions that apply. |
 | Space permissions and space roles | Space roles; see [Permissions](#permissions) | App accounts, site administrators (`all-product-admins`) and permissions without access to the space get no role |
 | Page states | Page statuses | |
 | Templates of the space | Templates | |
@@ -121,7 +121,7 @@ The report lists problems by category: macros, diagrams, attachments, links, con
 
 ## Macros
 
-These Confluence macros become Pagehall blocks. A macro falls back to an unsupported-macro block when its content or a parameter cannot be taken over, unless the table names another fallback.
+These Confluence macros become Lunedo blocks. A macro falls back to an unsupported-macro block when its content or a parameter cannot be taken over, unless the table names another fallback.
 
 | Macro | Becomes | Fallback |
 |---|---|---|
@@ -175,7 +175,7 @@ An include of a page that is not part of the export keeps the Confluence space k
 
 Confluence exports name people only by an Atlassian account ID. The people step adds names and e-mail addresses:
 
-- **API token.** The importer enters the Confluence Cloud site, their Atlassian e-mail address and a read-only API token. Pagehall checks it at once against that site only, stores it with envelope encryption, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails, when the importer loses the permission to import, and when the draft was not touched for 7 days. The token never appears in responses, logs, job payloads or audit entries. Sites must be `https` hosts under `atlassian.net`; instance administrators can allow further host names in the instance setting for imports.
+- **API token.** The importer enters the Confluence Cloud site, their Atlassian e-mail address and a read-only API token. Lunedo checks it at once against that site only, stores it with envelope encryption, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails, when the importer loses the permission to import, and when the draft was not touched for 7 days. The token never appears in responses, logs, job payloads or audit entries. Sites must be `https` hosts under `atlassian.net`; instance administrators can allow further host names in the instance setting for imports.
 - **User list.** A CSV file from admin.atlassian.com › Directory › Users › Export users, up to 10 MB.
 - **Skip.** Every author becomes a placeholder named by the Atlassian ID.
 
@@ -191,13 +191,13 @@ Before accepting, only the person who started the import maps people and groups.
 - Inline comments are anchored to their text. Resolved ones arrive resolved. When the text no longer exists, the comment becomes a page comment that starts with the quoted text, and the report lists it.
 - Likes become 👍 reactions by the same person. Watchers are counted in the report.
 - Blog posts keep their title, content, labels, attachments, author and date and are published at that date.
-- With the full page history, every Confluence version becomes a Pagehall version with its author and date; the current version stays the published one. Versions are read in small batches.
+- With the full page history, every Confluence version becomes a Lunedo version with its author and date; the current version stays the published one. Versions are read in small batches.
 
 ## Permissions
 
 - Each person or group gets the highest space role that fits its Confluence permissions: administer the space becomes space admin, add or edit pages becomes editor, comment becomes commenter, view becomes reader. Combinations that do not fit are marked for review. Anonymous access is never taken over. "All licensed users" becomes all members of the organization.
 - Spaces that use roles in Confluence Cloud (Admin, Manager, Collaborator, Viewer, View only and custom roles) are taken over through the permissions of their roles, so the same rule applies: a Collaborator becomes editor, a Viewer commenter.
-- App accounts of Confluence, such as the accounts of the draw.io or Teams apps, get no role; the permissions list them as not taken over. Pagehall recognizes them when the people come from an API token or from the API. Site administrators of Confluence (`all-product-admins`) get no role either.
+- App accounts of Confluence, such as the accounts of the draw.io or Teams apps, get no role; the permissions list them as not taken over. Lunedo recognizes them when the people come from an API token or from the API. Site administrators of Confluence (`all-product-admins`) get no role either.
 - Groups are matched by name to groups of the organization, including synchronized groups. Unmatched groups are listed in the report, where an existing group is mapped or a local group is created. Nothing is created automatically. Administrators cannot map a group that is named in page restrictions to a group they belong to.
 - Page restrictions become view and edit restrictions as soon as the page exists in the quarantine space, also when they name only placeholders or unmatched groups. Such pages stay closed until the people and groups are mapped.
 - As in Confluence, restrictions only narrow access. People and groups named in a restriction are listed on it, but they get no access from it: they still need a role in the space. The import never shares a page. The report marks everyone named in a restriction without a role in the space.
@@ -211,24 +211,24 @@ An import never notifies anyone: not for mentions, tasks, comments, reactions or
 
 A migration can run in stages: import a newer export of the same Confluence space into the space an earlier import created. Open the accepted import and choose **Re-import a newer export**. The wizard asks for the file and for the way people are recognized again; placeholders mapped earlier stay mapped.
 
-Pagehall accepts only an export of the same Confluence space (the space ID in the export decides) and refuses any other with a message. Use the same export format as before: the XML and the CSV export write some references differently, so a change of format can show unchanged pages as updated. Spaces imported before re-imports existed cannot be re-imported. Starting, deciding and applying a re-import needs permission to manage the space.
+Lunedo accepts only an export of the same Confluence space (the space ID in the export decides) and refuses any other with a message. Use the same export format as before: the XML and the CSV export write some references differently, so a change of format can show unchanged pages as updated. Spaces imported before re-imports existed cannot be re-imported. Starting, deciding and applying a re-import needs permission to manage the space.
 
-Every import records, for each page, blog post, template and space permission, the version and a checksum that came from it, as well as labels, restrictions, the parent page and the titles. Pagehall compares the newer export with this record and lists the changes. **Nothing changes until the changes are applied.**
+Every import records, for each page, blog post, template and space permission, the version and a checksum that came from it, as well as labels, restrictions, the parent page and the titles. Lunedo compares the newer export with this record and lists the changes. **Nothing changes until the changes are applied.**
 
 - **New** pages are created where they are in Confluence, with their restrictions.
 - Pages **changed only at the source** get a new version marked as from Confluence; the earlier version stays in the history. Unchanged pages are skipped.
-- Pages **changed on both sides** are conflicts and are never overwritten automatically. For each conflict, also for many at once: keep the Pagehall version, take the Confluence version (a new version), or keep both: the Pagehall version stays current and the Confluence version is added to the history, marked "from Confluence, not applied", where the two can be compared.
-- **Compare** shows a conflict before you decide: the current Pagehall content next to the content of the new export, converted as it would be applied, in the same view as the comparison of two versions. Comparing changes nothing. People who may only read the page see its latest version instead of the draft. When a page, one of its parent pages or the space is restricted further in Confluence, the new content is shown only to people who keep access once those restrictions are applied.
+- Pages **changed on both sides** are conflicts and are never overwritten automatically. For each conflict, also for many at once: keep the Lunedo version, take the Confluence version (a new version), or keep both: the Lunedo version stays current and the Confluence version is added to the history, marked "from Confluence, not applied", where the two can be compared.
+- **Compare** shows a conflict before you decide: the current Lunedo content next to the content of the new export, converted as it would be applied, in the same view as the comparison of two versions. Comparing changes nothing. People who may only read the page see its latest version instead of the draft. When a page, one of its parent pages or the space is restricted further in Confluence, the new content is shown only to people who keep access once those restrictions are applied.
 - A page with an open **editing session** is held like a conflict. A re-import never writes into a document someone is editing; a decided change is applied once the session has ended.
-- A page whose restrictions were **narrowed at the source** is held as well: its new content, comments and attachments wait until the restriction is applied in Pagehall or someone decides.
+- A page whose restrictions were **narrowed at the source** is held as well: its new content, comments and attachments wait until the restriction is applied in Lunedo or someone decides.
 - A restriction is applied exactly as in Confluence, with the people and groups named there. Applying it gives the person who applies it no access; if Confluence does not name them, they can no longer read the page afterwards.
 - Pages **deleted at the source** are listed. For each, decide to move it to the trash or keep it. Nothing happens without a decision.
-- Pages **moved at the source** follow, unless they were moved in Pagehall since the last import; then they stay and are listed.
-- New comments and attachments are added; new versions of an attachment become versions. Comments and attachments deleted at the source are only listed. Added labels are added; a label removed at the source is removed only if it was not touched in Pagehall.
+- Pages **moved at the source** follow, unless they were moved in Lunedo since the last import; then they stay and are listed.
+- New comments and attachments are added; new versions of an attachment become versions. Comments and attachments deleted at the source are only listed. Added labels are added; a label removed at the source is removed only if it was not touched in Lunedo.
 - Macros are converted with the current converters, so pages improve when the converters improve.
 - Nothing notifies anyone, as in the first import.
 
-**Permissions are never changed by a re-import.** Where the permissions in Confluence changed since the last import and Pagehall does not match them yet, the difference is listed. Each one can be applied after Pagehall showed who gains or loses access, and is written to the audit log.
+**Permissions are never changed by a re-import.** Where the permissions in Confluence changed since the last import and Lunedo does not match them yet, the difference is listed. Each one can be applied after Lunedo showed who gains or loses access, and is written to the audit log.
 
 **Apply changes** applies everything that is decided and leaves open conflicts and deletions waiting, without a deadline. A re-import changes only pages the person applying it may edit; the rest waits for someone with access. Applying again changes nothing that was applied already, and an interrupted run continues where it stopped. A newer export replaces an open re-import of the same space and evaluates its open decisions again.
 
@@ -240,9 +240,9 @@ Imported pages remember their Confluence page IDs and titles, so old links keep 
 - Data Center paths: `/display/OPS/Title`, by the title at import time and the titles of later re-imports, and `/display/OPS/2024/01/31/Title` for blog posts
 - short links: `/x/AbCd`, which encode the page ID
 
-Pagehall resolves them at `/confluence/<old path>`. People can also paste an old link into the search (the command palette) or into the field **Paste an old Confluence link** on the import page. A link to a page the person cannot read answers exactly like a link to an unknown page.
+Lunedo resolves them at `/confluence/<old path>`. People can also paste an old link into the search (the command palette) or into the field **Paste an old Confluence link** on the import page. A link to a page the person cannot read answers exactly like a link to an unknown page.
 
-To keep the old host name working, let a reverse proxy redirect it to Pagehall. Requests keep their path and query string, and people sign in to Pagehall as usual.
+To keep the old host name working, let a reverse proxy redirect it to Lunedo. Requests keep their path and query string, and people sign in to Lunedo as usual.
 
 Caddy:
 
@@ -264,7 +264,7 @@ server {
 }
 ```
 
-If Confluence ran under a context path such as `/confluence` or `/wiki`, nothing changes: Pagehall finds the page in the rest of the path. Links to Confluence Cloud (`*.atlassian.net`) cannot be redirected, because the host belongs to Atlassian; paste them into the search instead.
+If Confluence ran under a context path such as `/confluence` or `/wiki`, nothing changes: Lunedo finds the page in the rest of the path. Links to Confluence Cloud (`*.atlassian.net`) cannot be redirected, because the host belongs to Atlassian; paste them into the search instead.
 
 ## Large exports
 
@@ -274,11 +274,11 @@ There are two ways to import a large export.
 
 This is the normal way. Uploads are sent in parts of 16 MB, continue after an interruption without sending finished parts again, and are checked with a SHA-256 checksum at the end. Files of several gigabytes work.
 
-The instance setting for the largest export to upload defaults to 2 GB. Uploaded files and the data Pagehall reads from them also count against a limit per organization, 20 GB by default (instance setting "Import storage per organization"); when it is reached, new uploads and reading are refused until earlier imports are accepted, discarded or deleted. Instance administrators can raise it. When a file is above the limit, the wizard names the limit and both ways: ask the instance administrators to raise the limit, or to place the file in the organization's import folder.
+The instance setting for the largest export to upload defaults to 2 GB. Uploaded files and the data Lunedo reads from them also count against a limit per organization, 20 GB by default (instance setting "Import storage per organization"); when it is reached, new uploads and reading are refused until earlier imports are accepted, discarded or deleted. Instance administrators can raise it. When a file is above the limit, the wizard names the limit and both ways: ask the instance administrators to raise the limit, or to place the file in the organization's import folder.
 
 ### Import folder on the server
 
-This is the fallback for the person who runs the server. Each organization has its own subfolder of the import folder (`PAGEHALL_IMPORT_DIR`, default `/data/import`), named after the organization's ID:
+This is the fallback for the person who runs the server. Each organization has its own subfolder of the import folder (`LUNEDO_IMPORT_DIR`, default `/data/import`), named after the organization's ID:
 
 ```
 /data/import/<organization ID>/export.zip
@@ -286,18 +286,18 @@ This is the fallback for the person who runs the server. Each organization has i
 
 for example `/data/import/0c9d6a3e-5f2b-4c1a-9e8d-7b6a5c4d3e2f/export.zip`. The ID never changes and is never given to another organization, so changing the organization's short name needs no file move, and a short name taken over from another organization never shows that organization's files. Folders named after short names are not read.
 
-The import wizard and the organization's import settings show the exact path with a button to copy it, so an organization administrator can pass it to the person who runs the server. Pagehall offers only regular files directly inside the organization's subfolder; symbolic links, hidden files and further subfolders are ignored. An organization never sees files of another organization's subfolder or files at the top level. Mount the folder read-only. Instance administrators can turn the import folder off.
+The import wizard and the organization's import settings show the exact path with a button to copy it, so an organization administrator can pass it to the person who runs the server. Lunedo offers only regular files directly inside the organization's subfolder; symbolic links, hidden files and further subfolders are ignored. An organization never sees files of another organization's subfolder or files at the top level. Mount the folder read-only. Instance administrators can turn the import folder off.
 
-When a file is chosen, the import keeps the folder it was chosen from and reads the file only from there. If the file is replaced or changed after Pagehall analyzed it, the import fails with "The file in the import folder changed after it was read"; choose the file again in a new import.
+When a file is chosen, the import keeps the folder it was chosen from and reads the file only from there. If the file is replaced or changed after Lunedo analyzed it, the import fails with "The file in the import folder changed after it was read"; choose the file again in a new import.
 
-Uploaded files are deleted 7 days after an import was accepted, discarded or stopped. Files in the import folder are never changed or deleted by Pagehall.
+Uploaded files are deleted 7 days after an import was accepted, discarded or stopped. Files in the import folder are never changed or deleted by Lunedo.
 
 ## Defensive reading
 
 Exports are treated as untrusted input:
 
 - ZIP archives are limited in total size, entry count, entry size and compression ratio. Entries with unsafe names and symbolic links are refused; duplicate names keep the first entry and are reported. A leading `./`, as site backups of Confluence Cloud write it, is removed.
-- XML is read as a stream without DTDs or entities, with limits on depth, element size, the size of each object with all its fields, and the number of spaces. Only the fields Pagehall imports are kept in memory.
+- XML is read as a stream without DTDs or entities, with limits on depth, element size, the size of each object with all its fields, and the number of spaces. Only the fields Lunedo imports are kept in memory.
 - CSV is read as a stream with limits on field size, row size and field count. Cells that start like a spreadsheet formula are escaped in the CSV report.
 - Converted content is validated against the editor schema. Content that does not fit becomes an unsupported-macro block.
 - Markdown files are read with a size limit per file; front matter is parsed as plain YAML data without custom types. Word documents are checked like archives and rebuilt without macro parts and embedded objects before they are converted.

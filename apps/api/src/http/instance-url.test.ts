@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createTestApp } from "../testing/create-test-app.js";
 
-const PUBLIC_URL = "https://pagehall-test.example.org";
+const PUBLIC_URL = "https://lunedo-test.example.org";
 
 describe("the configured instance URL", () => {
   let close: (() => Promise<void>) | undefined;
@@ -17,7 +17,7 @@ describe("the configured instance URL", () => {
     return app.inject({
       method: "POST",
       url: "/api/v1/unknown",
-      headers: { "x-pagehall-request": "1", origin, ...headers },
+      headers: { "x-lunedo-request": "1", origin, ...headers },
     });
   }
 

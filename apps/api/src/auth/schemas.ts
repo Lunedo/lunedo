@@ -7,7 +7,7 @@ import {
   recoveryCodeSchema,
   signInEmailSchema,
   totpCodeSchema,
-} from "@pagehall/shared";
+} from "@lunedo/shared";
 import { z } from "zod";
 
 const base64url = (max: number) =>

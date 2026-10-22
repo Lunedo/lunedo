@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import { liveAccessCondition, type SearchViewer, storedAccessCondition } from "./access.js";

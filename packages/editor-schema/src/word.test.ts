@@ -309,12 +309,12 @@ describe("Word rendering", () => {
       },
       {
         type: "placeholder",
-        text: "Diagram cannot be shown in this format. Open the page in Pagehall to see it.",
+        text: "Diagram cannot be shown in this format. Open the page in Lunedo to see it.",
       },
     ]);
     const printed = kit.renderHtml(document, { nodeTitle, target: "print" });
     expect(printed).toContain(
-      '<div class="ph-unavailable" data-node="testDiagram"><p>Diagram cannot be shown',
+      '<div class="ld-unavailable" data-node="testDiagram"><p>Diagram cannot be shown',
     );
     expect(printed).not.toContain("<svg>");
     expect(kit.renderHtml(document, { nodeTitle })).toContain("<svg></svg>");
@@ -334,13 +334,13 @@ describe("print rendering", () => {
     expect(printed).not.toContain("loading=");
     expect(printed).toContain('width="320"');
     expect(printed).not.toContain("<details");
-    expect(printed).toContain('<p class="ph-expand-title">Details</p><div><p>Hidden on screen</p></div>');
+    expect(printed).toContain('<p class="ld-expand-title">Details</p><div><p>Hidden on screen</p></div>');
   });
 
   it("renders every other node for print like on screen", () => {
     for (const { document } of loadFixtures(editorSchemaVersion)) {
       const printed = renderHtml(document, { ...context, target: "print" });
-      expect(printed).not.toContain("ph-unavailable");
+      expect(printed).not.toContain("ld-unavailable");
     }
   });
 });

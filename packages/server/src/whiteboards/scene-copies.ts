@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
-import type { CopiedAttachment, DocumentJson, NodeJson } from "@pagehall/editor-schema";
-import { copyScene, MAX_SCENE_BYTES, type Scene, validateScene } from "@pagehall/editor-schema/scene";
+import type { CopiedAttachment, DocumentJson, NodeJson } from "@lunedo/editor-schema";
+import { copyScene, MAX_SCENE_BYTES, type Scene, validateScene } from "@lunedo/editor-schema/scene";
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import type { FileService } from "../files/files.js";

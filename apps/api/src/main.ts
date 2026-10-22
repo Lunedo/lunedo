@@ -7,7 +7,7 @@ import {
   instanceUrlSetting,
   registerShutdown,
   StartupError,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { createApp } from "./app.js";
 import { apiContextOf } from "./context.js";
 import { attachCollabProxy } from "./http/collab-proxy.js";

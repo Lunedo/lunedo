@@ -6,7 +6,7 @@ import {
   type SaveState,
   SaveStatus,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";

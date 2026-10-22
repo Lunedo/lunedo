@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
+import { versionReasons } from "@lunedo/server";
 import { Controller, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
-import { versionReasons } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -58,7 +58,7 @@ const referenceSchema = z
   .object({
     itemId: uuid("ID of the whiteboard."),
     title: z.string().describe("Title of the whiteboard."),
-    href: z.string().describe("Address of the whiteboard in Pagehall."),
+    href: z.string().describe("Address of the whiteboard in Lunedo."),
     preview: z.boolean().describe("Whether an image of the whiteboard exists."),
   })
   .describe("A whiteboard as a whiteboard block in a page shows it.");
@@ -211,7 +211,7 @@ export class WhiteboardsController {
   @ApiRoute({
     summary: "Get the image of a whiteboard",
     description:
-      "Sends the SVG image of the current state or of a version. Pagehall shows it in the page tree, in search results and in links. Answers 404 when no image was stored yet.",
+      "Sends the SVG image of the current state or of a version. Lunedo shows it in the page tree, in search results and in links. Answers 404 when no image was stored yet.",
     tags: [TAG],
     params: boardParams,
     query: previewQuery,

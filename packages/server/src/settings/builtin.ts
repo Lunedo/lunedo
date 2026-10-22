@@ -1,4 +1,4 @@
-import { isTimeZone, supportedLanguages } from "@pagehall/shared";
+import { isTimeZone, supportedLanguages } from "@lunedo/shared";
 import { z } from "zod";
 import { defineSetting } from "./definition.js";
 

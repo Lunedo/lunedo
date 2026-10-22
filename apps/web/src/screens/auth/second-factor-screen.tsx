@@ -1,5 +1,5 @@
-import { recoveryCodeSchema, totpCodeSchema } from "@pagehall/shared";
-import { Button, Field, Input, Notice } from "@pagehall/ui";
+import { recoveryCodeSchema, totpCodeSchema } from "@lunedo/shared";
+import { Button, Field, Input, Notice } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Fingerprint } from "lucide-react";

@@ -92,9 +92,9 @@ const STAGES: SetupStage[] = [
     run: async (page) => {
       const download = page.waitForEvent("download");
       await page.getByRole("button", { name: "Download keys" }).click();
-      expect((await download).suggestedFilename()).toBe("pagehall-keys.env");
+      expect((await download).suggestedFilename()).toBe("lunedo-keys.env");
       await expect(page.getByRole("figure", { name: "Master key and backup key" })).toContainText(
-        "PAGEHALL_MASTER_KEYS=",
+        "LUNEDO_MASTER_KEYS=",
       );
       await page.getByRole("checkbox", { name: /I stored both keys/ }).check();
       await page.getByRole("button", { name: "Continue" }).click();
@@ -120,7 +120,7 @@ async function enterSetupCode(page: Page): Promise<void> {
   expect(setupCode).toBeTruthy();
   await page.goto("/");
   await expect(page).toHaveURL(/\/setup$/);
-  await expect(page.getByRole("heading", { name: "Set up Pagehall" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set up Lunedo" })).toBeVisible();
   await expectAccessible(page, "setup code");
   await page.getByLabel("Setup code").fill("WRONG-CODE-0000");
   await page.getByRole("button", { name: "Continue" }).click();
@@ -130,7 +130,7 @@ async function enterSetupCode(page: Page): Promise<void> {
   await expect(page.getByLabel("Setup code")).toHaveValue(setupCode ?? "");
   await expect(page).toHaveURL(/\/setup$/);
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByRole("heading", { name: "Set up Pagehall" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Set up Lunedo" })).toBeHidden();
   await page.context().storageState({ path: SETUP_STORAGE });
 }
 
@@ -204,14 +204,14 @@ test.describe("e-mail", () => {
       await page.getByLabel("Server", { exact: true }).fill(SMTP_HOST);
       await page.getByLabel("Port").fill(String(SMTP_PORT));
       await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
-      await page.getByLabel("Sender address").fill("wiki@pagehall.test");
-      const recipient = `test.mail.${unique().toLowerCase()}@pagehall.test`;
+      await page.getByLabel("Sender address").fill("wiki@lunedo.test");
+      const recipient = `test.mail.${unique().toLowerCase()}@lunedo.test`;
       await page.getByLabel("Send a test mail to").fill(recipient);
       await page.getByRole("button", { name: "Send test mail" }).click();
       await expect(page.getByText("The mail server accepted the test mail.")).toBeVisible();
       await waitForMail(recipient, /test/i);
       await page.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(page.getByText("SMTP settings saved. Pagehall sends through SMTP.").first()).toBeVisible();
+      await expect(page.getByText("SMTP settings saved. Lunedo sends through SMTP.").first()).toBeVisible();
       await page.goto("/settings/instance/general");
       await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
       await expect(page.getByText("E-mail is not set up")).toBeHidden();

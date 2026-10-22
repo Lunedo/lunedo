@@ -1,5 +1,5 @@
 import { inflateRawSync } from "node:zlib";
-import { createFakeSamlIdp, type FakeSamlIdp } from "@pagehall/server/testing";
+import { createFakeSamlIdp, type FakeSamlIdp } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addTotp, completeConfiguredSetup, configuredSetupEnv, OWNER } from "../testing/accounts.js";
 import {
@@ -18,7 +18,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
   let ldapId: string;
 
   beforeAll(async () => {
-    test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true" });
+    test = await createAuthTestApp({ ...configuredSetupEnv, LUNEDO_INSECURE_IDENTITY_PROVIDERS: "true" });
     await completeConfiguredSetup(test);
     idp = await createFakeSamlIdp();
     owner = new TestClient(test.app);
@@ -30,7 +30,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
       config: {
         preset: "generic",
         metadata: { source: "file" },
-        domains: ["saml.pagehall.test"],
+        domains: ["saml.lunedo.test"],
         accountCreation: { enabled: true, requiredGroups: [] },
         attributes: { email: "email" },
       },
@@ -53,10 +53,10 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
       config: {
         preset: "activeDirectory",
         url: "ldaps://127.0.0.1:1",
-        bindDn: "CN=pagehall,OU=Service,DC=corp,DC=example",
+        bindDn: "CN=lunedo,OU=Service,DC=corp,DC=example",
         userBaseDn: "OU=People,DC=corp,DC=example",
         groupBaseDn: "OU=Groups,DC=corp,DC=example",
-        domains: ["corp.pagehall.test"],
+        domains: ["corp.lunedo.test"],
       },
       credential: { kind: "bindPassword", secret: "service password" },
     });
@@ -80,7 +80,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     });
   }
 
-  it("publishes Pagehall's metadata with the signing certificate", async () => {
+  it("publishes Lunedo's metadata with the signing certificate", async () => {
     const response = await new TestClient(test.app).get(`/api/v1/auth/providers/${samlId}/saml/metadata`);
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toContain("application/samlmetadata+xml");
@@ -95,7 +95,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
   it("receives the response the identity provider posts and finishes in the browser that started", async () => {
     const browser = new TestClient(test.app);
     const discovered = await browser.post("/api/v1/auth/sign-in/discover", {
-      email: "ada@saml.pagehall.test",
+      email: "ada@saml.lunedo.test",
     });
     expect(discovered.json()).toMatchObject({ step: "provider", providerId: samlId });
     const started = await browser.post(`/api/v1/auth/providers/${samlId}/start`, {});
@@ -106,7 +106,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     const requestId = /ID="([^"]+)"/.exec(request)?.[1] ?? "";
     const samlResponse = await idp.response({
       nameId: "ada",
-      attributes: { email: ["ada@saml.pagehall.test"] },
+      attributes: { email: ["ada@saml.lunedo.test"] },
       audience: `${TEST_ORIGIN}/api/v1/auth/providers/${samlId}/saml/metadata`,
       recipient: `${TEST_ORIGIN}/api/v1/auth/providers/${samlId}/saml/acs`,
       requestId,
@@ -133,7 +133,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     const received = await postResponse(
       await idp.response({
         nameId: "bea",
-        attributes: { email: ["bea@saml.pagehall.test"] },
+        attributes: { email: ["bea@saml.lunedo.test"] },
         audience: `${TEST_ORIGIN}/api/v1/auth/providers/${samlId}/saml/metadata`,
         recipient: `${TEST_ORIGIN}/api/v1/auth/providers/${samlId}/saml/acs`,
         requestId: /ID="([^"]+)"/.exec(request)?.[1] ?? "",
@@ -144,14 +144,14 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     expect(callback.statusCode).toBe(303);
     expect(callback.headers.location).toBe("/");
     expect((await browser.get("/api/v1/auth/session")).json()).toMatchObject({
-      account: { email: "bea@saml.pagehall.test" },
+      account: { email: "bea@saml.lunedo.test" },
     });
   });
 
   it("asks for the directory password and refuses an empty one", async () => {
     const browser = new TestClient(test.app, { remoteAddress: "198.51.100.77" });
     const discovered = await browser.post("/api/v1/auth/sign-in/discover", {
-      email: "ada@corp.pagehall.test",
+      email: "ada@corp.lunedo.test",
     });
     expect(discovered.json()).toEqual({
       step: "directory",
@@ -161,13 +161,13 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
       signInName: "userPrincipalName",
     });
     const empty = await browser.post(`/api/v1/auth/providers/${ldapId}/password`, {
-      signInName: "ada@corp.pagehall.test",
+      signInName: "ada@corp.lunedo.test",
       password: "",
     });
     expect(empty.statusCode).toBe(401);
     expect(empty.json()).toMatchObject({ code: "invalidCredentials" });
     const unreachable = await browser.post(`/api/v1/auth/providers/${ldapId}/password`, {
-      signInName: "ada@corp.pagehall.test",
+      signInName: "ada@corp.lunedo.test",
       password: "secret",
     });
     expect(unreachable.statusCode).toBe(502);
@@ -185,7 +185,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
     const config = {
       preset: "activeDirectory",
       url: "ldaps://127.0.0.1:1",
-      bindDn: "CN=pagehall,OU=Service,DC=corp,DC=example",
+      bindDn: "CN=lunedo,OU=Service,DC=corp,DC=example",
       userBaseDn: "OU=People,DC=corp,DC=example",
       groupBaseDn: "OU=Groups,DC=corp,DC=example",
       domains: [],
@@ -212,7 +212,7 @@ describe.skipIf(!databaseBaseUrl)("SAML and directory providers through the API"
       preset: "generic",
       url: "ldap://127.0.0.1:3",
       startTls: false,
-      bindDn: "cn=pagehall,dc=example,dc=org",
+      bindDn: "cn=lunedo,dc=example,dc=org",
       userBaseDn: "ou=people,dc=example,dc=org",
       groupBaseDn: "ou=groups,dc=example,dc=org",
       domains: [],

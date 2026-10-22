@@ -52,7 +52,7 @@ describe("include blocks", () => {
     expect(seen).toEqual([
       { pageId: PAGE, sourceSpace: null, sourceTitle: null, excerpt: false, name: null },
     ]);
-    expect(html).toContain('<div class="ph-include"');
+    expect(html).toContain('<div class="ld-include"');
     expect(html).toContain('id="included-1-contacts"');
     expect(html).toContain("@Anna Berger");
     expect(html).not.toContain("Runbook");
@@ -98,7 +98,7 @@ describe("include blocks", () => {
   it("leave a placeholder for the web client without include data", () => {
     const html = renderHtml(includeExcerpt({ pageId: PAGE, name: "contacts", panel: false }));
     expect(html).toBe(
-      `<div class="ph-include ph-include-excerpt" data-page-id="${PAGE}" data-name="contacts" data-panel="false"><p>Included excerpt</p></div>`,
+      `<div class="ld-include ld-include-excerpt" data-page-id="${PAGE}" data-name="contacts" data-panel="false"><p>Included excerpt</p></div>`,
     );
   });
 

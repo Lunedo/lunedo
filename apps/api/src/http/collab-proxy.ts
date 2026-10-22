@@ -2,7 +2,7 @@ import { request as httpRequest, type IncomingMessage, type Server } from "node:
 import { request as httpsRequest } from "node:https";
 import type { Duplex } from "node:stream";
 import type { TLSSocket } from "node:tls";
-import { clientAddress, type Logger, trustedProxyList } from "@pagehall/server";
+import { clientAddress, type Logger, trustedProxyList } from "@lunedo/server";
 
 export const COLLAB_PATH = "/collab";
 

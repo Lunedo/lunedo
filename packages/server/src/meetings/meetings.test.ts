@@ -1,5 +1,5 @@
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
-import { applyDocument, documentFromYDoc, yDocFromDocument } from "@pagehall/editor-schema/yjs";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
+import { applyDocument, documentFromYDoc, yDocFromDocument } from "@lunedo/editor-schema/yjs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as Y from "yjs";

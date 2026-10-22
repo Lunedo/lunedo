@@ -10,7 +10,7 @@ import {
   SegmentedControl,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { CircleHelp, Clock, Search, SearchX, SlidersHorizontal, X } from "lucide-react";

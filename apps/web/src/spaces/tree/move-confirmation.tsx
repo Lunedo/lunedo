@@ -1,4 +1,4 @@
-import { Notice, useToast } from "@pagehall/ui";
+import { Notice, useToast } from "@lunedo/ui";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";

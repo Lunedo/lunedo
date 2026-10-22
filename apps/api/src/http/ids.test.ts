@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { idSchema } from "@pagehall/shared";
+import { idSchema } from "@lunedo/shared";
 import { describe, expect, it } from "vitest";
 
 const root = path.resolve(import.meta.dirname, "../../../..");

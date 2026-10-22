@@ -12,9 +12,9 @@ import { checkSpace, criticalPercent, type DiskSpace, NotEnoughSpaceError } from
 import type { TestRestoreCheck } from "./schema.js";
 import type { BackupTarget } from "./targets.js";
 
-const DATABASE_PREFIX = "pagehall_test_restore_";
+const DATABASE_PREFIX = "lunedo_test_restore_";
 const DIRECTORY_PREFIX = "test-restore-";
-const LEFTOVER_DATABASE = /^pagehall_test_restore_([0-9a-f]{32})$/;
+const LEFTOVER_DATABASE = /^lunedo_test_restore_([0-9a-f]{32})$/;
 const LEFTOVER_DIRECTORY = /^test-restore-([0-9a-f]{32})$/;
 const SPACE_MARGIN = 1.2;
 
@@ -35,7 +35,7 @@ export async function removeTestRestoreLeftovers(
   const stale = (key: string) => keep === null || key < keep;
   let removed = 0;
   const databases = await sources.pool.query<{ datname: string }>(
-    "select datname from pg_database where datname like 'pagehall_test_restore_%' and datdba = (select oid from pg_roles where rolname = current_user)",
+    "select datname from pg_database where datname like 'lunedo_test_restore_%' and datdba = (select oid from pg_roles where rolname = current_user)",
   );
   for (const { datname } of databases.rows) {
     const key = LEFTOVER_DATABASE.exec(datname)?.[1];
@@ -96,7 +96,7 @@ async function createDatabasePrivilege(pool: DatabasePool): Promise<{ allowed: b
   const result = await pool.query<{ allowed: boolean; user: string }>(
     "select (rolcreatedb or rolsuper) as allowed, current_user as user from pg_roles where rolname = current_user",
   );
-  return { allowed: result.rows[0]?.allowed === true, user: result.rows[0]?.user ?? "pagehall" };
+  return { allowed: result.rows[0]?.allowed === true, user: result.rows[0]?.user ?? "lunedo" };
 }
 
 function quoteIdentifier(name: string): string {
@@ -119,7 +119,7 @@ async function inspect(
   expected: { schemaVersion: string; withFiles: boolean },
   sources: TestRestoreSources,
 ): Promise<TestRestoreCheck[]> {
-  const client = new pg.Client({ connectionString: databaseUrl, application_name: "pagehall-test-restore" });
+  const client = new pg.Client({ connectionString: databaseUrl, application_name: "lunedo-test-restore" });
   await client.connect();
   try {
     const checks: TestRestoreCheck[] = [];
@@ -201,7 +201,7 @@ function databaseFull(error: unknown): boolean {
 }
 
 const SPACE_ADVICE =
-  "The backup itself was checked and is complete and readable. Free up space in the work directory and on the database server, or move PAGEHALL_WORK_DIR to a larger disk, and start the test restore again.";
+  "The backup itself was checked and is complete and readable. Free up space in the work directory and on the database server, or move LUNEDO_WORK_DIR to a larger disk, and start the test restore again.";
 
 function formatGb(bytes: number): string {
   return `${(bytes / 1024 ** 3).toFixed(1)} GB`;

@@ -1,5 +1,5 @@
-import type { ContentLanguage } from "@pagehall/shared";
-import { Button, Combobox, Dialog, Field } from "@pagehall/ui";
+import type { ContentLanguage } from "@lunedo/shared";
+import { Button, Combobox, Dialog, Field } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";

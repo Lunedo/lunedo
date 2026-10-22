@@ -8,12 +8,12 @@ self.addEventListener("push", (event) => {
   } catch {
     message = {};
   }
-  const title = typeof message.title === "string" && message.title ? message.title : "Pagehall";
+  const title = typeof message.title === "string" && message.title ? message.title : "Lunedo";
   event.waitUntil(
     self.registration.showNotification(title, {
       body: typeof message.body === "string" ? message.body : "",
       tag: typeof message.tag === "string" ? message.tag : undefined,
-      icon: "/favicon.svg",
+      icon: "/lunedo-app-icon.svg",
       data: { url: sameOriginPath(message.url) },
     }),
   );

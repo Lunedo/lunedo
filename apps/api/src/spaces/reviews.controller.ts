@@ -1,3 +1,4 @@
+import { MAX_SOURCES, reviewRecipients } from "@lunedo/server";
 import {
   Body,
   Controller,
@@ -11,7 +12,6 @@ import {
   Query,
   Req,
 } from "@nestjs/common";
-import { MAX_SOURCES, reviewRecipients } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

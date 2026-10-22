@@ -1,4 +1,4 @@
-import { Button, useToast } from "@pagehall/ui";
+import { Button, useToast } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellPlus, BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";

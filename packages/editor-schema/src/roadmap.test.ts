@@ -52,9 +52,9 @@ describe("roadmap blocks", () => {
   it("draw lanes, bars, markers and months as SVG", () => {
     const html = renderHtml(document, context);
     expect(html).toContain(
-      '<svg xmlns="http://www.w3.org/2000/svg" class="ph-roadmap-image" viewBox="0 0 960',
+      '<svg xmlns="http://www.w3.org/2000/svg" class="ld-roadmap-image" viewBox="0 0 960',
     );
-    expect(html).toContain('class="ph-roadmap-lane" data-color="blue"');
+    expect(html).toContain('class="ld-roadmap-lane" data-color="blue"');
     expect(html).toContain(">2027-01</text>");
     expect(html).toContain("Go-live");
     expect(html.slice(0, html.indexOf("</svg>"))).not.toContain("Outside");
@@ -66,14 +66,14 @@ describe("roadmap blocks", () => {
     expect(html).toContain(
       "<title>Order switches for the core network\n2027-01-15 – 2027-02-10\nSix switches</title>",
     );
-    expect(html).toMatch(/class="ph-roadmap-bar-title"[^>]*>[^<]*…<\/text>/);
+    expect(html).toMatch(/class="ld-roadmap-bar-title"[^>]*>[^<]*…<\/text>/);
   });
 
   it("link bars only to pages the viewer can read", () => {
     const html = renderHtml(document, context);
-    expect(html).toContain(`<a href="/spaces/IT/pages/${PAGE}/order" class="ph-roadmap-link">`);
-    expect(html.match(/ph-roadmap-link/g)).toHaveLength(1);
-    expect(html).toContain('<details class="ph-roadmap-list"><summary>Show as list</summary>');
+    expect(html).toContain(`<a href="/spaces/IT/pages/${PAGE}/order" class="ld-roadmap-link">`);
+    expect(html.match(/ld-roadmap-link/g)).toHaveLength(1);
+    expect(html).toContain('<details class="ld-roadmap-list"><summary>Show as list</summary>');
   });
 
   it("write colors from the palette when asked, for Word", () => {

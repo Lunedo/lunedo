@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { proposeFormats, setupStepSchemas } from "@pagehall/shared";
+import { proposeFormats, setupStepSchemas } from "@lunedo/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -404,14 +404,14 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
             fields: { masterKeyVersions: master.versions, backupKeyVersions: deps.backupKeys.versions },
           });
           const content = [
-            "# Pagehall keys. Store this file outside the server, for example in a password manager.",
+            "# Lunedo keys. Store this file outside the server, for example in a password manager.",
             "# Without these keys, encrypted data and backups cannot be restored.",
-            `PAGEHALL_MASTER_KEYS=${keyRingLine(master)}`,
-            `PAGEHALL_BACKUP_KEY=${keyRingLine(deps.backupKeys)}`,
+            `LUNEDO_MASTER_KEYS=${keyRingLine(master)}`,
+            `LUNEDO_BACKUP_KEY=${keyRingLine(deps.backupKeys)}`,
             "",
           ].join("\n");
           return {
-            download: { filename: "pagehall-keys.env", contentType: "text/plain; charset=utf-8", content },
+            download: { filename: "lunedo-keys.env", contentType: "text/plain; charset=utf-8", content },
           };
         },
       }),

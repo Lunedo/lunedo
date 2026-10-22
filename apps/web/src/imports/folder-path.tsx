@@ -1,4 +1,4 @@
-import { CopyButton, Input } from "@pagehall/ui";
+import { CopyButton, Input } from "@lunedo/ui";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 

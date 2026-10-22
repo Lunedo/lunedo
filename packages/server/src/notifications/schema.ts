@@ -1,4 +1,4 @@
-import { watchStates } from "@pagehall/shared";
+import { watchStates } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import {
   boolean,

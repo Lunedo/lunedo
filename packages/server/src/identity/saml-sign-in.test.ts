@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { inflateRawSync } from "node:zlib";
-import { ENTRA_SAML_CLAIMS } from "@pagehall/shared";
+import { ENTRA_SAML_CLAIMS } from "@lunedo/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, SYSTEM } from "../accounts/principal.js";
@@ -24,7 +24,7 @@ import { samlEntityId, samlPaths } from "./saml.js";
 import type { CallbackResult } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const BASE = "https://pagehall.test";
+const BASE = "https://lunedo.test";
 
 describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
   let test: TestServices;
@@ -141,7 +141,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     expect((await test.services.accounts.get(placeholder.id))?.state).toBe("active");
   });
 
-  it("signs a person in through a request Pagehall started and recognizes them again", async () => {
+  it("signs a person in through a request Lunedo started and recognizes them again", async () => {
     const { id, domain } = await provider({ fromUrl: true });
     const person = { nameId: randomUUID(), email: `ada@${domain}` };
     const first = await signIn(id, person);
@@ -312,7 +312,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     expect(refreshed.warnings).not.toContain("metadataRefreshFailed");
   });
 
-  it("keeps a draft with Pagehall's details from the first step and connects it later", async () => {
+  it("keeps a draft with Lunedo's details from the first step and connects it later", async () => {
     const draft = await test.services.identityProviders.createDraft(SYSTEM, {
       type: "saml",
       preset: "entraId",

@@ -8,7 +8,7 @@ import type { Logger } from "../logging/logger.js";
 export const SHUTDOWN_MARGIN_SECONDS = 10;
 
 export interface ShutdownOptions {
-  /** `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS`: how long running work may take to finish. */
+  /** `LUNEDO_SHUTDOWN_TIMEOUT_SECONDS`: how long running work may take to finish. */
   timeoutSeconds: number;
   marginSeconds?: number;
   signals?: Pick<NodeJS.Process, "once">;

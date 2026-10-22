@@ -7,7 +7,7 @@ import {
   Skeleton,
   Table,
   type TableColumn,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Folder, FolderPlus, Plus } from "lucide-react";

@@ -4,7 +4,7 @@ import {
   type NodeJson,
   templateFieldKey,
   titlePatternFields,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Transaction } from "../database/database.js";
 import type { TemplateLanguage } from "../templates/builtin/types.js";

@@ -67,13 +67,13 @@ describe("page read view", () => {
         <PageReadView document={document} references={references} pageId={PAGE} />
       </PreferencesProvider>,
     );
-    const container = screen.getByText("Left").closest(".ph-read-view") as HTMLElement;
+    const container = screen.getByText("Left").closest(".ld-read-view") as HTMLElement;
     expect(container.querySelector("script")).toBeNull();
     expect(container.textContent).toContain("<script>alert(1)</script>");
     const headings = container.querySelectorAll("h2");
     expect(headings[0]?.id).toBe("set-up-a-new-device");
     expect(headings[1]?.id).toBe("set-up-a-new-device-2");
-    expect(container.querySelector('nav.ph-toc a[href="#set-up-a-new-device-2"]')).not.toBeNull();
+    expect(container.querySelector('nav.ld-toc a[href="#set-up-a-new-device-2"]')).not.toBeNull();
     const link = screen.getByText("Device naming");
     expect(link.getAttribute("href")).toBe(`/spaces/ITOPS/pages/${PAGE}/device-naming`);
     expect(container.textContent).not.toContain("Salary bands");
@@ -83,7 +83,7 @@ describe("page read view", () => {
     expect(missing.getAttribute("href")).toBe(`${FOLLOW_PATH}?space=${SPACE}&title=Glossary`);
     expect(container.textContent).toContain("@Anna Berger");
     expect(container.querySelector("[onmouseover]")).toBeNull();
-    const column = screen.getByText("Left").closest(".ph-column") as HTMLElement;
+    const column = screen.getByText("Left").closest(".ld-column") as HTMLElement;
     expect(column.style.getPropertyValue("--column-width")).toBe("30%");
   });
 
@@ -175,11 +175,11 @@ describe("page read view", () => {
     expect(screen.getByRole("checkbox", { name: /^Mark as open: Renew the certificate/ })).toBe(box);
     expect((box as HTMLInputElement).checked).toBe(true);
     expect(globalThis.document.activeElement).toBe(box);
-    expect(box.closest(".ph-task-item")?.getAttribute("data-checked")).toBe("true");
+    expect(box.closest(".ld-task-item")?.getAttribute("data-checked")).toBe("true");
     await userEvent.keyboard(" ");
     expect(screen.getByRole("checkbox", { name: /^Mark as done: Renew the certificate/ })).toBe(box);
     expect((box as HTMLInputElement).checked).toBe(false);
-    expect(box.closest(".ph-task-item")?.getAttribute("data-checked")).toBe("false");
+    expect(box.closest(".ld-task-item")?.getAttribute("data-checked")).toBe("false");
   });
 
   it("shows the status of a task a person cannot change", async () => {

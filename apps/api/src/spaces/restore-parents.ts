@@ -1,4 +1,4 @@
-import type { AccountServices, Principal, TrashEntry } from "@pagehall/server";
+import type { AccountServices, Principal, TrashEntry } from "@lunedo/server";
 import { z } from "zod";
 
 export const withParentsQuery = z

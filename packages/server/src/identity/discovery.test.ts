@@ -25,7 +25,7 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
     const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
       type: "oidc",
       name,
-      config: { preset: "generic", issuer: "https://idp.example.org", clientId: "pagehall", domains },
+      config: { preset: "generic", issuer: "https://idp.example.org", clientId: "lunedo", domains },
       credential: { kind: "clientSecret", secret: "secret", expiresAt: null },
     });
     return created.id;

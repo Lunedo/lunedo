@@ -1,4 +1,4 @@
-import { EmptyState, PageHeader, Section, Skeleton } from "@pagehall/ui";
+import { EmptyState, PageHeader, Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AtSign, Clock, Layers, ListChecks, Newspaper, Share2, Star, Sun } from "lucide-react";

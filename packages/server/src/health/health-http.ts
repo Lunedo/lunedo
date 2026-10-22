@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { type HealthCheck, type HealthReport, runHealthChecks } from "@pagehall/shared";
+import { type HealthCheck, type HealthReport, runHealthChecks } from "@lunedo/shared";
 import type { Logger } from "../logging/logger.js";
 import { isAuthorizedMetricsRequest, type Metrics } from "../observability/metrics.js";
 

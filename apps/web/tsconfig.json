@@ -1,5 +1,5 @@
 {
-  "extends": "@pagehall/config/tsconfig/react.json",
+  "extends": "@lunedo/config/tsconfig/react.json",
   "compilerOptions": {
     "noEmit": true,
     "types": ["vite/client", "node"]

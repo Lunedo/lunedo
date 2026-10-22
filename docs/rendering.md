@@ -1,6 +1,6 @@
 # Rendering: PDF and Word
 
-Pagehall turns pages into print-ready HTML on the server. By default, the person's own browser lays it out into sheets and saves it as PDF through its print dialog. Word documents are created by Pagehall itself. Neither needs anything besides Pagehall.
+Lunedo turns pages into print-ready HTML on the server. By default, the person's own browser lays it out into sheets and saves it as PDF through its print dialog. Word documents are created by Lunedo itself. Neither needs anything besides Lunedo.
 
 An optional render container creates PDF files on the server. It is needed only for:
 
@@ -17,23 +17,23 @@ The print view is tested in Chromium. Chrome and Edge take the paper size and or
 
 ## Setting up the render container
 
-The image `pagehall-render` (built from `docker/render.Dockerfile`) runs headless Chromium from Debian and a small service on port 3000. Add it next to Pagehall and give both the same token of at least 32 characters, for example from `openssl rand -hex 32`. Put the container only on an internal network that it shares with Pagehall: it then reaches neither the database nor the internet, and nothing but Pagehall reaches it.
+The image `lunedo-render` (built from `docker/render.Dockerfile`) runs headless Chromium from Debian and a small service on port 3000. Add it next to Lunedo and give both the same token of at least 32 characters, for example from `openssl rand -hex 32`. Put the container only on an internal network that it shares with Lunedo: it then reaches neither the database nor the internet, and nothing but Lunedo reaches it.
 
 ```yaml
 services:
-  pagehall-render:
-    image: ghcr.io/pagehall/render:latest
+  lunedo-render:
+    image: ghcr.io/lunedo/render:latest
     restart: unless-stopped
     environment:
-      RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN}
+      RENDER_TOKEN: ${LUNEDO_RENDER_TOKEN}
     security_opt:
       - seccomp=./chromium-seccomp.json
     networks: [render]
 
-  pagehall:
+  lunedo:
     environment:
-      PAGEHALL_RENDER_URL: http://pagehall-render:3000
-      PAGEHALL_RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN}
+      LUNEDO_RENDER_URL: http://lunedo-render:3000
+      LUNEDO_RENDER_TOKEN: ${LUNEDO_RENDER_TOKEN}
     networks: [default, render]
 
 networks:
@@ -53,13 +53,13 @@ Chromium runs with its own sandbox by default. The sandbox needs user namespaces
 
 If Chromium cannot start with the sandbox, the container stops with the error "Chromium did not start" and this hint. `RENDER_CHROMIUM_SANDBOX=false` turns the sandbox off as an explicit exception; the container then logs a warning at every start, because a flaw in Chromium's image or font decoding could run code with the rights of the container. Keep the internal network in that case above all.
 
-Restart Pagehall. Settings, Instance, Rendering shows whether the container answers, its version, its browser, the documents it renders at the same time and its limits. In development, start it with `docker compose -f docker/compose.dev.yml --profile render up -d render` and set `PAGEHALL_RENDER_URL=http://render:3000` and `PAGEHALL_RENDER_TOKEN` for the app.
+Restart Lunedo. Settings, Instance, Rendering shows whether the container answers, its version, its browser, the documents it renders at the same time and its limits. In development, start it with `docker compose -f docker/compose.dev.yml --profile render up -d render` and set `LUNEDO_RENDER_URL=http://render:3000` and `LUNEDO_RENDER_TOKEN` for the app.
 
 Settings of the container:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `RENDER_TOKEN` or `RENDER_TOKEN_FILE` | required | Token that Pagehall sends as `Authorization: Bearer`, at least 32 characters. |
+| `RENDER_TOKEN` or `RENDER_TOKEN_FILE` | required | Token that Lunedo sends as `Authorization: Bearer`, at least 32 characters. |
 | `RENDER_PORT` | `3000` | Port of the service. |
 | `RENDER_CONCURRENCY` | `2` | Documents rendered at the same time. Each needs about 300 MB of memory. |
 | `RENDER_MAX_WAITING` | 10 per parallel document | Documents that may wait; further requests are refused with 503. |
@@ -71,10 +71,10 @@ Settings of the container:
 
 ## Security
 
-- Only Pagehall's API and worker talk to the container; it needs no access to anything else. Keep it on an internal network without a route out, away from the database, and do not publish its port.
+- Only Lunedo's API and worker talk to the container; it needs no access to anything else. Keep it on an internal network without a route out, away from the database, and do not publish its port.
 - Chromium runs in its sandbox unless `RENDER_CHROMIUM_SANDBOX=false`.
 - Every request carries the token, which the container compares in constant time.
-- Pagehall sends the complete document: the print-ready HTML of what the exporting person may read, and the images they may read. The container serves only these and its own viewer to Chromium; every other request, including to the instance itself and to other hosts, is blocked, and host names do not resolve.
+- Lunedo sends the complete document: the print-ready HTML of what the exporting person may read, and the images they may read. The container serves only these and its own viewer to Chromium; every other request, including to the instance itself and to other hosts, is blocked, and host names do not resolve.
 - No JavaScript of the document runs. The viewer parses the document without executing scripts and allows only its own scripts, the pagination library included, through its content security policy.
 - Each document gets its own browser context, which is closed afterwards, and runs under the time and size limits above.
 

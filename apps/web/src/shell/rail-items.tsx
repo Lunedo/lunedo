@@ -1,5 +1,5 @@
-import { tokens } from "@pagehall/tokens";
-import { Menu, RailButton } from "@pagehall/ui";
+import { tokens } from "@lunedo/tokens";
+import { Menu, RailButton } from "@lunedo/ui";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   Bell,

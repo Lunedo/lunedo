@@ -21,7 +21,7 @@ export interface KeyProvider {
   addVersion(): Promise<KeyRing>;
 }
 
-/** Reads the key ring from `PAGEHALL_MASTER_KEYS`. Operators add versions and restart. */
+/** Reads the key ring from `LUNEDO_MASTER_KEYS`. Operators add versions and restart. */
 export class EnvKeyProvider implements KeyProvider {
   readonly name = "env";
   readonly #value: Secret;
@@ -36,7 +36,7 @@ export class EnvKeyProvider implements KeyProvider {
 
   async addVersion(): Promise<KeyRing> {
     throw new KeyRingError(
-      "The env key provider cannot create keys: add a new version to PAGEHALL_MASTER_KEYS and restart all nodes",
+      "The env key provider cannot create keys: add a new version to LUNEDO_MASTER_KEYS and restart all nodes",
     );
   }
 }
@@ -76,7 +76,7 @@ export class FileKeyProvider implements KeyProvider {
 
 export function createKeyProvider(config: ServerConfig): KeyProvider {
   if (config.keys.provider === "env") {
-    if (!config.keys.masterKeys) throw new KeyRingError("PAGEHALL_MASTER_KEYS is not set");
+    if (!config.keys.masterKeys) throw new KeyRingError("LUNEDO_MASTER_KEYS is not set");
     return new EnvKeyProvider(config.keys.masterKeys);
   }
   return new FileKeyProvider(config.keys.masterKeysPath);

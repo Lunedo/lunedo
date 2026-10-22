@@ -22,7 +22,7 @@ import {
   Switch,
   Table,
   type TableColumn,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DatabaseBackup, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
@@ -240,7 +240,7 @@ type TargetField = "path" | "endpoint" | "region" | "bucket" | "prefix" | "acces
 function draftOf(target: BackupOverview["target"]): TargetDraft {
   const empty: TargetDraft = {
     kind: "local",
-    path: "/var/lib/pagehall/backups",
+    path: "/var/lib/lunedo/backups",
     endpoint: "",
     region: "",
     bucket: "",
@@ -441,7 +441,7 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
               "path",
               t("backups.target.path"),
               t("backups.target.pathHint"),
-              text("path", "/var/lib/pagehall/backups"),
+              text("path", "/var/lib/lunedo/backups"),
             )}
             {data.target?.kind === "local" && data.target.sameVolumeAsFiles && !changed ? (
               <Notice variant="warning" title={t("backups.target.sameVolumeTitle")}>
@@ -467,13 +467,13 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
               "bucket",
               t("backups.target.bucket"),
               t("backups.target.bucketHint"),
-              text("bucket", "pagehall-backups"),
+              text("bucket", "lunedo-backups"),
             )}
             {field(
               "prefix",
               t("backups.target.prefix"),
               t("backups.target.prefixHint"),
-              text("prefix", "pagehall/"),
+              text("prefix", "lunedo/"),
             )}
             {field(
               "accessKeyId",
@@ -957,7 +957,7 @@ function BackupsTable({
       key: "version",
       header: t("backups.list.version"),
       hideBelow: "md",
-      cell: (row) => row.pagehallVersion ?? t("backups.list.unreadable"),
+      cell: (row) => row.lunedoVersion ?? t("backups.list.unreadable"),
     },
     {
       key: "test",

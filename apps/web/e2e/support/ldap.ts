@@ -1,11 +1,11 @@
 import { Attribute, Change, Client } from "ldapts";
 
-export const LDAP_URL = process.env.PAGEHALL_E2E_LDAP_URL || "ldap://localhost:3389";
+export const LDAP_URL = process.env.LUNEDO_E2E_LDAP_URL || "ldap://localhost:3389";
 export const LDAP_DOMAIN = "directory.example.org";
-export const LDAP_PASSWORD = "pagehall-test-password";
+export const LDAP_PASSWORD = "lunedo-test-password";
 export const LDAP_SERVICE = {
-  dn: "cn=pagehall,ou=service,dc=example,dc=org",
-  password: "pagehall-ldap-service-password",
+  dn: "cn=lunedo,ou=service,dc=example,dc=org",
+  password: "lunedo-ldap-service-password",
 };
 export const LDAP_BASE = { users: "ou=people,dc=example,dc=org", groups: "ou=groups,dc=example,dc=org" };
 

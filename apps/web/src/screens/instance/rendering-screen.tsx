@@ -1,4 +1,4 @@
-import { Badge, type BadgeVariant, Button, Notice, Section, SettingRow, Skeleton } from "@pagehall/ui";
+import { Badge, type BadgeVariant, Button, Notice, Section, SettingRow, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Printer, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -16,16 +16,16 @@ const STATE_BADGES: Record<string, BadgeVariant> = {
   unreachable: "danger",
 };
 
-const COMPOSE_SNIPPET = `  pagehall-render:
-    image: ghcr.io/pagehall/render:latest
+const COMPOSE_SNIPPET = `  lunedo-render:
+    image: ghcr.io/lunedo/render:latest
     restart: unless-stopped
     environment:
-      RENDER_TOKEN: \${PAGEHALL_RENDER_TOKEN}
+      RENDER_TOKEN: \${LUNEDO_RENDER_TOKEN}
 
-  pagehall:
+  lunedo:
     environment:
-      PAGEHALL_RENDER_URL: http://pagehall-render:3000
-      PAGEHALL_RENDER_TOKEN: \${PAGEHALL_RENDER_TOKEN}`;
+      LUNEDO_RENDER_URL: http://lunedo-render:3000
+      LUNEDO_RENDER_TOKEN: \${LUNEDO_RENDER_TOKEN}`;
 
 function PdfSection({
   status,

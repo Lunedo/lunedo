@@ -34,7 +34,7 @@ export function suggestionRender(
       onStart(props) {
         renderer = new ReactRenderer(SuggestionList, { props: propsOf(props), editor: props.editor });
         const element = renderer.element as HTMLElement;
-        element.classList.add("ph-suggestion-popup");
+        element.classList.add("ld-suggestion-popup");
         document.body.append(element);
         unmount = props.mount(element);
       },

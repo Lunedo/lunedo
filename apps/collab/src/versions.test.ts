@@ -1,6 +1,6 @@
-import { documentFromYDoc } from "@pagehall/editor-schema/yjs";
-import { accountPrincipal, type PageMode, type ServerRuntime } from "@pagehall/server";
-import { testDatabaseBaseUrl } from "@pagehall/server/testing";
+import { documentFromYDoc } from "@lunedo/editor-schema/yjs";
+import { accountPrincipal, type PageMode, type ServerRuntime } from "@lunedo/server";
+import { testDatabaseBaseUrl } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type * as Y from "yjs";
 import {

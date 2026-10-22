@@ -1,4 +1,4 @@
-const SCROLLERS = ".ph-roadmap-scroll";
+const SCROLLERS = ".ld-roadmap-scroll";
 
 function mark(scroller: HTMLElement, label: string): void {
   const overflowing = scroller.scrollWidth > scroller.clientWidth + 1;

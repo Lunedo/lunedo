@@ -7,7 +7,7 @@ import {
   schema,
   type TextAnchor,
   validateComment,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 
 const COMMENT_MARKS = new Set([
   "bold",

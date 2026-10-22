@@ -1,5 +1,5 @@
+import { type HealthReport, runHealthChecks } from "@lunedo/shared";
 import { Controller, Get, Header, Inject, Res } from "@nestjs/common";
-import { type HealthReport, runHealthChecks } from "@pagehall/shared";
 import type { FastifyReply } from "fastify";
 import { PublicRoute } from "../access/route-access.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";

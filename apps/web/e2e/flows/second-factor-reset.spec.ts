@@ -12,7 +12,7 @@ test("an administrator resets a member's second factor with a reason", async ({
   const suffix = unique();
   const person = {
     name: `Rita Reset ${suffix}`,
-    email: `rita.reset.${suffix.toLowerCase()}@pagehall.test`,
+    email: `rita.reset.${suffix.toLowerCase()}@lunedo.test`,
     password: "reset passphrase for testing",
   };
   await page.goto("/settings/preferences");

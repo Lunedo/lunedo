@@ -205,7 +205,7 @@ export class AtlassianDirectory {
 function unreachable(): ImportError {
   return new ImportError(
     "atlassianUnreachable",
-    "Pagehall could not read the people from this Confluence site. Check the address and try again.",
+    "Lunedo could not read the people from this Confluence site. Check the address and try again.",
   );
 }
 

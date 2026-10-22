@@ -81,7 +81,7 @@ export const codeBlockModule = defineModule({
           { class: language ? `hljs language-${language}` : "hljs" },
           highlightCode(codeText(node), language),
         );
-        return element("pre", { class: "ph-code-block", "data-language": language }, code);
+        return element("pre", { class: "ld-code-block", "data-language": language }, code);
       },
       word: (node) => [
         { type: "code", text: codeText(node), language: attrOf<string | null>(node, "language") },

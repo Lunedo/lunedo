@@ -1,4 +1,4 @@
-import { diffDocuments } from "@pagehall/editor-schema";
+import { diffDocuments } from "@lunedo/editor-schema";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -103,7 +103,7 @@ function change(overrides: Record<string, unknown>) {
     permission: null,
     held: false,
     heldFor: null,
-    decisions: ["pagehall", "source", "both"],
+    decisions: ["lunedo", "source", "both"],
     decision: null,
     decidedBy: null,
     decidedAt: null,
@@ -302,7 +302,7 @@ describe("re-import changes", () => {
       [`POST /api/v1/imports/${IMPORT_ID}/changes/${CHANGE(1)}/apply`]: () => ({ status: 204 }),
     });
     await open(`${DETAIL}?tab=permissions`);
-    expect(await screen.findByText("Readers: Editor in Confluence, no access in Pagehall")).toBeTruthy();
+    expect(await screen.findByText("Readers: Editor in Confluence, no access in Lunedo")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Apply…" }));
     const dialog = await screen.findByRole("dialog", { name: "Apply this permission difference?" });
     expect(within(dialog).getByText(/Mia Mitchell/)).toBeTruthy();
@@ -379,9 +379,9 @@ describe("re-import changes", () => {
       [`GET /api/v1/imports/${IMPORT_ID}/changes/${CHANGE(1)}/compare`]: () => ({
         body: {
           kind: "page",
-          pagehall: { title: "On-call rota", version: null },
+          lunedo: { title: "On-call rota", version: null },
           source: { title: "On-call rota", version: 7 },
-          decisions: ["pagehall", "source", "both"],
+          decisions: ["lunedo", "source", "both"],
           decision: null,
           diff: diffDocuments(
             {
@@ -407,7 +407,7 @@ describe("re-import changes", () => {
     expect(await screen.findByRole("heading", { name: "Compare “On-call rota”" })).toBeTruthy();
     expect(await screen.findByText("1 change")).toBeTruthy();
     expect(
-      screen.getByText("Left or removed: Pagehall, current content. Right or added: Confluence, version 7."),
+      screen.getByText("Left or removed: Lunedo, current content. Right or added: Confluence, version 7."),
     ).toBeTruthy();
     expect(api.requests.some((request) => request.method !== "GET")).toBe(false);
     await userEvent.click(screen.getByRole("radio", { name: "Side by side" }));
@@ -421,7 +421,7 @@ describe("re-import changes", () => {
     });
   });
 
-  it("offers only keeping the Pagehall version while a restriction from Confluence waits", async () => {
+  it("offers only keeping the Lunedo version while a restriction from Confluence waits", async () => {
     const api = setup({
       ...changeRoutes({
         conflicts: [
@@ -429,7 +429,7 @@ describe("re-import changes", () => {
             reason: "restricted",
             held: true,
             heldFor: { differenceId: CHANGE(9), title: "Finance" },
-            decisions: ["pagehall"],
+            decisions: ["lunedo"],
           }),
           change({
             id: CHANGE(2),
@@ -447,23 +447,23 @@ describe("re-import changes", () => {
     ).toContain("tab=permissions");
     await userEvent.click(screen.getByRole("combobox", { name: "Decision for On-call rota" }));
     const options = await screen.findAllByRole("option");
-    expect(options.map((option) => option.textContent)).toEqual(["Keep Pagehall version", "Decide later"]);
+    expect(options.map((option) => option.textContent)).toEqual(["Keep Lunedo version", "Decide later"]);
     await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
     const bar = screen.getByRole("toolbar", { name: "Decide for the selected changes" });
     expect(within(bar).queryByRole("button", { name: "Take Confluence version" })).toBeNull();
     expect(within(bar).queryByRole("button", { name: "Keep both" })).toBeNull();
-    expect(within(bar).getByText(/only “Keep Pagehall version” is offered/)).toBeTruthy();
-    await userEvent.click(within(bar).getByRole("button", { name: "Keep Pagehall version" }));
+    expect(within(bar).getByText(/only “Keep Lunedo version” is offered/)).toBeTruthy();
+    await userEvent.click(within(bar).getByRole("button", { name: "Keep Lunedo version" }));
     await waitFor(() =>
       expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({
         ids: [CHANGE(1), CHANGE(2)],
-        decision: "pagehall",
+        decision: "lunedo",
       }),
     );
   });
 
-  it("offers only keeping the Pagehall version on the comparison while a restriction waits", async () => {
+  it("offers only keeping the Lunedo version on the comparison while a restriction waits", async () => {
     const document = {
       type: "doc" as const,
       content: [{ type: "paragraph", content: [{ type: "text", text: "Rota" }] }],
@@ -473,9 +473,9 @@ describe("re-import changes", () => {
       [`GET /api/v1/imports/${IMPORT_ID}/changes/${CHANGE(1)}/compare`]: () => ({
         body: {
           kind: "page",
-          pagehall: { title: "On-call rota", version: null },
+          lunedo: { title: "On-call rota", version: null },
           source: { title: "On-call rota", version: 7 },
-          decisions: ["pagehall"],
+          decisions: ["lunedo"],
           decision: null,
           diff: diffDocuments({ title: "On-call rota", document }, { title: "On-call rota", document }),
           before: document,
@@ -485,10 +485,10 @@ describe("re-import changes", () => {
       }),
     });
     await open(`${DETAIL}/changes/${CHANGE(1)}/compare`);
-    expect(await screen.findByText(/only “Keep Pagehall version” is possible/)).toBeTruthy();
+    expect(await screen.findByText(/only “Keep Lunedo version” is possible/)).toBeTruthy();
     await userEvent.click(screen.getByRole("combobox", { name: "Decision for On-call rota" }));
     const options = await screen.findAllByRole("option");
-    expect(options.map((option) => option.textContent)).toEqual(["Keep Pagehall version", "Decide later"]);
+    expect(options.map((option) => option.textContent)).toEqual(["Keep Lunedo version", "Decide later"]);
   });
 
   it("explains that the source of a page restricted further is not shown", async () => {

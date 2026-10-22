@@ -1,4 +1,4 @@
-import { Section } from "@pagehall/ui";
+import { Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { LockKeyhole } from "lucide-react";

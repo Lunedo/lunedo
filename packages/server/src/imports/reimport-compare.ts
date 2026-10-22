@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Database, Executor } from "../database/database.js";
 import { fileNameKey } from "../files/names.js";
@@ -40,7 +40,7 @@ export const changeTypes = [
   "permission",
 ] as const;
 export type ChangeType = (typeof changeTypes)[number];
-export const changeDecisions = ["pagehall", "source", "both", "trash", "keep"] as const;
+export const changeDecisions = ["lunedo", "source", "both", "trash", "keep"] as const;
 export type ChangeDecision = (typeof changeDecisions)[number];
 
 export interface ChangeRow {

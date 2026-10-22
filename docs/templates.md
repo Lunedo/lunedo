@@ -1,10 +1,10 @@
 # Templates
 
-Templates give new pages a starting point: a title pattern, input fields asked for when the page is created, and content with placeholders. They exist at three levels: the instance, an organization and a space. Pagehall also ships built-in templates in English and German.
+Templates give new pages a starting point: a title pattern, input fields asked for when the page is created, and content with placeholders. They exist at three levels: the instance, an organization and a space. Lunedo also ships built-in templates in English and German.
 
 | Level | Who manages it | Who uses it |
 |---|---|---|
-| Built-in | nobody, they come with Pagehall | everyone who creates pages |
+| Built-in | nobody, they come with Lunedo | everyone who creates pages |
 | Instance | instance administrators | editors in every space |
 | Organization | organization administrators | editors in the organization's spaces |
 | Space | space administrators | editors of the space |
@@ -18,11 +18,11 @@ A template owns its files: the images it shows and the files that drawing and di
 - A page created from a template gets its own copies of the files as normal attachments. Changing or deleting the template later does not change the page.
 - Deleting a template deletes its files.
 
-Templates saved before Pagehall stored their files kept references to the attachments of the page they came from. After an update, Pagehall copies those files into the templates in the background, as long as the file still exists, the people who created and last changed the template can still open its page, and the page lies in the template's space or organization. Organization and instance templates take over files of unrestricted pages only. Images whose file is gone become empty image blocks. The worker log reports how many templates, files and emptied images it handled.
+Templates saved before Lunedo stored their files kept references to the attachments of the page they came from. After an update, Lunedo copies those files into the templates in the background, as long as the file still exists, the people who created and last changed the template can still open its page, and the page lies in the template's space or organization. Organization and instance templates take over files of unrestricted pages only. Images whose file is gone become empty image blocks. The worker log reports how many templates, files and emptied images it handled.
 
 ## Exporting templates
 
-Templates can be shared with other Pagehall instances and with the community as files. The people who manage templates at a level can export them: space administrators the templates of their space, organization administrators those of the organization, instance administrators those of the instance and the built-in templates. Everyone else uses templates as before.
+Templates can be shared with other Lunedo instances and with the community as files. The people who manage templates at a level can export them: space administrators the templates of their space, organization administrators those of the organization, instance administrators those of the instance and the built-in templates. Everyone else uses templates as before.
 
 On the template screen of a level, select templates and choose **Export**, or export all of them. Instance administrators can export built-in templates in English or German as a starting point for their own.
 
@@ -34,7 +34,7 @@ A template file cannot carry what only works in its own instance. Before the dow
 - live draw.io references to other pages and whiteboard blocks,
 - template buttons for templates of the instance (buttons for built-in templates stay),
 - reports, child page lists, label lists and roadmaps bound to pages or spaces (they stay, without the binding),
-- comments, meeting topics and imported macros Pagehall does not support,
+- comments, meeting topics and imported macros Lunedo does not support,
 - files that are not part of the template, and files that are not images, drawings or draw.io diagrams.
 
 Template field placeholders, the template's own images, external links and embeds stay. The file contains no database IDs, authors, timestamps, organization or space names, names of people, titles of other pages or the address of the instance. Every export is recorded in the audit log with the level, the number of templates and what was removed.
@@ -63,16 +63,16 @@ A template file is untrusted. The import reaches the same safety as content ente
 
 ## File format
 
-A template file is either plain JSON, `<name>.pagehall-template.json`, for templates without files, or a ZIP archive, `<name>.pagehall-template.zip`, with `template.json` at its root and the files under `files/`. One file holds one or several templates. Pagehall writes keys in a fixed order with two spaces of indentation, and the same templates always give the same file, so templates kept in a Git repository give clean diffs.
+A template file is either plain JSON, `<name>.lunedo-template.json`, for templates without files, or a ZIP archive, `<name>.lunedo-template.zip`, with `template.json` at its root and the files under `files/`. One file holds one or several templates. Lunedo writes keys in a fixed order with two spaces of indentation, and the same templates always give the same file, so templates kept in a Git repository give clean diffs.
 
 The JSON Schema [template-format.schema.json](template-format.schema.json) describes `template.json`; it is generated from the importer's validation. The importer additionally checks what a schema cannot: unique field keys, choice fields with options, the content against the editor schema, and the files.
 
 ```json
 {
-  "format": "pagehall-template",
+  "format": "lunedo-template",
   "formatVersion": 1,
   "schemaVersion": 11,
-  "pagehallVersion": "1.4.0",
+  "lunedoVersion": "1.4.0",
   "templates": [
     {
       "name": "Retrospective",
@@ -119,10 +119,10 @@ The JSON Schema [template-format.schema.json](template-format.schema.json) descr
 
 | Key | Meaning |
 |---|---|
-| `format` | always `pagehall-template` |
+| `format` | always `lunedo-template` |
 | `formatVersion` | version of this format, currently `1` |
 | `schemaVersion` | version of the editor schema the documents use |
-| `pagehallVersion` | the Pagehall version that wrote the file, for information |
+| `lunedoVersion` | the Lunedo version that wrote the file, for information |
 | `templates[].name`, `description`, `category` | name (1 to 100 characters), description (up to 300) and gallery category: `meetings`, `decisions`, `projects`, `engineering`, `operations`, `knowledge` or `teams` |
 | `templates[].language` | `en`, `de`, or `null` when unknown |
 | `templates[].titlePattern` | title of new pages; `{key}` inserts the value of an input field |

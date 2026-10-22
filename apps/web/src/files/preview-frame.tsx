@@ -1,4 +1,4 @@
-import { Skeleton } from "@pagehall/ui";
+import { Skeleton } from "@lunedo/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type FramePreviewKind, isFrameMessage, type RenderMessage } from "../preview/protocol.js";

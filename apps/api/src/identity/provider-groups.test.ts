@@ -1,4 +1,4 @@
-import { type FakeOidcProvider, startFakeOidcProvider } from "@pagehall/server/testing";
+import { type FakeOidcProvider, startFakeOidcProvider } from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -19,7 +19,7 @@ describe.skipIf(!databaseBaseUrl)("mapping rules and synchronization through the
   let providerId: string;
 
   beforeAll(async () => {
-    test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_INSECURE_IDENTITY_PROVIDERS: "true" });
+    test = await createAuthTestApp({ ...configuredSetupEnv, LUNEDO_INSECURE_IDENTITY_PROVIDERS: "true" });
     await completeConfiguredSetup(test);
     idp = await startFakeOidcProvider();
     owner = new TestClient(test.app);
@@ -33,7 +33,7 @@ describe.skipIf(!databaseBaseUrl)("mapping rules and synchronization through the
         preset: "generic",
         issuer: idp.issuer,
         clientId: idp.clientId,
-        domains: ["groups.pagehall.test"],
+        domains: ["groups.lunedo.test"],
         accountCreation: { enabled: true, requiredGroups: [] },
         claims: {
           email: "email",
@@ -79,7 +79,7 @@ describe.skipIf(!databaseBaseUrl)("mapping rules and synchronization through the
     const started = await person.post(`/api/v1/auth/providers/${providerId}/start`, {});
     const callback = await idp.authorize(started.json().url, {
       sub: "grace-subject",
-      email: "grace@groups.pagehall.test",
+      email: "grace@groups.lunedo.test",
       name: "Grace",
       groups: ["engineering-id"],
       group_names: ["Engineering"],
@@ -119,7 +119,7 @@ describe.skipIf(!databaseBaseUrl)("mapping rules and synchronization through the
   });
 
   it("keeps rules to people who may manage sign-in and grant the access", async () => {
-    const member = await createAccount(test, "rule-member@pagehall.test", undefined, organizationId);
+    const member = await createAccount(test, "rule-member@lunedo.test", undefined, organizationId);
     const client = await signedInClient(test, member.email, member.password);
     const refused = await client.post(`${base()}/mapping-rules`, {
       target: "organization",

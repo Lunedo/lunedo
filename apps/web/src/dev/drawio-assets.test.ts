@@ -35,7 +35,7 @@ describe("shipped draw.io files", () => {
     }
   });
 
-  it("map request paths of the pinned version to shipped files and Pagehall's configuration", () => {
+  it("map request paths of the pinned version to shipped files and Lunedo's configuration", () => {
     expect(drawioFile(`${DRAWIO_PATH}index.html?embed=1`)).toBe("index.html");
     expect(drawioFile(`${DRAWIO_PATH}js/PreConfig.js`)).toBe("js/PreConfig.js");
     expect(drawioFile(`${DRAWIO_PATH}WEB-INF/web.xml`)).toBeNull();

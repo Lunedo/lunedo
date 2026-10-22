@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
@@ -13,7 +13,7 @@ import { auditScopeOf } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { AnnouncementSeverity } from "./schema.js";
 
-export const ANNOUNCEMENT_CHANGES_CHANNEL = "pagehall_announcement_changes";
+export const ANNOUNCEMENT_CHANGES_CHANNEL = "lunedo_announcement_changes";
 export const ANNOUNCEMENT_TEXT_MAX_LENGTH = 300;
 export const ANNOUNCEMENT_LINK_LABEL_MAX_LENGTH = 60;
 export const ANNOUNCEMENT_URL_MAX_LENGTH = 2000;

@@ -50,7 +50,7 @@ export class ProviderGroupsController {
   @ApiRoute({
     summary: "Store the Google service account key",
     description:
-      "Pagehall reads accounts and groups from the Google directory with this key, read-only and in the name of the administrator set in the provider's directory settings.",
+      "Lunedo reads accounts and groups from the Google directory with this key, read-only and in the name of the administrator set in the provider's directory settings.",
     tags: [TAG],
     params: providerIdParams,
     body: directoryKeySchema,
@@ -170,7 +170,7 @@ export class ProviderGroupsController {
   @ApiRoute({
     summary: "Search the groups of a provider",
     description:
-      "Searches the provider's directory when Pagehall can read it, otherwise the groups Pagehall has seen at sign-in.",
+      "Searches the provider's directory when Lunedo can read it, otherwise the groups Lunedo has seen at sign-in.",
     tags: [TAG],
     params: providerIdParams,
     query: groupSearchQuery,

@@ -3,7 +3,7 @@ import type { OidcConfig, SamlConfig } from "../../api/identity-queries.js";
 import { oidcConfigInput, samlConfigInput } from "./provider-config.js";
 
 const common = {
-  clientId: "pagehall",
+  clientId: "lunedo",
   domains: ["example.org"],
   idTokenAlgorithm: "RS256" as const,
   accountCreation: { enabled: true, requiredGroups: [] },
@@ -35,7 +35,7 @@ describe("oidcConfigInput", () => {
     const input = oidcConfigInput({
       preset: "generic",
       ...common,
-      issuer: "https://keycloak.example.org/realms/pagehall",
+      issuer: "https://keycloak.example.org/realms/lunedo",
       scopes: ["openid"],
       claims: {
         email: "email",

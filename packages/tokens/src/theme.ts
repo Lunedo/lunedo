@@ -1,6 +1,6 @@
 import type { ColorMode, DesignTokens } from "./index.js";
 
-const PREFIX = "ph";
+const PREFIX = "ld";
 
 type Declarations = [name: string, value: string][];
 type ColorSet = "light" | "dark" | "highContrastLight" | "highContrastDark";
@@ -190,7 +190,7 @@ export function generateThemeCss(tokens: DesignTokens): string {
       ];
     });
   return [
-    "/* Generated from design-tokens.json by @pagehall/tokens. Do not edit. */",
+    "/* Generated from design-tokens.json by @lunedo/tokens. Do not edit. */",
     block("@theme inline", themeDeclarations(tokens)),
     '@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));',
     FOCUS_RING,

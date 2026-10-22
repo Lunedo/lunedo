@@ -20,27 +20,27 @@ export class Metrics {
     this.registry.setDefaultLabels({ service });
     collectDefaultMetrics({ register: this.registry });
     this.#httpRequests = new Counter({
-      name: "pagehall_http_requests_total",
+      name: "lunedo_http_requests_total",
       help: "HTTP requests by method, route template and status code.",
       labelNames: ["method", "route", "status"],
       registers: [this.registry],
     });
     this.#httpDuration = new Histogram({
-      name: "pagehall_http_request_duration_seconds",
+      name: "lunedo_http_request_duration_seconds",
       help: "HTTP request latency by method, route template and status code.",
       labelNames: ["method", "route", "status"],
       buckets: DURATION_BUCKETS,
       registers: [this.registry],
     });
     this.#jobDuration = new Histogram({
-      name: "pagehall_job_duration_seconds",
+      name: "lunedo_job_duration_seconds",
       help: "Duration of job attempts in this process by queue and outcome.",
       labelNames: ["queue", "state"],
       buckets: JOB_DURATION_BUCKETS,
       registers: [this.registry],
     });
     this.#loggedErrors = new Counter({
-      name: "pagehall_log_errors_total",
+      name: "lunedo_log_errors_total",
       help: "Error-level log events of this process by type, without content or personal data.",
       labelNames: ["type"],
       registers: [this.registry],
@@ -49,8 +49,8 @@ export class Metrics {
 
   observeBuild(version: string): void {
     new Gauge({
-      name: "pagehall_build_info",
-      help: "Always 1; the version label is the running Pagehall version.",
+      name: "lunedo_build_info",
+      help: "Always 1; the version label is the running Lunedo version.",
       labelNames: ["version"],
       registers: [this.registry],
     }).set({ version }, 1);
@@ -62,7 +62,7 @@ export class Metrics {
 
   observeCollaboration(source: () => { connections: number; documents: number }): void {
     new Gauge({
-      name: "pagehall_collab_connections",
+      name: "lunedo_collab_connections",
       help: "Open editor connections of this collaboration server.",
       registers: [this.registry],
       collect() {
@@ -70,7 +70,7 @@ export class Metrics {
       },
     });
     new Gauge({
-      name: "pagehall_collab_documents",
+      name: "lunedo_collab_documents",
       help: "Documents this collaboration server holds open.",
       registers: [this.registry],
       collect() {
@@ -114,67 +114,63 @@ export class Metrics {
         },
       });
     const seconds = (date: Date | null | undefined) => (date ? date.getTime() / 1000 : null);
-    gauge("pagehall_database_size_bytes", "Size of the Pagehall database.", (s) => s.databaseSizeBytes);
+    gauge("lunedo_database_size_bytes", "Size of the Lunedo database.", (s) => s.databaseSizeBytes);
+    gauge("lunedo_storage_used_bytes", "Bytes used in the file store.", (s) => s.storage?.usedBytes ?? null);
     gauge(
-      "pagehall_storage_used_bytes",
-      "Bytes used in the file store.",
-      (s) => s.storage?.usedBytes ?? null,
-    );
-    gauge(
-      "pagehall_storage_size_bytes",
+      "lunedo_storage_size_bytes",
       "Size of the file store volume, or the configured limit for S3 storage.",
       (s) => s.storage?.totalBytes ?? null,
     );
     gauge(
-      "pagehall_storage_usage_ratio",
+      "lunedo_storage_usage_ratio",
       "Used share of the file store, from 0 to 1.",
       (s) => s.storage?.ratio ?? null,
     );
     gauge(
-      "pagehall_storage_level",
+      "lunedo_storage_level",
       "Active storage warning level: 0 none, 1 warning, 2 large writes paused, 3 critical.",
       (s) => s.storageLevel,
     );
-    gauge("pagehall_backup_last_success_timestamp_seconds", "Time of the last successful backup.", (s) =>
+    gauge("lunedo_backup_last_success_timestamp_seconds", "Time of the last successful backup.", (s) =>
       seconds(s.backup.lastSuccessAt),
     );
-    counter("pagehall_backup_failures_total", "Backups that failed.", (s) => s.backup.failures);
-    gauge("pagehall_backup_scheduled", "1 when scheduled backups are on.", (s) => Number(s.backup.scheduled));
+    counter("lunedo_backup_failures_total", "Backups that failed.", (s) => s.backup.failures);
+    gauge("lunedo_backup_scheduled", "1 when scheduled backups are on.", (s) => Number(s.backup.scheduled));
     counter(
-      "pagehall_mail_delivery_failures_total",
+      "lunedo_mail_delivery_failures_total",
       "Failed attempts to deliver an e-mail.",
       (s) => s.mail.failedAttempts,
     );
     counter(
-      "pagehall_mail_undelivered_total",
+      "lunedo_mail_undelivered_total",
       "E-mails given up after the last attempt.",
       (s) => s.mail.failedMessages,
     );
-    gauge("pagehall_mail_last_success_timestamp_seconds", "Time of the last delivered e-mail.", (s) =>
+    gauge("lunedo_mail_last_success_timestamp_seconds", "Time of the last delivered e-mail.", (s) =>
       seconds(s.mail.lastSuccessAt),
     );
-    gauge("pagehall_mail_last_failure_timestamp_seconds", "Time of the last failed delivery attempt.", (s) =>
+    gauge("lunedo_mail_last_failure_timestamp_seconds", "Time of the last failed delivery attempt.", (s) =>
       seconds(s.mail.lastFailureAt),
     );
     gauge(
-      "pagehall_search_pending_items",
+      "lunedo_search_pending_items",
       "Items waiting to be indexed for search.",
       (s) => s.search.pendingItems,
     );
     gauge(
-      "pagehall_search_failing_items",
+      "lunedo_search_failing_items",
       "Items whose indexing failed at least once and is retried.",
       (s) => s.search.failingItems,
     );
-    gauge("pagehall_maintenance_mode", "1 while the instance is in maintenance mode.", (s) =>
+    gauge("lunedo_maintenance_mode", "1 while the instance is in maintenance mode.", (s) =>
       Number(s.maintenance),
     );
     gauge(
-      "pagehall_update_available",
+      "lunedo_update_available",
       "1 when a newer release is available. Only while the update check is on.",
       (s) => (s.updateAvailable === null ? null : Number(s.updateAvailable)),
     );
-    gauge("pagehall_collab_up", "1 when the collaboration server answers its readiness check.", (s) =>
+    gauge("lunedo_collab_up", "1 when the collaboration server answers its readiness check.", (s) =>
       s.collaborationReady === null ? null : Number(s.collaborationReady),
     );
   }
@@ -192,7 +188,7 @@ export class Metrics {
 
   observeDatabasePool(pool: DatabasePool): void {
     new Gauge({
-      name: "pagehall_db_pool_connections",
+      name: "lunedo_db_pool_connections",
       help: "Connections of this process's database pool by state.",
       labelNames: ["state"],
       registers: [this.registry],
@@ -206,7 +202,7 @@ export class Metrics {
 
   observeJobQueue(queue: JobQueue): void {
     new Gauge({
-      name: "pagehall_jobs",
+      name: "lunedo_jobs",
       help: "Jobs per queue and state.",
       labelNames: ["queue", "state"],
       registers: [this.registry],

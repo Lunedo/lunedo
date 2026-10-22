@@ -1,11 +1,11 @@
-import { endToEndWorkers } from "@pagehall/config/parallelism";
-import { retriesFromEnv } from "@pagehall/config/test-report";
+import { endToEndWorkers } from "@lunedo/config/parallelism";
+import { retriesFromEnv } from "@lunedo/config/test-report";
 import { defineConfig, devices } from "@playwright/test";
 import { BASE_URL } from "./e2e/support/environment.js";
 
 const ci = Boolean(process.env.CI);
-const identityProviders = process.env.PAGEHALL_E2E_IDP === "1";
-const sweeps = process.env.PAGEHALL_E2E_SWEEPS !== "false";
+const identityProviders = process.env.LUNEDO_E2E_IDP === "1";
+const sweeps = process.env.LUNEDO_E2E_SWEEPS !== "false";
 const chrome = { ...devices["Desktop Chrome"] };
 const afterSetup = identityProviders ? ["idp"] : ["setup"];
 

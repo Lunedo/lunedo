@@ -1,4 +1,4 @@
-import { Button, Notice, SegmentedControl } from "@pagehall/ui";
+import { Button, Notice, SegmentedControl } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Fingerprint } from "lucide-react";

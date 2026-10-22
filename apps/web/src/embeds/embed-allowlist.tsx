@@ -7,7 +7,7 @@ import {
   type EmbedService,
   embedRuleProblem,
   MAX_EMBED_SERVICES,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import {
   Button,
   Checkbox,
@@ -18,7 +18,7 @@ import {
   ListRow,
   Select,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { Globe, Plus, RotateCcw, X } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

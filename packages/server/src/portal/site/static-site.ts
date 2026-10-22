@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { type DocumentJson, extractSections, type NodeJson, plainText } from "@pagehall/editor-schema";
+import { type DocumentJson, extractSections, type NodeJson, plainText } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
 import { ANONYMOUS } from "../../accounts/principal.js";

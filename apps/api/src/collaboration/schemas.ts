@@ -25,7 +25,7 @@ import {
   taskReportDueWindows,
   taskReportStatuses,
   treeItemKinds,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { z } from "zod";
 import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleItem, exampleSpace, pageReferencesSchema } from "../spaces/schemas.js";

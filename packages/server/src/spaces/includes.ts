@@ -1,4 +1,4 @@
-import { type DocumentJson, excerptContent, type IncludeRequest } from "@pagehall/editor-schema";
+import { type DocumentJson, excerptContent, type IncludeRequest } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";

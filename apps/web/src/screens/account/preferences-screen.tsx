@@ -1,4 +1,4 @@
-import { textSizes } from "@pagehall/shared";
+import { textSizes } from "@lunedo/shared";
 import {
   IconButton,
   Menu,
@@ -8,7 +8,7 @@ import {
   Skeleton,
   Stepper,
   Switch,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { MoreHorizontal, Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../../api/organization-queries.js";

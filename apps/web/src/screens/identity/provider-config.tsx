@@ -5,8 +5,8 @@ import {
   idTokenAlgorithms,
   secondFactorModes,
   signInNameSources,
-} from "@pagehall/shared";
-import { Badge, CopyButton, Input, Select, SettingRow, Switch } from "@pagehall/ui";
+} from "@lunedo/shared";
+import { Badge, CopyButton, Input, Select, SettingRow, Switch } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";

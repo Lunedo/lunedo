@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxUploadSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxUploadSetting } from "@lunedo/server";
 import {
   ALICE,
   BOB,
@@ -12,7 +12,7 @@ import {
   peopleExport,
   syntheticExport,
   testJobContext,
-} from "@pagehall/server/testing";
+} from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -34,7 +34,7 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
   let owner: TestClient;
   let organizationId: string;
   let counter = 0;
-  const importDir = mkdtempSync(path.join(tmpdir(), "pagehall-import-folder-"));
+  const importDir = mkdtempSync(path.join(tmpdir(), "lunedo-import-folder-"));
 
   async function slugOf(id: string): Promise<string> {
     const result = await test.runtime.pool.query<{ slug: string }>(
@@ -52,7 +52,7 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
 
   beforeAll(async () => {
     writeFileSync(path.join(importDir, "top-level.zip"), createXmlExport(syntheticExport()));
-    test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_IMPORT_DIR: importDir });
+    test = await createAuthTestApp({ ...configuredSetupEnv, LUNEDO_IMPORT_DIR: importDir });
     await completeConfiguredSetup(test);
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
     await test.runtime.settings.set(accountAttemptLimitSetting, {}, "instance", 1000);
@@ -72,7 +72,7 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
 
   async function member() {
     counter += 1;
-    const email = `imports${counter}@pagehall.test`;
+    const email = `imports${counter}@lunedo.test`;
     const account = await createAccount(test, email);
     return { id: account.id, email, client: await signedInClient(test, email, account.password) };
   }

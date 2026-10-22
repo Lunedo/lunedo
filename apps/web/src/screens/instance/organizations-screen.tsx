@@ -1,4 +1,4 @@
-import { type Language, organizationNameSchema, slugSchema, timeZoneSchema } from "@pagehall/shared";
+import { type Language, organizationNameSchema, slugSchema, timeZoneSchema } from "@lunedo/shared";
 import {
   Button,
   Combobox,
@@ -12,7 +12,7 @@ import {
   Table,
   TableToolbar,
   TimeZoneCombobox,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Building2, MoreHorizontal, Plus } from "lucide-react";

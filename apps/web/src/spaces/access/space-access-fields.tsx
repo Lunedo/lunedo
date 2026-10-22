@@ -1,4 +1,4 @@
-import { Button, Field, focusFirstInvalidSoon, IconButton, Notice, RadioGroup } from "@pagehall/ui";
+import { Button, Field, focusFirstInvalidSoon, IconButton, Notice, RadioGroup } from "@lunedo/ui";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

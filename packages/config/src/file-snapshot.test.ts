@@ -7,7 +7,7 @@ import { snapshot } from "./file-snapshot.js";
 let root: string | undefined;
 
 function fixture(): string {
-  root = mkdtempSync(path.join(tmpdir(), "pagehall-snapshot-"));
+  root = mkdtempSync(path.join(tmpdir(), "lunedo-snapshot-"));
   mkdirSync(path.join(root, "src", "nested"), { recursive: true });
   mkdirSync(path.join(root, "src", "node_modules"));
   writeFileSync(path.join(root, "src", "a.ts"), "a");

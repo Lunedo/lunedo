@@ -1,4 +1,4 @@
-import { Button, EmptyState, ErrorState } from "@pagehall/ui";
+import { Button, EmptyState, ErrorState } from "@lunedo/ui";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { Compass, Lock } from "lucide-react";

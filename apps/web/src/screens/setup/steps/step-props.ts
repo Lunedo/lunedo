@@ -1,4 +1,4 @@
-import type { SetupStepDetails, SetupStepId } from "@pagehall/shared";
+import type { SetupStepDetails, SetupStepId } from "@lunedo/shared";
 import type { ReactNode } from "react";
 
 export interface StepProps<S extends SetupStepId> {

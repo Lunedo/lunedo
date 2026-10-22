@@ -25,11 +25,11 @@ const MARKED_IN_PLACE = new Set(["listItem", "taskItem", "tableRow", "tableCell"
 const WITHOUT_NOTES = new Set(["tableRow"]);
 const BLOCK_CHANGES = new Set(["added", "removed", "changed", "moved"]);
 const LINE_TAGS: Record<string, string> = { added: "ins", removed: "del" };
-const LINE_CLASSES: Record<string, string> = { added: "ph-diff-added", removed: "ph-diff-removed" };
+const LINE_CLASSES: Record<string, string> = { added: "ld-diff-added", removed: "ld-diff-removed" };
 const SEGMENT_WRAPPERS: Record<string, { tag: string; className: string }> = {
-  added: { tag: "ins", className: "ph-diff-added" },
-  removed: { tag: "del", className: "ph-diff-removed" },
-  formatted: { tag: "span", className: "ph-diff-formatted" },
+  added: { tag: "ins", className: "ld-diff-added" },
+  removed: { tag: "del", className: "ld-diff-removed" },
+  formatted: { tag: "span", className: "ld-diff-formatted" },
 };
 
 function invalid(code: ValidationCode, message: string): InvalidDocumentError {
@@ -132,7 +132,7 @@ class DiffHtmlRenderer extends HtmlRendererImpl {
         ? marked.replace(/^<[^>]*>/, (tag) => `${tag}${note}`)
         : marked;
     }
-    return element("div", { class: "ph-diff-block", "data-change": change }, `${note}${html}`);
+    return element("div", { class: "ld-diff-block", "data-change": change }, `${note}${html}`);
   }
 
   override children(node: ValidNode): string {
@@ -150,7 +150,7 @@ class DiffHtmlRenderer extends HtmlRendererImpl {
       const names = diff.attributes.map((attribute) => attribute.name).join(", ");
       texts.push(this.diffLabels.attributes.replace(/\{names\}/g, names));
     }
-    return texts.map((text) => element("span", { class: "ph-diff-note" }, escapeHtml(text))).join("");
+    return texts.map((text) => element("span", { class: "ld-diff-note" }, escapeHtml(text))).join("");
   }
 
   private changed(diff: BlockDiff, valid: ValidNode): string {
@@ -174,7 +174,7 @@ class DiffHtmlRenderer extends HtmlRendererImpl {
       })
       .join("\n");
     const code = element("code", { class: language ? `hljs language-${language}` : "hljs" }, content);
-    return element("pre", { class: "ph-code-block", "data-language": language }, code);
+    return element("pre", { class: "ld-code-block", "data-language": language }, code);
   }
 
   private segments(segments: readonly InlineSegment[]): string {

@@ -64,7 +64,7 @@ describe("ComponentsPage", () => {
     }
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(document.documentElement.dataset.density).toBe("compact");
-    expect(document.documentElement.style.getPropertyValue("--ph-text-scale")).toBe("0.875");
+    expect(document.documentElement.style.getPropertyValue("--ld-text-scale")).toBe("0.875");
   });
 
   it("reads the language and shows the page in German", () => {

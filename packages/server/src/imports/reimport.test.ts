@@ -157,13 +157,13 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const decide = async (
       tab: ChangeTab,
       sourceId: string,
-      decision: "pagehall" | "source" | "both" | "trash" | "keep",
+      decision: "lunedo" | "source" | "both" | "trash" | "keep",
     ) =>
       reimports.decide(as(w.admin), importId, {
         ids: [await idOf(w.admin, importId, tab, await w.item(sourceId))],
         decision,
       });
-    await decide("conflicts", RE.keepHere, "pagehall");
+    await decide("conflicts", RE.keepHere, "lunedo");
     await decide("conflicts", RE.takeSource, "source");
     await decide("conflicts", RE.keepBoth, "both");
     await decide("deleted", RE.trash, "trash");
@@ -351,16 +351,16 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const crashing = harness.worker();
     await test.services.imports.reimports.apply(as(w.admin), reimport.id);
     await test.database.execute(sql`
-      create or replace function pagehall_test_crash() returns trigger language plpgsql as $$
+      create or replace function lunedo_test_crash() returns trigger language plpgsql as $$
       begin raise exception 'simulated crash'; end $$`);
     await test.database.execute(sql`
-      create trigger pagehall_test_crash before insert on page_labels
-      for each row when (new.label = 'fresh') execute function pagehall_test_crash()`);
+      create trigger lunedo_test_crash before insert on page_labels
+      for each row when (new.label = 'fresh') execute function lunedo_test_crash()`);
     try {
       await expect(harness.drive(reimport.id, crashing)).rejects.toThrow();
     } finally {
-      await test.database.execute(sql`drop trigger pagehall_test_crash on page_labels`);
-      await test.database.execute(sql`drop function pagehall_test_crash()`);
+      await test.database.execute(sql`drop trigger lunedo_test_crash on page_labels`);
+      await test.database.execute(sql`drop function lunedo_test_crash()`);
     }
     const halfway = await test.database.execute<{ applied: number; open: number }>(sql`
       select count(*) filter (where applied_at is not null)::int as applied,
@@ -408,7 +408,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     await Promise.all([
       harness.drive(reimport.id, harness.worker()),
       harness.drive(reimport.id, harness.worker()),
-      reimports.decide(as(w.otherAdmin), reimport.id, { ids: [editing], decision: "pagehall" }),
+      reimports.decide(as(w.otherAdmin), reimport.id, { ids: [editing], decision: "lunedo" }),
     ]);
     const titles = await test.database.execute<{ count: number }>(sql`
       select count(*)::int as count from tree_items where space_id = ${w.spaceId}
@@ -419,7 +419,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
       "imported",
     ]);
     const decided = (await changes(w.admin, reimport.id, "conflicts")).find((entry) => entry.id === editing);
-    expect(decided?.decision).toBe("pagehall");
+    expect(decided?.decision).toBe("lunedo");
     expect(decided?.decidedBy?.id).toBe(w.otherAdmin);
     if ((await test.services.imports.get(as(w.admin), reimport.id)).state === "review") {
       await harness.applyChanges(w.admin, reimport.id);
@@ -813,7 +813,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const comparison = await reimports.compare(as(w.admin), reimport.id, conflict);
     expect(comparison).toMatchObject({
       kind: "page",
-      pagehall: { title: "Keep here", version: null },
+      lunedo: { title: "Keep here", version: null },
       source: { title: "Keep here", version: 2 },
     });
     expect(JSON.stringify(comparison.before)).toContain(`Local ${RE.keepHere}`);
@@ -853,7 +853,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const item = await w.item(RE.keepHere);
     const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
     const comparison = await test.services.imports.reimports.compare(as(w.otherAdmin), reimport.id, conflict);
-    expect(comparison.pagehall.version).toBe(1);
+    expect(comparison.lunedo.version).toBe(1);
     expect(JSON.stringify(comparison.before)).toContain("Original keep here");
     expect(JSON.stringify(comparison.before)).not.toContain(`Local ${RE.keepHere}`);
   });
@@ -1099,7 +1099,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
       reason: "restricted",
       held: true,
       heldFor: { differenceId: restriction, title: "Move target" },
-      decisions: ["pagehall"],
+      decisions: ["lunedo"],
       sourceTitle: "Keep here",
     });
     const hidden = (await changes(w.otherAdmin, reimport.id, "conflicts")).find(
@@ -1139,7 +1139,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const released = (await changes(w.admin, reimport.id, "conflicts")).find(
       (entry) => entry.item?.id === child,
     );
-    expect(released).toMatchObject({ held: false, heldFor: null, decisions: ["pagehall", "source", "both"] });
+    expect(released).toMatchObject({ held: false, heldFor: null, decisions: ["lunedo", "source", "both"] });
     await reimports.decide(as(w.admin), reimport.id, { ids: [released?.id ?? ""], decision: "source" });
     await harness.applyChanges(w.admin, reimport.id);
     expect(JSON.stringify((await document(child))?.snapshot)).toContain("Source keep here");
@@ -1154,7 +1154,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     expect(await canView(w.admin, created ?? "")).toBe(true);
   });
 
-  it("allows only keeping the Pagehall version while the restriction of a conflict waits", async () => {
+  it("allows only keeping the Lunedo version while the restriction of a conflict waits", async () => {
     const w = await world();
     await test.database.execute(sql`
       insert into group_members (group_id, account_id) values (${w.readers}, ${w.admin})`);
@@ -1181,7 +1181,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const entry = async (viewer: string) =>
       (await changes(viewer, reimport.id, "conflicts")).find((candidate) => candidate.id === conflict);
     expect(await entry(w.admin)).toMatchObject({
-      decisions: ["pagehall"],
+      decisions: ["lunedo"],
       decision: null,
       sourceTitle: "Source only, renamed",
     });
@@ -1209,7 +1209,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     }
 
     await reimports.applyDifference(as(w.admin), reimport.id, restriction);
-    expect(await entry(w.admin)).toMatchObject({ held: false, decisions: ["pagehall", "source", "both"] });
+    expect(await entry(w.admin)).toMatchObject({ held: false, decisions: ["lunedo", "source", "both"] });
     await reimports.decide(as(w.admin), reimport.id, { ids: [conflict], decision: "both" });
     await harness.applyChanges(w.admin, reimport.id);
     expect(await canView(w.otherAdmin, item)).toBe(false);
@@ -1301,7 +1301,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
       reimport.id,
       conflict?.id ?? "",
     );
-    expect(comparison).toMatchObject({ kind: "template", pagehall: { title: "Status report" } });
+    expect(comparison).toMatchObject({ kind: "template", lunedo: { title: "Status report" } });
     expect(JSON.stringify(comparison.before)).toContain("Template edited here");
     expect(JSON.stringify(comparison.after)).toContain("Template from the source");
     expect(await stored()).toEqual(before);

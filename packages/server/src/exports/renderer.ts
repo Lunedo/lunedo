@@ -34,7 +34,7 @@ import {
   type TaskReportRequest,
   taskReportRequest,
   type WordBlock,
-} from "@pagehall/editor-schema";
+} from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { dump } from "js-yaml";
 import type { Principal } from "../accounts/principal.js";
@@ -624,8 +624,8 @@ export class PageExportRenderer {
         : `> ${this.#texts.whiteboardWithoutImage}\n`;
     }
     return source
-      ? `<figure class="ph-whiteboard"><img src="${escapeHtml(source)}" alt="${escapeHtml(this.title(page))}"></figure>`
-      : `<p class="ph-export-note">${escapeHtml(this.#texts.whiteboardWithoutImage)}</p>`;
+      ? `<figure class="ld-whiteboard"><img src="${escapeHtml(source)}" alt="${escapeHtml(this.title(page))}"></figure>`
+      : `<p class="ld-export-note">${escapeHtml(this.#texts.whiteboardWithoutImage)}</p>`;
   }
 
   async #taskReports(document: DocumentJson): Promise<Map<string, readonly ReportedTask[]>> {
@@ -692,17 +692,17 @@ export class PageExportRenderer {
 
   #frontMatter(page: PreparedPage): string {
     const facts = page.facts;
-    const pagehall: Record<string, unknown> = { kind: page.board ? "whiteboard" : "page" };
-    if (page.version !== null) pagehall.version = page.version;
-    if (page.author) pagehall.author = page.author;
-    if (facts?.articleType) pagehall.articleType = facts.articleType;
-    if (facts?.language) pagehall.language = facts.language;
-    if (facts?.translation) pagehall.translation = true;
+    const lunedo: Record<string, unknown> = { kind: page.board ? "whiteboard" : "page" };
+    if (page.version !== null) lunedo.version = page.version;
+    if (page.author) lunedo.author = page.author;
+    if (facts?.articleType) lunedo.articleType = facts.articleType;
+    if (facts?.language) lunedo.language = facts.language;
+    if (facts?.translation) lunedo.translation = true;
     const data: Record<string, unknown> = { title: this.title(page) };
     if (facts?.createdAt) data.created = facts.createdAt.toISOString();
     data.updated = page.updatedAt.toISOString();
     if (facts && facts.labels.length > 0) data.labels = [...facts.labels];
-    data.pagehall = pagehall;
+    data.lunedo = lunedo;
     return `---\n${dump(data, { lineWidth: -1, noRefs: true })}---\n`;
   }
 
@@ -881,7 +881,7 @@ export class PageExportRenderer {
       }
     }
     return format === "html"
-      ? `<p class="ph-export-note">${escapeHtml(this.#texts.pageUnavailable)}</p>`
+      ? `<p class="ld-export-note">${escapeHtml(this.#texts.pageUnavailable)}</p>`
       : `> ${this.#texts.pageUnavailable}\n`;
   }
 
@@ -942,7 +942,7 @@ export class PageExportRenderer {
     const index = locator.index("html");
     const title = escapeHtml(this.title(page));
     const meta = this.#meta(page)
-      .map((line) => `<p class="ph-meta">${escapeHtml(line)}</p>`)
+      .map((line) => `<p class="ld-meta">${escapeHtml(line)}</p>`)
       .join("");
     const navigation = index
       ? `<nav><a href="${escapeHtml(index)}">${escapeHtml(this.#texts.contents)}</a></nav>`
@@ -950,9 +950,9 @@ export class PageExportRenderer {
     const facts = page.facts;
     const head = [
       facts?.articleType
-        ? `<meta name="pagehall:article-type" content="${escapeHtml(facts.articleType)}">`
+        ? `<meta name="lunedo:article-type" content="${escapeHtml(facts.articleType)}">`
         : "",
-      facts?.translation ? '<meta name="pagehall:translation" content="true">' : "",
+      facts?.translation ? '<meta name="lunedo:translation" content="true">' : "",
     ].join("");
     return htmlDocument(
       facts?.language ?? language,

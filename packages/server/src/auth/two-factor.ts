@@ -1,5 +1,5 @@
 import { createHash, randomInt } from "node:crypto";
-import { uuidv7 } from "@pagehall/shared";
+import { uuidv7 } from "@lunedo/shared";
 import { and, count, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { Secret, TOTP } from "otpauth";
 import type { Encryption } from "../crypto/envelope.js";

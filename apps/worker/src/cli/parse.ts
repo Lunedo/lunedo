@@ -23,21 +23,21 @@ export class UsageError extends Error {
 }
 
 export const usage = `Usage:
-  pagehall backup create --output <file>
-  pagehall backup create --before-update
-  pagehall backup skip-before-update [--for-version <version>]
-  pagehall backup verify --input <file>
-  pagehall backup restore --input <file> [--force] [--config-dir <dir>]
-  pagehall keys rotate
-  pagehall keys status
-  pagehall audit verify
-  pagehall search rebuild
-  pagehall search status
-  pagehall maintenance on [--message <text>] [--block-sign-in]
-  pagehall maintenance off
-  pagehall maintenance status
-  pagehall version
-  pagehall release-notes [--since <version>] [--update-from <version>] [--json]
+  lunedo backup create --output <file>
+  lunedo backup create --before-update
+  lunedo backup skip-before-update [--for-version <version>]
+  lunedo backup verify --input <file>
+  lunedo backup restore --input <file> [--force] [--config-dir <dir>]
+  lunedo keys rotate
+  lunedo keys status
+  lunedo audit verify
+  lunedo search rebuild
+  lunedo search status
+  lunedo maintenance on [--message <text>] [--block-sign-in]
+  lunedo maintenance off
+  lunedo maintenance status
+  lunedo version
+  lunedo release-notes [--since <version>] [--update-from <version>] [--json]
 `;
 
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/;

@@ -1,4 +1,4 @@
-import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
+import designTokens from "@lunedo/tokens/design-tokens.json" with { type: "json" };
 import type { supportedLanguages } from "../settings/builtin.js";
 import {
   type BackupFailedText,
@@ -284,7 +284,7 @@ const catalogs: Record<Language, Catalog> = {
     accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
       subject: `Administrative roles of ${accountName} on ${instanceName} are paused`,
       paragraphs: [
-        `Pagehall could not read the groups of ${accountName} from ${providerName} for longer than twice the sync interval. ${roles} administrative role${roles === 1 ? "" : "s"} granted by mapping rules ${roles === 1 ? "is" : "are"} paused until the groups can be read again. Memberships stay as last known.`,
+        `Lunedo could not read the groups of ${accountName} from ${providerName} for longer than twice the sync interval. ${roles} administrative role${roles === 1 ? "" : "s"} granted by mapping rules ${roles === 1 ? "is" : "are"} paused until the groups can be read again. Memberships stay as last known.`,
         "Check the connection to the provider and its sync log.",
       ],
     }),
@@ -314,9 +314,9 @@ const catalogs: Record<Language, Catalog> = {
     storageLevelReached: (params) => storageReached("en", params),
     storageLevelCleared: (params) => storageCleared("en", params),
     updateAvailable: ({ instanceName, version, current, breaking, link }) => ({
-      subject: `Pagehall ${version} is available for ${instanceName}`,
+      subject: `Lunedo ${version} is available for ${instanceName}`,
       paragraphs: [
-        `${instanceName} runs Pagehall ${current}. Version ${version} is available.`,
+        `${instanceName} runs Lunedo ${current}. Version ${version} is available.`,
         breaking
           ? "The release notes list breaking changes or manual steps. Read them before you update."
           : "The admin area shows what changed and the commands for your installation. The update takes a backup first.",
@@ -331,7 +331,7 @@ const catalogs: Record<Language, Catalog> = {
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-mail on ${instanceName} stops on ${date}`,
       paragraphs: [
-        `The client secret or certificate that ${instanceName} uses to send e-mail through Microsoft Graph expires on ${date}. Add a new one in the e-mail settings before then, or Pagehall can no longer send e-mail.`,
+        `The client secret or certificate that ${instanceName} uses to send e-mail through Microsoft Graph expires on ${date}. Add a new one in the e-mail settings before then, or Lunedo can no longer send e-mail.`,
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
@@ -488,7 +488,7 @@ const catalogs: Record<Language, Catalog> = {
     accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
       subject: `Administrative Rollen von ${accountName} auf ${instanceName} sind ausgesetzt`,
       paragraphs: [
-        `Pagehall konnte die Gruppen von ${accountName} länger als das doppelte Synchronisierungsintervall nicht aus ${providerName} lesen. ${roles === 1 ? "Eine administrative Rolle" : `${roles} administrative Rollen`} aus Zuordnungsregeln ${roles === 1 ? "ist" : "sind"} ausgesetzt, bis die Gruppen wieder gelesen werden können. Mitgliedschaften bleiben wie zuletzt bekannt.`,
+        `Lunedo konnte die Gruppen von ${accountName} länger als das doppelte Synchronisierungsintervall nicht aus ${providerName} lesen. ${roles === 1 ? "Eine administrative Rolle" : `${roles} administrative Rollen`} aus Zuordnungsregeln ${roles === 1 ? "ist" : "sind"} ausgesetzt, bis die Gruppen wieder gelesen werden können. Mitgliedschaften bleiben wie zuletzt bekannt.`,
         "Prüfen Sie die Verbindung zum Anbieter und sein Sync-Protokoll.",
       ],
     }),
@@ -518,9 +518,9 @@ const catalogs: Record<Language, Catalog> = {
     storageLevelReached: (params) => storageReached("de", params),
     storageLevelCleared: (params) => storageCleared("de", params),
     updateAvailable: ({ instanceName, version, current, breaking, link }) => ({
-      subject: `Pagehall ${version} ist für ${instanceName} verfügbar`,
+      subject: `Lunedo ${version} ist für ${instanceName} verfügbar`,
       paragraphs: [
-        `${instanceName} läuft mit Pagehall ${current}. Version ${version} ist verfügbar.`,
+        `${instanceName} läuft mit Lunedo ${current}. Version ${version} ist verfügbar.`,
         breaking
           ? "Die Versionshinweise nennen inkompatible Änderungen oder manuelle Schritte. Lesen Sie sie vor dem Update."
           : "Der Administrationsbereich zeigt, was sich geändert hat, und die Befehle für Ihre Installation. Das Update legt vorher ein Backup an.",
@@ -535,7 +535,7 @@ const catalogs: Record<Language, Catalog> = {
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-Mail-Versand auf ${instanceName} endet am ${date}`,
       paragraphs: [
-        `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Fügen Sie vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Pagehall keine E-Mails mehr senden.`,
+        `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Fügen Sie vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Lunedo keine E-Mails mehr senden.`,
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({

@@ -1,5 +1,5 @@
-import { statusItemIds } from "@pagehall/server";
-import { idSchema } from "@pagehall/shared";
+import { statusItemIds } from "@lunedo/server";
+import { idSchema } from "@lunedo/shared";
 import { z } from "zod";
 
 const level = z.enum(["ok", "warning", "error"]);

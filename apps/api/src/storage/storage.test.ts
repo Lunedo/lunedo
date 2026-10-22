@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addTotp,
@@ -29,8 +29,8 @@ describe.skipIf(!databaseBaseUrl)("storage warnings through the API", () => {
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
     organizationId = await firstOrganizationId(test);
-    await createAccount(test, "storage-member@pagehall.test", "a long enough passphrase");
-    member = await signedInClient(test, "storage-member@pagehall.test", "a long enough passphrase");
+    await createAccount(test, "storage-member@lunedo.test", "a long enough passphrase");
+    member = await signedInClient(test, "storage-member@lunedo.test", "a long enough passphrase");
   });
 
   afterAll(async () => {

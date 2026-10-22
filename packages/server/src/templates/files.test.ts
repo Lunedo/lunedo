@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
-import type { DocumentJson } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import type { DocumentJson } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";

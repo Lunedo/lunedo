@@ -16,7 +16,7 @@ const MIGRATION = "0012_concrete_formats";
 const INSTANCE = "00000000-0000-0000-0000-000000000000";
 
 function foldersBefore(tag: string): string {
-  const folder = mkdtempSync(path.join(tmpdir(), "pagehall-migrations-"));
+  const folder = mkdtempSync(path.join(tmpdir(), "lunedo-migrations-"));
   cpSync(migrations, folder, { recursive: true });
   const journalFile = path.join(folder, "meta", "_journal.json");
   const journal = JSON.parse(readFileSync(journalFile, "utf8")) as { entries: { tag: string }[] };
@@ -42,7 +42,7 @@ describe.skipIf(!baseUrl)("the migration to concrete formats", () => {
 
   it("keeps every format people saw while the formats were automatic", async () => {
     database = await createTemporaryDatabase(baseUrl as string);
-    pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: database.url, applicationName: "lunedo-test" });
     folder = foldersBefore(MIGRATION);
     await runMigrations(pool, { logger, folder });
 
@@ -109,7 +109,7 @@ describe.skipIf(!baseUrl)("the migration to concrete formats", () => {
 
   it("follows a locked instance language", async () => {
     database = await createTemporaryDatabase(baseUrl as string);
-    pool = createDatabasePool({ connectionString: database.url, applicationName: "pagehall-test" });
+    pool = createDatabasePool({ connectionString: database.url, applicationName: "lunedo-test" });
     folder = foldersBefore(MIGRATION);
     await runMigrations(pool, { logger, folder });
     const person = randomUUID();

@@ -1,4 +1,4 @@
-import { EmptyState, Field, SegmentedControl, Select, Skeleton } from "@pagehall/ui";
+import { EmptyState, Field, SegmentedControl, Select, Skeleton } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
@@ -22,13 +22,13 @@ const route = getRouteApi(
   "/app/settings/organizations/$organizationId/imports/$importId/changes/$changeId/compare",
 );
 
-const DECISIONS: readonly ChangeDecision[] = ["pagehall", "source", "both"];
+const DECISIONS: readonly ChangeDecision[] = ["lunedo", "source", "both"];
 const UNDECIDED = "later";
 
-function pagehallLabel(t: TFunction, comparison: ChangeComparison): string {
-  return comparison.pagehall.version === null
-    ? t("imports.reimport.comparison.pagehallCurrent")
-    : t("imports.reimport.comparison.pagehallVersion", { number: comparison.pagehall.version });
+function lunedoLabel(t: TFunction, comparison: ChangeComparison): string {
+  return comparison.lunedo.version === null
+    ? t("imports.reimport.comparison.lunedoCurrent")
+    : t("imports.reimport.comparison.lunedoVersion", { number: comparison.lunedo.version });
 }
 
 function sourceLabel(t: TFunction, comparison: ChangeComparison): string {
@@ -47,7 +47,7 @@ export function ReimportComparisonScreen() {
   const layout: DiffLayout = search.view === "sideBySide" ? "sideBySide" : "inline";
   const importHref = `/settings/organizations/${organizationId}/imports/${importId}?tab=conflicts`;
   const title = comparison.data
-    ? t("imports.reimport.comparison.title", { title: comparison.data.pagehall.title })
+    ? t("imports.reimport.comparison.title", { title: comparison.data.lunedo.title })
     : t("imports.reimport.comparison.heading");
   const withheld = comparison.error instanceof ApiError && comparison.error.code === "comparisonWithheld";
 
@@ -98,7 +98,7 @@ export function ReimportComparisonScreen() {
                 changeId={changeId}
                 decision={comparison.data.decision}
                 decisions={comparison.data.decisions}
-                title={comparison.data.pagehall.title}
+                title={comparison.data.lunedo.title}
               />
             ) : null}
             <SegmentedControl
@@ -119,14 +119,14 @@ export function ReimportComparisonScreen() {
           </div>
           <p className="text-sm text-text-muted">
             {t("imports.reimport.comparison.sides", {
-              before: pagehallLabel(t, comparison.data),
+              before: lunedoLabel(t, comparison.data),
               after: sourceLabel(t, comparison.data),
             })}
           </p>
           <DiffView
             comparison={comparison.data}
             layout={layout}
-            beforeLabel={pagehallLabel(t, comparison.data)}
+            beforeLabel={lunedoLabel(t, comparison.data)}
             afterLabel={sourceLabel(t, comparison.data)}
           />
         </div>

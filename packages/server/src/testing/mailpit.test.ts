@@ -3,7 +3,7 @@ import { Mailpit, testMailpitSmtpPort } from "./mailpit.js";
 
 describe("testMailpitSmtpPort", () => {
   it("reads the published port", () => {
-    expect(testMailpitSmtpPort({ PAGEHALL_TEST_MAILPIT_SMTP_PORT: " 40125 " })).toBe(40125);
+    expect(testMailpitSmtpPort({ LUNEDO_TEST_MAILPIT_SMTP_PORT: " 40125 " })).toBe(40125);
   });
 
   it("falls back to the default port outside CI", () => {
@@ -15,8 +15,8 @@ describe("testMailpitSmtpPort", () => {
   });
 
   it("rejects values that are not ports", () => {
-    expect(() => testMailpitSmtpPort({ PAGEHALL_TEST_MAILPIT_SMTP_PORT: "mail" })).toThrow(/port number/);
-    expect(() => testMailpitSmtpPort({ PAGEHALL_TEST_MAILPIT_SMTP_PORT: "70000" })).toThrow(/port number/);
+    expect(() => testMailpitSmtpPort({ LUNEDO_TEST_MAILPIT_SMTP_PORT: "mail" })).toThrow(/port number/);
+    expect(() => testMailpitSmtpPort({ LUNEDO_TEST_MAILPIT_SMTP_PORT: "70000" })).toThrow(/port number/);
   });
 });
 

@@ -1,18 +1,4 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Inject,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Req,
-  Res,
-} from "@nestjs/common";
-import {
   accountPrincipal,
   breakGlassReasonSchema,
   domainSchema,
@@ -26,7 +12,21 @@ import {
   slugSchema,
   supportedLanguages,
   timeZoneSchema,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";
@@ -425,7 +425,7 @@ export class OrganizationsController {
   @Permission("organization.update", organization)
   @ApiRoute({
     summary: "Remove the logo",
-    description: "Removes the logo. Pagehall shows its own logo again.",
+    description: "Removes the logo. Lunedo shows its own logo again.",
     tags: [TAG],
     params: organizationIdParams,
   })

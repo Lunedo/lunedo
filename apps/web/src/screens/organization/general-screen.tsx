@@ -1,5 +1,5 @@
-import { organizationNameSchema, slugSchema } from "@pagehall/shared";
-import { Button, ConfirmDialog, Notice, Section, SettingRow, Skeleton, useToast } from "@pagehall/ui";
+import { organizationNameSchema, slugSchema } from "@lunedo/shared";
+import { Button, ConfirmDialog, Notice, Section, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Building2, ImageUp, LogOut, Trash2 } from "lucide-react";

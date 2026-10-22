@@ -3,7 +3,7 @@ import {
   clientAttemptLimitSetting,
   tokenMaxLifetimeSetting,
   tokenRequestsPerMinuteSetting,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -78,7 +78,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   }
 
   it("lets a service account act within its scopes and its own roles, whoever created it", async () => {
-    const { account: creator, client: creatorClient } = await member("integrator@pagehall.test");
+    const { account: creator, client: creatorClient } = await member("integrator@lunedo.test");
     const integrator = await customRole("Integrator", {
       integrationsAndApi: "manage",
       membersAndGroups: "manage",
@@ -117,7 +117,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     });
     expect(tokenResponse.statusCode, tokenResponse.body).toBe(201);
     const { token } = tokenResponse.json();
-    expect(token).toMatch(/^ph_[0-9A-Za-z]{49}$/);
+    expect(token).toMatch(/^ld_[0-9A-Za-z]{49}$/);
 
     const bot = new TestClient(test.app);
     expect((await bot.get(`/api/v1/organizations/${organizationId}/members`, bearer(token))).statusCode).toBe(
@@ -165,11 +165,11 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     expect(deactivated.json()).toEqual({ revokedTokens: 1 });
     const afterwards = await bot.get(`/api/v1/organizations/${organizationId}/members`, bearer(token));
     expect(afterwards.statusCode).toBe(401);
-    expect(afterwards.json()).toMatchObject({ type: "urn:pagehall:problem:invalidApiToken" });
+    expect(afterwards.json()).toMatchObject({ type: "urn:lunedo:problem:invalidApiToken" });
   });
 
   it("refuses service account management without the integrations area", async () => {
-    const { client } = await member("no.integrations@pagehall.test");
+    const { client } = await member("no.integrations@lunedo.test");
     const response = await client.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
       name: "Nope",
     });
@@ -177,7 +177,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("shows a personal token once and lists it without the secret", async () => {
-    const { client } = await member("lister@pagehall.test");
+    const { client } = await member("lister@lunedo.test");
     const { token, apiToken } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     expect(apiToken.prefix).toBe(token.slice(0, 9));
     expect(apiToken.expiresAt).toBeNull();
@@ -195,7 +195,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("stops a personal token at expiry", async () => {
-    const { client } = await member("expiry@pagehall.test");
+    const { client } = await member("expiry@lunedo.test");
     const { token, apiToken } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const script = new TestClient(test.app);
     const url = `/api/v1/organizations/${organizationId}/members`;
@@ -210,7 +210,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("stops a personal token on revocation", async () => {
-    const { client } = await member("revoke@pagehall.test");
+    const { client } = await member("revoke@lunedo.test");
     const { token, apiToken } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const script = new TestClient(test.app);
     const url = `/api/v1/organizations/${organizationId}/members`;
@@ -221,7 +221,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("stops a personal token on deactivation", async () => {
-    const { account, client } = await member("deactivate@pagehall.test");
+    const { account, client } = await member("deactivate@lunedo.test");
     const { token } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const script = new TestClient(test.app);
     const url = `/api/v1/organizations/${organizationId}/members`;
@@ -231,8 +231,8 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("lets owners rename tokens, but not the tokens of others", async () => {
-    const { client } = await member("rename@pagehall.test");
-    const { client: stranger } = await member("stranger@pagehall.test");
+    const { client } = await member("rename@lunedo.test");
+    const { client: stranger } = await member("stranger@lunedo.test");
     const { apiToken } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const renamed = await client.patch(`/api/v1/account/tokens/${apiToken.id}`, { name: "Nightly export" });
     expect(renamed.json()).toMatchObject({ name: "Nightly export" });
@@ -243,7 +243,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("validates expiry and scopes", async () => {
-    const { client } = await member("validation@pagehall.test");
+    const { client } = await member("validation@lunedo.test");
     const post = (body: object) => client.post("/api/v1/account/tokens", { name: "Bad", ...body });
     const scopes = { organization: { membersAndGroups: "view" } };
     expect((await client.get("/api/v1/account/tokens/lifetime")).json()).toEqual({ maxLifetimeDays: null });
@@ -269,7 +269,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("accepts tokens only in the Authorization header and never together with a session", async () => {
-    const { client } = await member("header@pagehall.test");
+    const { client } = await member("header@lunedo.test");
     const { token } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const url = `/api/v1/organizations/${organizationId}/members`;
     const both = await client.get(url, bearer(token));
@@ -288,7 +288,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("refuses tokens on session routes and on routes that need recent authentication", async () => {
-    const { client } = await member("session.only@pagehall.test");
+    const { client } = await member("session.only@lunedo.test");
     const { token } = await personalToken(client, { organization: { membersAndGroups: "manage" } });
     const script = new TestClient(test.app);
     const listed = await script.get("/api/v1/account/tokens", bearer(token));
@@ -324,7 +324,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("limits the requests per token", async () => {
-    const { client } = await member("busy@pagehall.test");
+    const { client } = await member("busy@lunedo.test");
     const { token } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const { token: other } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     await test.runtime.settings.set(tokenRequestsPerMinuteSetting, {}, "instance", 2);
@@ -343,7 +343,7 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
   });
 
   it("lets holders of the integrations area list and revoke all tokens of the organization", async () => {
-    const { account, client } = await member("member.token@pagehall.test");
+    const { account, client } = await member("member.token@lunedo.test");
     const { token, apiToken } = await personalToken(client, { organization: { membersAndGroups: "view" } });
     const listed = await owner.get(`/api/v1/organizations/${organizationId}/api-tokens?limit=200`);
     expect(listed.statusCode).toBe(200);

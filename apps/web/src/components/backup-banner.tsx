@@ -1,4 +1,4 @@
-import { Button, Notice } from "@pagehall/ui";
+import { Button, Notice } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";

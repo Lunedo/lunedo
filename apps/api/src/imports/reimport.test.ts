@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import {
   createXmlExport,
   foreignExport,
@@ -9,7 +9,7 @@ import {
   type SyntheticExport,
   testJobContext,
   tinyLinkCode,
-} from "@pagehall/server/testing";
+} from "@lunedo/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -58,7 +58,7 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
 
   async function member() {
     counter += 1;
-    const email = `reimports${counter}@pagehall.test`;
+    const email = `reimports${counter}@lunedo.test`;
     const account = await createAccount(test, email);
     return { id: account.id, email, client: await signedInClient(test, email, account.password) };
   }
@@ -217,7 +217,7 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
     expect(space?.permission).toMatchObject({ action: "grant", applicable: false });
     const blocked = await owner.post(`/api/v1/imports/${id}/changes/${space?.id}/preview`);
     expect(blocked.statusCode).toBe(409);
-    expect(blocked.json()).toMatchObject({ code: "holderNotInPagehall" });
+    expect(blocked.json()).toMatchObject({ code: "holderNotInLunedo" });
   });
 
   it("compares a conflict before deciding without changing the page", async () => {
@@ -267,7 +267,7 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
     ).toBe(404);
   });
 
-  it("accepts only keeping the Pagehall version while a restriction from the source waits", async () => {
+  it("accepts only keeping the Lunedo version while a restriction from the source waits", async () => {
     const { importId, spaceId } = await acceptedSpace();
     const target = await test.runtime.pool.query<{ target_id: string }>(
       "select target_id from import_items where import_id = $1 and kind = 'page' and source_id = $2",
@@ -287,7 +287,7 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
     );
     await started(id);
     const conflict = (await changes(owner, id, "conflicts")).find((entry) => entry.item?.id === pageId);
-    expect(conflict).toMatchObject({ held: true, decisions: ["pagehall"] });
+    expect(conflict).toMatchObject({ held: true, decisions: ["lunedo"] });
     for (const decision of ["source", "both"]) {
       const refused = await owner.put(`/api/v1/imports/${id}/changes/decisions`, {
         ids: [conflict?.id],
@@ -298,7 +298,7 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
     }
     const kept = await owner.put(`/api/v1/imports/${id}/changes/decisions`, {
       ids: [conflict?.id],
-      decision: "pagehall",
+      decision: "lunedo",
     });
     expect(kept.json()).toEqual({ decided: 1 });
   });

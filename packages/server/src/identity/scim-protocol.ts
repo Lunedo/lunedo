@@ -130,7 +130,7 @@ export function serviceProviderConfig(documentationUri: string) {
       {
         type: "oauthbearertoken",
         name: "Bearer token",
-        description: "The secret token created in the SCIM tab of the identity provider in Pagehall.",
+        description: "The secret token created in the SCIM tab of the identity provider in Lunedo.",
         primary: true,
       },
     ],

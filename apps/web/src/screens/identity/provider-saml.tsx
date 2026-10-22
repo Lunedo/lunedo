@@ -1,5 +1,5 @@
-import { ADFS_GROUP_CLAIMS, type SamlGroupValues, samlGroupValues } from "@pagehall/shared";
-import { Badge, Button, buttonClassName, Notice, Section, Select, SettingRow, Switch } from "@pagehall/ui";
+import { ADFS_GROUP_CLAIMS, type SamlGroupValues, samlGroupValues } from "@lunedo/shared";
+import { Badge, Button, buttonClassName, Notice, Section, Select, SettingRow, Switch } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, FileUp, Lock, RefreshCw } from "lucide-react";
 import { useState } from "react";

@@ -1,4 +1,4 @@
-import { useToast } from "@pagehall/ui";
+import { useToast } from "@lunedo/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";

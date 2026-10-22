@@ -1,4 +1,4 @@
-import { SYNC_DEACTIVATION_LIMIT_ACCOUNTS, SYNC_DEACTIVATION_LIMIT_PERCENT } from "@pagehall/shared";
+import { SYNC_DEACTIVATION_LIMIT_ACCOUNTS, SYNC_DEACTIVATION_LIMIT_PERCENT } from "@lunedo/shared";
 import {
   Badge,
   type BadgeVariant,
@@ -20,7 +20,7 @@ import {
   TableToolbar,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { CircleAlert, RefreshCw } from "lucide-react";

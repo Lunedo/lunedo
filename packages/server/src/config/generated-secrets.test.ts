@@ -12,7 +12,7 @@ afterEach(() => {
 
 describe("ensureSecretFile", () => {
   it("generates a secret once and returns the stored value afterwards", () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-secrets-"));
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-secrets-"));
     const secretsDir = path.join(dir, "secrets");
     const first = ensureSecretFile(secretsDir, "backup-keys", generateToken);
     const second = ensureSecretFile(secretsDir, "backup-keys", () => "other");
@@ -22,7 +22,7 @@ describe("ensureSecretFile", () => {
   });
 
   it("keeps the first value when several callers race", () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-secrets-"));
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-secrets-"));
     const values = Array.from({ length: 5 }, (_, i) =>
       ensureSecretFile(dir as string, "token", () => `v${i}`),
     );
@@ -30,7 +30,7 @@ describe("ensureSecretFile", () => {
   });
 
   it.skipIf(process.platform === "win32")("restricts file permissions to the owner", () => {
-    dir = mkdtempSync(path.join(tmpdir(), "pagehall-secrets-"));
+    dir = mkdtempSync(path.join(tmpdir(), "lunedo-secrets-"));
     ensureSecretFile(dir, "token", generateToken);
     expect(statSync(path.join(dir, "token")).mode & 0o777).toBe(0o600);
   });

@@ -27,7 +27,7 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     graph = await startFakeGraph();
     const owner = await test.database.transaction((tx) =>
       test.services.accounts.createStandard(tx, {
-        email: "owner@pagehall.test",
+        email: "owner@lunedo.test",
         name: "Owner",
         password: "a long test passphrase",
         homeOrganizationId: null,
@@ -55,7 +55,7 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     tenantId: GRAPH_TENANT_ID,
     clientId: GRAPH_CLIENT_ID,
     sender,
-    senderName: "Pagehall",
+    senderName: "Lunedo",
     authority: graph.url,
     graphUrl: graph.url,
   });
@@ -90,7 +90,7 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
       saveToSentItems: false,
       message: {
         toRecipients: [{ emailAddress: { address: "reader@example.net" } }],
-        from: { emailAddress: { address: SENDER, name: "Pagehall" } },
+        from: { emailAddress: { address: SENDER, name: "Lunedo" } },
         body: { contentType: "HTML" },
       },
     });

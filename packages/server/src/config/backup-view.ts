@@ -4,11 +4,11 @@ import type { Env } from "./load.js";
 
 /** Settings that hold or point to key material; backups never contain them. */
 const KEY_SETTINGS = new Set([
-  "PAGEHALL_MASTER_KEYS",
-  "PAGEHALL_MASTER_KEYS_FILE",
-  "PAGEHALL_MASTER_KEYS_PATH",
-  "PAGEHALL_BACKUP_KEY",
-  "PAGEHALL_BACKUP_KEY_FILE",
+  "LUNEDO_MASTER_KEYS",
+  "LUNEDO_MASTER_KEYS_FILE",
+  "LUNEDO_MASTER_KEYS_PATH",
+  "LUNEDO_BACKUP_KEY",
+  "LUNEDO_BACKUP_KEY_FILE",
 ]);
 
 /**
@@ -18,11 +18,11 @@ const KEY_SETTINGS = new Set([
  */
 export function configurationForBackup(env: Env): Record<string, string> {
   const files: Record<string, string> = {};
-  const configFile = env.PAGEHALL_CONFIG_FILE?.trim();
+  const configFile = env.LUNEDO_CONFIG_FILE?.trim();
   if (configFile) {
     const values = JSON.parse(readFileSync(configFile, "utf8")) as Record<string, unknown>;
     for (const key of KEY_SETTINGS) delete values[key];
-    files["pagehall.json"] = `${JSON.stringify(values, null, 2)}\n`;
+    files["lunedo.json"] = `${JSON.stringify(values, null, 2)}\n`;
   }
 
   const environment: Record<string, string> = {};

@@ -28,12 +28,12 @@ export function recordTestResult(
   entry: TestReportEntry,
   env: NodeJS.ProcessEnv = process.env,
 ): void {
-  const directory = env.PAGEHALL_TEST_REPORT_DIR;
+  const directory = env.LUNEDO_TEST_REPORT_DIR;
   if (!directory) return;
   mkdirSync(directory, { recursive: true });
   appendFileSync(
     join(directory, `${tool}-${process.pid}.jsonl`),
-    `${JSON.stringify(env.PAGEHALL_TEST_JOB ? { ...entry, job: env.PAGEHALL_TEST_JOB } : entry)}\n`,
+    `${JSON.stringify(env.LUNEDO_TEST_JOB ? { ...entry, job: env.LUNEDO_TEST_JOB } : entry)}\n`,
   );
 }
 

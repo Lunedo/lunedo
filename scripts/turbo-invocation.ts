@@ -13,7 +13,7 @@ export function turboInvocation(args: string[], env: NodeJS.ProcessEnv, host?: H
     args: concurrency ? args : [...args, `--concurrency=${plan.concurrency}`],
     env: {
       ...env,
-      PAGEHALL_TEST_WORKERS: env.PAGEHALL_TEST_WORKERS ?? String(plan.workers),
+      LUNEDO_TEST_WORKERS: env.LUNEDO_TEST_WORKERS ?? String(plan.workers),
       GOMAXPROCS: env.GOMAXPROCS ?? String(plan.workers),
     },
   };

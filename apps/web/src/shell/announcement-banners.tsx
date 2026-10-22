@@ -1,4 +1,4 @@
-import { classNames, focusMainHeading, IconButton, useToast } from "@pagehall/ui";
+import { classNames, focusMainHeading, IconButton, useToast } from "@lunedo/ui";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";

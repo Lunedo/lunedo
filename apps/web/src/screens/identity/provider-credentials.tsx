@@ -1,4 +1,4 @@
-import { clientSecretSchema, directoryPasswordSchema } from "@pagehall/shared";
+import { clientSecretSchema, directoryPasswordSchema } from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -14,7 +14,7 @@ import {
   PasswordInput,
   SegmentedControl,
   Select,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Download, FileKey2, KeyRound, Plus, Trash2 } from "lucide-react";

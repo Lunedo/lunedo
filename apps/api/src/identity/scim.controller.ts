@@ -1,4 +1,11 @@
 import {
+  ScimError,
+  scimErrorBody,
+  scimResourceTypes,
+  scimSchemaDefinitions,
+  scimServiceProviderConfig,
+} from "@lunedo/server";
+import {
   type ArgumentsHost,
   Body,
   Catch,
@@ -18,13 +25,6 @@ import {
   Res,
   UseFilters,
 } from "@nestjs/common";
-import {
-  ScimError,
-  scimErrorBody,
-  scimResourceTypes,
-  scimSchemaDefinitions,
-  scimServiceProviderConfig,
-} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { InternalRoute, ScimTokenRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";

@@ -1,13 +1,4 @@
-import {
-  Badge,
-  classNames,
-  IconButton,
-  Menu,
-  Spinner,
-  Tooltip,
-  useToast,
-  VisuallyHidden,
-} from "@pagehall/ui";
+import { Badge, classNames, IconButton, Menu, Spinner, Tooltip, useToast, VisuallyHidden } from "@lunedo/ui";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, ExternalLink, Languages, Lock, MoreHorizontal } from "lucide-react";

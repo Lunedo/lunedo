@@ -1,7 +1,7 @@
 import { get, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, createServerRuntime } from "@lunedo/server";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, createServerRuntime } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -16,7 +16,7 @@ import {
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 import { createTestApp } from "../testing/create-test-app.js";
 
-const SESSION_COOKIE = "__Host-pagehall-session";
+const SESSION_COOKIE = "__Host-lunedo-session";
 const DRAFT_TEXT = "Unpublished draft sentence";
 const DRAFT_TITLE = "Unpublished draft title";
 
@@ -51,7 +51,7 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
 
   async function person() {
     counter += 1;
-    const account = await createAccount(test, `versions${counter}@pagehall.test`);
+    const account = await createAccount(test, `versions${counter}@lunedo.test`);
     return { id: account.id, client: await signedInClient(test, account.email, account.password) };
   }
 

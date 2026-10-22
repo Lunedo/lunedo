@@ -8,8 +8,8 @@ export type DrawioEvent =
   | { event: "load" }
   | { event: "autosave"; xml: string }
   | { event: "export"; data: string; xml: string }
-  | { event: "pagehall-gliffy-converted" }
-  | { event: "pagehall-gliffy-failed" };
+  | { event: "lunedo-gliffy-converted" }
+  | { event: "lunedo-gliffy-failed" };
 
 export function drawioUrl(language: string): string {
   const query = new URLSearchParams({
@@ -41,8 +41,8 @@ export function parseDrawioMessage(data: unknown): DrawioEvent | null {
   switch (message.event) {
     case "init":
     case "load":
-    case "pagehall-gliffy-converted":
-    case "pagehall-gliffy-failed":
+    case "lunedo-gliffy-converted":
+    case "lunedo-gliffy-failed":
       return { event: message.event };
     case "autosave":
       return typeof message.xml === "string" ? { event: "autosave", xml: message.xml } : null;

@@ -1,4 +1,4 @@
-import type { ContentNotificationType } from "@pagehall/shared";
+import type { ContentNotificationType } from "@lunedo/shared";
 import type { Language } from "../mail/templates.js";
 
 export interface LineContext {

@@ -69,7 +69,7 @@ export function completenessIssues(document: OpenApiDocument): string[] {
   const issues: string[] = [];
   for (const [path, operations] of Object.entries(document.paths)) {
     for (const [method, operation] of Object.entries(operations)) {
-      if (operation["x-pagehall-internal"]) continue;
+      if (operation["x-lunedo-internal"]) continue;
       issues.push(...operationIssues(document, `${method.toUpperCase()} ${path}`, operation));
     }
   }

@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
-import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
-import { emptyScene, type Scene } from "@pagehall/editor-schema/scene";
+import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
+import { emptyScene, type Scene } from "@lunedo/editor-schema/scene";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { TestServices } from "../testing/services.js";

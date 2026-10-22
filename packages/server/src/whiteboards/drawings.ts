@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
-import { MAX_DRAWING_TEXT } from "@pagehall/editor-schema";
-import { MAX_SCENE_BYTES, sceneText, validateScene, visibleScene } from "@pagehall/editor-schema/scene";
+import { MAX_DRAWING_TEXT } from "@lunedo/editor-schema";
+import { MAX_SCENE_BYTES, sceneText, validateScene, visibleScene } from "@lunedo/editor-schema/scene";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { Database } from "../database/database.js";

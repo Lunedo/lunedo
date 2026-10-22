@@ -16,8 +16,8 @@ let database: Database;
 
 beforeAll(async () => {
   if (!baseUrl) return;
-  temporary = await createMigratedDatabase(baseUrl, "pagehall_error_events_test");
-  pool = createDatabasePool({ connectionString: temporary.url, applicationName: "pagehall-test" });
+  temporary = await createMigratedDatabase(baseUrl, "lunedo_error_events_test");
+  pool = createDatabasePool({ connectionString: temporary.url, applicationName: "lunedo-test" });
   database = createDatabase(pool);
 });
 

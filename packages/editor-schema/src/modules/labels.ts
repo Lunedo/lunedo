@@ -85,7 +85,7 @@ function contentByLabelHtml(node: ValidNode, renderer: HtmlRenderer): string {
   else if (items.length === 0) {
     content = element(
       "p",
-      { class: "ph-listing-empty" },
+      { class: "ld-listing-empty" },
       renderer.escape(renderer.label("noLabeledContent")),
     );
   } else {
@@ -100,7 +100,7 @@ function contentByLabelHtml(node: ValidNode, renderer: HtmlRenderer): string {
           return element(
             "li",
             { "data-kind": item.kind },
-            `${href ? element("a", { href }, name) : name}${meta.length > 0 ? element("span", { class: "ph-listing-meta" }, renderer.escape(meta.join(" · "))) : ""}${item.excerpt ? element("p", { class: "ph-listing-excerpt" }, renderer.escape(item.excerpt)) : ""}`,
+            `${href ? element("a", { href }, name) : name}${meta.length > 0 ? element("span", { class: "ld-listing-meta" }, renderer.escape(meta.join(" · "))) : ""}${item.excerpt ? element("p", { class: "ld-listing-excerpt" }, renderer.escape(item.excerpt)) : ""}`,
           );
         })
         .join(""),
@@ -109,7 +109,7 @@ function contentByLabelHtml(node: ValidNode, renderer: HtmlRenderer): string {
   return element(
     "section",
     {
-      class: "ph-content-by-label",
+      class: "ld-content-by-label",
       "aria-label": title,
       "data-labels": json(node, "labels"),
       "data-match-all": attrOf<boolean>(node, "matchAll") ? "true" : null,
@@ -352,12 +352,12 @@ export const relatedLabelsModule = defineModule({
             : labels.length === 0
               ? element(
                   "p",
-                  { class: "ph-listing-empty" },
+                  { class: "ld-listing-empty" },
                   renderer.escape(renderer.label("noRelatedLabels")),
                 )
               : element(
                   "ul",
-                  { class: "ph-label-list" },
+                  { class: "ld-label-list" },
                   labels
                     .map((label) => {
                       const href = renderer.safeHref(label.href);
@@ -369,7 +369,7 @@ export const relatedLabelsModule = defineModule({
         return element(
           "section",
           {
-            class: "ph-related-labels",
+            class: "ld-related-labels",
             "aria-label": title,
             "data-labels": json(node, "labels"),
             "data-title": attrOf<string>(node, "title") || null,

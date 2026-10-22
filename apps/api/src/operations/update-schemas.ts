@@ -1,4 +1,4 @@
-import { updateCheckFailures } from "@pagehall/server";
+import { updateCheckFailures } from "@lunedo/server";
 import { z } from "zod";
 
 const notesSchema = z
@@ -35,7 +35,7 @@ export const updatesSchema = z
           .enum(["environment", "setting"])
           .nullable()
           .describe(
-            "What turned it off: `environment` for `PAGEHALL_UPDATE_CHECK=false`, `setting` for the instance setting.",
+            "What turned it off: `environment` for `LUNEDO_UPDATE_CHECK=false`, `setting` for the instance setting.",
           ),
         url: z.string().describe("The address of the version file."),
         checkedAt: z.iso.datetime().nullable().describe("When the last check ran, or null."),
@@ -54,7 +54,7 @@ export const updatesSchema = z
       .object({
         method: z
           .enum(["script", "compose", "other", "unknown"])
-          .describe("The recorded installation method, from `PAGEHALL_INSTALL_METHOD`."),
+          .describe("The recorded installation method, from `LUNEDO_INSTALL_METHOD`."),
         steps: z
           .array(
             z.object({
@@ -67,7 +67,7 @@ export const updatesSchema = z
           .describe("What to do, in order."),
       })
       .nullable()
-      .describe("How to update to the newest release, built by Pagehall from the installation method."),
+      .describe("How to update to the newest release, built by Lunedo from the installation method."),
     whatsNew: z
       .object({
         available: z.boolean().describe("Whether the changelog is part of this image."),
@@ -87,7 +87,7 @@ export const exampleUpdates: z.input<typeof updatesSchema> = {
   check: {
     enabled: true,
     disabledBy: null,
-    url: "https://github.com/pagehall/pagehall/releases/latest/download/pagehall-versions.json",
+    url: "https://github.com/lunedo/lunedo/releases/latest/download/lunedo-versions.json",
     checkedAt: "2026-11-03T04:11:00.000Z",
     succeeded: true,
     failure: null,
@@ -98,7 +98,7 @@ export const exampleUpdates: z.input<typeof updatesSchema> = {
       version: "1.5.0",
       date: "2026-11-02",
       minimumUpdateFrom: "1.3.0",
-      url: "https://github.com/pagehall/pagehall/releases/tag/v1.5.0",
+      url: "https://github.com/lunedo/lunedo/releases/tag/v1.5.0",
       notes: {
         new: ["Maintenance mode for scripted maintenance."],
         improved: [],
@@ -111,8 +111,8 @@ export const exampleUpdates: z.input<typeof updatesSchema> = {
   commands: {
     method: "script",
     steps: [
-      { kind: "command", text: "cd /opt/pagehall" },
-      { kind: "command", text: "./pagehall update 1.5.0" },
+      { kind: "command", text: "cd /opt/lunedo" },
+      { kind: "command", text: "./lunedo update 1.5.0" },
     ],
   },
   whatsNew: {

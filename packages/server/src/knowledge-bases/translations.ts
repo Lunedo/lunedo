@@ -1,4 +1,4 @@
-import { type ContentLanguage, contentLanguages, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
+import { type ContentLanguage, contentLanguages, OTHER_CONTENT_LANGUAGE } from "@lunedo/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";

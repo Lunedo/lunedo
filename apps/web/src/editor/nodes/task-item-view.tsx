@@ -1,4 +1,4 @@
-import { Avatar, Button, Combobox, Field, Input, Popover, useToast } from "@pagehall/ui";
+import { Avatar, Button, Combobox, Field, Input, Popover, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { CalendarDays, UserRound, X } from "lucide-react";
@@ -71,7 +71,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
 
   return (
     <NodeViewWrapper
-      className="ph-task-item-view flex items-start gap-2"
+      className="ld-task-item-view flex items-start gap-2"
       data-checked={done ? "true" : "false"}
     >
       <label contentEditable={false} suppressContentEditableWarning>
@@ -84,10 +84,10 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
           onChange={toggle}
         />
       </label>
-      <div className={`min-w-0 flex-1${done ? " ph-task-done" : ""}`}>
+      <div className={`min-w-0 flex-1${done ? " ld-task-done" : ""}`}>
         <NodeViewContent as="div" />
         {!page ? (
-          <p id={hintId} contentEditable={false} suppressContentEditableWarning className="ph-task-hint">
+          <p id={hintId} contentEditable={false} suppressContentEditableWarning className="ld-task-hint">
             {t("tasks.checkOnPages")}
           </p>
         ) : null}
@@ -95,7 +95,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
           <div
             contentEditable={false}
             suppressContentEditableWarning
-            className="ph-task-meta flex flex-wrap gap-1"
+            className="ld-task-meta flex flex-wrap gap-1"
           >
             {editable ? (
               <Popover
@@ -103,7 +103,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 onOpenChange={setAssigning}
                 label={t("tasks.assignee")}
                 trigger={
-                  <button type="button" className="ph-inline-button">
+                  <button type="button" className="ld-inline-button">
                     {assignee ? (
                       <Avatar name={assigneeName ?? "?"} size="sm" decorative />
                     ) : (
@@ -129,7 +129,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 </div>
               </Popover>
             ) : assignee ? (
-              <span className="ph-task-assignee">@{assigneeName ?? t("editor.mention.unknown")}</span>
+              <span className="ld-task-assignee">@{assigneeName ?? t("editor.mention.unknown")}</span>
             ) : null}
             {editable ? (
               <Popover
@@ -137,7 +137,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 onOpenChange={setDating}
                 label={t("tasks.dueDate")}
                 trigger={
-                  <button type="button" className="ph-inline-button">
+                  <button type="button" className="ld-inline-button">
                     <CalendarDays aria-hidden="true" className="size-icon-sm" />
                     {dueDate
                       ? t("tasks.dueOn", { date: format.date(`${dueDate}T12:00:00Z`) })
@@ -169,7 +169,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 </div>
               </Popover>
             ) : dueDate ? (
-              <time className="ph-task-due" dateTime={dueDate}>
+              <time className="ld-task-due" dateTime={dueDate}>
                 {t("tasks.dueOn", { date: format.date(`${dueDate}T12:00:00Z`) })}
               </time>
             ) : null}

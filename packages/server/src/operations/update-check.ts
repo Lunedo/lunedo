@@ -18,8 +18,8 @@ import {
 import { updateCheckSetting } from "./settings.js";
 import { parseReleaseVersion } from "./version.js";
 
-export const IMAGE_REPOSITORY = "ghcr.io/pagehall/pagehall";
-export const RELEASES_URL = "https://github.com/pagehall/pagehall/releases";
+export const IMAGE_REPOSITORY = "ghcr.io/lunedo/lunedo";
+export const RELEASES_URL = "https://github.com/lunedo/lunedo/releases";
 export const VERSION_FILE_MAX_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 15_000;
@@ -85,7 +85,7 @@ function failureOf(error: unknown): UpdateCheckError {
       case "blockedAddress":
         return new UpdateCheckError(
           "blockedAddress",
-          "The address of the version file points to a private network that PAGEHALL_OUTBOUND_ALLOWED_NETWORKS does not allow",
+          "The address of the version file points to a private network that LUNEDO_OUTBOUND_ALLOWED_NETWORKS does not allow",
         );
       case "insecureAddress":
         return new UpdateCheckError("insecureAddress", "Public addresses of the version file must use HTTPS");
@@ -110,7 +110,7 @@ export async function downloadVersionFile(
     for (let hop = 0; ; hop += 1) {
       const response = await openOutbound(policy, {
         url,
-        headers: { accept: "application/json", "user-agent": "Pagehall update check" },
+        headers: { accept: "application/json", "user-agent": "Lunedo update check" },
         timeoutMs: TIMEOUT_MS,
       });
       const location = response.headers.location;
@@ -184,7 +184,7 @@ export function updateCommands(
         method,
         steps: [
           { kind: "command", text: `cd ${folder}` },
-          { kind: "command", text: `./pagehall update ${version}` },
+          { kind: "command", text: `./lunedo update ${version}` },
         ],
       };
     case "compose":
@@ -194,9 +194,9 @@ export function updateCommands(
           { kind: "command", text: `cd ${folder}` },
           {
             kind: "command",
-            text: "docker compose exec pagehall pagehall backup create --before-update",
+            text: "docker compose exec lunedo lunedo backup create --before-update",
           },
-          { kind: "note", text: `Set the image of the pagehall service to ${image}.` },
+          { kind: "note", text: `Set the image of the lunedo service to ${image}.` },
           { kind: "command", text: "docker compose pull" },
           { kind: "command", text: "docker compose up -d" },
         ],
@@ -207,10 +207,10 @@ export function updateCommands(
         steps: [
           {
             kind: "note",
-            text: "Create a backup with pagehall backup create --before-update before you update.",
+            text: "Create a backup with lunedo backup create --before-update before you update.",
           },
           { kind: "command", text: `docker pull ${image}` },
-          { kind: "note", text: `Restart every Pagehall container with ${image}.` },
+          { kind: "note", text: `Restart every Lunedo container with ${image}.` },
         ],
       };
   }

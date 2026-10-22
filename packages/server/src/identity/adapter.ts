@@ -1,4 +1,4 @@
-import type { LdapConfig, OidcConfig, SamlConfig } from "@pagehall/shared";
+import type { LdapConfig, OidcConfig, SamlConfig } from "@lunedo/shared";
 import type { ReceivedClaim } from "./claims.js";
 import type { identityCredentialKinds, identityProviderTypes } from "./schema.js";
 

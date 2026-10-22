@@ -1,4 +1,4 @@
-import { Button, Checkbox, Dialog, IconButton, Menu, type MenuItem, useToast } from "@pagehall/ui";
+import { Button, Checkbox, Dialog, IconButton, Menu, type MenuItem, useToast } from "@lunedo/ui";
 import { Bell, BellOff, BellRing } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -11,7 +11,7 @@ describe("the instance step", () => {
         completed={false}
         details={{
           url: "",
-          name: "Pagehall",
+          name: "Lunedo",
           suggestedUrl: "http://localhost:5173",
           urlFromEnvironment: false,
         }}
@@ -36,7 +36,7 @@ describe("the instance step", () => {
         completed={false}
         details={{
           url: "https://old.example.org",
-          name: "Pagehall",
+          name: "Lunedo",
           suggestedUrl: "https://wiki.example.org",
           urlFromEnvironment: true,
         }}
@@ -48,6 +48,6 @@ describe("the instance step", () => {
     const address = screen.getByLabelText("Address") as HTMLInputElement;
     expect(address.value).toBe("https://wiki.example.org");
     expect(address.readOnly).toBe(true);
-    expect(screen.getByText(/Set by PAGEHALL_INSTANCE_URL/)).toBeTruthy();
+    expect(screen.getByText(/Set by LUNEDO_INSTANCE_URL/)).toBeTruthy();
   });
 });

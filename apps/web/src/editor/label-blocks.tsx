@@ -7,8 +7,8 @@ import {
   labeledContentKinds,
   MAX_CONTENT_BY_LABEL_LIMIT,
   MAX_LABEL_BLOCK_TITLE,
-} from "@pagehall/editor-schema";
-import { Checkbox, Field, Input, Notice, Select, SkeletonText } from "@pagehall/ui";
+} from "@lunedo/editor-schema";
+import { Checkbox, Field, Input, Notice, Select, SkeletonText } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { Tags } from "lucide-react";
@@ -118,7 +118,7 @@ export function ContentByLabelList({
   if (items.data.length === 0)
     return <p className="text-sm text-text-muted">{t("editor.contentByLabel.empty")}</p>;
   return (
-    <ul className="ph-content-by-label-items flex flex-col gap-2">
+    <ul className="ld-content-by-label-items flex flex-col gap-2">
       {items.data.map((item) => {
         const meta = [
           ...(display.showSpace && item.space.name ? [item.space.name] : []),
@@ -259,12 +259,12 @@ export function ContentByLabelView({ node, editor, updateAttributes, selected }:
   const display = contentByLabelDisplayFromAttrs(node.attrs);
   return (
     <NodeViewWrapper
-      className={`ph-content-by-label-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-content-by-label-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="contentByLabel"
     >
       <section
-        className="ph-content-by-label flex flex-col gap-3"
+        className="ld-content-by-label flex flex-col gap-3"
         aria-label={display.title || t("editor.contentByLabel.title")}
       >
         <h3 className="flex items-center gap-2 font-semibold">
@@ -310,7 +310,7 @@ export function RelatedLabelsList({ pageId, labels }: { pageId: string; labels: 
   if (related.data.length === 0)
     return <p className="text-sm text-text-muted">{t("editor.relatedLabels.empty")}</p>;
   return (
-    <ul className="ph-label-list flex flex-wrap gap-2">
+    <ul className="ld-label-list flex flex-wrap gap-2">
       {related.data.map((label) => (
         <li key={label.label}>
           <Link href={label.href}>{label.label}</Link>
@@ -331,11 +331,11 @@ export function RelatedLabelsView({ node, editor, updateAttributes, selected }: 
       : t("editor.relatedLabels.title");
   return (
     <NodeViewWrapper
-      className={`ph-related-labels-block${selected ? " ph-node-selected" : ""}`}
+      className={`ld-related-labels-block${selected ? " ld-node-selected" : ""}`}
       contentEditable={false}
       data-type="relatedLabels"
     >
-      <section className="ph-related-labels flex flex-col gap-3" aria-label={title}>
+      <section className="ld-related-labels flex flex-col gap-3" aria-label={title}>
         <h3 className="flex items-center gap-2 font-semibold">
           <Tags aria-hidden="true" className="size-icon-md" />
           {title}

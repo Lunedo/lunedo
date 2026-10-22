@@ -44,7 +44,7 @@ export const sectionModule = defineModule({
         return element(
           "section",
           {
-            class: "ph-section",
+            class: "ld-section",
             "data-section": attrOf<string>(node, "key"),
             "data-icon": attrOf<string | null>(node, "icon"),
             "data-framed": FRAMED_SECTIONS.includes(attrOf<string>(node, "key")) ? "true" : null,
@@ -69,8 +69,8 @@ export const sectionModule = defineModule({
         renderer.nextHeadingId();
         const number = renderer.headingNumber();
         const icon = attrOf<string | null>(node, "icon");
-        const marker = `<!-- pagehall:section key="${attrOf<string>(node, "key")}"${icon ? ` icon="${icon}"` : ""} -->`;
-        return `${marker}\n\n## ${number ? `${number} ` : ""}${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}\n\n<!-- /pagehall:section -->`;
+        const marker = `<!-- lunedo:section key="${attrOf<string>(node, "key")}"${icon ? ` icon="${icon}"` : ""} -->`;
+        return `${marker}\n\n## ${number ? `${number} ` : ""}${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}\n\n<!-- /lunedo:section -->`;
       },
       text: (node) => attrOf<string>(node, "title"),
       heading: (node) => ({ level: 2, text: attrOf<string>(node, "title") }),
@@ -83,20 +83,20 @@ function tooLargeImageHtml(node: ValidNode, renderer: HtmlRenderer, href: string
   const open = lazy
     ? element(
         "a",
-        { class: "ph-image-open", href, target: "_blank", rel: "noopener noreferrer" },
+        { class: "ld-image-open", href, target: "_blank", rel: "noopener noreferrer" },
         renderer.escape(renderer.label("openFullSize")),
       )
     : "";
   return element(
     "figure",
     {
-      class: "ph-image ph-image-too-large",
+      class: "ld-image ld-image-too-large",
       "data-attachment-id": attrOf<string | null>(node, "attachmentId"),
       "data-align": attrOf<string>(node, "align"),
     },
-    `${element("span", { class: "ph-image-name" }, renderer.escape(name))}${element(
+    `${element("span", { class: "ld-image-name" }, renderer.escape(name))}${element(
       "span",
-      { class: "ph-image-hint" },
+      { class: "ld-image-hint" },
       renderer.escape(renderer.label("imageTooLarge")),
     )}${open}`,
   );
@@ -126,7 +126,7 @@ function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): stri
       ? element(
           "a",
           {
-            class: "ph-image-full",
+            class: "ld-image-full",
             href,
             target: "_blank",
             rel: "noopener noreferrer",
@@ -138,7 +138,7 @@ function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): stri
   return element(
     "figure",
     {
-      class: "ph-image",
+      class: "ld-image",
       "data-attachment-id": id,
       "data-align": attrOf<string>(node, "align"),
       "data-width": width,
@@ -252,7 +252,7 @@ function fileHtml(node: ValidNode, renderer: HtmlRenderer): string {
   return element(
     "div",
     {
-      class: "ph-file",
+      class: "ld-file",
       "data-attachment-id": id,
       "data-preview": preview ? "true" : null,
       "data-height": preview ? attrOf<number | null>(node, "height") : null,
@@ -267,7 +267,7 @@ function filePrint(node: ValidNode, renderer: HtmlRenderer): string {
   if (!attrOf<boolean>(node, "preview") || !image || !href) return fileHtml(node, renderer);
   return element(
     "figure",
-    { class: "ph-file-preview", "data-attachment-id": attrOf<string>(node, "attachmentId") },
+    { class: "ld-file-preview", "data-attachment-id": attrOf<string>(node, "attachmentId") },
     `<img${htmlAttributes({ src: href, alt: name })}>${element("figcaption", {}, element("a", { href }, renderer.escape(name)))}`,
   );
 }

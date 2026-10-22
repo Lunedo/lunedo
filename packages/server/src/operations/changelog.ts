@@ -196,7 +196,7 @@ export function releaseNotesText(sections: readonly ChangelogSection[], since: s
   for (const section of sections) {
     const version = parseReleaseVersion(section.version);
     if (!version || (after && compareVersions(version, after) <= 0)) continue;
-    lines.push(`Pagehall ${section.version}${section.date ? ` (${section.date})` : ""}`);
+    lines.push(`Lunedo ${section.version}${section.date ? ` (${section.date})` : ""}`);
     if (section.minimumUpdateFrom) lines.push(`  Update from ${section.minimumUpdateFrom} or later.`);
     for (const group of ["breaking", "manualSteps", "new", "improved", "fixed"] as const) {
       if (section.notes[group].length === 0) continue;

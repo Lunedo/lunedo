@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
-import { type DocumentJson, editorSchemaVersion } from "@pagehall/editor-schema";
-import { uuidv7 } from "@pagehall/shared";
+import { type DocumentJson, editorSchemaVersion } from "@lunedo/editor-schema";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import yazl from "yazl";
@@ -74,10 +74,10 @@ function entry(overrides: Record<string, unknown> = {}) {
 
 function manifest(templates: unknown[], overrides: Record<string, unknown> = {}) {
   return {
-    format: "pagehall-template",
+    format: "lunedo-template",
     formatVersion: TEMPLATE_FORMAT_VERSION,
     schemaVersion: editorSchemaVersion,
-    pagehallVersion: "1.0.0",
+    lunedoVersion: "1.0.0",
     templates,
     ...overrides,
   };
@@ -152,7 +152,7 @@ describe.skipIf(!baseUrl)("template files for transfer", () => {
     actor: Principal,
     scope: TemplateScope,
     bytes: Buffer,
-    fileName = "retro.pagehall-template.zip",
+    fileName = "retro.lunedo-template.zip",
   ) {
     return test.services.templateTransfers.preview(actor, scope, {
       fileName,
@@ -204,7 +204,7 @@ describe.skipIf(!baseUrl)("template files for transfer", () => {
       const original = await templateWithImage(source.as, source.scope, "Team page", bytes);
       const exported = await exportOf(source.as, source.scope, [original.id]);
       expect(exported.contentType).toBe("application/zip");
-      expect(exported.fileName).toBe("team-page.pagehall-template.zip");
+      expect(exported.fileName).toBe("team-page.lunedo-template.zip");
 
       const target = await setup();
       const result = await preview(target.as, target.scope, exported.body, exported.fileName);
@@ -243,12 +243,12 @@ describe.skipIf(!baseUrl)("template files for transfer", () => {
         "1.2.3",
       );
       expect(exported.contentType).toBe("application/json");
-      expect(exported.fileName).toBe("templates.pagehall-template.json");
+      expect(exported.fileName).toBe("templates.lunedo-template.json");
       const parsed = JSON.parse(exported.body.toString("utf8"));
       expect(parsed).toMatchObject({
-        format: "pagehall-template",
+        format: "lunedo-template",
         formatVersion: 1,
-        pagehallVersion: "1.2.3",
+        lunedoVersion: "1.2.3",
       });
       expect(parsed.templates.map((item: { name: string }) => item.name)).toEqual(
         builtInTemplates.map((template) => template.text.de.name),
@@ -549,7 +549,7 @@ describe.skipIf(!baseUrl)("template files for transfer", () => {
       await expect(preview(as, scope, json(manifest([entry()], { formatVersion: 2 })))).rejects.toMatchObject(
         {
           code: "newerTemplateFormat",
-          message: expect.stringContaining("version 2; this Pagehall reads version 1"),
+          message: expect.stringContaining("version 2; this Lunedo reads version 1"),
         },
       );
       await expect(

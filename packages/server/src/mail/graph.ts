@@ -1,4 +1,4 @@
-import type { GraphMailConfiguration, GraphMailErrorCode } from "@pagehall/shared";
+import type { GraphMailConfiguration, GraphMailErrorCode } from "@lunedo/shared";
 import { type GraphClientCredential, requestGraphToken } from "../identity/graph-token.js";
 import type { MailMessage, MailTransport } from "./transport.js";
 

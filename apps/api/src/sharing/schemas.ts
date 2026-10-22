@@ -1,4 +1,4 @@
-import { shareLinkScopes, shareRoles } from "@pagehall/server";
+import { shareLinkScopes, shareRoles } from "@lunedo/server";
 import { z } from "zod";
 import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 import { exampleImpact, impactSchema } from "../spaces/schemas.js";

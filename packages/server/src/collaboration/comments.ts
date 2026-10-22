@@ -9,10 +9,10 @@ import {
   type ValidationProblem,
   validateComment,
   withInlineComment,
-} from "@pagehall/editor-schema";
-import { boundText, validateScene } from "@pagehall/editor-schema/scene";
-import { applyDocument, documentFromYDoc } from "@pagehall/editor-schema/yjs";
-import { uuidv7 } from "@pagehall/shared";
+} from "@lunedo/editor-schema";
+import { boundText, validateScene } from "@lunedo/editor-schema/scene";
+import { applyDocument, documentFromYDoc } from "@lunedo/editor-schema/yjs";
+import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";

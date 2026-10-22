@@ -1,5 +1,5 @@
-import { isAllowedHref } from "@pagehall/editor-schema";
-import { Button, Combobox, type ComboboxLoader, Dialog, Field, focusFirstInvalid, Input } from "@pagehall/ui";
+import { isAllowedHref } from "@lunedo/editor-schema";
+import { Button, Combobox, type ComboboxLoader, Dialog, Field, focusFirstInvalid, Input } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

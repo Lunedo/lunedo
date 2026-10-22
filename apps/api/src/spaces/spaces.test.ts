@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -43,7 +43,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
 
   async function person(kind: "member" | "none" = "member") {
     counter += 1;
-    const email = `person${counter}@pagehall.test`;
+    const email = `person${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const id =
       kind === "member"

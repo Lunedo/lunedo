@@ -114,7 +114,7 @@ export async function meetingAndFileHits(
       data: docx(`Firmware ${word} schedule for both gateway nodes.`),
       headers: {
         "Content-Type": "application/octet-stream",
-        "X-Pagehall-Request": "1",
+        "X-Lunedo-Request": "1",
         origin: new URL(browserPage.url()).origin,
       },
     },

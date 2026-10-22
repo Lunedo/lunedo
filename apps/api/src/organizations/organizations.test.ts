@@ -2,7 +2,7 @@ import {
   accountAttemptLimitSetting,
   clientAttemptLimitSetting,
   selfServiceOrganizationsSetting,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,

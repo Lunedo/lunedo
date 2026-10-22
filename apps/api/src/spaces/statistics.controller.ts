@@ -1,6 +1,6 @@
+import { MINIMUM_TERM_SEARCHES, statisticsPeriods } from "@lunedo/server";
+import { idSchema } from "@lunedo/shared";
 import { Controller, Delete, Get, HttpCode, Inject, Param, Query, Req } from "@nestjs/common";
-import { MINIMUM_TERM_SEARCHES, statisticsPeriods } from "@pagehall/server";
-import { idSchema } from "@pagehall/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

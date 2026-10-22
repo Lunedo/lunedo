@@ -1,4 +1,4 @@
-import { Button, Notice, Section, Skeleton } from "@pagehall/ui";
+import { Button, Notice, Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Play } from "lucide-react";

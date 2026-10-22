@@ -45,7 +45,7 @@ async function readBody(request: IncomingMessage): Promise<string> {
 export async function startFakeOidcProvider(
   options: { clientId?: string; clientSecret?: string; path?: string } = {},
 ): Promise<FakeOidcProvider> {
-  const clientId = options.clientId ?? "pagehall-test";
+  const clientId = options.clientId ?? "lunedo-test";
   const clientSecret = options.clientSecret ?? randomBytes(16).toString("hex");
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const jwk = { ...(await exportJWK(publicKey)), kid: "test-key", alg: "RS256", use: "sig" };

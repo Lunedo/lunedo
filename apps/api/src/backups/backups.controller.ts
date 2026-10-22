@@ -1,5 +1,5 @@
+import type { BackupList, BackupOverview, BackupStatus, RunView, TestRestoreView } from "@lunedo/server";
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Req } from "@nestjs/common";
-import type { BackupList, BackupOverview, BackupStatus, RunView, TestRestoreView } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -150,7 +150,7 @@ export class BackupsController {
       "Sets the local directory or the S3-compatible storage that backups are written to. The secret key is stored encrypted and never returned; leave it out to keep the stored one. Changes are audited without the secret key.",
     tags: [TAG],
     body: backupTargetSchema,
-    bodyExample: { kind: "local", path: "/var/lib/pagehall/backups" },
+    bodyExample: { kind: "local", path: "/var/lib/lunedo/backups" },
     response: {
       description: "Settings and state.",
       schema: backupOverviewSchema,
@@ -200,7 +200,7 @@ export class BackupsController {
   @ApiRoute({
     summary: "Confirm that the backup key is stored elsewhere",
     description:
-      "Records when and by whom it was confirmed that the backup key is kept outside Pagehall, or withdraws it. A backup cannot be restored without this key.",
+      "Records when and by whom it was confirmed that the backup key is kept outside Lunedo, or withdraws it. A backup cannot be restored without this key.",
     tags: [TAG],
     body: keyConfirmationSchema,
     bodyExample: { confirmed: true },
@@ -237,7 +237,7 @@ export class BackupsController {
   @ApiRoute({
     summary: "List the backups in the target",
     description:
-      "Lists the backups Pagehall created in the target, with class, size, version and the latest test restore. Backups are never downloaded through the API.",
+      "Lists the backups Lunedo created in the target, with class, size, version and the latest test restore. Backups are never downloaded through the API.",
     tags: [TAG],
     response: { description: "The backups.", schema: backupListSchema, example: exampleBackupList },
   })
@@ -264,7 +264,7 @@ export class BackupsController {
   @ApiRoute({
     summary: "Delete a backup",
     description:
-      "Deletes a backup Pagehall created from the target. This cannot be undone. Deletions are audited.",
+      "Deletes a backup Lunedo created from the target. This cannot be undone. Deletions are audited.",
     tags: [TAG],
     params: backupNameParams,
     errors: ["backupNotFound", "invalidBackupSettings", "backupTargetFailed"],

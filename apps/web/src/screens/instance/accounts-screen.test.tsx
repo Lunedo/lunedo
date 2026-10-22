@@ -319,9 +319,7 @@ describe("the accounts page", () => {
     const panel = await screen.findByRole("dialog", { name: "Max Member" });
     await userEvent.click(within(panel).getByRole("button", { name: "Anonymize account…" }));
     const dialog = await screen.findByRole("dialog", { name: "Anonymize account" });
-    expect(
-      within(dialog).getByText(/exported or streamed to other systems are outside Pagehall/),
-    ).toBeTruthy();
+    expect(within(dialog).getByText(/exported or streamed to other systems are outside Lunedo/)).toBeTruthy();
     const confirm = within(dialog).getByRole("button", { name: "Anonymize" }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
     await userEvent.click(confirm);

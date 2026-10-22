@@ -19,7 +19,7 @@ const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const CODE_LENGTH = 16;
 const EXCHANGES_PER_CLIENT = 10;
 const EXCHANGE_WINDOW_SECONDS = 15 * 60;
-const ISSUE_LOCK = "pagehall.setup";
+const ISSUE_LOCK = "lunedo.setup";
 
 function hashCode(code: string): Buffer {
   return createHash("sha256").update(code.toUpperCase().replace(/[\s-]/g, ""), "utf8").digest();
@@ -117,7 +117,7 @@ export class SetupService {
     });
     if (!issued) {
       if (options.configuredCode) {
-        logger.info("Setup is complete, PAGEHALL_SETUP_CODE can be removed from the configuration");
+        logger.info("Setup is complete, LUNEDO_SETUP_CODE can be removed from the configuration");
       }
       return;
     }

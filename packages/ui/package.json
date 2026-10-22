@@ -1,5 +1,5 @@
 {
-  "name": "@pagehall/ui",
+  "name": "@lunedo/ui",
   "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
@@ -7,19 +7,19 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "@pagehall/source": "./src/index.ts",
+      "@lunedo/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pagehall-dev",
+    "dev": "lunedo-dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@pagehall/config": "workspace:*",
+    "@lunedo/config": "workspace:*",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/node": "^24.19.2",
@@ -39,7 +39,7 @@
     "dist"
   ],
   "dependencies": {
-    "@pagehall/tokens": "workspace:*",
+    "@lunedo/tokens": "workspace:*",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.59.0",
     "radix-ui": "^1.8.1"

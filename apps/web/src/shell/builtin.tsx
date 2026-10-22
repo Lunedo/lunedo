@@ -49,7 +49,7 @@ import {
   TasksRailItem,
 } from "./rail-items.js";
 
-export const EDIT_PAGE_EVENT = "pagehall:edit-page";
+export const EDIT_PAGE_EVENT = "lunedo:edit-page";
 
 const ORGANIZATION = "/settings/organizations/$organizationId";
 const INSTANCE = "/settings/instance";

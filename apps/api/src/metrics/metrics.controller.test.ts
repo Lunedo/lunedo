@@ -24,7 +24,7 @@ describe("GET /metrics", () => {
     });
     expect(response.statusCode).toBe(401);
     expect(response.headers["www-authenticate"]).toBe("Bearer");
-    expect(response.body).not.toContain("pagehall_");
+    expect(response.body).not.toContain("lunedo_");
   });
 
   it("answers with the correct token in Prometheus format", async () => {
@@ -37,7 +37,7 @@ describe("GET /metrics", () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toContain("text/plain");
-    expect(response.body).toMatch(/pagehall_http_requests_total\{[^}]*route="\/health\/live"[^}]*\} 1/);
+    expect(response.body).toMatch(/lunedo_http_requests_total\{[^}]*route="\/health\/live"[^}]*\} 1/);
   });
 
   it("labels unknown paths without the raw path", async () => {

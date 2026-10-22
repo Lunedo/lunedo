@@ -25,9 +25,9 @@ export type RouteAccess =
 
 export type ResourceSource = { type: "instance" } | { type: string; param: string };
 
-export const ROUTE_ACCESS = "pagehall:route-access";
+export const ROUTE_ACCESS = "lunedo:route-access";
 
-export const INTERNAL_ROUTE = "pagehall:internal-route";
+export const INTERNAL_ROUTE = "lunedo:internal-route";
 
 export const PublicRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "public" } satisfies RouteAccess);
 

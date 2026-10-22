@@ -1,4 +1,3 @@
-import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject } from "@nestjs/common";
 import {
   AuthError,
   BackupBusyError,
@@ -45,7 +44,8 @@ import {
   SvgRejectedError,
   TokenRejectedError,
   UploadTimeoutError,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { API_CONTEXT, type ApiContext } from "../context.js";
@@ -69,7 +69,7 @@ const SCENE_PROBLEM_MESSAGES: Record<SceneProblemCode, string> = {
   unknownField: "The field is not supported",
   invalidElement: "The element has a value that is not allowed",
   duplicateElement: "Two elements have the same ID",
-  invalidLink: "Links can point to http and https addresses and to Pagehall only",
+  invalidLink: "Links can point to http and https addresses and to Lunedo only",
   invalidFile: "Images must be attachments of the same page or whiteboard",
 };
 
@@ -192,7 +192,7 @@ function map(error: unknown): Mapped | null {
     return {
       code: "maintenanceMode",
       detail:
-        "Pagehall is in maintenance mode and saves no changes until the instance administrators end it. Nothing was changed; try again later.",
+        "Lunedo is in maintenance mode and saves no changes until the instance administrators end it. Nothing was changed; try again later.",
       extensions: { retryAfterSeconds: MAINTENANCE_RETRY_SECONDS, maintenanceMessage: error.status.message },
     };
   }

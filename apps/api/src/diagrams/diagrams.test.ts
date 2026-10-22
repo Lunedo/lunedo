@@ -6,7 +6,7 @@ import {
   clientAttemptLimitSetting,
   MAX_PARALLEL_SANITIZATIONS,
   sanitizerSlots,
-} from "@pagehall/server";
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -58,7 +58,7 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
 
   async function person() {
     counter += 1;
-    const email = `diagrams${counter}@pagehall.test`;
+    const email = `diagrams${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const { id } = await createAccount(test, email, password);
     return { id, client: await signedInClient(test, email, password) };

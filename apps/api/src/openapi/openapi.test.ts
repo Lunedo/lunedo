@@ -50,7 +50,7 @@ describe("the OpenAPI description", () => {
   it("is committed in its current form, with the internal routes", () => {
     const expected = serializeOpenApi(generateOpenApi({ includeInternal: true }));
     const actual = readFileSync(committed, "utf8").replaceAll("\r\n", "\n");
-    expect(actual === expected, "openapi.json is outdated; run `pnpm --filter @pagehall/api openapi`").toBe(
+    expect(actual === expected, "openapi.json is outdated; run `pnpm --filter @lunedo/api openapi`").toBe(
       true,
     );
   });
@@ -99,10 +99,10 @@ describe("the OpenAPI description", () => {
   it("marks internal routes so that their changes are not reported as breaking", () => {
     const full = generateOpenApi({ includeInternal: true });
     const signIn = full.paths["/api/v1/auth/sign-in"]?.post;
-    expect(signIn?.["x-pagehall-internal"]).toBe(true);
+    expect(signIn?.["x-lunedo-internal"]).toBe(true);
     expect(signIn?.["x-stability-level"]).toBe("alpha");
     const members = full.paths["/api/v1/organizations/{organizationId}/members"]?.get;
-    expect(members?.["x-pagehall-internal"]).toBeUndefined();
+    expect(members?.["x-lunedo-internal"]).toBeUndefined();
     expect(members?.["x-stability-level"]).toBeUndefined();
     expect(full.tags.map((tag) => tag.name)).toEqual(document.tags.map((tag) => tag.name));
   });
@@ -121,21 +121,21 @@ describe("the OpenAPI description", () => {
   it("names the required permission of each route", () => {
     for (const methods of Object.values(document.paths)) {
       for (const operation of Object.values(methods)) {
-        expect(operation["x-pagehall-permission"], operation.operationId).toBeDefined();
+        expect(operation["x-lunedo-permission"], operation.operationId).toBeDefined();
         expect(operation.description, operation.operationId).toMatch(
           /Requires (the permission|one of the permissions) `/,
         );
       }
     }
     expect(
-      document.paths["/api/v1/organizations/{organizationId}/members"]?.get?.["x-pagehall-permission"],
+      document.paths["/api/v1/organizations/{organizationId}/members"]?.get?.["x-lunedo-permission"],
     ).toEqual({
       action: "organization.members.view",
       resource: "organization",
       parameter: "organizationId",
     });
     expect(
-      document.paths["/api/v1/organizations/{organizationId}/settings/{key}"]?.put?.["x-pagehall-permission"],
+      document.paths["/api/v1/organizations/{organizationId}/settings/{key}"]?.put?.["x-lunedo-permission"],
     ).toEqual({
       action: "organization.settings.manage",
       alternatives: ["organization.signIn.manage"],
@@ -186,7 +186,7 @@ describe("the OpenAPI description", () => {
           for (const example of Object.values(problem?.examples ?? {}) as {
             value: { type: string; status: number };
           }[]) {
-            expect(example.value.type).toMatch(/^urn:pagehall:problem:[a-zA-Z]+$/);
+            expect(example.value.type).toMatch(/^urn:lunedo:problem:[a-zA-Z]+$/);
             expect(example.value.status).toBe(Number(status));
           }
         }

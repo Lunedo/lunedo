@@ -8,7 +8,7 @@ import {
   Section,
   SettingRow,
   Skeleton,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { MonitorSmartphone } from "lucide-react";
 import { useState } from "react";

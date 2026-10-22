@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import {
   ANNOUNCEMENT_LINK_LABEL_MAX_LENGTH,
   ANNOUNCEMENT_TEXT_MAX_LENGTH,
   ANNOUNCEMENT_URL_MAX_LENGTH,
   type AnnouncementInput,
   announcementSeverities,
-} from "@pagehall/server";
+} from "@lunedo/server";
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";

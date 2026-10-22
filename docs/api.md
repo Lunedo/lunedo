@@ -6,11 +6,11 @@ Scripts and integrations use the same HTTP API as the web client. Every instance
 
 `/api/docs` shows the API reference with [Scalar](https://github.com/scalar/scalar). The page, the renderer and the OpenAPI description (`/api/docs/openapi.json`) come from the instance itself; nothing is loaded from other hosts, telemetry is off and the page sends a strict content security policy. By default only signed-in users and requests with an API token can open it. The instance setting `apiTokens.publicDocumentation` makes it public.
 
-The description is generated from the route declarations and Zod schemas in `apps/api`. Internal routes, which serve only the web client, follow the same conventions but are left out of the reference. The generated file `apps/api/openapi.json` is committed and contains every route, because the web client's types are generated from it; internal routes carry `x-pagehall-internal: true` and `x-stability-level: alpha`, so changing them is not a breaking change:
+The description is generated from the route declarations and Zod schemas in `apps/api`. Internal routes, which serve only the web client, follow the same conventions but are left out of the reference. The generated file `apps/api/openapi.json` is committed and contains every route, because the web client's types are generated from it; internal routes carry `x-lunedo-internal: true` and `x-stability-level: alpha`, so changing them is not a breaking change:
 
 ```sh
-pnpm --filter @pagehall/api build
-pnpm --filter @pagehall/api openapi
+pnpm --filter @lunedo/api build
+pnpm --filter @lunedo/api openapi
 ```
 
 Tests fail when the committed file differs from the generated one, when a public route lacks a summary, description, tag, documented error or example, when a field lacks a description, or when an example does not match its schema. Integration tests check every response against the description. A pull request that makes a breaking change to the description fails the `API compatibility` workflow unless it has the label `breaking-api-change`; the workflow runs [oasdiff](https://github.com/oasdiff/oasdiff) against the base branch.
@@ -18,8 +18,8 @@ Tests fail when the committed file differs from the generated one, when a public
 ## Conventions
 
 - Routes are versioned under `/api/v1`.
-- Each route declares its permission; the description names it in `x-pagehall-permission` and in the text.
-- Errors are Problem Details (RFC 9457) with the media type `application/problem+json`. `type` is stable, for example `urn:pagehall:problem:forbidden`, and `code` repeats its last part.
+- Each route declares its permission; the description names it in `x-lunedo-permission` and in the text.
+- Errors are Problem Details (RFC 9457) with the media type `application/problem+json`. `type` is stable, for example `urn:lunedo:problem:forbidden`, and `code` repeats its last part.
 - Lists use cursor pagination: `?cursor=&limit=` (1 to 200, default 50) and the response `{ "items": [...], "nextCursor": "..." }`; `nextCursor` is `null` on the last page. Lists that grow with an organization or the instance page in the database on an index, so a page costs the same at any position; only lists with a fixed upper bound, such as roles or one's own sessions, are paged in memory.
 - Every response passes through its declared schema. Fields that are not declared are not sent.
 
@@ -35,7 +35,7 @@ Deactivating a service account revokes all its tokens at once.
 
 There are personal tokens, which act as their owner, and tokens of service accounts.
 
-- A token is `ph_` followed by 43 base62 characters (256 bits of randomness) and a six-character checksum, so secret scanners recognize it and clients can reject typos without a request. Only a hash is stored; the token is shown once, when it is created.
+- A token is `ld_` followed by 43 base62 characters (256 bits of randomness) and a six-character checksum, so secret scanners recognize it and clients can reject typos without a request. Only a hash is stored; the token is shown once, when it is created.
 - Scopes are permission areas with `view` or `manage`, for the instance and for organizations, optionally limited to one organization. A token limited to one organization has no instance scopes and grants nothing outside that organization. At every request the token can do only what both its scopes and the current permissions of its owner allow. A token for a service account is created only when what it allows, its scopes intersected with the service account's roles, is covered by the creator's own permanent permissions.
 - Tokens have no expiry unless one is set when creating them. The maximum lifetime of API tokens, `apiTokens.maxLifetimeDays` in days, is empty by default. When the instance or an organization sets it, every new token needs an expiry within it, and a token created without one gets the maximum; lower levels may only shorten it, and cannot remove it. A personal token follows the strictest value of every organization it reaches: its own organization if it is limited to one, otherwise every organization its owner belongs to. `GET /api/v1/account/tokens/lifetime` and `GET /api/v1/service-accounts/{id}/tokens/lifetime` return the maximum that applies to a new token, or null. `expiryRequired` and `expiryTooLate` problems carry `maxLifetimeDays`.
 - The owner, or every responsible person of a service account and, without any, the organization's owners, get an e-mail `apiTokens.expiryReminderDays` (default 7) before a token expires.
@@ -53,7 +53,7 @@ What a token may do with content (spaces, pages, articles) is set when it is cre
 | Level | In the interface | What the token may do |
 |---|---|---|
 | `read` | Read | Read everything its account can read. Nothing is changed, not even reactions. |
-| `draft` | Write drafts | Also create articles and save drafts of knowledge base articles through the article API. A person publishes them in Pagehall. It changes nothing readers see: no publishing, no moving, deleting, sharing or restricting, and no saving of pages in live mode. |
+| `draft` | Write drafts | Also create articles and save drafts of knowledge base articles through the article API. A person publishes them in Lunedo. It changes nothing readers see: no publishing, no moving, deleting, sharing or restricting, and no saving of pages in live mode. |
 | `publish` | Write and publish | Write and publish like its account. |
 
 `draft` and `publish` need the organization area `spaces` with `manage`; `read` needs `view`. Left out, the level is `publish` for `manage` and `read` otherwise. A token can also be limited to selected knowledge bases with `knowledgeBaseIds`; it then reaches no other space, also not in search. A token never does more than its account may: an account that only reads a knowledge base cannot write to it, whatever the token's level.
@@ -92,12 +92,12 @@ A template whose name exists at the level appears in the preview with `conflict:
 
 ```sh
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"templateIds": null}' -o templates.pagehall-template.zip \
+  -d '{"templateIds": null}' -o templates.lunedo-template.zip \
   https://wiki.example.org/api/v1/spaces/$SPACE/templates/export
 
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/octet-stream" \
-  --data-binary @templates.pagehall-template.zip \
-  "https://wiki.example.org/api/v1/spaces/$OTHER_SPACE/template-imports?name=templates.pagehall-template.zip"
+  --data-binary @templates.lunedo-template.zip \
+  "https://wiki.example.org/api/v1/spaces/$OTHER_SPACE/template-imports?name=templates.lunedo-template.zip"
 ```
 
 ## Knowledge base articles
@@ -152,7 +152,7 @@ curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json
   https://wiki.example.org/api/v1/articles/$ARTICLE/draft
 ```
 
-The draft waits in Pagehall until a person publishes it; the publish dialog takes over the note. With a token of the level `publish`, publish it directly:
+The draft waits in Lunedo until a person publishes it; the publish dialog takes over the note. With a token of the level `publish`, publish it directly:
 
 ```sh
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \

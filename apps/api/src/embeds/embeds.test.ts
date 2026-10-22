@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -33,8 +33,8 @@ describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options th
   let counter = 0;
 
   beforeAll(async () => {
-    webRoot = mkdtempSync(path.join(tmpdir(), "pagehall-embeds-"));
-    writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Pagehall</title>");
+    webRoot = mkdtempSync(path.join(tmpdir(), "lunedo-embeds-"));
+    writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Lunedo</title>");
     test = await createAuthTestApp(configuredSetupEnv, { webRoot });
     await completeConfiguredSetup(test);
     await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
@@ -52,7 +52,7 @@ describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options th
 
   async function person() {
     counter += 1;
-    const email = `embeds${counter}@pagehall.test`;
+    const email = `embeds${counter}@lunedo.test`;
     const password = "a long enough passphrase";
     const { id } = await createAccount(test, email, password);
     return { id, client: await signedInClient(test, email, password) };

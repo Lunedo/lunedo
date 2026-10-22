@@ -512,12 +512,12 @@ describe("For you", () => {
       }),
     );
     await renderAt("/home");
-    expect(await screen.findByText("Welcome to Pagehall")).toBeTruthy();
+    expect(await screen.findByText("Welcome to Lunedo")).toBeTruthy();
     cleanup();
     upcoming.push(meeting);
     await renderAt("/home");
     expect(await screen.findByText("Jour fixe IT")).toBeTruthy();
-    expect(screen.queryByText("Welcome to Pagehall")).toBeNull();
+    expect(screen.queryByText("Welcome to Lunedo")).toBeNull();
   });
 
   it("names an upcoming meeting by its own title when the series stays hidden", async () => {

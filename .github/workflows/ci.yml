@@ -100,6 +100,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm references:check
+      - run: pnpm name:check
       - run: pnpm patches:check
       - run: pnpm playwright-image:check
       - run: pnpm i18n:check
@@ -124,13 +125,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: pagehall
-          POSTGRES_PASSWORD: pagehall
-          POSTGRES_DB: pagehall
+          POSTGRES_USER: lunedo
+          POSTGRES_PASSWORD: lunedo
+          POSTGRES_DB: lunedo
         ports:
           - 5432
         options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -U pagehall -d pagehall"
+          --health-cmd "pg_isready -h 127.0.0.1 -U lunedo -d lunedo"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -155,8 +156,8 @@ jobs:
       s3:
         image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
         env:
-          AWS_ACCESS_KEY_ID: pagehall
-          AWS_SECRET_ACCESS_KEY: pagehall-s3
+          AWS_ACCESS_KEY_ID: lunedo
+          AWS_SECRET_ACCESS_KEY: lunedo-s3
         ports:
           - 8333
         options: >-
@@ -201,18 +202,18 @@ jobs:
         run: command -v pg_dump > /dev/null || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
       - name: Turn off durability in the test database
-        run: node scripts/tune-test-postgres.ts "postgres://pagehall:pagehall@localhost:${{ job.services.postgres.ports['5432'] }}/pagehall"
+        run: node scripts/tune-test-postgres.ts "postgres://lunedo:lunedo@localhost:${{ job.services.postgres.ports['5432'] }}/lunedo"
       - name: Collect the test reports of this job
         run: |
-          echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
-          echo "PAGEHALL_TEST_JOB=Unit tests (${{ matrix.shard }} of 3)" >> "$GITHUB_ENV"
+          echo "LUNEDO_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
+          echo "LUNEDO_TEST_JOB=Unit tests (${{ matrix.shard }} of 3)" >> "$GITHUB_ENV"
       - name: Run the tests of this shard
         env:
-          PAGEHALL_TEST_DATABASE_URL: postgres://pagehall:pagehall@localhost:${{ job.services.postgres.ports['5432'] }}/pagehall
-          PAGEHALL_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
-          PAGEHALL_TEST_MAILPIT_SMTP_PORT: ${{ job.services.mailpit.ports['1025'] }}
-          PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
-          PAGEHALL_TEST_S3_ENDPOINT: http://localhost:${{ job.services.s3.ports['8333'] }}
+          LUNEDO_TEST_DATABASE_URL: postgres://lunedo:lunedo@localhost:${{ job.services.postgres.ports['5432'] }}/lunedo
+          LUNEDO_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
+          LUNEDO_TEST_MAILPIT_SMTP_PORT: ${{ job.services.mailpit.ports['1025'] }}
+          LUNEDO_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
+          LUNEDO_TEST_S3_ENDPOINT: http://localhost:${{ job.services.s3.ports['8333'] }}
         run: |
           args=(run test --continue)
           if [ "$LANE" = "fast" ]; then args+=(--affected); fi
@@ -250,7 +251,7 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+          tags: lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: VERSION=ci
       - name: Build the image for amd64
         if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
@@ -262,17 +263,17 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+          tags: lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: VERSION=ci
           cache-from: |
             type=gha,scope=amd64
             type=gha,scope=image
           cache-to: type=gha,mode=max,scope=amd64
       - name: Back up, restore and compare
-        run: scripts/backup-roundtrip.sh pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+        run: scripts/backup-roundtrip.sh lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove the image of this job
         if: always()
-        run: docker image rm --force pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+        run: docker image rm --force lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
 
   operations:
     name: Installation, update and reverse proxies
@@ -291,7 +292,7 @@ jobs:
           release="$(git tag --list 'v*' --sort=-version:refname --merged HEAD | head -n 1)"
           if [ -n "$release" ]; then
             echo "Installing the previous release $release, then updating to the build under test."
-            echo "image=ghcr.io/pagehall/pagehall:${release#v}" >> "$GITHUB_OUTPUT"
+            echo "image=ghcr.io/lunedo/lunedo:${release#v}" >> "$GITHUB_OUTPUT"
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
             base="$(git merge-base HEAD origin/main)"
@@ -303,7 +304,7 @@ jobs:
             git worktree add --detach "$path" "$base"
             echo "path=$path" >> "$GITHUB_OUTPUT"
             echo "sha=$base" >> "$GITHUB_OUTPUT"
-            echo "image=pagehall:previous-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+            echo "image=lunedo:previous-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
             echo "build=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -319,7 +320,7 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+          tags: lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: VERSION=ci
       - name: Build the image for amd64
         if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
@@ -331,7 +332,7 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+          tags: lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: VERSION=ci
           cache-from: |
             type=gha,scope=amd64
@@ -357,18 +358,18 @@ jobs:
       - name: Install the previous version and update with one command
         env:
           PREVIOUS: ${{ steps.previous.outputs.image }}
-        run: scripts/install-update-check.sh "$PREVIOUS" pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+        run: scripts/install-update-check.sh "$PREVIOUS" lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Check the reverse proxy examples
-        run: scripts/reverse-proxy-check.sh pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+        run: scripts/reverse-proxy-check.sh lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Check the storage service example of the backup documentation
-        run: scripts/backup-network-check.sh pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+        run: scripts/backup-network-check.sh lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove the images of this job
         if: always()
         env:
           PREVIOUS: ${{ steps.previous.outputs.image }}
           PREVIOUS_PATH: ${{ steps.previous.outputs.path }}
         run: |
-          docker image rm --force pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }} "$PREVIOUS" || true
+          docker image rm --force lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }} "$PREVIOUS" || true
           if [ -n "$PREVIOUS_PATH" ]; then git worktree remove --force "$PREVIOUS_PATH" || rm -rf "$PREVIOUS_PATH"; fi
 
   e2e:
@@ -381,18 +382,18 @@ jobs:
       image: mcr.microsoft.com/playwright@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf # v1.64.1-noble
       options: >-
         --user ${{ needs.scope.outputs.runner-user }}
-        --tmpfs /pagehall-home:exec
-        --tmpfs /pagehall-e2e
+        --tmpfs /lunedo-home:exec
+        --tmpfs /lunedo-e2e
         ${{ contains(vars.RUNNER_LABELS, 'self-hosted') && format('--volume {0}:/ci-cache', vars.CI_CACHE_DIR || '/srv/ci-cache') || '' }}
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: pagehall
-          POSTGRES_PASSWORD: pagehall
-          POSTGRES_DB: pagehall
+          POSTGRES_USER: lunedo
+          POSTGRES_PASSWORD: lunedo
+          POSTGRES_DB: lunedo
         options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -U pagehall -d pagehall"
+          --health-cmd "pg_isready -h 127.0.0.1 -U lunedo -d lunedo"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -410,13 +411,13 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     env:
-      HOME: /pagehall-home
-      PAGEHALL_E2E_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
-      PAGEHALL_E2E_MAILPIT_URL: http://mailpit:8025
-      PAGEHALL_E2E_REDIS_URL: redis://valkey:6379
-      PAGEHALL_E2E_SMTP_HOST: mailpit
-      PAGEHALL_E2E_STATE_DIR: /pagehall-e2e/state
-      PAGEHALL_E2E_WORKERS: ${{ vars.E2E_WORKERS }}
+      HOME: /lunedo-home
+      LUNEDO_E2E_DATABASE_URL: postgres://lunedo:lunedo@postgres:5432/lunedo
+      LUNEDO_E2E_MAILPIT_URL: http://mailpit:8025
+      LUNEDO_E2E_REDIS_URL: redis://valkey:6379
+      LUNEDO_E2E_SMTP_HOST: mailpit
+      LUNEDO_E2E_STATE_DIR: /lunedo-e2e/state
+      LUNEDO_E2E_WORKERS: ${{ vars.E2E_WORKERS }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -450,16 +451,16 @@ jobs:
         run: scripts/install-postgres-client.sh "$RUNNER_TEMP/postgresql-client" 16 >> "$GITHUB_PATH"
       - run: pnpm install --frozen-lockfile
       - name: Turn off durability in the test database
-        run: node scripts/tune-test-postgres.ts "$PAGEHALL_E2E_DATABASE_URL"
+        run: node scripts/tune-test-postgres.ts "$LUNEDO_E2E_DATABASE_URL"
       - run: pnpm build
-      - run: pnpm --filter @pagehall/web build:e2e
+      - run: pnpm --filter @lunedo/web build:e2e
       - name: Collect the test reports of this job
         run: |
-          echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
-          echo "PAGEHALL_TEST_JOB=End-to-end tests" >> "$GITHUB_ENV"
-      - run: pnpm --filter @pagehall/web test:e2e
+          echo "LUNEDO_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
+          echo "LUNEDO_TEST_JOB=End-to-end tests" >> "$GITHUB_ENV"
+      - run: pnpm --filter @lunedo/web test:e2e
         env:
-          PAGEHALL_E2E_SWEEPS: ${{ needs.scope.outputs.sweeps }}
+          LUNEDO_E2E_SWEEPS: ${{ needs.scope.outputs.sweeps }}
       - name: Show the load of the machine in the job summary
         if: always()
         run: node scripts/record-vm-load.ts summary "$RUNNER_TEMP/vm-load.jsonl" "the end-to-end tests"
@@ -484,7 +485,7 @@ jobs:
           name: e2e-failed-attempts
           path: |
             apps/web/test-results
-            ${{ env.PAGEHALL_E2E_STATE_DIR }}/server.log
+            ${{ env.LUNEDO_E2E_STATE_DIR }}/server.log
           if-no-files-found: ignore
           retention-days: 7
       - name: Check that every file in the workspace and the caches belongs to the runner user
@@ -500,8 +501,8 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     env:
-      PAGEHALL_E2E_IDP: "1"
-      PAGEHALL_E2E_HOST: 0.0.0.0
+      LUNEDO_E2E_IDP: "1"
+      LUNEDO_E2E_HOST: 0.0.0.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -527,18 +528,18 @@ jobs:
       - name: Choose free ports for this job
         run: >-
           node scripts/pick-free-ports.ts POSTGRES_PORT MAILPIT_SMTP_PORT MAILPIT_PORT
-          KEYCLOAK_PORT AUTHENTIK_PORT LDAP_PORT PAGEHALL_E2E_PORT:3
+          KEYCLOAK_PORT AUTHENTIK_PORT LDAP_PORT LUNEDO_E2E_PORT:3
       - name: Name the compose project and point the tests at the chosen ports
         run: |
           {
-            echo "COMPOSE_PROJECT_NAME=pagehall-idp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-            echo "PAGEHALL_E2E_STATE_DIR=${RUNNER_TEMP}/pagehall-e2e-state"
-            echo "PAGEHALL_E2E_DATABASE_URL=postgres://pagehall:pagehall@localhost:${POSTGRES_PORT}/pagehall"
-            echo "PAGEHALL_E2E_MAILPIT_URL=http://localhost:${MAILPIT_PORT}"
-            echo "PAGEHALL_E2E_SMTP_PORT=${MAILPIT_SMTP_PORT}"
-            echo "PAGEHALL_E2E_KEYCLOAK_URL=http://keycloak.localhost:${KEYCLOAK_PORT}"
-            echo "PAGEHALL_E2E_AUTHENTIK_URL=http://authentik.localhost:${AUTHENTIK_PORT}"
-            echo "PAGEHALL_E2E_LDAP_URL=ldap://localhost:${LDAP_PORT}"
+            echo "COMPOSE_PROJECT_NAME=lunedo-idp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            echo "LUNEDO_E2E_STATE_DIR=${RUNNER_TEMP}/lunedo-e2e-state"
+            echo "LUNEDO_E2E_DATABASE_URL=postgres://lunedo:lunedo@localhost:${POSTGRES_PORT}/lunedo"
+            echo "LUNEDO_E2E_MAILPIT_URL=http://localhost:${MAILPIT_PORT}"
+            echo "LUNEDO_E2E_SMTP_PORT=${MAILPIT_SMTP_PORT}"
+            echo "LUNEDO_E2E_KEYCLOAK_URL=http://keycloak.localhost:${KEYCLOAK_PORT}"
+            echo "LUNEDO_E2E_AUTHENTIK_URL=http://authentik.localhost:${AUTHENTIK_PORT}"
+            echo "LUNEDO_E2E_LDAP_URL=ldap://localhost:${LDAP_PORT}"
           } >> "$GITHUB_ENV"
       - name: Resolve the identity provider host names to this machine
         run: grep -q authentik.localhost /etc/hosts || echo "127.0.0.1 keycloak.localhost authentik.localhost" | sudo tee -a /etc/hosts
@@ -549,7 +550,7 @@ jobs:
       - name: Wait until Authentik has applied the test blueprint
         run: |
           for _ in $(seq 1 60); do
-            if curl -fsS "$PAGEHALL_E2E_AUTHENTIK_URL/application/o/pagehall/.well-known/openid-configuration" > /dev/null; then exit 0; fi
+            if curl -fsS "$LUNEDO_E2E_AUTHENTIK_URL/application/o/lunedo/.well-known/openid-configuration" > /dev/null; then exit 0; fi
             sleep 5
           done
           docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp logs authentik-worker
@@ -558,18 +559,18 @@ jobs:
         run: command -v pg_dump > /dev/null || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm --filter @pagehall/web build:e2e
+      - run: pnpm --filter @lunedo/web build:e2e
       - if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
-        run: pnpm --filter @pagehall/web exec playwright install --with-deps chromium
+        run: pnpm --filter @lunedo/web exec playwright install --with-deps chromium
       - if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
-        run: pnpm --filter @pagehall/web exec playwright install chromium
+        run: pnpm --filter @lunedo/web exec playwright install chromium
       - name: Wait until Authentik shows its sign-in form in a browser
-        run: pnpm --filter @pagehall/web exec node e2e/support/wait-for-authentik.ts
+        run: pnpm --filter @lunedo/web exec node e2e/support/wait-for-authentik.ts
       - name: Collect the test reports of this job
         run: |
-          echo "PAGEHALL_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
-          echo "PAGEHALL_TEST_JOB=Identity provider tests" >> "$GITHUB_ENV"
-      - run: pnpm --filter @pagehall/web exec playwright test --project=idp
+          echo "LUNEDO_TEST_REPORT_DIR=$GITHUB_WORKSPACE/.test-reports" >> "$GITHUB_ENV"
+          echo "LUNEDO_TEST_JOB=Identity provider tests" >> "$GITHUB_ENV"
+      - run: pnpm --filter @lunedo/web exec playwright test --project=idp
       - name: Show the load of the machine in the job summary
         if: always()
         run: node scripts/record-vm-load.ts summary "$RUNNER_TEMP/vm-load.jsonl" "the identity provider tests"
@@ -594,7 +595,7 @@ jobs:
           name: identity-provider-failed-attempts
           path: |
             apps/web/test-results
-            ${{ env.PAGEHALL_E2E_STATE_DIR }}/server.log
+            ${{ env.LUNEDO_E2E_STATE_DIR }}/server.log
           if-no-files-found: ignore
           retention-days: 7
       - if: failure()

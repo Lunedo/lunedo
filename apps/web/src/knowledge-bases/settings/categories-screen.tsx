@@ -11,7 +11,7 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Folder, FolderTree, RotateCcw } from "lucide-react";
 import { useState } from "react";

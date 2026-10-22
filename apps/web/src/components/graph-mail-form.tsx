@@ -1,4 +1,4 @@
-import { emailSchema, graphMailConfigurationSchema } from "@pagehall/shared";
+import { emailSchema, graphMailConfigurationSchema } from "@lunedo/shared";
 import {
   Button,
   ConfirmDialog,
@@ -14,7 +14,7 @@ import {
   SegmentedControl,
   Select,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Download, FileKey2, KeyRound, Plus, Send, Trash2 } from "lucide-react";
@@ -315,7 +315,7 @@ export function GraphMailForm({
           onAdded={async (certificate) => {
             setAdding(null);
             await refresh();
-            if (certificate) downloadText("pagehall-mail.pem", certificate, "application/x-pem-file");
+            if (certificate) downloadText("lunedo-mail.pem", certificate, "application/x-pem-file");
           }}
         />
       ) : null}

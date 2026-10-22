@@ -1,5 +1,5 @@
-import type { AttachmentContent, ByteRange, DisplayVersionSize, FileService } from "@pagehall/server";
-import { contentDisposition } from "@pagehall/server";
+import type { AttachmentContent, ByteRange, DisplayVersionSize, FileService } from "@lunedo/server";
+import { contentDisposition } from "@lunedo/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ProblemException } from "../http/problems.js";

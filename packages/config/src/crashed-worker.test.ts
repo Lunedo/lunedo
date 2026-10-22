@@ -41,7 +41,7 @@ describe("a test worker that exits abnormally", () => {
     const result = spawnSync(process.execPath, [vitest, "run", "--root", directory], {
       cwd: directory,
       encoding: "utf8",
-      env: { ...process.env, CI_RETRIES: "0", PAGEHALL_TEST_WORKERS: "1", NO_COLOR: "1" },
+      env: { ...process.env, CI_RETRIES: "0", LUNEDO_TEST_WORKERS: "1", NO_COLOR: "1" },
       timeout: 60_000,
     });
     const output = `${result.stdout}${result.stderr}`;

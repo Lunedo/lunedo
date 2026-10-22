@@ -57,7 +57,7 @@ describe("browser push on the personal settings", () => {
     expect(requestPermission).toHaveBeenCalledOnce();
     expect(
       await screen.findByText(
-        "Your browser blocked notifications for Pagehall. Allow notifications in the site settings of your browser, then try again.",
+        "Your browser blocked notifications for Lunedo. Allow notifications in the site settings of your browser, then try again.",
       ),
     ).toBeTruthy();
   });

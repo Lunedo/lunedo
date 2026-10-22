@@ -1,4 +1,4 @@
-import { emailSchema, passkeyNameSchema, passwordSchema } from "@pagehall/shared";
+import { emailSchema, passkeyNameSchema, passwordSchema } from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -16,7 +16,7 @@ import {
   SettingRow,
   Skeleton,
   useToast,
-} from "@pagehall/ui";
+} from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fingerprint, KeyRound, LockKeyhole, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useState } from "react";

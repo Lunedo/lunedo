@@ -73,7 +73,7 @@ describe("portal markup", () => {
 
   it("points pre-rendered links to the portal base and adds section icons", () => {
     const markup =
-      '<section class="ph-section" data-section="steps" data-icon="wrench" data-framed="true"><h2 id="steps">Steps</h2><a href="/__portal__/12">x</a></section>';
+      '<section class="ld-section" data-section="steps" data-icon="wrench" data-framed="true"><h2 id="steps">Steps</h2><a href="/__portal__/12">x</a></section>';
     const decorated = decorateArticleHtml(markup, "/help/it");
     expect(decorated).toContain('href="/help/it/12"');
     expect(decorated).toContain('<h2 id="steps"><span class="hb" aria-hidden="true"><svg');

@@ -1,4 +1,4 @@
-import type { NodeJson } from "@pagehall/editor-schema";
+import type { NodeJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { languageSetting } from "../../settings/builtin.js";
@@ -318,7 +318,7 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
     const file = (name: string, language: string, translation: boolean, text: string): ZipFileSpec => ({
       name: `hilfe/Drucker/${name}.md`,
-      data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
+      data: `---\nlunedo:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
     });
     const files = [
       file("Drucker", "de", false, "Drucker einrichten."),
@@ -371,7 +371,7 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
   describe("re-imports into a knowledge base", () => {
     const article = (name: string, language: string, translation: boolean, text: string): ZipFileSpec => ({
       name,
-      data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
+      data: `---\nlunedo:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
     });
     const before: ZipFileSpec[] = [
       article("hilfe/Geräte/Drucker/Drucker.md", "de", false, "Drucker einrichten."),

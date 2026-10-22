@@ -19,7 +19,7 @@ function link(target: string, location: string, type?: "dir" | "junction"): bool
 }
 
 function folder() {
-  const root = mkdtempSync(path.join(tmpdir(), "pagehall-import-"));
+  const root = mkdtempSync(path.join(tmpdir(), "lunedo-import-"));
   const directory = path.join(root, "import");
   const own = path.join(directory, ACME);
   mkdirSync(own, { recursive: true });
@@ -145,7 +145,7 @@ describe("import folder", () => {
 
   it("reports a missing folder", async () => {
     await expect(
-      new ImportFolder(path.join(tmpdir(), "pagehall-missing-folder")).list(ACME),
+      new ImportFolder(path.join(tmpdir(), "lunedo-missing-folder")).list(ACME),
     ).rejects.toMatchObject({
       code: "importFolderUnavailable",
     });

@@ -198,11 +198,7 @@ describe("signing in with a directory password", () => {
 
   it.each([
     [401, "invalidCredentials", /The sign-in name or the password is not correct/],
-    [
-      403,
-      "passwordExpired",
-      /Your directory password has expired.*Pagehall never changes directory passwords/,
-    ],
+    [403, "passwordExpired", /Your directory password has expired.*Lunedo never changes directory passwords/],
     [403, "passwordMustChange", /must be changed before you can sign in.*contact IT/],
     [403, "accountLocked", /Your directory account is locked/],
     [403, "accountDisabled", /Your directory account is disabled/],
@@ -267,7 +263,7 @@ describe("signing in with a directory password", () => {
   it("explains that sign-in started at the identity provider is off", async () => {
     signedOutApi({});
     await renderPath("/sign-in?error=providerInitiatedSignIn");
-    expect(await screen.findByText(/Start on the Pagehall sign-in page instead/)).toBeTruthy();
+    expect(await screen.findByText(/Start on the Lunedo sign-in page instead/)).toBeTruthy();
   });
 });
 
