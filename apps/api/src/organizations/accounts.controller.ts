@@ -5,7 +5,7 @@ import {
   passwordSchema,
   signInEmailSchema,
 } from "@lunedo/shared";
-import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Put, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute, SessionRoute } from "../access/route-access.js";

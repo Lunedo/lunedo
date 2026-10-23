@@ -232,8 +232,7 @@ const german: Record<ContentNotificationType, Line> = {
   },
   "copy.failed": (p) =>
     `Das Kopieren von ${text(p.itemTitle)} ist fehlgeschlagen, es wurde nichts angelegt. Starte die Kopie erneut; schlägt sie wieder fehl, wende dich an deine Administration.`,
-  "oneOnOne.started": (p, c) =>
-    `${c.actor ?? "Jemand"} hat ein 1:1 mit dir gestartet: ${text(p.itemTitle)}.`,
+  "oneOnOne.started": (p, c) => `${c.actor ?? "Jemand"} hat ein 1:1 mit dir gestartet: ${text(p.itemTitle)}.`,
   "chatChannel.failing": (p) =>
     `Der Chat-Kanal ${text(p.channelName)} nimmt keine Nachrichten mehr an, deshalb wird dort nichts gepostet. Öffne seine Einstellungen, um den Grund zu sehen und ihn zu beheben.`,
 };
