@@ -177,20 +177,24 @@ function VersionHistory({ page }: { page: ItemDetails }) {
             <div className="flex min-w-0 flex-col gap-4">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span className="text-sm text-text-muted">{t("versions.compare")}</span>
-                <Select
-                  aria-label={t("versions.compareFrom")}
-                  value={from === null ? undefined : String(from)}
-                  placeholder={t("versions.noEarlierVersion")}
-                  onValueChange={(value) => select({ from: sideOf(value) ?? null })}
-                  options={options}
-                />
+                <div className="min-w-field">
+                  <Select
+                    aria-label={t("versions.compareFrom")}
+                    value={from === null ? undefined : String(from)}
+                    placeholder={t("versions.noEarlierVersion")}
+                    onValueChange={(value) => select({ from: sideOf(value) ?? null })}
+                    options={options}
+                  />
+                </div>
                 <span className="text-sm text-text-muted">{t("versions.with")}</span>
-                <Select
-                  aria-label={t("versions.compareTo")}
-                  value={to === null ? undefined : String(to)}
-                  onValueChange={(value) => select({ to: sideOf(value) ?? null })}
-                  options={options}
-                />
+                <div className="min-w-field">
+                  <Select
+                    aria-label={t("versions.compareTo")}
+                    value={to === null ? undefined : String(to)}
+                    onValueChange={(value) => select({ to: sideOf(value) ?? null })}
+                    options={options}
+                  />
+                </div>
                 <span className="flex-1" />
                 <SegmentedControl
                   label={t("versions.view")}

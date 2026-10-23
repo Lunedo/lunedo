@@ -96,7 +96,9 @@ export function LabelScreen() {
               {label}
             </span>
           </h1>
-          {entries ? <p className="text-text-muted">{t("labels.count", { count: entries.length })}</p> : null}
+          {entries && entries.length > 0 ? (
+            <p className="text-text-muted">{t("labels.count", { count: entries.length })}</p>
+          ) : null}
           <fieldset className="flex flex-wrap gap-1">
             <legend className="sr-only">{t("labels.scope")}</legend>
             <button
