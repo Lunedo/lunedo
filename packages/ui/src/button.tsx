@@ -8,7 +8,7 @@ import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 import { Tooltip } from "./tooltip.js";
 
-export type ButtonVariant = "primary" | "secondary" | "outline" | "danger" | "dangerPrimary";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "dangerPrimary";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const BASE =
@@ -19,6 +19,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
     "border-accent bg-accent font-semibold text-on-accent hover:border-accent-hover hover:bg-accent-hover",
   secondary: "border-control-border bg-control text-text hover:bg-control-hover",
   outline: "border-control-border bg-surface text-text hover:bg-control-hover",
+  ghost: "border-transparent bg-transparent text-text hover:bg-hover",
   danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
   dangerPrimary: "border-danger bg-danger font-semibold text-on-accent hover:opacity-90 disabled:opacity-100",
 };

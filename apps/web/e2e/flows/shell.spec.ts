@@ -216,7 +216,7 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
   await page.goto(`${pagePath}?edit=true`);
   await expect(page.getByRole("textbox", { name: "Page content" })).toBeEditable();
   await expectOnlyContentScrolls(`${pagePath}?edit=true`, ["nav[aria-label='Main navigation']", "header"]);
-  const toolbar = await page.locator(".ld-editor-bar").boundingBox();
+  const toolbar = await page.locator("[data-editor-bar]").boundingBox();
   const main = await page.locator("#main").boundingBox();
   expect(toolbar?.y).toBeGreaterThanOrEqual(main?.y ?? 0);
   expect(toolbar?.y).toBeLessThan((main?.y ?? 0) + 10);

@@ -1,5 +1,6 @@
 import {
   Button,
+  ConfirmDialog,
   EmptyState,
   IconButton,
   Menu,
@@ -15,7 +16,6 @@ import {
   Archive,
   ArchiveRestore,
   ArrowRightLeft,
-  Check,
   Copy,
   FileCheck,
   FileDown,
@@ -36,6 +36,7 @@ import {
   Radio,
   Trash2,
   Undo2,
+  UserPlus,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,7 @@ import { StarredMark, useContentCollaboration, useStar } from "../collaboration/
 import { PageReactions } from "../collaboration/reaction-bar.js";
 import { isEmptyDocument } from "../editor/empty-document.js";
 import type { MissingSection } from "../editor/extensions/required-sections.js";
+import type { PresenceUser } from "../editor/presence.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
@@ -66,12 +68,12 @@ import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
 import { useArchiveItem, useDeleteItem, useDiscardDraft } from "./content-actions.js";
 import { ContentLanguageDialog } from "./content-language-dialog.js";
 import { draftQuery } from "./content-queries.js";
+import { EditorBar } from "./editor-bar.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { EditInfo, PageBar } from "./page-bar.js";
 import { usePageMeta } from "./page-meta.js";
 import {
-  DraftStatusLine,
   DraftToggle,
   type DraftViewMode,
   ModeSwitchDialog,
@@ -191,6 +193,11 @@ function PageArticle({
   const [missingSections, setMissingSections] = useState<MissingSection[]>([]);
   const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
   const saveState = useRef<SaveState>("saved");
+  const [shownSaveState, setShownSaveState] = useState<SaveState>("saved");
+  const [coEditors, setCoEditors] = useState<PresenceUser[]>([]);
+  const [previewing, setPreviewing] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const [confirmingLive, setConfirmingLive] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -213,6 +220,10 @@ function PageArticle({
       search: next ? { edit: true } : {},
       replace: true,
     });
+
+  useEffect(() => {
+    if (!editing) setPreviewing(false);
+  }, [editing]);
 
   useEffect(() => {
     const onEdit = () => {
@@ -360,29 +371,49 @@ function PageArticle({
     draft.data?.hasChanges === true &&
     draft.data.basedOn !== null;
 
+  const discardable = publishMode && draft.data?.hasChanges === true && draft.data.basedOn !== null;
+  const editorMenuItems: MenuItem[] = [
+    { label: t("versions.history"), icon: History, onSelect: openHistory },
+    ...(sharing.open ? [{ label: t("sharing.share"), icon: UserPlus, onSelect: sharing.open }] : []),
+  ];
+  const editorDangerItems: MenuItem[] = [
+    ...(discardable
+      ? [
+          { type: "separator" as const },
+          {
+            label: t("versions.discardDraft"),
+            icon: Undo2,
+            danger: true,
+            onSelect: () => setConfirmingDiscard(true),
+          },
+        ]
+      : []),
+  ];
+  const preview = async () => {
+    if (previewing) {
+      setPreviewing(false);
+      return;
+    }
+    await queryClient.refetchQueries({
+      queryKey: publishMode ? ["items", page.id, "draft"] : spaceKeys.content(page.id),
+    });
+    setPreviewing(true);
+  };
+  const notesButton = meeting ? (
+    <IconButton
+      ref={notesToggle}
+      label={t("meetings.notes.toggle")}
+      icon={NotebookPen}
+      aria-pressed={notesOpen}
+      aria-expanded={notesOpen}
+      onClick={() => setNotesOpen(!notesOpen)}
+    />
+  ) : null;
+
   const pageActions = (
     <>
       {writable ? (
-        editing ? (
-          publishMode ? (
-            <>
-              <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
-                {t("page.done")}
-              </Button>
-              <PublishButton
-                page={page}
-                draft={draft.data}
-                saveState={saveState}
-                onMissingSections={setMissingSections}
-                article={knowledgeBase}
-              />
-            </>
-          ) : (
-            <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
-              {t("page.done")}
-            </Button>
-          )
-        ) : showingDraft ? (
+        showingDraft ? (
           <>
             <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)} aria-keyshortcuts="E">
               {t("versions.continueEditing")}
@@ -396,16 +427,7 @@ function PageArticle({
         )
       ) : null}
       {sharing.shareButton}
-      {meeting ? (
-        <IconButton
-          ref={notesToggle}
-          label={t("meetings.notes.toggle")}
-          icon={NotebookPen}
-          aria-pressed={notesOpen}
-          aria-expanded={notesOpen}
-          onClick={() => setNotesOpen(!notesOpen)}
-        />
-      ) : null}
+      {notesButton}
       <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
       {watch.dialog}
     </>
@@ -413,13 +435,40 @@ function PageArticle({
 
   return (
     <div className="flex min-h-full flex-col">
-      <PageBar breadcrumbs={breadcrumbs} sticky={!editing}>
-        {writable && publishMode && !editing ? (
-          <DraftToggle draft={draft.data} view={draftView} onViewChange={setDraftView} />
-        ) : null}
-        <EditInfo pageId={page.id} editedAt={page.contentUpdatedAt} onOpen={openHistory} />
-        {pageActions}
-      </PageBar>
+      {editing ? (
+        <EditorBar
+          breadcrumbs={breadcrumbs}
+          draft={publishMode}
+          saveState={shownSaveState}
+          others={coEditors}
+          previewing={previewing}
+          onPreview={() => void preview()}
+          onClose={() => setEditing(false)}
+          primary={
+            publishMode ? (
+              <PublishButton
+                page={page}
+                draft={draft.data}
+                saveState={saveState}
+                onMissingSections={setMissingSections}
+                article={knowledgeBase}
+              />
+            ) : null
+          }
+          extra={notesButton}
+          menuItems={editorMenuItems}
+          dangerItems={editorDangerItems}
+          toolbarRef={setToolbarHost}
+        />
+      ) : (
+        <PageBar breadcrumbs={breadcrumbs}>
+          {writable && publishMode ? (
+            <DraftToggle draft={draft.data} view={draftView} onViewChange={setDraftView} />
+          ) : null}
+          <EditInfo pageId={page.id} editedAt={page.contentUpdatedAt} onOpen={openHistory} />
+          {pageActions}
+        </PageBar>
+      )}
       <div className="flex flex-1">
         <article
           className={`mx-auto flex w-full min-w-0 flex-col gap-4 px-4 pt-6 pb-12 md:px-8 ${width === "full" ? "max-w-none" : "max-w-content"}`}
@@ -494,28 +543,51 @@ function PageArticle({
               {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
             </Notice>
           ) : null}
-          {writable && publishMode && editing ? <DraftStatusLine draft={draft.data} /> : null}
           {writable && publishMode && !editing && !page.published && draft.data?.hasChanges ? (
             <Notice variant="info" title={t("versions.notPublishedTitle")}>
               {t("versions.notPublishedDescription")}
             </Notice>
           ) : null}
           {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
-          {editing ? (
-            <Suspense fallback={<Skeleton className="h-field w-full" />}>
-              <PageEditor
+          {editing && previewing ? (
+            publishMode && draft.data ? (
+              <PageReadView
                 pageId={page.id}
-                spaceId={space.id}
-                spaceKey={space.key}
-                draft={publishMode}
+                document={draft.data.document}
+                references={draft.data.references}
                 numberHeadings={page.numberHeadings}
-                missingSections={missingSections}
-                onSaveStateChange={(state) => {
-                  saveState.current = state;
-                }}
-                {...collaboration.editor}
               />
-            </Suspense>
+            ) : publishMode ? null : (
+              <PageContent
+                pageId={page.id}
+                publishMode={false}
+                meta={false}
+                numberHeadings={page.numberHeadings}
+                collaboration={{}}
+              />
+            )
+          ) : null}
+          {editing ? (
+            <div hidden={previewing}>
+              <Suspense fallback={<Skeleton className="h-field w-full" />}>
+                <PageEditor
+                  pageId={page.id}
+                  spaceId={space.id}
+                  spaceKey={space.key}
+                  draft={publishMode}
+                  numberHeadings={page.numberHeadings}
+                  missingSections={missingSections}
+                  showStatus={false}
+                  toolbarContainer={toolbarHost}
+                  onPresenceChange={setCoEditors}
+                  onSaveStateChange={(state) => {
+                    saveState.current = state;
+                    setShownSaveState(state);
+                  }}
+                  {...collaboration.editor}
+                />
+              </Suspense>
+            </div>
           ) : writable && publishMode && !page.published ? (
             draft.data?.hasChanges === false ? (
               <EmptyPage onEdit={() => setEditing(true)} />
@@ -552,6 +624,22 @@ function PageArticle({
           )}
           {collaboration.popover}
           {meta.dialogs}
+          <ConfirmDialog
+            open={confirmingDiscard}
+            onOpenChange={setConfirmingDiscard}
+            title={t("versions.discardTitle")}
+            description={t("versions.discardConfirm", {
+              count: draft.data?.changes ?? 0,
+              version: draft.data?.basedOn ?? 0,
+            })}
+            confirmLabel={t("versions.discardDraft")}
+            cancelLabel={t("versions.keepDraft")}
+            destructive
+            onConfirm={async () => {
+              await discard(page, draft.data?.basedOn ?? null);
+              setEditing(false);
+            }}
+          />
           <ModeSwitchDialog
             page={page}
             draft={draft.data}

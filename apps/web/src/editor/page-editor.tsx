@@ -2,11 +2,11 @@ import { anchorAt, type TextAnchor } from "@lunedo/editor-schema";
 import { IconButton, SkeletonText, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
-import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { GripVertical, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { PanelTopClose, PanelTopOpen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { ThreadCounters } from "../collaboration/inline-threads.js";
@@ -17,6 +17,7 @@ import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
+import { BlockGutter } from "./block-gutter.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "./collaboration.js";
 import { PageContextValue } from "./context.js";
 import { EmbedDialog } from "./embed-dialog.js";
@@ -27,7 +28,7 @@ import { type MissingSection, setRequiredSections } from "./extensions/required-
 import { FindBar } from "./find-bar.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
-import { AvatarStack, presenceColor, RemoteCarets, usePresence } from "./presence.js";
+import { AvatarStack, type PresenceUser, presenceColor, RemoteCarets, usePresence } from "./presence.js";
 import { rememberReferences } from "./references.js";
 import {
   CollaborationProblemNotice,
@@ -35,6 +36,7 @@ import {
   useUnsavedChangesWarning,
 } from "./save-indicator.js";
 import type { SaveState } from "./save-state.js";
+import { TableControls } from "./table-controls.js";
 import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
 import { sameToolbarItems, toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
@@ -52,6 +54,8 @@ export interface PageEditorProps {
   onThreadClick?: (threadId: string) => void;
   numberHeadings?: boolean;
   missingSections?: readonly MissingSection[];
+  toolbarContainer?: HTMLElement | null;
+  onPresenceChange?: (others: PresenceUser[]) => void;
 }
 
 const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound", "maintenance"]);
@@ -81,6 +85,8 @@ function CollaborativeEditor({
   collaboration,
   numberHeadings = false,
   missingSections,
+  toolbarContainer = null,
+  onPresenceChange,
 }: PageEditorProps & { collaboration: PageCollaboration }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -268,6 +274,9 @@ function CollaborativeEditor({
   useUnsavedChangesWarning(hasUnsavedChanges);
 
   const others = usePresence(collaboration.provider, self);
+  useEffect(() => {
+    onPresenceChange?.(others);
+  }, [others, onPresenceChange]);
   const items = useEditorState({
     editor,
     selector: ({ editor: current }) => (current ? toolbarItems(current, t, actions) : []),
@@ -305,36 +314,58 @@ function CollaborativeEditor({
         ) : null}
         {blocked || !editor ? null : (
           <>
-            <div className="ld-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  {preferences.editorToolbar && editable ? (
-                    <EditorToolbar ref={toolbar} editor={editor} items={items ?? []} />
+            {(() => {
+              const docked = toolbarContainer !== null;
+              const bar = (
+                <div
+                  className={
+                    docked
+                      ? "ld-editor-bar ld-editor-bar-docked flex flex-col gap-1 px-4 py-1"
+                      : "ld-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card"
+                  }
+                >
+                  <div
+                    className={`flex min-w-0 items-center gap-2${docked ? " mx-auto w-full max-w-content" : ""}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      {preferences.editorToolbar && editable ? (
+                        <EditorToolbar ref={toolbar} editor={editor} items={items ?? []} />
+                      ) : null}
+                    </div>
+                    {editable ? (
+                      <IconButton
+                        size="sm"
+                        label={t(preferences.editorToolbar ? "editor.toolbar.hide" : "editor.toolbar.show")}
+                        icon={preferences.editorToolbar ? PanelTopClose : PanelTopOpen}
+                        onClick={() =>
+                          updatePreference.mutate({
+                            key: preferenceKeys.editorToolbar,
+                            value: !preferences.editorToolbar,
+                          })
+                        }
+                      />
+                    ) : null}
+                    {showStatus && !docked ? (
+                      <div className="flex shrink-0 items-center gap-2 px-1">
+                        <SaveStateIndicator state={snapshot.saveState} draft={draft} />
+                        <AvatarStack self={self} others={others} />
+                      </div>
+                    ) : null}
+                  </div>
+                  {editable ? (
+                    <div className={docked ? "mx-auto w-full max-w-page" : undefined}>
+                      <TableMenu editor={editor} />
+                    </div>
+                  ) : null}
+                  {findOpen ? (
+                    <div className={docked ? "mx-auto w-full max-w-page" : undefined}>
+                      <FindBar editor={editor} onClose={() => setFindOpen(false)} />
+                    </div>
                   ) : null}
                 </div>
-                {editable ? (
-                  <IconButton
-                    size="sm"
-                    label={t(preferences.editorToolbar ? "editor.toolbar.hide" : "editor.toolbar.show")}
-                    icon={preferences.editorToolbar ? PanelTopClose : PanelTopOpen}
-                    onClick={() =>
-                      updatePreference.mutate({
-                        key: preferenceKeys.editorToolbar,
-                        value: !preferences.editorToolbar,
-                      })
-                    }
-                  />
-                ) : null}
-                {showStatus ? (
-                  <div className="flex shrink-0 items-center gap-2 px-1">
-                    <SaveStateIndicator state={snapshot.saveState} draft={draft} />
-                    <AvatarStack self={self} others={others} />
-                  </div>
-                ) : null}
-              </div>
-              {editable ? <TableMenu editor={editor} /> : null}
-              {findOpen ? <FindBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
-            </div>
+              );
+              return docked ? createPortal(bar, toolbarContainer) : bar;
+            })()}
             <CommentHighlights
               scope={`[data-comment-scope="${pageId}"]`}
               open={openThreads}
@@ -359,6 +390,7 @@ function CollaborativeEditor({
               )}
               <EditorContent editor={editor} />
               <RemoteCarets editor={editor} provider={collaboration.provider} container={surface} />
+              {editable ? <TableControls editor={editor} container={surface} /> : null}
               {onThreadClick && openThreads.length > 0 ? (
                 <ThreadCounters openThreads={openThreads} onOpen={onThreadClick} />
               ) : null}
@@ -366,12 +398,7 @@ function CollaborativeEditor({
             {editable ? (
               <>
                 <SelectionMenu editor={editor} actions={actions} />
-                <DragHandle editor={editor} className="ld-drag-handle">
-                  <span className="flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-hover">
-                    <GripVertical aria-hidden="true" className="size-icon-md" />
-                    <span className="sr-only">{t("editor.drag.handle")}</span>
-                  </span>
-                </DragHandle>
+                <BlockGutter editor={editor} />
               </>
             ) : null}
             <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />

@@ -395,7 +395,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   await mermaid.getByRole("button", { name: "Save diagram" }).click();
   await expect(mermaid.getByLabel("Source of the Mermaid diagram")).toBeHidden({ timeout: 20_000 });
   await expect(page.getByRole("status").getByText(/^Saved/)).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
 
   const lena = await asPerson(browser, "lena");
   const jonas = await asPerson(browser, "jonas");

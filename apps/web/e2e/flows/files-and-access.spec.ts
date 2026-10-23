@@ -66,8 +66,8 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
     );
   }, pasted);
   await expect(row(page, "page.html")).toBeVisible();
-  await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("button", { name: "Done" })).toBeHidden();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toBeHidden();
   await expect(page).not.toHaveURL(/edit=true/);
 
   await attachments(page)

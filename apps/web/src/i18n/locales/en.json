@@ -4479,13 +4479,15 @@
       "pages": "Pages",
       "empty": "Nothing found. Try another word.",
       "newPage": "Link to a new page “{title}”",
-      "newPageDescription": "The page is created in this space when someone opens the link"
+      "newPageDescription": "The page is created in this space when someone opens the link",
+      "hints": "↑↓ select · ↵ insert · Esc close"
     },
     "slashGroups": {
       "text": "Text",
       "lists": "Lists",
       "blocks": "Blocks",
-      "inline": "In the text"
+      "inline": "In the text",
+      "recent": "Recently used"
     },
     "blocks": {
       "paragraph": "Paragraph",
@@ -4584,7 +4586,8 @@
       "whiteboard": "Link to whiteboard",
       "whiteboardDescription": "Preview of a whiteboard that opens it",
       "tabs": "Tabs",
-      "tabsDescription": "Named tabs, each with its own content"
+      "tabsDescription": "Named tabs, each with its own content",
+      "tableSized": "Table {columns} × {rows}"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4675,7 +4678,9 @@
     "presence": {
       "label": "{count, plural, one {# person} other {# people}} on this page",
       "you": "{name} (you)",
-      "more": "{count} more"
+      "more": "{count} more",
+      "coEditors": "{count, plural, one {# person is editing} other {# people are editing}}",
+      "editing": "{name} is editing"
     },
     "save": {
       "editing": "Editing",
@@ -4752,7 +4757,10 @@
       "headerRow": "Header row on or off",
       "headerColumn": "Header column on or off",
       "background": "Cell background",
-      "deleteTable": "Delete table"
+      "deleteTable": "Delete table",
+      "addColumnHere": "Insert a column here",
+      "addRowHere": "Insert a row here",
+      "addRowBelow": "Row"
     },
     "find": {
       "label": "Find and replace",
@@ -5205,6 +5213,26 @@
       "lastTab": "The last tab cannot be removed. Delete the whole block instead.",
       "removed": "Tab {name} removed.",
       "undo": "Undo"
+    },
+    "preview": {
+      "start": "Preview",
+      "stop": "End preview"
+    },
+    "close": "Close",
+    "more": "More editor actions",
+    "showSidebar": "Show sidebar",
+    "hideSidebar": "Hide sidebar",
+    "gutter": {
+      "add": "Insert a block below",
+      "menu": "Block actions",
+      "handleHint": "Drag to move, click for actions",
+      "insertBelow": "Insert below",
+      "duplicate": "Duplicate",
+      "delete": "Delete block",
+      "deleted": "Block deleted"
+    },
+    "tasks": {
+      "add": "Add task"
     }
   },
   "spaces": {
@@ -6077,7 +6105,10 @@
     "viewPublished": "Published",
     "viewDraft": "Draft · {count, plural, one {# change} other {# changes}}",
     "continueEditing": "Continue editing",
-    "draftView": "Draft with changes marked"
+    "draftView": "Draft with changes marked",
+    "discardTitle": "Discard the draft?",
+    "discardConfirm": "{count, plural, one {The # change since version {version} is discarded and the draft is back at version {version}. You can restore it for 30 days.} other {The # changes since version {version} are discarded and the draft is back at version {version}. You can restore it for 30 days.}}",
+    "keepDraft": "Keep the draft"
   },
   "gallery": {
     "title": "Create in {space}",

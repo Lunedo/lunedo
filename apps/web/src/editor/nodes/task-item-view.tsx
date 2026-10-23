@@ -12,6 +12,12 @@ import { useEditable, usePageContext } from "../context.js";
 import { takeTaskStatus } from "../extensions/pasted-tasks.js";
 import { rememberReferences, usePersonName } from "../references.js";
 
+function todayIso(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -35,6 +41,8 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
   const [dating, setDating] = useState(false);
   const text = node.textContent.trim() || t("tasks.untitled");
   const known = status !== undefined;
+  const overdue = dueDate !== null && !done && dueDate < todayIso();
+  const dueClass = `ld-inline-button ld-task-chip${overdue ? " ld-task-overdue" : ""}`;
   const { mutate } = setStatus;
 
   useEffect(() => {
@@ -84,7 +92,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
           onChange={toggle}
         />
       </label>
-      <div className={`min-w-0 flex-1${done ? " ld-task-done" : ""}`}>
+      <div className={`ld-task-body${done ? " ld-task-done" : ""}`}>
         <NodeViewContent as="div" />
         {!page ? (
           <p id={hintId} contentEditable={false} suppressContentEditableWarning className="ld-task-hint">
@@ -103,7 +111,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 onOpenChange={setAssigning}
                 label={t("tasks.assignee")}
                 trigger={
-                  <button type="button" className="ld-inline-button">
+                  <button type="button" className="ld-inline-button ld-task-chip">
                     {assignee ? (
                       <Avatar name={assigneeName ?? "?"} size="sm" decorative />
                     ) : (
@@ -137,7 +145,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 onOpenChange={setDating}
                 label={t("tasks.dueDate")}
                 trigger={
-                  <button type="button" className="ld-inline-button">
+                  <button type="button" className={dueClass}>
                     <CalendarDays aria-hidden="true" className="size-icon-sm" />
                     {dueDate
                       ? t("tasks.dueOn", { date: format.date(`${dueDate}T12:00:00Z`) })
@@ -169,7 +177,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 </div>
               </Popover>
             ) : dueDate ? (
-              <time className="ld-task-due" dateTime={dueDate}>
+              <time className={`ld-task-due${overdue ? " ld-task-overdue" : ""}`} dateTime={dueDate}>
                 {t("tasks.dueOn", { date: format.date(`${dueDate}T12:00:00Z`) })}
               </time>
             ) : null}

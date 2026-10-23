@@ -84,7 +84,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("textbox", { name: "What changed?" }).fill("First version");
   await page.getByRole("button", { name: "Publish version 1" }).click();
-  await expect(page.getByText("Published as version 1. Readers see it now.").first()).toBeVisible();
+  await expect(page.getByText("Page published. Readers now see it as version 1.").first()).toBeVisible();
 
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
@@ -95,7 +95,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await expect(page.getByRole("status").getByText("Saved to draft", { exact: true })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText(/changes? since version 1/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Update", exact: true })).toBeVisible();
 
   const { page: other } = await organization.signIn(reader);
   await other.goto(pagePath);
@@ -114,13 +114,13 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await page.goto(`${pagePath}?edit=true`);
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
-  await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await page.getByRole("button", { name: "Publish version 2" }).click();
-  await expect(page.getByText("Published as version 2. Readers see it now.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Update", exact: true }).click();
+  await page.getByRole("button", { name: "Update as version 2" }).click();
+  await expect(page.getByText("Page updated. Readers now see version 2.").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Version history" }).click();
-  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "More editor actions" }).click();
+  await page.getByRole("menuitem", { name: "Versions" }).click();
+  await expect(page.getByRole("heading", { name: "Versions", level: 1 })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Changes" }).locator('[data-change="added"], ins').first(),
   ).toContainText("Secret draft");

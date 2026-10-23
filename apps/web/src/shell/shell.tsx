@@ -23,6 +23,8 @@ export interface ShellState extends ShellContext {
   mobileSidebarOpen: boolean;
   closeMobileSidebar(): void;
   suggestCollapsedSidebar(suggested: boolean): void;
+  editMode: boolean;
+  setEditMode(editing: boolean): void;
   spaceCreateTarget: SpaceCreateTarget | null;
   setSpaceCreateTarget(target: SpaceCreateTarget | null): void;
   pendingCreate: { spaceKey: string; kind: CreateKind } | null;

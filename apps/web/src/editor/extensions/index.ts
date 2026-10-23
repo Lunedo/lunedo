@@ -61,6 +61,7 @@ import { PropertyNavigation } from "./property-navigation.js";
 import { RequiredSections } from "./required-sections.js";
 import { PageLinkSuggestion, SlashCommand, type SuggestionItem, suggestionRender } from "./suggestions.js";
 import { TaskIds } from "./task-ids.js";
+import { TaskListAdd } from "./task-list-add.js";
 
 const INLINE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   mention: MentionView,
@@ -232,8 +233,9 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     SlashCommand.configure({
       items: (query) => slashSuggestionItems(query, t),
       open: (query) => slashMenuOpen(query, t),
-      labels: labels("editor.suggestions.blocks"),
+      labels: () => ({ ...labels("editor.suggestions.blocks")(), hints: t("editor.suggestions.hints") }),
     }),
+    TaskListAdd.configure({ label: () => t("editor.tasks.add") }),
     PageLinkSuggestion.configure({
       spaceId: options.spaceId,
       labels: () => ({

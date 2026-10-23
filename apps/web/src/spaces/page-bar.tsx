@@ -17,34 +17,40 @@ export function PageBar({
   sticky?: boolean;
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
   return (
     <div
       data-page-bar=""
       className={`${sticky ? "sticky top-0 z-20" : ""} flex min-h-hit flex-wrap items-center gap-x-3 gap-y-1 bg-bg px-4 py-1`}
     >
-      <nav aria-label={t("page.breadcrumbs")} className="min-w-0 flex-1">
-        <ol className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-text-muted">
-          {breadcrumbs.map((crumb, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: a breadcrumb is identified by its position in the path
-            <li key={index} className="inline-flex min-w-0 items-center gap-1">
-              {index > 0 ? <Icon icon={ChevronRight} size="sm" /> : null}
-              {crumb.href ? (
-                <Link
-                  to={crumb.href as never}
-                  className="truncate rounded-sm hover:text-text hover:underline focus-visible:focus-ring"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="truncate">{crumb.label}</span>
-              )}
-            </li>
-          ))}
-        </ol>
-      </nav>
+      <Breadcrumbs breadcrumbs={breadcrumbs} className="min-w-0 flex-1" />
       <div className="flex flex-wrap items-center gap-1">{children}</div>
     </div>
+  );
+}
+
+export function Breadcrumbs({ breadcrumbs, className }: { breadcrumbs: Breadcrumb[]; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <nav aria-label={t("page.breadcrumbs")} className={className}>
+      <ol className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-text-muted">
+        {breadcrumbs.map((crumb, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a breadcrumb is identified by its position in the path
+          <li key={index} className="inline-flex min-w-0 items-center gap-1">
+            {index > 0 ? <Icon icon={ChevronRight} size="sm" /> : null}
+            {crumb.href ? (
+              <Link
+                to={crumb.href as never}
+                className="truncate rounded-sm hover:text-text hover:underline focus-visible:focus-ring"
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className="truncate">{crumb.label}</span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 

@@ -1018,6 +1018,102 @@ describe("sharing and access", () => {
   });
 });
 
+describe("edit mode", () => {
+  it("replaces the page bar with the editor bar and collapses the sidebar", async () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const { requests } = mockApi(
+      routes("editor", {
+        "PUT /api/v1/account/preferences/appearance.sidebarCollapsedWhileEditing": () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    expect(await screen.findByRole("textbox", { name: "Page content" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
+    expect(screen.getByText("Draft")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Preview" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Update" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(screen.queryByRole("region", { name: /^Comments/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: /^Attachments/ })).toBeNull();
+    const navigation = screen.getByRole("navigation", { name: "Main navigation" });
+    await waitFor(() => expect(navigation.dataset.collapsed).toBeDefined());
+    await userEvent.click(screen.getByRole("button", { name: "More editor actions" }));
+    const entries = within(await screen.findByRole("menu"))
+      .getAllByRole("menuitem")
+      .map((entry) => entry.textContent);
+    expect(entries).toEqual(["Versions", "Show sidebar", "Discard draft"]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Show sidebar" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path.endsWith("/appearance.sidebarCollapsedWhileEditing"))?.body,
+      ).toEqual({ value: false }),
+    );
+  });
+
+  it("asks before discarding the draft and leaves the edit mode afterwards", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`POST /api/v1/pages/${VPN}/draft/discard`]: () => ({ body: { discardedDraftId: DRAFT_ID } }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await screen.findByRole("textbox", { name: "Page content" });
+    await userEvent.click(screen.getByRole("button", { name: "More editor actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Discard draft" }));
+    const dialog = await screen.findByRole("dialog", { name: "Discard the draft?" });
+    expect(within(dialog).getByText(/The 3 changes since version 7 are discarded/)).toBeTruthy();
+    expect(requests.some((request) => request.path.endsWith("/draft/discard"))).toBe(false);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Discard draft" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.endsWith("/draft/discard"))).toBe(true),
+    );
+    await waitFor(() => expect(window.location.search).not.toContain("edit=true"));
+  });
+
+  it("says Publish before the first publication and closes without publishing", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/items/${VPN}`]: () => ({
+          body: {
+            ...page(VPN, "VPN access", { published: false }),
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            spaceContentLanguage: "en",
+            ancestors: [],
+          },
+        }),
+        [`GET /api/v1/pages/${VPN}/draft`]: () => ({
+          body: {
+            title: "VPN access",
+            document: doc("Draft text"),
+            revision: 9,
+            updatedAt: "2026-10-07T08:00:00.000Z",
+            hasChanges: true,
+            changes: 3,
+            basedOn: null,
+            contributors: [],
+            references: { people: {}, pages: {} },
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More editor actions" }));
+    expect(screen.queryByRole("menuitem", { name: "Discard draft" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(window.location.search).not.toContain("edit=true"));
+  });
+});
+
 describe("an empty page", () => {
   const emptyContent = () => ({
     body: {

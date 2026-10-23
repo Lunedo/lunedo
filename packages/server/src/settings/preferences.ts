@@ -106,6 +106,14 @@ export const sidebarCollapsedSetting = defineSetting({
   lockable: false,
 });
 
+export const sidebarCollapsedWhileEditingSetting = defineSetting({
+  key: "appearance.sidebarCollapsedWhileEditing",
+  schema: z.boolean(),
+  default: true,
+  levels: ["user"],
+  lockable: false,
+});
+
 export const editorToolbarSetting = defineSetting({
   key: "appearance.editorToolbar",
   schema: z.boolean(),
@@ -161,6 +169,7 @@ export const preferenceSettings = [
   densitySetting,
   fontSetting,
   sidebarCollapsedSetting,
+  sidebarCollapsedWhileEditingSetting,
   editorToolbarSetting,
   folderViewSetting,
   accentColorSetting,

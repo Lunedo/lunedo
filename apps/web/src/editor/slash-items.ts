@@ -715,6 +715,7 @@ const UNMATCHED_WORDS_TO_CLOSE = 2;
 
 export function slashMenuOpen(query: string, t: TFunction): boolean {
   if (/^\s/.test(query)) return false;
+  if (sizedTable(query)) return true;
   const words = normalize(query).split(/\s+/).filter(Boolean);
   let matched = words.length;
   while (
@@ -726,14 +727,89 @@ export function slashMenuOpen(query: string, t: TFunction): boolean {
   return words.length - matched < UNMATCHED_WORDS_TO_CLOSE;
 }
 
-export function slashSuggestionItems(query: string, t: TFunction): SuggestionItem[] {
-  return filterSlashCommands(slashCommands, query, t).map((command) => ({
-    id: command.id,
+const RECENT_KEY = "lunedo.recentBlocks";
+const RECENT_SHOWN = 3;
+const SIZED_TABLE = /^(?:table|tabelle)\s*(\d{1,2})\s*[x×]\s*(\d{1,2})$/;
+const MAX_TABLE_SIZE = 20;
+
+export function recentSlashCommands(): string[] {
+  try {
+    const stored = JSON.parse(globalThis.localStorage?.getItem(RECENT_KEY) ?? "[]") as unknown;
+    return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberSlashCommand(id: string): void {
+  try {
+    const next = [id, ...recentSlashCommands().filter((entry) => entry !== id)].slice(0, RECENT_SHOWN);
+    globalThis.localStorage?.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+export function sizedTable(query: string): { columns: number; rows: number } | null {
+  const match = SIZED_TABLE.exec(normalize(query).trim());
+  if (!match) return null;
+  const columns = Number(match[1]);
+  const rows = Number(match[2]);
+  if (columns < 1 || rows < 1 || columns > MAX_TABLE_SIZE || rows > MAX_TABLE_SIZE) return null;
+  return { columns, rows };
+}
+
+function suggestionOf(
+  command: SlashCommandDefinition,
+  t: TFunction,
+  group: string,
+  id = command.id,
+): SuggestionItem {
+  return {
+    id,
     label: translateKey(t, command.labelKey),
     description: translateKey(t, command.descriptionKey),
-    group: translateKey(t, `editor.slashGroups.${command.group}`),
+    group,
     icon: command.icon,
     ...(command.hint ? { hint: command.hint } : {}),
-    run: (editor, range) => command.run(editor, range, t),
-  }));
+    run: (editor, range) => {
+      rememberSlashCommand(command.id);
+      command.run(editor, range, t);
+    },
+  };
+}
+
+export function slashSuggestionItems(query: string, t: TFunction): SuggestionItem[] {
+  const size = sizedTable(query);
+  if (size) {
+    return [
+      {
+        id: "sizedTable",
+        label: t("editor.blocks.tableSized", { columns: size.columns, rows: size.rows }),
+        description: translateKey(t, "editor.blocks.tableDescription"),
+        group: translateKey(t, "editor.slashGroups.blocks"),
+        icon: Table,
+        run: (editor, range) => {
+          rememberSlashCommand("table");
+          editor
+            .chain()
+            .focus()
+            .deleteRange(range)
+            .insertTable({ rows: size.rows, cols: size.columns, withHeaderRow: true })
+            .run();
+        },
+      },
+    ];
+  }
+  const recent =
+    query.trim() === ""
+      ? recentSlashCommands()
+          .map((id) => slashCommands.find((command) => command.id === id))
+          .filter((command): command is SlashCommandDefinition => command !== undefined)
+          .map((command) => suggestionOf(command, t, t("editor.slashGroups.recent"), `recent:${command.id}`))
+      : [];
+  return [
+    ...recent,
+    ...filterSlashCommands(slashCommands, query, t).map((command) =>
+      suggestionOf(command, t, translateKey(t, `editor.slashGroups.${command.group}`)),
+    ),
+  ];
 }

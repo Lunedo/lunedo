@@ -774,7 +774,31 @@ details.ld-expand > summary {
 }
 
 .ld-content .ld-task-meta {
-  @apply mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted no-underline;
+  @apply flex flex-wrap items-center gap-1 text-sm text-text-muted no-underline;
+}
+
+.ld-content .ld-task-body {
+  @apply flex min-w-0 flex-1 flex-wrap items-center gap-x-2;
+}
+
+.ld-content .ld-task-body > [data-node-view-content] {
+  @apply min-w-0 max-w-full;
+}
+
+.ld-content .ld-task-body > .ld-task-hint {
+  @apply basis-full;
+}
+
+.ld-content .ld-task-chip {
+  @apply rounded-full bg-surface-sunken px-2;
+}
+
+.ld-content .ld-task-overdue {
+  @apply bg-danger-soft text-danger;
+}
+
+.ld-task-add {
+  @apply my-1 inline-flex h-control-sm cursor-pointer items-center rounded-sm px-1 text-sm text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring;
 }
 
 .ld-content .ld-task-hint {

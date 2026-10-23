@@ -4479,13 +4479,15 @@
       "pages": "Seiten",
       "empty": "Nichts gefunden. Versuche ein anderes Wort.",
       "newPage": "Link auf neue Seite „{title}“",
-      "newPageDescription": "Die Seite wird in diesem Space angelegt, wenn jemand den Link öffnet"
+      "newPageDescription": "Die Seite wird in diesem Space angelegt, wenn jemand den Link öffnet",
+      "hints": "↑↓ auswählen · ↵ einfügen · Esc schließen"
     },
     "slashGroups": {
       "text": "Text",
       "lists": "Listen",
       "blocks": "Blöcke",
-      "inline": "Im Text"
+      "inline": "Im Text",
+      "recent": "Zuletzt verwendet"
     },
     "blocks": {
       "paragraph": "Absatz",
@@ -4584,7 +4586,8 @@
       "whiteboard": "Link zu Whiteboard",
       "whiteboardDescription": "Vorschau eines Whiteboards, die es öffnet",
       "tabs": "Tabs",
-      "tabsDescription": "Benannte Tabs mit jeweils eigenem Inhalt"
+      "tabsDescription": "Benannte Tabs mit jeweils eigenem Inhalt",
+      "tableSized": "Tabelle {columns} × {rows}"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4675,7 +4678,9 @@
     "presence": {
       "label": "{count, plural, one {# Person} other {# Personen}} auf dieser Seite",
       "you": "{name} (du)",
-      "more": "{count} weitere"
+      "more": "{count} weitere",
+      "coEditors": "{count, plural, one {# Person bearbeitet gerade} other {# Personen bearbeiten gerade}}",
+      "editing": "{name} bearbeitet gerade"
     },
     "save": {
       "editing": "Bearbeitung",
@@ -4752,7 +4757,10 @@
       "headerRow": "Kopfzeile ein oder aus",
       "headerColumn": "Kopfspalte ein oder aus",
       "background": "Zellenhintergrund",
-      "deleteTable": "Tabelle löschen"
+      "deleteTable": "Tabelle löschen",
+      "addColumnHere": "Spalte hier einfügen",
+      "addRowHere": "Zeile hier einfügen",
+      "addRowBelow": "Zeile"
     },
     "find": {
       "label": "Suchen und ersetzen",
@@ -5205,6 +5213,26 @@
       "lastTab": "Der letzte Tab kann nicht entfernt werden. Lösche stattdessen den ganzen Block.",
       "removed": "Tab {name} entfernt.",
       "undo": "Rückgängig"
+    },
+    "preview": {
+      "start": "Vorschau",
+      "stop": "Vorschau beenden"
+    },
+    "close": "Schließen",
+    "more": "Weitere Aktionen im Editor",
+    "showSidebar": "Seitenleiste anzeigen",
+    "hideSidebar": "Seitenleiste ausblenden",
+    "gutter": {
+      "add": "Block darunter einfügen",
+      "menu": "Blockaktionen",
+      "handleHint": "Ziehen zum Verschieben, Klick für Aktionen",
+      "insertBelow": "Darunter einfügen",
+      "duplicate": "Duplizieren",
+      "delete": "Block löschen",
+      "deleted": "Block gelöscht"
+    },
+    "tasks": {
+      "add": "Aufgabe hinzufügen"
     }
   },
   "spaces": {
@@ -6077,7 +6105,10 @@
     "viewPublished": "Veröffentlicht",
     "viewDraft": "Entwurf · {count, plural, one {# Änderung} other {# Änderungen}}",
     "continueEditing": "Weiter bearbeiten",
-    "draftView": "Entwurf mit markierten Änderungen"
+    "draftView": "Entwurf mit markierten Änderungen",
+    "discardTitle": "Entwurf verwerfen?",
+    "discardConfirm": "{count, plural, one {Die # Änderung seit Version {version} wird verworfen, der Entwurf steht danach wieder auf Version {version}. Du kannst ihn 30 Tage lang wiederherstellen.} other {Die # Änderungen seit Version {version} werden verworfen, der Entwurf steht danach wieder auf Version {version}. Du kannst ihn 30 Tage lang wiederherstellen.}}",
+    "keepDraft": "Entwurf behalten"
   },
   "gallery": {
     "title": "In {space} erstellen",

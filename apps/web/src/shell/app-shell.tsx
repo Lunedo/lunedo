@@ -76,6 +76,7 @@ function ShellFrame() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [collapseSuggested, setCollapseSuggested] = useState(false);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [spaceCreateTarget, setSpaceCreateTarget] = useState<SpaceCreateTarget | null>(null);
   const [pendingCreate, setPendingCreate] = useState<{ spaceKey: string; kind: CreateKind } | null>(null);
   const suggestionApplies = collapseSuggested && !suggestionDismissed && !preferences.sidebarCollapsed;
@@ -84,7 +85,9 @@ function ShellFrame() {
   const [settingsReturn, setSettingsReturn] = useState<SettingsReturn>(HOME_RETURN);
   const sidebarCollapsed = inSettings
     ? settingsNavigationHidden
-    : preferences.sidebarCollapsed || suggestionApplies;
+    : editMode
+      ? preferences.sidebarCollapsedWhileEditing
+      : preferences.sidebarCollapsed || suggestionApplies;
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
   const suggestCollapsedSidebar = useCallback((suggested: boolean) => {
     setCollapseSuggested(suggested);
@@ -126,6 +129,13 @@ function ShellFrame() {
           setSettingsNavigationHidden((hidden) => !hidden);
           return;
         }
+        if (editMode) {
+          updatePreference.mutate({
+            key: preferenceKeys.sidebarCollapsedWhileEditing,
+            value: !preferences.sidebarCollapsedWhileEditing,
+          });
+          return;
+        }
         if (suggestionApplies) {
           setSuggestionDismissed(true);
           return;
@@ -142,6 +152,8 @@ function ShellFrame() {
       mobileSidebarOpen,
       closeMobileSidebar,
       suggestCollapsedSidebar,
+      editMode,
+      setEditMode,
       spaceCreateTarget,
       setSpaceCreateTarget,
       pendingCreate,
@@ -153,6 +165,8 @@ function ShellFrame() {
       router,
       updatePreference,
       preferences.sidebarCollapsed,
+      preferences.sidebarCollapsedWhileEditing,
+      editMode,
       signOut,
       notificationsOpen,
       sidebarCollapsed,

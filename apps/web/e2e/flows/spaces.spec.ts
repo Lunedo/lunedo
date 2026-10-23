@@ -111,7 +111,7 @@ test("creates a space and arranges pages, folders and links", async ({ page, org
   await title.fill("VPN access");
   await title.press("Enter");
   await expect(tree.getByRole("treeitem", { name: "VPN access" })).toBeVisible();
-  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
 
   const vpn = tree.getByRole("treeitem", { name: "VPN access" });
   const runbooks = tree.getByRole("treeitem", { name: "Runbooks" });
@@ -168,10 +168,10 @@ test("writes a page with blocks and shows it in the read view", async ({ page, o
   await waitSaved(page);
   await expect(page.locator(".ld-callout-label").filter({ hasText: "Info" })).toBeVisible();
   const editing = await content.locator("p").first().boundingBox();
-  const bar = await page.locator(".ld-editor-bar").boundingBox();
-  expect(bar?.x).toBeCloseTo(editing?.x ?? -1, 0);
-  expect(bar?.width).toBeCloseTo(editing?.width ?? -1, 0);
-  await page.getByRole("button", { name: "Done" }).click();
+  const bar = await page.getByRole("toolbar", { name: "Formatting" }).boundingBox();
+  const middle = (box: { x: number; width: number } | null) => (box ? box.x + box.width / 2 : -1);
+  expect(Math.abs(middle(bar) - middle(editing))).toBeLessThan(40);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Set up a new device", level: 2 })).toBeVisible();
   const reading = await page.locator(".ld-read-view p").first().boundingBox();
   expect(editing).not.toBeNull();

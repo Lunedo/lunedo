@@ -39,6 +39,7 @@ export interface PreferenceValues {
   density: Density;
   font: Font;
   sidebarCollapsed: boolean;
+  sidebarCollapsedWhileEditing: boolean;
   editorToolbar: boolean;
   folderView: "list" | "tiles";
   startPage: "forYou" | "organizationHome";
@@ -57,6 +58,7 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   density: "appearance.density",
   font: "appearance.font",
   sidebarCollapsed: "appearance.sidebarCollapsed",
+  sidebarCollapsedWhileEditing: "appearance.sidebarCollapsedWhileEditing",
   editorToolbar: "appearance.editorToolbar",
   folderView: "appearance.folderView",
   startPage: "appearance.startPage",
@@ -79,6 +81,7 @@ export function defaultPreferences(language: Language): PreferenceValues {
     density: "default",
     font: "default",
     sidebarCollapsed: false,
+    sidebarCollapsedWhileEditing: true,
     editorToolbar: true,
     folderView: "list",
     startPage: "forYou",
@@ -106,6 +109,7 @@ export function toPreferenceValues(
     density: oneOf(densities, value("density"), fallback.density),
     font: oneOf(fonts, value("font"), fallback.font),
     sidebarCollapsed: value("sidebarCollapsed") === true,
+    sidebarCollapsedWhileEditing: value("sidebarCollapsedWhileEditing") !== false,
     editorToolbar: value("editorToolbar") !== false,
     folderView: value("folderView") === "tiles" ? "tiles" : "list",
     startPage: value("startPage") === "organizationHome" ? "organizationHome" : "forYou",
