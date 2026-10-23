@@ -162,9 +162,11 @@ const FOCUS_RING = `@utility focus-ring {
   outline-offset: var(--${PREFIX}-focus-offset);
 }`;
 
-const SETTING_ROW = `@utility grid-cols-setting-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+function settingRow(tokens: DesignTokens): string {
+  return `@utility grid-cols-setting-row {
+  grid-template-columns: ${tokens.layout.settingLabelWidth} minmax(0, 1fr);
 }`;
+}
 
 export function generateThemeCss(tokens: DesignTokens): string {
   const light: Declarations = [["color-scheme", "light"], ...colorDeclarations(tokens, "light", "light")];
@@ -194,7 +196,7 @@ export function generateThemeCss(tokens: DesignTokens): string {
     block("@theme inline", themeDeclarations(tokens)),
     '@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));',
     FOCUS_RING,
-    SETTING_ROW,
+    settingRow(tokens),
     block(":root", rootDeclarations(tokens)),
     block(':root,\n[data-theme="light"]', light),
     block('[data-theme="dark"]', dark),

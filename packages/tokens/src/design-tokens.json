@@ -210,6 +210,7 @@
     },
     "weight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700 },
     "size": {
+      "2xs": "0.6875rem",
       "xs": "0.75rem",
       "sm": "0.8125rem",
       "base": "0.875rem",
@@ -256,6 +257,7 @@
     "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem" },
     "qrCodeSize": "7.5rem",
     "fieldWidth": "16rem",
+    "settingLabelWidth": "13.75rem",
     "hitArea": "44px",
     "numberFieldWidth": "6rem",
     "unitFieldWidth": "9rem"

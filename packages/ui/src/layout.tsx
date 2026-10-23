@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronRight } from "lucide-react";
-import { isValidElement, type ReactNode, useId } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Slot } from "radix-ui";
+import { type ComponentProps, isValidElement, type ReactNode, useId } from "react";
 import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
@@ -18,6 +19,8 @@ export interface PageHeaderProps {
   context?: ReactNode;
   actions?: ReactNode;
   breadcrumbs?: Breadcrumb[];
+  status?: ReactNode;
+  variant?: "content" | "settings";
 }
 
 export function PageHeader({
@@ -28,8 +31,11 @@ export function PageHeader({
   context,
   actions,
   breadcrumbs,
+  status,
+  variant = "content",
 }: PageHeaderProps) {
   const labels = useUiLabels();
+  const showIcon = icon && variant === "content";
   return (
     <header className="flex flex-wrap items-end gap-4">
       <div className="flex min-w-0 flex-1 basis-field flex-col gap-2">
@@ -63,13 +69,14 @@ export function PageHeader({
             {context}
           </div>
         )}
-        <div className="flex items-center gap-3">
-          {icon && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {showIcon && (
             <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent">
               <Icon icon={icon} size="lg" />
             </span>
           )}
           <h1 className="min-w-0 text-xl font-semibold tracking-heading text-balance">{title}</h1>
+          {status && <div className="flex items-center text-sm">{status}</div>}
         </div>
         {description && <p className="text-text-muted">{description}</p>}
       </div>
@@ -80,26 +87,29 @@ export function PageHeader({
 
 export function Section({
   title,
+  description,
   icon,
   actions,
   children,
 }: {
   title: ReactNode;
+  description?: ReactNode;
   icon?: LucideIcon;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="overflow-hidden rounded-md border border-border bg-surface">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-3">
+    <section aria-labelledby={id} data-section="" className="flex flex-col">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pb-2">
         {icon && <Icon icon={icon} className="text-text-muted" />}
         <h2 id={id} className="min-w-0 flex-1 font-semibold">
           {title}
         </h2>
-        {actions}
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      <div className="divide-y divide-border">{children}</div>
+      {description && <p className="pb-2 text-sm text-text-muted">{description}</p>}
+      <div className="divide-y divide-border border-t border-border">{children}</div>
     </section>
   );
 }
@@ -107,15 +117,11 @@ export function Section({
 export function DangerZone({ title, children }: { title: ReactNode; children: ReactNode }) {
   const id = useId();
   return (
-    <section
-      aria-labelledby={id}
-      data-danger-zone=""
-      className="overflow-hidden rounded-md border border-danger bg-surface"
-    >
-      <h2 id={id} className="border-b border-danger px-4 py-3 font-semibold text-danger">
+    <section aria-labelledby={id} data-danger-zone="" className="flex flex-col">
+      <h2 id={id} className="pb-2 font-semibold text-danger">
         {title}
       </h2>
-      <div className="divide-y divide-border">{children}</div>
+      <div className="divide-y divide-border border-t border-border">{children}</div>
     </section>
   );
 }
@@ -130,7 +136,7 @@ export function DangerAction({
   action: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+    <div className="flex flex-wrap items-center gap-3 py-3">
       <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
         <span className="font-medium text-text">{title}</span>
         <div className="text-sm text-text-muted">{description}</div>
@@ -153,16 +159,14 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
   return (
     <div
       data-setting-row=""
-      className="grid grid-cols-1 items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-setting-row"
+      className="grid grid-cols-1 items-start gap-x-4 gap-y-2 py-3 sm:grid-cols-setting-row"
     >
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="font-medium text-text">{label}</span>
-        {description && <span className="text-sm text-text-muted">{description}</span>}
-        {meta && <span className="text-xs text-text-muted">{meta}</span>}
+      <div data-setting-label="" className="flex min-w-0 items-center text-text-muted sm:min-h-control-field">
+        {label}
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <div data-setting-line="" className="flex items-center justify-end gap-3">
-          <div data-setting-control="" className="flex w-full min-w-0 justify-end sm:w-field">
+        <div data-setting-line="" className="flex items-center justify-between gap-3">
+          <div data-setting-control="" className="flex w-full min-w-0 sm:w-field">
             {control}
           </div>
           <div
@@ -172,17 +176,51 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
             {menu}
           </div>
         </div>
-        {status ? (
-          <div className="flex justify-end gap-3">
-            <div className="flex w-full min-w-0 justify-end sm:w-field">{status}</div>
-            <div
-              aria-hidden="true"
-              className={classNames("w-control-md shrink-0", menu ? "block" : "hidden sm:block")}
-            />
+        {description && (
+          <div data-setting-hint="" className="text-sm text-text-muted">
+            {description}
           </div>
-        ) : null}
+        )}
+        {meta && (
+          <div data-setting-source="" className="text-xs text-text-muted">
+            {meta}
+          </div>
+        )}
+        {status && <div className="flex min-w-0">{status}</div>}
       </div>
     </div>
+  );
+}
+
+export interface BackLinkProps extends Omit<ComponentProps<"a">, "children"> {
+  label: ReactNode;
+  asChild?: boolean;
+  children?: ReactNode;
+}
+
+export function BackLink({ label, asChild = false, children, className, ...props }: BackLinkProps) {
+  const classes = classNames(
+    "inline-flex items-center gap-1 self-start rounded-sm text-sm text-text-muted hover:text-text focus-visible:focus-ring",
+    className,
+  );
+  const content = (
+    <>
+      <Icon icon={ChevronLeft} size="sm" />
+      <span className="min-w-0 truncate">{label}</span>
+    </>
+  );
+  if (asChild) {
+    return (
+      <Slot.Root data-back-link="" className={classes}>
+        <Slot.Slottable>{children}</Slot.Slottable>
+        {content}
+      </Slot.Root>
+    );
+  }
+  return (
+    <a data-back-link="" className={classes} {...props}>
+      {content}
+    </a>
   );
 }
 

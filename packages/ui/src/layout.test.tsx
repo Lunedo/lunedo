@@ -1,14 +1,27 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KeyRound, Shield, Users } from "lucide-react";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { describe, expect, it } from "vitest";
 import { Button } from "./button.js";
 import { RadioGroup, Select } from "./controls.js";
 import { Avatar, avatarColor, Badge, EmptyState, initialsOf, Notice, Spinner } from "./feedback.js";
 import { Field } from "./field.js";
-import { List, ListRow, PageHeader, Section, SettingRow } from "./layout.js";
+import {
+  BackLink,
+  DangerAction,
+  DangerZone,
+  List,
+  ListRow,
+  PageHeader,
+  Section,
+  SettingRow,
+} from "./layout.js";
 import { renderUi } from "./testing/render.js";
+
+function RouterLink(props: ComponentProps<"a">) {
+  return <a {...props} />;
+}
 
 describe("PageHeader", () => {
   it("shows breadcrumbs, the section icon, the organization context and actions", () => {
@@ -27,6 +40,15 @@ describe("PageHeader", () => {
     expect(within(crumbs).getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
     expect(within(crumbs).getByText("Members").getAttribute("aria-current")).toBe("page");
     expect(screen.getByText("Platform Team")).toBeDefined();
+    expect(document.querySelector("header .bg-accent-soft svg")).not.toBeNull();
+  });
+
+  it("leaves out the icon tile on settings pages and shows the save status next to the title", () => {
+    renderUi(<PageHeader title="Preferences" icon={Users} variant="settings" status={<span>Saved</span>} />);
+    expect(document.querySelector("header .bg-accent-soft")).toBeNull();
+    expect(document.querySelector("header svg")).toBeNull();
+    const title = screen.getByRole("heading", { level: 1, name: "Preferences" });
+    expect(title.parentElement?.textContent).toBe("PreferencesSaved");
   });
 });
 
@@ -51,15 +73,20 @@ describe("Section, SettingRow and List", () => {
 });
 
 describe("Section headers", () => {
-  it("are not darker than the card body", () => {
+  it("draw a flat section with hairlines between rows and no box", () => {
     renderUi(
-      <Section title="Display">
+      <Section title="Display" description="Applies to every space.">
         <p>Body</p>
       </Section>,
     );
-    const header = screen.getByRole("heading", { name: "Display" }).parentElement;
-    expect(header?.className).toContain("bg-surface");
-    expect(header?.className).not.toContain("bg-surface-sunken");
+    const section = screen.getByRole("region", { name: "Display" });
+    for (const boxed of ["rounded", "bg-surface", "border-border "]) {
+      expect(section.className).not.toContain(boxed);
+    }
+    expect(screen.getByText("Applies to every space.").className).toContain("text-text-muted");
+    const rows = screen.getByText("Body").parentElement;
+    expect(rows?.className).toContain("divide-y");
+    expect(rows?.className).toContain("divide-border");
   });
 
   it("let actions move below a long title instead of cutting them", () => {
@@ -74,11 +101,75 @@ describe("Section headers", () => {
 });
 
 describe("SettingRow", () => {
+  it("shows the label in its own column and the hint and source under the control", () => {
+    renderUi(
+      <SettingRow
+        label="Retention"
+        description="Older versions are deleted."
+        meta="Instance default: 90 days"
+        control={<Button>Change</Button>}
+        menu={<Button>More</Button>}
+        status={<span>Saved</span>}
+      />,
+    );
+    const row = document.querySelector("[data-setting-row]");
+    expect(row?.className).toContain("sm:grid-cols-setting-row");
+    expect(row?.className).toContain("grid-cols-1");
+    const label = row?.querySelector("[data-setting-label]");
+    expect(label?.textContent).toBe("Retention");
+    expect(label?.className).toContain("text-text-muted");
+    const column = row?.querySelector("[data-setting-line]")?.parentElement;
+    const hint = screen.getByText("Older versions are deleted.");
+    const source = screen.getByText("Instance default: 90 days");
+    expect(hint.parentElement).toBe(column);
+    expect(source.parentElement).toBe(column);
+    expect(hint.className).toContain("text-sm");
+    expect(source.className).toContain("text-xs");
+    expect(within(column as HTMLElement).getByText("Saved")).toBeDefined();
+    expect(within(column as HTMLElement).getByRole("button", { name: "More" })).toBeDefined();
+  });
+
   it("leaves no room for a missing menu on narrow screens", () => {
     renderUi(<SettingRow label="E-mail" control={<Button>Change e-mail address</Button>} />);
     const menu = document.querySelector("[data-setting-menu]");
     expect(menu?.className).toContain("hidden");
     expect(menu?.className).toContain("sm:flex");
+  });
+});
+
+describe("DangerZone", () => {
+  it("is flat with its heading in the danger color", () => {
+    renderUi(
+      <DangerZone title="Danger zone">
+        <DangerAction
+          title="Delete space"
+          description="All pages are deleted."
+          action={<Button variant="danger">Delete space</Button>}
+        />
+      </DangerZone>,
+    );
+    const zone = screen.getByRole("region", { name: "Danger zone" });
+    expect(zone.className).not.toContain("border-danger");
+    expect(zone.className).not.toContain("rounded");
+    expect(screen.getByRole("heading", { name: "Danger zone" }).className).toContain("text-danger");
+    expect(screen.getByRole("button", { name: "Delete space" })).toBeDefined();
+  });
+});
+
+describe("BackLink", () => {
+  it("links back to the parent page", () => {
+    renderUi(
+      <>
+        <BackLink label="Groups" href="/settings/groups" />
+        <BackLink label="Identity providers" asChild>
+          <RouterLink href="/settings/identity" />
+        </BackLink>
+      </>,
+    );
+    expect(screen.getByRole("link", { name: "Groups" }).getAttribute("href")).toBe("/settings/groups");
+    expect(screen.getByRole("link", { name: "Identity providers" }).getAttribute("href")).toBe(
+      "/settings/identity",
+    );
   });
 });
 

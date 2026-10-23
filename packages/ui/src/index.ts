@@ -109,6 +109,8 @@ export { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {
+  BackLink,
+  type BackLinkProps,
   type Breadcrumb,
   DangerAction,
   DangerZone,

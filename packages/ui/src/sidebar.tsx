@@ -28,20 +28,54 @@ export function Sidebar({
   );
 }
 
-export function SidebarHeader({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
+export function SidebarHeader({
+  children,
+  actions,
+  eyebrow,
+}: {
+  children: ReactNode;
+  actions?: ReactNode;
+  eyebrow?: ReactNode;
+}) {
   return (
     <div className="flex items-center gap-2 px-2 pb-2">
-      <h2 className="min-w-0 flex-1 truncate text-content font-semibold">{children}</h2>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {eyebrow && <span className="truncate text-xs text-text-muted">{eyebrow}</span>}
+        <h2 className="min-w-0 truncate text-content font-semibold">{children}</h2>
+      </div>
       {actions}
     </div>
   );
 }
 
-export function SidebarGroup({ label, children }: { label: ReactNode; children: ReactNode }) {
+export function SidebarGroup({
+  label,
+  variant = "default",
+  children,
+}: {
+  label?: ReactNode;
+  variant?: "default" | "divided";
+  children: ReactNode;
+}) {
   const id = useId();
+  if (label === undefined || label === null) {
+    return <ul className="flex flex-col gap-px">{children}</ul>;
+  }
   return (
-    <div className="flex flex-col">
-      <h3 id={id} className="px-2 pt-4 pb-1 text-xs font-semibold tracking-label text-text-muted uppercase">
+    <div
+      data-sidebar-group={variant}
+      className={classNames(
+        "flex flex-col",
+        variant === "divided" && "-mx-2 mt-3 border-t border-border px-2",
+      )}
+    >
+      <h3
+        id={id}
+        className={classNames(
+          "px-2 pb-1 tracking-label text-text-muted uppercase",
+          variant === "divided" ? "pt-3 text-2xs font-bold" : "pt-4 text-xs font-semibold",
+        )}
+      >
         {label}
       </h3>
       <ul aria-labelledby={id} className="flex flex-col gap-px">
@@ -72,10 +106,10 @@ export function SidebarItem({
 }: SidebarItemProps) {
   const classes = classNames(
     "flex h-row items-center gap-2 rounded-sm px-2 text-text transition-colors focus-visible:focus-ring motion-reduce:transition-none",
-    current ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover",
+    current ? "bg-accent font-semibold text-on-accent" : "hover:bg-hover",
     className,
   );
-  const glyph = icon && <Icon icon={icon} className={current ? "text-accent" : "text-text-muted"} />;
+  const glyph = icon && <Icon icon={icon} className={current ? "text-on-accent" : "text-text-muted"} />;
   const text =
     typeof label === "string" ? (
       <TruncatedText text={label} className="flex-1" />
@@ -83,7 +117,7 @@ export function SidebarItem({
       <span className="min-w-0 flex-1 truncate">{label}</span>
     );
   const count = badge !== undefined && badge !== null && (
-    <span className="text-xs text-text-muted">{badge}</span>
+    <span className={classNames("text-xs", current ? "text-on-accent" : "text-text-muted")}>{badge}</span>
   );
   return (
     <li>
