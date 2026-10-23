@@ -1085,7 +1085,8 @@
     "signInAndSecurity": "Sign-in and security",
     "watching": "Watched items",
     "profile": "Profile",
-    "backTo": "Back to {name}"
+    "backTo": "Back to {name}",
+    "loadingSettings": "Loading settings"
   },
   "navigationGroups": {
     "access": "Access",
@@ -10768,7 +10769,8 @@
     "close": "Close navigation",
     "tasksOpen": "My tasks, {count, plural, one {# open} other {{shown} open}}",
     "spaceType": "Space",
-    "open": "Open navigation"
+    "open": "Open navigation",
+    "mySpace": "My space"
   },
   "create": {
     "button": "Create",

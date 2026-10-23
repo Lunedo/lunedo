@@ -1,13 +1,14 @@
 import { classNames, Icon, RailButton, SidebarGroup, SidebarItem } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Layers, ListChecks, type LucideIcon } from "lucide-react";
+import { Home, Layers, ListChecks, type LucideIcon, User } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { starredQuery, tasksQuery } from "../collaboration/queries.js";
 import { recentlyViewedQuery } from "../search/search-api.js";
 import { SpaceBadge } from "../spaces/space-badge.js";
 import { useShell } from "./shell.js";
+import { useOrganizationState } from "./shell-context.js";
 import { useSidebarSlots } from "./sidebar-slot.js";
 
 const SIDEBAR_SPACES = 7;
@@ -90,6 +91,22 @@ function TasksEntry({ collapsed, current }: { collapsed: boolean; current: boole
       current={current}
       collapsed={collapsed}
       {...(count > 0 ? { badge: shown, badgeLabel: t("sidebar.tasksOpen", { count, shown }) } : {})}
+    />
+  );
+}
+
+function PersonalSpaceEntry({ collapsed, current }: { collapsed: boolean; current: boolean }) {
+  const { t } = useTranslation();
+  const organization = useOrganizationState();
+  const guest = organization.organization?.membershipKind === "guest";
+  if (guest || !organization.can("instance.personalSpace.use")) return null;
+  return (
+    <SidebarEntry
+      to="/personal-space"
+      icon={User}
+      label={t("sidebar.mySpace")}
+      current={current}
+      collapsed={collapsed}
     />
   );
 }
@@ -205,6 +222,7 @@ export function AppSidebar() {
             collapsed={collapsed}
           />
           <TasksEntry collapsed={collapsed} current={tasksActive} />
+          <PersonalSpaceEntry collapsed={collapsed} current={location.pathname === "/personal-space"} />
         </ul>
         <div className="w-full border-t border-border" />
         <div

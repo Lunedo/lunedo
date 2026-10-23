@@ -1524,12 +1524,42 @@ describe("app shell", () => {
     await renderAt("/spaces");
     const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
     await waitFor(() => expect(navigation.hasAttribute("data-collapsed")).toBe(true));
-    for (const name of ["For you", "My tasks", "All spaces"]) {
+    for (const name of ["For you", "My tasks", "My space", "All spaces"]) {
       const link = within(navigation).getByRole("link", { name });
       expect(link.getAttribute("aria-label")).toBe(name);
       expect(link.textContent).toBe("");
     }
     expect(within(navigation).queryByRole("list", { name: "Favorites" })).toBeNull();
+  });
+
+  it("offers My space below My tasks only to people who may have a personal space", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    const mySpace = await within(navigation).findByRole("link", { name: "My space" });
+    expect(mySpace.getAttribute("href")).toBe("/personal-space");
+    const entries = within(navigation)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(entries.indexOf("My space")).toBe(entries.indexOf("My tasks") + 1);
+    cleanup();
+
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.content.view"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+    });
+    await renderAt("/spaces");
+    const without = await screen.findByRole("navigation", { name: "Main navigation" });
+    await within(without).findByRole("link", { name: "My tasks" });
+    expect(within(without).queryByRole("link", { name: "My space" })).toBeNull();
   });
 
   it("offers the kinds of the current space in the Create menu", async () => {

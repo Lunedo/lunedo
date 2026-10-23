@@ -1085,7 +1085,8 @@
     "signInAndSecurity": "Anmeldung und Sicherheit",
     "watching": "Beobachtete Inhalte",
     "profile": "Profil",
-    "backTo": "Zurück zu {name}"
+    "backTo": "Zurück zu {name}",
+    "loadingSettings": "Einstellungen werden geladen"
   },
   "navigationGroups": {
     "access": "Zugriff",
@@ -10768,7 +10769,8 @@
     "close": "Navigation schließen",
     "tasksOpen": "Meine Aufgaben, {count, plural, one {# offen} other {{shown} offen}}",
     "spaceType": "Space",
-    "open": "Navigation öffnen"
+    "open": "Navigation öffnen",
+    "mySpace": "Mein Space"
   },
   "create": {
     "button": "Erstellen",

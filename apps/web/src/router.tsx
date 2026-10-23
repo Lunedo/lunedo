@@ -21,6 +21,8 @@ export interface RouterContext {
   queryClient: QueryClient;
 }
 
+import { SettingsPending } from "./screens/settings/settings-pending.js";
+
 const redirectSearch = z.object({ redirect: z.string().optional() });
 
 const wizardSearch = z.object({
@@ -444,6 +446,9 @@ const spaceSettingsRoute = createRoute({
     () => import("./spaces/settings/space-settings-layout.js"),
     "SpaceSettingsLayout",
   ),
+  pendingComponent: SettingsPending,
+  pendingMs: 0,
+  pendingMinMs: 0,
 });
 
 const spaceSettingsIndexRoute = createRoute({
@@ -607,6 +612,9 @@ const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings",
   component: lazyRouteComponent(() => import("./screens/settings/settings-layout.js"), "SettingsLayout"),
+  pendingComponent: SettingsPending,
+  pendingMs: 0,
+  pendingMinMs: 0,
 });
 
 const settingsIndexRoute = createRoute({
