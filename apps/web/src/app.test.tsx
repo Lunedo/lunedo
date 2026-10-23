@@ -295,8 +295,11 @@ describe("the web client", () => {
     expect(window.location.pathname).toBe("/settings/profile");
     const navigation = screen.getByRole("navigation", { name: "Settings" });
     const links = within(navigation).getAllByRole("link");
-    expect(links[0]?.textContent).toBe("Profile");
-    expect(links[0]?.getAttribute("aria-current")).toBe("page");
+    expect(links[0]?.textContent).toBe("Back to For you");
+    expect(links[0]?.getAttribute("href")).toBe("/home");
+    expect(links[1]?.textContent).toBe("Profile");
+    expect(links[1]?.getAttribute("aria-current")).toBe("page");
+    expect(screen.queryByRole("navigation", { name: "Main navigation" })).toBeNull();
     expect(((await screen.findByLabelText("Display name")) as HTMLInputElement).value).toBe("Olivia Owner");
     expect(screen.getByText("olivia@example.org", { selector: "[data-setting-hint]" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change e-mail address" })).toBeTruthy();

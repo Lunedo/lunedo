@@ -11,7 +11,13 @@ export interface SpaceCreateTarget {
   create: (kind: CreateKind) => void;
 }
 
+export interface SettingsReturn {
+  href: string;
+  spaceKey: string | null;
+}
+
 export interface ShellState extends ShellContext {
+  settingsReturn: SettingsReturn;
   notificationsOpen: boolean;
   sidebarCollapsed: boolean;
   mobileSidebarOpen: boolean;

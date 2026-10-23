@@ -1084,7 +1084,8 @@
     "updates": "Updates",
     "signInAndSecurity": "Sign-in and security",
     "watching": "Watched items",
-    "profile": "Profile"
+    "profile": "Profile",
+    "backTo": "Back to {name}"
   },
   "navigationGroups": {
     "access": "Access",
@@ -5380,8 +5381,7 @@
       "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role.",
       "discoverable": "Members of the organization can find this space and ask to join",
       "discoverableHint": "They see its name and description in the list of spaces, but no pages, until a space admin lets them in.",
-      "discoverableNotPrivate": "Only private spaces can be found this way; other visibilities already let people in.",
-      "back": "Back to {space}"
+      "discoverableNotPrivate": "Only private spaces can be found this way; other visibilities already let people in."
     },
     "permissions": {
       "visibilityTitle": "Readers through visibility",

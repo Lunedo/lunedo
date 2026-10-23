@@ -23,12 +23,22 @@ import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
 import { MaintenanceBanner } from "./maintenance-banner.js";
 import { useNavigationFocus } from "./navigation-focus.js";
 import { useRegistry } from "./registry.js";
-import { type CreateKind, type ShellState, ShellStateContext, type SpaceCreateTarget } from "./shell.js";
+import {
+  type CreateKind,
+  type SettingsReturn,
+  type ShellState,
+  ShellStateContext,
+  type SpaceCreateTarget,
+} from "./shell.js";
 import { ShellBanner } from "./shell-banner.js";
 import { OrganizationProvider, useOrganizationState } from "./shell-context.js";
 import { ShortcutsDialog } from "./shortcuts-dialog.js";
 import { SidebarSlotProvider, useSidebarSlotState } from "./sidebar-slot.js";
 import { DESKTOP_QUERY, TopBar } from "./top-bar.js";
+
+const SETTINGS_PATH = /^\/(settings|spaces\/[^/]+\/settings)(\/|$)/;
+const SPACE_PATH = /^\/spaces\/([^/?#]+)/;
+const HOME_RETURN: SettingsReturn = { href: "/home", spaceKey: null };
 
 function isDesktop(): boolean {
   return globalThis.matchMedia?.(DESKTOP_QUERY).matches ?? true;
@@ -69,13 +79,24 @@ function ShellFrame() {
   const [spaceCreateTarget, setSpaceCreateTarget] = useState<SpaceCreateTarget | null>(null);
   const [pendingCreate, setPendingCreate] = useState<{ spaceKey: string; kind: CreateKind } | null>(null);
   const suggestionApplies = collapseSuggested && !suggestionDismissed && !preferences.sidebarCollapsed;
-  const sidebarCollapsed = preferences.sidebarCollapsed || suggestionApplies;
+  const inSettings = SETTINGS_PATH.test(location.pathname);
+  const [settingsNavigationHidden, setSettingsNavigationHidden] = useState(false);
+  const [settingsReturn, setSettingsReturn] = useState<SettingsReturn>(HOME_RETURN);
+  const sidebarCollapsed = inSettings
+    ? settingsNavigationHidden
+    : preferences.sidebarCollapsed || suggestionApplies;
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
   const suggestCollapsedSidebar = useCallback((suggested: boolean) => {
     setCollapseSuggested(suggested);
     if (!suggested) setSuggestionDismissed(false);
   }, []);
-  const settingsArea = location.pathname === "/settings" || location.pathname.startsWith("/settings/");
+  const appHref = inSettings ? null : location.href;
+  useEffect(() => {
+    if (appHref === null) return;
+    setSettingsNavigationHidden(false);
+    const key = SPACE_PATH.exec(appHref)?.[1];
+    setSettingsReturn({ href: appHref, spaceKey: key ? decodeURIComponent(key) : null });
+  }, [appHref]);
 
   const signOut = useCallback(() => {
     void request(() => api.POST("/api/v1/auth/sign-out"), { sessionHandling: false })
@@ -101,6 +122,10 @@ function ShellFrame() {
           setMobileSidebarOpen((open) => !open);
           return;
         }
+        if (inSettings) {
+          setSettingsNavigationHidden((hidden) => !hidden);
+          return;
+        }
         if (suggestionApplies) {
           setSuggestionDismissed(true);
           return;
@@ -113,6 +138,7 @@ function ShellFrame() {
       signOut,
       notificationsOpen,
       sidebarCollapsed,
+      settingsReturn,
       mobileSidebarOpen,
       closeMobileSidebar,
       suggestCollapsedSidebar,
@@ -130,6 +156,8 @@ function ShellFrame() {
       signOut,
       notificationsOpen,
       sidebarCollapsed,
+      settingsReturn,
+      inSettings,
       suggestionApplies,
       mobileSidebarOpen,
       closeMobileSidebar,
@@ -162,7 +190,7 @@ function ShellFrame() {
           <MissingGroupsBanner />
           <WithheldRolesBanner />
           <div className="relative flex min-h-0 min-w-0 flex-1">
-            {settingsArea && !mobileSidebarOpen ? null : <AppSidebar />}
+            {inSettings ? null : <AppSidebar />}
             <div className="flex min-h-0 min-w-0 flex-1">
               <Outlet />
             </div>

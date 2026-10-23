@@ -473,6 +473,48 @@ describe("spaces", () => {
     expect(screen.queryByText("Space not found")).toBeNull();
   });
 
+  it("leaves the settings to the page the person came from, whatever settings pages they visit", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      [`GET /api/v1/spaces/${SPACE_ID}/settings`]: () => ({ body: [] }),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("link", { name: "Space settings" });
+    await userEvent.click(screen.getByRole("link", { name: "Space settings" }));
+    let navigation = await screen.findByRole("navigation", { name: "Space settings" });
+    expect(screen.queryByRole("navigation", { name: "Main navigation" })).toBeNull();
+    const back = () => within(navigation).getAllByRole("link")[0] as HTMLElement;
+    expect(back().textContent).toBe("Back to IT Operations");
+    expect(back().getAttribute("href")).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+
+    await userEvent.click(within(navigation).getByRole("link", { name: "Pages and trash" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/ITOPS/settings/content"));
+    navigation = screen.getByRole("navigation", { name: "Space settings" });
+    expect(back().getAttribute("href")).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+
+    await userEvent.click(screen.getByRole("button", { name: /sidebar|navigation/i }));
+    await userEvent.click(back());
+    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`));
+    expect(await screen.findByRole("navigation", { name: "Main navigation" })).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("/account/preferences/"))).toBe(false);
+  });
+
+  it("hides only the settings navigation with the top bar toggle and keeps the stored sidebar state", async () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const { requests } = mockApi({ ...baseRoutes(), ...spaceRoutes() });
+    await renderAt("/spaces/ITOPS/settings/general");
+    await screen.findByRole("navigation", { name: "Space settings" });
+    await userEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
+    await waitFor(() => expect(screen.queryByRole("navigation", { name: "Space settings" })).toBeNull());
+    expect(screen.getByRole("button", { name: "Show sidebar" })).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("/account/preferences/"))).toBe(false);
+  });
+
   it("replaces the space navigation with grouped settings and a way back to the space", async () => {
     mockApi({ ...baseRoutes(), ...spaceRoutes() });
     await renderAt("/spaces/ITOPS/settings/general");

@@ -25,7 +25,7 @@ export function SpaceSettingsLayout() {
       label={t("spaces.settings.title")}
       eyebrow={t("spaces.settings.title")}
       title={name}
-      back={{ label: t("spaces.settings.back", { space: name }), href: `/spaces/${space.key}` }}
+      space={{ key: space.key, name }}
       entries={entries}
     >
       <Outlet />
