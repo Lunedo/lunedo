@@ -478,7 +478,8 @@ describe("blog of a space", () => {
     await renderAt("/spaces/ITOPS/blog");
     expect(await screen.findByText("Printer maintenance")).toBeTruthy();
     expect(screen.getByText("Scheduled")).toBeTruthy();
-    await userEvent.click(screen.getAllByRole("button", { name: "Write a post" })[0] as HTMLElement);
+    expect(screen.getByRole("link", { name: "Printer maintenance" }).className).toContain("text-lg");
+    await userEvent.click(screen.getByRole("button", { name: "New post" }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Create post" }));
     expect(await within(dialog).findByText("Enter a title.")).toBeTruthy();

@@ -5637,7 +5637,15 @@
     "loadFailed": "Der Ordner konnte nicht geladen werden",
     "contentsFailed": "Der Inhalt des Ordners konnte nicht geladen werden",
     "empty": "Dieser Ordner ist leer",
-    "emptyDescription": "Seiten, Ordner und Links, die du hier erstellst, erscheinen in dieser Übersicht."
+    "emptyDescription": "Seiten, Ordner und Links, die du hier erstellst, erscheinen in dieser Übersicht.",
+    "showTiles": "Als Kacheln anzeigen",
+    "showList": "Als Tabelle anzeigen",
+    "new": "Neu",
+    "columns": {
+      "name": "Name",
+      "kind": "Art",
+      "changed": "Geändert"
+    }
   },
   "labels": {
     "title": "Labels",
@@ -5653,7 +5661,12 @@
     "pagesDescription": "In {space}.",
     "pagesFailed": "Die Seiten konnten nicht geladen werden",
     "noPages": "Keine Seiten mit diesem Label",
-    "noPagesDescription": "Füge einer Seite das Label {label} hinzu, damit sie hier erscheint."
+    "noPagesDescription": "Füge einer Seite das Label {label} hinzu, damit sie hier erscheint.",
+    "breadcrumb": "Label",
+    "count": "{count, plural, one {# Seite mit diesem Label.} other {# Seiten mit diesem Label.}}",
+    "scope": "Wo suchen",
+    "inThisSpace": "In diesem Space",
+    "everywhere": "Überall"
   },
   "page": {
     "loadFailed": "Die Seite konnte nicht geladen werden",
@@ -6367,7 +6380,7 @@
     "organizationTitle": "Blogbeiträge",
     "organizationDescription": "Blogbeiträge aller Spaces von {organization}, die du lesen kannst, die neuesten zuerst.",
     "noOrganization": "Blogbeiträge der Spaces, die du lesen kannst.",
-    "write": "Beitrag schreiben",
+    "write": "Neuer Beitrag",
     "writeTitle": "Neuer Blogbeitrag in {space}",
     "writeDescription": "Der Beitrag beginnt als Entwurf, den nur Bearbeiter sehen. Veröffentliche ihn oder plane die Veröffentlichung, wenn er fertig ist.",
     "postTitle": "Titel",

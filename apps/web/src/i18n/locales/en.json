@@ -5637,7 +5637,15 @@
     "loadFailed": "The folder could not be loaded",
     "contentsFailed": "The contents of the folder could not be loaded",
     "empty": "This folder is empty",
-    "emptyDescription": "Pages, folders and links you create here appear in this overview."
+    "emptyDescription": "Pages, folders and links you create here appear in this overview.",
+    "showTiles": "Show as tiles",
+    "showList": "Show as table",
+    "new": "New",
+    "columns": {
+      "name": "Name",
+      "kind": "Type",
+      "changed": "Changed"
+    }
   },
   "labels": {
     "title": "Labels",
@@ -5653,7 +5661,12 @@
     "pagesDescription": "In {space}.",
     "pagesFailed": "The pages could not be loaded",
     "noPages": "No pages with this label",
-    "noPagesDescription": "Add the label {label} to a page to list it here."
+    "noPagesDescription": "Add the label {label} to a page to list it here.",
+    "breadcrumb": "Label",
+    "count": "{count, plural, one {# page with this label.} other {# pages with this label.}}",
+    "scope": "Where to look",
+    "inThisSpace": "In this space",
+    "everywhere": "Everywhere"
   },
   "page": {
     "loadFailed": "The page could not be loaded",
@@ -6367,7 +6380,7 @@
     "organizationTitle": "Blog posts",
     "organizationDescription": "Blog posts of all spaces of {organization} you can read, newest first.",
     "noOrganization": "Blog posts of the spaces you can read.",
-    "write": "Write a post",
+    "write": "New post",
     "writeTitle": "New blog post in {space}",
     "writeDescription": "The post starts as a draft that only editors see. Publish it or schedule the publication when it is ready.",
     "postTitle": "Title",

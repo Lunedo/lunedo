@@ -156,7 +156,7 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
 }) => {
   const space = await collaborationSpace(page, organization);
   await page.goto(`/spaces/${space.key}/blog`);
-  await page.getByRole("button", { name: "Write a post" }).first().click();
+  await page.getByRole("button", { name: "New post" }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Title" }).fill("New VPN client from Monday");
   await dialog.getByRole("textbox", { name: "Excerpt" }).fill("Existing tunnels keep working.");

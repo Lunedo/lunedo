@@ -1381,6 +1381,54 @@ describe("finding spaces and restricted pages", () => {
   });
 });
 
+describe("folder and label pages", () => {
+  it("list the folder contents in a flat table with New and more actions in the page bar", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes("editor") });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const table = await screen.findByRole("table", { name: "Contents" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["Name", "Type", "Changed"]);
+    expect(within(table).getByRole("link", { name: "VPN access" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Runbooks");
+    await userEvent.click(screen.getByRole("button", { name: "New" }));
+    expect(await screen.findByRole("menuitem", { name: "New page" })).toBeTruthy();
+  });
+
+  it("switch the label list between this space and everywhere", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("reader"),
+      [`GET /api/v1/spaces/${SPACE_ID}/labels/network/pages`]: () => ({
+        body: [{ itemId: VPN, title: "VPN access", contentUpdatedAt: "2026-10-05T08:00:00.000Z" }],
+      }),
+      "GET /api/v1/reports/content-by-label": () => ({
+        body: [
+          {
+            id: NETWORK,
+            title: "Network plan",
+            kind: "page",
+            path: `/spaces/OTHER/pages/${NETWORK}/network-plan`,
+            space: { id: "01929b1e-0000-7000-8000-0000000000a9", name: "Facilities" },
+            labels: ["network"],
+            excerpt: null,
+          },
+        ],
+      }),
+    });
+    await renderAt("/spaces/ITOPS/labels/network");
+    expect(await screen.findByText("1 page with this label.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /VPN access/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "In this space" }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: "Everywhere" }));
+    expect(await screen.findByRole("link", { name: /Network plan/ })).toBeTruthy();
+    expect(screen.getByText("Facilities")).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("labels=network"))).toBe(true);
+  });
+});
+
 describe("app shell", () => {
   const MARKETING_ID = "01929b1e-0000-7000-8000-0000000000a2";
 

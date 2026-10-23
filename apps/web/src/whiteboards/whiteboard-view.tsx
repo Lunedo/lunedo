@@ -1,5 +1,5 @@
 import type { Scene } from "@lunedo/editor-schema/scene";
-import { Button, IconButton, Menu, type MenuItem, Notice, PageHeader, Skeleton, useToast } from "@lunedo/ui";
+import { Button, IconButton, Menu, type MenuItem, Notice, Skeleton, Tooltip, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
@@ -9,7 +9,6 @@ import {
   MessageSquarePlus,
   MoreHorizontal,
   Move,
-  Presentation,
   Smartphone,
   StickyNote,
   Trash2,
@@ -28,7 +27,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useMaintenance } from "../api/maintenance.js";
 import type { DescribeElement } from "../collaboration/comments-panel.js";
-import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { useContentCollaboration, useStar } from "../collaboration/content-collaboration.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "../editor/collaboration.js";
 import {
   AvatarStack,
@@ -41,8 +40,10 @@ import { CollaborationProblemNotice, SaveStateIndicator } from "../editor/save-i
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
-import { WatchMenu } from "../notifications/watch-menu.js";
+import { useWatchEntries } from "../notifications/watch-menu.js";
+import { useFormat } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
+import { PageBar } from "../spaces/page-bar.js";
 import type { BoardHandle } from "./excalidraw-board.js";
 import type { FileStore, RefusedElement } from "./scene-sync.js";
 import { loadImage, storePreview, uploadImage, whiteboardSceneQuery } from "./whiteboard-api.js";
@@ -103,6 +104,7 @@ export interface WhiteboardViewProps {
   restrictionNote?: ReactNode;
   dialogs?: ReactNode;
   menuItems?: MenuItem[];
+  editedAt?: string;
   onHistory?: () => void;
   onUnarchive?: () => void;
 }
@@ -151,6 +153,7 @@ export function WhiteboardView({
   restrictionNote,
   dialogs,
   menuItems = [],
+  editedAt,
   onHistory,
   onUnarchive,
 }: WhiteboardViewProps) {
@@ -287,7 +290,12 @@ export function WhiteboardView({
     </Button>
   ) : null;
 
+  const star = useStar({ itemId: board.id }, board.title);
+  const watch = useWatchEntries({ type: "item", id: board.id }, board.title);
   const items: MenuItem[] = [
+    star.menuItem,
+    ...watch.items,
+    { type: "separator" },
     ...(onHistory ? [{ label: t("versions.history"), icon: History, onSelect: onHistory }] : []),
     ...menuItems,
   ];
@@ -298,41 +306,26 @@ export function WhiteboardView({
   return (
     <div className="flex h-full min-h-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-col gap-2 border-b border-border px-4 py-3 md:px-6">
-          <PageHeader
-            title={title}
-            icon={Presentation}
-            {...(breadcrumbs ? { breadcrumbs } : {})}
-            {...(description ? { description } : {})}
-            actions={
-              <>
-                {editing ? <SaveStateIndicator state={snapshot.saveState} /> : null}
-                {editing ? (
-                  <AvatarStack self={self} others={others} colorFor={(user) => cursorColor(user.id)} />
-                ) : null}
-                {editing && boardReady ? (
-                  <Button
-                    variant="secondary"
-                    icon={StickyNote}
-                    onClick={() => handle.current?.addStickyNote()}
-                  >
-                    {t("whiteboards.stickyNote.add")}
-                  </Button>
-                ) : null}
-                {commentButton}
-                {share}
-                <StarButton target={{ itemId: board.id }} title={board.title} />
-                <WatchMenu target={{ type: "item", id: board.id }} name={board.title} />
-                {comments.commentsButton}
-                {onHistory ? (
-                  <IconButton label={t("versions.history")} icon={History} onClick={onHistory} />
-                ) : null}
-                {items.length > 0 ? (
-                  <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={items} />
-                ) : null}
-              </>
-            }
-          />
+        <PageBar breadcrumbs={[...(breadcrumbs ?? []), { label: board.title }]}>
+          {editing ? <SaveStateIndicator state={snapshot.saveState} /> : null}
+          {editing ? (
+            <AvatarStack self={null} others={others} colorFor={(user) => cursorColor(user.id)} />
+          ) : null}
+          {editedAt ? <EditedAt value={editedAt} {...(onHistory ? { onOpen: onHistory } : {})} /> : null}
+          {editing && boardReady ? (
+            <Button variant="secondary" icon={StickyNote} onClick={() => handle.current?.addStickyNote()}>
+              {t("whiteboards.stickyNote.add")}
+            </Button>
+          ) : null}
+          {commentButton}
+          {share}
+          {comments.commentsButton}
+          <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={items} />
+          {watch.dialog}
+        </PageBar>
+        <div className="flex flex-col gap-2 border-b border-border px-4 pb-2">
+          <h1 className="min-w-0 text-lg font-semibold tracking-heading">{title}</h1>
+          {description ? <p className="text-sm text-text-muted">{description}</p> : null}
           {restrictionNote}
           {archived ? (
             <Notice
@@ -391,6 +384,31 @@ export function WhiteboardView({
       {comments.panel}
       {dialogs}
     </div>
+  );
+}
+
+function EditedAt({ value, onOpen }: { value: string; onOpen?: () => void }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const label = t("page.editedOn", { date: format.date(value), time: format.time(value) });
+  if (!onOpen) {
+    return (
+      <span className="px-2 text-sm whitespace-nowrap text-text-muted" title={format.dateTime(value)}>
+        {format.short(value)}
+      </span>
+    );
+  }
+  return (
+    <Tooltip content={label}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onOpen}
+        className="flex h-control-md items-center rounded-md px-2 text-sm whitespace-nowrap text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring"
+      >
+        {format.short(value)}
+      </button>
+    </Tooltip>
   );
 }
 

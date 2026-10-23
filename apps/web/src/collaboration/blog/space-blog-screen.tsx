@@ -19,6 +19,7 @@ import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
+import { PageBar } from "../../spaces/page-bar.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { collaborationKeys } from "../queries.js";
@@ -210,73 +211,71 @@ export function SpaceBlogScreen() {
   });
   const items = posts.data?.pages.flatMap((page) => page.items) ?? [];
   return (
-    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
-      <PageHeader
-        title={t("blog.title")}
-        description={t("blog.spaceDescription", { space: spaceDisplayName(t, space) })}
-        icon={Newspaper}
+    <div className="flex min-h-full flex-col">
+      <PageBar
         breadcrumbs={[
           { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
           { label: t("blog.title") },
         ]}
-        actions={
-          <>
-            {space.role ? (
-              <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} />
-            ) : null}
-            {canEdit ? (
-              <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-                {t("blog.write")}
-              </Button>
-            ) : null}
-          </>
-        }
-      />
-      {posts.isPending ? (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-field w-full" />
-          <Skeleton className="h-field w-full" />
-        </div>
-      ) : null}
-      {posts.isError ? (
-        <LoadError what={t("blog.loadFailed")} error={posts.error} onRetry={() => posts.refetch()} />
-      ) : null}
-      {posts.data && items.length === 0 ? (
-        <EmptyState
-          icon={Newspaper}
-          title={t("blog.emptyTitle")}
-          description={canEdit ? t("blog.emptyEditor") : t("blog.emptyReader")}
-          action={
-            canEdit ? (
-              <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-                {t("blog.write")}
-              </Button>
-            ) : undefined
-          }
+      >
+        {space.role ? <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} /> : null}
+        {canEdit ? (
+          <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+            {t("blog.write")}
+          </Button>
+        ) : null}
+      </PageBar>
+      <div className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
+        <PageHeader
+          title={t("blog.title")}
+          description={t("blog.spaceDescription", { space: spaceDisplayName(t, space) })}
         />
-      ) : null}
-      {items.length > 0 ? (
-        <BlogList
-          posts={items}
-          level="space"
-          showSpace={false}
-          canPin={space.role === "admin" && !space.archived}
-          onPin={async (post, pinned) => {
-            await request(() =>
-              api.PUT("/api/v1/blog-posts/{postId}/pinned", {
-                params: { path: { postId: post.id } },
-                body: { pinned },
-              }),
-            );
-            await queryClient.invalidateQueries({ queryKey: collaborationKeys.spaceBlog(space.id) });
-          }}
-          hasMore={posts.hasNextPage}
-          loadingMore={posts.isFetchingNextPage}
-          onMore={() => void posts.fetchNextPage()}
-        />
-      ) : null}
-      {space.role === "admin" ? <ScheduledPosts spaceId={space.id} /> : null}
-      <CreatePostDialog open={creating} onOpenChange={setCreating} />
+        {posts.isPending ? (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-field w-full" />
+            <Skeleton className="h-field w-full" />
+          </div>
+        ) : null}
+        {posts.isError ? (
+          <LoadError what={t("blog.loadFailed")} error={posts.error} onRetry={() => posts.refetch()} />
+        ) : null}
+        {posts.data && items.length === 0 ? (
+          <EmptyState
+            icon={Newspaper}
+            title={t("blog.emptyTitle")}
+            description={canEdit ? t("blog.emptyEditor") : t("blog.emptyReader")}
+            action={
+              canEdit ? (
+                <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                  {t("blog.write")}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : null}
+        {items.length > 0 ? (
+          <BlogList
+            posts={items}
+            level="space"
+            showSpace={false}
+            canPin={space.role === "admin" && !space.archived}
+            onPin={async (post, pinned) => {
+              await request(() =>
+                api.PUT("/api/v1/blog-posts/{postId}/pinned", {
+                  params: { path: { postId: post.id } },
+                  body: { pinned },
+                }),
+              );
+              await queryClient.invalidateQueries({ queryKey: collaborationKeys.spaceBlog(space.id) });
+            }}
+            hasMore={posts.hasNextPage}
+            loadingMore={posts.isFetchingNextPage}
+            onMore={() => void posts.fetchNextPage()}
+          />
+        ) : null}
+        {space.role === "admin" ? <ScheduledPosts spaceId={space.id} /> : null}
+        <CreatePostDialog open={creating} onOpenChange={setCreating} />
+      </div>
     </div>
   );
 }

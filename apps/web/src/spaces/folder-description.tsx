@@ -1,4 +1,5 @@
 import { Field, Textarea } from "@lunedo/ui";
+import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SaveIndicator, useSaveState } from "../components/auto-save.js";
@@ -46,7 +47,7 @@ export function FolderDescription({
           ref={opener}
           type="button"
           {...(value === "" ? {} : { "aria-label": t("folder.editDescription", { description: value }) })}
-          className="-mx-2 rounded-md px-2 py-1 text-start whitespace-pre-wrap hover:bg-hover focus-visible:focus-ring"
+          className="group -mx-2 inline-flex items-baseline gap-2 self-start rounded-md px-2 py-1 text-start whitespace-pre-wrap hover:bg-hover focus-visible:focus-ring"
           onClick={() => setEditing(true)}
         >
           {value === "" ? (
@@ -54,6 +55,10 @@ export function FolderDescription({
           ) : (
             <span className="text-text-muted">{value}</span>
           )}
+          <Pencil
+            aria-hidden="true"
+            className="size-icon-sm shrink-0 text-text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+          />
         </button>
         {tracker.state === "saved" ? <SaveIndicator tracker={tracker} /> : null}
       </div>

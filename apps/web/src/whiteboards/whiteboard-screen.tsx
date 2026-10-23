@@ -97,6 +97,7 @@ function SpaceWhiteboard({ board }: { board: ItemDetails }) {
         )
       }
       breadcrumbs={breadcrumbs}
+      editedAt={board.contentUpdatedAt}
       role={space.role}
       mayEdit={mayEdit}
       spaceArchived={space.archived}
