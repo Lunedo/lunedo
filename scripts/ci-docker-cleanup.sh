@@ -6,7 +6,7 @@ set -uo pipefail
 export MSYS_NO_PATHCONV=1
 
 max_age_seconds=$((6 * 60 * 60))
-legacy_names=(--filter "name=pagehall-roundtrip-" --filter "name=lunedo-roundtrip-")
+legacy_names=(--filter "name=-roundtrip-")
 
 remove() {
   local kind="$1" age_limit="$2"
