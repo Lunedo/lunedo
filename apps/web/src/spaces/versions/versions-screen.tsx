@@ -1,9 +1,9 @@
 import {
   Badge,
   Button,
+  buttonClassName,
   ConfirmDialog,
   EmptyState,
-  Field,
   Notice,
   PageHeader,
   SegmentedControl,
@@ -12,16 +12,18 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { History, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { PageReadView } from "../../editor/read-view.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import type { Formatter } from "../../format/format.js";
 import { translateKey } from "../../i18n/translate.js";
 import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -38,8 +40,9 @@ import {
   versionQuery,
   versionsQuery,
 } from "../content-queries.js";
-import { itemSlug } from "../item-paths.js";
+import { itemHref, itemSlug } from "../item-paths.js";
 import { ItemActivity } from "../ownership/item-activity.js";
+import { PageBar } from "../page-bar.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 import { type ItemDetails, itemQuery, pagePath } from "../space-queries.js";
@@ -49,6 +52,11 @@ import { type DiffLayout, DiffView } from "./diff-view.js";
 const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/history");
 
 type View = DiffLayout;
+
+export function versionDate(format: Formatter, value: string): string {
+  const day = format.day(value);
+  return day === format.calendarDate(value) ? day : format.shortDateTime(value);
+}
 
 function sideOf(value: string | undefined): VersionSide | undefined {
   if (value === "draft") return "draft";
@@ -132,86 +140,87 @@ function VersionHistory({ page }: { page: ItemDetails }) {
     })),
   ];
   const pageHref = pagePath(space.key, page.id, itemSlug(page.title));
+  const breadcrumbs = [
+    { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
+    ...page.ancestors.map((ancestor) => {
+      const href = itemHref({ ...ancestor, link: null }, space.key);
+      return href ? { label: ancestor.title, href } : { label: ancestor.title };
+    }),
+    { label: page.title, href: pageHref },
+  ];
 
   return (
-    <div className="mx-auto flex w-full max-w-page flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
-      <PageHeader
-        title={t("versions.historyTitle")}
-        description={page.title}
-        icon={History}
-        breadcrumbs={[
-          { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
-          { label: page.title, href: pageHref },
-          { label: t("versions.historyTitle") },
-        ]}
-        actions={
-          writable && typeof to === "number" ? (
-            <Button variant="secondary" icon={RotateCcw} onClick={() => setRestoring(to)}>
-              {t("versions.restoreVersion", { number: to })}
-            </Button>
-          ) : undefined
-        }
-      />
-      {versions.isError ? (
-        <LoadError
-          what={t("versions.loadFailed")}
-          error={versions.error}
-          onRetry={() => versions.refetch()}
-        />
-      ) : versions.isPending ? (
-        <Skeleton className="h-field w-full" />
-      ) : list.length === 0 && !showDraft ? (
-        <EmptyState
-          icon={History}
-          title={t("versions.emptyTitle")}
-          description={page.mode === "live" ? t("versions.emptyLive") : t("versions.emptyPublish")}
-        />
-      ) : (
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_var(--spacing-sidebar)]">
-          <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <Field label={t("versions.compare")}>
+    <div className="flex min-h-full flex-col">
+      <PageBar breadcrumbs={breadcrumbs}>
+        <Link to={pageHref as never} className={buttonClassName({ variant: "outline" })}>
+          {t("versions.backToPage")}
+        </Link>
+      </PageBar>
+      <div className="mx-auto flex w-full max-w-page flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
+        <PageHeader title={t("versions.historyTitle")} description={page.title} />
+        {versions.isError ? (
+          <LoadError
+            what={t("versions.loadFailed")}
+            error={versions.error}
+            onRetry={() => versions.refetch()}
+          />
+        ) : versions.isPending ? (
+          <Skeleton className="h-field w-full" />
+        ) : list.length === 0 && !showDraft ? (
+          <EmptyState
+            icon={History}
+            title={t("versions.emptyTitle")}
+            description={page.mode === "live" ? t("versions.emptyLive") : t("versions.emptyPublish")}
+          />
+        ) : (
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_var(--spacing-sidebar)]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="text-sm text-text-muted">{t("versions.compare")}</span>
                 <Select
+                  aria-label={t("versions.compareFrom")}
                   value={from === null ? undefined : String(from)}
                   placeholder={t("versions.noEarlierVersion")}
                   onValueChange={(value) => select({ from: sideOf(value) ?? null })}
                   options={options}
                 />
-              </Field>
-              <Field label={t("versions.with")}>
+                <span className="text-sm text-text-muted">{t("versions.with")}</span>
                 <Select
+                  aria-label={t("versions.compareTo")}
                   value={to === null ? undefined : String(to)}
                   onValueChange={(value) => select({ to: sideOf(value) ?? null })}
                   options={options}
                 />
-              </Field>
-              <SegmentedControl
-                label={t("versions.view")}
-                value={view}
-                onValueChange={(value) => select({ view: value as View })}
-                options={[
-                  { value: "inline", label: t("versions.inline") },
-                  { value: "sideBySide", label: t("versions.sideBySide") },
-                ]}
-              />
+                <span className="flex-1" />
+                <SegmentedControl
+                  label={t("versions.view")}
+                  value={view}
+                  onValueChange={(value) => select({ view: value as View })}
+                  options={[
+                    { value: "inline", label: t("versions.inline") },
+                    { value: "sideBySide", label: t("versions.sideBySide") },
+                  ]}
+                />
+              </div>
+              {from !== null && to !== null ? (
+                <Comparison pageId={page.id} from={from} to={to} view={view} />
+              ) : typeof to === "number" ? (
+                <FirstVersion pageId={page.id} number={to} />
+              ) : null}
             </div>
-            {from !== null && to !== null ? (
-              <Comparison pageId={page.id} from={from} to={to} view={view} />
-            ) : typeof to === "number" ? (
-              <FirstVersion pageId={page.id} number={to} />
-            ) : null}
+            <VersionList
+              versions={list}
+              draft={showDraft ? draft.data : undefined}
+              selected={to}
+              onSelect={(side) => select({ to: side, from: previousOf(side) })}
+              discarded={writable ? (discarded.data ?? []) : []}
+              page={page}
+              {...(writable ? { onRestore: setRestoring } : {})}
+            />
           </div>
-          <VersionList
-            versions={list}
-            draft={showDraft ? draft.data : undefined}
-            selected={to}
-            onSelect={(side) => select({ to: side, from: previousOf(side) })}
-            discarded={writable ? (discarded.data ?? []) : []}
-            page={page}
-          />
-        </div>
-      )}
-      <ItemActivity itemId={page.id} article={isKnowledgeBase(space)} />
+        )}
+        <ItemActivity itemId={page.id} article={isKnowledgeBase(space)} />
+      </div>
       {restoring !== null ? (
         <RestoreDialog
           page={page}
@@ -287,6 +296,7 @@ function VersionList({
   onSelect,
   discarded,
   page,
+  onRestore,
 }: {
   versions: PageVersion[];
   draft: Draft | undefined;
@@ -294,6 +304,7 @@ function VersionList({
   onSelect: (side: VersionSide) => void;
   discarded: DiscardedDraft[];
   page: ItemDetails;
+  onRestore?: (number: number) => void;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -320,6 +331,7 @@ function VersionList({
               onClick={() => onSelect("draft")}
               title={t("versions.draft")}
               detail={[names(draft.contributors), t("versions.now")].filter(Boolean).join(" · ")}
+              people={draft.contributors}
               status={
                 draft.basedOn === null
                   ? t("versions.notPublishedYet")
@@ -342,11 +354,33 @@ function VersionList({
                       ? [version.createdBy]
                       : [],
                 ),
-                format.dateTime(version.createdAt),
+                versionDate(format, version.createdAt),
               ]
                 .filter(Boolean)
                 .join(" · ")}
+              detailTitle={format.dateTime(version.createdAt)}
+              people={
+                version.contributors.length > 0
+                  ? version.contributors
+                  : version.createdBy
+                    ? [version.createdBy]
+                    : []
+              }
               status={version.note ? `${reason(version)} · ${version.note}` : reason(version)}
+              {...(onRestore && selected === version.number
+                ? {
+                    action: (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        icon={RotateCcw}
+                        onClick={() => onRestore(version.number)}
+                      >
+                        {t("versions.restoreThis")}
+                      </Button>
+                    ),
+                  }
+                : {})}
             />
             <CopiedFrom source={version.copiedFrom} />
           </li>
@@ -363,25 +397,40 @@ function VersionButton({
   onClick,
   title,
   detail,
+  detailTitle,
   status,
+  people,
+  action,
 }: {
   selected: boolean;
   onClick: () => void;
   title: string;
   detail: string;
+  detailTitle?: string;
   status: string;
+  people: { id: string; name: string | null }[];
+  action?: ReactNode;
 }) {
+  const first = people[0];
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={`flex w-full flex-col gap-1 rounded-md border px-3 py-2 text-start focus-visible:focus-ring ${selected ? "border-accent bg-accent-soft" : "border-transparent hover:bg-hover"}`}
+    <div
+      className={`flex flex-col gap-2 rounded-md border ${selected ? "border-accent bg-accent-soft" : "border-transparent hover:bg-hover"}`}
     >
-      <span className="font-semibold">{title}</span>
-      <span className="text-sm text-text-muted">{detail}</span>
-      <span className="text-sm text-text-muted">{status}</span>
-    </button>
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onClick}
+        className="flex w-full flex-col gap-1 rounded-md px-3 pt-2 pb-2 text-start focus-visible:focus-ring"
+      >
+        <span className="font-semibold">{title}</span>
+        <span className="flex items-center gap-1 text-sm text-text-muted" title={detailTitle}>
+          {first ? <PersonAvatar id={first.id} name={first.name ?? ""} size="sm" decorative /> : null}
+          <span className="min-w-0 truncate">{detail}</span>
+        </span>
+        <span className="text-sm text-text-muted">{status}</span>
+      </button>
+      {action ? <div className="px-3 pb-2">{action}</div> : null}
+    </div>
   );
 }
 

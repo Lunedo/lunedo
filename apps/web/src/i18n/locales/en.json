@@ -6017,8 +6017,8 @@
     "draftChanges": "{count, plural, one {# change, not published} other {# changes, not published}}",
     "compare": "Compare",
     "with": "with",
-    "compareFrom": "Older state",
-    "compareTo": "Newer state",
+    "compareFrom": "Earlier version",
+    "compareTo": "Later version",
     "view": "View",
     "inline": "In the text",
     "sideBySide": "Side by side",
@@ -6108,7 +6108,9 @@
     "draftView": "Draft with changes marked",
     "discardTitle": "Discard the draft?",
     "discardConfirm": "{count, plural, one {The # change since version {version} is discarded and the draft is back at version {version}. You can restore it for 30 days.} other {The # changes since version {version} are discarded and the draft is back at version {version}. You can restore it for 30 days.}}",
-    "keepDraft": "Keep the draft"
+    "keepDraft": "Keep the draft",
+    "backToPage": "Back to the page",
+    "restoreThis": "Restore this version"
   },
   "gallery": {
     "title": "Create in {space}",

@@ -520,8 +520,14 @@ describe("version history", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Side by side" }));
     expect(await screen.findByRole("region", { name: "Version 6" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Version 7" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Restore this version" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: /^Version 6/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Restore version 6" }));
+    expect(screen.getAllByRole("button", { name: "Restore this version" })).toHaveLength(1);
+    expect(screen.getByText("Restoring creates a new version. Nothing is lost.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to the page" }).getAttribute("href")).toBe(
+      `/spaces/ITOPS/pages/${VPN}/vpn-access`,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Restore this version" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/The current draft with 3 changes is kept for 30 days/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole("button", { name: "Restore version 6" }));

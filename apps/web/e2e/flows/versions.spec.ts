@@ -129,7 +129,7 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await expect(page.getByRole("region", { name: "Version 1" })).toBeVisible();
   await expectAccessible(page, "version comparison side by side");
   await page.getByRole("button", { name: /^Version 1/ }).click();
-  await page.getByRole("button", { name: "Restore version 1" }).click();
+  await page.getByRole("button", { name: "Restore this version" }).click();
   const dialog = page.getByRole("dialog", { name: "Restore version 1?" });
   await expectAccessible(page, "restore dialog");
   await dialog.getByRole("button", { name: "Restore version 1" }).click();

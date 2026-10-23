@@ -6015,10 +6015,10 @@
       "copiedHidden": "Von einer anderen Seite kopiert"
     },
     "draftChanges": "{count, plural, one {# Änderung, nicht veröffentlicht} other {# Änderungen, nicht veröffentlicht}}",
-    "compare": "Vergleichen",
+    "compare": "Vergleiche",
     "with": "mit",
-    "compareFrom": "Älterer Stand",
-    "compareTo": "Neuerer Stand",
+    "compareFrom": "Ältere Version",
+    "compareTo": "Neuere Version",
     "view": "Ansicht",
     "inline": "Im Text",
     "sideBySide": "Nebeneinander",
@@ -6108,7 +6108,9 @@
     "draftView": "Entwurf mit markierten Änderungen",
     "discardTitle": "Entwurf verwerfen?",
     "discardConfirm": "{count, plural, one {Die # Änderung seit Version {version} wird verworfen, der Entwurf steht danach wieder auf Version {version}. Du kannst ihn 30 Tage lang wiederherstellen.} other {Die # Änderungen seit Version {version} werden verworfen, der Entwurf steht danach wieder auf Version {version}. Du kannst ihn 30 Tage lang wiederherstellen.}}",
-    "keepDraft": "Entwurf behalten"
+    "keepDraft": "Entwurf behalten",
+    "backToPage": "Zurück zur Seite",
+    "restoreThis": "Diese Version wiederherstellen"
   },
   "gallery": {
     "title": "In {space} erstellen",
