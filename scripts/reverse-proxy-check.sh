@@ -19,6 +19,8 @@ suffix="$$"
 network="lunedo-proxy-${suffix}"
 subnet="172.30.$((suffix % 200 + 20)).0/24"
 proxy_address="172.30.$((suffix % 200 + 20)).10"
+run_id="${LUNEDO_CI_RUN:-local-$$}"
+label=(--label "lunedo.ci.run=${run_id}")
 postgres="lunedo-proxy-db-${suffix}"
 app="lunedo-proxy-app-${suffix}"
 proxy="lunedo-proxy-${suffix}"
@@ -34,6 +36,8 @@ cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 block() {
   awk -v name="$1" '
@@ -48,7 +52,7 @@ psql_in() {
 }
 
 client() {
-  docker run --rm --network "$network" -v "$work:/work:ro" "$curl_image" "$@"
+  docker run "${label[@]}" --rm --network "$network" -v "$work:/work:ro" "$curl_image" "$@"
 }
 
 fail() {
@@ -65,15 +69,15 @@ expect_status() {
 }
 
 echo "Starting PostgreSQL and Lunedo"
-docker network create --subnet "$subnet" "$network" >/dev/null
-docker run -d --name "$postgres" --network "$network" --tmpfs /var/lib/postgresql/data \
+docker network create "${label[@]}" --subnet "$subnet" "$network" >/dev/null
+docker run "${label[@]}" -d --name "$postgres" --network "$network" --tmpfs /var/lib/postgresql/data \
   -e POSTGRES_USER=lunedo -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=lunedo \
   "$postgres_image" -c fsync=off >/dev/null
 for _ in $(seq 1 60); do
   docker exec "$postgres" pg_isready -h 127.0.0.1 -U lunedo -d lunedo >/dev/null 2>&1 && break
   sleep 1
 done
-docker run -d --name "$app" --network "$network" --network-alias lunedo \
+docker run "${label[@]}" -d --name "$app" --network "$network" --network-alias lunedo \
   -e LUNEDO_DATABASE_URL="postgres://lunedo:${password}@${postgres}:5432/lunedo" \
   -e LUNEDO_INSTANCE_URL=https://wiki.example.org -e LUNEDO_TRUSTED_PROXIES="$proxy_address/32" \
   -e LUNEDO_UPDATE_CHECK=false \
@@ -101,14 +105,14 @@ chmod 644 "$work/upload.bin"
 
 start_caddy() {
   block caddy | sed 's/^\temail admin@example.org$/\tlocal_certs/' > "$work/Caddyfile"
-  docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
+  docker run "${label[@]}" -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org --network-alias other.example.org \
     -v "$work/Caddyfile:/etc/caddy/Caddyfile:ro" "$caddy_image" >/dev/null
 }
 
 start_nginx() {
   block nginx | sed 's/server 127\.0\.0\.1:3000;/server lunedo:3000;/' > "$work/lunedo.conf"
-  docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
+  docker run "${label[@]}" -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org \
     -v "$work/lunedo.conf:/etc/nginx/conf.d/default.conf:ro" \
     -v "$work/fullchain.pem:/etc/ssl/lunedo/fullchain.pem:ro" \
@@ -118,7 +122,7 @@ start_nginx() {
 start_traefik() {
   block traefik | awk '/^certificatesResolvers:/ { exit } { print }' > "$work/traefik.yml"
   block traefik-dynamic | sed 's/certResolver: letsencrypt/options: default/' > "$work/dynamic.yml"
-  docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
+  docker run "${label[@]}" -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org \
     -v "$work/traefik.yml:/etc/traefik/traefik.yml:ro" \
     -v "$work/dynamic.yml:/etc/traefik/dynamic.yml:ro" "$traefik_image" >/dev/null

@@ -21,6 +21,7 @@ import type { OutboundPolicy } from "../outbound/guarded-request.js";
 import { type AccountServices, createAccountServices } from "../services.js";
 import { SettingsService } from "../settings/service.js";
 import { createMigratedDatabase, createTemporaryDatabase, type TemporaryDatabase } from "./database.js";
+import { EmptyDiskFileStore } from "./empty-disk-store.js";
 import { CapturingTransport } from "./jobs.js";
 
 export interface TestServices {
@@ -89,7 +90,7 @@ export async function createTestServices(
       jobs: options.jobs,
       logger,
       filesDir,
-      ...(options.fileStore ? { fileStore: options.fileStore } : {}),
+      fileStore: options.fileStore ?? new EmptyDiskFileStore(filesDir),
       ...(options.backup ? { backup: options.backup(temporary.url) } : {}),
       passwordHashConcurrency: 2,
       insecureIdentityProviders: true,
