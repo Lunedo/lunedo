@@ -39,7 +39,9 @@ test("new screens pass the accessibility check in English and German, light and 
   const post = /New VPN client from Monday/;
   await sweepAppearances(page, "page-with-comments", async () => {
     await page.goto(pagePath);
-    await expect(page.getByText("Hotel Wi-Fi blocks UDP on port 51820.")).toBeVisible();
+    await expect(
+      page.locator(".ld-read-view").getByText("Hotel Wi-Fi blocks UDP on port 51820."),
+    ).toBeVisible();
   });
   await sweepAppearances(page, "space-blog", async () => {
     await page.goto(`/spaces/${space.key}/blog`);
