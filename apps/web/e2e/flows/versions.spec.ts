@@ -70,7 +70,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await gallery.getByRole("button", { name: "Create from Meeting notes" }).click();
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
-  await expect(page.getByText("Not published yet").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
   const pagePath = new URL(page.url()).pathname;
 
   await editor(page).click();

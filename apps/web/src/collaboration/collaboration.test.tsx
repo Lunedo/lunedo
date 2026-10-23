@@ -378,6 +378,40 @@ describe("comments on a page", () => {
     expect(screen.queryByRole("button", { name: /^Comments/ })).toBeNull();
   });
 
+  it("list open inline threads below the content when the published text has no mark for them", async () => {
+    const { requests } = mockApi(
+      routes("commenter", {
+        [`GET /api/v1/pages/${VPN}/content`]: () => ({
+          body: {
+            itemId: VPN,
+            title: "VPN access",
+            version: 2,
+            document: {
+              type: "doc",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "Hotel Wi-Fi blocks UDP." }] }],
+            },
+            schemaVersion: 3,
+            revision: 4,
+            updatedAt: "2026-10-05T08:10:00.000Z",
+            updatedBy: OLIVIA.id,
+            references: { people: {}, pages: {} },
+          },
+        }),
+        [`PUT /api/v1/comments/${THREAD}/resolved`]: () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const section = await screen.findByRole("region", { name: "Comments 1" });
+    const thread = within(section).getByRole("article", { name: "Comment on “blocks UDP”" });
+    expect(within(thread).getByText("Happened twice")).toBeTruthy();
+    await userEvent.click(within(thread).getByRole("button", { name: "Resolve" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith("/resolved"))?.body).toEqual({
+        resolved: true,
+      }),
+    );
+  });
+
   it("open an inline thread from a deep link", async () => {
     wideScreen();
     mockApi(routes("reader"));

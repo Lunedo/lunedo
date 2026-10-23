@@ -30,14 +30,15 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await expect(popover).toBeHidden();
 
   await page.goto(pagePath);
-  await page.getByRole("button", { name: "1 open comment in this paragraph" }).click();
-  const ownerPopover = page.getByRole("dialog", { name: "Comments" });
-  await expect(ownerPopover.getByText("Happened twice this week.")).toBeVisible();
-  await ownerPopover.getByRole("textbox", { name: "Reply" }).click();
+  const thread = page
+    .getByRole("region", { name: /^Comments/ })
+    .getByRole("article", { name: /^Comment on “/ });
+  await expect(thread.getByText("Happened twice this week.")).toBeVisible();
+  await thread.getByRole("button", { name: "Reply", exact: true }).first().click();
+  await thread.getByRole("textbox", { name: "Reply" }).click();
   await page.keyboard.type("Let us document the fallback.");
-  await ownerPopover.getByRole("button", { name: "Reply", exact: true }).click();
-  await expect(ownerPopover.getByText("Let us document the fallback.")).toBeVisible();
-  await page.keyboard.press("Escape");
+  await thread.getByRole("button", { name: "Reply", exact: true }).last().click();
+  await expect(thread.getByText("Let us document the fallback.")).toBeVisible();
 
   await page.getByRole("textbox", { name: "New comment on the page" }).click();
   await page.keyboard.type("Thanks for the overview.");
@@ -47,7 +48,7 @@ test("two people discuss a page with comments, reactions, a mention and a task",
     .click();
   await other.reload();
   await expect(
-    other.getByRole("region", { name: "Comments 1" }).getByText("Thanks for the overview."),
+    other.getByRole("region", { name: /^Comments/ }).getByText("Thanks for the overview."),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Add reaction" }).first().click();

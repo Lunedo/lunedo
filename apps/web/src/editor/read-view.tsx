@@ -220,6 +220,7 @@ export interface ReadViewCollaboration {
   activeThread?: string | null;
   onThreadClick?: (threadId: string) => void;
   onCommentSelection?: (anchor: TextAnchor) => void;
+  onMarkedThreads?: (threadIds: string[]) => void;
   spaceId?: string | null;
 }
 
@@ -493,7 +494,11 @@ export function PageReadView({
         dangerouslySetInnerHTML={{ __html: html }}
       />
       {onThreadClick && openThreads.length > 0 ? (
-        <ThreadCounters openThreads={openThreads} onOpen={onThreadClick} />
+        <ThreadCounters
+          openThreads={openThreads}
+          onOpen={onThreadClick}
+          {...(collaboration.onMarkedThreads ? { onMarked: collaboration.onMarkedThreads } : {})}
+        />
       ) : null}
       {selection && onCommentSelection ? (
         <div className="absolute z-10" style={{ top: selection.top, left: selection.left }}>

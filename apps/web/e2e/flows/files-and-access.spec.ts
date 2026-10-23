@@ -65,10 +65,11 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
       new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
     );
   }, pasted);
-  await expect(row(page, "page.html")).toBeVisible();
+  await expect(attachments(page)).toBeHidden();
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: "Close", exact: true })).toBeHidden();
   await expect(page).not.toHaveURL(/edit=true/);
+  await expect(row(page, "page.html")).toBeVisible();
 
   await attachments(page)
     .locator('input[type="file"]')

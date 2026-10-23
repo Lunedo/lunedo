@@ -148,6 +148,7 @@ export function useContentCollaboration({
   const [pending, setPending] = useState<CommentAnchor | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [target, setTarget] = useState<InlineThreadTarget | null>(null);
+  const [marked, setMarked] = useState<readonly string[] | null>(null);
   const inline = layout === "inline";
   const toggleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -207,8 +208,8 @@ export function useContentCollaboration({
   const highlightedThread = comments.data?.threads.find((thread) => thread.id === highlighted);
   const highlightOpen = highlightedThread !== undefined && openThreads.includes(highlightedThread.id);
   useEffect(() => {
-    if (inline && highlightOpen && highlighted) activate(highlighted);
-  }, [inline, highlightOpen, highlighted, activate]);
+    if (inline && highlightOpen && highlighted && marked?.includes(highlighted)) activate(highlighted);
+  }, [inline, highlightOpen, highlighted, activate, marked]);
   const canToggleTask = useCallback(
     ({ assignee }: { id: string; assignee: string | null }) =>
       !archived && (writable || (assignee !== null && assignee === viewerId)),
@@ -228,6 +229,7 @@ export function useContentCollaboration({
       activeThread: active,
       onThreadClick: activate,
       spaceId,
+      ...(inline ? { onMarkedThreads: setMarked } : {}),
       ...(canComment ? { onCommentSelection: comment } : {}),
     },
     activeThread: active,
@@ -242,7 +244,8 @@ export function useContentCollaboration({
       <PageComments
         itemId={itemId}
         permissions={permissions}
-        highlight={highlightOpen ? null : highlighted}
+        highlight={highlightOpen && marked?.includes(highlighted ?? "") ? null : highlighted}
+        unmarked={marked === null ? [] : openThreads.filter((id) => !marked.includes(id))}
       />
     ) : null,
     popover: inline ? (

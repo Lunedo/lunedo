@@ -120,13 +120,18 @@ interface Counter {
 export function ThreadCounters({
   openThreads,
   onOpen,
+  onMarked,
 }: {
   openThreads: readonly string[];
   onOpen: (threadId: string) => void;
+  onMarked?: (threadIds: string[]) => void;
 }) {
   const { t } = useTranslation();
   const layer = useRef<HTMLDivElement>(null);
   const [counters, setCounters] = useState<Counter[]>([]);
+  const reportMarked = useRef(onMarked);
+  reportMarked.current = onMarked;
+  const lastMarked = useRef<string | null>(null);
 
   useLayoutEffect(() => {
     const element = layer.current;
@@ -138,14 +143,21 @@ export function ThreadCounters({
       frame = requestAnimationFrame(() => {
         const origin = element.getBoundingClientRect().top;
         const blocks = new Map<Element, string[]>();
+        const marked: string[] = [];
         for (const id of openThreads) {
           if (!UUID.test(id)) continue;
           const mark = host.querySelector(`[data-thread-id="${id}"]`);
           const root = mark?.closest(".ld-content");
           if (!mark || !root) continue;
+          marked.push(id);
           let block: Element = mark;
           while (block.parentElement && block.parentElement !== root) block = block.parentElement;
           blocks.set(block, [...(blocks.get(block) ?? []), id]);
+        }
+        const key = marked.join(",");
+        if (key !== lastMarked.current) {
+          lastMarked.current = key;
+          reportMarked.current?.(marked);
         }
         const next = [...blocks.entries()].map(([block, threads]) => ({
           key: threads[0] ?? "",

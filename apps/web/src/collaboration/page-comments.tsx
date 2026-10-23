@@ -294,10 +294,12 @@ export function PageComments({
   itemId,
   permissions,
   highlight,
+  unmarked = [],
 }: {
   itemId: string;
   permissions: CommentPermissions;
   highlight: string | null;
+  unmarked?: readonly string[];
 }) {
   const { t } = useTranslation();
   const comments = useQuery(commentsQuery(itemId));
@@ -305,7 +307,7 @@ export function PageComments({
   const create = useCreateComment(itemId);
   const threads = comments.data?.threads ?? [];
   const people = comments.data?.people ?? {};
-  const page = threads.filter((thread) => !isAnchored(thread));
+  const page = threads.filter((thread) => !isAnchored(thread) || unmarked.includes(thread.id));
   const resolved = threads.filter((thread) => isAnchored(thread) && thread.resolvedAt !== null);
   const highlightResolved = resolved.some((thread) => thread.id === highlight);
   const [showResolved, setShowResolved] = useState(highlightResolved);
@@ -352,6 +354,20 @@ export function PageComments({
                 people={people}
                 permissions={permissions}
                 highlighted={thread.id === highlight}
+                footer={
+                  permissions.canComment && isAnchored(thread) ? (
+                    <div className="ps-10">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={Check}
+                        onClick={() => void actions.resolve(thread.id, true)}
+                      >
+                        {t("comments.done")}
+                      </Button>
+                    </div>
+                  ) : null
+                }
               />
             </li>
           ))}

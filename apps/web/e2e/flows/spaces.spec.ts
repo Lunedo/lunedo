@@ -110,8 +110,15 @@ test("creates a space and arranges pages, folders and links", async ({ page, org
   await expect(title).toBeFocused();
   await title.fill("VPN access");
   await title.press("Enter");
-  await expect(tree.getByRole("treeitem", { name: "VPN access" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveAttribute(
+    "data-collapsed",
+    "true",
+  );
+  await expect(page.getByRole("heading", { name: "Rename VPN access" })).toBeVisible();
+  await expect(page).toHaveURL(/\/vpn-access\?edit=true$/);
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page).not.toHaveURL(/edit=true/);
+  await expect(tree.getByRole("treeitem", { name: "VPN access" })).toBeVisible();
 
   const vpn = tree.getByRole("treeitem", { name: "VPN access" });
   const runbooks = tree.getByRole("treeitem", { name: "Runbooks" });
@@ -175,7 +182,6 @@ test("writes a page with blocks and shows it in the read view", async ({ page, o
   await expect(page.getByRole("heading", { name: "Set up a new device", level: 2 })).toBeVisible();
   const reading = await page.locator(".ld-read-view p").first().boundingBox();
   expect(editing).not.toBeNull();
-  expect(reading?.x).toBeCloseTo(editing?.x ?? -1, 0);
   expect(reading?.width).toBeCloseTo(editing?.width ?? -1, 0);
   await expect(page.locator(".ld-read-view .ld-callout-label")).toHaveText("Info");
   await expect(page.locator("strong", { hasText: "company portal" })).toBeVisible();
@@ -209,7 +215,7 @@ test("lets three people edit one page at the same time without conflicts", async
   try {
     await Promise.all(sessions.map((session) => openEditor(session.page, pagePath)));
     for (const session of sessions) {
-      await expect(session.page.getByRole("list", { name: "3 people on this page" })).toBeVisible({
+      await expect(session.page.getByRole("list", { name: "2 people are editing" })).toBeVisible({
         timeout: 15_000,
       });
     }
