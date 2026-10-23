@@ -369,9 +369,9 @@ export function SpaceShortcutsScreen() {
             {shortcuts.data.map((shortcut, index, list) => (
               <li key={shortcut.id} className="flex flex-wrap items-center gap-3 py-3">
                 {shortcut.hidden ? (
-                  <EyeOff aria-hidden className="size-icon shrink-0 text-warning" />
+                  <EyeOff aria-hidden className="size-icon-md shrink-0 text-warning" />
                 ) : (
-                  <Link2 aria-hidden className="size-icon shrink-0 text-text-muted" />
+                  <Link2 aria-hidden className="size-icon-md shrink-0 text-text-muted" />
                 )}
                 <div className="flex min-w-0 flex-1 basis-field flex-col">
                   <TruncatedText text={shortcut.label} className="font-medium" />

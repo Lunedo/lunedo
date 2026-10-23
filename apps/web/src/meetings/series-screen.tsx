@@ -224,7 +224,7 @@ function SeriesView({ series }: { series: Series }) {
       {series.oneOnOne ? (
         <Notice variant="info" title={t("meetings.oneOnOne.privateTitle")}>
           <span className="inline-flex items-start gap-2">
-            <Lock aria-hidden className="size-icon shrink-0" />
+            <Lock aria-hidden className="size-icon-md shrink-0" />
             {t("meetings.oneOnOne.privateDescription")}
           </span>
         </Notice>
@@ -303,7 +303,7 @@ function SeriesView({ series }: { series: Series }) {
               to={pagePath(space.key, upcoming.id, itemSlug(upcoming.title))}
               className={buttonClassName({ variant: "primary" })}
             >
-              <NotebookPen aria-hidden className="size-icon" />
+              <NotebookPen aria-hidden className="size-icon-md" />
               {t("meetings.series.openAgenda")}
             </Link>
           </div>
@@ -325,7 +325,7 @@ function SeriesView({ series }: { series: Series }) {
           />
           <section aria-labelledby="series-tasks" className="flex flex-col gap-3">
             <h2 id="series-tasks" className="flex items-center gap-2 text-lg font-semibold">
-              <ListChecks aria-hidden className="size-icon text-text-muted" />
+              <ListChecks aria-hidden className="size-icon-md text-text-muted" />
               {t("meetings.series.openTasks")}
             </h2>
             <TaskTable
@@ -362,7 +362,7 @@ function OwnNotes({ seriesId, spaceKey }: { seriesId: string; spaceKey: string }
   return (
     <section aria-labelledby="series-notes" className="flex flex-col gap-3">
       <h2 id="series-notes" className="flex items-center gap-2 text-lg font-semibold">
-        <Lock aria-hidden className="size-icon text-text-muted" />
+        <Lock aria-hidden className="size-icon-md text-text-muted" />
         {t("meetings.notes.ownTitle")}
       </h2>
       <p className="text-sm text-text-muted">{t("meetings.notes.ownDescription")}</p>
@@ -374,7 +374,7 @@ function OwnNotes({ seriesId, spaceKey }: { seriesId: string; spaceKey: string }
               search={{ notes: true }}
               className="flex min-h-hit items-center gap-2 px-3 py-2 hover:bg-hover focus-visible:focus-ring"
             >
-              <NotebookPen aria-hidden className="size-icon text-text-muted" />
+              <NotebookPen aria-hidden className="size-icon-md text-text-muted" />
               <span className="min-w-0 flex-1 truncate">
                 {entry.startsAt ? format.date(entry.startsAt) : entry.meetingTitle}
               </span>

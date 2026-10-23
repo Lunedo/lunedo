@@ -33,7 +33,7 @@ export function usePageSharing(
   ) : null;
   const restrictionNote = restricted ? (
     <p className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-      <Lock aria-hidden="true" className="size-icon shrink-0" />
+      <Lock aria-hidden="true" className="size-icon-md shrink-0" />
       <span>
         {page.viewRestriction === "own"
           ? t("sharing.note.view")

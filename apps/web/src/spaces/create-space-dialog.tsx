@@ -271,7 +271,7 @@ function CreateSpaceForm({
         />
       </Field>
       {canCreateConfidential && !knowledgeBase ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 border-t border-border pt-4">
           <Checkbox
             label={t("confidential.createLabel")}
             description={t("confidential.createDescription")}

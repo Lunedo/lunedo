@@ -77,7 +77,7 @@ function Owner({ row }: { row: ReviewItem }) {
     : t("reviews.list.noOwner");
   return (
     <span className="inline-flex min-w-0 items-center gap-1">
-      <UserRoundX aria-hidden="true" className="size-icon shrink-0" />
+      <UserRoundX aria-hidden="true" className="size-icon-md shrink-0" />
       <span className="truncate" title={text}>
         {text}
       </span>
@@ -116,7 +116,7 @@ function ReviewRow({
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <div className="flex min-w-0 flex-1 basis-field items-start gap-2">
-        <Icon aria-hidden="true" className="mt-0.5 size-icon shrink-0 text-text-muted" />
+        <Icon aria-hidden="true" className="mt-0.5 size-icon-md shrink-0 text-text-muted" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Link
             to={href}
@@ -162,7 +162,7 @@ function ReviewRow({
           className={buttonClassName({ variant: "outline", size: "sm" })}
           aria-label={t("reviews.list.editArticle", { title: row.title })}
         >
-          <SquarePen aria-hidden="true" className="size-icon" />
+          <SquarePen aria-hidden="true" className="size-icon-md" />
           {t("reviews.list.edit")}
         </Link>
       </div>

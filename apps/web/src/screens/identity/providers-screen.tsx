@@ -14,7 +14,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Eye, KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -380,11 +380,12 @@ export function ProvidersTable({
                   />
                 }
                 items={[
-                  { label: t("identityProviders.openDetails"), onSelect: () => open(provider) },
+                  { label: t("identityProviders.openDetails"), icon: Eye, onSelect: () => open(provider) },
                   ...(canManage && !provider.setupComplete
                     ? [
                         {
                           label: t("identityProviders.unfinished.continue"),
+                          icon: ArrowRight,
                           onSelect: () =>
                             void navigate(continueSetupPath({ providerId: provider.id }) as never),
                         },

@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Trash } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 import { IconButton } from "./button.js";
 import { Menu } from "./overlays.js";
@@ -116,7 +116,7 @@ describe("Table", () => {
           cell: (row) => (
             <Menu
               trigger={<IconButton label={`More for ${row.name}`} icon={MoreHorizontal} />}
-              items={[{ label: "Remove rule", onSelect }]}
+              items={[{ label: "Remove rule", icon: Trash, onSelect }]}
             />
           ),
         },
@@ -126,5 +126,20 @@ describe("Table", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "Remove rule" }));
     expect(onSelect).toHaveBeenCalledOnce();
     expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("draws the flat variant without a frame", () => {
+    renderUi(
+      <Table
+        caption="Articles"
+        variant="flat"
+        columns={[{ key: "title", header: "Title", cell: (row: { id: string }) => row.id }]}
+        rows={[{ id: "VPN" }]}
+        rowKey={(row) => row.id}
+      />,
+    );
+    const table = screen.getByRole("table", { name: "Articles" });
+    expect(table.closest(".rounded-md")).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Title" }).className).toContain("text-xs");
   });
 });

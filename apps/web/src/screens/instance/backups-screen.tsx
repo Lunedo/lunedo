@@ -25,7 +25,7 @@ import {
   type TableColumn,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DatabaseBackup, MoreHorizontal } from "lucide-react";
+import { DatabaseBackup, Eye, MoreHorizontal, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -979,12 +979,12 @@ function BackupsTable({
               <IconButton icon={MoreHorizontal} label={t("backups.list.actionsFor", { name: row.name })} />
             }
             items={[
-              { label: t("backups.list.runTestRestore"), onSelect: () => onTest(row) },
+              { label: t("backups.list.runTestRestore"), icon: Play, onSelect: () => onTest(row) },
               ...(row.testRestore
-                ? [{ label: t("backups.list.showTestRestore"), onSelect: () => onDetails(row) }]
+                ? [{ label: t("backups.list.showTestRestore"), icon: Eye, onSelect: () => onDetails(row) }]
                 : []),
               { type: "separator" as const },
-              { label: t("backups.list.delete"), danger: true, onSelect: () => onDelete(row) },
+              { label: t("backups.list.delete"), icon: Trash2, danger: true, onSelect: () => onDelete(row) },
             ]}
           />
         ) : null,

@@ -856,7 +856,7 @@ describe("the sign-in settings of the instance", () => {
     expect(screen.getByText(/could not read your groups from Microsoft/)).toBeTruthy();
   });
 
-  it("tells a person without an organization that the administrators were informed", async () => {
+  it("tells a person without an organization on For you that the administrators were informed", async () => {
     adminApi({
       "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
       "GET /api/v1/auth/session": () => ({
@@ -868,8 +868,9 @@ describe("the sign-in settings of the instance", () => {
         },
       }),
     });
-    await renderPath("/settings/instance/sign-in-providers");
+    await renderPath("/home");
     expect(await screen.findByText("No organization is assigned to you yet")).toBeTruthy();
+    expect(screen.queryByText("Welcome to Lunedo")).toBeNull();
   });
 
   it("offers one primary action to add the first provider", async () => {

@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { Check, type LucideIcon } from "lucide-react";
 import { DropdownMenu, Popover as PopoverPrimitive, Tabs as TabsPrimitive } from "radix-ui";
 import { type ReactNode, useRef } from "react";
 import { classNames } from "./class-names.js";
@@ -60,14 +60,16 @@ export type MenuItem =
   | {
       type?: "item";
       label: string;
-      icon?: LucideIcon;
+      icon: LucideIcon;
       onSelect: () => void;
       danger?: boolean;
       disabled?: boolean;
       shortcut?: string;
+      checked?: boolean;
     }
   | { type: "separator" }
-  | { type: "label"; label: string };
+  | { type: "label"; label: string }
+  | { type: "header"; title: string; description?: string };
 
 export interface MenuProps {
   trigger: ReactNode;
@@ -106,6 +108,40 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
                 </DropdownMenu.Label>
               );
             }
+            if (item.type === "header") {
+              return (
+                <div key={`header-${item.title}`} className="flex flex-col px-2 pt-2 pb-2">
+                  <span className="truncate font-semibold" title={item.title}>
+                    {item.title}
+                  </span>
+                  {item.description && (
+                    <span className="truncate text-sm text-text-muted" title={item.description}>
+                      {item.description}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+            if (item.checked !== undefined) {
+              return (
+                <DropdownMenu.CheckboxItem
+                  key={item.label}
+                  checked={item.checked}
+                  onSelect={() => {
+                    rememberMenuOpener(opener.current);
+                    item.onSelect();
+                  }}
+                  {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
+                  className="flex h-row cursor-default items-center gap-2 rounded-sm px-2 text-text outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover"
+                >
+                  <Icon icon={item.icon} className="text-text-muted" />
+                  <span className="flex-1">{item.label}</span>
+                  <DropdownMenu.ItemIndicator className="flex">
+                    <Icon icon={Check} className="text-accent" />
+                  </DropdownMenu.ItemIndicator>
+                </DropdownMenu.CheckboxItem>
+              );
+            }
             return (
               <DropdownMenu.Item
                 key={item.label}
@@ -119,7 +155,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
                   item.danger ? "text-danger" : "text-text",
                 )}
               >
-                {item.icon && <Icon icon={item.icon} className={item.danger ? "" : "text-text-muted"} />}
+                <Icon icon={item.icon} className={item.danger ? "" : "text-text-muted"} />
                 <span className="flex-1">{item.label}</span>
                 {item.shortcut && <span className="text-xs text-text-muted">{item.shortcut}</span>}
               </DropdownMenu.Item>

@@ -78,6 +78,7 @@ import {
   MoreHorizontal,
   Palette,
   Plus,
+  RotateCcw,
   Search,
   Settings,
   Share2,
@@ -699,7 +700,7 @@ function RowMenu() {
       align="end"
       trigger={<IconButton label={t("More options", "Weitere Optionen")} icon={MoreHorizontal} />}
       items={[
-        { label: t("Reset to default", "Auf Standard zurücksetzen"), onSelect: () => {} },
+        { label: t("Reset to default", "Auf Standard zurücksetzen"), icon: RotateCcw, onSelect: () => {} },
         { label: t("Lock for members", "Für Mitglieder sperren"), icon: Lock, onSelect: () => {} },
       ]}
     />

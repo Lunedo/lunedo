@@ -486,38 +486,38 @@ describe("For you", () => {
     await renderAt("/home");
     expect(await screen.findByText("Test the fallback")).toBeTruthy();
     expect(screen.getByText(/Lukas Hofer/)).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: /VPN access/ }).length).toBe(3);
+    expect(screen.getAllByRole("link", { name: /VPN access/ }).length).toBe(4);
+    expect(screen.queryByText(/Hello/)).toBeNull();
     expect(screen.getByText("No blog posts were published in your spaces in the last 30 days.")).toBeTruthy();
   });
 
-  it("welcomes people only while nothing at all is there, upcoming meetings included", async () => {
+  it("welcomes people without spaces with a collapsed sidebar and shows the sections once a space exists", async () => {
     const empty = { recent: [], starred: { items: [], spaces: [] }, tasks: [], mentions: [], posts: [] };
-    const meeting = {
-      id: VPN,
-      title: "Jour fixe",
-      startsAt: "2030-03-18T08:30:00.000Z",
-      durationMinutes: 45,
-      seriesId: SPACE_ID,
-      seriesTitle: "Jour fixe IT",
-      spaceId: SPACE_ID,
-      spaceKey: "ITOPS",
-      oneOnOne: false,
-    };
-    const upcoming: unknown[] = [];
+    const spaces: unknown[] = [];
     mockApi(
       routes("reader", {
         "GET /api/v1/home": () => ({ body: empty }),
-        "GET /api/v1/meetings/upcoming": () => ({ body: upcoming }),
+        "GET /api/v1/spaces": () => ({ body: { items: spaces, nextCursor: null } }),
+        "GET /api/v1/meetings/upcoming": () => ({ body: [] }),
         "GET /api/v1/one-on-ones": () => ({ body: [] }),
       }),
     );
     await renderAt("/home");
     expect(await screen.findByText("Welcome to Lunedo")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open the spaces" }).getAttribute("href")).toBe("/spaces");
+    await waitFor(() =>
+      expect(screen.getByRole("navigation", { name: "Main navigation" }).hasAttribute("data-collapsed")).toBe(
+        true,
+      ),
+    );
     cleanup();
-    upcoming.push(meeting);
+    spaces.push({ id: SPACE_ID, key: "ITOPS", name: "IT Operations" });
     await renderAt("/home");
-    expect(await screen.findByText("Jour fixe IT")).toBeTruthy();
+    expect(await screen.findByText("No upcoming meetings.")).toBeTruthy();
     expect(screen.queryByText("Welcome to Lunedo")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Main navigation" }).hasAttribute("data-collapsed")).toBe(
+      false,
+    );
   });
 
   it("names an upcoming meeting by its own title when the series stays hidden", async () => {

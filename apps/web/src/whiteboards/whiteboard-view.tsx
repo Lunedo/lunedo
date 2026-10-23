@@ -351,7 +351,7 @@ export function WhiteboardView({
           ) : null}
           {writable && narrow ? (
             <p className="flex items-center gap-2 text-sm text-text-muted">
-              <Smartphone aria-hidden="true" className="size-icon shrink-0" />
+              <Smartphone aria-hidden="true" className="size-icon-md shrink-0" />
               {t("whiteboards.phone")}
             </p>
           ) : null}

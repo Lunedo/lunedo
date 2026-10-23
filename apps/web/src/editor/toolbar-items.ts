@@ -7,10 +7,17 @@ import {
   AlignLeft,
   AlignRight,
   AtSign,
+  Ban,
   Bold,
   Calendar,
   Code,
   Eraser,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   Highlighter,
   IndentDecrease,
   IndentIncrease,
@@ -40,7 +47,7 @@ import { slashCommands } from "./slash-items.js";
 export interface ToolbarAction {
   id: string;
   label: string;
-  icon?: LucideIcon;
+  icon: LucideIcon;
   shortcut?: string;
   active?: boolean;
   disabled?: boolean;
@@ -83,6 +90,8 @@ const layout: { id: string; group: string; essential?: boolean }[] = [
 ];
 
 const overflowOnly = ["subscript", "superscript"];
+
+const headingIcons: LucideIcon[] = [Heading1, Heading2, Heading3, Heading4, Heading5, Heading6];
 
 function todayIso(): string {
   const now = new Date();
@@ -169,6 +178,7 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
         {
           id: "paragraph",
           label: t("editor.blocks.paragraph"),
+          icon: Pilcrow,
           shortcut: "mod+alt+0",
           active: editor.isActive("paragraph"),
           run: () => chain().setParagraph().run(),
@@ -176,6 +186,7 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
         ...[1, 2, 3, 4, 5, 6].map((level) => ({
           id: `heading${level}`,
           label: translateKey(t, `editor.blocks.heading${level}`),
+          icon: headingIcons[level - 1] ?? Heading6,
           shortcut: `mod+alt+${level}`,
           active: editor.isActive("heading", { level }),
           run: () => chain().setNode("heading", { level }).run(),
@@ -199,11 +210,13 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
         {
           id: "color-default",
           label: t("editor.colors.default"),
+          icon: Ban,
           run: () => chain().unsetMark("textColor").run(),
         },
         ...contentColors.map((color) => ({
           id: `color-${color}`,
           label: translateKey(t, `editor.colors.${color}`),
+          icon: Palette,
           active: editor.isActive("textColor", { color }),
           run: () => chain().setMark("textColor", { color }).run(),
         })),
@@ -219,11 +232,13 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
         {
           id: "highlight-none",
           label: t("editor.colors.none"),
+          icon: Ban,
           run: () => chain().unsetMark("highlight").run(),
         },
         ...contentColors.map((color) => ({
           id: `highlight-${color}`,
           label: translateKey(t, `editor.colors.${color}`),
+          icon: Highlighter,
           active: editor.isActive("highlight", { color }),
           run: () => chain().setMark("highlight", { color }).run(),
         })),

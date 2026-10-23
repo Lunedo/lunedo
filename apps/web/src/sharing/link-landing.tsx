@@ -199,7 +199,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
           className="flex flex-col gap-2 border-t border-border pt-4"
         >
           <h2 id="link-attachments" className="flex items-center gap-2 font-semibold">
-            <Paperclip aria-hidden="true" className="size-icon" />
+            <Paperclip aria-hidden="true" className="size-icon-md" />
             {t("files.title")}
           </h2>
           <ul className="flex flex-col divide-y divide-border">

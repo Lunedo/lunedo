@@ -29,7 +29,13 @@ import { HeldActions, heldReason } from "./held-notice.js";
 const TITLE_MAX = 255;
 const EXCERPT_MAX = 500;
 
-function CreatePostDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CreatePostDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -137,7 +143,7 @@ function ScheduledPosts({ spaceId }: { spaceId: string }) {
     <section aria-labelledby="scheduled-posts" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h2 id="scheduled-posts" className="flex items-center gap-2 text-lg font-semibold">
-          <CalendarClock aria-hidden className="size-icon text-text-muted" />
+          <CalendarClock aria-hidden className="size-icon-md text-text-muted" />
           {t("blog.scheduledTitle")}
         </h2>
         <p className="text-sm text-text-muted">{t("blog.scheduledDescription")}</p>

@@ -133,7 +133,7 @@ export function PreviewBody({
         return (
           <div className="flex flex-col items-start gap-2 rounded-md border border-border p-4">
             <p className="flex items-center gap-2 text-sm text-text-muted">
-              <ImageOff aria-hidden="true" className="size-icon shrink-0" />
+              <ImageOff aria-hidden="true" className="size-icon-md shrink-0" />
               {t("files.preview.imageTooLarge")}
             </p>
             <a
@@ -142,7 +142,7 @@ export function PreviewBody({
               rel="noopener noreferrer"
               className="inline-flex min-h-hit items-center gap-2 font-medium text-accent underline focus-visible:focus-ring"
             >
-              <Maximize2 aria-hidden="true" className="size-icon" />
+              <Maximize2 aria-hidden="true" className="size-icon-md" />
               {t("files.preview.openFullSize")}
             </a>
           </div>
@@ -290,7 +290,7 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
               className="inline-flex min-h-hit items-center gap-1 text-accent underline"
               download={version.name}
             >
-              <Download aria-hidden="true" className="size-icon" />
+              <Download aria-hidden="true" className="size-icon-md" />
               {t("files.download")}
             </a>
             {canEdit ? (
@@ -372,7 +372,7 @@ export function FilePreviewDrawer({
                 download={attachment.name}
                 className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
               >
-                <Download aria-hidden="true" className="size-icon" />
+                <Download aria-hidden="true" className="size-icon-md" />
                 {t("files.download")}
               </a>
               {attachment.versions > 1 || canEdit ? (

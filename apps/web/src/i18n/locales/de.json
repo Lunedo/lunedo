@@ -1026,13 +1026,11 @@
   "rail": {
     "label": "Hauptnavigation",
     "home": "Lunedo-Startseite",
-    "search": "Suche",
     "notifications": "Benachrichtigungen",
     "notificationsUnread": "Benachrichtigungen, {count, plural, one {# ungelesen} other {# ungelesen}}",
     "help": "Hilfe",
     "settings": "Einstellungen",
     "account": "Konto",
-    "spaces": "Spaces",
     "forYou": "Für dich",
     "tasks": "Meine Aufgaben"
   },
@@ -5202,11 +5200,8 @@
     }
   },
   "spaces": {
-    "navigation": "Navigation von {space}",
-    "inOrganization": "{organization} · Space",
     "options": "Space-Optionen",
     "overview": "Übersicht",
-    "pagesButton": "Seiten",
     "loadFailed": "Der Space konnte nicht geladen werden",
     "notFound": {
       "title": "Space nicht gefunden",
@@ -5265,12 +5260,11 @@
     },
     "list": {
       "title": "Spaces",
-      "description": "Spaces, die du lesen kannst, mit ihren Seiten und Ordnern.",
+      "description": "Spaces, die du lesen kannst.",
       "search": "Spaces filtern",
       "searchPlaceholder": "Name, Schlüssel oder Beschreibung",
       "organizationFilter": "Organisation",
       "allOrganizations": "Alle Organisationen",
-      "inOrganization": "{organization}",
       "loadFailed": "Die Spaces konnten nicht geladen werden",
       "none": "Noch keine Spaces",
       "noneDescription": "Spaces enthalten Seiten, Ordner und Links für ein Team oder ein Thema. Erstelle den ersten, um loszuschreiben.",
@@ -5282,7 +5276,11 @@
       "activeSpaces": "Aktive Spaces",
       "archivedSpaces": "Archivierte Spaces",
       "oneOnOnes": "1:1-Gespräche",
-      "deletedSpaces": "Gelöschte Spaces"
+      "deletedSpaces": "Gelöschte Spaces",
+      "name": "Name",
+      "key": "Schlüssel",
+      "visibility": "Wer lesen kann",
+      "favorite": "Favorit"
     },
     "deleted": {
       "title": "Gelöschte Spaces",
@@ -5488,8 +5486,7 @@
       "removeFailed": "Die Einschränkung wurde nicht entfernt",
       "adminsOnlyTitle": "Nur Space-Admins verwalten Einschränkungen",
       "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht."
-    },
-    "articlesButton": "Artikel"
+    }
   },
   "tree": {
     "title": "Seiten",
@@ -5638,7 +5635,10 @@
     "useFixedWidth": "Feste Breite verwenden",
     "useFullWidth": "Volle Breite verwenden",
     "numberHeadings": "Überschriften nummerieren",
-    "stopNumberingHeadings": "Überschriften nicht mehr nummerieren"
+    "stopNumberingHeadings": "Überschriften nicht mehr nummerieren",
+    "breadcrumbs": "Pfad",
+    "editedBy": "Bearbeitet von {name} am {date}, {time} · Klick öffnet die Versionen",
+    "editedOn": "Bearbeitet am {date}, {time} · Klick öffnet die Versionen"
   },
   "pageTitle": {
     "edit": "{title} umbenennen",
@@ -6101,9 +6101,8 @@
   },
   "home": {
     "title": "Für dich",
-    "greeting": "Hallo {name}. Das hat sich für dich getan.",
     "loadFailed": "Deine Startseite konnte nicht geladen werden",
-    "tasks": "Meine offenen Aufgaben, bald fällig",
+    "tasks": "Meine Aufgaben, bald fällig",
     "noTasks": "In den nächsten 7 Tagen ist keine offene Aufgabe fällig.",
     "allTasks": "Alle meine Aufgaben",
     "mentions": "Erwähnungen",
@@ -9790,7 +9789,8 @@
       "withoutCategory": "Ohne Kategorie",
       "total": "{count, plural, one {# Artikel} other {# Artikel}} in Kategorien",
       "emptyFiltered": "In dieser Kategorie gibt es keine Artikel dieser Art.",
-      "languages": "Übersetzungen"
+      "languages": "Übersetzungen",
+      "articleCount": "{count, plural, one {{formatted} Artikel} other {{formatted} Artikel}}"
     },
     "create": {
       "typeLabel": "Art des Space",
@@ -10176,7 +10176,8 @@
       "translationOutdatedHint": "Übersetzung ({language}) veraltet",
       "lastReviewedOn": "Geprüft am {date}",
       "neverReviewed": "Nie geprüft",
-      "markArticle": "Als geprüft markieren: {title}"
+      "markArticle": "Als geprüft markieren: {title}",
+      "navDue": "Überprüfung, {count} fällig"
     },
     "settings": {
       "tab": "Überprüfung",
@@ -10662,5 +10663,48 @@
     "removePictureDescription": "Andere sehen dann wieder deine Initialen. Du kannst jederzeit ein neues Bild hochladen.",
     "pictureUploaded": "Profilbild gespeichert",
     "pictureRemoved": "Profilbild entfernt"
+  },
+  "topBar": {
+    "search": "Suchen",
+    "searchShortcut": "Strg K",
+    "searchShortcutApple": "⌘ K",
+    "switchOrganization": "Organisation wechseln, aktuell {name}",
+    "organizationSettings": "Organisationseinstellungen",
+    "createOrganization": "Organisation erstellen"
+  },
+  "sidebar": {
+    "favorites": "Favoriten",
+    "recentSpaces": "Zuletzt besucht",
+    "allSpaces": "Alle Spaces",
+    "collapse": "Seitenleiste einklappen",
+    "expand": "Seitenleiste ausklappen",
+    "close": "Navigation schließen",
+    "tasksOpen": "Meine Aufgaben, {count, plural, one {# offen} other {{shown} offen}}",
+    "spaceType": "Space",
+    "open": "Navigation öffnen"
+  },
+  "create": {
+    "button": "Erstellen",
+    "inSpace": "In {space}",
+    "inASpace": "In einem Space",
+    "page": "Seite",
+    "blogPost": "Blogbeitrag",
+    "whiteboard": "Whiteboard",
+    "folder": "Ordner",
+    "link": "Link",
+    "meeting": "Besprechung",
+    "article": "Artikel",
+    "category": "Kategorie",
+    "space": "Space",
+    "chooseSpace": {
+      "title": "{kind} erstellen",
+      "description": "Wähle den Space, in dem du es erstellen willst. Es erscheinen die Spaces, in denen du bearbeiten darfst.",
+      "label": "Space",
+      "placeholder": "Space nach Name oder Schlüssel suchen",
+      "empty": "Kein Space gefunden, in dem du bearbeiten darfst.",
+      "required": "Wähle einen Space aus.",
+      "cancel": "Abbrechen",
+      "continue": "Weiter"
+    }
   }
 }

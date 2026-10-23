@@ -255,7 +255,7 @@ export function WhiteboardBlock({
         <span className="truncate" title={title}>
           {title || t("editor.whiteboard.label")}
         </span>
-        <ExternalLink aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        <ExternalLink aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         <span className="sr-only">{t("editor.whiteboard.open")}</span>
       </span>
     </a>

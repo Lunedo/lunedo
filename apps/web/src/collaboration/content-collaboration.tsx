@@ -17,9 +17,11 @@ import { useSetTaskStatus } from "./task-actions.js";
 export function StarButton({
   target,
   title,
+  size = "md",
 }: {
   target: { itemId: string } | { spaceId: string };
   title: string;
+  size?: "sm" | "md";
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -63,6 +65,7 @@ export function StarButton({
     <IconButton
       label={active ? t("starred.unstar", { title }) : t("starred.star", { title })}
       icon={Star}
+      size={size}
       aria-pressed={active}
       className={active ? "text-warning [&_svg]:fill-current" : undefined}
       onClick={() => toggle.mutate(!active)}

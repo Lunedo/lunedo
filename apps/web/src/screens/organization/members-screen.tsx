@@ -17,7 +17,17 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus } from "lucide-react";
+import {
+  CalendarClock,
+  Info,
+  MoreHorizontal,
+  Plus,
+  ShieldMinus,
+  ShieldPlus,
+  UserCog,
+  UserMinus,
+  UserX,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -106,6 +116,7 @@ export function MembersScreen() {
   const memberMenu = (member: Member) => [
     {
       label: t("members.actions.roles"),
+      icon: ShieldPlus,
       onSelect: () => setAction({ kind: "roles", member }),
       disabled: member.kind !== "member",
     },
@@ -113,6 +124,7 @@ export function MembersScreen() {
       label: t("members.actions.removeRole", {
         role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
       }),
+      icon: ShieldMinus,
       onSelect: () => {
         if (!role.customRoleId && role.role === "owner") {
           setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
@@ -136,20 +148,32 @@ export function MembersScreen() {
     })),
     { type: "separator" as const },
     ...(member.kind !== "member"
-      ? [{ label: t("members.actions.expiry"), onSelect: () => setAction({ kind: "expiry", member }) }]
+      ? [
+          {
+            label: t("members.actions.expiry"),
+            icon: CalendarClock,
+            onSelect: () => setAction({ kind: "expiry", member }),
+          },
+        ]
       : []),
     ...(member.kind === "guest"
       ? [
           {
             label: t("members.actions.responsible"),
+            icon: UserCog,
             onSelect: () => setAction({ kind: "responsible", member }),
           },
         ]
       : []),
-    { label: t("members.actions.permissions"), onSelect: () => setAction({ kind: "permissions", member }) },
+    {
+      label: t("members.actions.permissions"),
+      icon: Info,
+      onSelect: () => setAction({ kind: "permissions", member }),
+    },
     { type: "separator" as const },
     {
       label: t("members.actions.remove"),
+      icon: UserMinus,
       danger: true,
       onSelect: () => setAction({ kind: "remove", member }),
     },
@@ -157,6 +181,7 @@ export function MembersScreen() {
       ? [
           {
             label: t("members.actions.deactivate"),
+            icon: UserX,
             danger: true,
             onSelect: () => setAction({ kind: "deactivate", member }),
           },

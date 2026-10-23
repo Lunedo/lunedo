@@ -1,6 +1,6 @@
-import { Notice, Rail } from "@lunedo/ui";
+import { Notice } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link, Outlet, useRouter } from "@tanstack/react-router";
+import { getRouteApi, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -17,16 +17,23 @@ import { PortalAccountHome } from "../knowledge-bases/portal-account-home.js";
 import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
 import { AnnouncementBanners } from "./announcement-banners.js";
+import { AppSidebar } from "./app-sidebar.js";
 import { CommandPaletteHost } from "./command-palette.js";
-import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
+import { type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
-import { LunedoMark } from "./lunedo-mark.js";
 import { MaintenanceBanner } from "./maintenance-banner.js";
 import { useNavigationFocus } from "./navigation-focus.js";
 import { useRegistry } from "./registry.js";
-import { type ShellState, ShellStateContext } from "./shell.js";
+import { type CreateKind, type ShellState, ShellStateContext, type SpaceCreateTarget } from "./shell.js";
+import { ShellBanner } from "./shell-banner.js";
 import { OrganizationProvider, useOrganizationState } from "./shell-context.js";
 import { ShortcutsDialog } from "./shortcuts-dialog.js";
+import { SidebarSlotProvider, useSidebarSlotState } from "./sidebar-slot.js";
+import { DESKTOP_QUERY, TopBar } from "./top-bar.js";
+
+function isDesktop(): boolean {
+  return globalThis.matchMedia?.(DESKTOP_QUERY).matches ?? true;
+}
 
 const route = getRouteApi("/app");
 
@@ -56,7 +63,21 @@ function ShellFrame() {
     () => allShortcuts.filter((shortcut) => !shortcut.listOnly),
     [allShortcuts],
   );
-  const items = useRegistry(railItems);
+  const location = useLocation();
+  const sidebarSlots = useSidebarSlotState();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [collapseSuggested, setCollapseSuggested] = useState(false);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [spaceCreateTarget, setSpaceCreateTarget] = useState<SpaceCreateTarget | null>(null);
+  const [pendingCreate, setPendingCreate] = useState<{ spaceKey: string; kind: CreateKind } | null>(null);
+  const suggestionApplies = collapseSuggested && !suggestionDismissed && !preferences.sidebarCollapsed;
+  const sidebarCollapsed = preferences.sidebarCollapsed || suggestionApplies;
+  const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
+  const suggestCollapsedSidebar = useCallback((suggested: boolean) => {
+    setCollapseSuggested(suggested);
+    if (!suggested) setSuggestionDismissed(false);
+  }, []);
+  const settingsArea = location.pathname === "/settings" || location.pathname.startsWith("/settings/");
 
   const signOut = useCallback(() => {
     void request(() => api.POST("/api/v1/auth/sign-out"), { sessionHandling: false })
@@ -83,16 +104,47 @@ function ShellFrame() {
       },
       openShortcuts: () => setShortcutsOpen(true),
       toggleNotifications: () => setNotificationsOpen((open) => !open),
-      toggleSidebar: () =>
+      toggleSidebar: () => {
+        if (!isDesktop()) {
+          setMobileSidebarOpen((open) => !open);
+          return;
+        }
+        if (suggestionApplies) {
+          setSuggestionDismissed(true);
+          return;
+        }
         updatePreference.mutate({
           key: preferenceKeys.sidebarCollapsed,
           value: !preferences.sidebarCollapsed,
-        }),
+        });
+      },
       signOut,
       notificationsOpen,
-      sidebarCollapsed: preferences.sidebarCollapsed,
+      sidebarCollapsed,
+      mobileSidebarOpen,
+      closeMobileSidebar,
+      suggestCollapsedSidebar,
+      spaceCreateTarget,
+      setSpaceCreateTarget,
+      pendingCreate,
+      requestCreate: (spaceKey, kind) => setPendingCreate({ spaceKey, kind }),
+      clearPendingCreate: () => setPendingCreate(null),
     }),
-    [organization, router, updatePreference, preferences.sidebarCollapsed, signOut, notificationsOpen],
+    [
+      organization,
+      router,
+      updatePreference,
+      preferences.sidebarCollapsed,
+      signOut,
+      notificationsOpen,
+      sidebarCollapsed,
+      suggestionApplies,
+      mobileSidebarOpen,
+      closeMobileSidebar,
+      suggestCollapsedSidebar,
+      spaceCreateTarget,
+      pendingCreate,
+    ],
   );
 
   useGlobalShortcuts(state, registeredShortcuts);
@@ -101,55 +153,37 @@ function ShellFrame() {
 
   return (
     <ShellStateContext value={state}>
-      <div className="relative flex h-full overflow-hidden bg-bg text-text">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:p-2 focus:shadow-popover"
-        >
-          {t("shell.skipToContent")}
-        </a>
-        <Rail
-          label={t("rail.label")}
-          logo={
-            <Link
-              to="/"
-              aria-label={t("rail.home")}
-              className="flex size-10 items-center justify-center rounded-md text-accent focus-visible:outline-2 focus-visible:outline-accent"
-            >
-              <LunedoMark className="size-8" />
-            </Link>
-          }
-          footer={items
-            .filter((item) => item.placement === "footer")
-            .map((item) => <item.component key={item.id} />)}
-        >
-          {items
-            .filter((item) => item.placement === "main")
-            .map((item) => (
-              <item.component key={item.id} />
-            ))}
-        </Rail>
-        {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <SidebarSlotProvider value={sidebarSlots}>
+        <div className="relative flex h-full flex-col overflow-hidden bg-bg text-text">
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:p-2 focus:shadow-popover"
+          >
+            {t("shell.skipToContent")}
+          </a>
+          <TopBar />
           <MaintenanceBanner />
           <AnnouncementBanners />
           <InsecureProvidersBanner />
           <MissingGroupsBanner />
-          <WithoutOrganizationBanner />
           <WithheldRolesBanner />
-          <div className="flex min-h-0 min-w-0 flex-1">
-            <Outlet />
+          <div className="relative flex min-h-0 min-w-0 flex-1">
+            {settingsArea && !mobileSidebarOpen ? null : <AppSidebar />}
+            <div className="flex min-h-0 min-w-0 flex-1">
+              <Outlet />
+            </div>
+            {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
           </div>
         </div>
-      </div>
-      <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <QuickSearchHost open={searchOpen} onOpenChange={setSearchOpen} />
-      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+        <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
+        <QuickSearchHost open={searchOpen} onOpenChange={setSearchOpen} />
+        <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      </SidebarSlotProvider>
     </ShellStateContext>
   );
 }
 
-function WithoutOrganizationBanner() {
+export function WithoutOrganizationNotice() {
   const { t } = useTranslation();
   const state = useOrganizationState();
   const account = state.session.account;
@@ -157,11 +191,9 @@ function WithoutOrganizationBanner() {
     return null;
   }
   return (
-    <div className="px-4 pt-3">
-      <Notice variant="info" title={t("shell.withoutOrganization.title")}>
-        {t("shell.withoutOrganization.description")}
-      </Notice>
-    </div>
+    <Notice variant="info" title={t("shell.withoutOrganization.title")}>
+      {t("shell.withoutOrganization.description")}
+    </Notice>
   );
 }
 
@@ -176,11 +208,12 @@ function WithheldRolesBanner() {
   const first = withheld.data?.[0];
   if (!first) return null;
   return (
-    <div className="px-4 pt-3">
-      <Notice variant="warning" title={t("shell.withheldRoles.title", { count: withheld.data?.length ?? 0 })}>
-        {t("shell.withheldRoles.description", { provider: first.providerName })}
-      </Notice>
-    </div>
+    <ShellBanner
+      variant="warning"
+      title={t("shell.withheldRoles.title", { count: withheld.data?.length ?? 0 })}
+    >
+      {t("shell.withheldRoles.description", { provider: first.providerName })}
+    </ShellBanner>
   );
 }
 
@@ -196,9 +229,9 @@ function MissingGroupsBanner() {
   );
   if (!allowed || affected.length === 0) return null;
   return (
-    <div className="px-4 pt-3">
+    <>
       {affected.map((provider) => (
-        <Notice
+        <ShellBanner
           key={provider.id}
           variant="warning"
           title={t("shell.groupsClaimMissing.title", {
@@ -207,9 +240,9 @@ function MissingGroupsBanner() {
           })}
         >
           {t("shell.groupsClaimMissing.description")}
-        </Notice>
+        </ShellBanner>
       ))}
-    </div>
+    </>
   );
 }
 
@@ -220,11 +253,9 @@ function InsecureProvidersBanner() {
   const security = useQuery({ ...signInSecurityQuery, enabled: allowed, throwOnError: false });
   if (!allowed || !security.data?.insecureIdentityProviders) return null;
   return (
-    <div className="px-4 pt-3">
-      <Notice variant="warning" title={t("shell.insecureProviders.title")}>
-        {t("shell.insecureProviders.description")}
-      </Notice>
-    </div>
+    <ShellBanner variant="warning" title={t("shell.insecureProviders.title")}>
+      {t("shell.insecureProviders.description")}
+    </ShellBanner>
   );
 }
 

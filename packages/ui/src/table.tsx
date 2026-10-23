@@ -54,6 +54,7 @@ export interface TableProps<T> {
   pagination?: TablePagination;
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
+  variant?: "framed" | "flat";
 }
 
 const CONTROLS = "a, button, input, select, textarea, label, [role=menuitem], [role=checkbox], [role=switch]";
@@ -88,11 +89,13 @@ export function Table<T>({
   pagination,
   onRowClick,
   rowLabel,
+  variant = "framed",
 }: TableProps<T>) {
   const labels = useUiLabels();
+  const flat = variant === "flat";
   const cellClass = (column: TableColumn<T>) =>
     classNames(
-      "px-4",
+      flat ? "px-3 first:pl-0 last:pr-0" : "px-4",
       column.align === "end" ? "text-right" : "text-left",
       column.hideBelow && HIDDEN[column.hideBelow],
       column.sticky && "sticky right-0",
@@ -100,11 +103,11 @@ export function Table<T>({
     );
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className={flat ? "overflow-hidden" : "overflow-hidden rounded-md border border-border"}>
         <ScrollArea label={caption}>
           <table className="w-full border-collapse" aria-busy={loading || undefined}>
             <caption className="sr-only">{caption}</caption>
-            <thead className="bg-surface-sunken">
+            <thead className={flat ? undefined : "bg-surface-sunken"}>
               <tr>
                 {columns.map((column) => {
                   const state = ariaSort(sort, column.key);
@@ -116,8 +119,9 @@ export function Table<T>({
                       aria-sort={column.sortable ? state : undefined}
                       className={classNames(
                         cellClass(column),
-                        "h-control-field border-b border-border text-sm font-semibold whitespace-nowrap text-text-muted",
-                        column.sticky && "bg-surface-sunken",
+                        "h-control-field border-b border-border whitespace-nowrap text-text-muted",
+                        flat ? "text-xs font-medium" : "text-sm font-semibold",
+                        column.sticky && (flat ? "bg-bg" : "bg-surface-sunken"),
                       )}
                     >
                       {column.sortable && onSortChange ? (
@@ -171,7 +175,7 @@ export function Table<T>({
                   <tr
                     key={rowKey(row)}
                     className={classNames(
-                      "border-b border-border bg-surface last:border-b-0",
+                      flat ? "border-b border-border" : "border-b border-border bg-surface last:border-b-0",
                       onRowClick &&
                         "cursor-pointer hover:bg-hover focus-visible:bg-hover focus-visible:focus-ring",
                     )}

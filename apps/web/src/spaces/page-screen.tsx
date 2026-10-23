@@ -52,7 +52,6 @@ import { AttachmentsSection, PageDropZone } from "../files/attachments-section.j
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
 import { ArticleTypeControl } from "../knowledge-bases/article-type-control.js";
-import { articleTypeIcon } from "../knowledge-bases/article-types.js";
 import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
@@ -73,6 +72,7 @@ import { itemHref, itemSlug } from "./item-paths.js";
 import { OwnerLine } from "./ownership/owner-line.js";
 import { pageStatusesQuery } from "./ownership/ownership-queries.js";
 import { PageStatusControl } from "./ownership/page-status.js";
+import { EditInfo, PageBar } from "./page-bar.js";
 import { PageLabels } from "./page-labels.js";
 import {
   DraftBanner,
@@ -336,218 +336,218 @@ function PageArticle({
     );
   }
 
-  return (
-    <div className="flex min-h-full">
-      <article
-        className={`mx-auto flex w-full min-w-0 flex-col gap-4 px-4 pt-6 pb-12 md:px-8 ${width === "full" ? "max-w-none" : "max-w-content"}`}
-      >
-        <PageHeader
-          title={
-            writable ? (
-              <InlineTitle
-                value={title}
-                label={t("page.titleLabel")}
-                autoFocus={editing && title === t("tree.untitledPage")}
-                onSave={async (next) => {
-                  await save({ title: next });
-                  if (!publishMode || !page.published) {
-                    await navigate({
-                      to: pagePath(space.key, page.id, itemSlug(next)),
-                      search,
-                      replace: true,
-                    });
-                  }
-                }}
-              />
-            ) : (
-              title
-            )
-          }
-          icon={knowledgeBase ? articleTypeIcon(page.articleType) : FileText}
-          breadcrumbs={breadcrumbs}
-          actions={
+  const pageActions = (
+    <>
+      {writable ? (
+        editing ? (
+          publishMode ? (
             <>
-              {writable ? (
-                editing ? (
-                  publishMode ? (
-                    <>
-                      <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
-                        {t("page.done")}
-                      </Button>
-                      <PublishButton
-                        page={page}
-                        draft={draft.data}
-                        saveState={saveState}
-                        onMissingSections={setMissingSections}
-                        article={knowledgeBase}
-                      />
-                    </>
-                  ) : (
-                    <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
-                      {t("page.done")}
-                    </Button>
-                  )
-                ) : (
-                  <Button
-                    variant="primary"
-                    icon={Pencil}
-                    onClick={() => setEditing(true)}
-                    aria-keyshortcuts="E"
-                  >
-                    {t("page.edit")}
-                  </Button>
-                )
-              ) : null}
-              {sharing.shareButton}
-              <StarButton target={{ itemId: page.id }} title={title} />
-              <WatchMenu target={{ type: "item", id: page.id }} name={title} />
-              {collaboration.commentsButton}
-              {meeting ? (
-                <IconButton
-                  ref={notesToggle}
-                  label={t("meetings.notes.toggle")}
-                  icon={NotebookPen}
-                  aria-pressed={notesOpen}
-                  aria-expanded={notesOpen}
-                  onClick={() => setNotesOpen(!notesOpen)}
-                />
-              ) : null}
-              <IconButton label={t("versions.history")} icon={History} onClick={openHistory} />
-              <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
+              <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
+                {t("page.done")}
+              </Button>
+              <PublishButton
+                page={page}
+                draft={draft.data}
+                saveState={saveState}
+                onMissingSections={setMissingSections}
+                article={knowledgeBase}
+              />
             </>
-          }
-        />
-        <PageMeta page={page} writable={writable} />
-        {knowledgeBase ? (
-          <ArticleReviewLine
-            itemId={page.id}
-            title={page.title}
-            editable={writable}
-            published={page.published}
-          />
-        ) : null}
-        {sharing.restrictionNote}
-        {editing && missingSections.length > 0 ? (
-          <Notice variant="warning" title={t("knowledgeBase.required.title")}>
-            {t("knowledgeBase.required.description", {
-              count: missingSections.length,
-              sections: missingSections.map((section) => section.title).join(", "),
-            })}
-          </Notice>
-        ) : null}
-        {meeting ? (
-          <MeetingHeader
-            meetingId={page.id}
-            spaceKey={space.key}
-            writable={writable}
-            onShare={sharing.open}
-          />
-        ) : null}
-        {page.archived || space.archived ? (
-          <Notice
-            variant="warning"
-            title={page.archived ? t("archive.pageArchivedTitle") : t("archive.spaceArchivedTitle")}
-            action={
-              page.archived && canEdit && !space.archived ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  icon={ArchiveRestore}
-                  onClick={() => void unarchive(page)}
-                >
-                  {t("archive.unarchive")}
-                </Button>
-              ) : undefined
-            }
-          >
-            {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
-          </Notice>
-        ) : null}
-        {writable && publishMode ? (
-          editing ? (
-            <DraftStatusLine draft={draft.data} />
           ) : (
-            <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
+            <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
+              {t("page.done")}
+            </Button>
           )
-        ) : null}
-        <PageLabels pageId={page.id} />
-        {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
-        {editing ? (
-          <Suspense fallback={<Skeleton className="h-field w-full" />}>
-            <PageEditor
-              pageId={page.id}
-              spaceId={space.id}
-              spaceKey={space.key}
-              draft={publishMode}
-              numberHeadings={page.numberHeadings}
-              missingSections={missingSections}
-              onSaveStateChange={(state) => {
-                saveState.current = state;
-              }}
-              {...collaboration.editor}
-            />
-          </Suspense>
-        ) : writable && publishMode && !page.published ? (
-          draft.data?.hasChanges === false ? (
-            <EmptyPage onEdit={() => setEditing(true)} />
-          ) : null
         ) : (
-          <PageContent
-            pageId={page.id}
-            publishMode={publishMode}
-            numberHeadings={page.numberHeadings}
-            collaboration={collaboration.readView}
-            {...(writable ? { onEdit: () => setEditing(true) } : {})}
+          <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)} aria-keyshortcuts="E">
+            {t("page.edit")}
+          </Button>
+        )
+      ) : null}
+      {sharing.shareButton}
+      <StarButton target={{ itemId: page.id }} title={title} />
+      <WatchMenu target={{ type: "item", id: page.id }} name={title} />
+      {collaboration.commentsButton}
+      {meeting ? (
+        <IconButton
+          ref={notesToggle}
+          label={t("meetings.notes.toggle")}
+          icon={NotebookPen}
+          aria-pressed={notesOpen}
+          aria-expanded={notesOpen}
+          onClick={() => setNotesOpen(!notesOpen)}
+        />
+      ) : null}
+      <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
+    </>
+  );
+
+  return (
+    <div className="flex min-h-full flex-col">
+      <PageBar breadcrumbs={breadcrumbs} sticky={!editing}>
+        <EditInfo pageId={page.id} editedAt={page.contentUpdatedAt} onOpen={openHistory} />
+        {pageActions}
+      </PageBar>
+      <div className="flex flex-1">
+        <article
+          className={`mx-auto flex w-full min-w-0 flex-col gap-4 px-4 pt-6 pb-12 md:px-8 ${width === "full" ? "max-w-none" : "max-w-content"}`}
+        >
+          <PageHeader
+            title={
+              writable ? (
+                <InlineTitle
+                  value={title}
+                  label={t("page.titleLabel")}
+                  autoFocus={editing && title === t("tree.untitledPage")}
+                  onSave={async (next) => {
+                    await save({ title: next });
+                    if (!publishMode || !page.published) {
+                      await navigate({
+                        to: pagePath(space.key, page.id, itemSlug(next)),
+                        search,
+                        replace: true,
+                      });
+                    }
+                  }}
+                />
+              ) : (
+                title
+              )
+            }
           />
-        )}
-        <AttachmentsSection pageId={page.id} canEdit={writable} />
-        <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
-        <Backlinks pageId={page.id} />
-        <ModeSwitchDialog
-          page={page}
-          draft={draft.data}
-          open={confirmingLive}
-          onOpenChange={setConfirmingLive}
-        />
-        {sharing.dialog}
-        <ExportDialog
-          page={{ id: page.id, title, publishable: !publishMode || page.published }}
-          space={{
-            id: space.id,
-            key: space.key,
-            name: space.name,
-            exportEnabled: space.exportEnabled,
-            admin: space.role === "admin",
-            mayExportPages: space.mayExport,
-          }}
-          open={exporting}
-          onOpenChange={setExporting}
-        />
-        <SaveTemplateDialog
-          spaceId={space.id}
-          spaceName={spaceDisplayName(t, space)}
-          page={{ id: page.id, title }}
-          open={savingTemplate}
-          onOpenChange={setSavingTemplate}
-        />
-        {choosingLanguage ? (
-          <ContentLanguageDialog page={page} open={choosingLanguage} onOpenChange={setChoosingLanguage} />
-        ) : null}
-      </article>
-      {notesOpen ? (
-        <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
-          <PrivateNotesPanel
-            meetingId={page.id}
-            canCopy={writable}
-            onClose={() => {
-              setNotesOpen(false);
-              notesToggle.current?.focus();
+          <PageMeta page={page} writable={writable} />
+          {knowledgeBase ? (
+            <ArticleReviewLine
+              itemId={page.id}
+              title={page.title}
+              editable={writable}
+              published={page.published}
+            />
+          ) : null}
+          {sharing.restrictionNote}
+          {editing && missingSections.length > 0 ? (
+            <Notice variant="warning" title={t("knowledgeBase.required.title")}>
+              {t("knowledgeBase.required.description", {
+                count: missingSections.length,
+                sections: missingSections.map((section) => section.title).join(", "),
+              })}
+            </Notice>
+          ) : null}
+          {meeting ? (
+            <MeetingHeader
+              meetingId={page.id}
+              spaceKey={space.key}
+              writable={writable}
+              onShare={sharing.open}
+            />
+          ) : null}
+          {page.archived || space.archived ? (
+            <Notice
+              variant="warning"
+              title={page.archived ? t("archive.pageArchivedTitle") : t("archive.spaceArchivedTitle")}
+              action={
+                page.archived && canEdit && !space.archived ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={ArchiveRestore}
+                    onClick={() => void unarchive(page)}
+                  >
+                    {t("archive.unarchive")}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
+            </Notice>
+          ) : null}
+          {writable && publishMode ? (
+            editing ? (
+              <DraftStatusLine draft={draft.data} />
+            ) : (
+              <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
+            )
+          ) : null}
+          <PageLabels pageId={page.id} />
+          {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
+          {editing ? (
+            <Suspense fallback={<Skeleton className="h-field w-full" />}>
+              <PageEditor
+                pageId={page.id}
+                spaceId={space.id}
+                spaceKey={space.key}
+                draft={publishMode}
+                numberHeadings={page.numberHeadings}
+                missingSections={missingSections}
+                onSaveStateChange={(state) => {
+                  saveState.current = state;
+                }}
+                {...collaboration.editor}
+              />
+            </Suspense>
+          ) : writable && publishMode && !page.published ? (
+            draft.data?.hasChanges === false ? (
+              <EmptyPage onEdit={() => setEditing(true)} />
+            ) : null
+          ) : (
+            <PageContent
+              pageId={page.id}
+              publishMode={publishMode}
+              meta={false}
+              numberHeadings={page.numberHeadings}
+              collaboration={collaboration.readView}
+              {...(writable ? { onEdit: () => setEditing(true) } : {})}
+            />
+          )}
+          <AttachmentsSection pageId={page.id} canEdit={writable} />
+          <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
+          <Backlinks pageId={page.id} />
+          <ModeSwitchDialog
+            page={page}
+            draft={draft.data}
+            open={confirmingLive}
+            onOpenChange={setConfirmingLive}
+          />
+          {sharing.dialog}
+          <ExportDialog
+            page={{ id: page.id, title, publishable: !publishMode || page.published }}
+            space={{
+              id: space.id,
+              key: space.key,
+              name: space.name,
+              exportEnabled: space.exportEnabled,
+              admin: space.role === "admin",
+              mayExportPages: space.mayExport,
             }}
+            open={exporting}
+            onOpenChange={setExporting}
           />
-        </div>
-      ) : (
-        collaboration.panel
-      )}
+          <SaveTemplateDialog
+            spaceId={space.id}
+            spaceName={spaceDisplayName(t, space)}
+            page={{ id: page.id, title }}
+            open={savingTemplate}
+            onOpenChange={setSavingTemplate}
+          />
+          {choosingLanguage ? (
+            <ContentLanguageDialog page={page} open={choosingLanguage} onOpenChange={setChoosingLanguage} />
+          ) : null}
+        </article>
+        {notesOpen ? (
+          <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
+            <PrivateNotesPanel
+              meetingId={page.id}
+              canCopy={writable}
+              onClose={() => {
+                setNotesOpen(false);
+                notesToggle.current?.focus();
+              }}
+            />
+          </div>
+        ) : (
+          collaboration.panel
+        )}
+      </div>
     </div>
   );
 }
@@ -616,12 +616,14 @@ export function PageContent({
   collaboration,
   onEdit,
   numberHeadings = false,
+  meta = true,
 }: {
   pageId: string;
   publishMode: boolean;
   numberHeadings?: boolean;
   collaboration: ReadViewCollaboration;
   onEdit?: () => void;
+  meta?: boolean;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -638,7 +640,7 @@ export function PageContent({
   }
   return (
     <>
-      {publishMode && version !== null ? (
+      {meta && publishMode && version !== null ? (
         <p className="text-sm text-text-muted">
           {t("versions.publishedMeta", { date: format.date(content.data.updatedAt), version })}
         </p>
@@ -670,7 +672,7 @@ function Backlinks({ pageId }: { pageId: string }) {
               to={pagePath(link.spaceKey, link.itemId, itemSlug(link.title))}
               className="inline-flex min-h-hit items-center gap-2 rounded-sm text-accent hover:underline focus-visible:focus-ring"
             >
-              <FileText aria-hidden="true" className="size-icon" />
+              <FileText aria-hidden="true" className="size-icon-md" />
               <span>{link.title}</span>
               <span className="text-sm text-text-muted">· {link.spaceName}</span>
             </Link>

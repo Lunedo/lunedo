@@ -26,6 +26,7 @@ export interface Formatter {
   dateTime(value: Date | string): string;
   month(value: Date | string): string;
   relative(value: Date | string, now?: Date): string;
+  short(value: Date | string, now?: Date): string;
   number(value: number): string;
   percent(value: number): string;
   bytes(value: number): string;
@@ -52,6 +53,24 @@ export function createFormatter(settings: FormatSettings): Formatter {
   const numbers = new Intl.NumberFormat(numberLocale);
   const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 2 });
   const relative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto" });
+  const shortRelative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto", style: "short" });
+  const dayMonth = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    day: "numeric",
+    month: "short",
+  });
+  const dayMonthYear = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const calendarDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: settings.timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 
   const date = (value: Date | string) =>
     formatDate(toDate(value), settings.dateFormat, settings.timeZone, settings.language);
@@ -71,6 +90,21 @@ export function createFormatter(settings: FormatSettings): Formatter {
       if (absolute < 86_400) return relative.format(Math.round(seconds / 3600), "hour");
       if (absolute < 30 * 86_400) return relative.format(Math.round(seconds / 86_400), "day");
       return date(value);
+    },
+    short(value, now = new Date()) {
+      const moment = toDate(value);
+      const day = calendarDay.format(moment);
+      if (day === calendarDay.format(now)) {
+        const seconds = Math.round((moment.getTime() - now.getTime()) / 1000);
+        const absolute = Math.abs(seconds);
+        if (absolute < 60) return shortRelative.format(0, "minute");
+        if (absolute < 3600) return shortRelative.format(Math.round(seconds / 60), "minute");
+        return shortRelative.format(Math.round(seconds / 3600), "hour");
+      }
+      if (day === calendarDay.format(new Date(now.getTime() - 86_400_000))) return relative.format(-1, "day");
+      return day.slice(0, 4) === calendarDay.format(now).slice(0, 4)
+        ? dayMonth.format(moment)
+        : dayMonthYear.format(moment);
     },
     number: (value) => numbers.format(value),
     percent: (value) => percent.format(value),

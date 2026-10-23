@@ -116,7 +116,7 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
       className="flex gap-3 border-b border-border py-4 outline-none"
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-text-muted">
-        <Icon aria-hidden="true" className="size-icon" />
+        <Icon aria-hidden="true" className="size-icon-md" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-text-muted">

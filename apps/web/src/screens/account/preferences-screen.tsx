@@ -9,7 +9,7 @@ import {
   Stepper,
   Switch,
 } from "@lunedo/ui";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../../api/organization-queries.js";
 import { SaveIndicator, useSaveStates } from "../../components/auto-save.js";
@@ -187,7 +187,11 @@ export function PreferencesScreen() {
                       <IconButton label={t("settings.moreFor", { name: label })} icon={MoreHorizontal} />
                     }
                     items={[
-                      { label: t("settings.resetToDefault"), onSelect: () => set(set_.key, undefined) },
+                      {
+                        label: t("settings.resetToDefault"),
+                        icon: RotateCcw,
+                        onSelect: () => set(set_.key, undefined),
+                      },
                     ]}
                   />
                 ) : null

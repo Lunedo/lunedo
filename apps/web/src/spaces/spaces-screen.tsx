@@ -1,4 +1,14 @@
-import { Badge, Button, EmptyState, Input, PageHeader, Select, Skeleton } from "@lunedo/ui";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Input,
+  PageHeader,
+  Select,
+  Skeleton,
+  Table,
+  type TableColumn,
+} from "@lunedo/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { FileInput, Layers, Lock, Plus, Search, User, Users } from "lucide-react";
@@ -6,8 +16,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { StarButton } from "../collaboration/content-collaboration.js";
 import { useDebounced } from "../components/table-state.js";
 import { LoadError } from "../errors/failure.js";
+import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { OneOnOneDialog } from "../meetings/one-on-one-dialog.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { DiscoverableSpaces } from "../sharing/discoverable-spaces.js";
@@ -89,7 +101,6 @@ export function SpacesScreen() {
         <PageHeader
           title={t("spaces.list.title")}
           description={t("spaces.list.description")}
-          icon={Layers}
           actions={
             <>
               <Button
@@ -125,7 +136,7 @@ export function SpacesScreen() {
             />
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute left-2 top-1/2 size-icon -translate-y-1/2 text-text-muted"
+              className="pointer-events-none absolute left-2 top-1/2 size-icon-md -translate-y-1/2 text-text-muted"
             />
           </div>
           <div className="sm:w-field">
@@ -228,11 +239,7 @@ export function SpacesScreen() {
           )
         ) : null}
         {items.length > 0 ? (
-          <ul aria-label={t("spaces.list.title")} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((space) => (
-              <SpaceCard key={space.id} space={space} showOrganization={state.multipleOrganizations} />
-            ))}
-          </ul>
+          <SpacesTable spaces={items} showOrganization={state.multipleOrganizations} />
         ) : null}
         {spaces.hasNextPage ? (
           <div className="flex justify-center">
@@ -255,48 +262,97 @@ export function SpacesScreen() {
   );
 }
 
-function SpaceCard({ space, showOrganization }: { space: Space; showOrganization: boolean }) {
+function VisibilityBadge({ space }: { space: Space }) {
   const { t } = useTranslation();
-  const name = spaceDisplayName(t, space);
+  if (space.confidential) {
+    return (
+      <Badge variant="warning" icon={Lock}>
+        {space.oneOnOne ? t("confidential.oneOnOneBadge") : t("confidential.badge")}
+      </Badge>
+    );
+  }
   return (
-    <li className="min-w-0">
-      <Link
-        to="/spaces/$spaceKey"
-        params={{ spaceKey: space.key }}
-        className="flex h-full flex-col gap-2 rounded-md border border-border bg-surface p-4 transition-colors focus-visible:focus-ring hover:bg-hover motion-reduce:transition-none"
-      >
-        <div className="flex items-center gap-3">
-          <SpaceBadge space={space} />
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate font-semibold" title={name}>
-              {name}
-            </span>
-            <span className="truncate text-sm text-text-muted">
-              {space.personal
-                ? t("spaces.personal.label")
-                : showOrganization
-                  ? t("spaces.list.inOrganization", { organization: space.organizationName ?? "" })
-                  : space.key}
-            </span>
+    <Badge variant={space.visibility === "instance" ? "info" : "neutral"}>
+      {t(`spaces.visibility.${space.visibility}.short`)}
+    </Badge>
+  );
+}
+
+function SpacesTable({ spaces, showOrganization }: { spaces: Space[]; showOrganization: boolean }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const columns: TableColumn<Space>[] = [
+    {
+      key: "name",
+      header: t("spaces.list.name"),
+      grow: true,
+      cell: (space) => {
+        const name = spaceDisplayName(t, space);
+        const details = [
+          isKnowledgeBase(space) ? t("knowledgeBase.create.knowledgeBase") : null,
+          showOrganization && space.organizationName ? space.organizationName : null,
+          space.description || null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        return (
+          <div className="flex min-w-0 items-center gap-3 py-2">
+            <SpaceBadge space={space} />
+            <div className="flex min-w-0 flex-col">
+              <Link
+                to="/spaces/$spaceKey"
+                params={{ spaceKey: space.key }}
+                className="truncate rounded-sm font-medium text-text hover:underline focus-visible:focus-ring"
+                title={name}
+              >
+                {name}
+              </Link>
+              {details ? (
+                <span className="truncate text-sm text-text-muted" title={details}>
+                  {details}
+                </span>
+              ) : null}
+            </div>
+            {space.quarantined ? (
+              <Badge variant="warning" icon={FileInput}>
+                {t("imports.quarantine.title")}
+              </Badge>
+            ) : null}
           </div>
-        </div>
-        {space.description ? (
-          <p className="line-clamp-2 text-sm text-text-muted">{space.description}</p>
-        ) : null}
-        <div className="mt-auto flex flex-wrap gap-2 pt-1">
-          <Badge variant="neutral">{t(`spaces.visibility.${space.visibility}.short`)}</Badge>
-          {space.quarantined ? (
-            <Badge variant="warning" icon={FileInput}>
-              {t("imports.quarantine.title")}
-            </Badge>
-          ) : null}
-          {space.confidential ? (
-            <Badge variant="accent" icon={Lock}>
-              {space.oneOnOne ? t("confidential.oneOnOneBadge") : t("confidential.badge")}
-            </Badge>
-          ) : null}
-        </div>
-      </Link>
-    </li>
+        );
+      },
+    },
+    {
+      key: "key",
+      header: t("spaces.list.key"),
+      hideBelow: "md",
+      cell: (space) => (
+        <span className="font-mono text-sm text-text-muted">{space.personal ? "" : space.key}</span>
+      ),
+    },
+    {
+      key: "visibility",
+      header: t("spaces.list.visibility"),
+      hideBelow: "sm",
+      cell: (space) => <VisibilityBadge space={space} />,
+    },
+    {
+      key: "star",
+      header: <span className="sr-only">{t("spaces.list.favorite")}</span>,
+      align: "end",
+      cell: (space) => (
+        <StarButton target={{ spaceId: space.id }} title={spaceDisplayName(t, space)} size="sm" />
+      ),
+    },
+  ];
+  return (
+    <Table
+      caption={t("spaces.list.title")}
+      variant="flat"
+      columns={columns}
+      rows={spaces}
+      rowKey={(space) => space.id}
+      onRowClick={(space) => void navigate({ to: "/spaces/$spaceKey", params: { spaceKey: space.key } })}
+    />
   );
 }

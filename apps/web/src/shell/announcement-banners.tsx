@@ -94,7 +94,7 @@ export function AnnouncementBanner({
     >
       <Glyph
         aria-hidden
-        className={classNames("size-icon shrink-0", warning ? "text-warning" : "text-info")}
+        className={classNames("size-icon-md shrink-0", warning ? "text-warning" : "text-info")}
       />
       <p className="min-w-0 flex-1 text-sm wrap-anywhere text-text">
         {warning ? <span className="sr-only">{t("announcements.warningLabel")} </span> : null}

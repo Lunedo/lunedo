@@ -476,7 +476,7 @@ function TreeNode({
         }}
         className={classNames(
           "group/row relative flex h-row items-center gap-1 rounded-sm pe-1 outline-none focus-visible:focus-ring",
-          current ? "bg-selected text-selected-text" : "hover:bg-hover",
+          current ? "bg-accent text-on-accent [&_svg]:text-on-accent" : "hover:bg-hover",
           target === "inside" && "bg-accent-soft",
         )}
         style={{ paddingInlineStart: indent(depth) }}
@@ -517,10 +517,10 @@ function TreeNode({
               />
             }
           >
-            <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+            <Glyph aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
           </Tooltip>
         ) : (
-          <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+          <Glyph aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         )}
         {href ? (
           <a
@@ -533,7 +533,7 @@ function TreeNode({
               event.preventDefault();
               void navigate({ to: href });
             }}
-            className={classNames("min-w-0 flex-1 truncate", current && "font-semibold")}
+            className={classNames("min-w-0 flex-1 truncate text-inherit", current && "font-semibold")}
           >
             {title}
           </a>

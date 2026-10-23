@@ -9,6 +9,7 @@ import { mockApi, problem } from "../testing/render.js";
 import "./builtin.js";
 import { countText, notificationText } from "./notification-entry.js";
 import { groupByDay } from "./notification-panel.js";
+import { notificationTypes } from "./notification-types.js";
 import {
   type NotificationItem,
   objectsChanged,
@@ -174,6 +175,22 @@ describe("notificationText", () => {
     ).toBe(
       "The API token Deploy has not been used for 90 days. It keeps working; revoke it if nobody needs it anymore.",
     );
+  });
+});
+
+describe("notification links", () => {
+  it("opens the account itself for an account without organization", () => {
+    const type = notificationTypes.list().find((entry) => entry.id === "account.withoutOrganization");
+    const accountId = "01929b1e-0000-7000-8000-000000000009";
+    expect(
+      type?.link(
+        notification("a", {
+          type: "account.withoutOrganization",
+          organizationId: null,
+          target: { type: "account", id: accountId },
+        }),
+      ),
+    ).toEqual({ to: "/settings/instance/accounts/$accountId", params: { accountId } });
   });
 });
 

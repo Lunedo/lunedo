@@ -39,32 +39,19 @@ import {
 } from "lucide-react";
 import "../editor/shortcuts.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
-import { AccountRailItem } from "./account-menu.js";
-import { commands, navigationItems, railItems, shortcuts, spaceSettingsItems } from "./extensions.js";
-import {
-  HelpRailItem,
-  HomeRailItem,
-  NotificationsRailItem,
-  SearchRailItem,
-  SettingsRailItem,
-  SpacesRailItem,
-  TasksRailItem,
-} from "./rail-items.js";
+import { commands, navigationItems, shortcuts, spaceSettingsItems, topBarItems } from "./extensions.js";
+import { AccountMenu, HelpMenu, NotificationsButton, SettingsGear } from "./top-bar-items.js";
 
 export const EDIT_PAGE_EVENT = "lunedo:edit-page";
 
 const ORGANIZATION = "/settings/organizations/$organizationId";
 const INSTANCE = "/settings/instance";
 
-railItems.register(
-  { id: "home", order: 5, placement: "main", component: HomeRailItem },
-  { id: "spaces", order: 10, placement: "main", component: SpacesRailItem },
-  { id: "tasks", order: 15, placement: "main", component: TasksRailItem },
-  { id: "search", order: 20, placement: "main", component: SearchRailItem },
-  { id: "notifications", order: 70, placement: "main", component: NotificationsRailItem },
-  { id: "help", order: 10, placement: "footer", component: HelpRailItem },
-  { id: "settings", order: 20, placement: "footer", component: SettingsRailItem },
-  { id: "account", order: 30, placement: "footer", component: AccountRailItem },
+topBarItems.register(
+  { id: "notifications", order: 10, component: NotificationsButton },
+  { id: "help", order: 20, component: HelpMenu },
+  { id: "settings", order: 30, component: SettingsGear },
+  { id: "account", order: 40, component: AccountMenu },
 );
 
 navigationItems.register(

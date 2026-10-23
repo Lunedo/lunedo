@@ -9,7 +9,7 @@ import {
   Skeleton,
   Table,
 } from "@lunedo/ui";
-import { Info, Lock, LockOpen, MoreHorizontal } from "lucide-react";
+import { Info, Lock, LockOpen, MoreHorizontal, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
@@ -165,6 +165,7 @@ function SettingItem({
       ? [
           {
             label: t("settings.resetToDefault"),
+            icon: RotateCcw,
             onSelect: () => void apply({ clear: true }),
           },
         ]

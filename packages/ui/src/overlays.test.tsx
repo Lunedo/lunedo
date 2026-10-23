@@ -1,6 +1,6 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MoreHorizontal, Trash } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Button, IconButton } from "./button.js";
@@ -19,7 +19,7 @@ describe("Menu", () => {
         trigger={<IconButton label="Actions for Lena" icon={MoreHorizontal} tooltip={false} />}
         items={[
           { type: "label", label: "Lena Hofer" },
-          { label: "Edit", onSelect: edit },
+          { label: "Edit", icon: Pencil, onSelect: edit },
           { type: "separator" },
           { label: "Remove", icon: Trash, onSelect: remove, danger: true },
         ]}
@@ -32,6 +32,32 @@ describe("Menu", () => {
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
     await waitFor(() => expect(remove).toHaveBeenCalledOnce());
     expect(edit).not.toHaveBeenCalled();
+  });
+
+  it("shows a header with name and e-mail and marks the checked entry", async () => {
+    const choose = vi.fn();
+    renderUi(
+      <Menu
+        trigger={<Button>Account</Button>}
+        items={[
+          { type: "header", title: "Lena Hofer", description: "lena@example.test" },
+          { label: "North", icon: Pencil, checked: true, onSelect: choose },
+          { label: "South", icon: Pencil, checked: false, onSelect: choose },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Account" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("Lena Hofer")).toBeDefined();
+    expect(within(menu).getByText("lena@example.test")).toBeDefined();
+    expect(within(menu).getByRole("menuitemcheckbox", { name: "North" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(within(menu).getByRole("menuitemcheckbox", { name: "South" }).getAttribute("aria-checked")).toBe(
+      "false",
+    );
+    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "South" }));
+    expect(choose).toHaveBeenCalledOnce();
   });
 });
 

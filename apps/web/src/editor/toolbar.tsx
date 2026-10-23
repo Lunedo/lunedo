@@ -34,7 +34,7 @@ const BUTTON =
 function menuItems(actions: ToolbarAction[]): MenuItem[] {
   return actions.map((action) => ({
     label: action.label,
-    ...(action.icon ? { icon: action.icon } : {}),
+    icon: action.icon,
     ...(action.shortcut ? { shortcut: displayKey(action.shortcut) } : {}),
     ...(action.disabled ? { disabled: true } : {}),
     onSelect: action.run,
@@ -61,7 +61,7 @@ function ItemButton({
   const Icon = item.icon;
   const content: ReactNode = (
     <>
-      {Icon ? <Icon aria-hidden="true" className="size-icon-md" /> : null}
+      <Icon aria-hidden="true" className="size-icon-md" />
       {item.text ? <span className="max-w-field truncate px-1 text-sm font-medium">{item.text}</span> : null}
       {item.menu ? <ChevronDown aria-hidden="true" className="size-icon-sm" /> : null}
     </>

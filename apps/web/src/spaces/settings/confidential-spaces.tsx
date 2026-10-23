@@ -89,7 +89,7 @@ export function ConfidentialSpaces({
             <li key={space.id} className="flex flex-wrap items-center gap-3 py-2">
               <div className="flex min-w-0 flex-1 basis-field flex-col">
                 <span className="flex items-center gap-2 font-medium">
-                  <Lock aria-hidden className="size-icon text-text-muted" />
+                  <Lock aria-hidden className="size-icon-md text-text-muted" />
                   {space.key}
                   {space.needsAdministrator ? (
                     <Badge variant="warning">{t("confidential.organization.noAdmin")}</Badge>

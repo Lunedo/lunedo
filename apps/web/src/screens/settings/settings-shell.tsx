@@ -1,6 +1,5 @@
-import { BackLink, IconButton, Select, Sidebar, SidebarGroup, SidebarHeader, SidebarItem } from "@lunedo/ui";
+import { BackLink, Select, Sidebar, SidebarGroup, SidebarHeader, SidebarItem } from "@lunedo/ui";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useShell } from "../../shell/shell.js";
@@ -77,16 +76,7 @@ export function SettingsShell({
         <div className="hidden md:flex">
           <Sidebar label={label}>
             {backLink ? <div className="flex px-2 pb-3">{backLink}</div> : null}
-            <SidebarHeader
-              eyebrow={eyebrow}
-              actions={
-                <IconButton
-                  label={t("navigation.collapseSidebar")}
-                  icon={PanelLeftClose}
-                  onClick={shell.toggleSidebar}
-                />
-              }
-            >
+            <SidebarHeader eyebrow={eyebrow}>
               <span title={title}>{title}</span>
             </SidebarHeader>
             {header ? <div className="px-2 pb-2">{header}</div> : null}
@@ -134,15 +124,6 @@ export function SettingsShell({
             />
           ) : null}
         </div>
-        {shell.sidebarCollapsed ? (
-          <div className="hidden px-4 pt-3 md:block">
-            <IconButton
-              label={t("navigation.expandSidebar")}
-              icon={PanelLeftOpen}
-              onClick={shell.toggleSidebar}
-            />
-          </div>
-        ) : null}
         {children}
       </main>
     </div>

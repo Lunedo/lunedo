@@ -276,7 +276,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     <p className="text-sm text-text-muted">{t("search.noOrganization")}</p>
   ) : nothingFound ? (
     <p className="flex items-center gap-2 text-sm text-text-muted">
-      <SearchX aria-hidden="true" className="size-icon shrink-0" />
+      <SearchX aria-hidden="true" className="size-icon-md shrink-0" />
       {inSpace
         ? t("search.quick.nothingInSpace", { query: typed, space: space.name || t("spaces.personal.label") })
         : t("search.quick.nothing", { query: typed })}

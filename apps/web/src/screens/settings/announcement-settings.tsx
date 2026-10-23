@@ -480,7 +480,7 @@ function AnnouncementForm({
           </div>
           <div className="flex flex-col gap-2">
             <h3 className="flex items-center gap-2 font-medium">
-              <Eye aria-hidden className="size-icon text-text-muted" />
+              <Eye aria-hidden className="size-icon-md text-text-muted" />
               {t("announcements.preview")}
             </h3>
             <div className="overflow-hidden rounded-md border border-border">

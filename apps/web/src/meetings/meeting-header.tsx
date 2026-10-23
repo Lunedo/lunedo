@@ -16,10 +16,15 @@ import {
   CalendarX,
   Check,
   ChevronDown,
+  Eraser,
+  type LucideIcon,
   MoreHorizontal,
   Repeat,
   RotateCcw,
+  UserCheck,
+  UserMinus,
   UserPlus,
+  UserX,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -41,6 +46,12 @@ import {
 import { type Attendee, type Meeting, meetingKeys, meetingQuery, seriesPath } from "./queries.js";
 
 const ATTENDANCE = ["present", "excused", "absent"] as const;
+
+const attendanceIcons: Record<(typeof ATTENDANCE)[number], LucideIcon> = {
+  present: UserCheck,
+  excused: UserMinus,
+  absent: UserX,
+};
 
 function targetOf(meeting: Meeting, fallbackTimeZone: string): MeetingTarget {
   return {
@@ -98,12 +109,12 @@ export function MeetingHeader({
               to={seriesPath(spaceKey, data.seriesId)}
               className="inline-flex items-center gap-1 text-sm text-accent hover:underline focus-visible:focus-ring"
             >
-              <Repeat aria-hidden className="size-icon" />
+              <Repeat aria-hidden className="size-icon-md" />
               {data.seriesTitle}
             </Link>
           ) : null}
           <p className="flex items-center gap-2 font-medium">
-            <CalendarClock aria-hidden className="size-icon text-text-muted" />
+            <CalendarClock aria-hidden className="size-icon-md text-text-muted" />
             {data.startsAt && end
               ? t("meetings.meeting.when", { start: format.dateTime(data.startsAt), end: format.time(end) })
               : t("meetings.notScheduled")}
@@ -259,17 +270,19 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
                       aria-label={t("meetings.attendance.change", { name, state })}
                     >
                       {state}
-                      <ChevronDown aria-hidden className="size-icon" />
+                      <ChevronDown aria-hidden className="size-icon-md" />
                     </Button>
                   }
                   items={[
                     ...ATTENDANCE.map((value) => ({
                       label: translateKey(t, `meetings.attendance.${value}`),
+                      icon: attendanceIcons[value],
                       onSelect: () => void setAttendance(attendee, value),
                     })),
                     { type: "separator" as const },
                     {
                       label: t("meetings.attendance.clear"),
+                      icon: Eraser,
                       onSelect: () => void setAttendance(attendee, null),
                     },
                   ]}

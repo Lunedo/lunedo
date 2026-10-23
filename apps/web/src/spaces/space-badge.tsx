@@ -14,13 +14,23 @@ export function spaceDisplayName(
     : "";
 }
 
-export function SpaceBadge({ space }: { space: Pick<Space, "key" | "personal"> }) {
+export function SpaceBadge({
+  space,
+  size = "md",
+}: {
+  space: Pick<Space, "key" | "personal">;
+  size?: "sm" | "md";
+}) {
   return (
     <span
       aria-hidden="true"
-      className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-xs font-semibold text-accent"
+      className={`flex shrink-0 items-center justify-center bg-accent-soft font-semibold text-accent ${size === "sm" ? "size-6 rounded-sm text-2xs" : "size-8 rounded-md text-xs"}`}
     >
-      {space.personal ? <User className="size-icon" /> : space.key.slice(0, 2)}
+      {space.personal ? (
+        <User className={size === "sm" ? "size-icon-sm" : "size-icon-md"} />
+      ) : (
+        space.key.slice(0, 2)
+      )}
     </span>
   );
 }

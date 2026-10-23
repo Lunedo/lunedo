@@ -232,6 +232,39 @@ describe("content language", () => {
   });
 });
 
+describe("page bar", () => {
+  it("names the last editor with date and time and opens the versions on click", async () => {
+    mockApi(
+      routes("reader", {
+        [`GET /api/v1/pages/${VPN}/versions`]: () => ({
+          body: [
+            {
+              number: 7,
+              title: "VPN access",
+              note: "",
+              reason: "published",
+              restoredFrom: null,
+              copiedFrom: null,
+              createdAt: "2026-10-05T08:00:00.000Z",
+              createdBy: { id: OLIVIA.id, name: "Anna Berger" },
+              contributors: [],
+            },
+          ],
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByText("Published text")).toBeTruthy();
+    const info = await screen.findByRole("button", {
+      name: /^Edited by Anna Berger on .+, .+ · Click to open the versions$/,
+    });
+    expect(screen.queryByText(/Published .* · version 7/)).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Path" }).textContent).toContain("IT Operations");
+    await userEvent.click(info);
+    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${VPN}/history`));
+  });
+});
+
 describe("publish mode", () => {
   it("shows readers the published version without any draft", async () => {
     const { requests } = mockApi(routes("reader"));

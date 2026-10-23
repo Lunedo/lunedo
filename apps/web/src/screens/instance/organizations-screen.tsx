@@ -15,7 +15,7 @@ import {
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Globe, MoreHorizontal, Plus, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -163,6 +163,7 @@ export function InstanceOrganizationsScreen() {
                     ? [
                         {
                           label: t("breakGlass.request"),
+                          icon: ShieldAlert,
                           danger: true,
                           onSelect: () => setBreakGlass(organization),
                         },
@@ -170,6 +171,7 @@ export function InstanceOrganizationsScreen() {
                     : []),
                   {
                     label: t("instance.organizations.domains"),
+                    icon: Globe,
                     disabled: !memberOf.has(organization.id),
                     onSelect: () =>
                       void navigate({

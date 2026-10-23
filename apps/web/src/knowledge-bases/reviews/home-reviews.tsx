@@ -1,10 +1,11 @@
-import { Badge, Button, Section } from "@lunedo/ui";
+import { Button, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
+import { SidebarEntry } from "../../shell/app-sidebar.js";
 import { itemHref } from "../../spaces/item-paths.js";
 import { articleTypeIcon } from "../article-types.js";
 import { homeReviewsQuery, reviewCountsQuery } from "./queries.js";
@@ -28,8 +29,8 @@ export function DueForReview() {
   }, [focusAfter, review.busy]);
   if (reviews.isError) {
     return (
-      <div className="md:col-span-2">
-        <Section title={t("reviews.home.title")} icon={CalendarCheck}>
+      <div>
+        <Section title={t("reviews.home.title")}>
           <LoadError what={t("reviews.home.title")} error={reviews.error} onRetry={() => reviews.refetch()} />
         </Section>
       </div>
@@ -39,8 +40,8 @@ export function DueForReview() {
   if (items.length === 0) return null;
   const now = Date.now();
   return (
-    <div className="md:col-span-2">
-      <Section title={t("reviews.home.title")} icon={CalendarCheck}>
+    <div>
+      <Section title={t("reviews.home.title")}>
         <p className="px-4 py-2 text-sm text-text-muted">{t("reviews.home.description")}</p>
         <ul
           ref={section}
@@ -54,7 +55,7 @@ export function DueForReview() {
               itemHref({ id: item.id, kind: "page", title: item.title, link: null }, item.spaceKey) ?? "";
             return (
               <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2">
-                <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+                <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <Link
                     to={href}
@@ -109,24 +110,25 @@ export function ReviewNavLink({
   spaceId,
   spaceKey,
   active,
+  collapsed,
 }: {
   spaceId: string;
   spaceKey: string;
   active: boolean;
+  collapsed: boolean;
 }) {
   const { t } = useTranslation();
   const counts = useQuery({ ...reviewCountsQuery(spaceId), throwOnError: false });
   const due = counts.data?.due ?? 0;
   return (
-    <Link
+    <SidebarEntry
       to="/spaces/$spaceKey/reviews"
       params={{ spaceKey }}
-      aria-current={active ? "page" : undefined}
-      className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${active ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-    >
-      <CalendarCheck aria-hidden="true" className="size-icon text-text-muted" />
-      <span className="min-w-0 flex-1 truncate">{t("reviews.list.title")}</span>
-      {due > 0 ? <Badge variant="warning">{t("reviews.list.dueBadge", { count: due })}</Badge> : null}
-    </Link>
+      icon={CalendarCheck}
+      label={t("reviews.list.title")}
+      current={active}
+      collapsed={collapsed}
+      {...(due > 0 ? { badge: due, badgeLabel: t("reviews.list.navDue", { count: due }) } : {})}
+    />
   );
 }

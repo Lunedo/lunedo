@@ -95,7 +95,7 @@ function ShareRow({ share, onChange }: { share: PageShare; onChange: (pending: P
     <li className="flex flex-col gap-2 py-3">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {share.holder.kind === "group" ? (
-          <Users aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+          <Users aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         ) : null}
         <div className="min-w-0">
           <p className="truncate font-medium" title={name}>
@@ -344,7 +344,7 @@ function Restrictions({ access, onChange }: { access: PageAccess; onChange: (pen
   return (
     <section aria-labelledby="share-restrict" className="flex flex-col gap-3">
       <h3 id="share-restrict" className="flex items-center gap-2 font-semibold">
-        <Lock aria-hidden="true" className="size-icon" />
+        <Lock aria-hidden="true" className="size-icon-md" />
         {t("sharing.restrict.title")}
       </h3>
       {inherited.length > 0 ? (

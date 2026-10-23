@@ -250,7 +250,7 @@ function GalleryContent({
             <TemplateCard
               selected={selected === BLANK}
               onSelect={() => choose(BLANK)}
-              icon={<FilePlus aria-hidden="true" className="size-icon text-text-muted" />}
+              icon={<FilePlus aria-hidden="true" className="size-icon-md text-text-muted" />}
               title={knowledgeBase ? t("gallery.article.blank") : t("gallery.blank")}
               description={t("gallery.blankDescription")}
             />
@@ -260,7 +260,7 @@ function GalleryContent({
               key={entry.id}
               selected={selected === entry.id}
               onSelect={() => choose(entry.id)}
-              icon={<LayoutTemplate aria-hidden="true" className="size-icon text-text-muted" />}
+              icon={<LayoutTemplate aria-hidden="true" className="size-icon-md text-text-muted" />}
               title={entry.name}
               description={entry.description}
               origin={entry.level === "builtIn" ? undefined : t(`gallery.levels.${entry.level}`)}

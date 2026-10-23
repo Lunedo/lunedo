@@ -51,7 +51,7 @@ export function DecisionsSection({ seriesId, spaceKey }: { seriesId: string; spa
     <section aria-labelledby="series-decisions" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 id="series-decisions" className="flex grow items-center gap-2 text-lg font-semibold">
-          <Flag aria-hidden className="size-icon text-text-muted" />
+          <Flag aria-hidden className="size-icon-md text-text-muted" />
           {t("meetings.decisions.title")}
         </h2>
         <Button
@@ -118,7 +118,7 @@ export function DecisionsSection({ seriesId, spaceKey }: { seriesId: string; spa
         <ul className="flex flex-col gap-2">
           {decisions.data.map((decision) => (
             <li key={decision.id} className="flex gap-3 rounded-md border border-border p-3">
-              <Flag aria-hidden className="mt-1 size-icon shrink-0 text-success" />
+              <Flag aria-hidden className="mt-1 size-icon-md shrink-0 text-success" />
               <div className="flex min-w-0 flex-col gap-1">
                 <p className="font-medium break-words">
                   {decision.text || t("meetings.decisions.noStatement")}

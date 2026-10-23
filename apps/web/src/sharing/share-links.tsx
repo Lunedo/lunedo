@@ -378,7 +378,7 @@ function LinkRow({ page, link }: { page: SharedPage; link: ShareLink }) {
   return (
     <li className="flex flex-col gap-2 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Link2 aria-hidden="true" className="size-icon text-text-muted" />
+        <Link2 aria-hidden="true" className="size-icon-md text-text-muted" />
         <span className="min-w-0 flex-1 truncate font-medium" title={label}>
           {label}
         </span>

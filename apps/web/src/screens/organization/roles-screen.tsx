@@ -16,7 +16,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -159,8 +159,13 @@ export function OrganizationRolesScreen() {
                       <IconButton label={t("roles.actionsFor", { name: role.name })} icon={MoreHorizontal} />
                     }
                     items={[
-                      { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.edit"), icon: Pencil, onSelect: () => setEditing(role) },
+                      {
+                        label: t("common.deleteRole"),
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setDeleting(role),
+                      },
                     ]}
                   />
                 ) : null,

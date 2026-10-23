@@ -211,14 +211,11 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
   const pagePath = `/spaces/${key}/pages/${created.id}/long-page`;
   await page.goto(pagePath);
   await expect(page.getByText("Paragraph 120 of a long page about the network.")).toBeAttached();
-  await expectOnlyContentScrolls(pagePath, [
-    "nav[aria-label='Main navigation']",
-    "nav[aria-label^='Navigation of']",
-  ]);
+  await expectOnlyContentScrolls(pagePath, ["nav[aria-label='Main navigation']", "header"]);
 
   await page.goto(`${pagePath}?edit=true`);
   await expect(page.getByRole("textbox", { name: "Page content" })).toBeEditable();
-  await expectOnlyContentScrolls(`${pagePath}?edit=true`, ["nav[aria-label='Main navigation']"]);
+  await expectOnlyContentScrolls(`${pagePath}?edit=true`, ["nav[aria-label='Main navigation']", "header"]);
   const toolbar = await page.locator(".ld-editor-bar").boundingBox();
   const main = await page.locator("#main").boundingBox();
   expect(toolbar?.y).toBeGreaterThanOrEqual(main?.y ?? 0);
@@ -227,7 +224,7 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
   await page.goto("/settings/instance/notifications");
   await expect(page.locator("#main h1")).toBeVisible();
   await expectOnlyContentScrolls("/settings/instance/notifications", [
-    "nav[aria-label='Main navigation']",
+    "header",
     "nav[aria-label='Settings']",
   ]);
 });

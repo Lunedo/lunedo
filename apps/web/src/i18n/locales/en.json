@@ -1026,13 +1026,11 @@
   "rail": {
     "label": "Main navigation",
     "home": "Lunedo home",
-    "search": "Search",
     "notifications": "Notifications",
     "notificationsUnread": "Notifications, {count, plural, one {# unread} other {# unread}}",
     "help": "Help",
     "settings": "Settings",
     "account": "Account",
-    "spaces": "Spaces",
     "forYou": "For you",
     "tasks": "My tasks"
   },
@@ -5202,11 +5200,8 @@
     }
   },
   "spaces": {
-    "navigation": "Navigation of {space}",
-    "inOrganization": "{organization} · Space",
     "options": "Space options",
     "overview": "Overview",
-    "pagesButton": "Pages",
     "loadFailed": "The space could not be loaded",
     "notFound": {
       "title": "Space not found",
@@ -5265,12 +5260,11 @@
     },
     "list": {
       "title": "Spaces",
-      "description": "Spaces you can read, with their pages and folders.",
+      "description": "Spaces you can read.",
       "search": "Filter spaces",
       "searchPlaceholder": "Name, key or description",
       "organizationFilter": "Organization",
       "allOrganizations": "All organizations",
-      "inOrganization": "{organization}",
       "loadFailed": "The spaces could not be loaded",
       "none": "No spaces yet",
       "noneDescription": "Spaces hold pages, folders and links for a team or a topic. Create the first one to start writing.",
@@ -5282,7 +5276,11 @@
       "activeSpaces": "Active spaces",
       "archivedSpaces": "Archived spaces",
       "oneOnOnes": "One-on-ones",
-      "deletedSpaces": "Deleted spaces"
+      "deletedSpaces": "Deleted spaces",
+      "name": "Name",
+      "key": "Key",
+      "visibility": "Who can read",
+      "favorite": "Favorite"
     },
     "deleted": {
       "title": "Deleted spaces",
@@ -5488,8 +5486,7 @@
       "removeFailed": "The restriction was not removed",
       "adminsOnlyTitle": "Only space admins manage restrictions",
       "adminsOnly": "Ask a space admin if a restricted page needs attention."
-    },
-    "articlesButton": "Articles"
+    }
   },
   "tree": {
     "title": "Pages",
@@ -5638,7 +5635,10 @@
     "useFixedWidth": "Use fixed width",
     "useFullWidth": "Use full width",
     "numberHeadings": "Number headings",
-    "stopNumberingHeadings": "Stop numbering headings"
+    "stopNumberingHeadings": "Stop numbering headings",
+    "breadcrumbs": "Path",
+    "editedBy": "Edited by {name} on {date}, {time} · Click to open the versions",
+    "editedOn": "Edited on {date}, {time} · Click to open the versions"
   },
   "pageTitle": {
     "edit": "Rename {title}",
@@ -6101,9 +6101,8 @@
   },
   "home": {
     "title": "For you",
-    "greeting": "Hello {name}. Here is what changed for you.",
     "loadFailed": "Your home page could not be loaded",
-    "tasks": "My open tasks due soon",
+    "tasks": "My tasks, due soon",
     "noTasks": "No open tasks are due in the next 7 days.",
     "allTasks": "All my tasks",
     "mentions": "Mentions",
@@ -9790,7 +9789,8 @@
       "withoutCategory": "Without category",
       "total": "{count, plural, one {# article} other {# articles}} in categories",
       "emptyFiltered": "No articles of this type in this category.",
-      "languages": "Translations"
+      "languages": "Translations",
+      "articleCount": "{count, plural, one {{formatted} article} other {{formatted} articles}}"
     },
     "create": {
       "typeLabel": "Type of space",
@@ -10176,7 +10176,8 @@
       "translationOutdatedHint": "{language} translation outdated",
       "lastReviewedOn": "Reviewed {date}",
       "neverReviewed": "Never reviewed",
-      "markArticle": "Mark as reviewed: {title}"
+      "markArticle": "Mark as reviewed: {title}",
+      "navDue": "Review, {count} due"
     },
     "settings": {
       "tab": "Review",
@@ -10662,5 +10663,48 @@
     "removePictureDescription": "Others see your initials again. You can upload a new picture at any time.",
     "pictureUploaded": "Profile picture saved",
     "pictureRemoved": "Profile picture removed"
+  },
+  "topBar": {
+    "search": "Search",
+    "searchShortcut": "Ctrl K",
+    "searchShortcutApple": "⌘ K",
+    "switchOrganization": "Switch organization, currently {name}",
+    "organizationSettings": "Organization settings",
+    "createOrganization": "Create organization"
+  },
+  "sidebar": {
+    "favorites": "Favorites",
+    "recentSpaces": "Recently visited",
+    "allSpaces": "All spaces",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "close": "Close navigation",
+    "tasksOpen": "My tasks, {count, plural, one {# open} other {{shown} open}}",
+    "spaceType": "Space",
+    "open": "Open navigation"
+  },
+  "create": {
+    "button": "Create",
+    "inSpace": "In {space}",
+    "inASpace": "In a space",
+    "page": "Page",
+    "blogPost": "Blog post",
+    "whiteboard": "Whiteboard",
+    "folder": "Folder",
+    "link": "Link",
+    "meeting": "Meeting",
+    "article": "Article",
+    "category": "Category",
+    "space": "Space",
+    "chooseSpace": {
+      "title": "Create {kind}",
+      "description": "Choose the space to create it in. The list shows the spaces you can edit.",
+      "label": "Space",
+      "placeholder": "Search spaces by name or key",
+      "empty": "No space found that you can edit.",
+      "required": "Choose a space.",
+      "cancel": "Cancel",
+      "continue": "Continue"
+    }
   }
 }

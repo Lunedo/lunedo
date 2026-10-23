@@ -1,13 +1,4 @@
-import {
-  Badge,
-  Button,
-  EmptyState,
-  PageHeader,
-  SegmentedControl,
-  Skeleton,
-  Table,
-  type TableColumn,
-} from "@lunedo/ui";
+import { Badge, Button, EmptyState, PageHeader, Skeleton, Table, type TableColumn } from "@lunedo/ui";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Folder, FolderPlus, Plus } from "lucide-react";
@@ -19,11 +10,11 @@ import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { contentLanguageLabel } from "../search/content-language.js";
 import { itemHref } from "../spaces/item-paths.js";
+import { PageBar } from "../spaces/page-bar.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
 import { ARTICLE_TYPES, articleTypeIcon, articleTypeLabel } from "./article-types.js";
 import { NamedIcon } from "./icons.js";
-import { PortalLink } from "./portal-link.js";
 import {
   type ArticleSummary,
   type ArticleTypeFilter,
@@ -67,13 +58,13 @@ function ArticleGroup({
         const href = itemHref({ id: article.id, kind: "page", title: article.title, link: null }, space.key);
         return (
           <span className="flex min-w-0 items-center gap-2">
-            <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+            <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
             <span className="sr-only">{articleTypeLabel(t, article.type)}: </span>
             {href ? (
               <Link
                 to={href}
                 title={article.title}
-                className="min-w-0 truncate font-medium hover:underline focus-visible:focus-ring"
+                className="min-w-0 truncate text-text hover:underline focus-visible:focus-ring"
               >
                 {article.title}
               </Link>
@@ -150,22 +141,24 @@ function ArticleGroup({
     {
       key: "updated",
       header: t("knowledgeBase.list.updated"),
-      cell: (article) => <span className="whitespace-nowrap">{format.date(article.contentUpdatedAt)}</span>,
+      cell: (article) => <span className="whitespace-nowrap">{format.short(article.contentUpdatedAt)}</span>,
     },
   ];
   return (
     <section aria-label={heading} className="flex flex-col gap-2">
-      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
+      <h2 className="flex min-w-0 items-baseline gap-2 font-semibold">
         {icon ? (
-          <NamedIcon name={icon} className="size-icon shrink-0 text-text-muted" />
+          <NamedIcon name={icon} className="size-icon-md shrink-0 text-text-muted" />
         ) : (
-          <Folder aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+          <Folder aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         )}
         <span className="truncate" title={heading}>
           {heading}
         </span>
         {count !== null ? (
-          <span className="text-sm font-normal text-text-muted">{format.number(count)}</span>
+          <span className="text-sm font-normal text-text-muted">
+            {t("knowledgeBase.list.articleCount", { count, formatted: format.number(count) })}
+          </span>
         ) : null}
       </h2>
       {articles.isError ? (
@@ -180,6 +173,7 @@ function ArticleGroup({
           columns={columns}
           rows={rows}
           rowKey={(article) => article.id}
+          variant="flat"
           loading={articles.isPending}
           empty={
             <p className="px-4 py-3 text-sm text-text-muted">
@@ -220,92 +214,107 @@ export function KnowledgeBaseScreen() {
   const categories = useQuery({ ...categoriesQuery(space.id), throwOnError: false });
   const topLevel = (categories.data ?? []).filter((category: Category) => category.level === 1);
   const total = topLevel.reduce((sum, category) => sum + category.articles, 0);
+  const filters: { value: ArticleTypeFilter; label: string }[] = [
+    { value: "all", label: t("knowledgeBase.list.allTypes") },
+    ...ARTICLE_TYPES.map((value) => ({ value, label: translateKey(t, `knowledgeBase.list.types.${value}`) })),
+  ];
   return (
-    <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
-      <PageHeader
-        title={name}
-        description={space.description || t("knowledgeBase.list.description")}
-        icon={BookOpen}
-        actions={
+    <>
+      <PageBar breadcrumbs={[{ label: name }]}>
+        {canEdit ? (
           <>
-            <PortalLink />
-            {canEdit ? (
-              <>
-                <Button variant="secondary" icon={FolderPlus} onClick={() => openCreate("folder", null)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={FolderPlus}
+              onClick={() => openCreate("folder", null)}
+            >
+              {t("knowledgeBase.newCategory")}
+            </Button>
+            <Button size="sm" variant="primary" icon={Plus} onClick={() => openCreate("page", null)}>
+              {t("knowledgeBase.newArticle")}
+            </Button>
+          </>
+        ) : null}
+      </PageBar>
+      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-4 pb-12 md:px-8">
+        <PageHeader
+          title={t("knowledgeBase.articles")}
+          description={[
+            space.description || t("knowledgeBase.list.description"),
+            categories.data && topLevel.length > 0
+              ? `${t("knowledgeBase.list.total", { count: total })}.`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        />
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="sr-only">{t("knowledgeBase.list.typeFilter")}</legend>
+          {filters.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              aria-pressed={type === filter.value}
+              onClick={() => setType(filter.value)}
+              className="h-control-sm rounded-sm bg-surface-sunken px-2 text-sm text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring aria-pressed:bg-accent-soft aria-pressed:font-medium aria-pressed:text-accent"
+            >
+              {filter.label}
+            </button>
+          ))}
+        </fieldset>
+        {categories.isPending ? (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-field w-full" />
+            <Skeleton className="h-field w-full" />
+          </div>
+        ) : null}
+        {categories.isError ? (
+          <LoadError
+            what={t("knowledgeBase.list.categoriesFailed")}
+            error={categories.error}
+            onRetry={() => categories.refetch()}
+          />
+        ) : null}
+        {categories.data && topLevel.length === 0 ? (
+          <EmptyState
+            icon={BookOpen}
+            title={t("knowledgeBase.list.noCategoriesTitle")}
+            description={
+              canEdit
+                ? t("knowledgeBase.list.noCategoriesEditor")
+                : t("knowledgeBase.list.noCategoriesReader")
+            }
+            action={
+              canEdit ? (
+                <Button variant="primary" icon={FolderPlus} onClick={() => openCreate("folder", null)}>
                   {t("knowledgeBase.newCategory")}
                 </Button>
-                <Button variant="primary" icon={Plus} onClick={() => openCreate("page", null)}>
-                  {t("knowledgeBase.newArticle")}
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
-      />
-      <SegmentedControl
-        label={t("knowledgeBase.list.typeFilter")}
-        value={type}
-        onValueChange={(value) => setType(value as ArticleTypeFilter)}
-        options={[
-          { value: "all", label: t("knowledgeBase.list.allTypes") },
-          ...ARTICLE_TYPES.map((value) => ({
-            value,
-            label: translateKey(t, `knowledgeBase.list.types.${value}`),
-          })),
-        ]}
-      />
-      {categories.isPending ? (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-field w-full" />
-          <Skeleton className="h-field w-full" />
-        </div>
-      ) : null}
-      {categories.isError ? (
-        <LoadError
-          what={t("knowledgeBase.list.categoriesFailed")}
-          error={categories.error}
-          onRetry={() => categories.refetch()}
-        />
-      ) : null}
-      {categories.data && topLevel.length === 0 ? (
-        <EmptyState
-          icon={BookOpen}
-          title={t("knowledgeBase.list.noCategoriesTitle")}
-          description={
-            canEdit ? t("knowledgeBase.list.noCategoriesEditor") : t("knowledgeBase.list.noCategoriesReader")
-          }
-          action={
-            canEdit ? (
-              <Button variant="primary" icon={FolderPlus} onClick={() => openCreate("folder", null)}>
-                {t("knowledgeBase.newCategory")}
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : null}
-      {topLevel.map((category) => (
-        <ArticleGroup
-          key={`${category.id}-${type}`}
-          heading={category.title}
-          icon={category.icon}
-          count={type === "all" ? category.articles : null}
-          categoryId={category.id}
-          type={type}
-        />
-      ))}
-      {categories.data ? (
-        <ArticleGroup
-          key={`top-${type}`}
-          heading={t("knowledgeBase.list.withoutCategory")}
-          icon={null}
-          count={null}
-          categoryId={null}
-          type={type}
-        />
-      ) : null}
-      {categories.data && topLevel.length > 0 ? (
-        <p className="text-sm text-text-muted">{t("knowledgeBase.list.total", { count: total })}</p>
-      ) : null}
-    </div>
+              ) : undefined
+            }
+          />
+        ) : null}
+        {topLevel.map((category) => (
+          <ArticleGroup
+            key={`${category.id}-${type}`}
+            heading={category.title}
+            icon={category.icon}
+            count={type === "all" ? category.articles : null}
+            categoryId={category.id}
+            type={type}
+          />
+        ))}
+        {categories.data ? (
+          <ArticleGroup
+            key={`top-${type}`}
+            heading={t("knowledgeBase.list.withoutCategory")}
+            icon={null}
+            count={null}
+            categoryId={null}
+            type={type}
+          />
+        ) : null}
+      </div>
+    </>
   );
 }

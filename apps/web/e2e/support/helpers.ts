@@ -154,7 +154,17 @@ export async function openSettingsArea(
   page: Page,
   area: "My account" | "Organization" | "Instance",
 ): Promise<void> {
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("menuitem", { name: area }).click();
+  if (area === "My account") {
+    await page.getByRole("button", { name: "Account", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Profile" }).click();
+  } else {
+    const gear = page.getByRole("button", { name: "Settings", exact: true });
+    const menu = (await gear.getAttribute("aria-haspopup")) === "menu";
+    await gear.click();
+    if (menu) await page.getByRole("menuitem", { name: area }).click();
+    await expect(page).toHaveURL(
+      area === "Instance" ? /\/settings\/instance\// : /\/settings\/organizations\//,
+    );
+  }
   await expect(page.getByRole("navigation", { name: "Settings", exact: true })).toBeVisible();
 }

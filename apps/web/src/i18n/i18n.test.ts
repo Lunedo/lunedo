@@ -46,6 +46,6 @@ describe("initI18n", () => {
   it("sets the document language", async () => {
     const instance = await initI18n(["de-DE"]);
     expect(document.documentElement.lang).toBe("de");
-    expect(instance.t("rail.search")).toBe("Suche");
+    expect(instance.t("topBar.search")).toBe("Suchen");
   });
 });

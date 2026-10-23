@@ -26,7 +26,7 @@ export function PortalLink({
       target="_blank"
       rel="noopener"
     >
-      <ExternalLink aria-hidden="true" className={compact ? "size-icon-sm" : "size-icon"} />
+      <ExternalLink aria-hidden="true" className={compact ? "size-icon-sm" : "size-icon-md"} />
       {t("knowledgeBase.portal.view")}
     </a>
   );

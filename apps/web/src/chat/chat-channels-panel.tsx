@@ -165,7 +165,7 @@ export function ChatChannelsPanel({
             const Icon = iconOf(channel.kind);
             return (
               <li key={channel.id} className="flex flex-wrap items-center gap-3 py-3">
-                <Icon aria-hidden className="size-icon shrink-0 text-text-muted" />
+                <Icon aria-hidden className="size-icon-md shrink-0 text-text-muted" />
                 <div className="flex min-w-0 flex-1 basis-field flex-col">
                   <TruncatedText text={channel.name} className="font-medium" />
                   <span className="text-sm text-text-muted wrap-anywhere">{hint(channel)}</span>

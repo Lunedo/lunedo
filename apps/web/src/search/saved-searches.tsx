@@ -185,7 +185,7 @@ function SavedSearchEntry({ organizationId, entry }: { organizationId: string; e
         to={href}
         className="flex min-h-hit min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-accent hover:underline focus-visible:focus-ring"
       >
-        <Bookmark aria-hidden="true" className="size-icon shrink-0" />
+        <Bookmark aria-hidden="true" className="size-icon-md shrink-0" />
         <span className="truncate" title={entry.name}>
           {entry.name}
         </span>

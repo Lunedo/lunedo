@@ -120,7 +120,7 @@ function PersonOverview({ organizationId, accountId }: { organizationId: string;
           download
           className="inline-flex min-h-hit items-center gap-2 self-start rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring sm:self-auto"
         >
-          <Download aria-hidden="true" className="size-icon" />
+          <Download aria-hidden="true" className="size-icon-md" />
           {t("organization.access.exportPerson")}
         </a>
       </div>
@@ -175,7 +175,7 @@ export function AccessOverviewScreen() {
             download
             className="inline-flex min-h-hit items-center gap-2 self-start rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring sm:self-auto"
           >
-            <Download aria-hidden="true" className="size-icon" />
+            <Download aria-hidden="true" className="size-icon-md" />
             {t("organization.access.exportAll")}
           </a>
         </div>

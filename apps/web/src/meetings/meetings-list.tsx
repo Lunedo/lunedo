@@ -72,7 +72,7 @@ export function MeetingsList({ seriesId, spaceKey }: { seriesId: string; spaceKe
                   to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
                   className="flex min-h-hit flex-wrap items-center gap-3 px-3 py-2 hover:bg-hover focus-visible:focus-ring"
                 >
-                  <CalendarDays aria-hidden className="size-icon text-text-muted" />
+                  <CalendarDays aria-hidden className="size-icon-md text-text-muted" />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-medium" title={meeting.title}>
                       {meeting.startsAt ? format.date(meeting.startsAt) : t("meetings.notScheduled")}

@@ -5,6 +5,11 @@ import { CellSelection } from "@tiptap/pm/tables";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
+  ArrowDownToLine,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ArrowUpToLine,
+  Ban,
   Bold,
   Columns3,
   Combine,
@@ -158,10 +163,19 @@ export function TableMenu({ editor }: { editor: Editor }) {
           </button>
         }
         items={[
-          { label: t("editor.table.addRowBefore"), onSelect: run(() => chain().addRowBefore().run()) },
-          { label: t("editor.table.addRowAfter"), onSelect: run(() => chain().addRowAfter().run()) },
+          {
+            label: t("editor.table.addRowBefore"),
+            icon: ArrowUpToLine,
+            onSelect: run(() => chain().addRowBefore().run()),
+          },
+          {
+            label: t("editor.table.addRowAfter"),
+            icon: ArrowDownToLine,
+            onSelect: run(() => chain().addRowAfter().run()),
+          },
           {
             label: t("editor.table.deleteRow"),
+            icon: Trash2,
             danger: true,
             onSelect: run(() => chain().deleteRow().run()),
           },
@@ -176,10 +190,19 @@ export function TableMenu({ editor }: { editor: Editor }) {
           </button>
         }
         items={[
-          { label: t("editor.table.addColumnBefore"), onSelect: run(() => chain().addColumnBefore().run()) },
-          { label: t("editor.table.addColumnAfter"), onSelect: run(() => chain().addColumnAfter().run()) },
+          {
+            label: t("editor.table.addColumnBefore"),
+            icon: ArrowLeftToLine,
+            onSelect: run(() => chain().addColumnBefore().run()),
+          },
+          {
+            label: t("editor.table.addColumnAfter"),
+            icon: ArrowRightToLine,
+            onSelect: run(() => chain().addColumnAfter().run()),
+          },
           {
             label: t("editor.table.deleteColumn"),
+            icon: Trash2,
             danger: true,
             onSelect: run(() => chain().deleteColumn().run()),
           },
@@ -220,10 +243,12 @@ export function TableMenu({ editor }: { editor: Editor }) {
         items={[
           {
             label: t("editor.colors.none"),
+            icon: Ban,
             onSelect: run(() => chain().setCellAttribute("background", null).run()),
           },
           ...contentColors.map((color) => ({
             label: translateKey(t, `editor.colors.${color}`),
+            icon: PaintBucket,
             onSelect: run(() => chain().setCellAttribute("background", color).run()),
           })),
         ]}

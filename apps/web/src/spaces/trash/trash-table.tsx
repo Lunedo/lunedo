@@ -13,7 +13,7 @@ export function daysUntil(date: string): number {
 
 function KindIcon({ entry }: { entry: TrashEntry }) {
   const Icon = entry.kind === "space" ? Layers : itemIcon(entry.itemKind);
-  return <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />;
+  return <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />;
 }
 
 export function TrashTable({

@@ -61,7 +61,7 @@ export function LabelScreen() {
                 to={pagePath(space.key, page.itemId, itemSlug(page.title))}
                 className="flex min-h-hit items-center gap-3 px-4 py-3 hover:bg-hover focus-visible:focus-ring"
               >
-                <FileText aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+                <FileText aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
                 <span className="min-w-0 flex-1 truncate font-medium" title={page.title}>
                   {page.title}
                 </span>

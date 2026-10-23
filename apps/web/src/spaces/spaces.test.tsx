@@ -779,9 +779,15 @@ describe("page tree", () => {
       mockApi({ ...baseRoutes(), ...spaceRoutes(role) });
       await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
       const user = userEvent.setup();
-      await user.click(await screen.findByRole("button", { name: "Space options" }));
-      const menu = await screen.findByRole("menu");
-      expect(within(menu).queryByRole("menuitem", { name: "Export space" }) !== null).toBe(role === "admin");
+      if (role === "reader") {
+        await screen.findByRole("button", { name: /Star IT Operations/ });
+        expect(screen.queryByRole("button", { name: "Space options" })).toBeNull();
+      } else {
+        await user.click(await screen.findByRole("button", { name: "Space options" }));
+        const menu = await screen.findByRole("menu");
+        expect(within(menu).getByRole("menuitem", { name: "Export space" })).toBeTruthy();
+        expect(within(menu).getByRole("menuitem", { name: "Space settings" })).toBeTruthy();
+      }
       cleanup();
     }
   });
@@ -1152,5 +1158,208 @@ describe("finding spaces and restricted pages", () => {
     });
     await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
     expect(await screen.findByText("Restricted: only the access list can view it")).toBeTruthy();
+  });
+});
+
+describe("app shell", () => {
+  const MARKETING_ID = "01929b1e-0000-7000-8000-0000000000a2";
+
+  function shellRoutes() {
+    return {
+      "GET /api/v1/starred": () => ({
+        body: {
+          items: [],
+          spaces: [
+            {
+              id: SPACE_ID,
+              key: "ITOPS",
+              name: "IT Operations",
+              personal: false,
+              starredAt: space().createdAt,
+            },
+          ],
+        },
+      }),
+      "GET /api/v1/recent": () => ({
+        body: [
+          {
+            id: VPN,
+            kind: "page",
+            title: "VPN access",
+            spaceId: SPACE_ID,
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            viewedAt: space().createdAt,
+          },
+          {
+            id: NETWORK,
+            kind: "page",
+            title: "Campaigns",
+            spaceId: MARKETING_ID,
+            spaceKey: "MKT",
+            spaceName: "Marketing",
+            viewedAt: space().createdAt,
+          },
+        ],
+      }),
+    };
+  }
+
+  it("lists favorite and recently visited spaces outside a space and the space itself inside one", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    const favorites = await within(navigation).findByRole("list", { name: "Favorites" });
+    expect(within(favorites).getByRole("link", { name: "IT Operations" })).toBeTruthy();
+    const recent = within(navigation).getByRole("list", { name: "Recently visited" });
+    expect(
+      within(recent)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("title")),
+    ).toEqual(["Marketing"]);
+    expect(within(navigation).getByRole("link", { name: "All spaces" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    expect(within(navigation).getByRole("button", { name: "Collapse sidebar" })).toBeTruthy();
+    cleanup();
+
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const inside = await screen.findByRole("navigation", { name: "Main navigation" });
+    expect(await within(inside).findByRole("link", { name: "Space settings" })).toBeTruthy();
+    expect(within(inside).getByRole("link", { name: "Trash" })).toBeTruthy();
+    expect(within(inside).queryByRole("link", { name: "All spaces" })).toBeNull();
+    expect(within(inside).getByRole("link", { name: "For you" })).toBeTruthy();
+  });
+
+  it("shows only icons with names when the sidebar is collapsed", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/account/preferences": () => ({
+        body: [
+          {
+            key: "appearance.sidebarCollapsed",
+            value: true,
+            defaultValue: false,
+            source: "own",
+            lockedBy: null,
+            locked: false,
+            lockable: false,
+            levelsBelow: [],
+            editable: true,
+            levels: [],
+          },
+        ],
+      }),
+    });
+    await renderAt("/spaces");
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    await waitFor(() => expect(navigation.hasAttribute("data-collapsed")).toBe(true));
+    for (const name of ["For you", "My tasks", "All spaces"]) {
+      const link = within(navigation).getByRole("link", { name });
+      expect(link.getAttribute("aria-label")).toBe(name);
+      expect(link.textContent).toBe("");
+    }
+    expect(within(navigation).queryByRole("list", { name: "Favorites" })).toBeNull();
+  });
+
+  it("offers the kinds of the current space in the Create menu", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes("editor"), ...shellRoutes() });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("link", { name: "Trash" });
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("In IT Operations")).toBeTruthy();
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((entry) => entry.textContent),
+    ).toEqual(["Page", "Blog post", "Whiteboard", "Folder", "Link", "Meeting", "New one-on-one", "Space"]);
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Folder" }));
+    expect(await screen.findByRole("dialog", { name: "New folder" })).toBeTruthy();
+  });
+
+  it("offers no content kinds in the Create menu of a space the person cannot edit", async () => {
+    mockApi({ ...baseRoutes(["organization.view"]), ...spaceRoutes("reader"), ...shellRoutes() });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findAllByRole("button", { name: "Remove IT Operations from starred" });
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((entry) => entry.textContent),
+    ).toEqual(["New one-on-one"]);
+  });
+
+  it("asks for the space first outside a space, validates the choice and opens the creation there", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("editor"),
+      ...shellRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [space("editor")], nextCursor: null } }),
+    });
+    await renderAt("/spaces");
+    await userEvent.click(await screen.findByRole("button", { name: "Create" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("In a space")).toBeTruthy();
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Folder" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Folder" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+    expect(await within(dialog).findByText("Choose a space.")).toBeTruthy();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await userEvent.click(within(dialog).getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("option", { name: /IT Operations/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("dialog", { name: "New folder" })).toBeTruthy();
+    expect(window.location.pathname.startsWith("/spaces/ITOPS")).toBe(true);
+    expect(
+      requests.some(
+        (request) => request.path.startsWith("/api/v1/spaces?") && request.path.includes("role=editor"),
+      ),
+    ).toBe(true);
+  });
+
+  it("switches the organization from the top bar only when there are several", async () => {
+    const second = { ...ORGANIZATION, id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60", name: "Field Team" };
+    mockApi({
+      ...baseRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/organizations": () => ({ body: { items: [ORGANIZATION, second], nextCursor: null } }),
+    });
+    await renderAt("/spaces");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Switch organization, currently Platform Team" }),
+    );
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu).getByRole("menuitemcheckbox", { name: "Platform Team" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "Field Team" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/home"));
+    expect(
+      await screen.findByRole("button", { name: "Switch organization, currently Field Team" }),
+    ).toBeTruthy();
+    expect(localStorage.getItem(`lunedo.organization.${OLIVIA.id}`)).toBe(second.id);
+    cleanup();
+    localStorage.clear();
+
+    mockApi({ ...baseRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    await screen.findByRole("button", { name: "Create" });
+    expect(screen.queryByRole("button", { name: /Switch organization/ })).toBeNull();
+  });
+
+  it("keeps the skip link and lists documentation, shortcuts and the API reference in the help menu", async () => {
+    mockApi({ ...baseRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    expect((await screen.findByRole("link", { name: "Skip to content" })).getAttribute("href")).toBe("#main");
+    await userEvent.click(screen.getByRole("button", { name: "Help" }));
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((entry) => entry.textContent),
+    ).toEqual(["Lunedo documentation", "Keyboard shortcuts?", "API reference"]);
   });
 });

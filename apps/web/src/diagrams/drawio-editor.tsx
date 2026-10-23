@@ -165,7 +165,7 @@ export function DrawioEditor({ pageId, blockId, source, title, onSaved, onClose 
         ) : (
           <>
             <p role="status" className="mr-auto flex items-center gap-2 text-sm text-text-muted">
-              <Server aria-hidden="true" className="size-icon shrink-0" />
+              <Server aria-hidden="true" className="size-icon-md shrink-0" />
               {phase === "starting"
                 ? t("editor.drawio.starting", { version: DRAWIO_VERSION })
                 : t("editor.drawio.servedLocally", { version: DRAWIO_VERSION })}

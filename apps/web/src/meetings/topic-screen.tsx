@@ -16,7 +16,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { CheckCircle2, Flag, Repeat, RotateCcw } from "lucide-react";
+import { CheckCircle2, CircleSlash, Flag, Repeat, RotateCcw } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -166,8 +166,16 @@ function TopicView({ topic }: { topic: TopicDetails }) {
                       </Button>
                     }
                     items={[
-                      { label: t("meetings.topic.closeResolved"), onSelect: () => void closeAs("resolved") },
-                      { label: t("meetings.topic.closeDropped"), onSelect: () => void closeAs("dropped") },
+                      {
+                        label: t("meetings.topic.closeResolved"),
+                        icon: CheckCircle2,
+                        onSelect: () => void closeAs("resolved"),
+                      },
+                      {
+                        label: t("meetings.topic.closeDropped"),
+                        icon: CircleSlash,
+                        onSelect: () => void closeAs("dropped"),
+                      },
                     ]}
                   />
                 </>

@@ -62,7 +62,7 @@ function RestrictedPages() {
         {pages.data.map((page) => (
           <li key={page.itemId} className="flex flex-col gap-2 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Lock aria-hidden="true" className="size-icon text-text-muted" />
+              <Lock aria-hidden="true" className="size-icon-md text-text-muted" />
               <Link
                 to={pagePath(space.key, page.itemId, itemSlug(page.title))}
                 className="min-w-0 flex-1 truncate font-medium text-accent hover:underline focus-visible:focus-ring"

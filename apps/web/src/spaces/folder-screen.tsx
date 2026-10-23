@@ -235,7 +235,7 @@ function FolderEntry({ item, tile }: { item: TreeItem; tile: boolean }) {
           className="aspect-video w-full"
         />
       ) : null}
-      <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+      <Glyph aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
       <span className="min-w-0 flex-1 truncate font-medium" title={title}>
         {title}
       </span>

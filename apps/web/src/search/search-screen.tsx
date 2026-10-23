@@ -160,7 +160,7 @@ export function SearchScreen() {
           <div className="relative min-w-0 flex-1 basis-field">
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-icon -translate-y-1/2 text-text-muted"
+              className="pointer-events-none absolute top-1/2 left-3 size-icon-md -translate-y-1/2 text-text-muted"
             />
             <input
               type="search"
@@ -346,7 +346,7 @@ function FirstUse({
                   onClick={() => onSearch(entry)}
                   className="flex min-h-hit min-w-0 flex-1 items-center gap-2 rounded-sm px-2 text-left hover:bg-hover focus-visible:focus-ring"
                 >
-                  <Clock aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+                  <Clock aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
                   <span className="truncate" title={entry.query}>
                     {entry.query}
                   </span>

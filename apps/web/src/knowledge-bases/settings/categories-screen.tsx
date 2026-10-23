@@ -195,9 +195,9 @@ function CategoryCard({
     <Section
       title={
         <span className="flex min-w-0 items-center gap-2">
-          <NamedIcon name={category.icon} className="size-icon shrink-0 text-text-muted" />
+          <NamedIcon name={category.icon} className="size-icon-md shrink-0 text-text-muted" />
           {category.icon ? null : (
-            <Folder aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+            <Folder aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
           )}
           <span className="truncate" title={category.title}>
             {category.title}
@@ -249,7 +249,7 @@ function CategoryCard({
                     <span className="flex items-center gap-2">
                       <NamedIcon
                         name={item.value === NO_ICON ? null : item.value}
-                        className="size-icon shrink-0"
+                        className="size-icon-md shrink-0"
                       />
                       {item.label}
                     </span>

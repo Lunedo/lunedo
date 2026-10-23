@@ -15,7 +15,7 @@ import {
   Table,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -139,8 +139,13 @@ export function InstanceRolesScreen() {
                       <IconButton label={t("roles.actionsFor", { name: role.name })} icon={MoreHorizontal} />
                     }
                     items={[
-                      { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.edit"), icon: Pencil, onSelect: () => setEditing(role) },
+                      {
+                        label: t("common.deleteRole"),
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setDeleting(role),
+                      },
                     ]}
                   />
                 ) : null,

@@ -103,7 +103,7 @@ function UploadRow({ item }: { item: UploadItem }) {
   return (
     <li className="flex flex-col gap-2 py-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Upload aria-hidden="true" className="size-icon text-text-muted" />
+        <Upload aria-hidden="true" className="size-icon-md text-text-muted" />
         <span className="min-w-0 flex-1 truncate font-medium" title={item.file.name}>
           {item.file.name}
         </span>
@@ -332,7 +332,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id={`attachments-${pageId}`} className="flex items-center gap-2 font-semibold">
-          <Paperclip aria-hidden="true" className="size-icon" />
+          <Paperclip aria-hidden="true" className="size-icon-md" />
           {t("files.title")}
           {list.length > 0 ? <span className="text-text-muted tabular-nums">{list.length}</span> : null}
         </h2>

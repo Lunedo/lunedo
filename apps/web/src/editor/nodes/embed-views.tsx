@@ -255,7 +255,7 @@ export function FileView({ node, editor, updateAttributes, selected }: NodeViewP
           className="inline-flex min-h-hit max-w-full items-center gap-2 self-start rounded-md border border-border px-3 hover:bg-hover focus-visible:focus-ring"
           onClick={() => preview?.open(id)}
         >
-          <Paperclip aria-hidden="true" className="size-icon shrink-0" />
+          <Paperclip aria-hidden="true" className="size-icon-md shrink-0" />
           <span className="truncate" title={name}>
             {name || t("editor.attachment.file", { name: "" })}
           </span>

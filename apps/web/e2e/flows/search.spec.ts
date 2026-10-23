@@ -7,10 +7,7 @@ test("searches from a space, opens a result, filters and saves the search", asyn
 }) => {
   const world = await searchWorld(page, organization);
   await page.goto(`/spaces/${world.operations.key}`);
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Search" })
-    .click();
+  await page.getByRole("banner").getByRole("button", { name: "Search", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Search" });
   await expect(dialog.getByRole("button", { name: "IT Operations first" })).toHaveAttribute(
     "aria-pressed",

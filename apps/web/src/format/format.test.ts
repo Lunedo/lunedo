@@ -58,6 +58,16 @@ describe("createFormatter", () => {
     expect(formatter.relative("2026-07-01T10:00:00Z", now)).toBe("2026-07-01");
   });
 
+  it("writes short dates: relative today, yesterday, day and month this year, with the year before", () => {
+    const formatter = createFormatter({ ...base, language: "de", timeZone: "Europe/Vienna" });
+    const now = new Date("2026-10-23T12:00:00Z");
+    expect(formatter.short("2026-10-23T10:00:00Z", now)).toBe("vor 2 Std.");
+    expect(formatter.short("2026-10-23T11:59:40Z", now)).toBe("in dieser Minute");
+    expect(formatter.short("2026-10-22T08:00:00Z", now)).toBe("gestern");
+    expect(formatter.short("2026-10-20T08:00:00Z", now)).toBe("20. Okt.");
+    expect(formatter.short("2025-10-22T08:00:00Z", now)).toBe("22. Okt. 2025");
+  });
+
   it("names byte sizes", () => {
     expect(createFormatter(base).bytes(212 * 1024 ** 3)).toBe("212 GB");
     expect(createFormatter(base).bytes(512)).toBe("512 bytes");

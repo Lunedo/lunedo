@@ -17,7 +17,15 @@ export function previousChange(status: WatchStatus | undefined): WatchChange {
     : { state: null };
 }
 
-export function WatchMenu({ target, name }: { target: WatchTarget; name: string }) {
+export function WatchMenu({
+  target,
+  name,
+  size = "md",
+}: {
+  target: WatchTarget;
+  name: string;
+  size?: "sm" | "md";
+}) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const failed = useFailureToast();
@@ -111,7 +119,12 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
       <Menu
         align="end"
         trigger={
-          <IconButton label={label} icon={icon} {...(watching ? { variant: "primary" as const } : {})} />
+          <IconButton
+            label={label}
+            icon={icon}
+            size={size}
+            {...(watching ? { variant: "primary" as const } : {})}
+          />
         }
         items={items}
       />

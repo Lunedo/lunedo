@@ -32,7 +32,7 @@ export function StorageUsage({ scope }: { scope: { spaceId: string } | { organiz
   }
   return (
     <p className="flex items-center gap-2">
-      <HardDrive aria-hidden="true" className="size-icon text-text-muted" />
+      <HardDrive aria-hidden="true" className="size-icon-md text-text-muted" />
       <span className="tabular-nums">
         {t("files.storage.used", { size: format.bytes(usage.data.bytes), count: usage.data.files })}
       </span>

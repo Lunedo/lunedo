@@ -17,10 +17,9 @@ export interface ShellContext {
   signOut(): void;
 }
 
-export interface RailItem {
+export interface TopBarItem {
   id: string;
   order: number;
-  placement: "main" | "footer";
   component: ComponentType;
 }
 
@@ -68,7 +67,7 @@ export interface Shortcut {
   run: (context: ShellContext) => void;
 }
 
-export const railItems = createRegistry<RailItem>();
+export const topBarItems = createRegistry<TopBarItem>();
 export const navigationItems = createRegistry<NavigationItem>();
 export const spaceSettingsItems = createRegistry<SpaceSettingsItem>();
 export const commands = createRegistry<Command>();

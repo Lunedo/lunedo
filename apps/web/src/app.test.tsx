@@ -209,24 +209,47 @@ describe("the web client", () => {
     expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
   });
 
-  it("opens the settings areas the person may see from the settings entry", async () => {
+  it("opens the organization settings directly from the gear for an organization admin", async () => {
     api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
     await renderApp("/settings/preferences");
     await screen.findByRole("heading", { name: "Preferences", level: 1 });
-    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
     await waitFor(() =>
-      expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
-        "My account",
-        "Organization",
-      ]),
+      expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-haspopup")).toBeNull(),
     );
-    await userEvent.click(screen.getByRole("menuitem", { name: "Organization" }));
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
     await waitFor(() =>
       expect(window.location.pathname).toBe(`/settings/organizations/${ORGANIZATION.id}/members`),
     );
+    expect(screen.queryByRole("menuitem")).toBeNull();
   });
 
-  it("opens the profile directly from the settings entry when only the own account is visible", async () => {
+  it("offers organization and instance in the gear to people who manage both", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.settings.view"],
+          organization: ["organization.view", "organization.members.view"],
+        },
+      }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-haspopup")).toBe("menu"),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await waitFor(() =>
+      expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+        "Organization",
+        "Instance",
+      ]),
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Instance" }));
+    await waitFor(() => expect(window.location.pathname.startsWith("/settings/instance/")).toBe(true));
+  });
+
+  it("shows no gear to people who manage nothing and reaches the own account through the avatar", async () => {
     api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
       "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
@@ -237,13 +260,12 @@ describe("the web client", () => {
     });
     await renderApp("/settings/preferences");
     await screen.findByRole("heading", { name: "Preferences", level: 1 });
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-haspopup")).toBeNull(),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Settings" })).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "Account" }));
+    expect(await screen.findByText(SESSION.account.email)).toBeTruthy();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Profile" }));
     expect(await screen.findByRole("heading", { name: "Profile", level: 1 })).toBeTruthy();
     expect(window.location.pathname).toBe("/settings/profile");
-    expect(screen.queryByRole("menuitem")).toBeNull();
   });
 
   it("opens the profile first, with the name, the e-mail address and the linked sign-ins", async () => {
