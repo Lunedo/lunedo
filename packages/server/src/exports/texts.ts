@@ -188,15 +188,15 @@ const german: ExportTexts = {
     reportPage: "Seite",
     templateButton: "Aus Vorlage erstellen",
     unavailableHere:
-      "{name} kann in diesem Format nicht dargestellt werden. Öffnen Sie die Seite in Lunedo, um es zu sehen.",
+      "{name} kann in diesem Format nicht dargestellt werden. Öffne die Seite in Lunedo, um es zu sehen.",
     pageProperties: "Seiteneigenschaften",
     propertiesReport: "Bericht zu Seiteneigenschaften",
     noReportedProperties: "Keine Seite mit Seiteneigenschaften passt zu den Filtern",
     propertiesReportCreator: "Erstellt von",
     propertiesReportLabels: "Labels",
-    propertiesReportMore: "{shown} von {total} Seiten. Öffnen Sie die Seite in Lunedo, um alle zu sehen.",
+    propertiesReportMore: "{shown} von {total} Seiten. Öffne die Seite in Lunedo, um alle zu sehen.",
     importedQuery:
-      "Mit einer Abfrage importiert, die nicht übernommen werden konnte: {query}. Prüfen Sie Labels und Bereiche dieses Blocks.",
+      "Mit einer Abfrage importiert, die nicht übernommen werden konnte: {query}. Prüfe Labels und Bereiche dieses Blocks.",
     contentByLabel: "Inhalte nach Label",
     noLabeledContent: "Keine Seite passt zu den Labels",
     relatedLabels: "Verwandte Labels",
@@ -238,9 +238,9 @@ const german: ExportTexts = {
   unavailable: (what) => `${what} konnte nicht exportiert werden.`,
   pageUnavailable: "Der Inhalt dieser Seite konnte nicht exportiert werden.",
   whiteboardWithoutImage:
-    "Von diesem Whiteboard ist noch kein Bild gespeichert, zum Beispiel weil noch nichts darauf gezeichnet wurde. Öffnen Sie es in Lunedo, um es zu sehen.",
+    "Von diesem Whiteboard ist noch kein Bild gespeichert, zum Beispiel weil noch nichts darauf gezeichnet wurde. Öffne es in Lunedo, um es zu sehen.",
   imageLeftOut:
-    "Bild ausgelassen, weil die Datei sonst zu groß würde. Öffnen Sie die Seite in Lunedo oder exportieren Sie sie als HTML oder Markdown mit Anhängen, um alle Bilder zu erhalten.",
+    "Bild ausgelassen, weil die Datei sonst zu groß würde. Öffne die Seite in Lunedo oder exportiere sie als HTML oder Markdown mit Anhängen, um alle Bilder zu erhalten.",
   someContent: "Dieser Inhalt",
   nodeTitles: {},
   pageNumber: { before: "Seite ", between: " von " },
@@ -252,7 +252,7 @@ const german: ExportTexts = {
   appendixFile: "Datei",
   appendixPage: "Seite",
   appendixSize: "Größe",
-  contentsHint: "Word füllt das Inhaltsverzeichnis, wenn Sie die Felder des Dokuments aktualisieren.",
+  contentsHint: "Word füllt das Inhaltsverzeichnis, wenn du die Felder des Dokuments aktualisierst.",
 };
 
 const texts: Record<Language, ExportTexts> = { en: english, de: german };

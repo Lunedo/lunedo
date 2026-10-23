@@ -73,7 +73,7 @@ export function backupMissing(language: Language, params: BackupMissingText): Co
         params.lastSuccess
           ? `Das letzte erfolgreiche Backup stammt vom ${params.lastSuccess}.`
           : "Es gibt noch kein erfolgreiches Backup.",
-        "Prüfen Sie den Zeitplan, das Backup-Ziel und die letzten Läufe in den Backup-Einstellungen.",
+        "Prüfe den Zeitplan, das Backup-Ziel und die letzten Läufe in den Backup-Einstellungen.",
       ],
       ...open(language, params.link),
     };
@@ -110,7 +110,7 @@ export function backupTestRestoreFailed(language: Language, params: BackupTestRe
         subject: `Test-Wiederherstellung eines Backups von ${params.instanceName} fehlgeschlagen`,
         paragraphs: [
           `Die Test-Wiederherstellung von ${params.backupName} ist fehlgeschlagen: ${params.reason}`,
-          "Dieses Backup lässt sich möglicherweise nicht wiederherstellen. Prüfen Sie das Ergebnis und erstellen Sie ein neues Backup.",
+          "Dieses Backup lässt sich möglicherweise nicht wiederherstellen. Prüfe das Ergebnis und erstelle ein neues Backup.",
         ],
         ...open(language, params.link),
       }

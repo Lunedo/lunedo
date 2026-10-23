@@ -146,19 +146,19 @@ const english: Record<ContentNotificationType, Line> = {
 
 const german: Record<ContentNotificationType, Line> = {
   "content.mentioned": (p, c) =>
-    `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} Sie in ${text(p.itemTitle)} erwähnt`,
-  "task.assigned": (p) => `Ihnen wurde in ${text(p.itemTitle)} eine Aufgabe zugewiesen`,
+    `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} dich in ${text(p.itemTitle)} erwähnt`,
+  "task.assigned": (p) => `Dir wurde in ${text(p.itemTitle)} eine Aufgabe zugewiesen`,
   "blogPost.scheduleHeld": (p, c) =>
     p.reason === "accountRemoved"
       ? `Der geplante Beitrag ${text(p.itemTitle)} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.`
       : `Der geplante Beitrag ${text(p.itemTitle)} wartet auf Freigabe, weil ${c.actor ?? "die Person, die ihn geplant hat,"} ihn nicht mehr bearbeiten kann.`,
   "page.shared": (p, c) =>
-    `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} ${text(p.itemTitle)} für Sie freigegeben: ${
+    `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} ${text(p.itemTitle)} für dich freigegeben: ${
       p.role === "editor"
-        ? "Sie können die Seite bearbeiten"
+        ? "Du kannst die Seite bearbeiten"
         : p.role === "commenter"
-          ? "Sie können sie lesen und kommentieren"
-          : "Sie können sie lesen"
+          ? "Du kannst sie lesen und kommentieren"
+          : "Du kannst sie lesen"
     }${p.includeDescendants === true ? ", mitsamt ihren Unterseiten" : ""}.`,
   "comment.created": (p, c) =>
     c.actorCount === 0
@@ -170,7 +170,7 @@ const german: Record<ContentNotificationType, Line> = {
       : `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} ${text(p.itemTitle)} geändert`,
   "ownership.transferred": (p, c) =>
     c.own
-      ? `${people("de", c)} hat Sie zum Besitzer von ${text(p.itemTitle)} gemacht`
+      ? `${people("de", c)} hat dich zum Besitzer von ${text(p.itemTitle)} gemacht`
       : `${people("de", c)} hat ${text(p.itemTitle)} einen neuen Besitzer gegeben`,
   "page.statusChanged": (p, c) => {
     const status = statusOf("de", p);
@@ -184,26 +184,26 @@ const german: Record<ContentNotificationType, Line> = {
       : `${text(p.requesterName)} bittet um Zugriff auf den Space ${text(p.spaceName)}`,
   "access.requestDecided": (p) => {
     const what = p.target === "page" ? text(p.itemTitle) : text(p.spaceName);
-    if (p.decision === "approved") return `Ihre Anfrage für ${what} wurde genehmigt.`;
+    if (p.decision === "approved") return `Deine Anfrage für ${what} wurde genehmigt.`;
     if (p.decision === "satisfied")
-      return `Sie haben jetzt Zugriff auf ${what}, Ihre Anfrage wurde deshalb geschlossen.`;
-    return `Ihre Anfrage für ${p.target === "page" ? "eine Seite" : text(p.spaceName)} wurde abgelehnt.`;
+      return `Du hast jetzt Zugriff auf ${what}, deine Anfrage wurde deshalb geschlossen.`;
+    return `Deine Anfrage für ${p.target === "page" ? "eine Seite" : text(p.spaceName)} wurde abgelehnt.`;
   },
   "restriction.orphaned": (p) =>
-    `Niemand auf der Zugriffsliste der beschränkten Seite ${text(p.itemTitle)} in ${text(p.spaceName)} hat noch ein aktives Konto. Prüfen Sie die Beschränkung in den Space-Einstellungen.`,
+    `Niemand auf der Zugriffsliste der beschränkten Seite ${text(p.itemTitle)} in ${text(p.spaceName)} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen.`,
   "ownership.orphaned": (p) => {
     const items = number(p.items);
-    return `${items === 1 ? "1 Inhalt" : `${items} Inhalte`} in ${text(p.spaceName)} ${items === 1 ? "hat" : "haben"} keinen Besitzer mehr, weil der Besitzer gegangen ist. Weisen Sie in den Space-Einstellungen neue Besitzer zu.`;
+    return `${items === 1 ? "1 Inhalt" : `${items} Inhalte`} in ${text(p.spaceName)} ${items === 1 ? "hat" : "haben"} keinen Besitzer mehr, weil der Besitzer gegangen ist. Weise in den Space-Einstellungen neue Besitzer zu.`;
   },
   "space.confidentialWithoutAdministrator": (p) =>
-    `Der vertrauliche Space ${text(p.spaceKey)} hat keinen Space-Admin mehr. Sie können eines der verbliebenen Mitglieder ernennen.`,
+    `Der vertrauliche Space ${text(p.spaceKey)} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.`,
   "blogPost.published": (p) => `Neuer Beitrag in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
   "article.reviewDue": (p, c) =>
-    `Der Artikel ${text(p.itemTitle)} ist am ${c.date(text(p.dueAt))} zur Überprüfung fällig. Prüfen Sie, ob er noch stimmt, und markieren Sie ihn als geprüft.`,
+    `Der Artikel ${text(p.itemTitle)} ist am ${c.date(text(p.dueAt))} zur Überprüfung fällig. Prüfe, ob er noch stimmt, und markiere ihn als geprüft.`,
   "article.sourceChanged": (p) =>
-    `Eine Quellseite des Artikels ${text(p.itemTitle)} wurde geändert. Prüfen Sie, ob der Artikel angepasst werden muss, und markieren Sie ihn als geprüft.`,
+    `Eine Quellseite des Artikels ${text(p.itemTitle)} wurde geändert. Prüfe, ob der Artikel angepasst werden muss, und markiere ihn als geprüft.`,
   "meeting.reminder": (p, c) =>
-    `${text(p.seriesTitle)} am ${c.dateTime(text(p.startsAt))}: Tragen Sie Ihre Themen vor der Besprechung ein, damit sich alle vorbereiten können.`,
+    `${text(p.seriesTitle)} am ${c.dateTime(text(p.startsAt))}: Trag deine Themen vor der Besprechung ein, damit sich alle vorbereiten können.`,
   "meeting.notesAvailable": (p, c) =>
     `${c.actor ?? "Jemand"} hat ${text(p.itemTitle)} geschlossen. Die Notizen sind verfügbar.`,
   "import.finished": (p) => {
@@ -217,25 +217,25 @@ const german: Record<ContentNotificationType, Line> = {
     }`;
   },
   "import.failed": (p) =>
-    `Der Import in ${text(p.spaceName)} (${text(p.spaceKey)}) ist fehlgeschlagen. Öffnen Sie ihn, um Grund und nächste Schritte zu sehen.`,
+    `Der Import in ${text(p.spaceName)} (${text(p.spaceKey)}) ist fehlgeschlagen. Öffne ihn, um Grund und nächste Schritte zu sehen.`,
   "import.held": (p) =>
-    `Der Import in den Space ${text(p.spaceKey)} ist angehalten, weil die Person, die ihn gestartet hat, nicht mehr importieren darf. Sie können ihn übernehmen.`,
+    `Der Import in den Space ${text(p.spaceKey)} ist angehalten, weil die Person, die ihn gestartet hat, nicht mehr importieren darf. Du kannst ihn übernehmen.`,
   "export.ready": (p, c) =>
-    `Ihr Export von ${text(p.name)} steht bis ${c.dateTime(text(p.expiresAt))} zum Herunterladen bereit.`,
+    `Dein Export von ${text(p.name)} steht bis ${c.dateTime(text(p.expiresAt))} zum Herunterladen bereit.`,
   "export.failed": (p) =>
-    `Ihr Export von ${text(p.name)} ist fehlgeschlagen. Öffnen Sie Ihre Exporte, um zu sehen, warum und was zu tun ist.`,
+    `Dein Export von ${text(p.name)} ist fehlgeschlagen. Öffne deine Exporte, um zu sehen, warum und was zu tun ist.`,
   "copy.finished": (p) => {
     const left = Number(p.hidden) + Number(p.skipped);
-    return `Ihre Kopie ${text(p.itemTitle)} ist im Space ${text(p.spaceKey)} fertig.${
+    return `Deine Kopie ${text(p.itemTitle)} ist im Space ${text(p.spaceKey)} fertig.${
       left > 0 ? ` ${left === 1 ? "1 Element wurde" : `${left} Elemente wurden`} nicht kopiert.` : ""
     }`;
   },
   "copy.failed": (p) =>
-    `Das Kopieren von ${text(p.itemTitle)} ist fehlgeschlagen, es wurde nichts angelegt. Starten Sie die Kopie erneut; schlägt sie wieder fehl, wenden Sie sich an Ihre Administration.`,
+    `Das Kopieren von ${text(p.itemTitle)} ist fehlgeschlagen, es wurde nichts angelegt. Starte die Kopie erneut; schlägt sie wieder fehl, wende dich an deine Administration.`,
   "oneOnOne.started": (p, c) =>
-    `${c.actor ?? "Jemand"} hat ein 1:1 mit Ihnen gestartet: ${text(p.itemTitle)}.`,
+    `${c.actor ?? "Jemand"} hat ein 1:1 mit dir gestartet: ${text(p.itemTitle)}.`,
   "chatChannel.failing": (p) =>
-    `Der Chat-Kanal ${text(p.channelName)} nimmt keine Nachrichten mehr an, deshalb wird dort nichts gepostet. Öffnen Sie seine Einstellungen, um den Grund zu sehen und ihn zu beheben.`,
+    `Der Chat-Kanal ${text(p.channelName)} nimmt keine Nachrichten mehr an, deshalb wird dort nichts gepostet. Öffne seine Einstellungen, um den Grund zu sehen und ihn zu beheben.`,
 };
 
 const lines: Record<Language, Record<string, Line>> = { en: english, de: german };
@@ -274,8 +274,8 @@ export const mailWording: Record<Language, MailWording> = {
   },
   de: {
     digestSubject: (instanceName, count) =>
-      `Ihre tägliche Zusammenfassung von ${instanceName}: ${count === 1 ? "1 Benachrichtigung" : `${count} Benachrichtigungen`}`,
-    digestIntro: () => "Das ist seit Ihrer letzten Zusammenfassung passiert, das Neueste zuerst.",
+      `Deine tägliche Zusammenfassung von ${instanceName}: ${count === 1 ? "1 Benachrichtigung" : `${count} Benachrichtigungen`}`,
+    digestIntro: () => "Das ist seit deiner letzten Zusammenfassung passiert, das Neueste zuerst.",
     otherSection: "Weitere Benachrichtigungen",
     open: "Öffnen",
     changes: (count) => `${count}-mal`,

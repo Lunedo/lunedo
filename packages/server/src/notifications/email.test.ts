@@ -307,7 +307,7 @@ describe.skipIf(!baseUrl)("notification e-mails", () => {
       await settle(context.readerId);
       await test.services.notificationMailer.sendDue();
       const [mail] = await sent(context.readerId);
-      expect(mail?.subject).toBe(`Ada Author hat Sie in ${context.page.title} erwähnt`);
+      expect(mail?.subject).toBe(`Ada Author hat dich in ${context.page.title} erwähnt`);
       expect(mail?.text).toContain("Gesendet von");
     });
 

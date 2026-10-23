@@ -129,7 +129,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       (await owner.get(`/api/v1/organizations/${organizationId}/invitations`)).json().items,
     ).toHaveLength(1);
     const mail = await mailTo("new.member@engineering.example");
-    expect(mail?.subject).toBe("Olivia Owner hat Sie zu Engineering Team auf Test wiki eingeladen");
+    expect(mail?.subject).toBe("Olivia Owner hat dich zu Engineering Team auf Test wiki eingeladen");
 
     const preview = () =>
       new TestClient(test.app).post("/api/v1/invitations/preview", { token: linkToken(mail?.text) });
