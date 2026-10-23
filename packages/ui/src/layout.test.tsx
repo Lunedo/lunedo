@@ -9,6 +9,7 @@ import { Avatar, avatarColor, Badge, EmptyState, initialsOf, Notice, Spinner } f
 import { Field } from "./field.js";
 import {
   BackLink,
+  CollapsibleSection,
   DangerAction,
   DangerZone,
   List,
@@ -97,6 +98,63 @@ describe("Section headers", () => {
     );
     const header = screen.getByRole("heading", { name: "Gruppenverwalter" }).parentElement;
     expect(header?.className).toContain("flex-wrap");
+  });
+});
+
+describe("CollapsibleSection", () => {
+  it("is flat with a chevron heading row and hairlines between rows", async () => {
+    const changes: boolean[] = [];
+    renderUi(
+      <CollapsibleSection title="Administration and security" onOpenChange={(open) => changes.push(open)}>
+        <p>First</p>
+        <p>Second</p>
+      </CollapsibleSection>,
+    );
+    const details = document.querySelector("details");
+    expect(details?.open).toBe(false);
+    for (const boxed of ["rounded", "bg-surface", "border"]) {
+      expect(details?.className ?? "").not.toContain(boxed);
+    }
+    const rows = details?.querySelector("[data-section-content]") as HTMLElement;
+    expect(rows.className).toContain("divide-y");
+    expect(rows.className).not.toContain("rounded");
+    const heading = screen.getByRole("heading", { name: "Administration and security", hidden: true });
+    const chevron = heading.parentElement?.querySelector("svg");
+    expect(chevron?.getAttribute("class")).not.toContain("rotate-90");
+    await userEvent.click(heading);
+    await waitFor(() => expect(details?.open).toBe(true));
+    expect(changes).toEqual([true]);
+    expect(chevron?.getAttribute("class")).toContain("rotate-90");
+  });
+
+  it("follows an open state held by the caller", async () => {
+    function Holder() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button onClick={() => setOpen(true)}>Show certificates</Button>
+          <CollapsibleSection title="Advanced" level={3} open={open} onOpenChange={setOpen}>
+            <p>Field</p>
+          </CollapsibleSection>
+        </>
+      );
+    }
+    renderUi(<Holder />);
+    expect(document.querySelector("details")?.open).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Show certificates" }));
+    expect(document.querySelector("details")?.open).toBe(true);
+    expect(screen.getByRole("heading", { name: "Advanced", level: 3 })).toBeDefined();
+  });
+
+  it("stacks fields with spacing instead of hairlines", () => {
+    renderUi(
+      <CollapsibleSection title="Advanced" layout="fields" defaultOpen>
+        <p>Field</p>
+      </CollapsibleSection>,
+    );
+    const group = document.querySelector("[data-section-content]") as HTMLElement;
+    expect(group.className).toContain("gap-4");
+    expect(group.className).not.toContain("divide-y");
   });
 });
 

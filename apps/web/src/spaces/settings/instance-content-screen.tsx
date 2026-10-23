@@ -39,7 +39,7 @@ export function InstanceContentScreen() {
     mutation.mutateAsync({ key, change: value }).then(() => undefined);
   const canManage = () => state.can("instance.settings.manage");
   return (
-    <SettingsPage title={t("content.title")} description={t("content.instanceDescription")} width="wide">
+    <SettingsPage title={t("content.title")} description={t("content.instanceDescription")}>
       <Panel title={t("content.pagesSection")}>
         <SettingsList
           settings={settings.data}

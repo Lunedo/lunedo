@@ -56,11 +56,7 @@ export function InstancePersonalSpacesScreen() {
   const queryClient = useQueryClient();
   const canManage = state.can("instance.personalSpaces.manage");
   return (
-    <SettingsPage
-      width="wide"
-      title={t("spaces.instance.title")}
-      description={t("spaces.instance.description")}
-    >
+    <SettingsPage title={t("spaces.instance.title")} description={t("spaces.instance.description")}>
       <Panel title={t("spaces.instance.availability")}>
         <SettingsList
           settings={settings.data}

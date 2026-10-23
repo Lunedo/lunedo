@@ -153,11 +153,7 @@ export function AccessOverviewScreen() {
   const state = useOrganizationState();
   const [person, setPerson] = useState<string | null>(null);
   return (
-    <SettingsPage
-      width="wide"
-      title={t("organization.access.title")}
-      description={t("organization.access.description")}
-    >
+    <SettingsPage title={t("organization.access.title")} description={t("organization.access.description")}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="w-full min-w-0 sm:flex-1">

@@ -3,9 +3,10 @@ import {
   type BadgeVariant,
   Button,
   Checkbox,
+  CollapsibleSection,
   ConfirmDialog,
   CopyButton,
-  Drawer,
+  Dialog,
   EmptyState,
   Field,
   focusFirstInvalidSoon,
@@ -796,54 +797,51 @@ function AdvancedSection({ data, canManage }: { data: BackupOverview; canManage:
   const [scopeTracker, saveScope] = useImmediate(save);
   const [testTracker, saveTest] = useImmediate(save);
   return (
-    <details className="rounded-md border border-border bg-surface">
-      <summary className="cursor-pointer py-3 font-medium">{t("backups.advanced.title")}</summary>
-      <div className="flex flex-col gap-4 border-border border-t p-4">
-        <RadioGroup
-          label={t("backups.advanced.scope")}
-          value={data.settings.scope}
-          onValueChange={(value) => void saveScope({ scope: value === "database" ? "database" : "all" })}
-          options={[
-            {
-              value: "all",
-              label: t("backups.advanced.scopeAll"),
-              description: t("backups.advanced.scopeAllHint"),
-            },
-            {
-              value: "database",
-              label: t("backups.advanced.scopeDatabase"),
-              description: t("backups.advanced.scopeDatabaseHint"),
-              disabled: !canManage,
-            },
-          ]}
-        />
-        <SaveIndicator tracker={scopeTracker} />
-        <NumberSetting
-          label={t("backups.advanced.missingDays")}
-          hint={t("backups.advanced.missingDaysHint")}
-          value={data.settings.missingDays}
-          min={1}
-          max={365}
-          disabled={!canManage}
-          onSave={(value) => save({ missingDays: value })}
-        />
-        <SettingRow
-          label={t("backups.advanced.autoTestRestore")}
-          description={t("backups.advanced.autoTestRestoreHint")}
-          status={<SaveIndicator tracker={testTracker} />}
-          control={
-            <Switch
-              label={t("backups.advanced.autoTestRestore")}
-              labelHidden
-              checked={data.settings.autoTestRestore}
-              disabled={!canManage}
-              onCheckedChange={(checked) => void saveTest({ autoTestRestore: checked })}
-            />
-          }
-        />
-        <p className="text-sm text-text-muted">{t("backups.advanced.contacts")}</p>
-      </div>
-    </details>
+    <CollapsibleSection title={t("backups.advanced.title")} layout="fields">
+      <RadioGroup
+        label={t("backups.advanced.scope")}
+        value={data.settings.scope}
+        onValueChange={(value) => void saveScope({ scope: value === "database" ? "database" : "all" })}
+        options={[
+          {
+            value: "all",
+            label: t("backups.advanced.scopeAll"),
+            description: t("backups.advanced.scopeAllHint"),
+          },
+          {
+            value: "database",
+            label: t("backups.advanced.scopeDatabase"),
+            description: t("backups.advanced.scopeDatabaseHint"),
+            disabled: !canManage,
+          },
+        ]}
+      />
+      <SaveIndicator tracker={scopeTracker} />
+      <NumberSetting
+        label={t("backups.advanced.missingDays")}
+        hint={t("backups.advanced.missingDaysHint")}
+        value={data.settings.missingDays}
+        min={1}
+        max={365}
+        disabled={!canManage}
+        onSave={(value) => save({ missingDays: value })}
+      />
+      <SettingRow
+        label={t("backups.advanced.autoTestRestore")}
+        description={t("backups.advanced.autoTestRestoreHint")}
+        status={<SaveIndicator tracker={testTracker} />}
+        control={
+          <Switch
+            label={t("backups.advanced.autoTestRestore")}
+            labelHidden
+            checked={data.settings.autoTestRestore}
+            disabled={!canManage}
+            onCheckedChange={(checked) => void saveTest({ autoTestRestore: checked })}
+          />
+        }
+      />
+      <p className="text-sm text-text-muted">{t("backups.advanced.contacts")}</p>
+    </CollapsibleSection>
   );
 }
 
@@ -858,15 +856,14 @@ function TestRestoreDetails({ test, onClose }: { test: TestRestore | null; onClo
   const { t } = useTranslation();
   const format = useFormat();
   return (
-    <Drawer
+    <Dialog
       open={test !== null}
       onOpenChange={(open) => (open ? null : onClose())}
       title={t("backups.test.title")}
-      side="right"
-      size="panel"
+      size="lg"
     >
       {test ? (
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4">
           <Badge variant={TEST_BADGES[test.state]}>
             {translateKey(t, `backups.test.states.${test.state}`)}
           </Badge>
@@ -918,7 +915,7 @@ function TestRestoreDetails({ test, onClose }: { test: TestRestore | null; onClo
           </ul>
         </div>
       ) : null}
-    </Drawer>
+    </Dialog>
   );
 }
 

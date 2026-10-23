@@ -276,7 +276,7 @@ export function GraphMailForm({
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-3 rounded-md border border-border p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
         <Field label={t("mail.testRecipient")} {...(errors.recipient ? { error: errors.recipient } : {})}>
           <Input type="email" value={recipient} onChange={(event) => setRecipient(event.target.value)} />
         </Field>

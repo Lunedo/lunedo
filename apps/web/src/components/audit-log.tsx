@@ -3,7 +3,7 @@ import {
   Button,
   Combobox,
   type ComboboxItem,
-  Drawer,
+  Dialog,
   Field,
   Input,
   Table,
@@ -11,8 +11,8 @@ import {
   TruncatedText,
 } from "@lunedo/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Download } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -85,7 +85,8 @@ export function AuditLog({
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [exporting, setExporting] = useState(false);
-  const [selected, setSelected] = useState<AuditItem | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pendingEdge, setPendingEdge] = useState<"first" | "last" | null>(null);
   const [actor, setActor] = useState<ComboboxItem | null>(null);
   const actorLoader = useMemo(
     () => (organizationId ? memberLoader(organizationId) : accountLoader()),
@@ -114,6 +115,39 @@ export function AuditLog({
             }),
           ),
   });
+
+  const items = (events.data?.items ?? []) as AuditItem[];
+  const index = selectedId ? items.findIndex((item) => item.id === selectedId) : -1;
+  const selected = index >= 0 ? (items[index] ?? null) : null;
+  const pageLoaded = !events.isPlaceholderData && !events.isFetching;
+  const hasPrevious = index > 0 || cursors.length > 1;
+  const hasNext = (index >= 0 && index < items.length - 1) || Boolean(events.data?.nextCursor);
+
+  useEffect(() => {
+    if (!pendingEdge || !pageLoaded) return;
+    const edge = pendingEdge === "first" ? items[0] : items.at(-1);
+    setPendingEdge(null);
+    setSelectedId(edge?.id ?? null);
+  }, [pendingEdge, pageLoaded, items]);
+
+  const step = (direction: -1 | 1) => {
+    if (pendingEdge) return;
+    const neighbour = items[index + direction];
+    if (neighbour) {
+      setSelectedId(neighbour.id);
+      return;
+    }
+    if (direction === 1) {
+      const next = events.data?.nextCursor;
+      if (!next) return;
+      setCursors((current) => [...current, next]);
+      setPendingEdge("first");
+      return;
+    }
+    if (cursors.length < 2) return;
+    setCursors((current) => current.slice(0, -1));
+    setPendingEdge("last");
+  };
 
   const update = (patch: Partial<Filters>) => {
     setFilters((current) => ({ ...current, ...patch }));
@@ -212,9 +246,9 @@ export function AuditLog({
       <Table
         caption={t("audit.eventsTitle")}
         rowKey={(event) => event.id}
-        rows={(events.data?.items ?? []) as AuditItem[]}
+        rows={items}
         loading={events.isPending}
-        onRowClick={(event: AuditItem) => setSelected(event)}
+        onRowClick={(event: AuditItem) => setSelectedId(event.id)}
         empty={<p className="p-4 text-text-muted">{t("audit.none")}</p>}
         pagination={{
           hasPrevious: cursors.length > 1,
@@ -251,7 +285,7 @@ export function AuditLog({
                 aria-label={t("audit.showDetails", { action: actionLabel(t, event) })}
                 onClick={(clicked) => {
                   clicked.stopPropagation();
-                  setSelected(event);
+                  setSelectedId(event.id);
                 }}
               >
                 {actionLabel(t, event)}
@@ -278,17 +312,33 @@ export function AuditLog({
           },
         ]}
       />
-      <Drawer
-        open={selected !== null}
+      <Dialog
+        open={selectedId !== null}
         onOpenChange={(open) => {
-          if (!open) setSelected(null);
+          if (open) return;
+          setSelectedId(null);
+          setPendingEdge(null);
         }}
-        title={selected ? actionLabel(t, selected) : ""}
-        side="right"
-        size="panel"
+        title={selected ? actionLabel(t, selected) : t("audit.loadingEvent")}
+        size="lg"
+        footer={
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-text-muted" aria-live="polite">
+              {!hasPrevious ? t("audit.firstEvent") : !hasNext ? t("audit.lastEvent") : null}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" icon={ChevronLeft} disabled={!hasPrevious} onClick={() => step(-1)}>
+                {t("audit.previousEvent")}
+              </Button>
+              <Button variant="outline" icon={ChevronRight} disabled={!hasNext} onClick={() => step(1)}>
+                {t("audit.nextEvent")}
+              </Button>
+            </div>
+          </div>
+        }
       >
         {selected ? <AuditDetails item={selected} context={context} /> : null}
-      </Drawer>
+      </Dialog>
     </div>
   );
 }
@@ -309,7 +359,7 @@ export function AuditDetails({ item, context }: { item: AuditItem; context: Audi
     ? [client.browser, client.system].filter(Boolean).join(t("audit.on")) || item.userAgent
     : null;
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4">
       <dl className="flex flex-col gap-3">
         <DetailRow label={t("audit.time")}>{format.dateTime(item.occurredAt)}</DetailRow>
         <DetailRow label={t("audit.actor")}>{actorLabel(t, item)}</DetailRow>

@@ -99,7 +99,6 @@ export function InstanceProviderScreen() {
 
   return (
     <SettingsPage
-      width="wide"
       title={data?.name ?? t("identityProviders.details")}
       {...(data
         ? {

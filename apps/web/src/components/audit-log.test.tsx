@@ -152,7 +152,7 @@ describe("the audit log", () => {
     expect(within(table).queryByText("Deleted account")).toBeNull();
   });
 
-  it("opens every detail of an event in a side panel", async () => {
+  it("opens every detail of an event in a centered dialog", async () => {
     const table = await renderLog();
     await userEvent.click(await within(table).findByText("Platform Team"));
     const panel = await screen.findByRole("dialog", { name: "Role given" });
@@ -163,6 +163,39 @@ describe("the audit log", () => {
     expect(within(panel).getByText("6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f")).toBeTruthy();
     const raw = within(panel).getByText("Raw event").closest("details") as HTMLDetailsElement;
     expect(raw.open).toBe(false);
+  });
+
+  it("steps through the filtered list in the dialog, across pages", async () => {
+    const third = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2f0",
+      name: "auth.signedIn",
+      labelKey: "audit.events.auth.signedIn",
+      changeKind: "fields",
+      changes: [],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": (request) => ({
+        body: request.path.includes("cursor=page-2")
+          ? { items: [third], nextCursor: null }
+          : { items: [event({}), ROLE_ASSIGNED], nextCursor: "page-2" },
+      }),
+    });
+    const table = await renderLog();
+    await userEvent.click(await within(table).findByText("Violet → Blue"));
+    let dialog = await screen.findByRole("dialog", { name: "Setting changed" });
+    expect(within(dialog).getByText("This is the first event in the list.")).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    dialog = await screen.findByRole("dialog", { name: "Role given" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    dialog = await screen.findByRole("dialog", { name: "Signed in" });
+    expect(within(dialog).getByText("This is the last event in the list.")).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Previous" }));
+    expect(await screen.findByRole("dialog", { name: "Role given" })).toBeTruthy();
   });
 
   it("labels the date filters and names targets and fields in words", async () => {

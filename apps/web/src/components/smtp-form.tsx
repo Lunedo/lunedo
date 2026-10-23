@@ -12,6 +12,7 @@ import {
 } from "@lunedo/shared";
 import {
   Button,
+  CollapsibleSection,
   ErrorState,
   Field,
   Input,
@@ -389,33 +390,30 @@ export function SmtpForm({
                   <Input className="font-mono" autoComplete="off" {...form.register("clientId")} />
                 </Field>
               </div>
-              <details
-                className="rounded-md border border-border"
-                open={form.getValues("authority") !== microsoftAuthorities[0]}
+              <CollapsibleSection
+                title={t("mail.oauth2.advanced")}
+                level={3}
+                layout="fields"
+                defaultOpen={form.getValues("authority") !== microsoftAuthorities[0]}
               >
-                <summary className="cursor-pointer rounded-md py-3 font-semibold focus-visible:focus-ring">
-                  {t("mail.oauth2.advanced")}
-                </summary>
-                <div className="border-border border-t p-4">
-                  <Field label={t("mail.oauth2.cloud")}>
-                    <Controller
-                      control={form.control}
-                      name="authority"
-                      render={({ field }) => (
-                        <Select
-                          aria-label={t("mail.oauth2.cloud")}
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          options={microsoftAuthorities.map((authority) => ({
-                            value: authority,
-                            label: t(`mail.oauth2.clouds.${CLOUDS[authority]}`),
-                          }))}
-                        />
-                      )}
-                    />
-                  </Field>
-                </div>
-              </details>
+                <Field label={t("mail.oauth2.cloud")}>
+                  <Controller
+                    control={form.control}
+                    name="authority"
+                    render={({ field }) => (
+                      <Select
+                        aria-label={t("mail.oauth2.cloud")}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={microsoftAuthorities.map((authority) => ({
+                          value: authority,
+                          label: t(`mail.oauth2.clouds.${CLOUDS[authority]}`),
+                        }))}
+                      />
+                    )}
+                  />
+                </Field>
+              </CollapsibleSection>
             </>
           ) : null}
           {provider === "generic" ? (
@@ -508,7 +506,7 @@ export function SmtpForm({
       <Field label={t("mail.from")} {...fieldError("from")}>
         <Input type="email" autoComplete="off" {...form.register("from")} />
       </Field>
-      <div className="flex flex-col gap-3 rounded-md border border-border p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
         <Field label={t("mail.testRecipient")}>
           <Input type="email" value={recipient} onChange={(event) => setRecipient(event.target.value)} />
         </Field>

@@ -54,7 +54,7 @@ export function OrganizationContentScreen() {
   const change = (key: string, value: Parameters<typeof mutation.mutateAsync>[0]["change"]) =>
     mutation.mutateAsync({ key, change: value }).then(() => undefined);
   return (
-    <SettingsPage title={t("content.title")} description={t("content.organizationDescription")} width="wide">
+    <SettingsPage title={t("content.title")} description={t("content.organizationDescription")}>
       <Panel title={t("content.pagesSection")}>
         <SettingsList
           settings={settings.data}

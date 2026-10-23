@@ -664,8 +664,10 @@ describe("the sync log", () => {
     expect(await within(panel).findByText("Too many deactivations at once")).toBeTruthy();
     expect(within(panel).getByText(/would have deactivated 40 accounts at once/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Confirm deactivations" }));
-    const dialog = await screen.findByRole("dialog", { name: "Deactivate these accounts?" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Confirm deactivations" }));
+    const confirmation = within(panel).getByRole("group", { name: "Deactivate these accounts?" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/confirm`)).toBe(false);
+    await userEvent.click(within(confirmation).getByRole("button", { name: "Confirm deactivations" }));
     await waitFor(() =>
       expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/confirm`)).toBe(true),
     );

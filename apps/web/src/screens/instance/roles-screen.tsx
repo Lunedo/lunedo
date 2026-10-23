@@ -69,7 +69,6 @@ export function InstanceRolesScreen() {
 
   return (
     <SettingsPage
-      width="wide"
       title={t("instance.roles.title")}
       description={t("instance.roles.description")}
       actions={

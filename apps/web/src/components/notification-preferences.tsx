@@ -6,7 +6,7 @@ import {
   notificationChannelSettingKey,
   notificationEvents,
 } from "@lunedo/shared";
-import { Button, Notice, Section, Select, Skeleton, Switch } from "@lunedo/ui";
+import { Button, CollapsibleSection, Notice, Section, Select, Skeleton, Switch } from "@lunedo/ui";
 import { Building2, Lock, PenLine, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
@@ -261,18 +261,13 @@ export function NotificationPreferences({
         <EventList rows={content} caption={t("notifications.eventTypes")} {...tableProps} />
       </Section>
       {administration.length > 0 ? (
-        <details className="rounded-md border border-border bg-surface">
-          <summary className="cursor-pointer rounded-md py-3 font-semibold focus-visible:focus-ring">
-            {t("notifications.administrationEvents")}
-          </summary>
-          <div className="border-border border-t">
-            <EventList
-              rows={administration}
-              caption={t("notifications.administrationEvents")}
-              {...tableProps}
-            />
-          </div>
-        </details>
+        <CollapsibleSection title={t("notifications.administrationEvents")}>
+          <EventList
+            rows={administration}
+            caption={t("notifications.administrationEvents")}
+            {...tableProps}
+          />
+        </CollapsibleSection>
       ) : null}
     </>
   );

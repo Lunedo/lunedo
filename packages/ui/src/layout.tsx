@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Slot } from "radix-ui";
-import { type ComponentProps, isValidElement, type ReactNode, useId } from "react";
+import { type ComponentProps, isValidElement, type ReactNode, useId, useState } from "react";
 import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
@@ -111,6 +111,61 @@ export function Section({
       {description && <p className="pb-2 text-sm text-text-muted">{description}</p>}
       <div className="divide-y divide-border border-t border-border">{children}</div>
     </section>
+  );
+}
+
+export function CollapsibleSection({
+  title,
+  level = 2,
+  layout = "rows",
+  open,
+  defaultOpen = false,
+  onOpenChange,
+  children,
+}: {
+  title: ReactNode;
+  level?: 2 | 3;
+  layout?: "rows" | "fields";
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  const [ownOpen, setOwnOpen] = useState(defaultOpen);
+  const expanded = open ?? ownOpen;
+  const Heading = level === 2 ? "h2" : "h3";
+  return (
+    <details
+      data-section=""
+      open={expanded}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        if (next === expanded) return;
+        setOwnOpen(next);
+        onOpenChange?.(next);
+      }}
+    >
+      <summary className="flex min-h-hit cursor-pointer list-none items-center gap-2 rounded-sm pb-2 focus-visible:focus-ring">
+        <Icon
+          icon={ChevronRight}
+          size="sm"
+          className={classNames(
+            "shrink-0 text-text-muted transition-transform motion-reduce:transition-none",
+            expanded && "rotate-90",
+          )}
+        />
+        <Heading className="min-w-0 flex-1 font-semibold">{title}</Heading>
+      </summary>
+      <div
+        data-section-content=""
+        className={classNames(
+          "border-t border-border",
+          layout === "rows" ? "divide-y divide-border" : "flex flex-col gap-4 pt-4",
+        )}
+      >
+        {children}
+      </div>
+    </details>
   );
 }
 

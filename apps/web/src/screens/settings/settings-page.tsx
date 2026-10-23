@@ -1,4 +1,4 @@
-import { BackLink, classNames, PageHeader } from "@lunedo/ui";
+import { BackLink, PageHeader } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,29 +15,21 @@ export function SettingsPage({
   description,
   actions,
   back,
-  width = "narrow",
   children,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
   back?: { label: string; href: string };
-  width?: "narrow" | "wide";
   children: ReactNode;
 }) {
   useDocumentTitle(title);
   return (
-    <div
-      data-page-width={width}
-      className={classNames(
-        "flex w-full flex-col gap-8 px-4 pt-6 pb-12 md:px-8",
-        width === "narrow" && "mx-auto max-w-page",
-      )}
-    >
+    <div className="mx-auto flex w-full max-w-page flex-col gap-8 px-4 pt-6 pb-12 md:px-8">
       <div className="flex flex-col gap-2">
         {back ? (
           <BackLink label={back.label} asChild>
-            <Link to={back.href as never} />
+            <Link to={back.href as never} activeOptions={{ exact: true }} />
           </BackLink>
         ) : null}
         <PageHeader

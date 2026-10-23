@@ -7,7 +7,7 @@ export function InstanceAuditScreen() {
   const { t } = useTranslation();
   const state = useOrganizationState();
   return (
-    <SettingsPage width="wide" title={t("audit.title")} description={t("audit.instanceDescription")}>
+    <SettingsPage title={t("audit.title")} description={t("audit.instanceDescription")}>
       <AuditLog scope="instance" canExport={state.can("instance.audit.view")} />
     </SettingsPage>
   );

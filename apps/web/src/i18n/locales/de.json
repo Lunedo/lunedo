@@ -3575,6 +3575,7 @@
       "actionsFor": "Aktionen für {name}"
     },
     "accounts": {
+      "account": "Konto",
       "open": "{name} öffnen",
       "empty": "Kein Konto passt zur Suche.",
       "filter": "Konten filtern",
@@ -4028,6 +4029,11 @@
     "browser": "Browser",
     "requestId": "Anfrage-ID",
     "rawEvent": "Rohdaten des Ereignisses",
+    "previousEvent": "Vorheriges",
+    "nextEvent": "Nächstes",
+    "firstEvent": "Das ist das erste Ereignis der Liste.",
+    "lastEvent": "Das ist das letzte Ereignis der Liste.",
+    "loadingEvent": "Ereignis wird geladen",
     "on": " unter ",
     "targets": {
       "account": "Konto",

@@ -3,8 +3,7 @@ import {
   Badge,
   type BadgeVariant,
   Button,
-  ConfirmDialog,
-  Drawer,
+  Dialog,
   DurationSelect,
   focusFirstInvalidSoon,
   Icon,
@@ -183,16 +182,16 @@ export function SyncTab({ provider, canManage }: { provider: IdentityProvider; c
           ]}
         />
       )}
-      <Drawer
+      <Dialog
         open={open !== null}
         onOpenChange={(next) => {
           if (!next) setOpen(null);
         }}
         title={t("identityProviders.sync.detailTitle")}
-        size="panel"
+        size="lg"
       >
         {open ? <RunDetail providerId={provider.id} runId={open} canManage={canManage} /> : null}
-      </Drawer>
+      </Dialog>
     </div>
   );
 }
@@ -227,8 +226,10 @@ function RunDetail({
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const run = useQuery({ ...syncRunQuery(providerId, runId), throwOnError: false });
   const confirm = async () => {
+    setConfirmBusy(true);
     try {
       await confirmSync(providerId, runId);
       toast({ title: t("identityProviders.sync.confirmed"), variant: "success" });
@@ -236,6 +237,8 @@ function RunDetail({
       await queryClient.invalidateQueries({ queryKey: ["identityProviders", providerId, "syncRuns"] });
     } catch (failure) {
       showFailure(t("failures.confirmSync"), failure);
+    } finally {
+      setConfirmBusy(false);
     }
   };
   const cancel = async () => {
@@ -297,26 +300,32 @@ function RunDetail({
                   })
                 : t("identityProviders.sync.heldDescription", { count: detail.heldDeactivations })}
             </span>
-            {canManage && !detail.confirmedAt ? (
+            {canManage && !detail.confirmedAt && !confirming ? (
               <div>
                 <Button variant="secondary" onClick={() => setConfirming(true)}>
                   {t("identityProviders.sync.confirm")}
                 </Button>
               </div>
             ) : null}
+            {canManage && !detail.confirmedAt && confirming ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 font-semibold">{t("identityProviders.sync.confirmTitle")}</legend>
+                <span>
+                  {t("identityProviders.sync.confirmDescription", { count: detail.heldDeactivations })}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="dangerPrimary" loading={confirmBusy} onClick={() => void confirm()}>
+                    {t("identityProviders.sync.confirm")}
+                  </Button>
+                  <Button variant="outline" onClick={() => setConfirming(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                </div>
+              </fieldset>
+            ) : null}
           </div>
         </Notice>
       ) : null}
-      <ConfirmDialog
-        open={confirming}
-        onOpenChange={setConfirming}
-        title={t("identityProviders.sync.confirmTitle")}
-        description={t("identityProviders.sync.confirmDescription", { count: detail.heldDeactivations ?? 0 })}
-        confirmLabel={t("identityProviders.sync.confirm")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={confirm}
-      />
       <section className="flex flex-col gap-2">
         <h3 className="font-semibold">{t("identityProviders.sync.changesTitle")}</h3>
         {detail.changes.length === 0 ? (

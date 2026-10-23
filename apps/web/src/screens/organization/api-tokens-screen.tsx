@@ -47,11 +47,7 @@ export function OrganizationTokensScreen() {
   const paged = usePaged(sorted.rows, 25);
 
   return (
-    <SettingsPage
-      width="wide"
-      title={t("tokens.organizationTitle")}
-      description={t("tokens.organizationDescription")}
-    >
+    <SettingsPage title={t("tokens.organizationTitle")} description={t("tokens.organizationDescription")}>
       <Table
         caption={t("tokens.organizationTitle")}
         rowKey={(token) => token.id}

@@ -33,11 +33,7 @@ export function OrganizationTemplatesScreen() {
     await queryClient.invalidateQueries({ queryKey: ["spaces"] });
   };
   return (
-    <SettingsPage
-      title={t("templates.title")}
-      description={t("templates.organizationDescription")}
-      width="wide"
-    >
+    <SettingsPage title={t("templates.title")} description={t("templates.organizationDescription")}>
       <TemplatesManager
         templates={templates.data}
         loading={templates.isPending}

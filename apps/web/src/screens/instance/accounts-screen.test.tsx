@@ -182,8 +182,13 @@ async function renderAccounts() {
   return screen.findByRole("table", { name: "Accounts" });
 }
 
+async function accountPage(name: string) {
+  const heading = await screen.findByRole("heading", { level: 1, name });
+  return heading.closest("main") as HTMLElement;
+}
+
 describe("the accounts page", () => {
-  it("searches on the server and opens an account in a side panel", async () => {
+  it("searches on the server and opens an account on its own page", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 1 } }));
     const table = await renderAccounts();
     expect(await within(table).findByText("Olivia Owner")).toBeTruthy();
@@ -193,10 +198,31 @@ describe("the accounts page", () => {
     await waitFor(() => expect(within(table).queryByText("Olivia Owner")).toBeNull());
 
     await userEvent.click(within(table).getByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
     expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
     expect(within(panel).getByText("One passkey")).toBeTruthy();
+    expect(window.location.pathname).toBe(`/settings/instance/accounts/${MAX}`);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const back = within(panel).getByRole("link", { name: "Accounts" });
+    expect(back.getAttribute("aria-current")).toBeNull();
+    const navigation = screen.getByRole("link", { name: "Accounts", current: "page" });
+    expect(navigation.getAttribute("href")).toBe("/settings/instance/accounts");
+    await userEvent.click(back);
+    expect(await screen.findByRole("table", { name: "Accounts" })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/instance/accounts");
+  });
+
+  it("opens an account from its address and reports when it cannot be loaded", async () => {
+    api(() => ({ body: {} }), {
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => problem(404, "notFound"),
+    });
+    window.history.replaceState(null, "", `/settings/instance/accounts/${MAX}`);
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const page = await accountPage("Account");
+    expect(await within(page).findByText("The account details could not be loaded")).toBeTruthy();
+    expect(within(page).getByRole("link", { name: "Accounts" })).toBeTruthy();
   });
 
   it("lists the organizations of each account, marks the home organization and names who manages it", async () => {
@@ -214,7 +240,7 @@ describe("the accounts page", () => {
     expect(within(max).getByText("Without organization")).toBeTruthy();
 
     await userEvent.click(within(table).getByText("Olivia Owner"));
-    const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
+    const panel = await accountPage("Olivia Owner");
     expect(within(panel).getByText("Managed by: Platform Team")).toBeTruthy();
   });
 
@@ -262,7 +288,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     const home = (await within(panel).findByRole("heading", { name: "Home organization" })).closest(
       "section",
     ) as HTMLElement;
@@ -279,7 +305,7 @@ describe("the accounts page", () => {
       expect(requests.some((request) => request.path.includes("withoutOrganization=true"))).toBe(true),
     );
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await userEvent.click(within(panel).getByRole("combobox", { name: "Organization" }));
     await userEvent.click(await screen.findByRole("option", { name: "Platform Team" }));
     await userEvent.click(within(panel).getByRole("button", { name: "Assign organization" }));
@@ -296,7 +322,7 @@ describe("the accounts page", () => {
     const { requests } = api(() => ({ body: { endedSessions: 2 } }));
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await userEvent.click(within(panel).getByRole("button", { name: "Reset second factor" }));
     const dialog = await screen.findByRole("dialog", { name: "Reset the second factor of Max Member?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Reset second factor" }));
@@ -316,7 +342,7 @@ describe("the accounts page", () => {
     const { requests } = api(() => ({ body: { endedSessions: 0 } }));
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await userEvent.click(within(panel).getByRole("button", { name: "Anonymize account…" }));
     const dialog = await screen.findByRole("dialog", { name: "Anonymize account" });
     expect(within(dialog).getByText(/exported or streamed to other systems are outside Lunedo/)).toBeTruthy();
@@ -393,7 +419,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     const change = (await within(panel).findByRole("button", {
       name: "Change home organization",
     })) as HTMLButtonElement;
@@ -443,7 +469,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Imported Author"));
-    const panel = await screen.findByRole("dialog", { name: "Imported Author" });
+    const panel = await accountPage("Imported Author");
     const field = await within(panel).findByRole("combobox", { name: "Account" });
     await userEvent.type(field, "o");
     await userEvent.click(await screen.findByRole("option", { name: /Olivia Owner/ }));
@@ -466,7 +492,7 @@ describe("the accounts page", () => {
     api(() => problem(409, "resetOwnSecondFactor"));
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Olivia Owner"));
-    const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
+    const panel = await accountPage("Olivia Owner");
     expect(
       within(panel).getByText("You manage your own account on the Sign-in and security page."),
     ).toBeTruthy();
@@ -480,7 +506,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await within(panel).findByText("Audit readers through Auditors", { exact: false });
     const zone = within(panel).getByRole("region", { name: "Danger zone" });
     const sections = within(panel).getAllByRole("region");

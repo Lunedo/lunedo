@@ -1057,7 +1057,7 @@ describe("linked identities", () => {
     await waitFor(() => expect(requests.filter((request) => request.method === "DELETE")).toHaveLength(2));
   });
 
-  it("lets administrators unlink an identity in the account panel", { timeout: 15_000 }, async () => {
+  it("lets administrators unlink an identity on the account page", { timeout: 15_000 }, async () => {
     const { requests } = adminApi({
       "GET /api/v1/instance/accounts": () => ({
         body: {
@@ -1122,7 +1122,8 @@ describe("linked identities", () => {
     await renderPath("/settings/instance/accounts");
     const table = await screen.findByRole("table", { name: "Accounts" });
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const heading = await screen.findByRole("heading", { level: 1, name: "Max Member" });
+    const panel = heading.closest("main") as HTMLElement;
     expect(await within(panel).findByText(/Signs in as mmember@example.org/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Unlink" }));
     const confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });

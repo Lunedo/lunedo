@@ -52,7 +52,6 @@ export function GroupsScreen() {
 
   return (
     <SettingsPage
-      width="wide"
       title={t("groups.title")}
       description={t("groups.description")}
       actions={

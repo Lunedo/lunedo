@@ -189,7 +189,6 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
     <SettingsPage
       title={entry.state === "running" ? t("imports.detail.importing") : title}
       description={subtitle()}
-      width="wide"
       back={{ label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` }}
       actions={
         <>

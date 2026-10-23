@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  CollapsibleSection,
   classNames,
   ErrorState,
   Field,
@@ -333,31 +334,28 @@ export function ConnectionStep({
               />
             </Field>
             {cloud ? null : (
-              <details
-                className="rounded-md border border-border"
+              <CollapsibleSection
+                title={t("imports.connection.advanced")}
+                level={3}
+                layout="fields"
                 open={advanced}
-                onToggle={(event) => setAdvanced(event.currentTarget.open)}
+                onOpenChange={setAdvanced}
               >
-                <summary className="flex min-h-hit cursor-pointer items-center rounded-md py-2 font-medium focus-visible:focus-ring">
-                  {t("imports.connection.advanced")}
-                </summary>
-                <div className="border-t border-border p-4">
-                  <Field
-                    label={t("imports.connection.certificates")}
-                    hint={t("imports.connection.certificatesHint")}
-                    {...(errors.certificates ? { error: errors.certificates } : {})}
-                  >
-                    <Textarea
-                      rows={6}
-                      value={certificates}
-                      spellCheck={false}
-                      className="font-mono"
-                      placeholder={t("imports.connection.certificatesPlaceholder")}
-                      onChange={(event) => setCertificates(event.target.value)}
-                    />
-                  </Field>
-                </div>
-              </details>
+                <Field
+                  label={t("imports.connection.certificates")}
+                  hint={t("imports.connection.certificatesHint")}
+                  {...(errors.certificates ? { error: errors.certificates } : {})}
+                >
+                  <Textarea
+                    rows={6}
+                    value={certificates}
+                    spellCheck={false}
+                    className="font-mono"
+                    placeholder={t("imports.connection.certificatesPlaceholder")}
+                    onChange={(event) => setCertificates(event.target.value)}
+                  />
+                </Field>
+              </CollapsibleSection>
             )}
             <p className="text-sm text-text-muted">{t("imports.connection.readOnly")}</p>
             {failure ? (

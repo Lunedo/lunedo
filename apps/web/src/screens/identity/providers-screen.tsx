@@ -438,7 +438,6 @@ export function InstanceProvidersScreen() {
   const canManage = state.can("instance.signIn.manage");
   return (
     <SettingsPage
-      width="wide"
       title={t("identityProviders.title")}
       description={t("identityProviders.description")}
       actions={

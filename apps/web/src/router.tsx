@@ -874,6 +874,11 @@ const instanceAccountsRoute = instanceScreen(
   () => import("./screens/instance/accounts-screen.js"),
   "InstanceAccountsScreen",
 );
+const instanceAccountRoute = instanceScreen(
+  "/accounts/$accountId",
+  () => import("./screens/instance/accounts-screen.js"),
+  "InstanceAccountScreen",
+);
 const instanceRolesRoute = instanceScreen(
   "/roles",
   () => import("./screens/instance/roles-screen.js"),
@@ -1091,6 +1096,7 @@ const routeTree = rootRoute.addChildren([
         instanceGeneralRoute,
         instanceOrganizationsRoute,
         instanceAccountsRoute,
+        instanceAccountRoute,
         instanceRolesRoute,
         instanceSecurityRoute,
         instanceProvidersRoute,

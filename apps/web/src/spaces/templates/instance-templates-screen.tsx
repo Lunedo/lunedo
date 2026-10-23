@@ -23,7 +23,7 @@ export function InstanceTemplatesScreen() {
     await queryClient.invalidateQueries({ queryKey: ["spaces"] });
   };
   return (
-    <SettingsPage title={t("templates.title")} description={t("templates.instanceDescription")} width="wide">
+    <SettingsPage title={t("templates.title")} description={t("templates.instanceDescription")}>
       <TemplatesManager
         templates={templates.data}
         loading={templates.isPending}

@@ -112,6 +112,7 @@ export {
   BackLink,
   type BackLinkProps,
   type Breadcrumb,
+  CollapsibleSection,
   DangerAction,
   DangerZone,
   List,

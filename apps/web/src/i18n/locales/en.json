@@ -3575,6 +3575,7 @@
       "actionsFor": "Actions for {name}"
     },
     "accounts": {
+      "account": "Account",
       "open": "Open {name}",
       "empty": "No account matches the search.",
       "filter": "Filter accounts",
@@ -4028,6 +4029,11 @@
     "browser": "Browser",
     "requestId": "Request ID",
     "rawEvent": "Raw event",
+    "previousEvent": "Previous",
+    "nextEvent": "Next",
+    "firstEvent": "This is the first event in the list.",
+    "lastEvent": "This is the last event in the list.",
+    "loadingEvent": "Loading event",
     "on": " on ",
     "targets": {
       "account": "Account",
