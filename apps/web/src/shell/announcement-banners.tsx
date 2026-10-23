@@ -1,5 +1,5 @@
 import { classNames, focusMainHeading, IconButton, useToast } from "@lunedo/ui";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,12 @@ import { useOrganizationState } from "./shell-context.js";
 const MAX_TIMER_MS = 2_147_483_647;
 
 export const announcementKeys = { shown: ["announcements", "shown"] as const };
+
+export const shownAnnouncementsQuery = queryOptions({
+  queryKey: announcementKeys.shown,
+  staleTime: 60_000,
+  queryFn: () => request(() => api.GET("/api/v1/announcements")),
+});
 
 export interface BannerAnnouncement {
   id: string;
@@ -127,12 +133,7 @@ export function AnnouncementBanners() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const organization = useOrganizationState();
-  const shown = useQuery({
-    queryKey: announcementKeys.shown,
-    throwOnError: false,
-    staleTime: 60_000,
-    queryFn: () => request(() => api.GET("/api/v1/announcements")),
-  });
+  const shown = useQuery({ ...shownAnnouncementsQuery, throwOnError: false });
   const announcements = shown.data ?? [];
   const now = useNow(announcements);
   const dismiss = useMutation({

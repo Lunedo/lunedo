@@ -89,7 +89,9 @@ test("creates a space and arranges pages, folders and links", async ({ page, org
   await dialog.getByRole("button", { name: "Create space" }).click();
   await expect(page).toHaveURL(new RegExp(`/spaces/${spaceKey}/pages/`));
   const tree = page.getByRole("tree", { name: "Page tree" });
-  await expect(tree.getByRole("treeitem", { name: "Team Handbook" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+  await expect(tree).not.toHaveAttribute("aria-busy", "true");
+  await expect(tree.getByRole("treeitem", { name: "Team Handbook" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Create in this space" }).click();
   await page.getByRole("menuitem", { name: "New folder" }).click();

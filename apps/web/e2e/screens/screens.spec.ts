@@ -269,7 +269,7 @@ shot(
     number: "09",
     name: "notifications",
     title: "Notifications",
-    state: "panel open with mentions, a task, comments, a share and meeting notes",
+    state: "popover open with mentions, a task, comments, a share and meeting notes",
     phone: true,
     fullPage: false,
   },
@@ -280,7 +280,7 @@ shot(
       .getByRole("button", { name: /^(Benachrichtigungen|Notifications)/ })
       .first()
       .click();
-    const panel = page.getByRole("complementary", { name: /^(Benachrichtigungen|Notifications)$/ });
+    const panel = page.getByRole("dialog", { name: /^(Benachrichtigungen|Notifications)$/ });
     await expect(panel.getByRole("listitem").first()).toBeVisible({ timeout: 20_000 });
   },
 );

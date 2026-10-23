@@ -191,7 +191,7 @@ describe("group mapping", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     const table = await screen.findByRole("table", { name: "Mapping rules" });
-    expect(within(table).getByText(`Member · group "Engineering"`)).toBeTruthy();
+    expect(await within(table).findByText(`Member · group "Engineering"`)).toBeTruthy();
     expect(within(table).getByText("Platform Team")).toBeTruthy();
     expect(within(table).getByText("Group not found")).toBeTruthy();
     expect(within(table).getAllByText("Instance role")).toHaveLength(1);
@@ -259,7 +259,7 @@ describe("group mapping", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     const table = await screen.findByRole("table", { name: "Mapping rules" });
-    expect(within(table).getAllByText("Engineering").length).toBeGreaterThan(0);
+    expect((await within(table).findAllByText("Engineering")).length).toBeGreaterThan(0);
     name = "Platform Engineering";
     emitStream("syncRuns", { providerId: PROVIDER, runId: RUN });
     expect(await within(table).findByText("Platform Engineering")).toBeTruthy();
@@ -289,7 +289,7 @@ describe("group mapping", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await screen.findByRole("table", { name: "Mapping rules" });
-    await userEvent.click(screen.getByRole("button", { name: "More for Engineering" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More for Engineering" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Remove rule" }));
     expect(screen.queryByRole("dialog", { name: "Remove mapping rule" })).toBeNull();
     expect(requests.some((request) => request.method === "DELETE")).toBe(true);
@@ -318,7 +318,7 @@ describe("group mapping", () => {
     adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: rules }) });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     const table = await screen.findByRole("table", { name: "Mapping rules" });
-    expect(within(table).getAllByText("Engineering").length).toBeGreaterThan(0);
+    expect((await within(table).findAllByText("Engineering")).length).toBeGreaterThan(0);
     rules = [];
     emitStream("changes", { scope: "instance", organizationId: null, target: "mappingRule" });
     await waitFor(() => expect(within(table).queryByText("Engineering")).toBeNull());
@@ -514,7 +514,7 @@ describe("the sync log", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
     const table = await screen.findByRole("table", { name: "Synchronization runs" });
-    expect(within(table).getByText("Completed with warnings")).toBeTruthy();
+    expect(await within(table).findByText("Completed with warnings")).toBeTruthy();
     expect(within(table).getByText("2 changes, 1 warning")).toBeTruthy();
     expect(within(table).getByText("38 s")).toBeTruthy();
 

@@ -142,6 +142,14 @@ afterEach(() => {
 });
 
 describe("the attachments of a page", () => {
+  it("draws no placeholder below the page while the attachments load", async () => {
+    routes({ [`GET /api/v1/pages/${PAGE}/attachments`]: () => new Promise(() => {}) });
+    await renderSection();
+    const text = screen.getByText("Page text");
+    expect(text.nextElementSibling).toBeNull();
+    expect(document.querySelector(".animate-pulse")).toBeNull();
+  });
+
   it("lists each file with name, type and size", async () => {
     await renderSection(false);
     const report = await screen.findByRole("button", { name: /^Report\.pdf/ });

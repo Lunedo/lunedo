@@ -1,24 +1,23 @@
 import { Notice } from "@lunedo/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { providersQuery, signInSecurityQuery } from "../api/identity-queries.js";
 import { request } from "../api/request.js";
-import { NotificationPanel } from "../notifications/notification-panel.js";
 import { useNotificationStream } from "../notifications/notifications-api.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { useFormat, usePreferences } from "../preferences/preferences-provider.js";
 import "../notifications/browser-push.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
+import { maintenanceQuery } from "../api/maintenance.js";
 import { PortalAccountHome } from "../knowledge-bases/portal-account-home.js";
 import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
-import { AnnouncementBanners } from "./announcement-banners.js";
+import { AnnouncementBanners, shownAnnouncementsQuery } from "./announcement-banners.js";
 import { AppSidebar } from "./app-sidebar.js";
-import { CommandPaletteHost } from "./command-palette.js";
 import { type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
 import { MaintenanceBanner } from "./maintenance-banner.js";
@@ -54,7 +53,6 @@ function ShellFrame() {
   const organization = useOrganizationState();
   const preferences = usePreferences();
   const updatePreference = useUpdatePreference();
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -94,14 +92,8 @@ function ShellFrame() {
       organizationId: organization.organizationId,
       can: organization.can,
       navigate: (to, params) => void router.navigate({ to: to as never, params: params as never }),
-      openCommandPalette: () => {
-        setSearchOpen(false);
-        setPaletteOpen(true);
-      },
-      openSearch: () => {
-        setPaletteOpen(false);
-        setSearchOpen(true);
-      },
+      openCommandPalette: () => setSearchOpen(true),
+      openSearch: () => setSearchOpen(true),
       openShortcuts: () => setShortcutsOpen(true),
       toggleNotifications: () => setNotificationsOpen((open) => !open),
       toggleSidebar: () => {
@@ -150,6 +142,8 @@ function ShellFrame() {
   useGlobalShortcuts(state, registeredShortcuts);
   useNavigationFocus();
   useNotificationStream(true);
+  const settled = useShellSettled();
+  if (!settled) return <ShellPlaceholder collapsed={sidebarCollapsed} />;
 
   return (
     <ShellStateContext value={state}>
@@ -172,14 +166,50 @@ function ShellFrame() {
             <div className="flex min-h-0 min-w-0 flex-1">
               <Outlet />
             </div>
-            {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
           </div>
         </div>
-        <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
         <QuickSearchHost open={searchOpen} onOpenChange={setSearchOpen} />
         <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </SidebarSlotProvider>
     </ShellStateContext>
+  );
+}
+
+const withheldRolesQuery = queryOptions({
+  queryKey: ["account", "withheldRoles"],
+  queryFn: () => request(() => api.GET("/api/v1/account/withheld-roles")),
+  staleTime: 60_000,
+});
+
+function useShellSettled(): boolean {
+  const organization = useOrganizationState();
+  const adminBanners = organization.can("instance.signIn.view");
+  const banners = useQueries({
+    queries: [
+      { ...maintenanceQuery, retry: false },
+      shownAnnouncementsQuery,
+      withheldRolesQuery,
+      { ...providersQuery, enabled: adminBanners },
+      { ...signInSecurityQuery, enabled: adminBanners },
+    ].map((query) => ({ ...query, throwOnError: false })),
+  });
+  const settled =
+    organization.settled && banners.every((banner) => banner.fetchStatus === "idle" || !banner.isPending);
+  const [shown, setShown] = useState(settled);
+  if (settled && !shown) setShown(true);
+  return shown || settled;
+}
+
+function ShellPlaceholder({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div aria-busy="true" className="flex h-full flex-col bg-bg">
+      <div className="h-toolbar shrink-0 border-b border-border" />
+      <div className="flex min-h-0 flex-1">
+        <div
+          className={`hidden shrink-0 border-r border-border bg-sidebar md:block ${collapsed ? "w-rail" : "w-sidebar"}`}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -199,12 +229,7 @@ export function WithoutOrganizationNotice() {
 
 function WithheldRolesBanner() {
   const { t } = useTranslation();
-  const withheld = useQuery({
-    queryKey: ["account", "withheldRoles"],
-    queryFn: () => request(() => api.GET("/api/v1/account/withheld-roles")),
-    throwOnError: false,
-    staleTime: 60_000,
-  });
+  const withheld = useQuery({ ...withheldRolesQuery, throwOnError: false });
   const first = withheld.data?.[0];
   if (!first) return null;
   return (
@@ -236,7 +261,7 @@ function MissingGroupsBanner() {
           variant="warning"
           title={t("shell.groupsClaimMissing.title", {
             provider: provider.name,
-            since: format.dateTime(provider.groupsClaimMissingSince ?? ""),
+            since: format.shortDateTime(provider.groupsClaimMissingSince ?? ""),
           })}
         >
           {t("shell.groupsClaimMissing.description")}

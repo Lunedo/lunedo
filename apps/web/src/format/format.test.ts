@@ -66,6 +66,26 @@ describe("createFormatter", () => {
     expect(formatter.short("2026-10-22T08:00:00Z", now)).toBe("gestern");
     expect(formatter.short("2026-10-20T08:00:00Z", now)).toBe("20. Okt.");
     expect(formatter.short("2025-10-22T08:00:00Z", now)).toBe("22. Okt. 2025");
+    expect(formatter.short("2026-10-26T08:00:00Z", now)).toBe("26. Okt.");
+    expect(formatter.short("2026-10-24T08:00:00Z", now)).toBe("morgen");
+  });
+
+  it("writes days and dates with times by the same rule", () => {
+    const formatter = createFormatter({
+      ...base,
+      language: "de",
+      timeZone: "Europe/Vienna",
+      timeFormat: "24h",
+    });
+    const now = new Date("2026-10-23T12:00:00Z");
+    expect(formatter.day("2026-10-23T05:00:00Z", now)).toBe("heute");
+    expect(formatter.day("2026-10-22T23:30:00Z", now)).toBe("heute");
+    expect(formatter.day("2026-10-26T12:00:00Z", now)).toBe("26. Okt.");
+    expect(formatter.day("2027-01-04T12:00:00Z", now)).toBe("4. Jan. 2027");
+    expect(formatter.shortDateTime("2026-10-26T07:30:00Z", now)).toBe("26. Okt., 08:30");
+    expect(formatter.shortDateTime("2026-10-23T14:00:00Z", now)).toBe("heute, 16:00");
+    expect(formatter.calendarDate("2026-10-23T14:00:00Z", now)).toBe("23. Okt.");
+    expect(formatter.calendarDateTime("2025-10-23T14:00:00Z", now)).toBe("23. Okt. 2025, 16:00");
   });
 
   it("names byte sizes", () => {

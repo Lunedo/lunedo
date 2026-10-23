@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounced } from "../components/table-state.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { useCommandGroups } from "../shell/command-groups.js";
 import { isApplePlatform } from "../shell/keyboard.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { itemHref } from "../spaces/item-paths.js";
@@ -76,6 +77,11 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const debounced = useDebounced(typed, QUICK_DEBOUNCE_MS);
   const settled = debounced === typed;
   const remember = useRememberSearch(organizationId);
+  const commandGroups = useCommandGroups(query, () => onOpenChange(false));
+  const linkGroups = commandGroups.filter((group) =>
+    group.items.some((item) => item.id === "confluence-link"),
+  );
+  const otherCommands = commandGroups.filter((group) => !linkGroups.includes(group));
   const clearRecent = useClearRecentSearches(organizationId ?? "");
 
   const results = useQuery({
@@ -170,7 +176,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
       });
       if (items.length > 0)
         list.push({ heading: t("search.quick.recentlyViewed"), items: items.slice(0, 5) });
-      return list;
+      return [...linkGroups, ...list, ...otherCommands];
     }
 
     const hits = current?.results ?? [];
@@ -192,6 +198,8 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     const local = inSpace ? content.filter((hit) => hit.space?.id === space.id) : content;
     const elsewhere = inSpace ? content.filter((hit) => hit.space?.id !== space.id) : [];
     const list: CommandGroup[] = [
+      ...linkGroups,
+      ...otherCommands,
       {
         heading: inSpace
           ? t("search.quick.inSpace", { space: space.name || t("spaces.personal.label") })

@@ -11,6 +11,7 @@ import {
 } from "@lunedo/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
 import { FileInput, Layers, Lock, Plus, Search, User, Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +25,7 @@ import { OneOnOneDialog } from "../meetings/one-on-one-dialog.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { DiscoverableSpaces } from "../sharing/discoverable-spaces.js";
 import { useOrganizationState } from "../shell/shell-context.js";
+import { useDesktop } from "../shell/top-bar.js";
 import { CreateSpaceDialog } from "./create-space-dialog.js";
 import { DeletedSpaces } from "./deleted-spaces.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
@@ -278,9 +280,56 @@ function VisibilityBadge({ space }: { space: Space }) {
   );
 }
 
+function spaceDetails(t: TFunction, space: Space, showOrganization: boolean): string {
+  return [
+    isKnowledgeBase(space) ? t("knowledgeBase.create.knowledgeBase") : null,
+    showOrganization && space.organizationName ? space.organizationName : null,
+    space.description || null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function SpacesList({ spaces, showOrganization }: { spaces: Space[]; showOrganization: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <ul aria-label={t("spaces.list.title")} className="flex flex-col">
+      {spaces.map((space) => {
+        const name = spaceDisplayName(t, space);
+        const details = [space.personal ? null : space.key, spaceDetails(t, space, showOrganization) || null]
+          .filter(Boolean)
+          .join(" · ");
+        return (
+          <li key={space.id} className="flex items-center gap-3 border-b border-border py-2 last:border-b-0">
+            <SpaceBadge space={space} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Link
+                to="/spaces/$spaceKey"
+                params={{ spaceKey: space.key }}
+                className="truncate rounded-sm font-medium text-text hover:underline focus-visible:focus-ring"
+                title={name}
+              >
+                {name}
+              </Link>
+              {details ? (
+                <span className="truncate text-sm text-text-muted" title={details}>
+                  {details}
+                </span>
+              ) : null}
+            </div>
+            <StarButton target={{ spaceId: space.id }} title={name} size="sm" />
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function SpacesTable({ spaces, showOrganization }: { spaces: Space[]; showOrganization: boolean }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const desktop = useDesktop();
+  if (!desktop) return <SpacesList spaces={spaces} showOrganization={showOrganization} />;
   const columns: TableColumn<Space>[] = [
     {
       key: "name",
@@ -288,13 +337,7 @@ function SpacesTable({ spaces, showOrganization }: { spaces: Space[]; showOrgani
       grow: true,
       cell: (space) => {
         const name = spaceDisplayName(t, space);
-        const details = [
-          isKnowledgeBase(space) ? t("knowledgeBase.create.knowledgeBase") : null,
-          showOrganization && space.organizationName ? space.organizationName : null,
-          space.description || null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+        const details = spaceDetails(t, space, showOrganization);
         return (
           <div className="flex min-w-0 items-center gap-3 py-2">
             <SpaceBadge space={space} />
@@ -325,7 +368,6 @@ function SpacesTable({ spaces, showOrganization }: { spaces: Space[]; showOrgani
     {
       key: "key",
       header: t("spaces.list.key"),
-      hideBelow: "md",
       cell: (space) => (
         <span className="font-mono text-sm text-text-muted">{space.personal ? "" : space.key}</span>
       ),
@@ -333,7 +375,7 @@ function SpacesTable({ spaces, showOrganization }: { spaces: Space[]; showOrgani
     {
       key: "visibility",
       header: t("spaces.list.visibility"),
-      hideBelow: "sm",
+      hideBelow: "md",
       cell: (space) => <VisibilityBadge space={space} />,
     },
     {
@@ -348,7 +390,6 @@ function SpacesTable({ spaces, showOrganization }: { spaces: Space[]; showOrgani
   return (
     <Table
       caption={t("spaces.list.title")}
-      variant="flat"
       columns={columns}
       rows={spaces}
       rowKey={(space) => space.id}

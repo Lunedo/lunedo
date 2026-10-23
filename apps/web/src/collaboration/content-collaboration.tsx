@@ -1,7 +1,7 @@
 import type { TextAnchor } from "@lunedo/editor-schema";
-import { IconButton, useToast } from "@lunedo/ui";
+import { IconButton, type MenuItem, useToast } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Star } from "lucide-react";
+import { MessageSquare, Star, StarOff } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -14,15 +14,9 @@ import { useOverlayFocusTrap } from "./focus-trap.js";
 import { collaborationKeys, commentsQuery, recordView, starredQuery, taskStatusesQuery } from "./queries.js";
 import { useSetTaskStatus } from "./task-actions.js";
 
-export function StarButton({
-  target,
-  title,
-  size = "md",
-}: {
-  target: { itemId: string } | { spaceId: string };
-  title: string;
-  size?: "sm" | "md";
-}) {
+export type StarTarget = { itemId: string } | { spaceId: string };
+
+export function useStar(target: StarTarget, title: string) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -61,15 +55,50 @@ export function StarButton({
       void queryClient.invalidateQueries({ queryKey: collaborationKeys.home });
     },
   });
+  const menuItem: MenuItem = {
+    label: active ? t("starred.removeEntry") : t("starred.addEntry"),
+    icon: active ? StarOff : Star,
+    onSelect: () => toggle.mutate(!active),
+  };
+  return { active, toggle: () => toggle.mutate(!active), menuItem };
+}
+
+export function StarButton({
+  target,
+  title,
+  size = "md",
+}: {
+  target: StarTarget;
+  title: string;
+  size?: "sm" | "md";
+}) {
+  const { t } = useTranslation();
+  const star = useStar(target, title);
   return (
     <IconButton
-      label={active ? t("starred.unstar", { title }) : t("starred.star", { title })}
+      label={star.active ? t("starred.unstar", { title }) : t("starred.star", { title })}
       icon={Star}
       size={size}
-      aria-pressed={active}
-      className={active ? "text-warning [&_svg]:fill-current" : undefined}
-      onClick={() => toggle.mutate(!active)}
+      aria-pressed={star.active}
+      className={star.active ? "text-warning [&_svg]:fill-current" : undefined}
+      onClick={star.toggle}
     />
+  );
+}
+
+export function StarredMark({ target }: { target: StarTarget }) {
+  const { t } = useTranslation();
+  const starred = useQuery({ ...starredQuery(), throwOnError: false });
+  const active =
+    "itemId" in target
+      ? (starred.data?.items.some((item) => item.id === target.itemId) ?? false)
+      : (starred.data?.spaces.some((space) => space.id === target.spaceId) ?? false);
+  if (!active) return null;
+  return (
+    <span className="inline-flex shrink-0 items-center text-warning" title={t("starred.mark")}>
+      <Star aria-hidden="true" className="size-icon-md fill-current" />
+      <span className="sr-only">{t("starred.mark")}</span>
+    </span>
   );
 }
 

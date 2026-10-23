@@ -1136,7 +1136,7 @@
       "navigation": "Navigation",
       "editor": "Editor"
     },
-    "commandPalette": "Befehlspalette öffnen",
+    "commandPalette": "Suche mit Befehlen öffnen",
     "search": "Suchen",
     "overview": "Diese Übersicht anzeigen",
     "notifications": "Benachrichtigungen öffnen oder schließen",
@@ -5486,6 +5486,9 @@
       "removeFailed": "Die Einschränkung wurde nicht entfernt",
       "adminsOnlyTitle": "Nur Space-Admins verwalten Einschränkungen",
       "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht."
+    },
+    "news": {
+      "title": "Neu in diesem Space"
     }
   },
   "tree": {
@@ -6136,7 +6139,10 @@
     "added": "{title} zu Favoriten hinzugefügt",
     "removed": "{title} aus Favoriten entfernt",
     "addFailed": "Der Favorit konnte nicht hinzugefügt werden. Prüfe deine Verbindung und versuche es erneut.",
-    "removeFailed": "Der Favorit konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es erneut."
+    "removeFailed": "Der Favorit konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es erneut.",
+    "addEntry": "Zu Favoriten hinzufügen",
+    "removeEntry": "Aus Favoriten entfernen",
+    "mark": "Favorit"
   },
   "mentions": {
     "noAccess": "{name} hat keinen Zugriff auf diese Seite",
@@ -6234,7 +6240,7 @@
     "openCount": "{count, plural, one {# offen} other {# offen}}",
     "doneCount": "{count, plural, one {# erledigt} other {# erledigt}}",
     "overdueCount": "{count, plural, one {# überfällig} other {# überfällig}}",
-    "dueOn": "Fällig am {date}",
+    "dueOn": "Fällig: {date}",
     "overdueSince": "Überfällig seit {date}",
     "noDueDate": "Kein Fälligkeitsdatum",
     "markDone": "Als erledigt markieren: {task}",

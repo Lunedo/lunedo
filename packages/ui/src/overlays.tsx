@@ -20,7 +20,9 @@ export interface PopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   label?: string;
+  labelledBy?: string;
   onCloseAutoFocus?: (event: Event) => void;
+  variant?: "default" | "panel";
 }
 
 export function Popover({
@@ -31,8 +33,11 @@ export function Popover({
   open,
   onOpenChange,
   label,
+  labelledBy,
   onCloseAutoFocus,
+  variant = "default",
 }: PopoverProps) {
+  const panel = variant === "panel";
   return (
     <PopoverPrimitive.Root
       {...(open !== undefined ? { open } : {})}
@@ -43,11 +48,21 @@ export function Popover({
         <PopoverPrimitive.Content
           align={align}
           side={side}
-          sideOffset={6}
-          collisionPadding={8}
+          sideOffset={panel ? 10 : 6}
+          collisionPadding={panel ? 0 : 8}
           {...(label ? { "aria-label": label } : {})}
+          {...(labelledBy ? { "aria-labelledby": labelledBy } : {})}
           {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
-          className={classNames(SURFACE, "max-w-dialog-sm p-3 focus-visible:focus-ring")}
+          {...(panel
+            ? { style: { maxHeight: "min(70dvh, var(--radix-popover-content-available-height))" } }
+            : {})}
+          className={classNames(
+            SURFACE,
+            "focus-visible:focus-ring",
+            panel
+              ? "flex w-card max-w-screen flex-col overflow-hidden max-md:w-screen max-md:rounded-none max-md:border-x-0"
+              : "max-w-dialog-sm p-3",
+          )}
         >
           {children}
         </PopoverPrimitive.Content>
@@ -173,11 +188,16 @@ export interface TabsProps {
   tabs: { value: string; label: ReactNode; count?: number }[];
   label: string;
   children?: ReactNode;
+  fill?: boolean;
 }
 
-export function Tabs({ value, onValueChange, tabs, label, children }: TabsProps) {
+export function Tabs({ value, onValueChange, tabs, label, children, fill = false }: TabsProps) {
   return (
-    <TabsPrimitive.Root value={value} onValueChange={onValueChange} className="flex flex-col gap-4">
+    <TabsPrimitive.Root
+      value={value}
+      onValueChange={onValueChange}
+      className={classNames("flex flex-col", fill ? "min-h-0 flex-1 gap-1" : "gap-4")}
+    >
       <ScrollArea surface="bg">
         <TabsPrimitive.List aria-label={label} className="flex w-max min-w-full gap-1 border-b border-border">
           {tabs.map((tab) => (
@@ -195,7 +215,10 @@ export function Tabs({ value, onValueChange, tabs, label, children }: TabsProps)
           ))}
         </TabsPrimitive.List>
       </ScrollArea>
-      <TabsPrimitive.Content value={value} className="focus-visible:focus-ring">
+      <TabsPrimitive.Content
+        value={value}
+        className={classNames("focus-visible:focus-ring", fill && "min-h-0 flex-1 overflow-y-auto")}
+      >
         {children}
       </TabsPrimitive.Content>
     </TabsPrimitive.Root>

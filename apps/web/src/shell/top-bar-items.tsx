@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { PersonAvatar } from "../components/person-avatar.js";
 import { docsUrl } from "../docs/docs-url.js";
 import { useHelpUrl } from "../knowledge-bases/help-target.js";
+import { NotificationPopover } from "../notifications/notification-panel.js";
 import { useUnreadCount } from "../notifications/notifications-api.js";
 import { isNavigationVisible, type NavigationSection, navigationItems } from "./extensions.js";
 import { useRegistry } from "./registry.js";
@@ -31,11 +32,17 @@ export function NotificationsButton() {
   const count = unread.data ?? 0;
   return (
     <span className="relative inline-flex">
-      <IconButton
-        label={count > 0 ? t("rail.notificationsUnread", { count }) : t("rail.notifications")}
-        icon={Bell}
-        aria-pressed={shell.notificationsOpen}
-        onClick={shell.toggleNotifications}
+      <NotificationPopover
+        open={shell.notificationsOpen}
+        onOpenChange={(open) => {
+          if (open !== shell.notificationsOpen) shell.toggleNotifications();
+        }}
+        trigger={
+          <IconButton
+            label={count > 0 ? t("rail.notificationsUnread", { count }) : t("rail.notifications")}
+            icon={Bell}
+          />
+        }
       />
       {count > 0 ? (
         <span

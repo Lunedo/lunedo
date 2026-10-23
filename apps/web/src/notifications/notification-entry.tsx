@@ -32,8 +32,8 @@ export function notificationText(
         ? translateKey(t, "common.unknown")
         : typeof value === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value)
           ? dateTimes.includes(key)
-            ? format.dateTime(value)
-            : format.date(value)
+            ? format.calendarDateTime(value)
+            : format.calendarDate(value.length === 10 ? `${value}T12:00:00Z` : value)
           : value,
     ]),
   );
@@ -133,7 +133,9 @@ export function NotificationEntry({
           <span className={`block wrap-anywhere ${unread ? "font-medium" : ""}`}>{text}</span>
           <span className="block text-sm text-text-muted">
             {item.count > 1 ? `${countText(t, item)} · ` : ""}
-            <time dateTime={item.updatedAt}>{format.relative(item.updatedAt)}</time>
+            <time dateTime={item.updatedAt} title={format.dateTime(item.updatedAt)}>
+              {format.short(item.updatedAt)}
+            </time>
           </span>
           {unread ? <span className="sr-only">{t("notifications.unreadLabel")}</span> : null}
         </button>

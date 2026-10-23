@@ -1136,7 +1136,7 @@
       "navigation": "Navigation",
       "editor": "Editor"
     },
-    "commandPalette": "Open the command palette",
+    "commandPalette": "Open the search with commands",
     "search": "Search",
     "overview": "Show this overview",
     "notifications": "Open or close notifications",
@@ -5486,6 +5486,9 @@
       "removeFailed": "The restriction was not removed",
       "adminsOnlyTitle": "Only space admins manage restrictions",
       "adminsOnly": "Ask a space admin if a restricted page needs attention."
+    },
+    "news": {
+      "title": "New in this space"
     }
   },
   "tree": {
@@ -6136,7 +6139,10 @@
     "added": "{title} starred",
     "removed": "{title} removed from starred",
     "addFailed": "The star could not be added. Check your connection and try again.",
-    "removeFailed": "The star could not be removed. Check your connection and try again."
+    "removeFailed": "The star could not be removed. Check your connection and try again.",
+    "addEntry": "Add to starred",
+    "removeEntry": "Remove from starred",
+    "mark": "Starred"
   },
   "mentions": {
     "noAccess": "{name} has no access to this page",

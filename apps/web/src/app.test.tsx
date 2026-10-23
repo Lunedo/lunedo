@@ -39,9 +39,9 @@ function preference(key: string, value: unknown) {
   };
 }
 
-function api(
-  overrides: Record<string, (request: RecordedRequest) => { status?: number; body?: unknown }> = {},
-) {
+type Reply = { status?: number; body?: unknown };
+
+function api(overrides: Record<string, (request: RecordedRequest) => Reply | Promise<Reply>> = {}) {
   let signedIn = false;
   return mockApi({
     "GET /api/v1/instance/info": () => ({
@@ -519,7 +519,67 @@ describe("the web client", () => {
   });
 });
 
-describe("the command palette", () => {
+describe("the shell while it loads", () => {
+  it("appears only once permissions and notices are known, so nothing moves afterwards", async () => {
+    let release: () => void = () => {};
+    const permissions = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": async () => {
+        await permissions;
+        return { body: { instance: ["instance.settings.view"], organization: ["organization.view"] } };
+      },
+      "GET /api/v1/announcements": () => ({
+        body: [
+          {
+            id: "01929b1e-0000-7000-8000-0000000000f1",
+            scope: "instance",
+            organizationId: null,
+            version: "1",
+            severity: "warning",
+            text: "Planned update tonight",
+            link: null,
+            startsAt: "2020-01-01T00:00:00.000Z",
+            endsAt: "2999-01-01T00:00:00.000Z",
+            dismissed: false,
+          },
+        ],
+      }),
+    });
+    await renderApp("/settings/preferences");
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
+    expect(screen.queryByText("Planned update tonight")).toBeNull();
+    release();
+    expect(await screen.findByRole("button", { name: "Create" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy();
+    expect(screen.getByText("Planned update tonight")).toBeTruthy();
+  });
+});
+
+describe("the search", () => {
+  it("opens the same search with commands from the top bar field and with Ctrl K", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: { instance: [], organization: ["organization.view"] },
+      }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await userEvent.click(screen.getAllByRole("button", { name: "Search" })[0] as HTMLElement);
+    const fromField = await screen.findByRole("dialog", { name: "Search" });
+    expect(within(fromField).getByRole("group", { name: "Actions" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await userEvent.keyboard("{Control>}k{/Control}");
+    const fromKeys = await screen.findByRole("dialog", { name: "Search" });
+    expect(within(fromKeys).getByRole("group", { name: "Actions" })).toBeTruthy();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
   it("names the scope of settings pages that share a name", async () => {
     api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),

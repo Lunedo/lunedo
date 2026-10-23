@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
 import { CreatePostDialog } from "../collaboration/blog/space-blog-screen.js";
-import { StarButton } from "../collaboration/content-collaboration.js";
+import { useStar } from "../collaboration/content-collaboration.js";
 import { LoadError } from "../errors/failure.js";
 import { SpaceExportDialog } from "../exports/space-export.js";
 import { KnowledgeBaseScreen } from "../knowledge-bases/knowledge-base-screen.js";
@@ -34,7 +34,7 @@ import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ReviewNavLink } from "../knowledge-bases/reviews/home-reviews.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
-import { WatchMenu } from "../notifications/watch-menu.js";
+import { useWatchEntries } from "../notifications/watch-menu.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
 import { SidebarEntry } from "../shell/app-sidebar.js";
 import { type CreateKind, useShell } from "../shell/shell.js";
@@ -94,20 +94,7 @@ export function SpaceLayout() {
       <Redirect to={["", "spaces", addressed.data.spaceKey, ...rest].join("/")} search={location.search} />
     );
   }
-  if (redirectByItem) {
-    return (
-      <div className="flex flex-1 gap-4 p-6">
-        <Skeleton className="h-field flex-1" />
-      </div>
-    );
-  }
-  if (resolved.isPending) {
-    return (
-      <div className="flex flex-1 gap-4 p-6">
-        <Skeleton className="h-field flex-1" />
-      </div>
-    );
-  }
+  if (redirectByItem || resolved.isPending) return <SpaceLoading />;
   if (resolved.isError) {
     if (isApiError(resolved.error, "notFound") && urlItemId && rest[0] !== "folders") {
       return <NoPageAccess pageId={urlItemId} />;
@@ -141,6 +128,35 @@ export function SpaceLayout() {
   return <SpaceFrame space={space} />;
 }
 
+const TREE_PLACEHOLDERS = ["w-3/4", "w-2/3", "w-4/5", "w-1/2", "w-3/5"];
+
+function SpaceLoading() {
+  const shell = useShell();
+  const collapsed = shell.sidebarCollapsed && !shell.mobileSidebarOpen;
+  const middle = collapsed ? (
+    <Skeleton className="size-8 rounded-md" />
+  ) : (
+    <div aria-hidden="true" className="flex flex-col gap-2 pt-3">
+      <div className="flex items-center gap-2 pb-2">
+        <Skeleton className="size-8 rounded-md" />
+        <div className="flex flex-1 flex-col gap-1">
+          <Skeleton className="w-2/3" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
+      </div>
+      {TREE_PLACEHOLDERS.map((width) => (
+        <Skeleton key={width} className={`my-1 ${width}`} />
+      ))}
+    </div>
+  );
+  return (
+    <>
+      <SidebarContent middle={middle} bottom={null} />
+      <div aria-busy="true" className="flex-1" />
+    </>
+  );
+}
+
 function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const { t } = useTranslation();
   const shell = useShell();
@@ -170,7 +186,8 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
       canEdit,
       openMove: (item) => setMoving(item),
       openCopy: (item) => setCopying(item),
-      openCreate: (kind, parentId, title) => {
+      openCreate: (kind, requestedParent, title) => {
+        const parentId = requestedParent ?? space.overviewItemId;
         if (kind === "page") {
           setGalleryTitle(title ?? "");
           setGalleryParent(parentId);
@@ -317,9 +334,14 @@ function SpaceHeader({ space, collapsed }: { space: SpaceWithRole; collapsed: bo
   const shell = useShell();
   const name = spaceDisplayName(t, space);
   const [exporting, setExporting] = useState(false);
+  const star = useStar({ spaceId: space.id }, name);
+  const watch = useWatchEntries({ type: "space", id: space.id }, name);
   const settings = (path: string) => () =>
     shell.navigate(`/spaces/$spaceKey/settings/${path}`, { spaceKey: space.key });
   const items: MenuItem[] = [
+    star.menuItem,
+    ...watch.items,
+    { type: "separator" },
     ...(space.role === "admin"
       ? [
           { label: t("spaces.settings.general"), icon: SlidersHorizontal, onSelect: settings("general") },
@@ -336,6 +358,7 @@ function SpaceHeader({ space, collapsed }: { space: SpaceWithRole; collapsed: bo
       ? [{ label: t("spaces.settings.title"), icon: Settings, onSelect: settings("general") }]
       : []),
   ];
+  while (items.at(-1)?.type === "separator") items.pop();
   if (collapsed) {
     return (
       <ul className="flex flex-col items-center gap-px pb-2">
@@ -365,14 +388,11 @@ function SpaceHeader({ space, collapsed }: { space: SpaceWithRole; collapsed: bo
               : t("sidebar.spaceType")}
         </span>
       </div>
-      <StarButton target={{ spaceId: space.id }} title={name} size="sm" />
-      <WatchMenu target={{ type: "space", id: space.id }} name={name} size="sm" />
-      {items.length > 0 ? (
-        <Menu
-          trigger={<IconButton label={t("spaces.options")} icon={MoreHorizontal} size="sm" />}
-          items={items}
-        />
-      ) : null}
+      <Menu
+        trigger={<IconButton label={t("spaces.options")} icon={MoreHorizontal} size="sm" />}
+        items={items}
+      />
+      {watch.dialog}
       <SpaceExportDialog
         space={{
           id: space.id,

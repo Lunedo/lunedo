@@ -38,18 +38,18 @@ test("delivers a notification live to an open page", async ({ page, browser, org
     before,
   );
   await page.getByRole("button", { name: /Notifications, \d+ unread/ }).click();
-  const panel = page.getByRole("complementary", { name: "Notifications" });
+  const panel = page.getByRole("dialog", { name: "Notifications" });
   await expect(panel.getByRole("listitem").first()).toBeVisible();
-  await expectAccessible(page, "notification panel");
+  await expectAccessible(page, "notification popover");
   await panel.getByRole("button", { name: "Mark all as read" }).click();
   await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
 });
 
-test("opens the command palette with the keyboard and navigates", async ({ page }) => {
+test("opens the search with the keyboard and runs a command from it", async ({ page }) => {
   await page.goto("/settings/preferences");
   await expect(page.locator("#main h1")).toBeVisible();
   await page.keyboard.press("Control+k");
-  const palette = page.getByRole("dialog", { name: "Command palette" });
+  const palette = page.getByRole("dialog", { name: "Search" });
   await expect(palette).toBeVisible();
   await page.keyboard.type("Sign-in and security");
   await page.keyboard.press("Enter");
@@ -58,7 +58,7 @@ test("opens the command palette with the keyboard and navigates", async ({ page 
 
   await page.keyboard.press("Control+k");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Command palette" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Search" })).toHaveCount(0);
 });
 
 test("lists keyboard shortcuts and moves between screens with them", async ({ page }) => {
@@ -67,7 +67,7 @@ test("lists keyboard shortcuts and moves between screens with them", async ({ pa
   await page.locator("body").press("?");
   const dialog = page.getByRole("dialog", { name: "Keyboard shortcuts" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Open the command palette")).toBeVisible();
+  await expect(dialog.getByText("Open the search with commands")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await page.locator("body").press("g");

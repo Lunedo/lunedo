@@ -1,16 +1,17 @@
 import {
   Button,
+  classNames,
   EmptyState,
   focusWhenShown,
-  IconButton,
-  SegmentedControl,
+  Popover,
   Skeleton,
   Spinner,
-  useOpener,
+  Tabs,
+  WIDE_HIT_AREA,
 } from "@lunedo/ui";
-import { useNavigate } from "@tanstack/react-router";
-import { BellOff, CheckCheck, Settings, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { BellOff, CheckCheck, Settings } from "lucide-react";
+import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -42,137 +43,173 @@ export function groupByDay(
     .filter((group) => group.items.length > 0);
 }
 
-export function NotificationPanel({ onClose }: { onClose: () => void }) {
+export function NotificationPopover({
+  open,
+  onOpenChange,
+  trigger,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger: ReactNode;
+}) {
+  return (
+    <Popover
+      trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
+      align="end"
+      variant="panel"
+      labelledBy="notifications-title"
+    >
+      {open ? <NotificationList onClose={() => onOpenChange(false)} /> : null}
+    </Popover>
+  );
+}
+
+function NotificationList({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
   const list = useNotificationList(filter === "unread");
   const markAll = useMarkAllRead();
-  const panel = useRef<HTMLElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
   const hasUnread = items.some((item) => item.readAt === null);
-  const restoreFocus = useOpener();
-  const close = useCallback(() => {
-    onClose();
-    restoreFocus();
-  }, [onClose, restoreFocus]);
-
-  useEffect(() => {
-    panel.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [close]);
 
   const loadMore = async () => {
-    const before = panel.current?.querySelectorAll("[data-notification]").length ?? 0;
+    const before = body.current?.querySelectorAll("[data-notification]").length ?? 0;
     await list.fetchNextPage();
-    focusWhenShown(() => panel.current?.querySelectorAll<HTMLElement>("[data-notification]")[before]);
+    focusWhenShown(() => body.current?.querySelectorAll<HTMLElement>("[data-notification]")[before]);
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const rows = [...(body.current?.querySelectorAll<HTMLElement>("[data-notification]") ?? [])];
+    const index = rows.indexOf(document.activeElement as HTMLElement);
+    const target =
+      event.key === "ArrowDown"
+        ? rows[index === -1 ? 0 : Math.min(index + 1, rows.length - 1)]
+        : event.key === "ArrowUp"
+          ? rows[index === -1 ? rows.length - 1 : Math.max(index - 1, 0)]
+          : event.key === "Home"
+            ? rows[0]
+            : event.key === "End"
+              ? rows.at(-1)
+              : undefined;
+    if (!target) return;
+    event.preventDefault();
+    target.focus();
   };
 
   return (
-    <aside
-      ref={panel}
-      tabIndex={-1}
-      aria-labelledby="notifications-title"
-      className="absolute inset-y-0 right-0 z-30 flex w-panel max-w-full flex-col border-border border-l bg-surface shadow-popover outline-none max-sm:left-0 max-sm:w-auto"
-    >
-      <header className="flex items-center gap-2 border-border border-b px-4 py-3">
-        <h2 id="notifications-title" className="min-w-0 flex-1 font-semibold text-lg wrap-anywhere">
+    // biome-ignore lint/a11y/noStaticElementInteractions: arrow keys move between the notifications like in a menu
+    <div onKeyDown={onKeyDown} className="flex min-h-0 flex-1 flex-col">
+      <header className="flex items-center gap-2 px-4 pt-3">
+        <h2 id="notifications-title" className="min-w-0 flex-1 font-semibold wrap-anywhere">
           {t("notifications.title")}
         </h2>
-        <IconButton
-          label={t("notifications.preferences")}
-          icon={Settings}
-          onClick={() => {
-            onClose();
-            void navigate({ to: "/settings/notifications" });
-          }}
-        />
-        <IconButton label={t("notifications.close")} icon={X} onClick={close} />
+        {hasUnread ? (
+          <button
+            type="button"
+            aria-busy={markAll.isPending || undefined}
+            onClick={() => markAll.mutate(new Date().toISOString())}
+            className={classNames(
+              WIDE_HIT_AREA,
+              "inline-flex h-control-sm shrink-0 items-center gap-1 rounded-sm px-1 text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
+            )}
+          >
+            {markAll.isPending ? (
+              <Spinner label={t("ui.loading")} />
+            ) : (
+              <CheckCheck aria-hidden="true" className="size-icon-sm" />
+            )}
+            {t("notifications.markAllRead")}
+          </button>
+        ) : null}
       </header>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-        <SegmentedControl
+      <div className="flex min-h-0 flex-1 flex-col px-2">
+        <Tabs
           label={t("notifications.filter")}
           value={filter}
           onValueChange={(value) => setFilter(value as Filter)}
-          options={[
+          tabs={[
             { value: "all", label: t("notifications.all") },
             { value: "unread", label: t("notifications.unread") },
           ]}
-        />
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={CheckCheck}
-          disabled={!hasUnread}
-          loading={markAll.isPending}
-          onClick={() => markAll.mutate(new Date().toISOString())}
+          fill
         >
-          {t("notifications.markAllRead")}
-        </Button>
-      </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-4">
-        {list.isPending ? (
-          <div className="flex flex-col gap-3 p-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : null}
-        {list.isError ? (
-          <div className="p-2">
-            <LoadError
-              what={t("failures.loadNotifications")}
-              error={list.error}
-              onRetry={() => list.refetch()}
-            />
-          </div>
-        ) : null}
-        {list.isSuccess && items.length === 0 ? (
-          filter === "unread" ? (
-            <EmptyState
-              icon={CheckCheck}
-              title={t("notifications.allRead")}
-              action={
-                <Button variant="secondary" onClick={() => setFilter("all")}>
-                  {t("notifications.showAll")}
+          <div ref={body} className="pb-2">
+            {list.isPending ? (
+              <div className="flex flex-col gap-3 p-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : null}
+            {list.isError ? (
+              <div className="p-2">
+                <LoadError
+                  what={t("failures.loadNotifications")}
+                  error={list.error}
+                  onRetry={() => list.refetch()}
+                />
+              </div>
+            ) : null}
+            {list.isSuccess && items.length === 0 ? (
+              filter === "unread" ? (
+                <EmptyState
+                  icon={CheckCheck}
+                  title={t("notifications.allRead")}
+                  action={
+                    <Button variant="secondary" onClick={() => setFilter("all")}>
+                      {t("notifications.showAll")}
+                    </Button>
+                  }
+                />
+              ) : (
+                <EmptyState
+                  icon={BellOff}
+                  title={t("notifications.none")}
+                  description={t("notifications.noneDescription")}
+                />
+              )
+            ) : null}
+            {groupByDay(items).map((group) => (
+              <section key={group.key} aria-labelledby={`notifications-${group.key}`} className="pt-2">
+                <h3
+                  id={`notifications-${group.key}`}
+                  className="px-2 pb-1 font-semibold text-text-muted text-xs uppercase tracking-label"
+                >
+                  {t(`notifications.groups.${group.key}`)}
+                </h3>
+                <ul className="flex flex-col">
+                  {group.items.map((item) => (
+                    <NotificationEntry key={item.id} item={item} format={format} onNavigate={onClose} />
+                  ))}
+                </ul>
+              </section>
+            ))}
+            {list.hasNextPage ? (
+              <div className="flex justify-center p-2">
+                <Button variant="secondary" size="sm" onClick={() => void loadMore()}>
+                  {list.isFetchingNextPage ? <Spinner label={t("ui.loading")} /> : t("notifications.more")}
                 </Button>
-              }
-            />
-          ) : (
-            <EmptyState
-              icon={BellOff}
-              title={t("notifications.none")}
-              description={t("notifications.noneDescription")}
-            />
-          )
-        ) : null}
-        {groupByDay(items).map((group) => (
-          <section key={group.key} aria-labelledby={`notifications-${group.key}`} className="pt-2">
-            <h3
-              id={`notifications-${group.key}`}
-              className="px-2 pb-1 font-semibold text-text-muted text-xs uppercase tracking-label"
-            >
-              {t(`notifications.groups.${group.key}`)}
-            </h3>
-            <ul className="flex flex-col">
-              {group.items.map((item) => (
-                <NotificationEntry key={item.id} item={item} format={format} onNavigate={onClose} />
-              ))}
-            </ul>
-          </section>
-        ))}
-        {list.hasNextPage ? (
-          <div className="flex justify-center p-2">
-            <Button variant="secondary" size="sm" onClick={() => void loadMore()}>
-              {list.isFetchingNextPage ? <Spinner label={t("ui.loading")} /> : t("notifications.more")}
-            </Button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </Tabs>
       </div>
-    </aside>
+      <footer className="flex justify-end border-t border-border px-4 py-2">
+        <Link
+          to="/settings/notifications"
+          onClick={onClose}
+          className={classNames(
+            WIDE_HIT_AREA,
+            "inline-flex h-control-sm items-center gap-1 rounded-sm text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
+          )}
+        >
+          <Settings aria-hidden="true" className="size-icon-sm" />
+          {t("notifications.preferences")}
+        </Link>
+      </footer>
+    </div>
   );
 }

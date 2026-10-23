@@ -7,7 +7,7 @@ test("searches from a space, opens a result, filters and saves the search", asyn
 }) => {
   const world = await searchWorld(page, organization);
   await page.goto(`/spaces/${world.operations.key}`);
-  await page.getByRole("banner").getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("banner").getByRole("button", { name: /^Search Ctrl K$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Search" });
   await expect(dialog.getByRole("button", { name: "IT Operations first" })).toHaveAttribute(
     "aria-pressed",
@@ -142,11 +142,11 @@ test("finds attachments, running topics and decisions and opens each where it li
   expect(new URL(page.url()).searchParams.get("attachment")).toBeNull();
 });
 
-test("the command palette matches letters in order and remembers recent commands", async ({ page }) => {
+test("the search finds commands by letters in order and remembers recent commands", async ({ page }) => {
   await page.goto("/home");
   await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await page.keyboard.press("Control+k");
-  const palette = page.getByRole("dialog", { name: "Command palette" });
+  const palette = page.getByRole("dialog", { name: "Search" });
   await palette.getByRole("combobox").fill("opsrch");
   await expect(palette.getByRole("option", { name: "Open the search page" })).toBeVisible();
   await page.keyboard.press("Enter");

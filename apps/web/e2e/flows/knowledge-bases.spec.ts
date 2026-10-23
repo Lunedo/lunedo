@@ -16,7 +16,8 @@ test("creates a knowledge base and publishes a how-to only once its required sec
   await expectAccessible(page, "create knowledge base");
   await dialog.getByRole("button", { name: "Create space" }).click();
 
-  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Articles", level: 1 })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main navigation" }).getByText(name)).toBeVisible();
   await expect(page.getByRole("link", { name: "View in portal" }).first()).toHaveAttribute(
     "href",
     /\/help\/[a-z0-9-]+\/$/,

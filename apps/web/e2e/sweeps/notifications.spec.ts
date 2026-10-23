@@ -27,7 +27,7 @@ test("watching and notification settings pass the accessibility check in every a
   for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(pagePath);
-    await page.getByRole("button", { name: /^Watching options for VPN access/ }).click();
+    await page.getByRole("button", { name: "More actions" }).click();
     await page.getByRole("menuitem", { name: "Mute…" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expectAccessible(page, `mute dialog at ${width}`);

@@ -35,8 +35,14 @@ describe("Table", () => {
     const table = screen.getByRole("table", { name: "Members" });
     expect(within(table).getAllByRole("row")).toHaveLength(3);
     expect(within(table).getByRole("columnheader", { name: "Role" }).className).toContain(
-      "hidden sm:table-cell",
+      "hidden @lg:table-cell",
     );
+  });
+
+  it("hides columns by the width it has, not by the width of the window", () => {
+    renderTable();
+    const table = screen.getByRole("table", { name: "Members" });
+    expect(table.closest('[class~="@container"]')).not.toBeNull();
   });
 
   it("lets a growing column take the free width and shrink so that long text truncates", () => {
@@ -128,18 +134,19 @@ describe("Table", () => {
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
-  it("draws the flat variant without a frame", () => {
+  it("draws without a frame, with a small header row and lines only between rows", () => {
     renderUi(
       <Table
         caption="Articles"
-        variant="flat"
         columns={[{ key: "title", header: "Title", cell: (row: { id: string }) => row.id }]}
-        rows={[{ id: "VPN" }]}
+        rows={[{ id: "VPN" }, { id: "Wi-Fi" }]}
         rowKey={(row) => row.id}
       />,
     );
     const table = screen.getByRole("table", { name: "Articles" });
     expect(table.closest(".rounded-md")).toBeNull();
+    expect(table.closest(".border")).toBeNull();
+    expect(screen.getAllByRole("row").at(-1)?.className).toContain("last:border-b-0");
     expect(screen.getByRole("columnheader", { name: "Title" }).className).toContain("text-xs");
   });
 });

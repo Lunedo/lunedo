@@ -256,12 +256,76 @@ describe("page bar", () => {
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     expect(await screen.findByText("Published text")).toBeTruthy();
     const info = await screen.findByRole("button", {
-      name: /^Edited by Anna Berger on .+, .+ · Click to open the versions$/,
+      name: /^.+ Edited by Anna Berger on .+, .+ · Click to open the versions$/,
     });
     expect(screen.queryByText(/Published .* · version 7/)).toBeNull();
     expect(screen.getByRole("navigation", { name: "Path" }).textContent).toContain("IT Operations");
     await userEvent.click(info);
     await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${VPN}/history`));
+  });
+});
+
+describe("page actions", () => {
+  it("keeps only edit info, Edit and Share in the bar and offers starring and watching in the menu", async () => {
+    let starred = false;
+    const { requests } = mockApi(
+      routes("editor", {
+        "GET /api/v1/starred": () => ({
+          body: {
+            items: starred
+              ? [
+                  {
+                    id: VPN,
+                    kind: "page",
+                    title: "VPN access",
+                    spaceKey: "ITOPS",
+                    spaceName: "IT Operations",
+                    starredAt: "2026-10-05T08:00:00.000Z",
+                  },
+                ]
+              : [],
+            spaces: [],
+          },
+        }),
+        [`PUT /api/v1/starred/items/${VPN}`]: () => {
+          starred = true;
+          return { status: 204 };
+        },
+        [`GET /api/v1/items/${VPN}/watch`]: () => ({ body: { effective: null, own: null } }),
+        [`PUT /api/v1/items/${VPN}/watch`]: () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await screen.findByText(/unpublished changes/);
+    expect(screen.queryByRole("button", { name: /^Star VPN access/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Watch/ })).toBeNull();
+    expect(screen.queryByText("Starred")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const menu = await screen.findByRole("menu");
+    const entries = within(menu)
+      .getAllByRole("menuitem")
+      .map((entry) => entry.textContent);
+    expect(entries.slice(0, 2)).toEqual(["Add to starred", "Watch"]);
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Add to starred" }));
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.method === "PUT" && request.path.endsWith(`/starred/items/${VPN}`),
+        ),
+      ).toBe(true),
+    );
+    expect(await screen.findByText("Starred")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Remove from starred" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Watch" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "PUT" && request.path.endsWith(`/items/${VPN}/watch`))
+          ?.body,
+      ).toEqual({
+        state: "watching",
+      }),
+    );
   });
 });
 
@@ -657,12 +721,14 @@ describe("trash", () => {
   it("shows content kinds the client does not know yet without failing", async () => {
     mockApi(
       routes("admin", {
-        [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+        [`GET /api/v1/spaces/${SPACE_ID}/items`]: (request) => ({
           body: {
-            items: [
-              page(VPN, "VPN access"),
-              { ...page("01929b1e-0000-7000-8000-0000000000f2", "Team board"), kind: "database" },
-            ],
+            items: request.path.includes("parentId=")
+              ? []
+              : [
+                  page(VPN, "VPN access"),
+                  { ...page("01929b1e-0000-7000-8000-0000000000f2", "Team board"), kind: "database" },
+                ],
             nextCursor: null,
           },
         }),

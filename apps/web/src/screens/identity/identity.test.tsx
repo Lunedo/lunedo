@@ -532,7 +532,7 @@ describe("setting up a provider as a draft", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     const section = await screen.findByRole("region", { name: "Unfinished setups" });
-    expect(within(section).getByText("Old draft")).toBeTruthy();
+    expect(await within(section).findByText("Old draft")).toBeTruthy();
     expect(within(section).getByText(/nobody signs in through it until the setup is finished/)).toBeTruthy();
     expect(screen.getByText("Setup not finished")).toBeTruthy();
     const removeButtons = within(section).getAllByRole("button", { name: "Remove draft" });
@@ -621,7 +621,7 @@ describe("the sign-in settings of the instance", () => {
     const table = await screen.findByRole("table", { name: "Identity providers" });
     expect(within(table).getByText("example.org, example.at")).toBeTruthy();
     expect(screen.getByText(/The credential of Microsoft Entra ID · Example expires soon/)).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "Password sign-in" })).toBeTruthy();
+    expect(await screen.findByRole("switch", { name: "Password sign-in" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add provider" })).toBeTruthy();
   });
 

@@ -1,4 +1,4 @@
-import { type Breadcrumb, Icon, Tooltip } from "@lunedo/ui";
+import { type Breadcrumb, Icon, Tooltip, VisuallyHidden } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
@@ -70,11 +70,11 @@ export function EditInfo({
       <button
         type="button"
         onClick={onOpen}
-        aria-label={label}
         className="flex h-control-md items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring"
       >
         {editor ? <PersonAvatar id={editor.id} name={name ?? ""} size="sm" decorative /> : null}
         <span className="whitespace-nowrap">{format.short(editedAt)}</span>
+        <VisuallyHidden>{label}</VisuallyHidden>
       </button>
     </Tooltip>
   );

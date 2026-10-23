@@ -39,7 +39,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
-import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { StarredMark, useContentCollaboration, useStar } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
 import { isEmptyDocument } from "../editor/empty-document.js";
 import type { MissingSection } from "../editor/extensions/required-sections.js";
@@ -58,7 +58,7 @@ import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js"
 import { TranslationsControl } from "../knowledge-bases/translations-control.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
-import { WatchMenu } from "../notifications/watch-menu.js";
+import { useWatchEntries } from "../notifications/watch-menu.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
@@ -84,6 +84,7 @@ import {
 import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
+import { SpaceNews } from "./space-news.js";
 import {
   backlinksQuery,
   contentQuery,
@@ -243,7 +244,9 @@ function PageArticle({
       params: { spaceKey: space.key, itemId: page.id },
     });
 
-  const menuItems: MenuItem[] = [];
+  const star = useStar({ itemId: page.id }, title);
+  const watch = useWatchEntries({ type: "item", id: page.id }, title);
+  const menuItems: MenuItem[] = [star.menuItem, ...watch.items, { type: "separator" }];
   if (writable) {
     menuItems.push(
       ...(meeting
@@ -365,8 +368,6 @@ function PageArticle({
         )
       ) : null}
       {sharing.shareButton}
-      <StarButton target={{ itemId: page.id }} title={title} />
-      <WatchMenu target={{ type: "item", id: page.id }} name={title} />
       {collaboration.commentsButton}
       {meeting ? (
         <IconButton
@@ -379,6 +380,7 @@ function PageArticle({
         />
       ) : null}
       <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
+      {watch.dialog}
     </>
   );
 
@@ -414,6 +416,7 @@ function PageArticle({
                 title
               )
             }
+            status={<StarredMark target={{ itemId: page.id }} />}
           />
           <PageMeta page={page} writable={writable} />
           {knowledgeBase ? (
@@ -499,6 +502,9 @@ function PageArticle({
               {...(writable ? { onEdit: () => setEditing(true) } : {})}
             />
           )}
+          {overview && !editing && space.organizationId ? (
+            <SpaceNews organizationId={space.organizationId} spaceId={space.id} overviewId={page.id} />
+          ) : null}
           <AttachmentsSection pageId={page.id} canEdit={writable} />
           <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
           <Backlinks pageId={page.id} />

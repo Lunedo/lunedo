@@ -61,7 +61,7 @@ function SharedWithYou() {
             title={entry.title}
             meta={`${t("home.sharedMeta", {
               name: entry.sharedBy?.name ?? t("files.someone"),
-              when: format.relative(entry.sharedAt),
+              when: format.short(entry.sharedAt),
             })} · ${entry.spaceName}`}
           />
         ) : null;
@@ -149,8 +149,8 @@ function HomeSections() {
                 meta={`${
                   task.dueDate
                     ? task.overdue
-                      ? t("tasks.overdueSince", { date: format.date(`${task.dueDate}T12:00:00Z`) })
-                      : t("tasks.dueOn", { date: format.date(`${task.dueDate}T12:00:00Z`) })
+                      ? t("tasks.overdueSince", { date: format.day(`${task.dueDate}T12:00:00Z`) })
+                      : t("tasks.dueOn", { date: format.day(`${task.dueDate}T12:00:00Z`) })
                     : t("tasks.noDueDate")
                 } · ${task.item.title}`}
                 {...(task.overdue ? { metaClassName: "text-danger" } : {})}
@@ -195,8 +195,8 @@ function HomeSections() {
                   title={item.title}
                   meta={
                     mention.actor
-                      ? t("home.mentionedBy", { name: mention.actor.name, when: format.relative(mention.at) })
-                      : format.relative(mention.at)
+                      ? t("home.mentionedBy", { name: mention.actor.name, when: format.short(mention.at) })
+                      : format.short(mention.at)
                   }
                 />
               ) : null;

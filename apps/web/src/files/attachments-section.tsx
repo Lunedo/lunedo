@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Menu, Skeleton, useToast } from "@lunedo/ui";
+import { Badge, Button, IconButton, Menu, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -312,7 +312,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
     );
   };
 
-  if (attachments.isPending) return <Skeleton className="h-12 w-full" />;
+  if (attachments.isPending) return null;
   if (attachments.isError) {
     return (
       <LoadError

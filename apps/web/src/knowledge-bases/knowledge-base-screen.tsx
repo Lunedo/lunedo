@@ -173,7 +173,6 @@ function ArticleGroup({
           columns={columns}
           rows={rows}
           rowKey={(article) => article.id}
-          variant="flat"
           loading={articles.isPending}
           empty={
             <p className="px-4 py-3 text-sm text-text-muted">

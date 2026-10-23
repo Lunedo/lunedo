@@ -76,6 +76,74 @@ describe("PageTree", () => {
     expect(tree.hasAttribute("aria-busy")).toBe(false);
   });
 
+  it("shows the pages below the home page as the first level, without the home page and without meeting series", async () => {
+    const home = "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a50";
+    const withHome = { ...space, overviewItemId: home } as SpaceWithRole;
+    const page = (id: string, title: string, parentId: string | null, kind = "page") => ({
+      ...folder,
+      id,
+      kind,
+      title,
+      parentId,
+      hasChildren: false,
+      published: true,
+    });
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes(`parentId=${home}`)
+          ? {
+              body: {
+                items: [
+                  page(child, "Network", home),
+                  page("0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a51", "Weekly sync", home, "meetingSeries"),
+                ],
+                nextCursor: null,
+              },
+            }
+          : {
+              body: {
+                items: [
+                  { ...page(home, "IT Operations", null), hasChildren: true },
+                  page("0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a52", "Imported", null),
+                ],
+                nextCursor: null,
+              },
+            },
+    });
+    await renderWithProviders(inSpace(<PageTree space={withHome} currentId={null} ancestors={[]} />));
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    await within(tree).findByRole("treeitem", { name: "Network" });
+    expect(
+      within(tree)
+        .getAllByRole("treeitem")
+        .map((entry) => [entry.getAttribute("aria-label"), entry.getAttribute("aria-level")]),
+    ).toEqual([
+      ["Network", "1"],
+      ["Imported", "1"],
+    ]);
+    expect(
+      within(tree)
+        .getAllByRole("treeitem")
+        .filter((entry) => entry.getAttribute("tabindex") === "0"),
+    ).toHaveLength(1);
+  });
+
+  it("draws the expand button of the current row on the accent fill, with a ring instead of a box on hover", async () => {
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes("parentId=")
+          ? { body: { items: [], nextCursor: null } }
+          : { body: { items: [folder], nextCursor: null } },
+    });
+    await renderWithProviders(inSpace(<PageTree space={space} currentId={folder.id} ancestors={[]} />));
+    const row = await screen.findByRole("treeitem", { name: "Runbooks" });
+    const toggle = row.querySelector("button") as HTMLButtonElement;
+    expect(row.className).toContain("bg-accent");
+    expect(toggle.className).toContain("text-on-accent");
+    expect(toggle.className).toContain("hover:ring-on-accent");
+    expect(toggle.className).not.toContain("hover:bg-hover");
+  });
+
   it("is no longer busy once the first level has loaded", async () => {
     mockApi({ [items]: () => ({ body: { items: [], nextCursor: null } }) });
     await renderWithProviders(<PageTree space={space} currentId={null} ancestors={[]} />);

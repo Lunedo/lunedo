@@ -231,9 +231,9 @@ describe("notificationText for blog posts and meeting reminders", () => {
         format,
       ),
     ).toBe(
-      `Platform weekly on ${format.dateTime("2026-10-15T07:30:00.000Z")}: add your topics before the meeting so others can prepare.`,
+      `Platform weekly on ${format.calendarDateTime("2026-10-15T07:30:00.000Z")}: add your topics before the meeting so others can prepare.`,
     );
-    expect(format.dateTime("2026-10-15T07:30:00.000Z")).toContain("09:30");
+    expect(format.calendarDateTime("2026-10-15T07:30:00.000Z")).toContain("09:30");
   });
 });
 
@@ -289,9 +289,11 @@ describe("the notification panel", () => {
     expect(await screen.findByRole("button", { name: "Notifications, 4 unread" })).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Notifications, 4 unread" }));
-    const panel = screen.getByRole("complementary", { name: "Notifications" });
+    const panel = await screen.findByRole("dialog", { name: "Notifications" });
     expect(
-      await within(panel).findByText("The guest access of Gina Guest to Platform Team ends on 8 Oct 2026."),
+      await within(panel).findByText(
+        /^The guest access of Gina Guest to Platform Team ends on Oct 8(, 2026)?.$/,
+      ),
     ).toBeTruthy();
     expect(within(panel).getByText(/3 times/)).toBeTruthy();
     expect(
@@ -301,21 +303,34 @@ describe("the notification panel", () => {
     ).toBeTruthy();
     expect(within(panel).getByRole("heading", { name: "Today" })).toBeTruthy();
     expect(within(panel).getByRole("heading", { name: "Earlier" })).toBeTruthy();
+    const rows = within(panel)
+      .getAllByRole("button")
+      .filter((button) => button.hasAttribute("data-notification"));
+    within(panel).getByRole("button", { name: "Mark all as read" }).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(rows[0]);
+    await userEvent.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(rows[1]);
+    await userEvent.keyboard("{End}");
+    expect(document.activeElement).toBe(rows.at(-1));
+    expect(within(panel).getByRole("link", { name: "Notification settings" }).getAttribute("href")).toBe(
+      "/settings/notifications",
+    );
 
     await userEvent.click(within(panel).getByRole("button", { name: "Mark all as read" }));
     await waitFor(() =>
       expect(requests.some((request) => request.path === "/api/v1/notifications/read-all")).toBe(true),
     );
     const bell = await screen.findByRole("button", { name: "Notifications" });
-    await userEvent.click(within(panel).getByRole("radio", { name: "Unread" }));
+    await userEvent.click(within(panel).getByRole("tab", { name: "Unread" }));
     expect(await within(panel).findByText("You have read everything.")).toBeTruthy();
     expect(
       within(panel).queryByText("Reminders and notices about your organizations appear here."),
     ).toBeNull();
     await userEvent.click(within(panel).getByRole("button", { name: "Show all" }));
-    expect(within(panel).getByRole("radio", { name: "All" }).getAttribute("aria-checked")).toBe("true");
+    expect(within(panel).getByRole("tab", { name: "All" }).getAttribute("aria-selected")).toBe("true");
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("complementary", { name: "Notifications" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Notifications" })).toBeNull());
     expect(document.activeElement).toBe(bell);
   });
 });
@@ -367,7 +382,7 @@ describe("watching from a notification", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Notifications, 1 unread" }, { timeout: 5000 }),
     );
-    const panel = screen.getByRole("complementary", { name: "Notifications" });
+    const panel = await screen.findByRole("dialog", { name: "Notifications" });
     await userEvent.click(await within(panel).findByRole("button", { name: "Stop watching" }));
     expect(await within(panel).findByText("Not watched")).toBeTruthy();
     expect(within(panel).queryByRole("button", { name: "Stop watching" })).toBeNull();

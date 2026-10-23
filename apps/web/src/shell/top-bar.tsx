@@ -100,8 +100,7 @@ function SearchTrigger() {
       <button
         type="button"
         onClick={shell.openSearch}
-        aria-label={t("topBar.search")}
-        aria-keyshortcuts="/"
+        aria-keyshortcuts="Control+K /"
         className="hidden h-control-md w-full max-w-dialog-sm items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 text-sm text-text-muted hover:bg-hover focus-visible:focus-ring md:flex"
       >
         <Search aria-hidden="true" className="size-icon-md shrink-0" />
@@ -115,7 +114,7 @@ function SearchTrigger() {
   );
 }
 
-function useDesktop(): boolean {
+export function useDesktop(): boolean {
   const [desktop, setDesktop] = useState(() => globalThis.matchMedia?.(DESKTOP_QUERY).matches ?? true);
   useEffect(() => {
     const query = globalThis.matchMedia?.(DESKTOP_QUERY);
@@ -154,7 +153,7 @@ export function TopBar() {
   const { t } = useTranslation();
   const items = useRegistry(topBarItems);
   return (
-    <header className="flex h-hit shrink-0 items-center gap-2 border-b border-border bg-bg px-2 md:gap-3">
+    <header className="flex h-toolbar shrink-0 items-center gap-2 border-b border-border bg-bg px-2 md:gap-3">
       <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-2">
         <SidebarToggle />
         <Link

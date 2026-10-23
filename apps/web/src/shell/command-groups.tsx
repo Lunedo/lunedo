@@ -1,37 +1,26 @@
 import {
   type CommandGroup,
   type CommandItem,
-  CommandPalette,
   fuzzyMatch,
   Highlighted,
   highlightParts,
-  Kbd,
   useToast,
 } from "@lunedo/ui";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useRouter } from "@tanstack/react-router";
-import { Building2, Command as CommandIcon, Link2, type LucideIcon, Search } from "lucide-react";
+import { Building2, Link2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";
-import { useDebounced } from "../components/table-state.js";
 import { useFailureToast } from "../errors/failure.js";
 import { translateKey } from "../i18n/translate.js";
 import { useConfluenceLink } from "../imports/confluence-link.js";
 import { looksLikeConfluenceLink } from "../imports/reimport-api.js";
-import { QUICK_DEBOUNCE_MS, quickSearchQuery } from "../search/search-api.js";
-import { noFilters, toSearchParams } from "../search/search-params.js";
-import { hitHref, hitIcon, hitTitle } from "../search/search-results.js";
 import { commands, isNavigationVisible, navigationItems } from "./extensions.js";
-import { displayKey } from "./keyboard.js";
 import { recentCommands, rememberCommand } from "./recent-commands.js";
 import { useRegistry } from "./registry.js";
 import { useShell } from "./shell.js";
 import { useOrganizationState, useSession } from "./shell-context.js";
 
-const MATCHES = 12;
-const PAGES = 5;
-const MIN_PAGE_QUERY = 2;
+const MATCHES = 5;
 
 interface Entry {
   id: string;
@@ -75,22 +64,9 @@ function rank(
     .map(({ entry, item }) => ({ entry, item }));
 }
 
-export function CommandPaletteHost({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  if (!open) return null;
-  return <Palette onOpenChange={onOpenChange} />;
-}
-
-function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+export function useCommandGroups(query: string, close: () => void): CommandGroup[] {
   const { t } = useTranslation();
   const shell = useShell();
-  const router = useRouter();
-  const navigate = useNavigate();
   const session = useSession();
   const accountId = session.account?.id ?? "";
   const organization = useOrganizationState();
@@ -99,18 +75,9 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const openLink = useConfluenceLink();
   const failed = useFailureToast();
   const { toast } = useToast();
-  const [query, setQuery] = useState("");
   const [recent, setRecent] = useState(() => recentCommands(accountId));
   const typed = query.trim();
-  const debounced = useDebounced(typed, QUICK_DEBOUNCE_MS);
-  const organizationId = shell.organizationId;
-  const pages = useQuery({
-    ...quickSearchQuery(organizationId ?? "", debounced, null),
-    enabled: organizationId !== null && debounced.length >= MIN_PAGE_QUERY,
-    throwOnError: false,
-  });
 
-  const close = () => onOpenChange(false);
   const sections = [
     { section: "account", heading: t("navigation.myAccount"), scope: t("commands.scopes.personal") },
     {
@@ -163,6 +130,7 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
 
   const toItem = ({ entry, item }: { entry: Entry; item: Omit<CommandItem, "onSelect"> }): CommandItem => ({
     ...item,
+    id: `command:${item.id}`,
     onSelect: () => {
       if (accountId) rememberCommand(accountId, entry.id);
       setRecent(recentCommands(accountId));
@@ -215,88 +183,23 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const recentEntries = recent.flatMap((id) => entries.filter((entry) => entry.id === id));
   if (!typed) {
     groups.push({ heading: t("commands.recent"), items: recentEntries.map(plain).map(toItem) });
-    for (const heading of [...new Set(entries.map((entry) => entry.heading))]) {
-      groups.push({
-        heading,
-        items: entries
-          .filter((entry) => entry.heading === heading && !recent.includes(entry.id))
-          .map(plain)
-          .map(toItem),
-      });
-    }
+    groups.push({
+      heading: t("commands.actions"),
+      items: entries
+        .filter((entry) => entry.heading === t("commands.actions") && !recent.includes(entry.id))
+        .map(plain)
+        .map(toItem),
+    });
   } else {
-    const ranked = rank(typed, entries);
     groups.push({
       heading: t("commands.commands"),
-      items: ranked
-        .filter(({ entry }) => !recent.includes(entry.id))
+      items: [
+        ...rank(typed, recentEntries),
+        ...rank(typed, entries).filter(({ entry }) => !recent.includes(entry.id)),
+      ]
         .slice(0, MATCHES)
         .map(toItem),
     });
-    groups.push({
-      heading: t("commands.recent"),
-      items: rank(typed, recentEntries).map(toItem),
-    });
-    const current = pages.data && !pages.isPlaceholderData && debounced === typed ? pages.data : null;
-    const pageItems = (current?.results ?? [])
-      .filter((hit) => hit.type !== "comment")
-      .slice(0, PAGES)
-      .flatMap<CommandItem>((hit) => {
-        const href = hitHref(hit);
-        if (!href) return [];
-        const title = hitTitle(t, hit);
-        const match = fuzzyMatch(typed, title);
-        const item: CommandItem = {
-          id: `page:${hit.id}`,
-          label: title,
-          ...(match ? { labelContent: <Highlighted parts={highlightParts(title, match.ranges)} /> } : {}),
-          icon: hitIcon(hit),
-          href,
-          onSelect: () => {
-            close();
-            void navigate({ href });
-          },
-        };
-        return [item];
-      });
-    if (typed.length >= MIN_PAGE_QUERY && organizationId) {
-      const all = router.buildLocation({ to: "/search", search: toSearchParams(typed, noFilters) }).href;
-      pageItems.push({
-        id: "pages:all",
-        label: t("commands.searchFor", { query: typed }),
-        icon: Search,
-        href: all,
-        alwaysShown: true,
-        onSelect: () => {
-          close();
-          void navigate({ href: all });
-        },
-      });
-    }
-    groups.push({ heading: t("commands.pages"), items: pageItems });
   }
-
-  return (
-    <CommandPalette
-      open
-      onOpenChange={onOpenChange}
-      label={t("commands.label")}
-      placeholder={t("commands.placeholder")}
-      emptyText={t("commands.empty")}
-      groups={groups}
-      query={query}
-      onQueryChange={setQuery}
-      filter={false}
-      icon={CommandIcon}
-      closeHint="Esc"
-      footer={
-        <>
-          <span>{t("commands.fuzzyHint")}</span>
-          <span className="flex items-center gap-1 sm:ml-auto">
-            <Kbd>{displayKey("mod+k")}</Kbd> {t("commands.opensAnywhere")}
-          </span>
-        </>
-      }
-    />
-  );
+  return groups;
 }

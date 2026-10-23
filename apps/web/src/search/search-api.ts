@@ -32,7 +32,25 @@ export const searchKeys = {
   saved: (organizationId: string) => ["search", organizationId, "saved"] as const,
   people: (query: string) => ["search", "people", query] as const,
   spaces: (organizationId: string, query: string) => ["search", organizationId, "spaces", query] as const,
+  newest: (organizationId: string, spaceId: string) => ["search", organizationId, "newest", spaceId] as const,
 };
+
+export function newestInSpaceQuery(organizationId: string, spaceId: string, limit: number) {
+  return queryOptions({
+    queryKey: searchKeys.newest(organizationId, spaceId),
+    queryFn: ({ signal }) =>
+      request(() =>
+        api.GET("/api/v1/organizations/{organizationId}/search", {
+          params: {
+            path: { organizationId },
+            query: { spaceIds: spaceId, types: "page,blogPost", sort: "newest", limit },
+          },
+          signal,
+        }),
+      ),
+    staleTime: 30_000,
+  });
+}
 
 export function quickSearchQuery(organizationId: string, query: string, spaceId: string | null) {
   return queryOptions({

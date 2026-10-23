@@ -27,6 +27,10 @@ export interface Formatter {
   month(value: Date | string): string;
   relative(value: Date | string, now?: Date): string;
   short(value: Date | string, now?: Date): string;
+  day(value: Date | string, now?: Date): string;
+  calendarDate(value: Date | string, now?: Date): string;
+  calendarDateTime(value: Date | string, now?: Date): string;
+  shortDateTime(value: Date | string, now?: Date): string;
   number(value: number): string;
   percent(value: number): string;
   bytes(value: number): string;
@@ -75,6 +79,21 @@ export function createFormatter(settings: FormatSettings): Formatter {
   const date = (value: Date | string) =>
     formatDate(toDate(value), settings.dateFormat, settings.timeZone, settings.language);
   const time = (value: Date | string) => timeFormatter.format(toDate(value));
+  const calendarDate = (value: Date | string, now = new Date()) => {
+    const moment = toDate(value);
+    return calendarDay.format(moment).slice(0, 4) === calendarDay.format(now).slice(0, 4)
+      ? dayMonth.format(moment)
+      : dayMonthYear.format(moment);
+  };
+  const day = (value: Date | string, now = new Date()) => {
+    const moment = toDate(value);
+    const target = calendarDay.format(moment);
+    const offset = Math.round(
+      (Date.parse(`${target}T00:00:00Z`) - Date.parse(`${calendarDay.format(now)}T00:00:00Z`)) / 86_400_000,
+    );
+    if (Math.abs(offset) <= 1) return relative.format(offset, "day");
+    return calendarDate(moment, now);
+  };
 
   return {
     settings,
@@ -93,19 +112,17 @@ export function createFormatter(settings: FormatSettings): Formatter {
     },
     short(value, now = new Date()) {
       const moment = toDate(value);
-      const day = calendarDay.format(moment);
-      if (day === calendarDay.format(now)) {
-        const seconds = Math.round((moment.getTime() - now.getTime()) / 1000);
-        const absolute = Math.abs(seconds);
-        if (absolute < 60) return shortRelative.format(0, "minute");
-        if (absolute < 3600) return shortRelative.format(Math.round(seconds / 60), "minute");
-        return shortRelative.format(Math.round(seconds / 3600), "hour");
-      }
-      if (day === calendarDay.format(new Date(now.getTime() - 86_400_000))) return relative.format(-1, "day");
-      return day.slice(0, 4) === calendarDay.format(now).slice(0, 4)
-        ? dayMonth.format(moment)
-        : dayMonthYear.format(moment);
+      if (calendarDay.format(moment) !== calendarDay.format(now)) return day(moment, now);
+      const seconds = Math.round((moment.getTime() - now.getTime()) / 1000);
+      const absolute = Math.abs(seconds);
+      if (absolute < 60) return shortRelative.format(0, "minute");
+      if (absolute < 3600) return shortRelative.format(Math.round(seconds / 60), "minute");
+      return shortRelative.format(Math.round(seconds / 3600), "hour");
     },
+    day,
+    calendarDate,
+    calendarDateTime: (value, now = new Date()) => `${calendarDate(value, now)}, ${time(value)}`,
+    shortDateTime: (value, now = new Date()) => `${day(value, now)}, ${time(value)}`,
     number: (value) => numbers.format(value),
     percent: (value) => percent.format(value),
     bytes(value) {

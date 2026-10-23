@@ -101,7 +101,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await other.goto(pagePath);
   await expect(other.getByText("First published sentence.")).toBeVisible();
   await expect(other.getByText("Secret draft sentence.")).toHaveCount(0);
-  await expect(other.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(other.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
   await expectAccessible(other, "read view of a published page");
 });
 
@@ -118,7 +118,8 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await page.getByRole("button", { name: "Publish version 2" }).click();
   await expect(page.getByText("Published as version 2. Readers see it now.").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Version history" }).first().click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Version history" }).click();
   await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Changes" }).locator('[data-change="added"], ins').first(),
@@ -155,10 +156,10 @@ test("deletes a page to the trash, restores it and archives it", async ({ page, 
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Archive" }).click();
   await expect(page.getByText("Archived", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
   await expectAccessible(page, "archived page");
   await page.getByRole("button", { name: "Bring back from the archive" }).first().click();
-  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
 });
 
 test("passes the accessibility check on the new settings screens", async ({ page, organization }) => {

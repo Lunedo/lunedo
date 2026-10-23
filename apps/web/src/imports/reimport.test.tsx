@@ -220,7 +220,7 @@ describe("re-import changes", () => {
     });
     await open(DETAIL);
     expect(await screen.findByRole("heading", { name: "Changes since the last import" })).toBeTruthy();
-    const tabs = screen.getByRole("tablist", { name: "Changes" });
+    const tabs = await screen.findByRole("tablist", { name: "Changes" });
     expect(within(tabs).getByRole("tab", { name: /Changed on both sides/ }).textContent).toContain("2");
     expect(within(tabs).getByRole("tab", { name: /New and updated/ }).textContent).toContain("21");
     expect(await screen.findByText("Being edited")).toBeTruthy();

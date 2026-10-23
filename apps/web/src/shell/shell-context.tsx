@@ -23,6 +23,7 @@ export interface OrganizationState {
   can(action: string): boolean;
   grantableAreas(scope: RoleScope): Areas;
   permissionsLoaded: boolean;
+  settled: boolean;
   switchOrganization(organizationId: string): void;
 }
 
@@ -104,9 +105,19 @@ export function OrganizationProvider({ session, children }: { session: SessionIn
       can: (action) => (allowed ? allowed.instance.has(action) || allowed.organization.has(action) : false),
       grantableAreas: (scope) => (allowed?.grantableAreas[scope] as Areas | undefined) ?? {},
       permissionsLoaded: allowed !== undefined,
+      settled: !organizations.isPending && !permissions.isPending,
       switchOrganization,
     };
-  }, [session, list, organization, organizationId, permissions.data, switchOrganization]);
+  }, [
+    session,
+    list,
+    organization,
+    organizationId,
+    permissions.data,
+    organizations.isPending,
+    permissions.isPending,
+    switchOrganization,
+  ]);
 
   return <OrganizationContext value={value}>{children}</OrganizationContext>;
 }

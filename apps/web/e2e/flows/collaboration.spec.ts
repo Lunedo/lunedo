@@ -194,7 +194,9 @@ test("shows recent pages, starred items, tasks, mentions and new posts on For yo
   await publishedPost(page, space);
   const { page: other } = await organization.signIn(space.colleague);
   await other.goto(pagePath);
-  await other.getByRole("button", { name: "Star VPN access" }).click();
+  await other.getByRole("button", { name: "More actions" }).click();
+  await other.getByRole("menuitem", { name: "Add to starred" }).click();
+  await expect(other.getByText("VPN access starred")).toBeVisible();
   await other.goto("/home");
   const main = other.getByRole("main");
   await expect(main.getByRole("link", { name: /VPN access/ }).first()).toBeVisible();
