@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const GUTTER_BUTTON =
-  "flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring";
+  "relative flex size-control-sm items-center justify-center rounded-sm text-text-muted after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2 hover:bg-hover hover:text-text focus-visible:focus-ring";
 
 interface Target {
   node: ProseMirrorNode;
@@ -126,7 +126,7 @@ export function BlockGutter({ editor }: { editor: Editor }) {
                 if (deleted) {
                   toast({
                     title: t("editor.gutter.deleted"),
-                    undo: { onUndo: () => current.chain().focus().undo().run(), seconds: 5 },
+                    undo: { onUndo: () => current.chain().focus().undo().run(), seconds: 10 },
                   });
                 }
                 return deleted;

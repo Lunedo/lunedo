@@ -1,6 +1,6 @@
 import { Button, EmptyState, IconButton, Menu, type MenuItem, Skeleton, Table } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link } from "@tanstack/react-router";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRightLeft,
   Copy,
@@ -193,6 +193,7 @@ export function FolderScreen() {
 function FolderContents({ folderId, view }: { folderId: string; view: "list" | "tiles" }) {
   const { t } = useTranslation();
   const { space, canEdit, openCreate } = useSpace();
+  const navigate = useNavigate();
   const children = useChildren(space.id, folderId);
   const items = children.data?.pages.flatMap((page) => page.items) ?? [];
   if (children.isPending) return <Skeleton className="h-12 w-full" />;
@@ -237,6 +238,13 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
           caption={t("folder.contents")}
           rows={items}
           rowKey={(item) => item.id}
+          rowLabel={(item) => item.title}
+          onRowClick={(item) => {
+            const href = itemHref(item, space.key);
+            if (!href) return;
+            if (/^https?:/.test(href)) globalThis.open(href, "_blank", "noopener,noreferrer");
+            else void navigate({ to: href as never });
+          }}
           columns={[
             {
               key: "name",

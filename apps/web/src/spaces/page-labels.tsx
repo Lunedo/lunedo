@@ -121,7 +121,7 @@ export function LabelChips({
                 <button
                   type="button"
                   aria-label={t("labels.remove", { label })}
-                  className="-ms-1 hidden size-control-sm items-center justify-center rounded-sm text-text-muted group-focus-within/label:inline-flex group-hover/label:inline-flex hover:bg-hover focus-visible:focus-ring"
+                  className="relative -ms-1 hidden size-control-sm items-center after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2 justify-center rounded-sm text-text-muted group-focus-within/label:inline-flex group-hover/label:inline-flex hover:bg-hover focus-visible:focus-ring"
                   onClick={() => void remove(label)}
                 >
                   <X aria-hidden="true" className="size-icon-sm" />
@@ -137,7 +137,7 @@ export function LabelChips({
           aria-label={t("labels.add")}
           title={t("labels.add")}
           onClick={onAdd}
-          className="inline-flex size-control-sm items-center justify-center rounded-sm border border-dashed border-border text-text-muted opacity-0 group-hover/meta:opacity-100 hover:bg-hover hover:text-text focus-visible:opacity-100 focus-visible:focus-ring"
+          className="relative inline-flex size-control-sm items-center justify-center rounded-sm border border-dashed after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2 border-border text-text-muted opacity-0 group-hover/meta:opacity-100 hover:bg-hover hover:text-text focus-visible:opacity-100 focus-visible:focus-ring"
         >
           <Plus aria-hidden="true" className="size-icon-sm" />
         </button>

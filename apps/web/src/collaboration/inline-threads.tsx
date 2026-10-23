@@ -184,7 +184,7 @@ export function ThreadCounters({
             const first = counter.threads[0];
             if (first) onOpen(first);
           }}
-          className="pointer-events-auto absolute left-0 inline-flex size-control-sm items-center justify-center rounded-full bg-warning-soft text-xs font-semibold text-text hover:bg-hover focus-visible:focus-ring"
+          className="pointer-events-auto absolute left-0 inline-flex size-control-sm after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2 items-center justify-center rounded-full bg-warning-soft text-xs font-semibold text-text hover:bg-hover focus-visible:focus-ring"
         >
           {counter.threads.length}
         </button>
