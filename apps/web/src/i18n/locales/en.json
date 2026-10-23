@@ -2179,7 +2179,7 @@
       },
       "locale_dateFormat": {
         "label": "Date format",
-        "description": "How dates are written."
+        "description": "How full dates are written, for example in tables and versions. Short dates such as “today” or “Oct 26” follow the language."
       },
       "locale_timeFormat": {
         "label": "Time format",
@@ -10689,8 +10689,6 @@
     "favorites": "Favorites",
     "recentSpaces": "Recently visited",
     "allSpaces": "All spaces",
-    "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar",
     "close": "Close navigation",
     "tasksOpen": "My tasks, {count, plural, one {# open} other {{shown} open}}",
     "spaceType": "Space",

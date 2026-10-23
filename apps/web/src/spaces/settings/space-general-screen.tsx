@@ -13,6 +13,7 @@ import { ImpactConfirmDialog } from "../access/impact.js";
 import { useSpace } from "../space-context.js";
 import { type SpaceVisibility, spaceKeys } from "../space-queries.js";
 import { Panel } from "./panel.js";
+import { SpaceDangerZone } from "./space-danger-zone.js";
 import { SpaceSettingsPage } from "./space-settings-page.js";
 
 const VISIBILITIES: SpaceVisibility[] = ["private", "organization", "instance"];
@@ -84,6 +85,7 @@ export function SpaceGeneralScreen() {
         ) : space.confidential ? null : (
           <VisibilitySection />
         )}
+        {space.role === "admin" ? <SpaceDangerZone /> : null}
       </div>
     </SpaceSettingsPage>
   );

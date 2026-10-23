@@ -2179,7 +2179,7 @@
       },
       "locale_dateFormat": {
         "label": "Datumsformat",
-        "description": "Wie Daten geschrieben werden."
+        "description": "Wie volle Datumsangaben geschrieben werden, etwa in Tabellen und Versionen. Kurze Angaben wie „heute“ oder „26. Okt.“ folgen der Sprache."
       },
       "locale_timeFormat": {
         "label": "Zeitformat",
@@ -10689,8 +10689,6 @@
     "favorites": "Favoriten",
     "recentSpaces": "Zuletzt besucht",
     "allSpaces": "Alle Spaces",
-    "collapse": "Seitenleiste einklappen",
-    "expand": "Seitenleiste ausklappen",
     "close": "Navigation schließen",
     "tasksOpen": "Meine Aufgaben, {count, plural, one {# offen} other {{shown} offen}}",
     "spaceType": "Space",

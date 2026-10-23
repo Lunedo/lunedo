@@ -101,6 +101,13 @@ describe("Tabs", () => {
     );
     expect(screen.getByRole("tabpanel").textContent).toBe("Panel guests");
   });
+
+  it("scroll their row sideways only, never up and down", () => {
+    renderUi(<TabsProbe />);
+    const row = screen.getByRole("tablist", { name: "Member types" }).parentElement as HTMLElement;
+    expect(row.className).toContain("overflow-x-auto");
+    expect(row.className).toContain("overflow-y-hidden");
+  });
 });
 
 describe("CommandPalette", () => {

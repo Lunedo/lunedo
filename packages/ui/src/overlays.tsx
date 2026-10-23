@@ -198,7 +198,7 @@ export function Tabs({ value, onValueChange, tabs, label, children, fill = false
       onValueChange={onValueChange}
       className={classNames("flex flex-col", fill ? "min-h-0 flex-1 gap-1" : "gap-4")}
     >
-      <ScrollArea surface="bg">
+      <ScrollArea surface="bg" className="overflow-y-hidden">
         <TabsPrimitive.List aria-label={label} className="flex w-max min-w-full gap-1 border-b border-border">
           {tabs.map((tab) => (
             <TabsPrimitive.Trigger

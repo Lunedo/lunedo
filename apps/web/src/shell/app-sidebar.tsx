@@ -1,7 +1,7 @@
 import { classNames, Icon, RailButton, SidebarGroup, SidebarItem } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import { ChevronsLeft, ChevronsRight, Home, Layers, ListChecks, type LucideIcon } from "lucide-react";
+import { Home, Layers, ListChecks, type LucideIcon } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { starredQuery, tasksQuery } from "../collaboration/queries.js";
@@ -74,34 +74,6 @@ export function SidebarEntry({
     >
       {link}
     </SidebarItem>
-  );
-}
-
-export function SidebarButton({
-  icon,
-  label,
-  collapsed,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  collapsed: boolean;
-  onClick: () => void;
-}) {
-  if (collapsed) {
-    return <RailButton label={label} icon={<Icon icon={icon} size="md" />} onClick={onClick} />;
-  }
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex h-row w-full items-center gap-2 rounded-sm px-2 text-left text-text transition-colors hover:bg-hover focus-visible:focus-ring motion-reduce:transition-none"
-      >
-        <Icon icon={icon} className="text-text-muted" />
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-      </button>
-    </li>
   );
 }
 
@@ -244,24 +216,16 @@ export function AppSidebar() {
           <div ref={setMiddle} className="contents" />
           {claimed ? null : <SpacesNavigation collapsed={collapsed} />}
         </div>
-        <div
-          className={classNames(
-            "w-full border-t border-border py-3",
-            collapsed ? "flex justify-center" : "px-3",
-          )}
-        >
-          <div ref={setBottom} className="contents" />
-          {claimed ? null : (
-            <ul className="flex flex-col gap-px">
-              <SidebarButton
-                icon={collapsed ? ChevronsRight : ChevronsLeft}
-                label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-                collapsed={collapsed}
-                onClick={shell.toggleSidebar}
-              />
-            </ul>
-          )}
-        </div>
+        {claimed ? (
+          <div
+            className={classNames(
+              "w-full border-t border-border py-3",
+              collapsed ? "flex justify-center" : "px-3",
+            )}
+          >
+            <div ref={setBottom} className="contents" />
+          </div>
+        ) : null}
       </nav>
     </>
   );

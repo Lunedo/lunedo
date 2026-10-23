@@ -526,6 +526,32 @@ describe("spaces", () => {
     );
   });
 
+  it("ends the general space settings with the danger zone and keeps it off pages and trash", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      [`GET /api/v1/spaces/${SPACE_ID}/settings`]: () => ({ body: [] }),
+    });
+    await renderAt("/spaces/ITOPS/settings/general");
+    const zone = await screen.findByRole("region", { name: "Danger zone" });
+    expect(within(zone).getByRole("button", { name: "Archive space" })).toBeTruthy();
+    expect(within(zone).getByRole("button", { name: "Delete space" })).toBeTruthy();
+    const main = screen.getByRole("main");
+    const regions = within(main).getAllByRole("region");
+    expect(regions.at(-1)).toBe(zone);
+    cleanup();
+
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      [`GET /api/v1/spaces/${SPACE_ID}/settings`]: () => ({ body: [] }),
+    });
+    await renderAt("/spaces/ITOPS/settings/content");
+    await screen.findByRole("heading", { name: "Pages and trash", level: 1 });
+    expect(screen.queryByRole("region", { name: "Danger zone" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete space" })).toBeNull();
+  });
+
   it("says that the old key keeps leading to the space until another space takes it", async () => {
     mockApi({ ...baseRoutes(), ...spaceRoutes() });
     await renderAt("/spaces/ITOPS/settings/general");
@@ -1372,7 +1398,8 @@ describe("app shell", () => {
     expect(within(navigation).getByRole("link", { name: "All spaces" }).getAttribute("aria-current")).toBe(
       "page",
     );
-    expect(within(navigation).getByRole("button", { name: "Collapse sidebar" })).toBeTruthy();
+    expect(within(navigation).queryByRole("button", { name: "Collapse sidebar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
     cleanup();
 
     await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
