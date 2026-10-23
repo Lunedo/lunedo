@@ -7,6 +7,7 @@ test("the comment popover passes the accessibility check wide and narrow", async
   const space = await collaborationSpace(page, organization);
   const { id: pageId, path: pagePath } = await vpnPage(page, space);
   await commentOnVpnPage(page, pageId);
+  await callApi(page, "POST", `/api/v1/pages/${pageId}/publish`, {});
   const { page: other } = await organization.signIn(space.colleague);
   for (const width of WIDTHS) {
     await other.setViewportSize({ width, height: 900 });

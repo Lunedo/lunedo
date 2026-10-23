@@ -55,6 +55,7 @@ import { ExportDialog } from "../exports/export-dialog.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
+import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
@@ -497,7 +498,7 @@ function PageArticle({
             }
             status={<StarredMark target={{ itemId: page.id }} />}
           />
-          {editing ? null : meta.line}
+          {editing ? knowledgeBase ? <ArticlePortalLink itemId={page.id} /> : null : meta.line}
           {knowledgeBase ? (
             <ArticleReviewLine
               itemId={page.id}

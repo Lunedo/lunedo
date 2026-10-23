@@ -309,7 +309,7 @@ export function WhiteboardView({
         <PageBar breadcrumbs={[...(breadcrumbs ?? []), { label: board.title }]}>
           {editing ? <SaveStateIndicator state={snapshot.saveState} /> : null}
           {editing ? (
-            <AvatarStack self={null} others={others} colorFor={(user) => cursorColor(user.id)} />
+            <AvatarStack self={self} others={others} colorFor={(user) => cursorColor(user.id)} />
           ) : null}
           {editedAt ? <EditedAt value={editedAt} {...(onHistory ? { onOpen: onHistory } : {})} /> : null}
           {editing && boardReady ? (
