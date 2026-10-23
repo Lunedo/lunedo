@@ -77,10 +77,24 @@ export const exampleOrganization = {
   createdAt: "2026-10-01T08:00:00.000Z",
 };
 
+export const pictureRefField = z
+  .string()
+  .nullable()
+  .describe(
+    "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+  );
+
+export const jobTitleField = z
+  .string()
+  .nullable()
+  .describe("Job title the person entered on their profile, or null.");
+
 export const memberSchema = z
   .object({
     accountId: uuid("ID of the account."),
     name: z.string().describe("Display name of the account."),
+    jobTitle: jobTitleField,
+    pictureRef: pictureRefField,
     email: z.string().nullable().describe("E-mail address, or null for service accounts."),
     accountType: z.string().describe("`standard`, `guest`, `portal` or `service`."),
     kind: z.enum(["member", "collaborator", "guest"]).describe("Kind of membership in the organization."),
@@ -104,6 +118,8 @@ export const memberSchema = z
 export const exampleMember = {
   accountId: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
   name: "Ada Lovelace",
+  jobTitle: "Head of Engineering",
+  pictureRef: "5f2b8c1d9a0e4b7c",
   email: "ada@example.org",
   accountType: "standard",
   kind: "member",
@@ -156,6 +172,8 @@ export const groupMemberSchema = z
   .object({
     accountId: uuid("ID of the member."),
     name: z.string().describe("Display name of the member."),
+    jobTitle: jobTitleField,
+    pictureRef: pictureRefField,
     expiresAt: timestamp("When the group membership ends, or null.").nullable(),
   })
   .describe("A member of the group.");
@@ -163,6 +181,8 @@ export const groupMemberSchema = z
 export const exampleGroupMember = {
   accountId: exampleMember.accountId,
   name: exampleMember.name,
+  jobTitle: exampleMember.jobTitle,
+  pictureRef: exampleMember.pictureRef,
   expiresAt: null,
 };
 

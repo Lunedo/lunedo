@@ -540,6 +540,29 @@ export const auditCatalog = {
     visibility: "organization",
     personal: { previousEmail: "target", newEmail: "target" },
   }),
+  "account.profileChanged": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({
+      name: z.string(),
+      previousName: z.string(),
+      jobTitle: z.string().nullable(),
+      previousJobTitle: z.string().nullable(),
+    }),
+    visibility: "organization",
+    personal: {
+      name: "target",
+      previousName: "target",
+      jobTitle: "target",
+      previousJobTitle: "target",
+    },
+  }),
+  "account.pictureChanged": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({ removed: z.boolean() }),
+    visibility: "organization",
+  }),
   "twoFactor.totpAdded": event({
     actor: ["account", "anonymous"],
     target: "account",

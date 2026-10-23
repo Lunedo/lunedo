@@ -1,3 +1,4 @@
+export { accountPictures } from "../accounts/picture-schema.js";
 export {
   accountState,
   accounts,

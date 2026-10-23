@@ -30,6 +30,7 @@ import {
   syncRunsQuery,
   uploadProviderLogo,
 } from "../../api/identity-queries.js";
+import { IMAGE_MAX_BYTES, IMAGE_TYPES, toBase64 } from "../../components/image-upload.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -67,9 +68,6 @@ import { continueSetupPath } from "./providers-screen.js";
 
 const route = getRouteApi("/app/settings/instance/sign-in-providers/$providerId");
 
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
-const LOGO_MAX_BYTES = 256 * 1024;
-
 export interface ProviderTab {
   value: string;
   labelKey: string;
@@ -87,13 +85,6 @@ export const providerTabs: ProviderTab[] = [
   { value: "sync", labelKey: "identityProviders.tabs.sync", component: SyncTab, available: () => true },
   { value: "scim", labelKey: "identityProviders.tabs.scim", component: ScimTab, available: () => true },
 ];
-
-async function toBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
 
 export function InstanceProviderScreen() {
   const { t } = useTranslation();
@@ -401,14 +392,14 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
     await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
   };
   const upload = async (file: File) => {
-    if (!(LOGO_TYPES as readonly string[]).includes(file.type) || file.size > LOGO_MAX_BYTES) {
+    if (!(IMAGE_TYPES as readonly string[]).includes(file.type) || file.size > IMAGE_MAX_BYTES) {
       toast({ title: t("failures.uploadLogo"), description: t("problems.invalidLogo"), variant: "error" });
       return;
     }
     setBusy(true);
     try {
       await uploadProviderLogo(provider.id, {
-        contentType: file.type as (typeof LOGO_TYPES)[number],
+        contentType: file.type as (typeof IMAGE_TYPES)[number],
         data: await toBase64(file),
       });
       await refresh();
@@ -439,7 +430,7 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
               <input
                 ref={input}
                 type="file"
-                accept={LOGO_TYPES.join(",")}
+                accept={IMAGE_TYPES.join(",")}
                 className="sr-only"
                 aria-label={t("identityProviders.logo.upload")}
                 tabIndex={-1}

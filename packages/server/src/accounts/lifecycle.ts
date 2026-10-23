@@ -524,6 +524,9 @@ export class AccountLifecycleService {
     }
     await tx.execute(sql`delete from service_account_responsibles where account_id = ${id}`);
     await tx.execute(sql`delete from meeting_private_notes where account_id = ${id}`);
+    await tx.execute(sql`
+      with released as (delete from account_pictures where account_id = ${id} returning file_id)
+      update stored_files set state = 'orphaned', updated_at = now() where id in (select file_id from released)`);
     await tx
       .update(accounts)
       .set({
@@ -536,6 +539,8 @@ export class AccountLifecycleService {
         homeOrganizationId: null,
         secondFactorResetAt: null,
         inactivityNotifiedAt: null,
+        jobTitle: null,
+        pictureRef: null,
         updatedAt: new Date(),
       })
       .where(eq(accounts.id, id));

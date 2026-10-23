@@ -1013,6 +1013,9 @@ describe("linked identities", () => {
   it("lets people unlink their own identity and explains a refusal", async () => {
     let refuse = true;
     const { requests } = adminApi({
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
       "GET /api/v1/account/identities": () => ({
         body: [
           {

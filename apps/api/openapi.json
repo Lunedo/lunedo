@@ -4403,6 +4403,687 @@
         }
       }
     },
+    "/api/v1/account/profile": {
+      "get": {
+        "operationId": "account.profile",
+        "summary": "Get the own profile",
+        "tags": [
+          "Account"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Display name."
+                    },
+                    "jobTitle": {
+                      "description": "Job title the person entered on their profile, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pictureRef": {
+                      "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "nameProvider": {
+                      "description": "Name of the identity provider the display name comes from, or null when the person sets it. The name cannot be changed here while a provider sets it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "jobTitle",
+                    "pictureRef",
+                    "nameProvider"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The own profile."
+                },
+                "example": {
+                  "name": "Ada Lovelace",
+                  "jobTitle": "Head of Engineering",
+                  "pictureRef": "5f2b8c1d9a0e4b7c",
+                  "nameProvider": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "account.updateProfile",
+        "summary": "Change the own profile",
+        "description": "Changes the display name or the job title. The display name stays as it is while an identity provider sets it.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Account"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "New display name, 1 to 200 characters.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "jobTitle": {
+                    "description": "New job title, at most 100 characters. An empty text or null removes it.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Fields to change. Fields that are left out stay as they are."
+              },
+              "example": {
+                "jobTitle": "Head of Engineering"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Display name."
+                    },
+                    "jobTitle": {
+                      "description": "Job title the person entered on their profile, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pictureRef": {
+                      "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "nameProvider": {
+                      "description": "Name of the identity provider the display name comes from, or null when the person sets it. The name cannot be changed here while a provider sets it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "jobTitle",
+                    "pictureRef",
+                    "nameProvider"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The own profile."
+                },
+                "example": {
+                  "name": "Ada Lovelace",
+                  "jobTitle": "Head of Engineering",
+                  "pictureRef": "5f2b8c1d9a0e4b7c",
+                  "nameProvider": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`nameFromProvider`: The name is set by an identity provider.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "nameFromProvider": {
+                    "value": {
+                      "type": "urn:lunedo:problem:nameFromProvider",
+                      "title": "The name is set by an identity provider",
+                      "status": 409,
+                      "code": "nameFromProvider"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/profile/picture": {
+      "delete": {
+        "operationId": "account.removePicture",
+        "summary": "Remove the profile picture",
+        "description": "Removes the picture. Others see the initials again.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Account"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The profile without a picture.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Display name."
+                    },
+                    "jobTitle": {
+                      "description": "Job title the person entered on their profile, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pictureRef": {
+                      "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "nameProvider": {
+                      "description": "Name of the identity provider the display name comes from, or null when the person sets it. The name cannot be changed here while a provider sets it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "jobTitle",
+                    "pictureRef",
+                    "nameProvider"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The own profile."
+                },
+                "example": {
+                  "name": "Ada Lovelace",
+                  "jobTitle": "Head of Engineering",
+                  "pictureRef": null,
+                  "nameProvider": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "account.uploadPicture",
+        "summary": "Upload a profile picture",
+        "description": "Sets the picture shown next to the own name. PNG, JPEG or WebP, at most 256 KiB.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Account"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "image/png",
+                      "image/jpeg",
+                      "image/webp"
+                    ],
+                    "description": "Type of the image."
+                  },
+                  "data": {
+                    "type": "string",
+                    "maxLength": 349528,
+                    "format": "base64",
+                    "contentEncoding": "base64",
+                    "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+                    "description": "The image, Base64-encoded."
+                  }
+                },
+                "required": [
+                  "contentType",
+                  "data"
+                ],
+                "additionalProperties": false,
+                "description": "A profile picture."
+              },
+              "example": {
+                "contentType": "image/png",
+                "data": "iVBORw0KGgo="
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The profile with its new picture.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Display name."
+                    },
+                    "jobTitle": {
+                      "description": "Job title the person entered on their profile, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pictureRef": {
+                      "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "nameProvider": {
+                      "description": "Name of the identity provider the display name comes from, or null when the person sets it. The name cannot be changed here while a provider sets it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "jobTitle",
+                    "pictureRef",
+                    "nameProvider"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The own profile."
+                },
+                "example": {
+                  "name": "Ada Lovelace",
+                  "jobTitle": "Head of Engineering",
+                  "pictureRef": "5f2b8c1d9a0e4b7c",
+                  "nameProvider": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidPicture`: The picture is not a supported image.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPicture": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidPicture",
+                      "title": "The picture is not a supported image",
+                      "status": 400,
+                      "code": "invalidPicture"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:lunedo:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/account/push": {
       "get": {
         "operationId": "push.show",
@@ -9621,6 +10302,149 @@
         }
       }
     },
+    "/api/v1/accounts/{accountId}/picture": {
+      "get": {
+        "operationId": "accounts.picture",
+        "summary": "Get a profile picture",
+        "description": "Returns the profile picture of a person whose name the caller may see, with its stored image type. Add the `pictureRef` of the person as `v` so a changed picture is loaded again. It is sent with `X-Content-Type-Options: nosniff` and a content security policy that blocks scripts.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Accounts"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "required": false,
+            "description": "The `pictureRef` of the person, to bypass caches.",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The picture.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{accountId}/reactivate": {
       "post": {
         "operationId": "accounts.reactivate",
@@ -14259,11 +15083,19 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "id",
-                            "name"
+                            "name",
+                            "pictureRef"
                           ],
                           "additionalProperties": false,
                           "description": "A person."
@@ -14334,7 +15166,8 @@
                   "reviewedAt": "2026-10-02T09:00:00.000Z",
                   "reviewedBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-                    "name": "Anna Weber"
+                    "name": "Anna Weber",
+                    "pictureRef": null
                   },
                   "dueAt": "2027-04-02T09:00:00.000Z",
                   "sourceChangedAt": null,
@@ -14683,11 +15516,19 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "id",
-                            "name"
+                            "name",
+                            "pictureRef"
                           ],
                           "additionalProperties": false,
                           "description": "A person."
@@ -14758,7 +15599,8 @@
                   "reviewedAt": "2026-10-02T09:00:00.000Z",
                   "reviewedBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-                    "name": "Anna Weber"
+                    "name": "Anna Weber",
+                    "pictureRef": null
                   },
                   "dueAt": "2027-04-02T09:00:00.000Z",
                   "sourceChangedAt": null,
@@ -19852,6 +20694,13 @@
                             "name": {
                               "type": "string"
                             },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -19879,6 +20728,7 @@
                             "id",
                             "email",
                             "name",
+                            "pictureRef",
                             "type",
                             "homeOrganizationId"
                           ],
@@ -20205,6 +21055,13 @@
                                 "name": {
                                   "type": "string"
                                 },
+                                "pictureRef": {
+                                  "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
                                 "type": {
                                   "type": "string",
                                   "enum": [
@@ -20232,6 +21089,7 @@
                                 "id",
                                 "email",
                                 "name",
+                                "pictureRef",
                                 "type",
                                 "homeOrganizationId"
                               ],
@@ -21335,6 +22193,13 @@
                                 "name": {
                                   "type": "string"
                                 },
+                                "pictureRef": {
+                                  "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
                                 "type": {
                                   "type": "string",
                                   "enum": [
@@ -21362,6 +22227,7 @@
                                 "id",
                                 "email",
                                 "name",
+                                "pictureRef",
                                 "type",
                                 "homeOrganizationId"
                               ],
@@ -22809,6 +23675,13 @@
                             "name": {
                               "type": "string"
                             },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -22836,6 +23709,7 @@
                             "id",
                             "email",
                             "name",
+                            "pictureRef",
                             "type",
                             "homeOrganizationId"
                           ],
@@ -22982,6 +23856,13 @@
                                 "name": {
                                   "type": "string"
                                 },
+                                "pictureRef": {
+                                  "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
                                 "type": {
                                   "type": "string",
                                   "enum": [
@@ -23009,6 +23890,7 @@
                                 "id",
                                 "email",
                                 "name",
+                                "pictureRef",
                                 "type",
                                 "homeOrganizationId"
                               ],
@@ -23709,6 +24591,13 @@
                             "name": {
                               "type": "string"
                             },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -23736,6 +24625,7 @@
                             "id",
                             "email",
                             "name",
+                            "pictureRef",
                             "type",
                             "homeOrganizationId"
                           ],
@@ -24189,6 +25079,13 @@
                             "name": {
                               "type": "string"
                             },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -24216,6 +25113,7 @@
                             "id",
                             "email",
                             "name",
+                            "pictureRef",
                             "type",
                             "homeOrganizationId"
                           ],
@@ -33820,6 +34718,20 @@
                             "type": "string",
                             "description": "Display name of the member."
                           },
+                          "jobTitle": {
+                            "description": "Job title the person entered on their profile, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "expiresAt": {
                             "anyOf": [
                               {
@@ -33836,6 +34748,8 @@
                         "required": [
                           "accountId",
                           "name",
+                          "jobTitle",
+                          "pictureRef",
                           "expiresAt"
                         ],
                         "additionalProperties": false,
@@ -33863,6 +34777,8 @@
                     {
                       "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
                       "name": "Ada Lovelace",
+                      "jobTitle": "Head of Engineering",
+                      "pictureRef": "5f2b8c1d9a0e4b7c",
                       "expiresAt": null
                     }
                   ],
@@ -140327,6 +141243,20 @@
                                 "null"
                               ]
                             },
+                            "jobTitle": {
+                              "description": "Job title the person entered on their profile, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "email": {
                               "description": "E-mail address of the owner, or null when the caller may not see it.",
                               "type": [
@@ -140342,6 +141272,8 @@
                           "required": [
                             "id",
                             "name",
+                            "jobTitle",
+                            "pictureRef",
                             "email",
                             "active"
                           ],
@@ -140434,6 +141366,8 @@
                   "owner": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "name": "Anna Weber",
+                    "jobTitle": "Service Manager",
+                    "pictureRef": null,
                     "email": "anna.weber@example.org",
                     "active": true
                   },
@@ -147082,6 +148016,13 @@
                               "null"
                             ]
                           },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "active": {
                             "type": "boolean",
                             "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
@@ -147094,6 +148035,7 @@
                         "required": [
                           "id",
                           "name",
+                          "pictureRef",
                           "active",
                           "canRead"
                         ],
@@ -147377,6 +148319,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "pictureRef": null,
                       "active": true,
                       "canRead": true
                     }
@@ -147783,6 +148726,13 @@
                               "null"
                             ]
                           },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "active": {
                             "type": "boolean",
                             "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
@@ -147795,6 +148745,7 @@
                         "required": [
                           "id",
                           "name",
+                          "pictureRef",
                           "active",
                           "canRead"
                         ],
@@ -148078,6 +149029,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "pictureRef": null,
                       "active": true,
                       "canRead": true
                     }
@@ -150688,6 +151640,13 @@
                               "null"
                             ]
                           },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "attendance": {
                             "anyOf": [
                               {
@@ -150723,6 +151682,7 @@
                         "required": [
                           "id",
                           "name",
+                          "pictureRef",
                           "attendance",
                           "member",
                           "active",
@@ -150781,6 +151741,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "pictureRef": null,
                       "attendance": "present",
                       "member": true,
                       "active": true,
@@ -155233,11 +156194,19 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "id",
-                            "name"
+                            "name",
+                            "pictureRef"
                           ],
                           "additionalProperties": false,
                           "description": "A person."
@@ -155300,7 +156269,8 @@
                     "partners": [
                       {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-                        "name": "Anna Berger"
+                        "name": "Anna Berger",
+                        "pictureRef": null
                       }
                     ],
                     "nextMeeting": {
@@ -173050,6 +174020,20 @@
                             "type": "string",
                             "description": "Display name of the account."
                           },
+                          "jobTitle": {
+                            "description": "Job title the person entered on their profile, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "email": {
                             "description": "E-mail address, or null for service accounts.",
                             "type": [
@@ -173148,6 +174132,8 @@
                         "required": [
                           "accountId",
                           "name",
+                          "jobTitle",
+                          "pictureRef",
                           "email",
                           "accountType",
                           "kind",
@@ -173180,6 +174166,8 @@
                     {
                       "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
                       "name": "Ada Lovelace",
+                      "jobTitle": "Head of Engineering",
+                      "pictureRef": "5f2b8c1d9a0e4b7c",
                       "email": "ada@example.org",
                       "accountType": "standard",
                       "kind": "member",
@@ -196764,11 +197752,19 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "pictureRef": {
+                                    "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   }
                                 },
                                 "required": [
                                   "id",
-                                  "name"
+                                  "name",
+                                  "pictureRef"
                                 ],
                                 "additionalProperties": false
                               },
@@ -196918,11 +197914,19 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "pictureRef": {
+                                    "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   }
                                 },
                                 "required": [
                                   "id",
-                                  "name"
+                                  "name",
+                                  "pictureRef"
                                 ],
                                 "additionalProperties": false
                               },
@@ -196975,11 +197979,19 @@
                                             "string",
                                             "null"
                                           ]
+                                        },
+                                        "pictureRef": {
+                                          "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
                                         }
                                       },
                                       "required": [
                                         "id",
-                                        "name"
+                                        "name",
+                                        "pictureRef"
                                       ],
                                       "additionalProperties": false
                                     },
@@ -197144,7 +198156,8 @@
                       "parentId": null,
                       "author": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-                        "name": "Lukas Hofer"
+                        "name": "Lukas Hofer",
+                        "pictureRef": null
                       },
                       "body": {
                         "type": "doc",
@@ -239081,6 +240094,13 @@
                               "null"
                             ]
                           },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "active": {
                             "type": "boolean",
                             "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
@@ -239093,6 +240113,7 @@
                         "required": [
                           "id",
                           "name",
+                          "pictureRef",
                           "active",
                           "canRead"
                         ],
@@ -239376,6 +240397,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "pictureRef": null,
                       "active": true,
                       "canRead": true
                     }
@@ -244743,11 +245765,19 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "pictureRef": {
+                                    "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   }
                                 },
                                 "required": [
                                   "id",
-                                  "name"
+                                  "name",
+                                  "pictureRef"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A person."
@@ -244778,11 +245808,19 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "pictureRef": {
+                                    "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   }
                                 },
                                 "required": [
                                   "id",
-                                  "name"
+                                  "name",
+                                  "pictureRef"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A person."
@@ -244990,7 +246028,8 @@
                       ],
                       "owner": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-                        "name": "Anna Weber"
+                        "name": "Anna Weber",
+                        "pictureRef": null
                       },
                       "ownerActive": true,
                       "formerOwner": null,

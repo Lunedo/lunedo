@@ -1,6 +1,5 @@
 import { groupDescriptionSchema, groupNameSchema } from "@lunedo/shared";
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -34,6 +33,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -233,8 +233,22 @@ export function GroupScreen() {
               key={member.accountId}
               className="flex items-center gap-3 border-border border-b py-2 last:border-b-0"
             >
-              <Avatar name={member.name} size="sm" />
-              <span className="flex-1">{member.name}</span>
+              <PersonAvatar
+                id={member.accountId}
+                name={member.name}
+                pictureRef={member.pictureRef}
+                size="sm"
+              />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate" title={member.name}>
+                  {member.name}
+                </span>
+                {member.jobTitle ? (
+                  <span className="truncate text-sm text-text-muted" title={member.jobTitle}>
+                    {member.jobTitle}
+                  </span>
+                ) : null}
+              </span>
               {member.expiresAt ? (
                 <Badge variant="warning">{t("groups.until", { date: format.date(member.expiresAt) })}</Badge>
               ) : null}

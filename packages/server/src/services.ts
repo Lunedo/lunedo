@@ -7,6 +7,7 @@ import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
 import { accountPrincipal } from "./accounts/principal.js";
+import { ProfileService } from "./accounts/profile.js";
 import {
   ANNOUNCEMENT_STARTS_SCHEDULE,
   AnnouncementService,
@@ -344,6 +345,7 @@ export interface AccountServices {
   accessExplanations: AccessExplanationService;
   giveAccessDrafts: GiveAccessDraftService;
   files: FileService;
+  profiles: ProfileService;
   displayVersions: DisplayVersionService;
   storage: StorageService;
   backups: BackupService;
@@ -1256,6 +1258,7 @@ export function createAccountServices(options: {
     accessExplanations,
     giveAccessDrafts,
     files,
+    profiles: new ProfileService({ database, files, audit, people, storage }),
     displayVersions,
     storage,
     attachments,

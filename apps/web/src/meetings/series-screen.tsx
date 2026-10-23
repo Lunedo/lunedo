@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Badge,
   Button,
   buttonClassName,
@@ -33,6 +32,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
 import { TaskTable } from "../collaboration/task-table.js";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { WatchMenu } from "../notifications/watch-menu.js";
@@ -205,7 +205,13 @@ function SeriesView({ series }: { series: Series }) {
             key={member.id}
             className="flex items-center gap-2 rounded-full border border-border py-1 pr-3 pl-1 text-sm"
           >
-            <Avatar name={member.name ?? "?"} size="sm" decorative />
+            <PersonAvatar
+              id={member.id}
+              name={member.name ?? "?"}
+              pictureRef={member.pictureRef}
+              size="sm"
+              decorative
+            />
             <span>{member.name ?? t("meetings.unknownPerson")}</span>
             {!member.active ? (
               <Badge variant="neutral">{t("meetings.inactive")}</Badge>

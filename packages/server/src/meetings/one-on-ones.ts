@@ -21,7 +21,7 @@ export interface OneOnOneSummary {
   spaceId: string;
   spaceKey: string;
   seriesId: string | null;
-  partners: { id: string; name: string | null }[];
+  partners: { id: string; name: string | null; pictureRef: string | null }[];
   nextMeeting: { id: string; startsAt: Date | null } | null;
 }
 
@@ -166,8 +166,13 @@ export class OneOnOneService {
       limit 200`);
     const summaries: OneOnOneSummary[] = [];
     for (const row of result.rows) {
-      const partners = await this.#database.execute<{ id: string; name: string | null }>(sql`
-        select a.id, ${this.#people.visibleName(actor, sql`a`)} as name from space_permissions sp
+      const partners = await this.#database.execute<{
+        id: string;
+        name: string | null;
+        picture_ref: string | null;
+      }>(sql`
+        select a.id, ${this.#people.visibleName(actor, sql`a`)} as name,
+          ${this.#people.visiblePictureRef(actor, sql`a`)} as picture_ref from space_permissions sp
         join accounts a on a.id = sp.principal_id
         where sp.space_id = ${row.space_id} and sp.principal_kind = 'account' and a.id <> ${accountId}
           and a.state = 'active' and exists (select 1 from spaces ps where ps.id = sp.space_id
@@ -177,7 +182,11 @@ export class OneOnOneService {
         spaceId: row.space_id,
         spaceKey: row.key,
         seriesId: row.series_id,
-        partners: partners.rows,
+        partners: partners.rows.map((partner) => ({
+          id: partner.id,
+          name: partner.name,
+          pictureRef: partner.picture_ref,
+        })),
         nextMeeting: row.meeting_id
           ? { id: row.meeting_id, startsAt: row.starts_at === null ? null : new Date(row.starts_at) }
           : null,

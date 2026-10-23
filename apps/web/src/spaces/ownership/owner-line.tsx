@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -18,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { ActionFailure } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { spaceKeys } from "../space-queries.js";
@@ -26,6 +26,8 @@ import { ownershipKeys } from "./ownership-queries.js";
 export interface OwnerInfo {
   id: string;
   name: string | null;
+  jobTitle: string | null;
+  pictureRef: string | null;
   email: string | null;
   active: boolean;
 }
@@ -67,11 +69,16 @@ function PersonCard({ owner }: { owner: OwnerInfo }) {
     >
       <div className="flex min-w-field flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Avatar name={name} />
+          <PersonAvatar id={owner.id} name={name} pictureRef={owner.pictureRef} />
           <div className="flex min-w-0 flex-col">
             <span className="truncate font-medium" title={name}>
               {name}
             </span>
+            {owner.jobTitle ? (
+              <span className="truncate text-sm text-text-muted" title={owner.jobTitle}>
+                {owner.jobTitle}
+              </span>
+            ) : null}
             {owner.active ? null : (
               <span className="text-sm text-text-muted">{t("ownership.inactiveOwner")}</span>
             )}

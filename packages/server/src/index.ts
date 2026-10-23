@@ -70,6 +70,14 @@ export {
   type TokenGrant,
   type TokenScopes,
 } from "./accounts/principal.js";
+export {
+  PICTURE_MAX_BYTES,
+  type Profile,
+  type ProfileChange,
+  ProfileError,
+  type ProfileErrorCode,
+  ProfileService,
+} from "./accounts/profile.js";
 export { accountScopeChain } from "./accounts/scope.js";
 export {
   ANNOUNCEMENT_LINK_LABEL_MAX_LENGTH,

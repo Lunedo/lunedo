@@ -282,6 +282,8 @@ export class ItemsController {
         owner: {
           id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
           name: "Anna Weber",
+          jobTitle: "Service Manager",
+          pictureRef: null,
           email: "anna.weber@example.org",
           active: true,
         },

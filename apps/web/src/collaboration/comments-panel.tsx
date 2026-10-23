@@ -1,5 +1,5 @@
 import { commentKit, type DocumentJson, type TextAnchor } from "@lunedo/editor-schema";
-import { Avatar, Badge, Button, IconButton, Menu, Skeleton, useToast } from "@lunedo/ui";
+import { Badge, Button, IconButton, Menu, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -173,7 +174,13 @@ function CommentView({
   const name = comment.author?.name ?? t("editor.mention.unknown");
   return (
     <div className="flex gap-2">
-      <Avatar name={name} size="sm" decorative />
+      <PersonAvatar
+        id={comment.author?.id}
+        name={name}
+        pictureRef={comment.author?.pictureRef}
+        size="sm"
+        decorative
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2">
           <span className="min-w-0 truncate text-sm font-semibold" title={name}>

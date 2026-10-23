@@ -51,6 +51,8 @@ export const auditEventNames = [
   "account.passwordReset",
   "account.emailChangeRequested",
   "account.emailChanged",
+  "account.profileChanged",
+  "account.pictureChanged",
   "account.deactivated",
   "account.reactivated",
   "account.sessionsEnded",

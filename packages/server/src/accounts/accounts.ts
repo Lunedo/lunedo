@@ -27,6 +27,7 @@ export interface Account {
   state: AccountState;
   email: string | null;
   name: string;
+  pictureRef: string | null;
   passwordHash: string | null;
   passwordChangedAt: Date | null;
   homeOrganizationId: string | null;
@@ -39,6 +40,7 @@ const accountColumns = {
   state: accounts.state,
   email: accounts.email,
   name: accounts.name,
+  pictureRef: accounts.pictureRef,
   passwordHash: accounts.passwordHash,
   passwordChangedAt: accounts.passwordChangedAt,
   homeOrganizationId: accounts.homeOrganizationId,

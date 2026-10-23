@@ -56,6 +56,8 @@ export function isTimeZone(value: string): boolean {
 export const emailSchema = z.email().max(254);
 export const signInEmailSchema = z.string().trim().min(1).max(254);
 export const accountNameSchema = z.string().trim().min(1).max(200);
+export const JOB_TITLE_MAX_LENGTH = 100;
+export const jobTitleSchema = z.string().trim().max(JOB_TITLE_MAX_LENGTH);
 export const passwordSchema = z.string().min(1).max(PASSWORD_MAX_LENGTH);
 export const totpCodeSchema = z.string().trim().max(16);
 export const recoveryCodeSchema = z.string().trim().max(64);

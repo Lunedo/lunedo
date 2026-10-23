@@ -1,9 +1,10 @@
-import { Avatar, Button, Section, Skeleton } from "@lunedo/ui";
+import { Button, Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CalendarClock, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { itemSlug } from "../spaces/item-paths.js";
@@ -88,7 +89,13 @@ export function OneOnOnes() {
                   }
                   className="flex min-h-hit items-center gap-3 rounded-sm px-2 py-1 hover:bg-hover focus-visible:focus-ring"
                 >
-                  <Avatar name={name} size="sm" decorative />
+                  <PersonAvatar
+                    id={entry.partners.length === 1 ? entry.partners[0]?.id : null}
+                    name={name}
+                    pictureRef={entry.partners.length === 1 ? entry.partners[0]?.pictureRef : null}
+                    size="sm"
+                    decorative
+                  />
                   <span className="min-w-0 flex-1 truncate" title={name}>
                     {name}
                   </span>

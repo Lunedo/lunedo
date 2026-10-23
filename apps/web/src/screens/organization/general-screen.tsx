@@ -14,6 +14,7 @@ import {
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { IMAGE_MAX_BYTES, IMAGE_TYPES, toBase64 } from "../../components/image-upload.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { HelpTargetSection } from "../../knowledge-bases/help-target.js";
@@ -24,16 +25,6 @@ import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/general");
-
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
-const LOGO_MAX_BYTES = 256 * 1024;
-
-async function toBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
 
 export function OrganizationGeneralScreen() {
   const { t } = useTranslation();
@@ -154,7 +145,7 @@ function LogoRow({
   };
 
   const upload = async (file: File) => {
-    if (!(LOGO_TYPES as readonly string[]).includes(file.type) || file.size > LOGO_MAX_BYTES) {
+    if (!(IMAGE_TYPES as readonly string[]).includes(file.type) || file.size > IMAGE_MAX_BYTES) {
       toast({ title: t("failures.uploadLogo"), description: t("problems.invalidLogo"), variant: "error" });
       return;
     }
@@ -164,7 +155,7 @@ function LogoRow({
       await request(() =>
         api.PUT("/api/v1/organizations/{organizationId}/logo", {
           params: { path: { organizationId: organization.id } },
-          body: { contentType: file.type as (typeof LOGO_TYPES)[number], data },
+          body: { contentType: file.type as (typeof IMAGE_TYPES)[number], data },
         }),
       );
       await refresh();
@@ -197,7 +188,7 @@ function LogoRow({
               <input
                 ref={input}
                 type="file"
-                accept={LOGO_TYPES.join(",")}
+                accept={IMAGE_TYPES.join(",")}
                 className="sr-only"
                 aria-label={t("organization.general.uploadLogo")}
                 tabIndex={-1}

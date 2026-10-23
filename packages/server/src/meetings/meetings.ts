@@ -73,6 +73,7 @@ function activeAccount(account: SQL, organizationId: string | null): SQL {
 export interface SeriesMember {
   id: string;
   name: string | null;
+  pictureRef: string | null;
   active: boolean;
   canRead: boolean;
 }
@@ -116,6 +117,7 @@ export interface SeriesDetails {
 export interface MeetingAttendee {
   id: string;
   name: string | null;
+  pictureRef: string | null;
   attendance: Attendance | null;
   member: boolean | null;
   active: boolean;
@@ -560,9 +562,11 @@ export class MeetingService {
     const result = await this.#database.execute<{
       account_id: string;
       name: string | null;
+      picture_ref: string | null;
       active: boolean;
     }>(sql`
       select mm.account_id, ${this.#people.visibleName(viewer, sql`a`)} as name,
+        ${this.#people.visiblePictureRef(viewer, sql`a`)} as picture_ref,
         ${activeAccount(sql`a`, series.organization_id)} as active
       from meeting_series_members mm join accounts a on a.id = mm.account_id
       where mm.series_id = ${series.item_id} order by mm.position, mm.account_id`);
@@ -571,6 +575,7 @@ export class MeetingService {
       members.push({
         id: row.account_id,
         name: row.name,
+        pictureRef: row.picture_ref,
         active: row.name === null || row.active,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
@@ -789,11 +794,13 @@ export class MeetingService {
     const attendees = await this.#database.execute<{
       account_id: string;
       name: string | null;
+      picture_ref: string | null;
       attendance: Attendance | null;
       member: boolean;
       active: boolean;
     }>(sql`
-      select a.account_id, ${this.#people.visibleName(viewer, sql`p`)} as name, a.attendance,
+      select a.account_id, ${this.#people.visibleName(viewer, sql`p`)} as name,
+        ${this.#people.visiblePictureRef(viewer, sql`p`)} as picture_ref, a.attendance,
         ${activeAccount(sql`p`, series.organization_id)} as active,
         exists (select 1 from meeting_series_members mm where mm.series_id = ${meeting.series_id}
           and mm.account_id = a.account_id) as member
@@ -804,6 +811,7 @@ export class MeetingService {
       list.push({
         id: row.account_id,
         name: row.name,
+        pictureRef: row.picture_ref,
         attendance: row.attendance,
         member: seriesVisible ? row.member : null,
         active: row.name === null || row.active,

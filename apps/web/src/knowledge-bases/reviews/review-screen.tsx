@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Button,
   buttonClassName,
   Checkbox,
@@ -13,6 +12,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen, Languages, SquarePen, UserRoundX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { LoadError } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -65,7 +65,7 @@ function Owner({ row }: { row: ReviewItem }) {
     const name = row.owner.name ?? t("ownership.someone");
     return (
       <span className="inline-flex min-w-0 items-center gap-1">
-        <Avatar name={name} size="sm" decorative />
+        <PersonAvatar id={row.owner.id} name={name} pictureRef={row.owner.pictureRef} size="sm" decorative />
         <span className="truncate" title={name}>
           {name}
         </span>

@@ -20,6 +20,7 @@ import {
   MissingTargetSecretError,
   OrganizationError,
   PasswordPolicyError,
+  ProfileError,
   ProviderResponseError,
   PushSubscriptionError,
   RelyingPartyError,
@@ -247,6 +248,8 @@ function map(error: unknown): Mapped | null {
   if (error instanceof ExportError) {
     return { code: error.code === "exportNotFound" ? "notFound" : error.code, detail: error.message };
   }
+  if (error instanceof ProfileError)
+    return { code: error.code === "accountNotFound" ? "notFound" : error.code, detail: error.message };
   if (error instanceof OrganizationError)
     return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
   if (error instanceof ImportError) {

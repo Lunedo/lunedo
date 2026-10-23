@@ -230,6 +230,9 @@ describe("the web client", () => {
     api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
       "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
       "GET /api/v1/account/identities": () => ({ body: [] }),
     });
     await renderApp("/settings/preferences");
@@ -246,6 +249,9 @@ describe("the web client", () => {
   it("opens the profile first, with the name, the e-mail address and the linked sign-ins", async () => {
     api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
       "GET /api/v1/account/identities": () => ({
         body: [
           {
@@ -269,7 +275,7 @@ describe("the web client", () => {
     const links = within(navigation).getAllByRole("link");
     expect(links[0]?.textContent).toBe("Profile");
     expect(links[0]?.getAttribute("aria-current")).toBe("page");
-    expect(screen.getByText("Olivia Owner")).toBeTruthy();
+    expect(((await screen.findByLabelText("Display name")) as HTMLInputElement).value).toBe("Olivia Owner");
     expect(screen.getByText("olivia@example.org", { selector: "[data-setting-hint]" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change e-mail address" })).toBeTruthy();
     expect(await screen.findByText("Entra ID")).toBeTruthy();

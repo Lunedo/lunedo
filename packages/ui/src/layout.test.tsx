@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KeyRound, Shield, Users } from "lucide-react";
 import { type ComponentProps, useState } from "react";
@@ -208,6 +208,16 @@ describe("feedback components", () => {
     expect(avatar.textContent).toBe("");
     expect(avatar.querySelector("[data-initials]")?.getAttribute("data-initials")).toBe("LH");
     expect(screen.queryByRole("img", { name: "Tomas Kern" })).toBeNull();
+  });
+
+  it("show the picture of a person and fall back to the initials when it does not load", () => {
+    renderUi(<Avatar name="Lena Hofer" src="/pictures/lena.png" />);
+    const picture = screen.getByRole("img", { name: "Lena Hofer" });
+    expect(picture.tagName).toBe("IMG");
+    fireEvent.error(picture);
+    const fallback = screen.getByRole("img", { name: "Lena Hofer" });
+    expect(fallback.tagName).toBe("SPAN");
+    expect(fallback.querySelector("[data-initials]")?.getAttribute("data-initials")).toBe("LH");
   });
 
   it("render badges, notices, empty states and spinners", () => {

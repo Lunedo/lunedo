@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -32,6 +31,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
@@ -229,10 +229,22 @@ export function MembersScreen() {
                   sortable: true,
                   cell: (member) => (
                     <div className="flex items-center gap-3">
-                      <Avatar name={member.name} size="sm" />
+                      <PersonAvatar
+                        id={member.accountId}
+                        name={member.name}
+                        pictureRef={member.pictureRef}
+                        size="sm"
+                      />
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate font-medium">{member.name}</span>
-                        <span className="truncate text-sm text-text-muted">{member.email}</span>
+                        <span className="truncate font-medium" title={member.name}>
+                          {member.name}
+                        </span>
+                        <span
+                          className="truncate text-sm text-text-muted"
+                          title={[member.jobTitle, member.email].filter(Boolean).join(" · ")}
+                        >
+                          {[member.jobTitle, member.email].filter(Boolean).join(" · ")}
+                        </span>
                       </div>
                     </div>
                   ),

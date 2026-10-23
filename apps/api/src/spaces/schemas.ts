@@ -18,7 +18,7 @@ import {
 } from "@lunedo/server";
 import { contentLanguages } from "@lunedo/shared";
 import { z } from "zod";
-import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, jobTitleField, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 
 export const visibilitySchema = z
   .enum(spaceVisibilities)
@@ -537,6 +537,8 @@ export const itemDetailsSchema = treeItemSchema
           .string()
           .nullable()
           .describe("Name of the owner, or null when the caller may not see the person."),
+        jobTitle: jobTitleField,
+        pictureRef: pictureRefField,
         email: z
           .string()
           .nullable()

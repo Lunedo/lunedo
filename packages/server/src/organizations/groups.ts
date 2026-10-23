@@ -38,6 +38,8 @@ export interface GroupDetails extends Group {
 export interface GroupMember {
   accountId: string;
   name: string;
+  jobTitle: string | null;
+  pictureRef: string | null;
   expiresAt: Date | null;
 }
 
@@ -135,6 +137,8 @@ export class GroupService {
       .select({
         accountId: groupMembers.accountId,
         name: accounts.name,
+        jobTitle: accounts.jobTitle,
+        pictureRef: accounts.pictureRef,
         expiresAt: groupMembers.expiresAt,
         sortName,
       })

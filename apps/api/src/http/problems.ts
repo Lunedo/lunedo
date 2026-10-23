@@ -27,6 +27,8 @@ export const problems = {
   expiryTooLate: { status: 400, title: "The expiry exceeds the maximum lifetime" },
   invalidOwner: { status: 400, title: "The owner is not valid" },
   invalidLogo: { status: 400, title: "The logo is not a supported image" },
+  invalidPicture: { status: 400, title: "The picture is not a supported image" },
+  nameFromProvider: { status: 409, title: "The name is set by an identity provider" },
   invalidProviderConfiguration: { status: 400, title: "The identity provider configuration is not valid" },
   invalidScopes: { status: 400, title: "The scopes are not valid" },
   invalidResponsible: { status: 400, title: "The responsible person is not valid" },

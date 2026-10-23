@@ -41,6 +41,7 @@ export class CommentInvalidError extends Error {
 export interface CommentPerson {
   id: string;
   name: string | null;
+  pictureRef: string | null;
 }
 
 export interface Comment {
@@ -151,12 +152,14 @@ export class CommentService {
       limit ${MAX_COMMENTS_PER_PAGE}`);
     const rows = result.rows;
     const anchored = await this.#anchoredForViewer(viewer, itemId);
-    const names = await this.#people.visibleNames(
+    const visible = await this.#people.visiblePeople(
       viewer,
       rows.flatMap((row) => [row.author_id, row.resolved_by].filter((id): id is string => id !== null)),
     );
     const person = (id: string | null): CommentPerson | null =>
-      id ? { id, name: names.get(id) ?? null } : null;
+      id
+        ? { id, name: visible.get(id)?.name ?? null, pictureRef: visible.get(id)?.pictureRef ?? null }
+        : null;
     const reactions = await this.#reactions.forComments(
       viewer,
       itemId,

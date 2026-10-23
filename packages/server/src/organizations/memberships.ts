@@ -38,6 +38,8 @@ export class LastOwnerError extends OrganizationError {
 export interface Member {
   accountId: string;
   name: string;
+  jobTitle: string | null;
+  pictureRef: string | null;
   email: string | null;
   accountType: string;
   kind: MembershipKind;
@@ -137,6 +139,8 @@ export class MembershipService {
         sortName,
         accountId: memberships.accountId,
         name: accounts.name,
+        jobTitle: accounts.jobTitle,
+        pictureRef: accounts.pictureRef,
         email: accounts.email,
         accountType: accounts.type,
         kind: memberships.kind,

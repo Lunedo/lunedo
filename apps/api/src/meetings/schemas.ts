@@ -15,7 +15,7 @@ import {
   weekdays,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleDocument } from "../spaces/schemas.js";
 
 const weekday = z.enum(weekdays).describe("Weekday as in iCalendar: `MO` to `SU`.");
@@ -152,6 +152,7 @@ const memberSchema = z
   .object({
     id: uuid("Account ID."),
     name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+    pictureRef: pictureRefField,
     active: z
       .boolean()
       .describe(
@@ -244,7 +245,15 @@ export const exampleSeries = {
   parentId: null,
   archived: false,
   oneOnOne: false,
-  members: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", active: true, canRead: true }],
+  members: [
+    {
+      id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+      name: "Anna Berger",
+      pictureRef: null,
+      active: true,
+      canRead: true,
+    },
+  ],
   schedule: {
     rhythm: { frequency: "weekly", interval: 1, weekdays: ["MO"] },
     recurrence: "FREQ=WEEKLY;BYDAY=MO",
@@ -313,6 +322,7 @@ export const meetingSchema = z
           .object({
             id: uuid("Account ID."),
             name: z.string().nullable().describe("Name, if visible."),
+            pictureRef: pictureRefField,
             attendance: extensibleEnum(attendanceValues, "Attendance, or null when not recorded.").nullable(),
             member: z
               .boolean()
@@ -353,6 +363,7 @@ export const exampleMeeting = {
     {
       id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
       name: "Anna Berger",
+      pictureRef: null,
       attendance: "present",
       member: true,
       active: true,
@@ -670,7 +681,11 @@ export const oneOnOneSchema = z
     partners: z
       .array(
         z
-          .object({ id: uuid("Account ID."), name: z.string().nullable().describe("Name.") })
+          .object({
+            id: uuid("Account ID."),
+            name: z.string().nullable().describe("Name."),
+            pictureRef: pictureRefField,
+          })
           .describe("A person."),
       )
       .describe("The other people of the one-on-one."),

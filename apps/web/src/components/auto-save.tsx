@@ -1,14 +1,16 @@
 import {
   Button,
   Field,
+  FieldError,
   focusFirstInvalidSoon,
   Input,
   PasswordInput,
   type SaveState,
   SaveStatus,
+  SettingRow,
   Textarea,
 } from "@lunedo/ui";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
 import { isRetryable } from "../errors/failure.js";
@@ -107,26 +109,18 @@ export function SaveIndicator({ tracker }: { tracker: SaveTracker }) {
   );
 }
 
-export function AutoSaveTextField({
-  label,
-  hint,
+function useAutoSaveText({
   value,
   schema,
   onSave,
-  disabled = false,
-  multiline = false,
-  className,
+  multiline,
   invalidMessage,
 }: {
-  invalidMessage?: string;
-  label: string;
-  hint?: string;
   value: string;
-  schema?: z.ZodType<string>;
+  schema: z.ZodType<string> | undefined;
   onSave: (value: string) => Promise<unknown>;
-  disabled?: boolean;
-  multiline?: boolean;
-  className?: string;
+  multiline: boolean;
+  invalidMessage: string | undefined;
 }) {
   const { t } = useTranslation();
   const tracker = useSaveState();
@@ -159,6 +153,37 @@ export function AutoSaveTextField({
 
   const fieldError =
     invalid ?? (tracker.state === "error" && tracker.error && !tracker.retryable ? tracker.error : undefined);
+  return { tracker, draft, setDraft, commit, fieldError };
+}
+
+export function AutoSaveTextField({
+  label,
+  hint,
+  value,
+  schema,
+  onSave,
+  disabled = false,
+  multiline = false,
+  className,
+  invalidMessage,
+}: {
+  invalidMessage?: string;
+  label: string;
+  hint?: string;
+  value: string;
+  schema?: z.ZodType<string>;
+  onSave: (value: string) => Promise<unknown>;
+  disabled?: boolean;
+  multiline?: boolean;
+  className?: string;
+}) {
+  const { tracker, draft, setDraft, commit, fieldError } = useAutoSaveText({
+    value,
+    schema,
+    onSave,
+    multiline,
+    invalidMessage,
+  });
   const control = multiline ? (
     <Textarea
       rows={2}
@@ -190,6 +215,72 @@ export function AutoSaveTextField({
       </Field>
       {tracker.state === "error" && !tracker.retryable ? null : <SaveIndicator tracker={tracker} />}
     </div>
+  );
+}
+
+export function AutoSaveTextRow({
+  label,
+  hint,
+  value,
+  schema,
+  onSave,
+  disabled = false,
+  invalidMessage,
+  maxLength,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  schema?: z.ZodType<string>;
+  onSave: (value: string) => Promise<unknown>;
+  disabled?: boolean;
+  invalidMessage?: string;
+  maxLength?: number;
+}) {
+  const id = useId();
+  const { tracker, draft, setDraft, commit, fieldError } = useAutoSaveText({
+    value,
+    schema,
+    onSave,
+    multiline: false,
+    invalidMessage,
+  });
+  const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const describedBy = [fieldError ? errorId : null, hint ? hintId : null].filter(Boolean).join(" ");
+  return (
+    <SettingRow
+      label={<label htmlFor={id}>{label}</label>}
+      control={
+        <Input
+          id={id}
+          value={draft}
+          disabled={disabled}
+          invalid={Boolean(fieldError)}
+          {...(describedBy ? { "aria-describedby": describedBy } : {})}
+          {...(maxLength ? { maxLength } : {})}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void commit();
+            }
+          }}
+        />
+      }
+      description={
+        fieldError || hint ? (
+          <>
+            {fieldError ? <FieldError id={errorId}>{fieldError}</FieldError> : null}
+            {hint ? <span id={hintId}>{hint}</span> : null}
+          </>
+        ) : undefined
+      }
+      status={
+        tracker.state === "error" && !tracker.retryable ? undefined : <SaveIndicator tracker={tracker} />
+      }
+    />
   );
 }
 

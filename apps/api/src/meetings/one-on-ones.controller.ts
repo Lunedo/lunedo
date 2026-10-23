@@ -20,7 +20,7 @@ const exampleOneOnOne = {
   spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b00",
   spaceKey: "MSAB",
   seriesId: exampleSeries.id,
-  partners: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" }],
+  partners: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", pictureRef: null }],
   nextMeeting: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10", startsAt: "2026-10-15T12:00:00.000Z" },
 };
 const createdSchema = z

@@ -59,6 +59,7 @@ async function describeSession(services: AccountServices, session: Session) {
           id: account.id,
           email: account.email,
           name: account.name,
+          pictureRef: account.pictureRef,
           type: account.type,
           homeOrganizationId: account.homeOrganizationId,
         }

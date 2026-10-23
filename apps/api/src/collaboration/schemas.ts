@@ -27,7 +27,7 @@ import {
   treeItemKinds,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleItem, exampleSpace, pageReferencesSchema } from "../spaces/schemas.js";
 
 const person = (description: string) =>
@@ -35,6 +35,15 @@ const person = (description: string) =>
     .object({
       id: uuid("Account ID."),
       name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+    })
+    .describe(description);
+
+const personWithPicture = (description: string) =>
+  z
+    .object({
+      id: uuid("Account ID."),
+      name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+      pictureRef: pictureRefField,
     })
     .describe(description);
 
@@ -64,7 +73,7 @@ const commentShape = {
   id: uuid("ID of the comment."),
   itemId: uuid("Page or blog post the comment belongs to."),
   parentId: uuid("The comment this replies to, or null for a new thread.").nullable(),
-  author: person("Author, or null for a deleted comment.").nullable(),
+  author: personWithPicture("Author, or null for a deleted comment.").nullable(),
   body: commentBodySchema.nullable().describe("Content, or null for a deleted comment."),
   deleted: z
     .boolean()
@@ -94,7 +103,7 @@ export const threadSchema = z
       .nullable()
       .describe("The whiteboard element the comment refers to, also after it was removed, or null."),
     resolvedAt: timestamp("When the inline comment was resolved, or null while it is open.").nullable(),
-    resolvedBy: person("Who resolved it, or null.").nullable(),
+    resolvedBy: personWithPicture("Who resolved it, or null.").nullable(),
     replies: z.array(commentSchema).describe("Replies, oldest first. Replies are one level deep."),
   })
   .describe("A comment with its replies.");
@@ -112,7 +121,7 @@ export const exampleThread = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b01",
   itemId: exampleItem.id,
   parentId: null,
-  author: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer" },
+  author: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer", pictureRef: null },
   body: exampleCommentBody,
   deleted: false,
   createdAt: "2026-10-06T08:00:00.000Z",

@@ -11,6 +11,12 @@ export interface Person {
   type: string;
 }
 
+export interface VisiblePerson {
+  name: string;
+  jobTitle: string | null;
+  pictureRef: string | null;
+}
+
 export class PeopleService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
@@ -84,6 +90,10 @@ export class PeopleService {
     return sql`(case when ${this.visibleCondition(viewer, sql`${account}.id`)} then ${account}.name end)`;
   }
 
+  visiblePictureRef(viewer: Principal, account: SQL): SQL {
+    return sql`(case when ${this.visibleCondition(viewer, sql`${account}.id`)} then ${account}.picture_ref end)`;
+  }
+
   async visibleNames(viewer: Principal, ids: readonly string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const result = await this.#database.execute<{ id: string; name: string }>(sql`
@@ -91,6 +101,27 @@ export class PeopleService {
       where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
         and ${this.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`);
     return new Map(result.rows.map((row) => [row.id, row.name]));
+  }
+
+  async visiblePeople(viewer: Principal, ids: readonly string[]): Promise<Map<string, VisiblePerson>> {
+    if (ids.length === 0) return new Map();
+    const result = await this.#database.execute<{
+      id: string;
+      name: string;
+      job_title: string | null;
+      picture_ref: string | null;
+    }>(sql`
+      select a.id, coalesce(m.name, a.name) as name, case when m.id is null then a.job_title else m.job_title end as job_title,
+        case when m.id is null then a.picture_ref else m.picture_ref end as picture_ref
+      from accounts a left join accounts m on m.id = a.merged_into_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
+        and ${this.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`);
+    return new Map(
+      result.rows.map((row) => [
+        row.id,
+        { name: row.name, jobTitle: row.job_title, pictureRef: row.picture_ref },
+      ]),
+    );
   }
 
   async names(ids: readonly string[], executor: Executor = this.#database): Promise<Map<string, string>> {

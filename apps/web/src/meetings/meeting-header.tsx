@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -27,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { peopleLoader } from "../collaboration/people.js";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
@@ -239,7 +239,13 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
               key={attendee.id}
               className="flex items-center gap-2 rounded-full border border-border py-1 pr-1 pl-1 text-sm"
             >
-              <Avatar name={name} size="sm" decorative />
+              <PersonAvatar
+                id={attendee.id}
+                name={name}
+                pictureRef={attendee.pictureRef}
+                size="sm"
+                decorative
+              />
               <span className="max-w-card truncate" title={name}>
                 {name}
               </span>

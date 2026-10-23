@@ -22,6 +22,8 @@ export type OwnerLoss = "none" | "deactivated" | "membershipEnded";
 export interface ItemOwner {
   id: string;
   name: string | null;
+  jobTitle: string | null;
+  pictureRef: string | null;
   email: string | null;
   active: boolean;
 }
@@ -114,9 +116,15 @@ export class OwnershipService {
       where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row?.owner_id) return null;
-    const names = await this.#people.visibleNames(viewer, [row.owner_id]);
-    const name = names.get(row.owner_id) ?? null;
-    return { id: row.owner_id, name, email: name === null ? null : row.email, active: row.active };
+    const person = (await this.#people.visiblePeople(viewer, [row.owner_id])).get(row.owner_id);
+    return {
+      id: row.owner_id,
+      name: person?.name ?? null,
+      jobTitle: person?.jobTitle ?? null,
+      pictureRef: person?.pictureRef ?? null,
+      email: person ? row.email : null,
+      active: row.active,
+    };
   }
 
   async canTransfer(actor: Principal, itemId: string, executor: Executor = this.#database): Promise<boolean> {

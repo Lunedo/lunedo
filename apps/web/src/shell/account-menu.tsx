@@ -1,7 +1,8 @@
-import { Avatar, Menu, RailButton } from "@lunedo/ui";
+import { Menu, RailButton } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { LockKeyhole, LogOut, Palette, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { useShell } from "./shell.js";
 import { useSession } from "./shell-context.js";
 
@@ -14,7 +15,19 @@ export function AccountRailItem() {
   return (
     <Menu
       align="start"
-      trigger={<RailButton label={t("rail.account")} icon={<Avatar name={name} size="sm" />} />}
+      trigger={
+        <RailButton
+          label={t("rail.account")}
+          icon={
+            <PersonAvatar
+              id={session.account?.id}
+              name={name}
+              pictureRef={session.account?.pictureRef}
+              size="sm"
+            />
+          }
+        />
+      }
       items={[
         { type: "label", label: session.account?.email ?? name },
         {
