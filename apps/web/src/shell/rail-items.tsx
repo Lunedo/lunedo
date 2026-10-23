@@ -145,27 +145,37 @@ export function SettingsRailItem() {
   const shell = useShell();
   const location = useLocation();
   const navigation = useRegistry(navigationItems);
+  const { permissionsLoaded } = useOrganizationState();
   const areas = SETTINGS_AREAS.flatMap((area) => {
     const first = navigation.find(
       (item) => item.section === area.section && isNavigationVisible(item, shell),
     );
     return first ? [{ ...area, to: first.to }] : [];
   });
+  const open = (to: string) =>
+    shell.navigate(to, shell.organizationId ? { organizationId: shell.organizationId } : {});
+  const current = location.pathname.startsWith("/settings");
+  const [only] = areas;
+  if (permissionsLoaded && areas.length === 1 && only) {
+    return (
+      <RailButton
+        label={t("rail.settings")}
+        icon={<RailIcon icon={Settings} />}
+        current={current}
+        onClick={() => open(only.to)}
+      />
+    );
+  }
   return (
     <Menu
       trigger={
-        <RailButton
-          label={t("rail.settings")}
-          icon={<RailIcon icon={Settings} />}
-          current={location.pathname.startsWith("/settings")}
-        />
+        <RailButton label={t("rail.settings")} icon={<RailIcon icon={Settings} />} current={current} />
       }
       align="start"
       items={areas.map((area) => ({
         label: t(area.labelKey),
         icon: area.icon,
-        onSelect: () =>
-          shell.navigate(area.to, shell.organizationId ? { organizationId: shell.organizationId } : {}),
+        onSelect: () => open(area.to),
       }))}
     />
   );

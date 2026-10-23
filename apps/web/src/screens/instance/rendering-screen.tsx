@@ -61,7 +61,7 @@ function PdfSection({
         }
       />
       {state === "unreachable" && pdf.reason ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="danger" title={translateKey(t, `rendering.pdf.states.${state}`)}>
             {translateKey(t, `rendering.pdf.reasons.${pdf.reason}`)}
           </Notice>
@@ -101,11 +101,11 @@ function PdfSection({
               </span>
             }
           />
-          <p className="px-4 py-3 text-sm text-text-muted">{t("rendering.pdf.usedFor")}</p>
+          <p className="py-3 text-sm text-text-muted">{t("rendering.pdf.usedFor")}</p>
         </>
       ) : null}
       {state === "notConfigured" ? (
-        <div className="flex flex-col gap-3 px-4 py-3">
+        <div className="flex flex-col gap-3 py-3">
           <Notice variant="info" title={t("rendering.pdf.notConfiguredTitle")}>
             {t("rendering.pdf.notConfigured")}
           </Notice>

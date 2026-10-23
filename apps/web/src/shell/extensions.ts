@@ -40,7 +40,6 @@ export interface NavigationItem {
 export interface SpaceSettingsItem {
   id: string;
   order: number;
-  icon: LucideIcon;
   labelKey: string;
   groupKey?: string;
   to: string;

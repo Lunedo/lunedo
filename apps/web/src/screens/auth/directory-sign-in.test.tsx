@@ -322,7 +322,7 @@ describe("confirming the identity with a directory password", () => {
       [`DELETE /api/v1/account/identities/${identity.id}`]: () =>
         confirmed ? { status: 204 } : problem(403, "reauthenticationRequired"),
     });
-    await renderPath("/settings/security");
+    await renderPath("/settings/profile");
     await userEvent.click(await screen.findByRole("button", { name: "Unlink" }));
     const confirm = await screen.findByRole("dialog", { name: "Unlink Verlag AD?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));

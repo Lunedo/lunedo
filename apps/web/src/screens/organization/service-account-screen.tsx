@@ -131,7 +131,6 @@ export function ServiceAccountScreen() {
     <SettingsPage
       title={data?.name ?? ""}
       description={data?.description || t("serviceAccounts.description")}
-      organizationId={organizationId}
       back={{
         label: t("serviceAccounts.title"),
         href: `/settings/organizations/${organizationId}/service-accounts`,
@@ -143,7 +142,7 @@ export function ServiceAccountScreen() {
       {data && manage && active ? <DetailsSection account={data} onSaved={refresh} /> : null}
       {data ? (
         <Section title={t("serviceAccounts.responsible")}>
-          <p className="px-4 pt-3 text-sm text-text-muted">{t("serviceAccounts.responsibleHint")}</p>
+          <p className="pt-3 text-sm text-text-muted">{t("serviceAccounts.responsibleHint")}</p>
           <List>
             {data.responsibleAccountIds.map((id) => (
               <ListRow
@@ -210,7 +209,7 @@ export function ServiceAccountScreen() {
           ) : null
         }
       >
-        {tokens.data?.length === 0 ? <p className="px-4 py-3 text-text-muted">{t("tokens.none")}</p> : null}
+        {tokens.data?.length === 0 ? <p className="py-3 text-text-muted">{t("tokens.none")}</p> : null}
         <List>
           {tokens.data?.map((token) => (
             <ListRow

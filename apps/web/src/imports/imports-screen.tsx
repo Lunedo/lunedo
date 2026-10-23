@@ -137,7 +137,6 @@ export function ImportsScreen() {
     <SettingsPage
       title={t("imports.title")}
       description={t("imports.description")}
-      organizationId={organizationId}
       width="wide"
       actions={
         canImport ? (

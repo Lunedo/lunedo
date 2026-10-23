@@ -54,12 +54,7 @@ export function OrganizationContentScreen() {
   const change = (key: string, value: Parameters<typeof mutation.mutateAsync>[0]["change"]) =>
     mutation.mutateAsync({ key, change: value }).then(() => undefined);
   return (
-    <SettingsPage
-      title={t("content.title")}
-      description={t("content.organizationDescription")}
-      organizationId={organizationId}
-      width="wide"
-    >
+    <SettingsPage title={t("content.title")} description={t("content.organizationDescription")} width="wide">
       <Panel title={t("content.pagesSection")}>
         <SettingsList
           settings={settings.data}
@@ -132,7 +127,7 @@ export function OrganizationContentScreen() {
         />
       </Panel>
       {canManageTrash ? (
-        <Panel title={t("trash.deletedContent")} description={t("trash.deletedContentDescription")}>
+        <Panel title={t("trash.deletedContent")}>
           <DeletedConfidentialNotice organizationId={organizationId} />
           <DeletedContent
             entries={trash.data}

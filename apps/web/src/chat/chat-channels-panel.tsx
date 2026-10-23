@@ -62,7 +62,7 @@ export function ChatChannelsPanel({
   owner: ChatOwner;
   events: readonly ChatEventName[];
   title: string;
-  description: string;
+  description?: string | undefined;
   canManage: boolean;
   unavailable?: string | undefined;
   secondaryAction?: boolean;

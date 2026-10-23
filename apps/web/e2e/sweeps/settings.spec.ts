@@ -21,7 +21,12 @@ for (const appearance of [
   test(`has no accessibility violations in ${appearance.name}`, async ({ page, organization }) => {
     await page.goto("/settings/preferences");
     await setAppearance(page, appearance);
-    for (const path of ["/settings/preferences", "/settings/security", "/settings/notifications"]) {
+    for (const path of [
+      "/settings/profile",
+      "/settings/preferences",
+      "/settings/security",
+      "/settings/notifications",
+    ]) {
       await page.goto(path);
       await expect(page.locator("#main h1")).toBeVisible();
       await expectAccessible(page, `${path} in ${appearance.name}`);
@@ -48,6 +53,7 @@ for (const language of ["en", "de"] as const) {
     await page.setViewportSize({ width: 375, height: 740 });
     const organizationId = organization.id;
     for (const path of [
+      "/settings/profile",
       "/settings/preferences",
       "/settings/security",
       "/settings/notifications",

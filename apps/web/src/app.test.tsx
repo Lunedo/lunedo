@@ -214,12 +214,122 @@ describe("the web client", () => {
     await renderApp("/settings/preferences");
     await screen.findByRole("heading", { name: "Preferences", level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Settings" }));
-    const items = await screen.findAllByRole("menuitem");
-    expect(items.map((item) => item.textContent)).toEqual(["My account", "Organization"]);
+    await waitFor(() =>
+      expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+        "My account",
+        "Organization",
+      ]),
+    );
     await userEvent.click(screen.getByRole("menuitem", { name: "Organization" }));
     await waitFor(() =>
       expect(window.location.pathname).toBe(`/settings/organizations/${ORGANIZATION.id}/members`),
     );
+  });
+
+  it("opens the profile directly from the settings entry when only the own account is visible", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
+      "GET /api/v1/account/identities": () => ({ body: [] }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-haspopup")).toBeNull(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByRole("heading", { name: "Profile", level: 1 })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/profile");
+    expect(screen.queryByRole("menuitem")).toBeNull();
+  });
+
+  it("opens the profile first, with the name, the e-mail address and the linked sign-ins", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/identities": () => ({
+        body: [
+          {
+            id: "01929b1e-0000-7000-8000-0000000000a1",
+            providerId: "01929b1e-0000-7000-8000-0000000000a2",
+            providerName: "Entra ID",
+            subject: "tid:oid",
+            email: "olivia@example.org",
+            signInName: null,
+            displayName: "Olivia",
+            lastSignInAt: null,
+            createdAt: "2026-09-01T08:00:00.000Z",
+          },
+        ],
+      }),
+    });
+    await renderApp("/settings");
+    expect(await screen.findByRole("heading", { name: "Profile", level: 1 })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/profile");
+    const navigation = screen.getByRole("navigation", { name: "Settings" });
+    const links = within(navigation).getAllByRole("link");
+    expect(links[0]?.textContent).toBe("Profile");
+    expect(links[0]?.getAttribute("aria-current")).toBe("page");
+    expect(screen.getByText("Olivia Owner")).toBeTruthy();
+    expect(screen.getByText("olivia@example.org", { selector: "[data-setting-hint]" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change e-mail address" })).toBeTruthy();
+    expect(await screen.findByText("Entra ID")).toBeTruthy();
+  });
+
+  it("lists watched and muted items in two sections with their counts", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/watches": () => ({
+        body: {
+          items: [
+            {
+              target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d1" },
+              state: "watching",
+              keepActionable: false,
+              automatic: false,
+              title: "VPN access",
+              kind: "page",
+              spaceId: "01929b1e-0000-7000-8000-0000000000d0",
+              spaceKey: "OPS",
+              spaceName: "Operations",
+              updatedAt: "2026-10-01T08:00:00.000Z",
+            },
+            {
+              target: { type: "space", id: "01929b1e-0000-7000-8000-0000000000d0" },
+              state: "watching",
+              keepActionable: false,
+              automatic: false,
+              title: "Operations",
+              kind: "space",
+              spaceId: "01929b1e-0000-7000-8000-0000000000d0",
+              spaceKey: "OPS",
+              spaceName: "Operations",
+              updatedAt: "2026-10-01T08:00:00.000Z",
+            },
+            {
+              target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d2" },
+              state: "muted",
+              keepActionable: false,
+              automatic: false,
+              title: "Old notes",
+              kind: "page",
+              spaceId: "01929b1e-0000-7000-8000-0000000000d0",
+              spaceKey: "OPS",
+              spaceName: "Operations",
+              updatedAt: "2026-10-01T08:00:00.000Z",
+            },
+          ],
+          counts: { watchedItems: 1, watchedSpaces: 1, mutedItems: 1, mutedSpaces: 0 },
+        },
+      }),
+    });
+    await renderApp("/settings/notifications/watching");
+    const watched = await screen.findByRole("region", { name: "Watching 2" });
+    expect(within(watched).getByRole("link", { name: "VPN access" })).toBeTruthy();
+    expect(within(watched).getByRole("link", { name: "Operations" })).toBeTruthy();
+    expect(within(watched).getAllByRole("button", { name: "Stop watching" })).toHaveLength(2);
+    const muted = screen.getByRole("region", { name: "Muted 1" });
+    expect(within(muted).getByRole("link", { name: "Old notes" })).toBeTruthy();
+    expect(within(muted).getByRole("button", { name: "Unmute" })).toBeTruthy();
   });
 
   it("searches the settings of every area it shows and offers to clear an empty result", async () => {
@@ -312,7 +422,8 @@ describe("the web client", () => {
     await userEvent.type(within(dialog).getByLabelText("Repeat the password"), "a new long passphrase");
     await userEvent.click(within(dialog).getByRole("button", { name: "Change password" }));
 
-    const confirm = await screen.findByRole("dialog", { name: "Confirm your identity" });
+    const confirm = await within(dialog).findByRole("region", { name: "Confirm your identity" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await userEvent.type(within(confirm).getByLabelText("Password"), "correct horse battery");
     await userEvent.click(within(confirm).getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Change password" })).toBeNull());

@@ -5,15 +5,12 @@ import {
   BellRing,
   Bot,
   Building2,
-  CalendarCheck,
   CircleHelp,
   Construction,
   DatabaseBackup,
   Eye,
   FileArchive,
   FileClock,
-  Flag,
-  FolderTree,
   Globe,
   HardDrive,
   Import,
@@ -22,16 +19,13 @@ import {
   Layers,
   LayoutTemplate,
   LibraryBig,
-  Link2,
   LockKeyhole,
   Mail,
   Megaphone,
-  MessagesSquare,
   Palette,
   Printer,
   Search,
   Settings,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
@@ -74,6 +68,14 @@ railItems.register(
 );
 
 navigationItems.register(
+  {
+    id: "account.profile",
+    order: 5,
+    section: "account",
+    icon: UserRound,
+    labelKey: "navigation.profile",
+    to: "/settings/profile",
+  },
   {
     id: "account.security",
     order: 10,
@@ -498,14 +500,12 @@ spaceSettingsItems.register(
   {
     id: "space.general",
     order: 10,
-    icon: Settings,
     labelKey: "spaces.settings.general",
     to: "/spaces/$spaceKey/settings/general",
   },
   {
     id: "space.address",
     order: 20,
-    icon: Globe,
     labelKey: "knowledgeBase.settings.address",
     groupKey: "navigationGroups.publishing",
     to: "/spaces/$spaceKey/settings/address",
@@ -514,7 +514,6 @@ spaceSettingsItems.register(
   {
     id: "space.appearance",
     order: 30,
-    icon: Palette,
     labelKey: "knowledgeBase.settings.appearance",
     groupKey: "navigationGroups.publishing",
     to: "/spaces/$spaceKey/settings/appearance",
@@ -523,7 +522,6 @@ spaceSettingsItems.register(
   {
     id: "space.visibility",
     order: 40,
-    icon: Eye,
     labelKey: "knowledgeBase.settings.visibility",
     groupKey: "navigationGroups.publishing",
     to: "/spaces/$spaceKey/settings/visibility",
@@ -532,7 +530,6 @@ spaceSettingsItems.register(
   {
     id: "space.languages",
     order: 50,
-    icon: Languages,
     labelKey: "knowledgeBase.languages.tab",
     groupKey: "navigationGroups.publishing",
     to: "/spaces/$spaceKey/settings/languages",
@@ -541,7 +538,6 @@ spaceSettingsItems.register(
   {
     id: "space.portalAccounts",
     order: 60,
-    icon: Users,
     labelKey: "portalAccounts.tab",
     groupKey: "navigationGroups.publishing",
     to: "/spaces/$spaceKey/settings/portal-accounts",
@@ -550,7 +546,6 @@ spaceSettingsItems.register(
   {
     id: "space.permissions",
     order: 70,
-    icon: Shield,
     labelKey: "spaces.settings.permissions",
     groupKey: "navigationGroups.access",
     to: "/spaces/$spaceKey/settings/permissions",
@@ -558,7 +553,6 @@ spaceSettingsItems.register(
   {
     id: "space.access",
     order: 80,
-    icon: ShieldCheck,
     labelKey: "spaces.access.tab",
     groupKey: "navigationGroups.access",
     to: "/spaces/$spaceKey/settings/access",
@@ -566,7 +560,6 @@ spaceSettingsItems.register(
   {
     id: "space.categories",
     order: 90,
-    icon: FolderTree,
     labelKey: "knowledgeBase.settings.categories",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/categories",
@@ -575,7 +568,6 @@ spaceSettingsItems.register(
   {
     id: "space.knowledgeBaseTemplates",
     order: 100,
-    icon: LayoutTemplate,
     labelKey: "templates.title",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/templates",
@@ -584,7 +576,6 @@ spaceSettingsItems.register(
   {
     id: "space.reviews",
     order: 110,
-    icon: CalendarCheck,
     labelKey: "reviews.settings.tab",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/reviews",
@@ -593,7 +584,6 @@ spaceSettingsItems.register(
   {
     id: "space.content",
     order: 120,
-    icon: Trash2,
     labelKey: "content.title",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/content",
@@ -601,7 +591,6 @@ spaceSettingsItems.register(
   {
     id: "space.status",
     order: 130,
-    icon: Flag,
     labelKey: "pageStatus.settingsTitle",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/status",
@@ -609,7 +598,6 @@ spaceSettingsItems.register(
   {
     id: "space.templates",
     order: 140,
-    icon: LayoutTemplate,
     labelKey: "templates.title",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/templates",
@@ -618,7 +606,6 @@ spaceSettingsItems.register(
   {
     id: "space.export",
     order: 150,
-    icon: FileArchive,
     labelKey: "exports.settings.tab",
     groupKey: "navigationGroups.content",
     to: "/spaces/$spaceKey/settings/export",
@@ -626,7 +613,6 @@ spaceSettingsItems.register(
   {
     id: "space.shortcuts",
     order: 160,
-    icon: Link2,
     labelKey: "spaceShortcuts.title",
     groupKey: "navigationGroups.connections",
     to: "/spaces/$spaceKey/settings/shortcuts",
@@ -634,7 +620,6 @@ spaceSettingsItems.register(
   {
     id: "space.chat",
     order: 170,
-    icon: MessagesSquare,
     labelKey: "chatChannels.title",
     groupKey: "navigationGroups.connections",
     to: "/spaces/$spaceKey/settings/chat",

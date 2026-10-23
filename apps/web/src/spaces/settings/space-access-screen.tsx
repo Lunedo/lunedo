@@ -190,16 +190,12 @@ export function SpaceAccessScreen() {
     <SpaceSettingsPage title={t("spaces.access.title")} description={t("spaces.access.description")}>
       <div className="flex flex-col gap-8">
         {admin ? (
-          <Panel
-            title={t("spaces.access.giveTitle")}
-            description={t("spaces.access.giveDescription")}
-            actions={<GiveAccessButton spaceId={space.id} />}
-          >
+          <Panel title={t("spaces.access.giveTitle")} actions={<GiveAccessButton spaceId={space.id} />}>
             <p className="text-sm text-text-muted">{t("spaces.access.giveHint")}</p>
           </Panel>
         ) : null}
         {admin ? (
-          <Panel title={t("sharing.why.toggle")} description={t("spaces.access.whyDescription")}>
+          <Panel title={t("sharing.why.toggle")}>
             <WhyAccess />
           </Panel>
         ) : null}

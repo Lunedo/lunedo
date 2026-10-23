@@ -1,6 +1,6 @@
 import { type SaveState, SaveStatus, Section, Skeleton, Switch } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
@@ -16,44 +16,53 @@ export function ArticleTemplateSections() {
   const { space } = useSpace();
   const templates = useQuery({ ...templateSectionsQuery(space.id), throwOnError: false });
   return (
-    <div className="flex flex-col gap-8">
-      {templates.isPending ? <Skeleton className="h-field w-full" /> : null}
+    <Section
+      title={t("knowledgeBase.templates.articleTemplates")}
+      description={t("knowledgeBase.templates.hint")}
+    >
+      {templates.isPending ? <Skeleton className="my-3 h-field w-full" /> : null}
       {templates.isError ? (
-        <LoadError
-          what={t("knowledgeBase.templates.loadFailed")}
-          error={templates.error}
-          onRetry={() => templates.refetch()}
-        />
+        <div className="py-3">
+          <LoadError
+            what={t("knowledgeBase.templates.loadFailed")}
+            error={templates.error}
+            onRetry={() => templates.refetch()}
+          />
+        </div>
       ) : null}
       {templates.data?.map((template) => (
-        <TemplateCard key={template.templateId} template={template} />
+        <ArticleTemplate key={template.templateId} template={template} />
       ))}
-      <p className="text-sm text-text-muted">{t("knowledgeBase.templates.hint")}</p>
-    </div>
+    </Section>
   );
 }
 
-function TemplateCard({ template }: { template: TemplateSections }) {
+function ArticleTemplate({ template }: { template: TemplateSections }) {
   const { t } = useTranslation();
   const Icon = articleTypeIcon(template.articleType);
+  const id = useId();
   return (
-    <Section title={template.name} icon={Icon}>
-      <div className="flex flex-col gap-2 p-4">
-        <p className="text-sm text-text-muted">
-          {articleTypeLabel(t, template.articleType)}
-          {template.builtIn ? ` · ${t("knowledgeBase.templates.builtIn")}` : ""}
-        </p>
-        {template.sections.length === 0 ? (
-          <p className="text-sm text-text-muted">{t("knowledgeBase.templates.noSections")}</p>
-        ) : (
-          <ol className="flex flex-col divide-y divide-border">
-            {template.sections.map((section) => (
-              <SectionRow key={section.key} templateId={template.templateId} section={section} />
-            ))}
-          </ol>
-        )}
+    <section aria-labelledby={id} className="flex flex-col gap-2 py-4">
+      <div className="flex items-center gap-2">
+        <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        <h3 id={id} className="min-w-0 font-medium">
+          {template.name}
+        </h3>
       </div>
-    </Section>
+      <p className="text-sm text-text-muted">
+        {articleTypeLabel(t, template.articleType)}
+        {template.builtIn ? ` · ${t("knowledgeBase.templates.builtIn")}` : ""}
+      </p>
+      {template.sections.length === 0 ? (
+        <p className="text-sm text-text-muted">{t("knowledgeBase.templates.noSections")}</p>
+      ) : (
+        <ol className="flex flex-col divide-y divide-border">
+          {template.sections.map((section) => (
+            <SectionRow key={section.key} templateId={template.templateId} section={section} />
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 

@@ -46,7 +46,7 @@ test("adds a passkey and uses it as second factor and for sign-in", async ({ bro
   const keyName = `Test key ${unique()}`;
   await page.getByLabel("Name", { exact: true }).fill(keyName);
   await page.getByRole("dialog").getByRole("button", { name: "Add passkey" }).click();
-  const confirm = page.getByRole("dialog", { name: "Confirm your identity" });
+  const confirm = page.getByRole("region", { name: "Confirm your identity" });
   const added = page.getByText(keyName, { exact: true });
   await expect(confirm.or(added)).toBeVisible();
   if (await confirm.isVisible()) {

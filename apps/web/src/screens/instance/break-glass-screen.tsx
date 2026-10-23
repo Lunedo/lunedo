@@ -77,7 +77,7 @@ export function BreakGlassScreen() {
             </Button>
           </div>
           {candidates.length === 0 && organizations.isSuccess ? (
-            <div className="px-4 pb-4">
+            <div className="pb-4">
               <Notice variant="info">{t("breakGlass.noCandidates")}</Notice>
             </div>
           ) : null}

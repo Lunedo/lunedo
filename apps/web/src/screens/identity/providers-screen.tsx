@@ -95,7 +95,7 @@ function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvide
     <Section title={t("identityProviders.unfinished.title")}>
       <ul className="flex flex-col divide-y divide-border">
         {items.map((item) => (
-          <li key={item.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
+          <li key={item.key} className="flex flex-wrap items-center gap-3 py-3">
             <KeyRound aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
             <span className="flex min-w-0 flex-1 flex-col">
               <TruncatedText text={item.name} className="font-medium" />

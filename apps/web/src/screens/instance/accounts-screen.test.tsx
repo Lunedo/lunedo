@@ -467,7 +467,9 @@ describe("the accounts page", () => {
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Olivia Owner"));
     const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
-    expect(within(panel).getByText("You manage your own account on the Security page.")).toBeTruthy();
+    expect(
+      within(panel).getByText("You manage your own account on the Sign-in and security page."),
+    ).toBeTruthy();
     expect(within(panel).queryByRole("button", { name: "Reset second factor" })).toBeNull();
     expect(within(panel).queryByRole("region", { name: "Danger zone" })).toBeNull();
   });

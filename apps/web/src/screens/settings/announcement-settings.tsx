@@ -365,7 +365,7 @@ function AnnouncementForm({
         <form
           ref={form}
           noValidate
-          className="flex flex-col gap-5 px-4 py-4"
+          className="flex flex-col gap-5 py-4"
           onSubmit={(event) => {
             event.preventDefault();
             if (editable) void save();

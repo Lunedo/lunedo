@@ -1,4 +1,3 @@
-import { Bell } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import { settingsArea } from "./settings-layout.js";
 import { currentEntry, groupEntries, type SettingsEntry } from "./settings-shell.js";
@@ -6,7 +5,6 @@ import { currentEntry, groupEntries, type SettingsEntry } from "./settings-shell
 const entry = (id: string, href: string, group?: string): SettingsEntry => ({
   id,
   label: id,
-  icon: Bell,
   href,
   ...(group ? { group } : {}),
 });

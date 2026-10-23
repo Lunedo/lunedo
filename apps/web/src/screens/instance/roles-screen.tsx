@@ -376,7 +376,11 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
         <AccessImpact
           change="gains"
           people={people.map((item) => item.label)}
-          what={t("instance.roles.gainsWhat", { role: label, areas: areasDescription(t, "instance", areas) })}
+          what={t("instance.roles.gainsWhat", {
+            count: people.length,
+            role: label,
+            areas: areasDescription(t, "instance", areas),
+          })}
         />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>

@@ -1,4 +1,4 @@
-import { emailSchema, passkeyNameSchema, passwordSchema } from "@lunedo/shared";
+import { passkeyNameSchema, passwordSchema } from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -33,7 +33,6 @@ import {
 import { api } from "../../api/client.js";
 import { instanceInfoQuery } from "../../api/queries.js";
 import { request } from "../../api/request.js";
-import { OwnIdentities } from "../../components/linked-identities.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
 import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
@@ -44,8 +43,10 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { createPasskey, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
+import { useInlineReauthentication } from "../../session/reauthentication.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { EmailRow } from "./profile-screen.js";
 
 export function SecurityScreen() {
   const { t } = useTranslation();
@@ -53,9 +54,6 @@ export function SecurityScreen() {
   return (
     <SettingsPage title={t("security.title")} description={t("security.description")}>
       <SignInSection />
-      <Section title={t("identities.title")}>
-        <OwnIdentities />
-      </Section>
       <TwoFactorSection />
       <SessionsSection />
       <TokensSection />
@@ -107,38 +105,22 @@ function SecurityDangerZone() {
   );
 }
 
-export function SignInSection() {
+export function SignInSection({ withEmail = false }: { withEmail?: boolean }) {
   const { t } = useTranslation();
-  const session = useSession();
-  const [dialog, setDialog] = useState<"password" | "email" | null>(null);
+  const [open, setOpen] = useState(false);
   return (
     <Section title={t("security.signIn")}>
       <SettingRow
         label={t("auth.password")}
         description={t("security.passwordDescription")}
         control={
-          <Button variant="outline" onClick={() => setDialog("password")}>
+          <Button variant="outline" onClick={() => setOpen(true)}>
             {t("security.changePassword")}
           </Button>
         }
       />
-      <SettingRow
-        label={t("auth.email")}
-        description={session.account?.email ?? ""}
-        control={
-          <Button variant="outline" onClick={() => setDialog("email")}>
-            {t("security.changeEmail")}
-          </Button>
-        }
-      />
-      <ChangePasswordDialog
-        open={dialog === "password"}
-        onOpenChange={(open) => setDialog(open ? "password" : null)}
-      />
-      <ChangeEmailDialog
-        open={dialog === "email"}
-        onOpenChange={(open) => setDialog(open ? "email" : null)}
-      />
+      {withEmail ? <EmailRow /> : null}
+      <ChangePasswordDialog open={open} onOpenChange={setOpen} />
     </Section>
   );
 }
@@ -159,6 +141,7 @@ function ChangePasswordDialog({
   const info = useQuery(instanceInfoQuery);
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const reauthentication = useInlineReauthentication(open);
   const form = useSchemaForm(passwordForm, {
     defaultValues: { password: "", repeated: "" },
     messages: { repeated: t("auth.passwordsDiffer") },
@@ -177,7 +160,13 @@ function ChangePasswordDialog({
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("security.changePassword")} size="sm">
-      <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
+      {reauthentication.panel}
+      <form
+        className="flex flex-col gap-4"
+        noValidate
+        hidden={reauthentication.active}
+        onSubmit={submitWith(submit)}
+      >
         {error ? (
           <Notice variant="danger" title={t("failures.changePassword")}>
             {error}
@@ -200,54 +189,6 @@ function ChangePasswordDialog({
           </Button>
           <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
             {t("security.changePassword")}
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-}
-
-const emailForm = z.object({ email: emailSchema });
-
-function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const form = useSchemaForm(emailForm, { defaultValues: { email: "" } });
-  const submit = form.handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await request(() => api.POST("/api/v1/account/email", { body: values }));
-      toast({ title: t("security.emailConfirmationSent"), variant: "success" });
-      form.reset();
-      onOpenChange(false);
-    } catch (failure) {
-      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
-    }
-  });
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("security.changeEmail")}
-      description={t("security.changeEmailDescription")}
-      size="sm"
-    >
-      <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? (
-          <Notice variant="danger" title={t("failures.changeEmail")}>
-            {error}
-          </Notice>
-        ) : null}
-        <Field label={t("security.newEmail")} error={form.formState.errors.email?.message}>
-          <Input type="email" autoComplete="email" autoFocus {...form.register("email")} />
-        </Field>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {t("common.cancel")}
-          </Button>
-          <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
-            {t("security.sendConfirmation")}
           </Button>
         </div>
       </form>
@@ -292,7 +233,7 @@ export function TwoFactorSection() {
   return (
     <Section title={t("security.twoFactor")}>
       {data.secondFactorRequiredBy ? (
-        <div className="px-4 pt-4">
+        <div className="pt-4">
           <Notice variant="info">{t(`security.twoFactorRequired.${data.secondFactorRequiredBy}`)}</Notice>
         </div>
       ) : null}
@@ -444,6 +385,7 @@ function AddPasskeyDialog({
 }) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
+  const reauthentication = useInlineReauthentication(open);
   const form = useSchemaForm(passkeyForm, { defaultValues: { name: "" } });
   const submit = form.handleSubmit(async (values) => {
     setError(null);
@@ -461,7 +403,13 @@ function AddPasskeyDialog({
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("security.addPasskey")} size="sm">
-      <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
+      {reauthentication.panel}
+      <form
+        className="flex flex-col gap-4"
+        noValidate
+        hidden={reauthentication.active}
+        onSubmit={submitWith(submit)}
+      >
         {error ? (
           <Notice variant="danger" title={t("failures.addPasskey")}>
             {error}
@@ -604,7 +552,7 @@ function TokensSection() {
       }
     >
       {tokens.isPending ? <Skeleton className="h-12 w-full" /> : null}
-      {tokens.data?.length === 0 ? <p className="px-4 py-3 text-text-muted">{t("tokens.none")}</p> : null}
+      {tokens.data?.length === 0 ? <p className="py-3 text-text-muted">{t("tokens.none")}</p> : null}
       <List>
         {tokens.data?.map((token) => (
           <ListRow

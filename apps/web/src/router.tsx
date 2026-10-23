@@ -612,8 +612,14 @@ const settingsIndexRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/settings/preferences" });
+    throw redirect({ to: "/settings/profile" });
   },
+});
+
+const profileRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: "/profile",
+  component: lazyRouteComponent(() => import("./screens/account/profile-screen.js"), "ProfileScreen"),
 });
 
 const preferencesRoute = createRoute({
@@ -1047,6 +1053,7 @@ const routeTree = rootRoute.addChildren([
     ]),
     settingsRoute.addChildren([
       settingsIndexRoute,
+      profileRoute,
       preferencesRoute,
       securityRoute,
       notificationSettingsRoute,

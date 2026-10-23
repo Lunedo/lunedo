@@ -174,7 +174,7 @@
       "keyRequired": "Füge den JSON-Schlüssel des Dienstkontos ein."
     },
     "title": "Anmeldemethoden",
-    "description": "Wie sich Personen bei dieser Instanz anmelden. Die Organisationen ergeben sich nach der Anmeldung aus der Gruppenzuordnung.",
+    "description": "Wie sich Personen bei dieser Instanz anmelden.",
     "providers": "Identitätsanbieter",
     "details": "Anbieter",
     "add": "Anbieter hinzufügen",
@@ -1085,7 +1085,8 @@
     "maintenance": "Wartungsmodus",
     "updates": "Updates",
     "signInAndSecurity": "Anmeldung und Sicherheit",
-    "watching": "Beobachtete Inhalte"
+    "watching": "Beobachtete Inhalte",
+    "profile": "Profil"
   },
   "navigationGroups": {
     "access": "Zugriff",
@@ -1187,7 +1188,7 @@
     "passwordSignInDisabled": "Die Anmeldung mit Passwort ist für diese Instanz ausgeschaltet. Melde dich über deinen Anbieter oder mit einem Passkey an.",
     "invalidProviderConfiguration": "Lunedo konnte diese Anbieter-Konfiguration nicht verwenden. Vergleiche Issuer, Tenant oder Client-ID mit den Einstellungen deines Anbieters und speichere erneut.",
     "resetOwnSecondFactor": "Deinen eigenen zweiten Faktor kannst du hier nicht zurücksetzen, weil er sonst umgangen würde. Melde dich mit einem Wiederherstellungscode an oder bitte eine andere Person aus der Administration.",
-    "endOwnSessions": "Deine eigenen Sitzungen beendest du nicht in der Kontenliste, sondern auf deiner Seite Sicherheit.",
+    "endOwnSessions": "Deine eigenen Sitzungen beendest du nicht in der Kontenliste, sondern auf deiner Seite „Anmeldung und Sicherheit“.",
     "roleNeedsAccountOrGroup": "Rollen können nur einzelnen Personen und Gruppen gegeben werden, nicht allen auf einmal. Wähle stattdessen Personen oder Gruppen.",
     "unknown": "Der Server hat unerwartet geantwortet. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "networkError": "Lunedo ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
@@ -1549,14 +1550,14 @@
     },
     "storageFull": "Der Speicher ist fast voll. Die Administration der Instanz wurde informiert. Versuche es erneut, sobald Platz geschaffen wurde.",
     "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
-    "invalidBackupSettings": "Die Backup-Einstellungen sind ungültig. Prüfen Sie die markierten Felder und versuchen Sie es erneut.",
-    "backupRunning": "Ein Backup oder eine Test-Wiederherstellung läuft bereits. Warten Sie, bis sie fertig ist, und versuchen Sie es erneut.",
-    "backupNotFound": "Das Backup ist nicht mehr im Ziel. Laden Sie die Liste neu.",
-    "backupTargetFailed": "Das Backup-Ziel konnte nicht verwendet werden. Die Meldung nennt den Grund; beheben Sie ihn in den Backup-Einstellungen, prüfen Sie ihn mit „Verbindung testen“ und versuchen Sie es erneut.",
-    "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
-    "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
-    "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
-    "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration.",
+    "invalidBackupSettings": "Die Backup-Einstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
+    "backupRunning": "Ein Backup oder eine Test-Wiederherstellung läuft bereits. Warte, bis sie fertig ist, und versuche es erneut.",
+    "backupNotFound": "Das Backup ist nicht mehr im Ziel. Lade die Liste neu.",
+    "backupTargetFailed": "Das Backup-Ziel konnte nicht verwendet werden. Die Meldung nennt den Grund; behebe ihn in den Backup-Einstellungen, prüfe ihn mit „Verbindung testen“ und versuche es erneut.",
+    "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportiere stattdessen als Word oder HTML, oder als PDF auf dem Server, falls deine Administration den Render-Container eingerichtet hat.",
+    "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportiere stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
+    "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucke das PDF stattdessen über deinen Browser oder frag deine Instanz-Administration.",
+    "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuche es erneut; schlägt es wieder fehl, informiere deine Instanz-Administration.",
     "invalidDiagram": "Das draw.io-Diagramm konnte nicht gespeichert werden, weil es etwas enthält, das draw.io nicht schreibt, oder weil es beschädigt ist. Mache die letzte Änderung in draw.io rückgängig und speichere noch einmal.",
     "connectionMissing": "Verbinde den Import zuerst mit Confluence: Gib Adresse und Token ein und teste die Verbindung.",
     "wrongInput": "Diese Art von Import nimmt diese Eingabe nicht an. Lade die Seite neu und fahre im Assistenten fort.",
@@ -2012,7 +2013,7 @@
   },
   "preferences": {
     "title": "Darstellung und Sprache",
-    "description": "Wie Lunedo für dich aussieht und sich verhält. Änderungen gelten sofort.",
+    "description": "Wie Lunedo für dich aussieht und sich verhält.",
     "display": "Darstellung",
     "colorMode": "Farbmodus",
     "colorModeHint": "Automatisch folgt deinem System.",
@@ -2395,7 +2396,7 @@
       },
       "spaces_export": {
         "label": "Export erlauben",
-        "description": "Seiten und der Space können als Markdown und HTML exportiert werden. Ist es aus, kann niemand exportieren, auch Space-Admins nicht."
+        "description": "Seiten und der Space können als PDF, Word, HTML und Markdown exportiert werden. Ist es aus, kann niemand exportieren, auch Space-Admins nicht."
       },
       "content_language": {
         "label": "Inhaltssprache",
@@ -2453,7 +2454,7 @@
       "on": " unter "
     },
     "title": "Anmeldung und Sicherheit",
-    "description": "Anmeldung, zweite Faktoren, Sitzungen und API-Tokens.",
+    "description": "Passwort, zweite Faktoren, Sitzungen und API-Tokens.",
     "signIn": "Anmeldung",
     "passwordDescription": "Verwende eine lange Passphrase, die du sonst nirgends verwendest.",
     "changePassword": "Passwort ändern",
@@ -2608,7 +2609,7 @@
     "preferencesTitle": "Benachrichtigungen",
     "preferencesDescription": "Wähle, wie du von jeder Art von Ereignis erfährst.",
     "defaultsTitle": "Benachrichtigungen",
-    "organizationDefaultsDescription": "Standards für alle in {name}. Alle können sie für sich ändern; ihre eigene Wahl bleibt, wenn du einen Standard änderst.",
+    "organizationDefaultsDescription": "Standards für alle in {name}; wer selbst etwas gewählt hat, behält es, wenn du einen Standard änderst.",
     "instanceDefaultsDescription": "Standards für alle auf dieser Instanz.",
     "eventTypes": "Ereignisse",
     "event": "Ereignis",
@@ -2746,7 +2747,7 @@
       },
       "backup": {
         "failed": "{reminder, select, true {Erinnerung: Backups schlagen weiter fehl.} other {Ein Backup ist fehlgeschlagen.}} {reason}",
-        "missing": "Seit {days, plural, one {# Tag} other {# Tagen}} gibt es kein erfolgreiches Backup. Prüfen Sie den Zeitplan, das Ziel und die letzten Läufe.",
+        "missing": "Seit {days, plural, one {# Tag} other {# Tagen}} gibt es kein erfolgreiches Backup. Prüfe den Zeitplan, das Ziel und die letzten Läufe.",
         "recovered": "Backups funktionieren wieder. Das letzte Backup ist gelungen.",
         "testRestoreFailed": "Die Test-Wiederherstellung von {backupName} ist fehlgeschlagen: {reason}"
       },
@@ -2803,7 +2804,7 @@
       "counts": "{watched} beobachtet · {muted} stummgeschaltet",
       "manage": "Verwalten",
       "screenTitle": "Beobachtete und stummgeschaltete Inhalte",
-      "screenDescription": "Du erfährst von Änderungen und Kommentaren an dem, was du beobachtest. Stummgeschaltete Inhalte und Spaces bleiben still.",
+      "screenDescription": "Du erfährst von Änderungen und Kommentaren an dem, was du beobachtest; Stummgeschaltetes bleibt still.",
       "none": "Du beobachtest nichts und hast nichts stummgeschaltet",
       "noneDescription": "Beobachte Seiten, Blogbeiträge, Besprechungsserien und Spaces über ihr Menü, um von Änderungen und Kommentaren zu erfahren.",
       "loadFailed": "Die beobachteten Inhalte konnten nicht geladen werden",
@@ -3170,7 +3171,7 @@
     },
     "security": {
       "title": "Sicherheit",
-      "description": "Anmelderegeln für alle in {name}. Die Werte kommen von der Instanz, solange du sie hier nicht festlegst.",
+      "description": "Anmelderegeln für alle in {name}.",
       "signIn": "Anmeldung",
       "apiTokens": "API-Tokens"
     },
@@ -3191,7 +3192,7 @@
     },
     "access": {
       "title": "Zugriffsübersicht",
-      "description": "Sieh, was eine Person in den Spaces dieser Organisation tun kann und warum. Exporte werden im Audit-Log festgehalten.",
+      "description": "Sieh, was eine Person in den Spaces dieser Organisation tun kann und warum; Exporte werden im Audit-Log festgehalten.",
       "person": "Person",
       "personHint": "Ein Mitglied oder einen Gast nach Namen suchen.",
       "chooseTitle": "Person auswählen",
@@ -3256,7 +3257,7 @@
     "responsibleHint": "Wird erinnert, bevor der Zugang des Gasts endet.",
     "collaboratorHint": "Mitwirkende sind Mitglieder einer anderen Organisation. Sie sehen nur, was mit ihnen geteilt wird.",
     "guestHint": "Gäste melden sich mit eigenem Konto an und sehen nur, was mit ihnen geteilt wird.",
-    "inviteImpact": "Sie treten {name} als {kind} mit der Rolle {role} bei, wenn sie annehmen.",
+    "inviteImpact": "{count, plural, one {Diese Person tritt {name} als {kind} mit der Rolle {role} bei, wenn sie die Einladung annimmt.} other {Diese Personen treten {name} als {kind} mit der Rolle {role} bei, wenn sie die Einladung annehmen.}}",
     "invitationExpiry": "Einladungen laufen nach 7 Tagen ab.",
     "sendInvitations": "{count, plural, one {Einladung senden} other {# Einladungen senden}}",
     "invitationsSent": "{count, plural, one {# Einladung gesendet.} other {# Einladungen gesendet.}}",
@@ -3268,15 +3269,15 @@
     "revokeInvitationDescription": "Der Link in der E-Mail funktioniert dann nicht mehr.",
     "removeTitle": "{name} entfernen?",
     "removeDescription": "Das Konto bleibt bestehen, gehört aber nicht mehr zu dieser Organisation.",
-    "removeImpact": "Sie verlieren jeden Zugriff auf {name}.",
+    "removeImpact": "{count, plural, one {Diese Person verliert} other {Diese Personen verlieren}} jeden Zugriff auf {name}.",
     "removed": "Das Mitglied wurde entfernt.",
     "deactivateTitle": "{name} deaktivieren?",
     "deactivateDescription": "Das Konto kann sich auf dieser Instanz nirgends mehr anmelden. Seine Sitzungen enden sofort, und seine API-Tokens werden endgültig widerrufen; eine Reaktivierung stellt sie nicht wieder her.",
-    "deactivateImpact": "Sie verlieren den Zugriff auf alle Organisationen dieser Instanz.",
+    "deactivateImpact": "{count, plural, one {Diese Person verliert} other {Diese Personen verlieren}} den Zugriff auf alle Organisationen dieser Instanz.",
     "deactivated": "Das Konto wurde deaktiviert.",
     "expiryTitle": "Ablauf für {name}",
     "expiryHint": "Der Zugang endet am Ende dieses Tages. Vorher gehen Erinnerungen hinaus.",
-    "expiryImpact": "Sie verlieren nach dem {date} den Zugriff auf {name}.",
+    "expiryImpact": "{count, plural, one {Diese Person verliert} other {Diese Personen verlieren}} nach dem {date} den Zugriff auf {name}.",
     "responsibleTitle": "Verantwortliche Person für {name}",
     "permissionsTitle": "Berechtigungen von {name}",
     "permissionsDescription": "Jede Aktion in der Organisation und warum sie erlaubt ist oder nicht.",
@@ -3339,8 +3340,8 @@
     "groupNamed": "Gruppe {name}",
     "builtInGroup": "Eingebaut",
     "customGroup": "Eigene",
-    "gainsWhat": "Sie erhalten {role} in {name}: {areas}.",
-    "losesWhat": "Sie verlieren {role} in {name}.",
+    "gainsWhat": "{count, plural, one {Diese Person erhält} other {Diese Personen erhalten}} {role} in {name}: {areas}.",
+    "losesWhat": "{count, plural, one {Diese Person verliert} other {Diese Personen verlieren}} {role} in {name}.",
     "builtIn": {
       "owner": "Owner",
       "administrator": "Administrator",
@@ -3454,10 +3455,10 @@
     "delete": "Gruppe löschen",
     "deleteTitle": "{name} löschen?",
     "deleteDescription": "Die Gruppe und ihre Rollenzuweisungen werden endgültig entfernt. Das lässt sich nicht rückgängig machen.",
-    "gainsRoles": "Sie treten {name} bei und erhalten deren Rollen: {roles}.",
-    "gainsMembership": "Sie treten {name} bei.",
-    "losesRoles": "Sie verlassen {name} und verlieren deren Rollen: {roles}.",
-    "losesMembership": "Sie verlassen {name}.",
+    "gainsRoles": "{count, plural, one {Diese Person tritt {name} bei und erhält} other {Diese Personen treten {name} bei und erhalten}} deren Rollen: {roles}.",
+    "gainsMembership": "{count, plural, one {Diese Person tritt {name} bei.} other {Diese Personen treten {name} bei.}}",
+    "losesRoles": "{count, plural, one {Diese Person verlässt {name} und verliert} other {Diese Personen verlassen {name} und verlieren}} deren Rollen: {roles}.",
+    "losesMembership": "{count, plural, one {Diese Person verlässt {name}.} other {Diese Personen verlassen {name}.}}",
     "removeMember": "Aus der Gruppe entfernen",
     "removeManager": "Als Gruppenverwalter entfernen",
     "memberRemovedName": "{name} wurde aus der Gruppe entfernt.",
@@ -3465,9 +3466,9 @@
     "deleteSummary": "Entfernt die Gruppe und ihre Rollenzuweisungen endgültig. Mitglieder verlieren den Zugriff, den sie über die Gruppe hatten."
   },
   "serviceAccounts": {
-    "open": "Service-Konto {name} öffnen",
+    "open": "Dienstkonto {name} öffnen",
     "title": "Dienstkonten",
-    "description": "Konten für Skripte und Integrationen. Sie handeln nur über API-Tokens.",
+    "description": "Konten für Skripte und Integrationen, die nur über API-Tokens handeln.",
     "create": "Dienstkonto anlegen",
     "createHint": "Du wirst die verantwortliche Person.",
     "none": "Noch keine Dienstkonten",
@@ -3565,7 +3566,7 @@
       "created": "Angelegt",
       "owner": "Owner",
       "ownerHint": "Der Owner verwaltet die Organisation.",
-      "ownerImpact": "Sie werden Owner der neuen Organisation.",
+      "ownerImpact": "Diese Person wird Owner der neuen Organisation.",
       "slugHint": "Optional. Wird aus dem Namen abgeleitet, wenn leer.",
       "open": "Einstellungen öffnen",
       "domains": "Domains",
@@ -3583,7 +3584,7 @@
       "chooseOrganization": "Organisation auswählen",
       "assign": "Organisation zuweisen",
       "accountType": "Typ",
-      "typesHint": "Standardkonten gehören Personen einer Organisation. Gäste und Portalnutzer sehen nur, was mit ihnen geteilt ist. Service-Konten gehören zu Integrationen und melden sich nur mit API-Tokens an.",
+      "typesHint": "Standardkonten gehören Personen einer Organisation. Gäste und Portalnutzer sehen nur, was mit ihnen geteilt ist. Dienstkonten gehören zu Integrationen und melden sich nur mit API-Tokens an.",
       "instanceRole": "Instanzrolle",
       "twoFactor": "Zwei-Faktor",
       "twoFactorOn": "Aktiv",
@@ -3591,7 +3592,7 @@
       "lastSignIn": "Letzte Anmeldung",
       "never": "Nie",
       "sessionsEnded": "{count, plural, one {Eine Sitzung von {name} wurde beendet.} other {# Sitzungen von {name} wurden beendet.}}",
-      "ownAccount": "Dein eigenes Konto verwaltest du auf der Seite Sicherheit.",
+      "ownAccount": "Dein eigenes Konto verwaltest du auf der Seite „Anmeldung und Sicherheit“.",
       "reactivate": "Reaktivieren",
       "endSessions": "Alle Sitzungen beenden",
       "resetSecondFactor": "Zweiten Faktor zurücksetzen",
@@ -3644,7 +3645,7 @@
       "newOwner": "Neuer Owner",
       "transferTitle": "{name} zum Owner der Instanz machen?",
       "transferDescription": "Du bleibst Administrator. Nur der Owner kann die Rolle wieder übertragen.",
-      "transferImpact": "Sie werden Owner der Instanz und Notfallkonto.",
+      "transferImpact": "Diese Person wird Owner der Instanz und Notfallkonto.",
       "deactivateSummary": "Beendet jede Anmeldung und alle Sitzungen und widerruft die API-Tokens endgültig.",
       "endSessionsSummary": "Meldet {name} auf allen Geräten ab. {name} kann sich sofort wieder anmelden.",
       "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein.",
@@ -3654,12 +3655,11 @@
       "title": "Rollen",
       "description": "Wer die Instanz verwaltet.",
       "noContent": "Instanzrollen geben nie Zugriff auf Inhalte von Organisationen.",
-      "gainsWhat": "Sie erhalten {role} auf der Instanz: {areas}.",
-      "losesWhat": "Sie verlieren {role} auf der Instanz."
+      "gainsWhat": "{count, plural, one {Diese Person erhält} other {Diese Personen erhalten}} {role} auf der Instanz: {areas}."
     },
     "security": {
       "title": "Sicherheit",
-      "description": "Anmelderegeln für die ganze Instanz. Gesperrte Werte gelten für jede Organisation.",
+      "description": "Anmelderegeln für die ganze Instanz.",
       "signIn": "Anmeldung",
       "protection": "Schutz vor Rateversuchen",
       "apiTokens": "API-Tokens"
@@ -4440,10 +4440,10 @@
       "deletesAccess": "Verknüpfte Anmeldungen, Sitzungen, API-Tokens, Passkeys, zweite Faktoren und persönliche Einstellungen werden gelöscht.",
       "endsMemberships": "Alle Mitgliedschaften, Rollen und Gruppenmitgliedschaften enden.",
       "keepsContent": "Seiten, Kommentare und Versionen bleiben und zeigen die ehemalige Person.",
-      "auditLog": "Das Audit-Protokoll behält die Ereignisse nur mit der Konto-ID; die persönlichen Daten darin werden unlesbar.",
-      "copies": "Kopien des Audit-Protokolls, die exportiert oder an andere Systeme gestreamt wurden, liegen außerhalb von Lunedo und behalten die Daten. Lösche sie bei Bedarf dort.",
+      "auditLog": "Das Audit-Log behält die Ereignisse nur mit der Konto-ID; die persönlichen Daten darin werden unlesbar.",
+      "copies": "Kopien des Audit-Logs, die exportiert oder an andere Systeme gestreamt wurden, liegen außerhalb von Lunedo und behalten die Daten. Lösche sie bei Bedarf dort.",
       "reason": "Grund",
-      "reasonHint": "Bis zu 500 Zeichen, bleibt im Audit-Protokoll. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026.",
+      "reasonHint": "Bis zu 500 Zeichen, bleibt im Audit-Log. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026.",
       "confirm": "Gib {name} zur Bestätigung ein",
       "reauthentication": "Danach bittet Lunedo dich, mit deinem Passwort, Passkey oder Authenticator-Code zu bestätigen.",
       "action": "Anonymisieren",
@@ -4895,8 +4895,8 @@
       "tooManyPages": "Bis zu {count} Seiten wählen. Entferne eine, bevor du eine weitere hinzufügst.",
       "reverse": "Reihenfolge umkehren",
       "searchSpace": "Bereich suchen",
-      "hiddenSpace": "Ein Bereich, den Sie nicht öffnen können",
-      "tooManySpaces": "Wählen Sie bis zu {count} Bereiche. Entfernen Sie einen, bevor Sie einen weiteren hinzufügen."
+      "hiddenSpace": "Ein Bereich, den du nicht öffnen kannst",
+      "tooManySpaces": "Wähle bis zu {count} Bereiche. Entferne einen, bevor du einen weiteren hinzufügst."
     },
     "pageReport": {
       "title": "Seitenbericht",
@@ -5047,18 +5047,18 @@
       "newColumn": "Noch auf keiner Seite",
       "title": "Bericht zu Seiteneigenschaften",
       "loadFailed": "Die Seiten des Berichts konnten nicht geladen werden.",
-      "empty": "Keine Seite, die Sie sehen können, hat Seiteneigenschaften, die zu den Filtern passen.",
+      "empty": "Keine Seite, die du sehen kannst, hat Seiteneigenschaften, die zu den Filtern passen.",
       "creator": "Erstellt von",
       "labels": "Labels",
       "range": "Seiten {first} bis {last} von {total}",
       "importedQueryTitle": "Filter aus Confluence nicht übernommen",
-      "importedQuery": "Dieser Block wurde mit der Abfrage {query} importiert, die Lunedo nicht anwenden kann. Prüfen Sie unten Labels und Bereiche.",
-      "spacesHint": "Leer lassen für alle Bereiche, die Sie lesen können.",
+      "importedQuery": "Dieser Block wurde mit der Abfrage {query} importiert, die Lunedo nicht anwenden kann. Prüfe unten Labels und Bereiche.",
+      "spacesHint": "Leer lassen für alle Bereiche, die du lesen kannst.",
       "labelsHint": "Seiten mit mindestens einem dieser Labels. Leer lassen für alle Seiten mit Seiteneigenschaften.",
       "columns": "Spalten",
       "columnsHint": "Namen der Seiteneigenschaften, die angezeigt werden. Leer lassen für alle Namen, die auf den Seiten vorkommen.",
       "searchColumn": "Namen suchen oder eingeben",
-      "tooManyColumns": "Wählen Sie bis zu {count} Spalten. Entfernen Sie eine, bevor Sie eine weitere hinzufügen.",
+      "tooManyColumns": "Wähle bis zu {count} Spalten. Entferne eine, bevor du eine weitere hinzufügst.",
       "sort": "Reihenfolge",
       "byTitle": "Nach Titel",
       "pageSize": "Seiten pro Seite",
@@ -5069,13 +5069,13 @@
       "setIdHint": "Nur Seiteneigenschaften mit dieser ID. Leer lassen für alle.",
       "showCreator": "Anzeigen, wer jede Seite erstellt hat",
       "showLabels": "Labels jeder Seite anzeigen",
-      "readableOnly": "Immer aktuell. Es werden nur Seiten aufgeführt, die Sie lesen können."
+      "readableOnly": "Immer aktuell. Es werden nur Seiten aufgeführt, die du lesen kannst."
     },
     "contentByLabel": {
       "title": "Inhalte nach Label",
-      "chooseLabels": "Wählen Sie Labels, um die Seiten mit diesen Labels aufzulisten.",
+      "chooseLabels": "Wähle Labels, um die Seiten mit diesen Labels aufzulisten.",
       "loadFailed": "Die Seiten mit diesen Labels konnten nicht geladen werden.",
-      "empty": "Keine Seite, die Sie sehen können, hat diese Labels.",
+      "empty": "Keine Seite, die du sehen kannst, hat diese Labels.",
       "labelsHint": "Seiten mit diesen Labels.",
       "match": "Seiten brauchen",
       "matchAny": "Eines der Labels",
@@ -5101,8 +5101,8 @@
       "excerptTitle": "Eingebundener Auszug",
       "page": "Seite",
       "pageHint": "Die Seite, deren Inhalt hier angezeigt wird. Leser sehen ihn nur, wenn sie diese Seite lesen können.",
-      "importedHint": "Aus Confluence als {title} importiert. Erscheint, sobald diese Seite importiert ist, oder wählen Sie eine Seite.",
-      "choosePage": "Wählen Sie die Seite, die eingebunden wird.",
+      "importedHint": "Aus Confluence als {title} importiert. Erscheint, sobald diese Seite importiert ist, oder wähle eine Seite.",
+      "choosePage": "Wähle die Seite, die eingebunden wird.",
       "notImportedYet": "Die eingebundene Seite {title} war nicht Teil des Imports. Sie erscheint hier, sobald sie importiert ist.",
       "restricted": "Eingeschränkter Inhalt. Leser, die die eingebundene Seite nicht lesen können, sehen hier nichts.",
       "loop": "Dieser Inhalt wird nicht angezeigt, weil er sich selbst einbinden würde.",
@@ -5454,10 +5454,9 @@
       "title": "Zugriff",
       "description": "Zugriff geben, über Anfragen entscheiden und eingeschränkte Seiten prüfen.",
       "giveTitle": "Zugriff geben",
-      "giveDescription": "Ein geführter Weg, um einer Person oder Gruppe Zugriff auf den Space oder einzelne Seiten zu geben.",
       "giveHint": "Du siehst, wie viele Seiten sie dann lesen und bearbeiten können, bevor sich etwas ändert.",
       "requestsTitle": "Zugriffsanfragen",
-      "requestsDescription": "Offene Anfragen für diesen Space und seine Seiten. Sie bleiben offen, bis jemand entscheidet oder die Person auf anderem Weg Zugriff bekommt.",
+      "requestsDescription": "Anfragen bleiben offen, bis jemand entscheidet oder die Person auf anderem Weg Zugriff bekommt.",
       "restrictedTitle": "Eingeschränkte Seiten",
       "restrictedDescription": "Seiten, die nur ihre Zugriffslisten sehen oder bearbeiten können. Du siehst die Titel, aber nicht den Inhalt. Das Entfernen einer Einschränkung wird im Audit-Log festgehalten.",
       "restrictedFailed": "die eingeschränkten Seiten",
@@ -5475,8 +5474,7 @@
       "removed": "Einschränkung von {title} entfernt",
       "removeFailed": "Die Einschränkung wurde nicht entfernt",
       "adminsOnlyTitle": "Nur Space-Admins verwalten Einschränkungen",
-      "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht.",
-      "whyDescription": "Suche eine Person, um ihre Rolle in diesem Space und deren Herkunft zu sehen."
+      "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht."
     },
     "articlesButton": "Artikel"
   },
@@ -5748,9 +5746,7 @@
     "emptied": "{count, plural, one {# Eintrag in die Admin-Wiederherstellung verschoben} other {# Einträge in die Admin-Wiederherstellung verschoben}}",
     "emptyFailed": "Der Papierkorb konnte nicht geleert werden",
     "deletedContent": "Gelöschte Inhalte",
-    "deletedContentDescription": "Alles, was in den Spaces dieser Organisation gelöscht wurde, und gelöschte Spaces. Stelle es wieder her oder lösche es sofort endgültig, etwa für eine Löschanfrage.",
     "deletedPersonal": "Gelöschte persönliche Spaces",
-    "deletedPersonalDescription": "Gelöschte persönliche Spaces und Inhalte persönlicher Spaces in der Admin-Wiederherstellung.",
     "nothingDeletedTitle": "Nichts gelöscht",
     "nothingDeletedDescription": "Gelöschte Seiten und Spaces erscheinen hier, bis sie endgültig gelöscht werden.",
     "deleteNow": "Endgültig löschen",
@@ -5775,9 +5771,9 @@
   },
   "templates": {
     "title": "Vorlagen",
-    "spaceDescription": "Vorlagen für neue Seiten in diesem Space. Bearbeiter können jede Seite als Vorlage speichern.",
+    "spaceDescription": "Vorlagen für neue Seiten in diesem Space.",
     "organizationDescription": "Vorlagen, die in allen Spaces der Organisation angeboten werden.",
-    "instanceDescription": "Vorlagen, die in allen Organisationen angeboten werden. Die eingebauten Vorlagen gibt es immer zusätzlich.",
+    "instanceDescription": "Vorlagen, die in allen Organisationen zusätzlich zu den eingebauten angeboten werden.",
     "loadFailed": "Die Vorlagen konnten nicht geladen werden",
     "create": "Vorlage erstellen",
     "createAction": "Vorlage erstellen",
@@ -5935,7 +5931,8 @@
     "restrictedConfirm": "Alle, die die Vorlagen von {space} verwenden können, dürfen diesen Inhalt sehen",
     "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab.",
     "articleType": "Artikelart",
-    "articleTypeHint": "Artikel aus dieser Vorlage bekommen diese Art. Lesende filtern im Portal danach."
+    "articleTypeHint": "Artikel aus dieser Vorlage bekommen diese Art. Lesende filtern im Portal danach.",
+    "ownTemplates": "Eigene Vorlagen"
   },
   "versions": {
     "history": "Versionsverlauf",
@@ -7230,7 +7227,7 @@
   },
   "imports": {
     "title": "Import",
-    "description": "Hol Inhalte aus Confluence, Markdown-Ordnern oder Word-Dokumenten in Lunedo. Jeder Import landet zuerst in einem Quarantäne-Space, den nur du und die Prüfer, die du hinzufügst, sehen.",
+    "description": "Hol Inhalte aus Confluence, Markdown-Ordnern oder Word-Dokumenten in einen Quarantäne-Space, den nur du und deine Prüfer sehen.",
     "untitled": "Neuer Import",
     "states": {
       "draft": "Entwurf",
@@ -7690,7 +7687,7 @@
         },
         "unmappedQuery": {
           "title": "{count, plural, one {# Bericht behält} other {# Berichte behalten}} eine Confluence-Abfrage",
-          "hint": "Die Abfrage ließ sich nicht in Labels und Bereiche umwandeln. Der Block behält sie als Hinweis; prüfen Sie seine Filter.",
+          "hint": "Die Abfrage ließ sich nicht in Labels und Bereiche umwandeln. Der Block behält sie als Hinweis; prüfe seine Filter.",
           "entry": "Makro {macro}: Die Abfrage {query} ließ sich nicht umwandeln."
         },
         "macroOptionDropped": {
@@ -8378,7 +8375,7 @@
       "comparison": {
         "heading": "Mit Confluence vergleichen",
         "title": "„{title}“ vergleichen",
-        "description": "Der aktuelle Inhalt in Lunedo neben dem Inhalt des neuen Exports, so wie er übernommen würde. Nichts ändert sich, bis du die Änderungen anwendest.",
+        "description": "Der aktuelle Inhalt in Lunedo neben dem Inhalt des neuen Exports; nichts ändert sich, bis du die Änderungen anwendest.",
         "sides": "Links oder entfernt: {before}. Rechts oder hinzugefügt: {after}.",
         "lunedoCurrent": "Lunedo, aktueller Inhalt",
         "lunedoVersion": "Lunedo, Version {number}",
@@ -8537,7 +8534,7 @@
       "danger": "Rot"
     },
     "settingsTitle": "Seitenstatus",
-    "settingsDescription": "Zeigt oben auf jeder Seite, wie weit sie ist, zum Beispiel in Arbeit oder geprüft. Bearbeiter setzen den Status, Leser sehen ihn.",
+    "settingsDescription": "Zeigt oben auf jeder Seite, wie weit sie ist, zum Beispiel in Arbeit oder geprüft.",
     "valuesTitle": "Werte",
     "valuesDescription": "Bearbeiter wählen aus diesen Werten in dieser Reihenfolge. Wenn du einen Wert umbenennst oder umfärbst, ändert er sich auf allen Seiten, die ihn haben.",
     "reorderFailed": "Die Reihenfolge wurde nicht gespeichert",
@@ -8627,7 +8624,7 @@
     "space": {
       "menu": "Space exportieren",
       "panelTitle": "Diesen Space exportieren",
-      "description": "Exportieren Sie alle Seiten und veröffentlichten Blogbeiträge, die Sie lesen können, als PDF, Word, HTML oder Markdown. Eingeschränkte Seiten sind nur enthalten, wenn Sie sie lesen können; private Notizen und der Verlauf nicht. Nur Sie können den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Download gelöscht, oder nach 7 Tagen, wenn Sie ihn nie herunterladen. Der Export wird abgelehnt, wenn der Speicher von Lunedo fast voll ist.",
+      "description": "Exportiere alle Seiten und veröffentlichten Blogbeiträge, die du lesen kannst, als PDF, Word, HTML oder Markdown. Eingeschränkte Seiten sind nur enthalten, wenn du sie lesen kannst; private Notizen und der Verlauf nicht. Nur du kannst den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Download gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst. Der Export wird abgelehnt, wenn der Speicher von Lunedo fast voll ist.",
       "empty": "Du hast keine Exporte dieses Space.",
       "descriptionArticles": "Exportiere alle Artikel, die du lesen kannst, als PDF, Word, HTML oder Markdown. Eingeschränkte Artikel sind nur enthalten, wenn du sie lesen kannst; private Notizen und der Verlauf nicht. Nur du kannst den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Download gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst. Der Export wird abgelehnt, wenn der Speicher von Lunedo fast voll ist."
     },
@@ -8665,21 +8662,21 @@
       "tokenRevoked": "Das API-Token, das den Export gestartet hat, wurde widerrufen oder ist abgelaufen. Starte den Export erneut.",
       "interrupted": "Der Export wurde mehrmals unterbrochen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Lunedo betreibt.",
       "internalError": "Beim Erstellen des Exports ist etwas schiefgegangen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Lunedo betreibt.",
-      "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
-      "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starten Sie den Export erneut; schlägt er wieder fehl, informieren Sie Ihre Instanz-Administration.",
-      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML.",
-      "tooManyPagesForFile": "Die Word- oder PDF-Datei hätte mehr Seiten, als sie aufnimmt. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
-      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv.",
+      "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucke das PDF stattdessen über deinen Browser oder frag deine Instanz-Administration.",
+      "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starte den Export erneut; schlägt er wieder fehl, informiere deine Instanz-Administration.",
+      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportiere weniger Seiten oder als Word bzw. HTML.",
+      "tooManyPagesForFile": "Die Word- oder PDF-Datei hätte mehr Seiten, als sie aufnimmt. Exportiere stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
+      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportiere einen kleineren Teil oder als HTML- oder Markdown-Archiv.",
       "notPublic": "Die Wissensdatenbank ist nicht mehr öffentlich und kann deshalb keine statische Website werden. Mach sie wieder öffentlich und starte den Download erneut."
     },
     "screen": {
       "title": "Meine Exporte",
-      "description": "Downloads von Spaces und Seiten, die du exportiert hast. Nur du kannst sie öffnen. Jeder Download wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst."
+      "description": "Nur du kannst diese Downloads öffnen; jeder wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, spätestens nach 7 Tagen."
     },
     "settings": {
       "tab": "Export",
       "title": "Export",
-      "description": "Erlauben Sie, Seiten und den ganzen Space als PDF, Word, HTML und Markdown zu exportieren.",
+      "description": "Erlaube, Seiten und den ganzen Space als PDF, Word, HTML und Markdown zu exportieren.",
       "settingTitle": "Export-Einstellung",
       "copyNote": "Das Ausschalten des Exports verhindert kein Kopieren: Wer eine Seite lesen kann, kann ihren Inhalt weiterhin kopieren.",
       "descriptionArticles": "Erlaube, Artikel und die ganze Wissensdatenbank als PDF, Word, HTML und Markdown zu exportieren oder als statische Website herunterzuladen."
@@ -8717,8 +8714,8 @@
           "description": "Textdateien mit Formatierung"
         }
       },
-      "printHintTitle": "Ihr Browser öffnet den Druckdialog – wählen Sie „Als PDF speichern“.",
-      "printHint": "Lunedo fügt Kopfzeile, Fußzeile und Seitenzahlen hinzu. Schalten Sie die eigenen Kopf- und Fußzeilen des Browsers aus.",
+      "printHintTitle": "Dein Browser öffnet den Druckdialog – wähle „Als PDF speichern“.",
+      "printHint": "Lunedo fügt Kopfzeile, Fußzeile und Seitenzahlen hinzu. Schalte die eigenen Kopf- und Fußzeilen des Browsers aus.",
       "printPrepared": "Bei mehreren Seiten wird die Druckansicht zuerst auf dem Server vorbereitet.",
       "scopes": {
         "page": {
@@ -8727,17 +8724,17 @@
         },
         "pages": {
           "label": "Diese Seite mit Unterseiten",
-          "description": "{title} und die Unterseiten, die Sie lesen können",
-          "counted": "{count, plural, one {# Seite, die Sie lesen können} other {# Seiten, die Sie lesen können}}"
+          "description": "{title} und die Unterseiten, die du lesen kannst",
+          "counted": "{count, plural, one {# Seite, die du lesen kannst} other {# Seiten, die du lesen kannst}}"
         },
         "space": {
           "label": "Der ganze Space „{name}“",
-          "description": "Alle Seiten und veröffentlichten Blogbeiträge, die Sie lesen können",
+          "description": "Alle Seiten und veröffentlichten Blogbeiträge, die du lesen kannst",
           "counted": "{pages, plural, one {# Seite} other {# Seiten}} und {posts, plural, one {# Blogbeitrag} other {# Blogbeiträge}}",
           "countedArticles": "{count, plural, one {# Artikel} other {# Artikel}}",
           "descriptionArticles": "Alle Artikel, die du lesen kannst"
         },
-        "adminsOnly": "Nur Space-Admins können mehrere Seiten auf einmal exportieren. Fragen Sie einen Space-Admin von {name}."
+        "adminsOnly": "Nur Space-Admins können mehrere Seiten auf einmal exportieren. Frag einen Space-Admin von {name}."
       },
       "attachments": "Anhänge einschließen",
       "attachmentsPaged": "Bilder bleiben im Dokument; Dateien werden in einem Anhang aufgelistet.",
@@ -8746,18 +8743,18 @@
       "commentsDescription": "Offene Kommentare erscheinen nach jeder Seite.",
       "contents": "Inhaltsverzeichnis",
       "contentsDescription": "Auf dem ersten Blatt, mit Seitenzahlen.",
-      "background": "Läuft im Hintergrund. Sie erhalten eine Benachrichtigung mit dem Download, sobald die Datei fertig ist.",
+      "background": "Läuft im Hintergrund. Du erhältst eine Benachrichtigung mit dem Download, sobald die Datei fertig ist.",
       "tooManyForFileTitle": "Zu viele Seiten für eine Datei",
-      "tooManyForFile": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als eine Word- oder PDF-Datei aufnimmt (bis zu {limit}). Exportieren Sie sie als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
+      "tooManyForFile": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als eine Word- oder PDF-Datei aufnimmt (bis zu {limit}). Exportiere sie als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
       "tooManyTitle": "Zu viele Seiten für die Druckansicht",
-      "tooMany": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Exportieren Sie stattdessen als Word oder HTML.",
-      "tooManyServer": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Erstellen Sie das PDF auf dem Server oder exportieren Sie als Word oder HTML.",
+      "tooMany": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Exportiere stattdessen als Word oder HTML.",
+      "tooManyServer": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Erstelle das PDF auf dem Server oder exportiere als Word oder HTML.",
       "useWord": "Als Word exportieren",
       "useHtml": "Als HTML exportieren",
       "useMarkdown": "Als Markdown exportieren",
       "useServer": "PDF auf dem Server erstellen",
       "serverChosen": "Das PDF wird auf dem Server erstellt.",
-      "countsFailed": "Die Seiten konnten nicht gezählt werden. Sie können den Export trotzdem starten.",
+      "countsFailed": "Die Seiten konnten nicht gezählt werden. Du kannst den Export trotzdem starten.",
       "openPrint": "Druckansicht öffnen",
       "preparePrint": "Druckansicht vorbereiten",
       "download": "Herunterladen",
@@ -8778,18 +8775,18 @@
       "back": "Zurück",
       "again": "Erneut drucken",
       "frame": "Druckvorschau von {title}",
-      "hint": "Ihr Browser öffnet den Druckdialog – wählen Sie „Als PDF speichern“. Schalten Sie die eigenen Kopf- und Fußzeilen des Browsers aus; Lunedo fügt eigene hinzu.",
+      "hint": "Dein Browser öffnet den Druckdialog – wähle „Als PDF speichern“. Schalte die eigenen Kopf- und Fußzeilen des Browsers aus; Lunedo fügt eigene hinzu.",
       "preparing": "Die Druckansicht wird vorbereitet",
       "preparingProgress": "{done} von {total} Schritten erledigt",
       "loading": "Die Seiten werden geladen",
       "layout": "Die Blätter werden gesetzt",
       "failedTitle": "Die Druckansicht konnte nicht angezeigt werden",
-      "failed": "Die Seiten konnten nicht geladen oder gesetzt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-      "exportFailed": "Die Vorbereitung der Druckansicht ist auf dem Server fehlgeschlagen. Starten Sie den Export im Exportdialog erneut.",
+      "failed": "Die Seiten konnten nicht geladen oder gesetzt werden. Prüfe deine Verbindung und versuche es erneut.",
+      "exportFailed": "Die Vorbereitung der Druckansicht ist auf dem Server fehlgeschlagen. Starte den Export im Exportdialog erneut.",
       "retry": "Erneut versuchen",
       "missingTitle": "Nichts zu drucken",
-      "missing": "Öffnen Sie die Druckansicht über den Exportdialog einer Seite.",
-      "browsers": "Chrome und Edge übernehmen Papierformat und Ausrichtung der Druckansicht. In Firefox und Safari wählen Sie dasselbe Papierformat und dieselbe Ausrichtung im Druckdialog."
+      "missing": "Öffne die Druckansicht über den Exportdialog einer Seite.",
+      "browsers": "Chrome und Edge übernehmen Papierformat und Ausrichtung der Druckansicht. In Firefox und Safari wählst du dasselbe Papierformat und dieselbe Ausrichtung im Druckdialog."
     },
     "formats": {
       "archive": "Markdown und HTML",
@@ -9303,8 +9300,8 @@
   },
   "backups": {
     "title": "Backups",
-    "description": "Sichern Sie Datenbank, Dateispeicher und Konfiguration nach Zeitplan, bewahren Sie Generationen auf und prüfen Sie, ob sich Backups wiederherstellen lassen.",
-    "readOnly": "Sie können die Backups und ihre Test-Wiederherstellungen ansehen. Für Änderungen, Backups, Test-Wiederherstellungen und das Löschen brauchen Sie das Recht, den Betrieb zu verwalten.",
+    "description": "Sichere Datenbank, Dateispeicher und Konfiguration nach Zeitplan, bewahre Generationen auf und prüfe, ob sich Backups wiederherstellen lassen.",
+    "readOnly": "Du kannst die Backups und ihre Test-Wiederherstellungen ansehen. Für Änderungen, Backups, Test-Wiederherstellungen und das Löschen brauchst du das Recht, den Betrieb zu verwalten.",
     "failures": {
       "load": "Die Backup-Einstellungen konnten nicht geladen werden",
       "list": "Die Liste der Backups konnte nicht geladen werden",
@@ -9312,27 +9309,27 @@
       "delete": "Das Backup konnte nicht gelöscht werden"
     },
     "errors": {
-      "invalidTime": "Geben Sie die Uhrzeit in Stunden und Minuten ein, zum Beispiel 02:30.",
-      "invalidDay": "Wählen Sie einen Tag aus der Liste.",
-      "invalidCount": "Geben Sie eine ganze Zahl im erlaubten Bereich ein.",
-      "invalidScope": "Wählen Sie, was die Backups enthalten.",
-      "invalidPath": "Geben Sie einen absoluten Pfad im Container ein, zum Beispiel /var/lib/lunedo/backups.",
-      "reservedPath": "Dieser Pfad enthält den Dateispeicher, die Geheimnisse oder den Importordner. Wählen Sie ein eigenes Verzeichnis.",
-      "invalidEndpoint": "Geben Sie nur die Adresse des Dienstes ein, beginnend mit https://, zum Beispiel https://s3.example.org.",
-      "invalidRegion": "Geben Sie die Region ein, zum Beispiel eu-central-1, oder auto für Cloudflare R2.",
-      "invalidBucket": "Geben Sie den Bucket-Namen ein: 3 bis 63 Kleinbuchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
-      "invalidPrefix": "Lassen Sie das Präfix leer oder beenden Sie es mit einem Schrägstrich, zum Beispiel lunedo/.",
-      "invalidAccessKey": "Geben Sie den Zugriffsschlüssel ein.",
-      "secretKeyRequired": "Geben Sie den geheimen Schlüssel ein.",
-      "noTarget": "Richten Sie zuerst ein Backup-Ziel ein. Backups lassen sich einschalten, sobald Lunedo weiß, wohin es sie schreiben soll.",
-      "range": "Geben Sie eine ganze Zahl von {min} bis {max} ein."
+      "invalidTime": "Gib die Uhrzeit in Stunden und Minuten ein, zum Beispiel 02:30.",
+      "invalidDay": "Wähle einen Tag aus der Liste.",
+      "invalidCount": "Gib eine ganze Zahl im erlaubten Bereich ein.",
+      "invalidScope": "Wähle, was die Backups enthalten.",
+      "invalidPath": "Gib einen absoluten Pfad im Container ein, zum Beispiel /var/lib/lunedo/backups.",
+      "reservedPath": "Dieser Pfad enthält den Dateispeicher, die Geheimnisse oder den Importordner. Wähle ein eigenes Verzeichnis.",
+      "invalidEndpoint": "Gib nur die Adresse des Dienstes ein, beginnend mit https://, zum Beispiel https://s3.example.org.",
+      "invalidRegion": "Gib die Region ein, zum Beispiel eu-central-1, oder auto für Cloudflare R2.",
+      "invalidBucket": "Gib den Bucket-Namen ein: 3 bis 63 Kleinbuchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
+      "invalidPrefix": "Lass das Präfix leer oder beende es mit einem Schrägstrich, zum Beispiel lunedo/.",
+      "invalidAccessKey": "Gib den Zugriffsschlüssel ein.",
+      "secretKeyRequired": "Gib den geheimen Schlüssel ein.",
+      "noTarget": "Richte zuerst ein Backup-Ziel ein. Backups lassen sich einschalten, sobald Lunedo weiß, wohin es sie schreiben soll.",
+      "range": "Gib eine ganze Zahl von {min} bis {max} ein."
     },
     "status": {
       "title": "Status",
       "failingTitle": "Backups schlagen fehl",
-      "failingUnknown": "Das letzte Backup ist fehlgeschlagen. Prüfen Sie das Ziel und die letzten Läufe unten.",
+      "failingUnknown": "Das letzte Backup ist fehlgeschlagen. Prüfe das Ziel und die letzten Läufe unten.",
       "missingTitle": "Kein aktuelles Backup",
-      "missingBody": "Seit {count, plural, one {# Tag} other {# Tagen}} ist kein Backup gelungen. Prüfen Sie den Zeitplan und das Ziel.",
+      "missingBody": "Seit {count, plural, one {# Tag} other {# Tagen}} ist kein Backup gelungen. Prüfe den Zeitplan und das Ziel.",
       "lastSuccess": "Letztes erfolgreiches Backup",
       "at": "{relative} ({time})",
       "never": "Noch keines",
@@ -9347,7 +9344,7 @@
     "key": {
       "title": "Backup-Schlüssel",
       "warningTitle": "Ohne diesen Schlüssel lässt sich kein Backup wiederherstellen",
-      "warning": "Backups sind mit dem Backup-Schlüssel verschlüsselt (LUNEDO_BACKUP_KEY oder backup-keys im Verzeichnis für Geheimnisse). Bewahren Sie eine Kopie des Backup-Schlüssels und der Hauptschlüssel außerhalb dieses Servers auf, zum Beispiel in einem Passwortmanager. Backups enthalten die Schlüssel nie.",
+      "warning": "Backups sind mit dem Backup-Schlüssel verschlüsselt (LUNEDO_BACKUP_KEY oder backup-keys im Verzeichnis für Geheimnisse). Bewahre eine Kopie des Backup-Schlüssels und der Hauptschlüssel außerhalb dieses Servers auf, zum Beispiel in einem Passwortmanager. Backups enthalten die Schlüssel nie.",
       "confirm": "Der Backup-Schlüssel ist außerhalb von Lunedo aufbewahrt",
       "confirmedBy": "Bestätigt am {date} von {name}.",
       "confirmedAt": "Bestätigt am {date}.",
@@ -9356,16 +9353,16 @@
     "target": {
       "title": "Ziel",
       "noneTitle": "Kein Ziel eingerichtet",
-      "none": "Wählen Sie, wohin Backups geschrieben werden. Bis dahin landen Backups vor Updates im Standardverzeichnis des Containers.",
+      "none": "Wähle, wohin Backups geschrieben werden. Bis dahin landen Backups vor Updates im Standardverzeichnis des Containers.",
       "kind": "Wohin Backups geschrieben werden",
       "local": "Verzeichnis",
-      "localDescription": "Ein Verzeichnis im Container. Binden Sie dort eine Netzwerkfreigabe (NFS, SMB) ein, damit Backups auf einem anderen Rechner liegen.",
+      "localDescription": "Ein Verzeichnis im Container. Binde dort eine Netzwerkfreigabe (NFS, SMB) ein, damit Backups auf einem anderen Rechner liegen.",
       "s3": "S3-kompatibler Speicher",
       "s3Description": "Amazon S3, Google Cloud Storage, MinIO, Cloudflare R2 und andere S3-kompatible Dienste.",
       "path": "Verzeichnis",
       "pathHint": "Absoluter Pfad im Container. Der Container-Benutzer muss dort schreiben dürfen.",
       "sameVolumeTitle": "Auf demselben Laufwerk wie der Dateispeicher",
-      "sameVolume": "Dieses Verzeichnis liegt auf demselben Laufwerk wie der Dateispeicher, ein Plattendefekt verliert also beides. Binden Sie ein eigenes Laufwerk oder eine Netzwerkfreigabe ein, oder nutzen Sie S3-kompatiblen Speicher.",
+      "sameVolume": "Dieses Verzeichnis liegt auf demselben Laufwerk wie der Dateispeicher, ein Plattendefekt verliert also beides. Binde ein eigenes Laufwerk oder eine Netzwerkfreigabe ein, oder nutze S3-kompatiblen Speicher.",
       "endpoint": "Endpunkt",
       "endpointHint": "Adresse des Dienstes. Für Amazon S3 leer lassen.",
       "region": "Region",
@@ -9377,7 +9374,7 @@
       "accessKey": "Zugriffsschlüssel",
       "accessKeyHint": "Der Schlüssel braucht das Recht, Objekte zu schreiben, zu lesen, aufzulisten und zu löschen.",
       "secretKey": "Geheimer Schlüssel",
-      "secretKeyStored": "Ein geheimer Schlüssel ist gespeichert. Lassen Sie das Feld leer, um ihn zu behalten, oder geben Sie einen neuen ein, um ihn zu ersetzen.",
+      "secretKeyStored": "Ein geheimer Schlüssel ist gespeichert. Lass das Feld leer, um ihn zu behalten, oder gib einen neuen ein, um ihn zu ersetzen.",
       "secretKeyHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
       "pathStyle": "Bucket im Pfad adressieren",
       "pathStyleHint": "Nötig für MinIO und einige andere Dienste.",
@@ -9391,20 +9388,20 @@
         "list": "Auflisten"
       },
       "failures": {
-        "notFound": "{step} fehlgeschlagen: Das Verzeichnis existiert im Container nicht. Legen Sie es an oder binden Sie das Laufwerk dort ein.",
-        "permission": "{step} fehlgeschlagen: Lunedo darf das nicht. Geben Sie dem Container-Benutzer oder dem Zugriffsschlüssel das Recht zu schreiben, zu lesen, aufzulisten und zu löschen.",
-        "readOnly": "{step} fehlgeschlagen: Das Dateisystem ist schreibgeschützt eingebunden. Binden Sie es beschreibbar ein.",
-        "full": "{step} fehlgeschlagen: Das Ziel ist voll. Schaffen Sie Platz oder wählen Sie ein anderes Ziel.",
-        "dns": "{step} fehlgeschlagen: Der Hostname des Endpunkts ließ sich nicht auflösen. Prüfen Sie den Endpunkt.",
-        "blockedAddress": "{step} fehlgeschlagen: Der Endpunkt liegt in einem privaten Netz. Soll er erreichbar sein, tragen Sie seine Adresse in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein.",
-        "blockedAddressAt": "{step} fehlgeschlagen: Der Endpunkt löst zu {address} auf, einer Adresse in einem privaten Netz. Soll Lunedo ihn erreichen, tragen Sie {network} oder das Subnetz seines Netzes in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein und starten Sie Lunedo neu.",
-        "insecureAddress": "{step} fehlgeschlagen: Öffentliche Endpunkte brauchen HTTPS. Verwenden Sie eine https://-Adresse.",
-        "connection": "{step} fehlgeschlagen: Der Endpunkt war nicht erreichbar. Prüfen Sie Adresse, Port und Firewall.",
-        "tls": "{step} fehlgeschlagen: Dem TLS-Zertifikat des Endpunkts wird nicht vertraut. Prüfen Sie das Zertifikat oder die Adresse.",
-        "credentials": "{step} fehlgeschlagen: Der Zugriffsschlüssel oder der geheime Schlüssel wurde nicht angenommen. Prüfen Sie beide Schlüssel.",
-        "bucket": "{step} fehlgeschlagen: Den Bucket gibt es nicht oder er liegt in einer anderen Region. Prüfen Sie Bucket und Region.",
-        "mismatch": "{step} fehlgeschlagen: Das Testobjekt kam verändert zurück. Prüfen Sie den Speicherdienst.",
-        "other": "{step} fehlgeschlagen: Der Speicherdienst hat die Anfrage abgelehnt. Prüfen Sie die Einstellungen und die Protokolle des Dienstes."
+        "notFound": "{step} fehlgeschlagen: Das Verzeichnis existiert im Container nicht. Lege es an oder binde das Laufwerk dort ein.",
+        "permission": "{step} fehlgeschlagen: Lunedo darf das nicht. Gib dem Container-Benutzer oder dem Zugriffsschlüssel das Recht zu schreiben, zu lesen, aufzulisten und zu löschen.",
+        "readOnly": "{step} fehlgeschlagen: Das Dateisystem ist schreibgeschützt eingebunden. Binde es beschreibbar ein.",
+        "full": "{step} fehlgeschlagen: Das Ziel ist voll. Schaffe Platz oder wähle ein anderes Ziel.",
+        "dns": "{step} fehlgeschlagen: Der Hostname des Endpunkts ließ sich nicht auflösen. Prüfe den Endpunkt.",
+        "blockedAddress": "{step} fehlgeschlagen: Der Endpunkt liegt in einem privaten Netz. Soll er erreichbar sein, trage seine Adresse in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein.",
+        "blockedAddressAt": "{step} fehlgeschlagen: Der Endpunkt löst zu {address} auf, einer Adresse in einem privaten Netz. Soll Lunedo ihn erreichen, trage {network} oder das Subnetz seines Netzes in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein und starte Lunedo neu.",
+        "insecureAddress": "{step} fehlgeschlagen: Öffentliche Endpunkte brauchen HTTPS. Verwende eine https://-Adresse.",
+        "connection": "{step} fehlgeschlagen: Der Endpunkt war nicht erreichbar. Prüfe Adresse, Port und Firewall.",
+        "tls": "{step} fehlgeschlagen: Dem TLS-Zertifikat des Endpunkts wird nicht vertraut. Prüfe das Zertifikat oder die Adresse.",
+        "credentials": "{step} fehlgeschlagen: Der Zugriffsschlüssel oder der geheime Schlüssel wurde nicht angenommen. Prüfe beide Schlüssel.",
+        "bucket": "{step} fehlgeschlagen: Den Bucket gibt es nicht oder er liegt in einer anderen Region. Prüfe Bucket und Region.",
+        "mismatch": "{step} fehlgeschlagen: Das Testobjekt kam verändert zurück. Prüfe den Speicherdienst.",
+        "other": "{step} fehlgeschlagen: Der Speicherdienst hat die Anfrage abgelehnt. Prüfe die Einstellungen und die Protokolle des Dienstes."
       }
     },
     "schedule": {
@@ -9423,7 +9420,7 @@
     },
     "retention": {
       "title": "Aufbewahrung",
-      "description": "Lunedo löscht nur Backups, die es selbst in diesem Ziel angelegt hat, nie andere Dateien. Ein als monatlich aufbewahrtes Backup zählt nicht als tägliches. Manuelle Backups bleiben, bis Sie sie löschen.",
+      "description": "Lunedo löscht nur Backups, die es selbst in diesem Ziel angelegt hat, nie andere Dateien. Ein als monatlich aufbewahrtes Backup zählt nicht als tägliches. Manuelle Backups bleiben, bis du sie löschst.",
       "daily": "Tägliche Backups",
       "dailyHint": "Anzahl, die aufbewahrt wird.",
       "weekly": "Wöchentliche Backups",
@@ -9436,7 +9433,7 @@
     "updates": {
       "title": "Vor Updates",
       "environmentTitle": "Für diese Installation ausgeschaltet",
-      "environment": "LUNEDO_BACKUP_BEFORE_UPDATE=false ist gesetzt, Lunedo startet also ohne Backup, wenn Migrationen anstehen. Entfernen Sie die Variable, um diese Einstellung zu nutzen.",
+      "environment": "LUNEDO_BACKUP_BEFORE_UPDATE=false ist gesetzt, Lunedo startet also ohne Backup, wenn Migrationen anstehen. Entferne die Variable, um diese Einstellung zu nutzen.",
       "enabled": "Vor Migrationen sichern",
       "enabledHint": "Startet eine neue Version mit anstehenden Migrationen, schreibt sie zuerst ein Backup ins Ziel und wartet darauf.",
       "defaultTarget": "Startet eine neue Version mit anstehenden Migrationen, schreibt sie zuerst ein Backup ins Standardverzeichnis des Containers, weil kein Ziel eingerichtet ist."
@@ -9447,7 +9444,7 @@
       "scopeAll": "Alles",
       "scopeAllHint": "Datenbank, Dateispeicher und Konfiguration.",
       "scopeDatabase": "Ohne Dateispeicher",
-      "scopeDatabaseHint": "Für Installationen, die das Laufwerk des Dateispeichers selbst sichern. Eine Wiederherstellung bringt dann nur die Datenbank zurück; stellen Sie den Dateispeicher aus Ihrer Sicherung vom selben Zeitpunkt wieder her, sonst fehlen Anhänge.",
+      "scopeDatabaseHint": "Für Installationen, die das Laufwerk des Dateispeichers selbst sichern. Eine Wiederherstellung bringt dann nur die Datenbank zurück; stelle den Dateispeicher aus deiner Sicherung vom selben Zeitpunkt wieder her, sonst fehlen Anhänge.",
       "missingDays": "Warnen nach Tagen ohne Backup",
       "missingDaysHint": "Instanzadministration und Betriebskontakte werden einmal informiert.",
       "autoTestRestore": "Neuestes Backup jeden Monat testweise wiederherstellen",
@@ -9475,7 +9472,7 @@
       },
       "filesNotIncluded": "Das Backup enthält den Dateispeicher nicht.",
       "filesMissing": "{count, plural, one {# Datei fehlt} other {# Dateien fehlen}}.",
-      "privilege": "Eine vollständige Test-Wiederherstellung braucht einen Datenbankbenutzer, der Datenbanken anlegen darf. Führen Sie dies als Datenbank-Superuser aus:",
+      "privilege": "Eine vollständige Test-Wiederherstellung braucht einen Datenbankbenutzer, der Datenbanken anlegen darf. Führe dies als Datenbank-Superuser aus:",
       "copyGrant": "SQL kopieren"
     },
     "classes": {
@@ -9504,7 +9501,7 @@
       "delete": "Backup löschen",
       "unavailableTitle": "Das Ziel konnte nicht gelesen werden",
       "emptyTitle": "Noch keine Backups",
-      "empty": "Backups erscheinen hier, sobald das erste geschrieben ist. Mit „Jetzt sichern“ legen Sie eines an."
+      "empty": "Backups erscheinen hier, sobald das erste geschrieben ist. Mit „Jetzt sichern“ legst du eines an."
     },
     "delete": {
       "title": "Dieses Backup löschen?",
@@ -9516,14 +9513,14 @@
       "open": "Backup-Einstellungen öffnen",
       "restored": {
         "title": "Diese Instanz wurde aus einem Backup wiederhergestellt",
-        "body": "Diese Instanz wurde aus einem Backup wiederhergestellt. Backups sind pausiert, bis Sie das Ziel bestätigen.",
-        "target": "Ziel: {location}. Wenn diese Instanz eine Kopie ist, zum Beispiel ein Testsystem, ändern Sie das Ziel, damit sie nicht in die Backups des Originals schreibt oder sie löscht.",
-        "change": "Für ein anderes Ziel ändern Sie es unten; auch das setzt die Backups fort.",
+        "body": "Diese Instanz wurde aus einem Backup wiederhergestellt. Backups sind pausiert, bis du das Ziel bestätigst.",
+        "target": "Ziel: {location}. Wenn diese Instanz eine Kopie ist, zum Beispiel ein Testsystem, ändere das Ziel, damit sie nicht in die Backups des Originals schreibt oder sie löscht.",
+        "change": "Für ein anderes Ziel ändere es unten; auch das setzt die Backups fort.",
         "confirm": "Ziel bestätigen und Backups fortsetzen"
       },
       "failing": {
         "title": "Backups schlagen fehl",
-        "body": "Das letzte Backup ist fehlgeschlagen. Öffnen Sie die Backup-Einstellungen, um den Grund zu sehen."
+        "body": "Das letzte Backup ist fehlgeschlagen. Öffne die Backup-Einstellungen, um den Grund zu sehen."
       },
       "missing": {
         "title": "Kein aktuelles Backup",
@@ -9531,11 +9528,11 @@
       },
       "off": {
         "title": "Backups sind ausgeschaltet",
-        "body": "Diese Instanz enthält Inhalte, aber keine geplanten Backups. Schalten Sie sie in den Backup-Einstellungen ein."
+        "body": "Diese Instanz enthält Inhalte, aber keine geplanten Backups. Schalte sie in den Backup-Einstellungen ein."
       },
       "noTarget": {
         "title": "Backups sind nicht eingerichtet",
-        "body": "Diese Instanz enthält Inhalte, aber kein Backup-Ziel. Richten Sie eines in den Backup-Einstellungen ein."
+        "body": "Diese Instanz enthält Inhalte, aber kein Backup-Ziel. Richte eines in den Backup-Einstellungen ein."
       }
     }
   },
@@ -9605,9 +9602,9 @@
         "unreachable": "Nicht erreichbar"
       },
       "reasons": {
-        "connection": "Lunedo erreicht den Container nicht. Prüfen Sie, ob er läuft und LUNEDO_RENDER_URL auf ihn zeigt.",
-        "token": "Der Container lehnt das Token ab. Setzen Sie dasselbe Token in LUNEDO_RENDER_TOKEN von Lunedo und RENDER_TOKEN des Containers.",
-        "response": "Der Container antwortet, aber nicht wie ein Lunedo-Render-Container. Prüfen Sie LUNEDO_RENDER_URL."
+        "connection": "Lunedo erreicht den Container nicht. Prüfe, ob er läuft und LUNEDO_RENDER_URL auf ihn zeigt.",
+        "token": "Der Container lehnt das Token ab. Setze dasselbe Token in LUNEDO_RENDER_TOKEN von Lunedo und RENDER_TOKEN des Containers.",
+        "response": "Der Container antwortet, aber nicht wie ein Lunedo-Render-Container. Prüfe LUNEDO_RENDER_URL."
       },
       "address": "Adresse",
       "version": "Version",
@@ -9621,8 +9618,8 @@
       "usedFor": "Wird für PDF über die API und für PDF mehrerer Seiten im Hintergrund verwendet. Einzelne Seiten exportieren Personen als PDF über ihren eigenen Browser.",
       "notConfiguredTitle": "Der interaktive Export funktioniert ohne ihn.",
       "notConfigured": "Personen drucken PDF-Dateien über ihren eigenen Browser. Der Container wird nur für PDF über die API und für PDF vieler Seiten im Hintergrund gebraucht. Er führt Chromium ohne Oberfläche aus und ist optional.",
-      "setup": "Fügen Sie den Render-Container Ihrer Docker-Compose-Datei hinzu, setzen Sie dasselbe Token für Lunedo und starten Sie Lunedo neu:",
-      "docs": "So richten Sie den Render-Container ein",
+      "setup": "Füge den Render-Container deiner Docker-Compose-Datei hinzu, setze dasselbe Token für Lunedo und starte Lunedo neu:",
+      "docs": "So richtest du den Render-Container ein",
       "loadFailed": "Der Zustand des Renderings konnte nicht geladen werden"
     },
     "other": {
@@ -9640,7 +9637,7 @@
   "embeds": {
     "settings": {
       "title": "Externe Einbettungen",
-      "description": "Welche Dienste Seiten einbetten dürfen, etwa Videos und Diagramme anderer Websites. Organisationen können die Liste für ihre Inhalte einschränken."
+      "description": "Welche Dienste Seiten einbetten dürfen, etwa Videos und Diagramme anderer Websites."
     },
     "allowlist": {
       "title": "Liste erlaubter Einbettungen",
@@ -9851,7 +9848,7 @@
     },
     "categories": {
       "title": "Kategorien",
-      "description": "Icon, Einleitung und Kontaktadresse der Kategorien und ihre Reihenfolge. Ordner auf der ersten Ebene sind Kategorien, auf der zweiten Unterkategorien.",
+      "description": "Ordner auf der ersten Ebene sind Kategorien, auf der zweiten Unterkategorien.",
       "icon": "Icon",
       "iconHint": "Ohne Icon zeigt das Portal den Anfangsbuchstaben des Namens.",
       "noIcon": "Kein Icon",
@@ -9869,7 +9866,8 @@
       "noSections": "Diese Vorlage hat keine Abschnitte.",
       "requiredOf": "{section} ist Pflicht",
       "adminsOnly": "Nur Space-Admins können festlegen, welche Abschnitte Pflicht sind.",
-      "hint": "Pflichtabschnitte sind standardmäßig aus. Ist einer an, lässt sich ein Artikel aus dieser Vorlage erst veröffentlichen, wenn der Abschnitt Inhalt hat. Bereits veröffentlichte Artikel bleiben veröffentlicht."
+      "hint": "Pflichtabschnitte sind standardmäßig aus. Ist einer an, lässt sich ein Artikel aus dieser Vorlage erst veröffentlichen, wenn der Abschnitt Inhalt hat. Bereits veröffentlichte Artikel bleiben veröffentlicht.",
+      "articleTemplates": "Artikelvorlagen"
     },
     "required": {
       "title": "Pflichtabschnitte sind leer",
@@ -9920,7 +9918,7 @@
     },
     "address": {
       "title": "Adresse",
-      "description": "Unter dieser Adresse öffnen Lesende die Wissensdatenbank. Wer sie öffnet, landet im Portal, nicht in der App.",
+      "description": "Unter dieser Adresse öffnen Lesende das Portal der Wissensdatenbank.",
       "loadFailed": "Die Adresse des Portals konnte nicht geladen werden",
       "panel": "Adresse des Portals",
       "change": "Ändern",
@@ -9929,7 +9927,7 @@
       "pathInvalid": "Verwende Kleinbuchstaben, Ziffern und einzelne Bindestriche, höchstens 60 Zeichen.",
       "domain": "Eigene Domain",
       "domainHint": "Optional. Zum Beispiel kann die alte Adresse einer Hilfe hierher zeigen.",
-      "noDomains": "Die Instanz-Administration hat für diese Organisation noch keine Domain erlaubt. Domains werden unter Instanz-Einstellungen, Portal-Domains erlaubt.",
+      "noDomains": "Die Instanz-Administration hat für diese Organisation noch keine Domain erlaubt. Domains werden in den Instanz-Einstellungen unter „Wissensdatenbank-Portale“ erlaubt.",
       "noDomain": "Keine eigene Domain",
       "dnsTitle": "Trage zuerst diesen Eintrag beim DNS-Anbieter ein",
       "dnsText": "Lass {domain} auf diese Instanz zeigen. Der Reverse Proxy muss die Domain an Lunedo weiterleiten und ihr Zertifikat bereitstellen.",
@@ -9940,7 +9938,7 @@
     },
     "appearance": {
       "title": "Aussehen und Startseite",
-      "description": "Wie das Portal aussieht und was auf seiner Startseite steht. Änderungen gelten sofort im Portal.",
+      "description": "Wie das Portal aussieht und was auf seiner Startseite steht.",
       "loadFailed": "Das Aussehen des Portals konnte nicht geladen werden",
       "open": "Portal öffnen",
       "identity": "Logo und Farbe",
@@ -9992,7 +9990,7 @@
     "languages": {
       "tab": "Sprachen",
       "title": "Sprachen",
-      "description": "Artikel können übersetzt werden. Übersetzungen sind mit ihrem Original verknüpft; fehlt eine, sehen Lesende die Standardsprache mit einem Hinweis.",
+      "description": "Sprachen, in die Artikel übersetzt werden; fehlt eine Übersetzung, sehen Lesende die Standardsprache.",
       "loadFailed": "Die Sprachen konnten nicht geladen werden",
       "section": "Sprachen",
       "default": "Standardsprache",
@@ -10170,7 +10168,7 @@
     "settings": {
       "tab": "Überprüfung",
       "title": "Überprüfung",
-      "description": "Artikel veralten. Mit einem Intervall werden Verantwortliche erinnert und fällige Artikel unter „Überprüfung“ und auf „Für dich“ gelistet.",
+      "description": "Erinnert Verantwortliche an veraltete Artikel und listet fällige unter „Überprüfung“ und auf „Für dich“.",
       "loadFailed": "Die Einstellungen zur Überprüfung",
       "section": "Überprüfung und Erinnerungen",
       "interval": "Überprüfungsintervall",
@@ -10293,7 +10291,7 @@
   "portalAccounts": {
     "tab": "Portalkonten",
     "title": "Portalkonten",
-    "description": "Lesende ohne Firmenkonto melden sich mit E-Mail-Adresse und Passwort oder Passkey an. Sie sehen nur die Portale der Wissensdatenbanken, zu denen sie eingeladen wurden, nie das Wiki.",
+    "description": "Lesende ohne Firmenkonto, die nur die Portale sehen, zu denen sie eingeladen wurden, nie das Wiki.",
     "notForPortalTitle": "Diese Wissensdatenbank ist nicht für Portalkonten",
     "notForPortal": "Portalkonten lesen nur Wissensdatenbanken mit der Zielgruppe Portalkonten. Ändere die Zielgruppe, um hier Lesende einzuladen.",
     "toVisibility": "Sichtbarkeit öffnen",
@@ -10352,7 +10350,7 @@
   "operations": {
     "status": {
       "title": "Systemstatus",
-      "description": "Prüfungen der Instanz: Datenbank, Speicher, Jobs, Backups, Suche, letzte Fehler und die Einrichtungsprüfungen. Wird jede Minute aktualisiert.",
+      "description": "Prüfungen der Instanz: Datenbank, Speicher, Jobs, Backups, Suche, letzte Fehler und die Einrichtungsprüfungen.",
       "refresh": "Erneut prüfen",
       "loadFailed": "den Systemstatus",
       "checks": "Prüfungen",
@@ -10633,5 +10631,11 @@
       "noSection": "Das Changelog hat keinen Eintrag für diese Version.",
       "unavailable": "Dieses Image enthält kein Changelog."
     }
+  },
+  "profile": {
+    "title": "Profil",
+    "description": "Wie du in Lunedo heißt und unter welcher Adresse Lunedo dich erreicht.",
+    "details": "Persönliche Angaben",
+    "displayName": "Anzeigename"
   }
 }

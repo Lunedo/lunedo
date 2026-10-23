@@ -155,7 +155,7 @@ function EventList({
           const push = browserPush ? row.push : undefined;
           const pushReason = push ? disabledReason(t, push, level, editable, organizationName) : undefined;
           return (
-            <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+            <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 py-3">
               <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
                 <span className="font-medium wrap-anywhere">{label(row)}</span>
                 <SaveIndicator tracker={saveState(row.event.id)} />
@@ -262,7 +262,7 @@ export function NotificationPreferences({
       </Section>
       {administration.length > 0 ? (
         <details className="rounded-md border border-border bg-surface">
-          <summary className="cursor-pointer rounded-md px-4 py-3 font-semibold focus-visible:focus-ring">
+          <summary className="cursor-pointer rounded-md py-3 font-semibold focus-visible:focus-ring">
             {t("notifications.administrationEvents")}
           </summary>
           <div className="border-border border-t">

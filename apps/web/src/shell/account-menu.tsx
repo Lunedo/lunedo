@@ -1,6 +1,6 @@
 import { Avatar, Menu, RailButton } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { LockKeyhole, LogOut, Palette } from "lucide-react";
+import { LockKeyhole, LogOut, Palette, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useShell } from "./shell.js";
 import { useSession } from "./shell-context.js";
@@ -17,6 +17,11 @@ export function AccountRailItem() {
       trigger={<RailButton label={t("rail.account")} icon={<Avatar name={name} size="sm" />} />}
       items={[
         { type: "label", label: session.account?.email ?? name },
+        {
+          label: t("navigation.profile"),
+          icon: UserRound,
+          onSelect: () => void navigate({ to: "/settings/profile" }),
+        },
         {
           label: t("navigation.preferences"),
           icon: Palette,

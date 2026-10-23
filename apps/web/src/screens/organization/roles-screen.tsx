@@ -93,7 +93,6 @@ export function OrganizationRolesScreen() {
       width="wide"
       title={t("roles.title")}
       description={t("roles.description")}
-      organizationId={organizationId}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setAssigning(true)}>
@@ -341,7 +340,11 @@ export function OrganizationRolesScreen() {
           <AccessImpact
             change="loses"
             {...holders(removing)}
-            what={t("roles.losesWhat", { role: roleName(t, removing), name: organizationName })}
+            what={t("roles.losesWhat", {
+              count: holders(removing).people.length,
+              role: roleName(t, removing),
+              name: organizationName,
+            })}
           />
         ) : null}
       </ConfirmDialog>

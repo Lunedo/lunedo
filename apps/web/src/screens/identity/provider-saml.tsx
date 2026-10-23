@@ -113,7 +113,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
   return (
     <Section title={t("identityProviders.saml.metadataTitle")}>
       {metadata === null ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="warning" title={t("identityProviders.saml.noMetadataTitle")}>
             {source.source === "url"
               ? t("identityProviders.saml.noMetadataUrl")
@@ -122,7 +122,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
         </div>
       ) : null}
       {metadata?.refreshFailedAt ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="danger" title={t("identityProviders.saml.refreshFailedTitle")}>
             {t("identityProviders.warnings.metadataRefreshFailed", {
               name: provider.name,
@@ -177,7 +177,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
         </>
       ) : null}
       {canManage ? (
-        <div className="flex flex-wrap gap-2 px-4 py-3">
+        <div className="flex flex-wrap gap-2 py-3">
           {source.source === "url" ? (
             <Button
               variant="secondary"
@@ -254,7 +254,7 @@ export function SamlConnectionFields({
   return (
     <>
       {config.preset === "entraId" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <ExplicitSaveTextField
             label={t("identityProviders.fields.tenantId")}
             hint={t("identityProviders.fields.tenantIdHint")}
@@ -295,7 +295,7 @@ export function SamlConnectionFields({
         status={<SaveIndicator tracker={tracker("source")} />}
       />
       {source === "url" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <ExplicitSaveTextField
             label={t("identityProviders.saml.metadataAddress")}
             hint={t("identityProviders.saml.metadataAddressHint")}
@@ -351,7 +351,7 @@ export function SamlGraphClientField({
   const config = provider.config;
   if (config.preset !== "entraId") return null;
   return (
-    <div className="px-4 py-3">
+    <div className="py-3">
       <AutoSaveTextField
         label={t("identityProviders.saml.graphClientId")}
         hint={t("identityProviders.saml.graphClientIdHint")}
@@ -417,7 +417,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           />
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
           <AutoSaveTextField
             label={t("identityProviders.attributes.saml.identifier")}
             hint={
@@ -507,7 +507,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
         />
       ) : null}
       {config.preset !== "entraId" && config.groupValues === "names" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="warning">{t("identityProviders.attributes.saml.namesWarning")}</Notice>
         </div>
       ) : null}

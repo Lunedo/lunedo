@@ -55,7 +55,6 @@ export function ReimportComparisonScreen() {
     <SettingsPage
       title={title}
       description={t("imports.reimport.comparison.description")}
-      organizationId={organizationId}
       width="wide"
       back={{ label: t("imports.reimport.title"), href: importHref }}
     >

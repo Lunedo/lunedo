@@ -14,6 +14,7 @@ import { PortalLink } from "./portal-link.js";
 import type { PortalSettings } from "./queries.js";
 import { AddressPanel } from "./settings/address-screen.js";
 import { BrandRow } from "./settings/appearance-screen.js";
+import { ArticleTemplateSections } from "./settings/article-template-sections.js";
 import { AudienceForm } from "./settings/visibility-screen.js";
 
 const SPACE_ID = "01929b1e-0000-7000-8000-0000000000b1";
@@ -331,6 +332,62 @@ describe("the portal of a knowledge base", () => {
       expect(api.requests.filter((request) => request.method === "PUT").at(-1)?.body).toEqual({
         brand: { color: "custom", light: "#FFB000", dark: "#8AA8E6" },
         confirmProposal: true,
+      }),
+    );
+  });
+});
+
+describe("the article templates of a knowledge base", () => {
+  it("lists every template with its sections under one heading and saves a required section", async () => {
+    const api = mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/templates`]: () => ({
+        body: [
+          {
+            templateId: "how-to",
+            name: "How-to",
+            articleType: "howTo",
+            builtIn: true,
+            sections: [{ key: "steps", title: "Steps", icon: null, required: false }],
+          },
+          { templateId: "faq", name: "FAQ", articleType: "faq", builtIn: true, sections: [] },
+        ],
+      }),
+      [`PUT /api/v1/spaces/${SPACE_ID}/knowledge-base/required-sections`]: () => ({
+        body: [
+          {
+            templateId: "how-to",
+            name: "How-to",
+            articleType: "howTo",
+            builtIn: true,
+            sections: [{ key: "steps", title: "Steps", icon: null, required: true }],
+          },
+        ],
+      }),
+    });
+    await renderWithProviders(
+      <SpaceContext
+        value={{
+          space: knowledgeBase(),
+          canEdit: true,
+          openMove: () => undefined,
+          openCopy: () => undefined,
+          openCreate: () => undefined,
+        }}
+      >
+        <ArticleTemplateSections />
+      </SpaceContext>,
+    );
+    const section = await screen.findByRole("region", { name: "Article templates" });
+    expect(within(section).getByText(/an article from this template can only be published/)).toBeTruthy();
+    expect(await within(section).findByRole("heading", { name: "How-to", level: 3 })).toBeTruthy();
+    expect(within(section).getByRole("heading", { name: "FAQ", level: 3 })).toBeTruthy();
+    expect(within(section).getByText("This template has no sections.")).toBeTruthy();
+    await userEvent.click(within(section).getByRole("switch", { name: "Steps is required" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({
+        templateId: "how-to",
+        sectionKey: "steps",
+        required: true,
       }),
     );
   });

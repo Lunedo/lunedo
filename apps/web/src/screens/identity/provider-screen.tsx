@@ -231,7 +231,7 @@ function Overview({
             control={<span className="break-all font-mono text-sm">{provider.config.url}</span>}
           />
         ) : (
-          <div className="px-4 py-3">
+          <div className="py-3">
             {provider.type === "saml" ? (
               <SamlServiceProviderFields provider={provider} />
             ) : (
@@ -242,7 +242,7 @@ function Overview({
       </Section>
       {provider.type === "ldap" ? (
         <Section title={t("identityProviders.directoryTest.title")}>
-          <div className="px-4 py-3">
+          <div className="py-3">
             <DirectoryTest provider={provider} />
           </div>
         </Section>
@@ -250,7 +250,7 @@ function Overview({
       {provider.type === "saml" ? (
         <>
           <Section title={t("identityProviders.credentials.groupTitles.signing")}>
-            <div className="px-4 py-3">
+            <div className="py-3">
               <CredentialsList
                 provider={provider}
                 canManage={canManage}
@@ -261,7 +261,7 @@ function Overview({
           </Section>
           {provider.config.preset === "entraId" ? (
             <Section title={t("identityProviders.credentials.groupTitles.graph")}>
-              <div className="px-4 py-3">
+              <div className="py-3">
                 <CredentialsList
                   provider={provider}
                   canManage={canManage}
@@ -274,7 +274,7 @@ function Overview({
         </>
       ) : (
         <Section title={t("identityProviders.credentials.title")}>
-          <div className="px-4 py-3">
+          <div className="py-3">
             <CredentialsList provider={provider} canManage={canManage} removeInline={false} />
           </div>
         </Section>

@@ -70,14 +70,14 @@ export function FollowedBlogs() {
 
   return (
     <Section title={t("blog.followedTitle")} icon={Newspaper}>
-      <p className="px-4 py-3 text-sm text-text-muted">{t("blog.followedDescription")}</p>
+      <p className="py-3 text-sm text-text-muted">{t("blog.followedDescription")}</p>
       {followed.isPending ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Skeleton className="h-field w-full" />
         </div>
       ) : null}
       {followed.isError ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <LoadError
             what={t("blog.followedLoadFailed")}
             error={followed.error}
@@ -116,7 +116,7 @@ export function FollowedBlogs() {
         </List>
       ) : null}
       {followed.data && followed.data.unavailable > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 py-3">
           <p className="min-w-0 flex-1 text-sm text-text-muted">
             {t("blog.unavailableFollowed", { count: followed.data.unavailable })}
           </p>

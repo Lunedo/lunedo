@@ -1042,7 +1042,7 @@ describe("linked identities", () => {
       "DELETE /api/v1/account/identities/01929b1e-0000-7000-8000-0000000000c2": () =>
         refuse ? problem(409, "lastSignInMethod") : { status: 204 },
     });
-    await renderPath("/settings/security");
+    await renderPath("/settings/profile");
     await userEvent.click(await screen.findByRole("button", { name: "Unlink" }));
     let confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));

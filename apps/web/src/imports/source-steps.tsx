@@ -338,7 +338,7 @@ export function ConnectionStep({
                 open={advanced}
                 onToggle={(event) => setAdvanced(event.currentTarget.open)}
               >
-                <summary className="flex min-h-hit cursor-pointer items-center rounded-md px-4 py-2 font-medium focus-visible:focus-ring">
+                <summary className="flex min-h-hit cursor-pointer items-center rounded-md py-2 font-medium focus-visible:focus-ring">
                   {t("imports.connection.advanced")}
                 </summary>
                 <div className="border-t border-border p-4">

@@ -50,11 +50,7 @@ export function OrganizationSpacesScreen() {
   const mutation = useOrganizationSettingMutation(organizationId);
   const canManage = state.can("organization.settings.manage");
   return (
-    <SettingsPage
-      title={t("spaces.organization.title")}
-      description={t("spaces.organization.description")}
-      organizationId={organizationId}
-    >
+    <SettingsPage title={t("spaces.organization.title")} description={t("spaces.organization.description")}>
       <Panel title={t("spaces.organization.creating")}>
         <SettingsList
           settings={settings.data}
@@ -260,10 +256,7 @@ function WithoutAdministrator({ organizationId }: { organizationId: string }) {
   });
   const [appointing, setAppointing] = useState<{ id: string; name: string } | null>(null);
   return (
-    <Panel
-      title={t("spaces.organization.withoutAdmin")}
-      description={t("spaces.organization.withoutAdminDescription")}
-    >
+    <Panel title={t("spaces.organization.withoutAdmin")}>
       {spaces.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {spaces.isError ? (
         <LoadError

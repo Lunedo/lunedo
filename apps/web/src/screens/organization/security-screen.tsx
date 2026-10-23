@@ -26,7 +26,6 @@ export function OrganizationSecurityScreen() {
     <SettingsPage
       title={t("organization.security.title")}
       description={t("organization.security.description", { name })}
-      organizationId={organizationId}
     >
       <Section title={t("organization.security.signIn")}>
         <SettingsList

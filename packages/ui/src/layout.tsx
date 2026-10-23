@@ -271,7 +271,7 @@ export function ListRow({
 }) {
   const glyph = isLucideIcon(icon) ? <Icon icon={icon} /> : icon;
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-center gap-3 py-3">
       {glyph && <span className="flex shrink-0 items-center text-text-muted">{glyph}</span>}
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="font-medium text-text">{title}</span>

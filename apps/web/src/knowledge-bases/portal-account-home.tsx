@@ -82,7 +82,7 @@ export function PortalAccountHome() {
           </List>
         ) : null}
       </Section>
-      <SignInSection />
+      <SignInSection withEmail />
       <TwoFactorSection />
       <SessionsSection />
     </main>

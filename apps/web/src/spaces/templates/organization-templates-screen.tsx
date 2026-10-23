@@ -36,7 +36,6 @@ export function OrganizationTemplatesScreen() {
     <SettingsPage
       title={t("templates.title")}
       description={t("templates.organizationDescription")}
-      organizationId={organizationId}
       width="wide"
     >
       <TemplatesManager

@@ -109,7 +109,7 @@ export function LdapConnectionFields({
   const serviceAccount = serviceAccountField(config.preset);
   return (
     <>
-      <div className="px-4 py-3">
+      <div className="py-3">
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.url")}
           hint={t("identityProviders.ldap.urlHint")}
@@ -156,7 +156,7 @@ export function LdapConnectionFields({
         }
         status={<SaveIndicator tracker={tracker("startTls")} />}
       />
-      <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.bindDn")}
           hint={t(serviceAccount.hint)}
@@ -275,7 +275,7 @@ export function CaCertificateSection({
   const certificate = provider.ldap.caCertificate;
   return (
     <Section title={t("identityProviders.ldap.caTitle")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("identityProviders.ldap.caDescription")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("identityProviders.ldap.caDescription")}</p>
       {certificate ? (
         <>
           <SettingRow
@@ -303,7 +303,7 @@ export function CaCertificateSection({
         />
       )}
       {canManage ? (
-        <div className="flex flex-wrap items-start gap-2 px-4 py-3">
+        <div className="flex flex-wrap items-start gap-2 py-3">
           <CaCertificateUpload provider={provider} />
           {certificate ? (
             <Button variant="danger" icon={Trash2} onClick={() => setRemoving(true)}>
@@ -381,7 +381,7 @@ export function LdapAttributeFields({
         }
         status={<SaveIndicator tracker={tracker("signInAttribute")} />}
       />
-      <div className="px-4 py-3">
+      <div className="py-3">
         <TestPersonLookup provider={provider} onFound={setFound} onUploadCertificate={onUploadCertificate} />
       </div>
       {config.preset === "activeDirectory"
@@ -422,7 +422,7 @@ export function LdapAttributeFields({
               }
             />
           ))}
-          <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
             <AutoSaveTextField
               label={t("identityProviders.ldap.attributes.groupName")}
               value={config.attributes.groupName}
@@ -666,7 +666,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
   const save = (next: { attribute: string; values: string[] } | null) =>
     update((current) => (current.preset === "generic" ? { ...current, disabled: next } : current));
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
       <AutoSaveTextField
         label={t("identityProviders.ldap.disabledAttribute")}
         hint={t("identityProviders.ldap.disabledAttributeHint")}
@@ -848,7 +848,7 @@ function DirectoryTestOutcome({
       </ul>
       {sample ? (
         <Section title={t("identityProviders.directoryTest.sample")}>
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 px-4 py-3 text-sm sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 py-3 text-sm sm:grid-cols-2">
             <Entry label={t("identityProviders.test.subject")} value={sample.subject} mono />
             <Entry label={t("identityProviders.test.email")} value={sample.email ?? t("common.unknown")} />
             <Entry

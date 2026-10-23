@@ -169,7 +169,6 @@ export function MembersScreen() {
       width="wide"
       title={t("members.title")}
       description={t("members.description", { name: organizationName })}
-      organizationId={organizationId}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setInviting(true)}>
@@ -395,7 +394,7 @@ function MemberActionDialogs({
         <AccessImpact
           change="loses"
           people={[member.name]}
-          what={t("roles.losesWhat", { role: action.role, name: organizationName })}
+          what={t("roles.losesWhat", { count: 1, role: action.role, name: organizationName })}
         />
       </ConfirmDialog>
     );
@@ -426,7 +425,7 @@ function MemberActionDialogs({
         <AccessImpact
           change="loses"
           people={[member.name]}
-          what={t("members.removeImpact", { name: organizationName })}
+          what={t("members.removeImpact", { count: 1, name: organizationName })}
         />
       </ConfirmDialog>
     );
@@ -454,7 +453,11 @@ function MemberActionDialogs({
           )
         }
       >
-        <AccessImpact change="loses" people={[member.name]} what={t("members.deactivateImpact")} />
+        <AccessImpact
+          change="loses"
+          people={[member.name]}
+          what={t("members.deactivateImpact", { count: 1 })}
+        />
       </ConfirmDialog>
     );
   }
@@ -474,7 +477,7 @@ function MemberActionDialogs({
             <AccessImpact
               change="loses"
               people={[member.name]}
-              what={t("members.expiryImpact", { name: organizationName, date: expiry })}
+              what={t("members.expiryImpact", { count: 1, name: organizationName, date: expiry })}
             />
           ) : null}
           <div className="flex justify-end gap-2">

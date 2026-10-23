@@ -174,7 +174,7 @@
       "keyRequired": "Paste the JSON key of the service account."
     },
     "title": "Sign-in methods",
-    "description": "How people sign in to this instance. Organizations follow from group mapping after sign-in.",
+    "description": "How people sign in to this instance.",
     "providers": "Identity providers",
     "details": "Provider",
     "add": "Add provider",
@@ -1085,7 +1085,8 @@
     "maintenance": "Maintenance mode",
     "updates": "Updates",
     "signInAndSecurity": "Sign-in and security",
-    "watching": "Watched items"
+    "watching": "Watched items",
+    "profile": "Profile"
   },
   "navigationGroups": {
     "access": "Access",
@@ -1187,7 +1188,7 @@
     "passwordSignInDisabled": "Password sign-in is turned off for this instance. Sign in through your provider or with a passkey.",
     "invalidProviderConfiguration": "Lunedo could not use this provider configuration. Check the issuer, tenant or client ID against your provider's settings and save again.",
     "resetOwnSecondFactor": "You cannot reset your own second factor here, because that would bypass it. Sign in with a recovery code or ask another administrator.",
-    "endOwnSessions": "Your own sessions are not ended from the account list. End them on your Security page.",
+    "endOwnSessions": "Your own sessions are not ended from the account list. End them on your Sign-in and security page.",
     "roleNeedsAccountOrGroup": "Roles can only go to individual people and groups, not to everyone at once. Choose people or groups instead.",
     "unknown": "The server gave an unexpected answer. Try again; if it keeps failing, ask your administrator to check the server log.",
     "networkError": "Lunedo cannot be reached. Check your connection and try again.",
@@ -2012,7 +2013,7 @@
   },
   "preferences": {
     "title": "Preferences",
-    "description": "How Lunedo looks and behaves for you. Changes apply immediately.",
+    "description": "How Lunedo looks and behaves for you.",
     "display": "Display",
     "colorMode": "Color mode",
     "colorModeHint": "Automatic follows your system.",
@@ -2395,7 +2396,7 @@
       },
       "spaces_export": {
         "label": "Allow export",
-        "description": "People can export pages and the space as Markdown and HTML. When it is off, nobody can export, space admins included."
+        "description": "People can export pages and the space as PDF, Word, HTML and Markdown. When it is off, nobody can export, space admins included."
       },
       "content_language": {
         "label": "Content language",
@@ -2453,7 +2454,7 @@
       "on": " on "
     },
     "title": "Sign-in and security",
-    "description": "Sign-in, second factors, sessions and API tokens.",
+    "description": "Password, second factors, sessions and API tokens.",
     "signIn": "Sign-in",
     "passwordDescription": "Use a long passphrase that you use nowhere else.",
     "changePassword": "Change password",
@@ -2608,7 +2609,7 @@
     "preferencesTitle": "Notifications",
     "preferencesDescription": "Choose how you learn about each kind of event.",
     "defaultsTitle": "Notifications",
-    "organizationDefaultsDescription": "Defaults for everyone in {name}. People can change them for themselves; their own choices stay when you change a default.",
+    "organizationDefaultsDescription": "Defaults for everyone in {name}; people who chose for themselves keep their choice when you change a default.",
     "instanceDefaultsDescription": "Defaults for everyone on this instance.",
     "eventTypes": "Events",
     "event": "Event",
@@ -2803,7 +2804,7 @@
       "counts": "{watched, plural, one {# watched} other {# watched}} · {muted, plural, one {# muted} other {# muted}}",
       "manage": "Manage",
       "screenTitle": "Watched and muted items",
-      "screenDescription": "You learn about changes and comments on what you watch. Muted items and spaces stay silent.",
+      "screenDescription": "You learn about changes and comments on what you watch; muted items stay silent.",
       "none": "You do not watch or mute anything",
       "noneDescription": "Watch pages, blog posts, meeting series and spaces from their menu to learn about changes and comments.",
       "loadFailed": "The watched items could not be loaded",
@@ -3170,7 +3171,7 @@
     },
     "security": {
       "title": "Security",
-      "description": "Sign-in rules for everyone in {name}. Values come from the instance unless you set them here.",
+      "description": "Sign-in rules for everyone in {name}.",
       "signIn": "Sign-in",
       "apiTokens": "API tokens"
     },
@@ -3191,7 +3192,7 @@
     },
     "access": {
       "title": "Access overview",
-      "description": "See what a person can do in the spaces of this organization and why. Exports are recorded in the audit log.",
+      "description": "See what a person can do in the spaces of this organization and why; exports are recorded in the audit log.",
       "person": "Person",
       "personHint": "Search a member or guest by name.",
       "chooseTitle": "Choose a person",
@@ -3467,7 +3468,7 @@
   "serviceAccounts": {
     "open": "Open service account {name}",
     "title": "Service accounts",
-    "description": "Accounts for scripts and integrations. They act only through API tokens.",
+    "description": "Accounts for scripts and integrations that act only through API tokens.",
     "create": "Create service account",
     "createHint": "You become the responsible person.",
     "none": "No service accounts yet",
@@ -3591,7 +3592,7 @@
       "lastSignIn": "Last sign-in",
       "never": "Never",
       "sessionsEnded": "{count, plural, one {One session of {name} was ended.} other {# sessions of {name} were ended.}}",
-      "ownAccount": "You manage your own account on the Security page.",
+      "ownAccount": "You manage your own account on the Sign-in and security page.",
       "reactivate": "Reactivate",
       "endSessions": "End all sessions",
       "resetSecondFactor": "Reset second factor",
@@ -3654,12 +3655,11 @@
       "title": "Roles",
       "description": "Who administers the instance.",
       "noContent": "Instance roles never grant access to the content of organizations.",
-      "gainsWhat": "They receive {role} on the instance: {areas}.",
-      "losesWhat": "They lose {role} on the instance."
+      "gainsWhat": "They receive {role} on the instance: {areas}."
     },
     "security": {
       "title": "Security",
-      "description": "Sign-in rules for the whole instance. Locked values apply to every organization.",
+      "description": "Sign-in rules for the whole instance.",
       "signIn": "Sign-in",
       "protection": "Protection against guessing",
       "apiTokens": "API tokens"
@@ -5454,10 +5454,9 @@
       "title": "Access",
       "description": "Give people access, decide on requests and review restricted pages.",
       "giveTitle": "Give access",
-      "giveDescription": "A guided way to give a person or group access to the space or to single pages.",
       "giveHint": "You see how many pages they can then read and edit before anything changes.",
       "requestsTitle": "Access requests",
-      "requestsDescription": "Open requests for this space and its pages. They stay open until someone decides or the person gets access another way.",
+      "requestsDescription": "Requests stay open until someone decides or the person gets access another way.",
       "restrictedTitle": "Restricted pages",
       "restrictedDescription": "Pages that only their access lists can see or edit. You see the titles but not the content. Removing a restriction is recorded in the audit log.",
       "restrictedFailed": "the restricted pages",
@@ -5475,8 +5474,7 @@
       "removed": "Restriction of {title} removed",
       "removeFailed": "The restriction was not removed",
       "adminsOnlyTitle": "Only space admins manage restrictions",
-      "adminsOnly": "Ask a space admin if a restricted page needs attention.",
-      "whyDescription": "Search a person to see their role in this space and where it comes from."
+      "adminsOnly": "Ask a space admin if a restricted page needs attention."
     },
     "articlesButton": "Articles"
   },
@@ -5748,9 +5746,7 @@
     "emptied": "{count, plural, one {# entry moved to second-stage recovery} other {# entries moved to second-stage recovery}}",
     "emptyFailed": "The trash could not be emptied",
     "deletedContent": "Deleted content",
-    "deletedContentDescription": "Everything deleted in the spaces of this organization, and deleted spaces. Restore it, or delete it permanently at once, for example for an erasure request.",
     "deletedPersonal": "Deleted personal spaces",
-    "deletedPersonalDescription": "Deleted personal spaces and content of personal spaces in second-stage recovery.",
     "nothingDeletedTitle": "Nothing deleted",
     "nothingDeletedDescription": "Deleted pages and spaces appear here until they are deleted for good.",
     "deleteNow": "Delete permanently",
@@ -5775,9 +5771,9 @@
   },
   "templates": {
     "title": "Templates",
-    "spaceDescription": "Templates for new pages in this space. Editors can save any page as a template.",
+    "spaceDescription": "Templates for new pages in this space.",
     "organizationDescription": "Templates offered in every space of the organization.",
-    "instanceDescription": "Templates offered in every organization. The built-in templates are always offered as well.",
+    "instanceDescription": "Templates offered in every organization in addition to the built-in ones.",
     "loadFailed": "The templates could not be loaded",
     "create": "Create template",
     "createAction": "Create template",
@@ -5935,7 +5931,8 @@
     "restrictedConfirm": "Everyone who can use the templates of {space} may see this content",
     "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel.",
     "articleType": "Article type",
-    "articleTypeHint": "Articles created from this template get this type. Readers filter by it in the portal."
+    "articleTypeHint": "Articles created from this template get this type. Readers filter by it in the portal.",
+    "ownTemplates": "Own templates"
   },
   "versions": {
     "history": "Version history",
@@ -7230,7 +7227,7 @@
   },
   "imports": {
     "title": "Import",
-    "description": "Bring content into Lunedo from Confluence, Markdown folders or Word documents. Every import runs into a quarantine space first, which only you and the reviewers you add can see.",
+    "description": "Bring content from Confluence, Markdown folders or Word documents into a quarantine space that only you and your reviewers can see.",
     "untitled": "New import",
     "states": {
       "draft": "Draft",
@@ -8378,7 +8375,7 @@
       "comparison": {
         "heading": "Compare with Confluence",
         "title": "Compare “{title}”",
-        "description": "The current content in Lunedo next to the content of the new export, as it would be applied. Nothing changes until you apply the changes.",
+        "description": "The current content in Lunedo next to the content of the new export; nothing changes until you apply the changes.",
         "sides": "Left or removed: {before}. Right or added: {after}.",
         "lunedoCurrent": "Lunedo, current content",
         "lunedoVersion": "Lunedo, version {number}",
@@ -8537,7 +8534,7 @@
       "danger": "Red"
     },
     "settingsTitle": "Page status",
-    "settingsDescription": "Show at the top of each page how far it is, for example in progress or verified. Editors set the status; readers see it.",
+    "settingsDescription": "Show at the top of each page how far it is, for example in progress or verified.",
     "valuesTitle": "Values",
     "valuesDescription": "Editors choose from these values, in this order. Renaming or recoloring a value changes it on every page that has it.",
     "reorderFailed": "The order was not saved",
@@ -8674,7 +8671,7 @@
     },
     "screen": {
       "title": "My exports",
-      "description": "Downloads of spaces and pages you exported. Only you can open them. Each download is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it."
+      "description": "Only you can open these downloads; each is deleted 24 hours after you first download it completely, or after 7 days at the latest."
     },
     "settings": {
       "tab": "Export",
@@ -9640,7 +9637,7 @@
   "embeds": {
     "settings": {
       "title": "External embeds",
-      "description": "Which services pages may embed, such as videos and diagrams from other sites. Organizations can narrow the list for their own content."
+      "description": "Which services pages may embed, such as videos and diagrams from other sites."
     },
     "allowlist": {
       "title": "External embeds allowlist",
@@ -9851,7 +9848,7 @@
     },
     "categories": {
       "title": "Categories",
-      "description": "Icon, introduction and contact address of the categories, and their order. Folders on the first level are categories, on the second level subcategories.",
+      "description": "Folders on the first level are categories, on the second level subcategories.",
       "icon": "Icon",
       "iconHint": "Without an icon the portal shows the first letter of the name.",
       "noIcon": "No icon",
@@ -9869,7 +9866,8 @@
       "noSections": "This template has no sections.",
       "requiredOf": "{section} is required",
       "adminsOnly": "Only space admins can change which sections are required.",
-      "hint": "Required sections are off by default. When one is on, an article from this template can only be published once the section has content. Published articles stay published."
+      "hint": "Required sections are off by default. When one is on, an article from this template can only be published once the section has content. Published articles stay published.",
+      "articleTemplates": "Article templates"
     },
     "required": {
       "title": "Required sections are empty",
@@ -9920,7 +9918,7 @@
     },
     "address": {
       "title": "Address",
-      "description": "Readers open the knowledge base at this address. Whoever opens it lands in the portal, not in the app.",
+      "description": "Readers open the portal of the knowledge base at this address.",
       "loadFailed": "The address of the portal could not be loaded",
       "panel": "Address of the portal",
       "change": "Change",
@@ -9929,7 +9927,7 @@
       "pathInvalid": "Use lowercase letters, digits and single hyphens, at most 60 characters.",
       "domain": "Own domain",
       "domainHint": "Optional. For example the old address of a help center can point here.",
-      "noDomains": "Your instance administrator has not allowed a domain for this organization yet. Domains are allowed under Instance settings, Portal domains.",
+      "noDomains": "Your instance administrator has not allowed a domain for this organization yet. Domains are allowed in the instance settings under Knowledge base portals.",
       "noDomain": "No own domain",
       "dnsTitle": "First add this record at your DNS provider",
       "dnsText": "Point {domain} to this instance. Your reverse proxy must send the domain to Lunedo and hold its certificate.",
@@ -9940,7 +9938,7 @@
     },
     "appearance": {
       "title": "Appearance and start page",
-      "description": "How the portal looks and what its start page shows. Changes apply in the portal at once.",
+      "description": "How the portal looks and what its start page shows.",
       "loadFailed": "The appearance of the portal could not be loaded",
       "open": "Open the portal",
       "identity": "Logo and color",
@@ -9992,7 +9990,7 @@
     "languages": {
       "tab": "Languages",
       "title": "Languages",
-      "description": "Articles can be translated. Translations are linked to their original; where one is missing, readers see the default language with a note.",
+      "description": "Languages articles are translated into; where a translation is missing, readers see the default language.",
       "loadFailed": "The languages could not be loaded",
       "section": "Languages",
       "default": "Default language",
@@ -10170,7 +10168,7 @@
     "settings": {
       "tab": "Review",
       "title": "Review",
-      "description": "Articles get outdated. With an interval, owners are reminded and due articles are listed under Review and on “For you”.",
+      "description": "Reminds owners of outdated articles and lists due ones under Review and on “For you”.",
       "loadFailed": "The review settings",
       "section": "Review and reminders",
       "interval": "Review interval",
@@ -10293,7 +10291,7 @@
   "portalAccounts": {
     "tab": "Portal accounts",
     "title": "Portal accounts",
-    "description": "Readers without a company account sign in with their e-mail address and a password or passkey. They see only the portals of the knowledge bases they were invited to, never the wiki.",
+    "description": "Readers without a company account, who see only the portals they were invited to, never the wiki.",
     "notForPortalTitle": "This knowledge base is not for portal accounts",
     "notForPortal": "Portal accounts read only knowledge bases whose audience is portal accounts. Change the audience to invite readers here.",
     "toVisibility": "Open Visibility",
@@ -10352,7 +10350,7 @@
   "operations": {
     "status": {
       "title": "System status",
-      "description": "Checks of the instance: database, storage, jobs, backups, search, recent errors and the setup checks. Refreshes every minute.",
+      "description": "Checks of the instance: database, storage, jobs, backups, search, recent errors and the setup checks.",
       "refresh": "Check again",
       "loadFailed": "the system status",
       "checks": "Checks",
@@ -10633,5 +10631,11 @@
       "noSection": "The changelog has no entry for this version.",
       "unavailable": "This image contains no changelog."
     }
+  },
+  "profile": {
+    "title": "Profile",
+    "description": "Your name in Lunedo and the address where Lunedo reaches you.",
+    "details": "Personal details",
+    "displayName": "Display name"
   }
 }

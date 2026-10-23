@@ -52,7 +52,6 @@ export function SettingsLayout() {
     (item) => ({
       id: item.id,
       label: translateKey(t, item.labelKey),
-      icon: item.icon,
       href: resolveSettingsPath(item.to, organization.organizationId),
       ...(item.groupKey ? { group: translateKey(t, item.groupKey) } : {}),
     }),

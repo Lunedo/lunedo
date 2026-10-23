@@ -144,7 +144,6 @@ export function GroupScreen() {
     <SettingsPage
       title={group.data?.name ?? ""}
       description={group.data?.description || t("groups.noDescription")}
-      organizationId={organizationId}
       back={{ label: t("groups.title"), href: `/settings/organizations/${organizationId}/groups` }}
     >
       {group.isPending ? <Skeleton className="h-12 w-full" /> : null}
@@ -161,7 +160,7 @@ export function GroupScreen() {
       {group.data && canManage ? <DetailsSection group={group.data} onSaved={refresh} /> : null}
       <Section title={t("groups.access")} icon={ShieldCheck}>
         {groupRoles.length === 0 ? (
-          <p className="px-4 py-3 text-text-muted">{t("groups.noAccess")}</p>
+          <p className="py-3 text-text-muted">{t("groups.noAccess")}</p>
         ) : (
           <List>
             {groupRoles.map((entry) => (
@@ -227,14 +226,12 @@ export function GroupScreen() {
         }
       >
         {members.isPending ? <Skeleton className="h-12 w-full" /> : null}
-        {members.data?.length === 0 ? (
-          <p className="px-4 py-3 text-text-muted">{t("groups.noMembers")}</p>
-        ) : null}
+        {members.data?.length === 0 ? <p className="py-3 text-text-muted">{t("groups.noMembers")}</p> : null}
         <ul className="flex flex-col">
           {members.data?.map((member) => (
             <li
               key={member.accountId}
-              className="flex items-center gap-3 border-border border-b px-4 py-2 last:border-b-0"
+              className="flex items-center gap-3 border-border border-b py-2 last:border-b-0"
             >
               <Avatar name={member.name} size="sm" />
               <span className="flex-1">{member.name}</span>
@@ -320,8 +317,15 @@ export function GroupScreen() {
           people={members.data?.map((member) => member.name) ?? []}
           what={
             roleSummary
-              ? t("groups.losesRoles", { roles: roleSummary, name: group.data?.name ?? "" })
-              : t("groups.losesMembership", { name: group.data?.name ?? "" })
+              ? t("groups.losesRoles", {
+                  count: members.data?.length ?? 0,
+                  roles: roleSummary,
+                  name: group.data?.name ?? "",
+                })
+              : t("groups.losesMembership", {
+                  count: members.data?.length ?? 0,
+                  name: group.data?.name ?? "",
+                })
           }
         />
       </ConfirmDialog>
@@ -426,8 +430,8 @@ function AddPersonDialog({
             people={[name]}
             what={
               roleSummary
-                ? t("groups.gainsRoles", { roles: roleSummary, name: groupName })
-                : t("groups.gainsMembership", { name: groupName })
+                ? t("groups.gainsRoles", { count: 1, roles: roleSummary, name: groupName })
+                : t("groups.gainsMembership", { count: 1, name: groupName })
             }
           />
         ) : null}

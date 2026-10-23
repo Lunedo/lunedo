@@ -190,6 +190,7 @@ export function AssignRoleDialog({
             change="gains"
             people={people}
             what={t("roles.gainsWhat", {
+              count: people.length,
               role: roleLabel,
               areas: areasDescription(t, "organization", areas),
               name: organizationName,

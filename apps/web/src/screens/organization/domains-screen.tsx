@@ -65,15 +65,11 @@ export function DomainsScreen() {
   };
 
   return (
-    <SettingsPage
-      title={t("organization.domains.title")}
-      description={t("organization.domains.description")}
-      organizationId={organizationId}
-    >
+    <SettingsPage title={t("organization.domains.title")} description={t("organization.domains.description")}>
       <Section title={t("organization.domains.domains")}>
-        <p className="px-4 pt-3 text-sm text-text-muted">{t("organization.domains.domainsHint", { name })}</p>
+        <p className="pt-3 text-sm text-text-muted">{t("organization.domains.domainsHint", { name })}</p>
         {domains.data?.length === 0 ? (
-          <p className="px-4 py-3 text-text-muted">{t("organization.domains.none")}</p>
+          <p className="py-3 text-text-muted">{t("organization.domains.none")}</p>
         ) : null}
         <List>
           {domains.data?.map((entry) => (

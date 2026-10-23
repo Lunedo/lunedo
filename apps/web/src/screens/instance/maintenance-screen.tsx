@@ -136,7 +136,7 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
           }
         />
         {details.enabled && details.blockSignIn ? (
-          <div className="px-4 pb-3">
+          <div className="pb-3">
             <Notice variant="warning">{t("maintenance.state.signInPaused")}</Notice>
           </div>
         ) : null}
@@ -152,7 +152,7 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
       </Section>
       {canManage ? (
         <Section title={details.enabled ? t("maintenance.form.changeTitle") : t("maintenance.form.title")}>
-          <div ref={form} className="flex flex-col gap-4 px-4 py-3">
+          <div ref={form} className="flex flex-col gap-4 py-3">
             <Field
               label={t("maintenance.form.message")}
               hint={t("maintenance.form.messageHint", { max: MESSAGE_MAX })}

@@ -157,7 +157,6 @@ export function AccessOverviewScreen() {
       width="wide"
       title={t("organization.access.title")}
       description={t("organization.access.description")}
-      organizationId={organizationId}
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

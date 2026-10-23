@@ -106,14 +106,14 @@ export function ImportWizardScreen() {
   const query = useQuery(importQuery(importId));
   if (query.isPending) {
     return (
-      <SettingsPage title={t("imports.wizard.title")} organizationId={organizationId}>
+      <SettingsPage title={t("imports.wizard.title")}>
         <Skeleton className="h-control-field w-full" />
       </SettingsPage>
     );
   }
   if (query.isError) {
     return (
-      <SettingsPage title={t("imports.wizard.title")} organizationId={organizationId}>
+      <SettingsPage title={t("imports.wizard.title")}>
         <LoadError what={t("imports.wizard.loadFailed")} error={query.error} onRetry={query.refetch} />
       </SettingsPage>
     );
@@ -468,7 +468,6 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
             })
           : t("imports.wizard.progress", { step: index + 1, total: stepNames.length })
       }
-      organizationId={organizationId}
       back={{ label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` }}
       actions={
         <Button
@@ -1176,7 +1175,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
     }),
   );
   const space = (
-    <li className="flex flex-col gap-1 px-4 py-3">
+    <li className="flex flex-col gap-1 py-3">
       <span className="font-medium">
         {t("imports.wizard.check.spaceTitle", { name: form.spaceName, key: form.spaceKey })}
       </span>
@@ -1204,7 +1203,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
         </div>
         <Section title={t("imports.wizard.check.foundTitle")}>
           <ul className="flex flex-col divide-y divide-border">
-            <li className="flex flex-col gap-1 px-4 py-3">
+            <li className="flex flex-col gap-1 py-3">
               <span className="font-medium">
                 {t(
                   input === "archive"
@@ -1244,7 +1243,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
       </div>
       <Section title={t("imports.wizard.check.foundTitle")}>
         <ul className="flex flex-col divide-y divide-border">
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">
               {t("imports.wizard.check.peopleTitle", { count: found.people })}
             </span>
@@ -1254,7 +1253,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
               )}
             </span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">
               {t(history ? "imports.wizard.check.historyFull" : "imports.wizard.check.historyCurrent", {
                 count: found.versions,
@@ -1264,13 +1263,13 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
               {t("imports.wizard.check.extras", { likes: found.likes, watchers: found.watchers })}
             </span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">{t("imports.wizard.check.permissionsTitle")}</span>
             <span className="text-sm text-text-muted">
               {t("imports.wizard.check.permissionsDescription")}
             </span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">
               {t("imports.wizard.check.macrosTitle", { count: found.macroKinds })}
             </span>

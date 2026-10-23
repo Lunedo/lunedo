@@ -574,7 +574,7 @@ function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; 
   const setDirectory = (next: GoogleDirectorySettings | null) =>
     update.config((current) => (current.preset === "google" ? { ...current, directory: next } : current));
   return (
-    <div className="flex flex-col gap-4 px-4 py-3">
+    <div className="flex flex-col gap-4 py-3">
       <div className="flex flex-col gap-1">
         <Switch
           label={t("identityProviders.sync.groupSync")}

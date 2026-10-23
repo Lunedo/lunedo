@@ -86,7 +86,7 @@ export function InstanceContentScreen() {
         />
       </Panel>
       {canManagePersonal ? (
-        <Panel title={t("trash.deletedPersonal")} description={t("trash.deletedPersonalDescription")}>
+        <Panel title={t("trash.deletedPersonal")}>
           <DeletedContent
             entries={trash.data}
             loading={trash.isPending}

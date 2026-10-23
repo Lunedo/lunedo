@@ -47,11 +47,7 @@ export function OrganizationGeneralScreen() {
   const membership = state.organizations.find((entry) => entry.id === organizationId);
 
   return (
-    <SettingsPage
-      title={t("organization.general.title")}
-      description={t("organization.general.description")}
-      organizationId={organizationId}
-    >
+    <SettingsPage title={t("organization.general.title")} description={t("organization.general.description")}>
       {organization.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {organization.data ? (
         <ProfileSection

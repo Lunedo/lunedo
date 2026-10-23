@@ -29,7 +29,6 @@ export function OrganizationNotificationDefaultsScreen() {
       description={t("notifications.organizationDefaultsDescription", {
         name: organization.data?.name ?? "",
       })}
-      organizationId={organizationId}
     >
       <NotificationPreferences
         settings={settings.data}

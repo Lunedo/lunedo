@@ -102,14 +102,14 @@ export function ImportScreen() {
   const query = useQuery(importQuery(importId));
   if (query.isPending) {
     return (
-      <SettingsPage title={t("imports.title")} organizationId={organizationId}>
+      <SettingsPage title={t("imports.title")}>
         <Skeleton className="h-control-field w-full" />
       </SettingsPage>
     );
   }
   if (query.isError) {
     return (
-      <SettingsPage title={t("imports.title")} organizationId={organizationId}>
+      <SettingsPage title={t("imports.title")}>
         <LoadError what={t("imports.detail.loadFailed")} error={query.error} onRetry={query.refetch} />
       </SettingsPage>
     );
@@ -189,7 +189,6 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
     <SettingsPage
       title={entry.state === "running" ? t("imports.detail.importing") : title}
       description={subtitle()}
-      organizationId={organizationId}
       width="wide"
       back={{ label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` }}
       actions={
@@ -453,7 +452,7 @@ function Progress({ entry }: { entry: ImportView }) {
                 <li
                   key={phase}
                   aria-current={active ? "step" : undefined}
-                  className={`flex items-center gap-3 px-4 py-3 ${done || active ? "text-text" : "text-text-muted"}`}
+                  className={`flex items-center gap-3 py-3 ${done || active ? "text-text" : "text-text-muted"}`}
                 >
                   <span className="flex size-icon-lg shrink-0 items-center justify-center">
                     {done ? (

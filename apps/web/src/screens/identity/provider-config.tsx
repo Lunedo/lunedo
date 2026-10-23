@@ -214,7 +214,7 @@ export function NameRow({ provider, canManage }: { provider: IdentityProvider; c
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
   return (
-    <div className="px-4 py-3">
+    <div className="py-3">
       <AutoSaveTextField
         label={t("identityProviders.fields.name")}
         hint={t(`identityProviders.fields.nameHints.${providerKind(provider)}`)}
@@ -235,7 +235,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
   const tracker = useSaveStates();
   return (
     <>
-      <div className="flex flex-col gap-4 px-4 py-3">
+      <div className="flex flex-col gap-4 py-3">
         <ExplicitSaveTextField
           label={t("identityProviders.fields.clientId")}
           value={config.clientId}
@@ -369,10 +369,10 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
         </>
       ) : null}
       {config.preset === "google" ? (
-        <p className="px-4 py-3 text-sm text-text-muted">{t("identityProviders.attributes.googleFixed")}</p>
+        <p className="py-3 text-sm text-text-muted">{t("identityProviders.attributes.googleFixed")}</p>
       ) : null}
       {config.preset === "generic" ? (
-        <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
           {(["email", "signInName", "displayName", "groups", "groupNames"] as const).map((claim) => (
             <AutoSaveTextField
               key={claim}
@@ -448,7 +448,7 @@ export function AccountFields({
         status={<SaveIndicator tracker={tracker("create")} />}
       />
       {showDomains ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <ExplicitSaveTextField
             label={t("identityProviders.accounts.domains")}
             hint={t(domainsHintKey(provider.type, config.preset))}
@@ -486,7 +486,7 @@ export function AccountFields({
         status={<SaveIndicator tracker={tracker("requireGroup")} />}
       />
       {requireGroups ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <AutoSaveTextField
             label={t("identityProviders.accounts.groups")}
             hint={t("identityProviders.accounts.groupsHint")}
@@ -544,7 +544,7 @@ export function SecondFactorFields({
         status={<SaveIndicator tracker={tracker("secondFactor")} />}
       />
       {setting.mode === "providerProof" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <AutoSaveTextField
             label={t("identityProviders.secondFactor.proofValues")}
             hint={t("identityProviders.secondFactor.proofValuesHint")}

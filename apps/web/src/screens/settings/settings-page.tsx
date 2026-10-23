@@ -1,10 +1,7 @@
 import { BackLink, classNames, PageHeader } from "@lunedo/ui";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { organizationQuery } from "../../api/organization-queries.js";
-import { organizationLogoUrl } from "../../shell/brand.js";
 
 export function useDocumentTitle(title: string): void {
   const { t } = useTranslation();
@@ -17,7 +14,6 @@ export function SettingsPage({
   title,
   description,
   actions,
-  organizationId,
   back,
   width = "narrow",
   children,
@@ -25,17 +21,11 @@ export function SettingsPage({
   title: string;
   description?: string;
   actions?: ReactNode;
-  organizationId?: string;
   back?: { label: string; href: string };
   width?: "narrow" | "wide";
   children: ReactNode;
 }) {
   useDocumentTitle(title);
-  const organization = useQuery({
-    ...organizationQuery(organizationId ?? ""),
-    enabled: Boolean(organizationId),
-  });
-  const logoRef = organization.data?.logoRef;
   return (
     <div
       data-page-width={width}
@@ -55,18 +45,6 @@ export function SettingsPage({
           title={title}
           {...(description ? { description } : {})}
           {...(actions ? { actions } : {})}
-          {...(organization.data ? { context: organization.data.name } : {})}
-          {...(organization.data && logoRef
-            ? {
-                logo: (
-                  <img
-                    src={organizationLogoUrl({ id: organization.data.id, logoRef })}
-                    alt=""
-                    className="h-6 w-auto"
-                  />
-                ),
-              }
-            : {})}
         />
       </div>
       {children}

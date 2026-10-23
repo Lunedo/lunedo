@@ -51,7 +51,6 @@ export function OrganizationTokensScreen() {
       width="wide"
       title={t("tokens.organizationTitle")}
       description={t("tokens.organizationDescription")}
-      organizationId={organizationId}
     >
       <Table
         caption={t("tokens.organizationTitle")}

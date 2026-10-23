@@ -205,7 +205,7 @@ function QueuesSection({ queues }: { queues: OperationsStatus["queues"] }) {
         columns={columns}
         rows={queues}
         rowKey={(row) => row.queue}
-        empty={<p className="px-4 py-3 text-sm text-text-muted">{t("operations.status.queues.empty")}</p>}
+        empty={<p className="py-3 text-sm text-text-muted">{t("operations.status.queues.empty")}</p>}
       />
     </Section>
   );
@@ -247,13 +247,13 @@ function ErrorsSection({ errors }: { errors: OperationsStatus["recentErrors"] })
   ];
   return (
     <Section title={t("operations.status.errors.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("operations.status.errors.description")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("operations.status.errors.description")}</p>
       <Table
         caption={t("operations.status.errors.title")}
         columns={columns}
         rows={errors}
         rowKey={(row) => `${row.type}\u0000${row.code ?? ""}`}
-        empty={<p className="px-4 py-3 text-sm text-text-muted">{t("operations.status.errors.empty")}</p>}
+        empty={<p className="py-3 text-sm text-text-muted">{t("operations.status.errors.empty")}</p>}
       />
     </Section>
   );

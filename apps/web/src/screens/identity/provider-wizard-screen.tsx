@@ -536,7 +536,7 @@ function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
   );
   return (
     <Section title={t("identityProviders.wizard.copyTitle", { place })}>
-      <div className="flex flex-col gap-4 px-4 py-3">
+      <div className="flex flex-col gap-4 py-3">
         <p className="text-sm text-text-muted">
           {translateKey(t, `identityProviders.wizard.registerHints.${kind}`)}{" "}
           {t("identityProviders.wizard.copyHint", { place })}
@@ -832,7 +832,7 @@ function OidcConnectionStep({
         />
       ) : null}
       <Section title={t("identityProviders.credentials.title")}>
-        <div className="px-4 py-3">
+        <div className="py-3">
           <CredentialFields
             draft={draft.credential}
             onChange={(credential) => set({ credential })}
@@ -938,7 +938,7 @@ function SavedProviderStep({
             <SamlGraphClientField provider={provider} canManage={canManage} />
           </Section>
           <Section title={t("identityProviders.credentials.groupTitles.graph")}>
-            <div className="px-4 py-3">
+            <div className="py-3">
               <CredentialsList provider={provider} canManage={canManage} group="graph" />
             </div>
           </Section>

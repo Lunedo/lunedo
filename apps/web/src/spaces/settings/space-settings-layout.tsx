@@ -17,7 +17,6 @@ export function SpaceSettingsLayout() {
     .map((item) => ({
       id: item.id,
       label: translateKey(t, item.labelKey),
-      icon: item.icon,
       href: item.to.replace("$spaceKey", space.key),
       ...(item.groupKey ? { group: translateKey(t, item.groupKey) } : {}),
     }));

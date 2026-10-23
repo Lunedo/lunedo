@@ -195,6 +195,7 @@ export function InviteDialog({
             change="gains"
             people={parsed.valid}
             what={t("members.inviteImpact", {
+              count: parsed.valid.length,
               name: organizationName,
               role: roleLabel,
               kind: t(`members.kinds.${kind}`),

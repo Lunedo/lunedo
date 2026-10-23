@@ -393,7 +393,7 @@ export function SmtpForm({
                 className="rounded-md border border-border"
                 open={form.getValues("authority") !== microsoftAuthorities[0]}
               >
-                <summary className="cursor-pointer rounded-md px-4 py-3 font-semibold focus-visible:focus-ring">
+                <summary className="cursor-pointer rounded-md py-3 font-semibold focus-visible:focus-ring">
                   {t("mail.oauth2.advanced")}
                 </summary>
                 <div className="border-border border-t p-4">

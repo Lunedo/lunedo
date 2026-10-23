@@ -1,5 +1,5 @@
 import { slugify } from "@lunedo/editor-schema";
-import { Badge, Button, EmptyState, List, ListRow, Section, Skeleton, useToast } from "@lunedo/ui";
+import { Button, EmptyState, List, ListRow, Section, Skeleton, useToast } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { Bell, BellOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -87,58 +87,70 @@ export function WatchedItemsScreen() {
           description={t("notifications.watching.noneDescription")}
         />
       ) : null}
-      {items.length > 0 ? (
-        <Section title={t("notifications.watching.screenTitle")}>
-          <List label={t("notifications.watching.screenTitle")}>
-            {items.map((entry) => {
-              const path = watchedPath(entry);
-              const kind = translateKey(t, `notifications.watching.kinds.${entry.kind}`);
-              return (
-                <ListRow
+      {(["watching", "muted"] as const).map((state) => {
+        const entries = items.filter((entry) => entry.state === state);
+        if (entries.length === 0) return null;
+        const title = t(`notifications.watching.states.${state}`);
+        return (
+          <Section
+            key={state}
+            title={
+              <>
+                {title} <span className="font-normal text-text-muted">{entries.length}</span>
+              </>
+            }
+          >
+            <List label={title}>
+              {entries.map((entry) => (
+                <WatchedRow
                   key={`${entry.target.type}:${entry.target.id}`}
-                  icon={entry.state === "muted" ? BellOff : Bell}
-                  title={
-                    path ? (
-                      <Link
-                        to={path as never}
-                        className="wrap-anywhere hover:underline focus-visible:focus-ring"
-                      >
-                        {entry.title}
-                      </Link>
-                    ) : (
-                      <span className="wrap-anywhere">{entry.title}</span>
-                    )
-                  }
-                  description={
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span>{kind}</span>
-                      {entry.target.type === "item" ? (
-                        <span>{t("notifications.watching.inSpace", { space: entry.spaceName })}</span>
-                      ) : null}
-                      {entry.state === "muted" && entry.keepActionable ? (
-                        <span>{t("notifications.watching.keepsMentions")}</span>
-                      ) : null}
-                      {entry.automatic ? <span>{t("notifications.watching.automatic")}</span> : null}
-                    </span>
-                  }
-                  actions={
-                    <>
-                      <Badge variant={entry.state === "muted" ? "warning" : "neutral"}>
-                        {t(`notifications.watching.states.${entry.state}`)}
-                      </Badge>
-                      <Button variant="secondary" size="sm" onClick={() => release(entry)}>
-                        {entry.state === "muted"
-                          ? t("notifications.watching.unmuteAction")
-                          : t("notifications.watching.unwatch")}
-                      </Button>
-                    </>
-                  }
+                  entry={entry}
+                  onRelease={release}
                 />
-              );
-            })}
-          </List>
-        </Section>
-      ) : null}
+              ))}
+            </List>
+          </Section>
+        );
+      })}
     </SettingsPage>
+  );
+}
+
+function WatchedRow({ entry, onRelease }: { entry: WatchedEntry; onRelease: (entry: WatchedEntry) => void }) {
+  const { t } = useTranslation();
+  const path = watchedPath(entry);
+  const kind = translateKey(t, `notifications.watching.kinds.${entry.kind}`);
+  return (
+    <ListRow
+      icon={entry.state === "muted" ? BellOff : Bell}
+      title={
+        path ? (
+          <Link to={path as never} className="wrap-anywhere hover:underline focus-visible:focus-ring">
+            {entry.title}
+          </Link>
+        ) : (
+          <span className="wrap-anywhere">{entry.title}</span>
+        )
+      }
+      description={
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>{kind}</span>
+          {entry.target.type === "item" ? (
+            <span>{t("notifications.watching.inSpace", { space: entry.spaceName })}</span>
+          ) : null}
+          {entry.state === "muted" && entry.keepActionable ? (
+            <span>{t("notifications.watching.keepsMentions")}</span>
+          ) : null}
+          {entry.automatic ? <span>{t("notifications.watching.automatic")}</span> : null}
+        </span>
+      }
+      actions={
+        <Button variant="secondary" size="sm" onClick={() => onRelease(entry)}>
+          {entry.state === "muted"
+            ? t("notifications.watching.unmuteAction")
+            : t("notifications.watching.unwatch")}
+        </Button>
+      }
+    />
   );
 }

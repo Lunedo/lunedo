@@ -115,7 +115,7 @@ function ExportRow({ entry, onRemove }: { entry: ExportEntry; onRemove: () => vo
         : t("exports.list.startedAt", { date: format.dateTime(entry.createdAt) });
   const Glyph = entry.scope === "space" ? FileArchive : FolderTree;
   return (
-    <li className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+    <li className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <Glyph aria-hidden="true" className="mt-1 size-icon shrink-0 text-text-muted" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">

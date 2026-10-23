@@ -55,7 +55,6 @@ export function GroupsScreen() {
       width="wide"
       title={t("groups.title")}
       description={t("groups.description")}
-      organizationId={organizationId}
       actions={
         canCreate ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>

@@ -67,7 +67,7 @@ export function EmergencyRecipients() {
   }));
   return (
     <>
-      <p className="px-4 pt-3 text-sm text-text-muted">
+      <p className="pt-3 text-sm text-text-muted">
         {canManage ? t("emergencyRecipients.description") : t("emergencyRecipients.ownerOnly")}
       </p>
       <SettingRow
@@ -87,7 +87,7 @@ export function EmergencyRecipients() {
         }
         status={<SaveIndicator tracker={tracker("administrators")} />}
       />
-      <div className="flex flex-col gap-1 px-4 py-3">
+      <div className="flex flex-col gap-1 py-3">
         <Field label={t("emergencyRecipients.accounts")} hint={t("emergencyRecipients.accountsHint")}>
           <Combobox
             multiple
@@ -102,7 +102,7 @@ export function EmergencyRecipients() {
         </Field>
         <SaveIndicator tracker={tracker("accounts")} />
       </div>
-      <div className="px-4 py-3">
+      <div className="py-3">
         <AutoSaveTextField
           label={t("emergencyRecipients.addresses")}
           hint={t("emergencyRecipients.addressesHint")}

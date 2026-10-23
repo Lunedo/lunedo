@@ -1,6 +1,6 @@
 import { BackLink, IconButton, Select, Sidebar, SidebarGroup, SidebarHeader, SidebarItem } from "@lunedo/ui";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { type LucideIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useShell } from "../../shell/shell.js";
@@ -8,7 +8,6 @@ import { useShell } from "../../shell/shell.js";
 export interface SettingsEntry {
   id: string;
   label: string;
-  icon: LucideIcon;
   href: string;
   group?: string;
 }
@@ -98,13 +97,7 @@ export function SettingsShell({
                 {...(group.label ? { label: group.label, variant: "divided" as const } : {})}
               >
                 {group.entries.map((entry) => (
-                  <SidebarItem
-                    key={entry.id}
-                    icon={entry.icon}
-                    label={entry.label}
-                    current={entry.id === current?.id}
-                    asChild
-                  >
+                  <SidebarItem key={entry.id} label={entry.label} current={entry.id === current?.id} asChild>
                     <Link to={entry.href as never} />
                   </SidebarItem>
                 ))}

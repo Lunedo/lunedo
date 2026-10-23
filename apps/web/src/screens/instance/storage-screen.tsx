@@ -82,7 +82,7 @@ function UsageSection({ status }: { status: StorageStatus }) {
       status.usedBytes !== null &&
       status.totalBytes !== null &&
       status.percent !== null ? (
-        <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex flex-col gap-2 py-3">
           <p className="font-medium">
             {t("storage.usage.summary", {
               used: format.bytes(status.usedBytes),
@@ -105,7 +105,7 @@ function UsageSection({ status }: { status: StorageStatus }) {
           </div>
         </div>
       ) : (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="info" title={t("storage.usage.inactiveTitle")}>
             {t("storage.usage.inactiveNoLimit")}
           </Notice>
@@ -207,7 +207,7 @@ function LevelsSection({ status, canManage }: { status: StorageStatus; canManage
   const serverError = tracker.state === "error" ? tracker.error : null;
   return (
     <Section title={t("storage.levels.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("storage.levels.description")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("storage.levels.description")}</p>
       <div className="flex flex-col gap-4 p-4">
         {LEVEL_FIELDS.map((field) => (
           <Field
@@ -438,7 +438,7 @@ function ContactsSection({ status, canManage }: { status: StorageStatus; canMana
     tracker.state === "error" && !errors.addresses && !errors.webhook ? tracker.error : null;
   return (
     <Section title={t("storage.contacts.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("storage.contacts.description")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("storage.contacts.description")}</p>
       <div className="flex flex-col gap-4 p-4">
         <Field
           label={t("storage.contacts.addresses")}

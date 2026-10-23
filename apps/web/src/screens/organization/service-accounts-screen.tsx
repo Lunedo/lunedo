@@ -53,7 +53,6 @@ export function ServiceAccountsScreen() {
       width="wide"
       title={t("serviceAccounts.title")}
       description={t("serviceAccounts.description")}
-      organizationId={organizationId}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>

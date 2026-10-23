@@ -119,14 +119,14 @@ function StatusSection({
   return (
     <Section title={t("backups.status.title")}>
       {data.alert === "failing" && data.lastFailure ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice variant="danger" title={t("backups.status.failingTitle")}>
             {data.lastFailure.error ?? t("backups.status.failingUnknown")}
           </Notice>
         </div>
       ) : null}
       {data.alert === "missing" ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice variant="warning" title={t("backups.status.missingTitle")}>
             {t("backups.status.missingBody", { count: data.settings.missingDays })}
           </Notice>
@@ -162,7 +162,7 @@ function StatusSection({
           </span>
         }
       />
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 py-3">
         {data.running ? <Badge variant="info">{t("backups.status.running")}</Badge> : null}
         {canManage ? (
           <Button variant="primary" loading={tracker.state === "saving"} onClick={() => void backUpNow()}>
@@ -728,7 +728,7 @@ function RetentionSection({ data, canManage }: { data: BackupOverview; canManage
   const counts = ["daily", "weekly", "monthly"] as const;
   return (
     <Section title={t("backups.retention.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("backups.retention.description")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("backups.retention.description")}</p>
       <div className="grid gap-4 p-4 sm:grid-cols-3">
         {counts.map((kind) => (
           <NumberSetting
@@ -755,7 +755,7 @@ function UpdatesSection({ data, canManage }: { data: BackupOverview; canManage: 
   return (
     <Section title={t("backups.updates.title")}>
       {environment ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice variant="info" title={t("backups.updates.environmentTitle")}>
             {t("backups.updates.environment")}
           </Notice>
@@ -797,7 +797,7 @@ function AdvancedSection({ data, canManage }: { data: BackupOverview; canManage:
   const [testTracker, saveTest] = useImmediate(save);
   return (
     <details className="rounded-md border border-border bg-surface">
-      <summary className="cursor-pointer px-4 py-3 font-medium">{t("backups.advanced.title")}</summary>
+      <summary className="cursor-pointer py-3 font-medium">{t("backups.advanced.title")}</summary>
       <div className="flex flex-col gap-4 border-border border-t p-4">
         <RadioGroup
           label={t("backups.advanced.scope")}

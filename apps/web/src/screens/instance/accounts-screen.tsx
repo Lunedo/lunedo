@@ -636,7 +636,7 @@ function canHaveSecondFactor(account: { type: string; state: string }): boolean 
 function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Section title={title}>
-      <div className="px-4 py-3">{children}</div>
+      <div className="py-3">{children}</div>
     </Section>
   );
 }

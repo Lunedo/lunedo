@@ -99,7 +99,7 @@ export function BrowserPushSection() {
   return (
     <Section title={t("notifications.push.title")}>
       {failure ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice
             variant="danger"
             title={t("notifications.push.failed")}

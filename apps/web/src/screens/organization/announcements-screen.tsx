@@ -16,11 +16,7 @@ export function OrganizationAnnouncementsScreen() {
   const state = useOrganizationState();
   const organization = useQuery(organizationQuery(organizationId));
   return (
-    <SettingsPage
-      title={t("announcements.title")}
-      description={t("announcements.organizationDescription")}
-      organizationId={organizationId}
-    >
+    <SettingsPage title={t("announcements.title")} description={t("announcements.organizationDescription")}>
       <AnnouncementSettings
         level="organization"
         organizationId={organizationId}
@@ -31,7 +27,6 @@ export function OrganizationAnnouncementsScreen() {
         owner={{ kind: "organization", organizationId }}
         events={organizationChatEvents}
         title={t("chatChannels.announcementsTitle")}
-        description={t("chatChannels.announcementsDescription")}
         canManage={state.can("organization.integrations.manage")}
         secondaryAction
       />

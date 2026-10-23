@@ -83,10 +83,7 @@ export function SettingsSearchResults({
                 const item = area.items.find((candidate) => candidate.id === match.pageId);
                 if (!item) return null;
                 return (
-                  <li
-                    key={`${match.pageId}:${match.sectionTitleKey}:${match.entry.id}`}
-                    className="px-4 py-3"
-                  >
+                  <li key={`${match.pageId}:${match.sectionTitleKey}:${match.entry.id}`} className="py-3">
                     <Link
                       to={item.to as never}
                       params={params as never}
