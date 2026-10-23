@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.json && node scripts/run-turbo.ts run typecheck --continue",
     "test": "node --test \"scripts/*.test.ts\" && node scripts/run-turbo.ts run test --continue",
     "test:e2e": "turbo run test:e2e",
+    "screens:capture": "node scripts/capture-screens.ts",
     "licenses:check": "node scripts/check-licenses.ts",
     "dco:check": "node scripts/check-dco.ts",
     "prepare": "node scripts/install-hooks.ts",

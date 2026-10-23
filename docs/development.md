@@ -131,6 +131,10 @@ Roles are `api`, `collab`, `worker` and `all` (default), which runs all three pr
 
 `packages/tokens/src/design-tokens.json` is the single source for colors, type, spacing, radii and shadows. The build generates `packages/tokens/generated/theme.css`, which defines the Tailwind theme and the CSS variables for light and dark mode. The default Tailwind scales are removed, so only token values can be used in class names. The web client is described in [web-client.md](web-client.md).
 
+### Screenshots of the main screens
+
+`pnpm screens:capture <directory>` builds the project, starts a fresh end-to-end instance, fills it with synthetic content and captures every main screen into the directory: desktop (1440×900) and, for the reading screens, phone (390×844), each in light and dark mode, in German and for some screens also in English. `index.md` in the directory lists every file with its route, role and state, and the screens that could not be captured. Choose a directory outside the repository, for example one per date, to compare the interface before and after a change. `--skip-build` reuses the last build. The run needs the development database and Mailpit (`pnpm dev`) and uses port 4410 (`LUNEDO_E2E_PORT`); the scenario lives in `apps/web/e2e/screens` and `apps/web/playwright.screens.config.ts`.
+
 ## Interface patterns
 
 Screens are built from the components in `packages/ui`; `/dev/components` shows each of them in every state. New screens follow these rules, so that the interface behaves the same everywhere.
