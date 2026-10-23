@@ -13,7 +13,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Check, Download, KeyRound } from "lucide-react";
+import { Check, Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -353,11 +353,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
     <SettingsPage
       width="wide"
       title={t("identityProviders.wizard.title")}
-      icon={KeyRound}
-      breadcrumbs={[
-        { label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" },
-        { label: t("identityProviders.wizard.new") },
-      ]}
+      back={{ label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" }}
       actions={
         <Button variant="secondary" onClick={() => void navigate(listPath)}>
           {providerId || draftId ? t("identityProviders.wizard.close") : t("common.cancel")}

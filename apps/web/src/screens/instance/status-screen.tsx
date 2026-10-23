@@ -11,7 +11,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Activity, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   type OperationsStatus,
@@ -268,7 +268,6 @@ export function InstanceStatusScreen() {
     <SettingsPage
       title={t("operations.status.title")}
       description={t("operations.status.description")}
-      icon={Activity}
       actions={
         <Button
           variant="secondary"

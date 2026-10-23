@@ -53,7 +53,6 @@ export function ServiceAccountsScreen() {
       width="wide"
       title={t("serviceAccounts.title")}
       description={t("serviceAccounts.description")}
-      icon={Bot}
       organizationId={organizationId}
       actions={
         manage ? (

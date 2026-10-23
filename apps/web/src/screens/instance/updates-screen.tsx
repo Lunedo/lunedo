@@ -241,7 +241,7 @@ export function InstanceUpdatesScreen() {
   const updates = useQuery({ ...updatesQuery, throwOnError: false });
   const data = updates.data;
   return (
-    <SettingsPage title={t("updates.title")} description={t("updates.description")} icon={ArrowUpCircle}>
+    <SettingsPage title={t("updates.title")} description={t("updates.description")}>
       {updates.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {updates.isError ? (
         <LoadError what={t("updates.loadFailed")} error={updates.error} onRetry={() => updates.refetch()} />

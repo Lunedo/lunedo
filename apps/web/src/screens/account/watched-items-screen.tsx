@@ -1,7 +1,7 @@
 import { slugify } from "@lunedo/editor-schema";
 import { Badge, Button, EmptyState, List, ListRow, Section, Skeleton, useToast } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
-import { Bell, BellOff, Eye } from "lucide-react";
+import { Bell, BellOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -71,11 +71,6 @@ export function WatchedItemsScreen() {
     <SettingsPage
       title={t("notifications.watching.screenTitle")}
       description={t("notifications.watching.screenDescription")}
-      icon={Eye}
-      breadcrumbs={[
-        { label: t("notifications.preferencesTitle"), href: "/settings/notifications" },
-        { label: t("notifications.watching.screenTitle") },
-      ]}
     >
       {list.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {list.isError ? (

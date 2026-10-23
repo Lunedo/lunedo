@@ -12,7 +12,6 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Construction } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -217,11 +216,7 @@ export function InstanceMaintenanceScreen() {
   const state = useOrganizationState();
   const details = useQuery({ ...detailsQuery, throwOnError: false });
   return (
-    <SettingsPage
-      title={t("maintenance.title")}
-      description={t("maintenance.description")}
-      icon={Construction}
-    >
+    <SettingsPage title={t("maintenance.title")} description={t("maintenance.description")}>
       {details.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {details.isError ? (
         <LoadError

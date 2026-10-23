@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
@@ -58,7 +57,6 @@ export function OrganizationContentScreen() {
     <SettingsPage
       title={t("content.title")}
       description={t("content.organizationDescription")}
-      icon={Trash2}
       organizationId={organizationId}
       width="wide"
     >

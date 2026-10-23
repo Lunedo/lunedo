@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
+import { ArticleTemplateSections } from "../../knowledge-bases/settings/article-template-sections.js";
 import { contentKeys } from "../content-queries.js";
 import { SpaceSettingsPage } from "../settings/space-settings-page.js";
 import { useSpace } from "../space-context.js";
@@ -29,12 +29,8 @@ export function SpaceTemplatesScreen() {
   };
   const path = { spaceId: space.id };
   return (
-    <SpaceSettingsPage
-      tab="templates"
-      title={t("templates.title")}
-      description={t("templates.spaceDescription")}
-      icon={LayoutTemplate}
-    >
+    <SpaceSettingsPage title={t("templates.title")} description={t("templates.spaceDescription")}>
+      {isKnowledgeBase(space) ? <ArticleTemplateSections /> : null}
       <TemplatesManager
         templates={templates.data}
         loading={templates.isPending}

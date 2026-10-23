@@ -49,7 +49,7 @@ export function BreakGlassScreen() {
   };
 
   return (
-    <SettingsPage title={t("breakGlass.title")} description={t("breakGlass.description")} icon={ShieldAlert}>
+    <SettingsPage title={t("breakGlass.title")} description={t("breakGlass.description")}>
       {canRequest ? (
         <Section title={t("breakGlass.request")}>
           <div className="flex flex-wrap items-end gap-3 p-4">

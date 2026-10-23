@@ -18,7 +18,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fingerprint, KeyRound, LockKeyhole, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
+import { Fingerprint, KeyRound, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -51,7 +51,7 @@ export function SecurityScreen() {
   const { t } = useTranslation();
   const session = useSession();
   return (
-    <SettingsPage title={t("security.title")} description={t("security.description")} icon={LockKeyhole}>
+    <SettingsPage title={t("security.title")} description={t("security.description")}>
       <SignInSection />
       <Section title={t("identities.title")}>
         <OwnIdentities />

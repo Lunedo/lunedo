@@ -17,7 +17,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Palette } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -73,10 +73,8 @@ export function PortalAppearanceScreen() {
   const portal = useQuery({ ...portalQuery(space.id), throwOnError: false });
   return (
     <SpaceSettingsPage
-      tab="appearance"
       title={t("knowledgeBase.appearance.title")}
       description={t("knowledgeBase.appearance.description")}
-      icon={Palette}
     >
       {portal.isPending ? <Skeleton className="h-field w-full" /> : null}
       {portal.isError ? (

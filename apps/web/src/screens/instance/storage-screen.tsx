@@ -13,7 +13,6 @@ import {
   Textarea,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HardDrive } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -570,7 +569,7 @@ export function InstanceStorageScreen() {
   const canManage = state.can("instance.settings.manage");
   const data = status.data;
   return (
-    <SettingsPage title={t("storage.title")} description={t("storage.description")} icon={HardDrive}>
+    <SettingsPage title={t("storage.title")} description={t("storage.description")}>
       {status.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {status.isError ? (
         <LoadError what={t("failures.loadStorage")} error={status.error} onRetry={() => status.refetch()} />

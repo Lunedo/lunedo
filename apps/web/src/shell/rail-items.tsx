@@ -4,6 +4,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   Bell,
   BookOpen,
+  Building2,
   CircleHelp,
   Home,
   Keyboard,
@@ -12,11 +13,15 @@ import {
   ListChecks,
   type LucideIcon,
   Search,
+  Server,
   Settings,
+  UserRound,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useHelpUrl } from "../knowledge-bases/help-target.js";
 import { useUnreadCount } from "../notifications/notifications-api.js";
+import { isNavigationVisible, type NavigationSection, navigationItems } from "./extensions.js";
+import { useRegistry } from "./registry.js";
 import { useShell } from "./shell.js";
 import { useOrganizationState } from "./shell-context.js";
 
@@ -129,17 +134,39 @@ export function HelpRailItem() {
   );
 }
 
+const SETTINGS_AREAS = [
+  { section: "account", labelKey: "navigation.myAccount", icon: UserRound },
+  { section: "organization", labelKey: "navigation.organization", icon: Building2 },
+  { section: "instance", labelKey: "navigation.instance", icon: Server },
+] as const satisfies readonly { section: NavigationSection; labelKey: string; icon: LucideIcon }[];
+
 export function SettingsRailItem() {
   const { t } = useTranslation();
+  const shell = useShell();
   const location = useLocation();
+  const navigation = useRegistry(navigationItems);
+  const areas = SETTINGS_AREAS.flatMap((area) => {
+    const first = navigation.find(
+      (item) => item.section === area.section && isNavigationVisible(item, shell),
+    );
+    return first ? [{ ...area, to: first.to }] : [];
+  });
   return (
-    <RailButton
-      label={t("rail.settings")}
-      icon={<RailIcon icon={Settings} />}
-      current={location.pathname.startsWith("/settings")}
-      asChild
-    >
-      <Link to="/settings/preferences" />
-    </RailButton>
+    <Menu
+      trigger={
+        <RailButton
+          label={t("rail.settings")}
+          icon={<RailIcon icon={Settings} />}
+          current={location.pathname.startsWith("/settings")}
+        />
+      }
+      align="start"
+      items={areas.map((area) => ({
+        label: t(area.labelKey),
+        icon: area.icon,
+        onSelect: () =>
+          shell.navigate(area.to, shell.organizationId ? { organizationId: shell.organizationId } : {}),
+      }))}
+    />
   );
 }

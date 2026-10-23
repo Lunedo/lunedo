@@ -1,7 +1,6 @@
 import { Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
@@ -27,7 +26,6 @@ export function OrganizationSecurityScreen() {
     <SettingsPage
       title={t("organization.security.title")}
       description={t("organization.security.description", { name })}
-      icon={LockKeyhole}
       organizationId={organizationId}
     >
       <Section title={t("organization.security.signIn")}>

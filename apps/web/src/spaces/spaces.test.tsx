@@ -433,6 +433,59 @@ describe("spaces", () => {
     expect(screen.queryByText("Space not found")).toBeNull();
   });
 
+  it("replaces the space navigation with grouped settings and a way back to the space", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes() });
+    await renderAt("/spaces/ITOPS/settings/general");
+    const navigation = await screen.findByRole("navigation", { name: "Space settings" });
+    expect(within(navigation).getByRole("heading", { name: "IT Operations" })).toBeTruthy();
+    expect(within(navigation).getByRole("link", { name: "Back to IT Operations" }).getAttribute("href")).toBe(
+      "/spaces/ITOPS",
+    );
+    expect(within(navigation).getByRole("link", { name: "General" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    const content = within(navigation).getByRole("list", { name: "Content" });
+    expect(
+      within(content)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Pages and trash", "Page status", "Templates", "Export"]);
+    expect(within(navigation).getByRole("list", { name: "Access" })).toBeTruthy();
+    expect(within(navigation).getByRole("list", { name: "Connections" })).toBeTruthy();
+    expect(within(navigation).queryByRole("list", { name: "Publishing" })).toBeNull();
+    expect(within(navigation).queryByRole("link", { name: "Categories" })).toBeNull();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Navigation of IT Operations" })).toBeNull();
+  });
+
+  it("shows the publishing settings for a knowledge base and sends article templates to Templates", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      "GET /api/v1/space-keys/ITOPS": () => ({
+        body: { space: { ...space(), type: "knowledgeBase" }, redirected: false },
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/article-templates");
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/ITOPS/settings/templates"));
+    const navigation = await screen.findByRole("navigation", { name: "Space settings" });
+    const publishing = within(navigation).getByRole("list", { name: "Publishing" });
+    expect(
+      within(publishing)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Address", "Appearance and start page", "Visibility", "Languages", "Portal accounts"]);
+    const content = within(navigation).getByRole("list", { name: "Content" });
+    expect(
+      within(content)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Categories", "Templates", "Review", "Pages and trash", "Page status", "Export"]);
+    expect(within(content).getByRole("link", { name: "Templates" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+  });
+
   it("says that the old key keeps leading to the space until another space takes it", async () => {
     mockApi({ ...baseRoutes(), ...spaceRoutes() });
     await renderAt("/spaces/ITOPS/settings/general");

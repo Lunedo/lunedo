@@ -1,7 +1,6 @@
 import { organizationChatEvents } from "@lunedo/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Megaphone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery } from "../../api/organization-queries.js";
 import { ChatChannelsPanel } from "../../chat/chat-channels-panel.js";
@@ -20,7 +19,6 @@ export function OrganizationAnnouncementsScreen() {
     <SettingsPage
       title={t("announcements.title")}
       description={t("announcements.organizationDescription")}
-      icon={Megaphone}
       organizationId={organizationId}
     >
       <AnnouncementSettings

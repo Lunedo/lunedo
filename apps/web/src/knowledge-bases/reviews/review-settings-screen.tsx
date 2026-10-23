@@ -60,12 +60,7 @@ export function ReviewSettingsScreen() {
   const { save, status } = useFieldSaver(space.id);
   const value = settings.data;
   return (
-    <SpaceSettingsPage
-      tab="reviews"
-      title={t("reviews.settings.title")}
-      description={t("reviews.settings.description")}
-      icon={CalendarCheck}
-    >
+    <SpaceSettingsPage title={t("reviews.settings.title")} description={t("reviews.settings.description")}>
       <div className="flex flex-col gap-6">
         {settings.isPending ? <Skeleton className="h-field w-full" /> : null}
         {settings.isError ? (

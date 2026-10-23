@@ -146,6 +146,9 @@ export function SpaceLayout() {
 function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const { t } = useTranslation();
   const shell = useShell();
+  const location = useLocation();
+  const settingsPath = `/spaces/${space.key}/settings`;
+  const inSettings = location.pathname === settingsPath || location.pathname.startsWith(`${settingsPath}/`);
   const params = useParams({ strict: false }) as { itemId?: string };
   const currentId = params.itemId ?? null;
   const current = useQuery({ ...itemQuery(currentId ?? ""), enabled: currentId !== null });
@@ -187,41 +190,45 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   );
   return (
     <SpaceContext value={context}>
-      <div className="flex min-w-0 flex-1">
-        {shell.sidebarCollapsed ? null : (
-          <nav
-            aria-label={t("spaces.navigation", { space: spaceDisplayName(t, space) })}
-            className="hidden w-sidebar shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar md:flex"
+      {inSettings ? (
+        <Outlet />
+      ) : (
+        <div className="flex min-w-0 flex-1">
+          {shell.sidebarCollapsed ? null : (
+            <nav
+              aria-label={t("spaces.navigation", { space: spaceDisplayName(t, space) })}
+              className="hidden w-sidebar shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar md:flex"
+            >
+              {navigation}
+            </nav>
+          )}
+          <main
+            id="main"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
+            tabIndex={0}
+            className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
           >
-            {navigation}
-          </nav>
-        )}
-        <main
-          id="main"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
-          tabIndex={0}
-          className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
-        >
-          <div className="flex items-center gap-2 border-b border-border px-4 py-2 md:hidden">
-            <Button variant="secondary" size="sm" icon={ListTree} onClick={() => setTreeOpen(true)}>
-              {isKnowledgeBase(space) ? t("spaces.articlesButton") : t("spaces.pagesButton")}
-            </Button>
-            <span className="min-w-0 flex-1 truncate text-sm text-text-muted">
-              {spaceDisplayName(t, space)}
-            </span>
-          </div>
-          {shell.sidebarCollapsed ? (
-            <div className="hidden px-4 pt-3 md:block">
-              <IconButton
-                label={t("navigation.expandSidebar")}
-                icon={PanelLeftOpen}
-                onClick={shell.toggleSidebar}
-              />
+            <div className="flex items-center gap-2 border-b border-border px-4 py-2 md:hidden">
+              <Button variant="secondary" size="sm" icon={ListTree} onClick={() => setTreeOpen(true)}>
+                {isKnowledgeBase(space) ? t("spaces.articlesButton") : t("spaces.pagesButton")}
+              </Button>
+              <span className="min-w-0 flex-1 truncate text-sm text-text-muted">
+                {spaceDisplayName(t, space)}
+              </span>
             </div>
-          ) : null}
-          <Outlet />
-        </main>
-      </div>
+            {shell.sidebarCollapsed ? (
+              <div className="hidden px-4 pt-3 md:block">
+                <IconButton
+                  label={t("navigation.expandSidebar")}
+                  icon={PanelLeftOpen}
+                  onClick={shell.toggleSidebar}
+                />
+              </div>
+            ) : null}
+            <Outlet />
+          </main>
+        </div>
+      )}
       <Drawer open={treeOpen} onOpenChange={setTreeOpen} title={spaceDisplayName(t, space)} side="left">
         {navigation}
       </Drawer>

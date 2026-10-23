@@ -16,7 +16,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -93,7 +93,6 @@ export function OrganizationRolesScreen() {
       width="wide"
       title={t("roles.title")}
       description={t("roles.description")}
-      icon={ShieldCheck}
       organizationId={organizationId}
       actions={
         manage ? (

@@ -68,7 +68,6 @@ export function DomainsScreen() {
     <SettingsPage
       title={t("organization.domains.title")}
       description={t("organization.domains.description")}
-      icon={Globe}
       organizationId={organizationId}
     >
       <Section title={t("organization.domains.domains")}>

@@ -1,7 +1,7 @@
 import { Badge, Button, ConfirmDialog, EmptyState, Field, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Lock, ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -187,12 +187,7 @@ export function SpaceAccessScreen() {
   const { space } = useSpace();
   const admin = space.role === "admin";
   return (
-    <SpaceSettingsPage
-      tab="access"
-      title={t("spaces.access.title")}
-      description={t("spaces.access.description")}
-      icon={ShieldCheck}
-    >
+    <SpaceSettingsPage title={t("spaces.access.title")} description={t("spaces.access.description")}>
       <div className="flex flex-col gap-8">
         {admin ? (
           <Panel

@@ -439,6 +439,10 @@ const labelRoute = createRoute({
 const spaceSettingsRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/settings",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-settings-layout.js"),
+    "SpaceSettingsLayout",
+  ),
 });
 
 const spaceSettingsIndexRoute = createRoute({
@@ -566,10 +570,9 @@ const spaceCategoriesRoute = createRoute({
 const spaceArticleTemplatesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/article-templates",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/article-templates-screen.js"),
-    "ArticleTemplatesScreen",
-  ),
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/spaces/$spaceKey/settings/templates", params });
+  },
 });
 
 const spacePortalAccountsRoute = createRoute({

@@ -10,7 +10,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Globe, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -39,10 +39,8 @@ export function PortalAddressScreen() {
   const portal = useQuery({ ...portalQuery(space.id), throwOnError: false });
   return (
     <SpaceSettingsPage
-      tab="address"
       title={t("knowledgeBase.address.title")}
       description={t("knowledgeBase.address.description")}
-      icon={Globe}
     >
       {portal.isPending ? <Skeleton className="h-field w-full" /> : null}
       {portal.isError ? (

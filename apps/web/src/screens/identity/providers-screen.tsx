@@ -441,7 +441,6 @@ export function InstanceProvidersScreen() {
       width="wide"
       title={t("identityProviders.title")}
       description={t("identityProviders.description")}
-      icon={KeyRound}
       actions={
         canManage && (providers.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} onClick={() => void navigate(newProviderPath)}>

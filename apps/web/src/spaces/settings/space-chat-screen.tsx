@@ -1,5 +1,4 @@
 import { spaceChatEvents } from "@lunedo/shared";
-import { MessagesSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ChatChannelsPanel } from "../../chat/chat-channels-panel.js";
 import { useSpace } from "../space-context.js";
@@ -14,12 +13,7 @@ export function SpaceChatScreen() {
       ? t("chatChannels.personal")
       : undefined;
   return (
-    <SpaceSettingsPage
-      tab="chat"
-      title={t("chatChannels.title")}
-      description={t("chatChannels.spaceDescription")}
-      icon={MessagesSquare}
-    >
+    <SpaceSettingsPage title={t("chatChannels.title")} description={t("chatChannels.spaceDescription")}>
       <ChatChannelsPanel
         owner={{ kind: "space", spaceId: space.id }}
         events={spaceChatEvents}

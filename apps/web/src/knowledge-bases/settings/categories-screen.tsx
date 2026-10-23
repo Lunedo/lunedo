@@ -319,10 +319,8 @@ export function CategoriesScreen() {
   const fallbackSource = t("knowledgeBase.contact.knowledgeBase");
   return (
     <SpaceSettingsPage
-      tab="categories"
       title={t("knowledgeBase.categories.title")}
       description={t("knowledgeBase.categories.description")}
-      icon={FolderTree}
     >
       <div className="flex flex-col gap-6">
         <Panel

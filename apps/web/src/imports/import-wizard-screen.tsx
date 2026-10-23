@@ -20,7 +20,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, FileInput, X } from "lucide-react";
+import { ArrowLeft, Check, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -32,7 +32,7 @@ import { SettingsPage } from "../screens/settings/settings-page.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { HolderPicker } from "../spaces/access/holders.js";
 import { FolderPath } from "./folder-path.js";
-import { errorText, importTitle } from "./import-labels.js";
+import { errorText } from "./import-labels.js";
 import {
   folderQuery,
   type ImportUpdate,
@@ -106,14 +106,14 @@ export function ImportWizardScreen() {
   const query = useQuery(importQuery(importId));
   if (query.isPending) {
     return (
-      <SettingsPage title={t("imports.wizard.title")} icon={FileInput} organizationId={organizationId}>
+      <SettingsPage title={t("imports.wizard.title")} organizationId={organizationId}>
         <Skeleton className="h-control-field w-full" />
       </SettingsPage>
     );
   }
   if (query.isError) {
     return (
-      <SettingsPage title={t("imports.wizard.title")} icon={FileInput} organizationId={organizationId}>
+      <SettingsPage title={t("imports.wizard.title")} organizationId={organizationId}>
         <LoadError what={t("imports.wizard.loadFailed")} error={query.error} onRetry={query.refetch} />
       </SettingsPage>
     );
@@ -468,16 +468,8 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
             })
           : t("imports.wizard.progress", { step: index + 1, total: stepNames.length })
       }
-      icon={FileInput}
       organizationId={organizationId}
-      breadcrumbs={[
-        { label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` },
-        {
-          label: reimport
-            ? t("imports.reimport.wizardTitle", { space: reimport.name })
-            : importTitle(t, entry),
-        },
-      ]}
+      back={{ label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` }}
       actions={
         <Button
           variant="secondary"

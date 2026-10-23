@@ -139,7 +139,7 @@ describe("the web client", () => {
     await userEvent.type(screen.getByLabelText("Code from your authenticator app"), "123456");
     await userEvent.click(screen.getByRole("button", { name: "Verify" }));
 
-    expect(await screen.findByRole("heading", { name: "Security", level: 1 })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Sign-in and security", level: 1 })).toBeTruthy();
     const signIn = requests.find((request) => request.path === "/api/v1/auth/sign-in");
     expect(signIn?.headers.get("X-Lunedo-Request")).toBe("1");
   });
@@ -189,9 +189,37 @@ describe("the web client", () => {
     expect(document.documentElement.style.getPropertyValue("--ld-text-scale")).toBe("1.25");
     expect(await screen.findByRole("button", { name: "Notifications, 2 unread" })).toBeTruthy();
     const navigation = screen.getByRole("navigation", { name: "Settings" });
-    expect(within(navigation).getByRole("link", { name: "Members" })).toBeTruthy();
+    expect(within(navigation).getByRole("heading", { name: "My account" })).toBeTruthy();
+    expect(within(navigation).getByRole("link", { name: "Preferences" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    expect(within(navigation).getByRole("link", { name: "Sign-in and security" })).toBeTruthy();
+    expect(within(navigation).queryByRole("link", { name: "Members" })).toBeNull();
+  });
+
+  it("shows only the entries of the organization area, grouped, with the parent of a detail page active", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp(`/settings/organizations/${ORGANIZATION.id}/members`);
+    const navigation = await screen.findByRole("navigation", { name: "Settings" });
+    expect(await within(navigation).findByRole("heading", { name: "Platform Team" })).toBeTruthy();
+    const group = within(navigation).getByRole("list", { name: "People and access" });
+    expect(within(group).getByRole("link", { name: "Members" }).getAttribute("aria-current")).toBe("page");
     expect(within(navigation).queryByRole("link", { name: "Roles" })).toBeNull();
+    expect(within(navigation).queryByRole("link", { name: "Preferences" })).toBeNull();
     expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
+  });
+
+  it("opens the settings areas the person may see from the settings entry", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.map((item) => item.textContent)).toEqual(["My account", "Organization"]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Organization" }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe(`/settings/organizations/${ORGANIZATION.id}/members`),
+    );
   });
 
   it("searches the settings of every area it shows and offers to clear an empty result", async () => {

@@ -15,7 +15,7 @@ import {
   Table,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -72,7 +72,6 @@ export function InstanceRolesScreen() {
       width="wide"
       title={t("instance.roles.title")}
       description={t("instance.roles.description")}
-      icon={ShieldCheck}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setAssigning(true)}>

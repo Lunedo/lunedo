@@ -102,14 +102,14 @@ export function ImportScreen() {
   const query = useQuery(importQuery(importId));
   if (query.isPending) {
     return (
-      <SettingsPage title={t("imports.title")} icon={FileInput} organizationId={organizationId}>
+      <SettingsPage title={t("imports.title")} organizationId={organizationId}>
         <Skeleton className="h-control-field w-full" />
       </SettingsPage>
     );
   }
   if (query.isError) {
     return (
-      <SettingsPage title={t("imports.title")} icon={FileInput} organizationId={organizationId}>
+      <SettingsPage title={t("imports.title")} organizationId={organizationId}>
         <LoadError what={t("imports.detail.loadFailed")} error={query.error} onRetry={query.refetch} />
       </SettingsPage>
     );
@@ -189,13 +189,9 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
     <SettingsPage
       title={entry.state === "running" ? t("imports.detail.importing") : title}
       description={subtitle()}
-      icon={FileInput}
       organizationId={organizationId}
       width="wide"
-      breadcrumbs={[
-        { label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` },
-        { label: title },
-      ]}
+      back={{ label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` }}
       actions={
         <>
           <Badge variant={stateBadge(entry.state)}>

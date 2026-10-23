@@ -10,7 +10,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Shield, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -86,10 +86,8 @@ export function SpacePermissionsScreen() {
   if (space.role !== "admin") {
     return (
       <SpaceSettingsPage
-        tab="permissions"
         title={t("spaces.settings.permissions")}
         description={t("spaces.settings.permissionsDescription")}
-        icon={Shield}
       >
         <Notice variant="info" title={t("spaces.settings.adminsOnlyTitle")}>
           {t("spaces.settings.adminsOnly", { role: roleLabel(t, space.role ?? "reader") })}
@@ -139,10 +137,8 @@ export function SpacePermissionsScreen() {
 
   return (
     <SpaceSettingsPage
-      tab="permissions"
       title={t("spaces.settings.permissions")}
       description={t("spaces.settings.permissionsDescription")}
-      icon={Shield}
     >
       <div className="flex flex-col gap-8">
         <Panel title={t("spaces.permissions.visibilityTitle")}>

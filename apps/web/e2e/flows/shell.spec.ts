@@ -51,10 +51,10 @@ test("opens the command palette with the keyboard and navigates", async ({ page 
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await expect(palette).toBeVisible();
-  await page.keyboard.type("Security");
+  await page.keyboard.type("Sign-in and security");
   await page.keyboard.press("Enter");
   await expect(palette).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Security", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign-in and security", level: 1 })).toBeVisible();
 
   await page.keyboard.press("Control+k");
   await page.keyboard.press("Escape");

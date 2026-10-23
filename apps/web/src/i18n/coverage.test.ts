@@ -37,7 +37,8 @@ function usedKeys(): string[] {
   for (const file of sources(sourceRoot)) {
     const text = readFileSync(file, "utf8");
     for (const match of text.matchAll(/\bt\(\s*"([a-zA-Z0-9_.]+)"/g)) if (match[1]) keys.add(match[1]);
-    for (const match of text.matchAll(/labelKey: "([a-zA-Z0-9_.]+)"/g)) if (match[1]) keys.add(match[1]);
+    for (const match of text.matchAll(/(?:labelKey|groupKey): "([a-zA-Z0-9_.]+)"/g))
+      if (match[1]) keys.add(match[1]);
     for (const match of text.matchAll(/translateKey\(t, "([a-zA-Z0-9_.]+)"/g))
       if (match[1]) keys.add(match[1]);
   }

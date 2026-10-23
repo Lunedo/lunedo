@@ -318,7 +318,7 @@ test("disconnects a person at once when they lose the edit permission", async ({
   }
 });
 
-test("loads the organization settings for Spaces with the whole settings navigation", async ({
+test("loads the organization settings for Spaces from the organization settings navigation", async ({
   page,
   organization,
 }) => {
@@ -327,10 +327,13 @@ test("loads the organization settings for Spaces with the whole settings navigat
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Default permissions for new spaces" })).toBeVisible();
   const navigation = page.getByRole("navigation", { name: "Settings", exact: true });
-  await expect(navigation.getByRole("link", { name: "Personal spaces" })).toBeVisible();
-  await expect(navigation.getByRole("link", { name: "Spaces", exact: true })).toBeVisible();
-  await navigation.getByRole("link", { name: "Personal spaces" }).click();
-  await expect(page.getByRole("heading", { name: "Personal spaces", level: 1 })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Spaces", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(navigation.getByRole("link", { name: "Personal spaces" })).toHaveCount(0);
+  await navigation.getByRole("link", { name: "Pages and trash" }).click();
+  await expect(page.getByRole("heading", { name: "Pages and trash", level: 1 })).toBeVisible();
   await navigation.getByRole("link", { name: "Spaces", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);

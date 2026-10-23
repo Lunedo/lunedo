@@ -2,7 +2,7 @@ import { organizationNameSchema, slugSchema } from "@lunedo/shared";
 import { Button, ConfirmDialog, Notice, Section, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Building2, ImageUp, LogOut, Trash2 } from "lucide-react";
+import { ImageUp, LogOut, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -50,7 +50,6 @@ export function OrganizationGeneralScreen() {
     <SettingsPage
       title={t("organization.general.title")}
       description={t("organization.general.description")}
-      icon={Building2}
       organizationId={organizationId}
     >
       {organization.isPending ? <Skeleton className="h-12 w-full" /> : null}

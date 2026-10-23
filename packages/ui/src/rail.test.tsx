@@ -71,6 +71,7 @@ describe("Sidebar", () => {
     expect(current.getAttribute("aria-current")).toBe("page");
     expect(current.className).toContain("bg-accent");
     expect(current.className).toContain("text-on-accent");
+    expect(current.className.split(" ")).not.toContain("text-text");
     expect(current.querySelector("svg")?.getAttribute("class")).toContain("text-on-accent");
     const other = screen.getByRole("link", { name: "Security" });
     expect(other.getAttribute("href")).toBe("/settings/security");

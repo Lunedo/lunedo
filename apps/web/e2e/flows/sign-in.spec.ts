@@ -78,7 +78,7 @@ test("returns to the page that was open when the session ended", async ({ browse
   const context = await forwardFrom(await browser.newContext({ storageState: organization.adminState }));
   const page = await context.newPage();
   await page.goto("/settings/security");
-  await expect(page.getByRole("heading", { name: "Security", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign-in and security", level: 1 })).toBeVisible();
   await context.clearCookies({ name: "__Host-lunedo-session" });
   await page.reload();
   await expect(page).toHaveURL(/\/sign-in\?/);

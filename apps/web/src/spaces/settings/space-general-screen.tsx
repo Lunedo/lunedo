@@ -1,7 +1,6 @@
 import { Button, Field, Input, Notice, RadioGroup, Switch, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -34,10 +33,8 @@ export function SpaceGeneralScreen() {
 
   return (
     <SpaceSettingsPage
-      tab="general"
       title={t("spaces.settings.general")}
       description={t("spaces.settings.generalDescription")}
-      icon={Settings}
     >
       <div className="flex flex-col gap-8">
         <Panel title={t("spaces.settings.about")}>

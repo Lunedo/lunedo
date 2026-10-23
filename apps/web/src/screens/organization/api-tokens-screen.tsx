@@ -1,7 +1,6 @@
 import { Button, Table } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { KeyRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ApiToken } from "../../api/account-queries.js";
@@ -52,7 +51,6 @@ export function OrganizationTokensScreen() {
       width="wide"
       title={t("tokens.organizationTitle")}
       description={t("tokens.organizationDescription")}
-      icon={KeyRound}
       organizationId={organizationId}
     >
       <Table

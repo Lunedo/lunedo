@@ -1,6 +1,6 @@
 import { Badge, type BadgeVariant, Button, Notice, Section, SettingRow, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type RenderingStatus, renderingQuery } from "../../api/instance-queries.js";
 import { DRAWIO_VERSION } from "../../diagrams/drawio-version.js";
@@ -131,7 +131,7 @@ export function InstanceRenderingScreen() {
   const { t } = useTranslation();
   const status = useQuery({ ...renderingQuery, throwOnError: false });
   return (
-    <SettingsPage title={t("rendering.title")} description={t("rendering.description")} icon={Printer}>
+    <SettingsPage title={t("rendering.title")} description={t("rendering.description")}>
       {status.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {status.isError ? (
         <LoadError

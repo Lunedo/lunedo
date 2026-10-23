@@ -1074,7 +1074,7 @@
     "templates": "Templates",
     "accessOverview": "Access overview",
     "imports": "Import",
-    "exports": "Exports",
+    "exports": "My exports",
     "announcements": "Announcements",
     "storage": "Storage",
     "backups": "Backups",
@@ -1083,7 +1083,21 @@
     "portals": "Knowledge base portals",
     "systemStatus": "System status",
     "maintenance": "Maintenance mode",
-    "updates": "Updates"
+    "updates": "Updates",
+    "signInAndSecurity": "Sign-in and security",
+    "watching": "Watched items"
+  },
+  "navigationGroups": {
+    "access": "Access",
+    "content": "Content",
+    "connections": "Connections",
+    "publishing": "Publishing",
+    "peopleAndAccess": "People and access",
+    "integrationsAndSecurity": "Integrations and security",
+    "operations": "Operations",
+    "peopleAndSignIn": "People and sign-in",
+    "services": "Services",
+    "log": "Log"
   },
   "commands": {
     "label": "Command palette",
@@ -2438,7 +2452,7 @@
       "more": "Show older events",
       "on": " on "
     },
-    "title": "Security",
+    "title": "Sign-in and security",
     "description": "Sign-in, second factors, sessions and API tokens.",
     "signIn": "Sign-in",
     "passwordDescription": "Use a long passphrase that you use nowhere else.",
@@ -5348,7 +5362,8 @@
       "adminsOnly": "Your role in this space is {role}. Ask a space admin if someone needs another role.",
       "discoverable": "Members of the organization can find this space and ask to join",
       "discoverableHint": "They see its name and description in the list of spaces, but no pages, until a space admin lets them in.",
-      "discoverableNotPrivate": "Only private spaces can be found this way; other visibilities already let people in."
+      "discoverableNotPrivate": "Only private spaces can be found this way; other visibilities already let people in.",
+      "back": "Back to {space}"
     },
     "permissions": {
       "visibilityTitle": "Readers through visibility",
@@ -8658,7 +8673,7 @@
       "notPublic": "The knowledge base is no longer public, so it cannot become a static website. Make it public again, then start the download again."
     },
     "screen": {
-      "title": "Exports",
+      "title": "My exports",
       "description": "Downloads of spaces and pages you exported. Only you can open them. Each download is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it."
     },
     "settings": {
@@ -9816,7 +9831,6 @@
     "settings": {
       "visibility": "Visibility",
       "categories": "Categories",
-      "articleTemplates": "Article templates",
       "typeTitle": "Knowledge base",
       "typeDescription": "This space is a knowledge base. Who may read it is set in its visibility, not in a general visibility of the space.",
       "toVisibility": "Open the visibility settings",
@@ -9850,15 +9864,12 @@
       "moveFailed": "The category could not be moved"
     },
     "templates": {
-      "title": "Article templates",
-      "description": "Templates give articles sections with a meaning. Writing without a template is always possible.",
       "loadFailed": "The article templates could not be loaded.",
       "builtIn": "Ships with Lunedo",
       "noSections": "This template has no sections.",
       "requiredOf": "{section} is required",
       "adminsOnly": "Only space admins can change which sections are required.",
-      "hint": "Required sections are off by default. When one is on, an article from this template can only be published once the section has content. Published articles stay published.",
-      "manage": "Manage the templates of this space"
+      "hint": "Required sections are off by default. When one is on, an article from this template can only be published once the section has content. Published articles stay published."
     },
     "required": {
       "title": "Required sections are empty",

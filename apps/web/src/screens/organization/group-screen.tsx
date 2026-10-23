@@ -144,12 +144,8 @@ export function GroupScreen() {
     <SettingsPage
       title={group.data?.name ?? ""}
       description={group.data?.description || t("groups.noDescription")}
-      icon={UsersRound}
       organizationId={organizationId}
-      breadcrumbs={[
-        { label: t("groups.title"), href: `/settings/organizations/${organizationId}/groups` },
-        { label: group.data?.name ?? "" },
-      ]}
+      back={{ label: t("groups.title"), href: `/settings/organizations/${organizationId}/groups` }}
     >
       {group.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {managedBy ? (

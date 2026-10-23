@@ -149,3 +149,12 @@ export async function callApi(
   expect(response.status(), `${method} ${path}: ${await response.text()}`).toBeLessThan(300);
   return response.status() === 204 ? null : ((await response.json()) as unknown);
 }
+
+export async function openSettingsArea(
+  page: Page,
+  area: "My account" | "Organization" | "Instance",
+): Promise<void> {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("menuitem", { name: area }).click();
+  await expect(page.getByRole("navigation", { name: "Settings", exact: true })).toBeVisible();
+}

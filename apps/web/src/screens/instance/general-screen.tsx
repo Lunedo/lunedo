@@ -1,7 +1,6 @@
 import { Notice, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery, mailQuery } from "../../api/instance-queries.js";
 import { SettingsList } from "../../components/settings-list.js";
@@ -58,11 +57,7 @@ export function InstanceGeneralScreen() {
   const { t } = useTranslation();
   const editor = useInstanceSettingsEditor();
   return (
-    <SettingsPage
-      title={t("instance.general.title")}
-      description={t("instance.general.description")}
-      icon={SlidersHorizontal}
-    >
+    <SettingsPage title={t("instance.general.title")} description={t("instance.general.description")}>
       <MailNotice />
       <Section title={t("instance.general.identity")}>
         <SettingsList {...editor} keys={["instance.name"]} level="instance" />

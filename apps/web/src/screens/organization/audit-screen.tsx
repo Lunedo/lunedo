@@ -1,5 +1,4 @@
 import { getRouteApi } from "@tanstack/react-router";
-import { FileClock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AuditLog } from "../../components/audit-log.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -16,7 +15,6 @@ export function OrganizationAuditScreen() {
       width="wide"
       title={t("audit.title")}
       description={t("audit.organizationDescription")}
-      icon={FileClock}
       organizationId={organizationId}
     >
       <AuditLog

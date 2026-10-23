@@ -1,6 +1,5 @@
 import { Notice, Section, SegmentedControl, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -31,7 +30,7 @@ export function InstanceMailScreen() {
   const configured = data ? (data.method === "graph" ? data.graph !== null : data.smtp !== null) : true;
 
   return (
-    <SettingsPage title={t("mail.title")} description={t("mail.description")} icon={Mail}>
+    <SettingsPage title={t("mail.title")} description={t("mail.description")}>
       {mail.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {mail.isError ? (
         <LoadError what={t("failures.loadMail")} error={mail.error} onRetry={() => mail.refetch()} />

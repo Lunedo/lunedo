@@ -1,6 +1,5 @@
 import { Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery } from "../../api/instance-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
@@ -22,7 +21,6 @@ export function InstanceNotificationDefaultsScreen() {
     <SettingsPage
       title={t("notifications.defaultsTitle")}
       description={t("notifications.instanceDefaultsDescription")}
-      icon={BellRing}
     >
       <NotificationPreferences
         settings={settings.data}

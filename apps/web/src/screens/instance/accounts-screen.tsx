@@ -20,7 +20,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Info, UserPlus, UserRound } from "lucide-react";
+import { Info, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -99,7 +99,6 @@ export function InstanceAccountsScreen() {
       width="wide"
       title={t("instance.accounts.title")}
       description={t("instance.accounts.description")}
-      icon={UserRound}
     >
       <TableToolbar
         search={{ ...table.search, label: t("members.search"), placeholder: t("members.search") }}

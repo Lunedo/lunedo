@@ -12,7 +12,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserRound, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -60,7 +60,6 @@ export function InstancePersonalSpacesScreen() {
       width="wide"
       title={t("spaces.instance.title")}
       description={t("spaces.instance.description")}
-      icon={UserRound}
     >
       <Panel title={t("spaces.instance.availability")}>
         <SettingsList

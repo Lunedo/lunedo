@@ -12,7 +12,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Flag, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -69,10 +69,8 @@ export function SpaceStatusScreen() {
   });
   return (
     <SpaceSettingsPage
-      tab="status"
       title={t("pageStatus.settingsTitle")}
       description={t("pageStatus.settingsDescription")}
-      icon={Flag}
     >
       <div className="flex flex-col gap-8">
         <Panel title={t("pageStatus.title")}>

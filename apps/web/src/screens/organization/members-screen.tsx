@@ -18,7 +18,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus, Users } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -169,7 +169,6 @@ export function MembersScreen() {
       width="wide"
       title={t("members.title")}
       description={t("members.description", { name: organizationName })}
-      icon={Users}
       organizationId={organizationId}
       actions={
         manage ? (

@@ -13,7 +13,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ImageUp, KeyRound, Pause, Play, Trash2 } from "lucide-react";
+import { ImageUp, Pause, Play, Trash2 } from "lucide-react";
 import { type ComponentType, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -117,11 +117,7 @@ export function InstanceProviderScreen() {
               .join(" · "),
           }
         : {})}
-      icon={KeyRound}
-      breadcrumbs={[
-        { label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" },
-        { label: data?.name ?? t("identityProviders.details") },
-      ]}
+      back={{ label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" }}
       actions={
         data && data.type !== "ldap" ? (
           <StartTestButton provider={data} returnTo={() => `${globalThis.location.pathname}?tab=overview`} />

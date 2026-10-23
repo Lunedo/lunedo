@@ -16,7 +16,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Bot, KeyRound, Plus, PowerOff, UserRound } from "lucide-react";
+import { KeyRound, Plus, PowerOff, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -131,15 +131,11 @@ export function ServiceAccountScreen() {
     <SettingsPage
       title={data?.name ?? ""}
       description={data?.description || t("serviceAccounts.description")}
-      icon={Bot}
       organizationId={organizationId}
-      breadcrumbs={[
-        {
-          label: t("serviceAccounts.title"),
-          href: `/settings/organizations/${organizationId}/service-accounts`,
-        },
-        { label: data?.name ?? "" },
-      ]}
+      back={{
+        label: t("serviceAccounts.title"),
+        href: `/settings/organizations/${organizationId}/service-accounts`,
+      }}
     >
       {account.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {data && !active ? <Notice variant="warning">{t("serviceAccounts.deactivatedNotice")}</Notice> : null}

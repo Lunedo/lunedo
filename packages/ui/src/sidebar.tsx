@@ -105,8 +105,8 @@ export function SidebarItem({
   ...props
 }: SidebarItemProps) {
   const classes = classNames(
-    "flex h-row items-center gap-2 rounded-sm px-2 text-text transition-colors focus-visible:focus-ring motion-reduce:transition-none",
-    current ? "bg-accent font-semibold text-on-accent" : "hover:bg-hover",
+    "flex h-row items-center gap-2 rounded-sm px-2 transition-colors focus-visible:focus-ring motion-reduce:transition-none",
+    current ? "bg-accent font-semibold text-on-accent" : "text-text hover:bg-hover",
     className,
   );
   const glyph = icon && <Icon icon={icon} className={current ? "text-on-accent" : "text-text-muted"} />;

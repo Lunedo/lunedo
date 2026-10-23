@@ -13,7 +13,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Layers, Plus, ShieldCheck, X } from "lucide-react";
+import { Plus, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -53,7 +53,6 @@ export function OrganizationSpacesScreen() {
     <SettingsPage
       title={t("spaces.organization.title")}
       description={t("spaces.organization.description")}
-      icon={Layers}
       organizationId={organizationId}
     >
       <Panel title={t("spaces.organization.creating")}>

@@ -1074,7 +1074,7 @@
     "templates": "Vorlagen",
     "accessOverview": "Zugriffsübersicht",
     "imports": "Import",
-    "exports": "Exporte",
+    "exports": "Meine Exporte",
     "announcements": "Ankündigungen",
     "storage": "Speicher",
     "backups": "Backups",
@@ -1083,7 +1083,21 @@
     "portals": "Wissensdatenbank-Portale",
     "systemStatus": "Systemstatus",
     "maintenance": "Wartungsmodus",
-    "updates": "Updates"
+    "updates": "Updates",
+    "signInAndSecurity": "Anmeldung und Sicherheit",
+    "watching": "Beobachtete Inhalte"
+  },
+  "navigationGroups": {
+    "access": "Zugriff",
+    "content": "Inhalte",
+    "connections": "Verbindungen",
+    "publishing": "Veröffentlichung",
+    "peopleAndAccess": "Personen und Zugriff",
+    "integrationsAndSecurity": "Integrationen und Sicherheit",
+    "operations": "Betrieb",
+    "peopleAndSignIn": "Personen und Anmeldung",
+    "services": "Dienste",
+    "log": "Protokoll"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -2438,7 +2452,7 @@
       "more": "Ältere Ereignisse anzeigen",
       "on": " unter "
     },
-    "title": "Sicherheit",
+    "title": "Anmeldung und Sicherheit",
     "description": "Anmeldung, zweite Faktoren, Sitzungen und API-Tokens.",
     "signIn": "Anmeldung",
     "passwordDescription": "Verwende eine lange Passphrase, die du sonst nirgends verwendest.",
@@ -5348,7 +5362,8 @@
       "adminsOnly": "Deine Rolle in diesem Space ist {role}. Frag einen Space-Admin, wenn jemand eine andere Rolle braucht.",
       "discoverable": "Mitglieder der Organisation können diesen Space finden und um Beitritt bitten",
       "discoverableHint": "Sie sehen Name und Beschreibung in der Liste der Spaces, aber keine Seiten, bis ein Space-Admin sie aufnimmt.",
-      "discoverableNotPrivate": "Nur private Spaces lassen sich so finden; andere Sichtbarkeiten geben bereits Zugriff."
+      "discoverableNotPrivate": "Nur private Spaces lassen sich so finden; andere Sichtbarkeiten geben bereits Zugriff.",
+      "back": "Zurück zu {space}"
     },
     "permissions": {
       "visibilityTitle": "Leser über die Sichtbarkeit",
@@ -8658,7 +8673,7 @@
       "notPublic": "Die Wissensdatenbank ist nicht mehr öffentlich und kann deshalb keine statische Website werden. Mach sie wieder öffentlich und starte den Download erneut."
     },
     "screen": {
-      "title": "Exporte",
+      "title": "Meine Exporte",
       "description": "Downloads von Spaces und Seiten, die du exportiert hast. Nur du kannst sie öffnen. Jeder Download wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst."
     },
     "settings": {
@@ -9816,7 +9831,6 @@
     "settings": {
       "visibility": "Sichtbarkeit",
       "categories": "Kategorien",
-      "articleTemplates": "Artikelvorlagen",
       "typeTitle": "Wissensdatenbank",
       "typeDescription": "Dieser Space ist eine Wissensdatenbank. Wer sie lesen darf, legt ihre Sichtbarkeit fest, nicht eine allgemeine Sichtbarkeit des Space.",
       "toVisibility": "Sichtbarkeit öffnen",
@@ -9850,15 +9864,12 @@
       "moveFailed": "Die Kategorie konnte nicht verschoben werden"
     },
     "templates": {
-      "title": "Artikelvorlagen",
-      "description": "Vorlagen geben Artikeln Abschnitte mit Bedeutung. Schreiben ohne Vorlage ist immer möglich.",
       "loadFailed": "Die Artikelvorlagen konnten nicht geladen werden.",
       "builtIn": "Mit Lunedo geliefert",
       "noSections": "Diese Vorlage hat keine Abschnitte.",
       "requiredOf": "{section} ist Pflicht",
       "adminsOnly": "Nur Space-Admins können festlegen, welche Abschnitte Pflicht sind.",
-      "hint": "Pflichtabschnitte sind standardmäßig aus. Ist einer an, lässt sich ein Artikel aus dieser Vorlage erst veröffentlichen, wenn der Abschnitt Inhalt hat. Bereits veröffentlichte Artikel bleiben veröffentlicht.",
-      "manage": "Vorlagen dieses Space verwalten"
+      "hint": "Pflichtabschnitte sind standardmäßig aus. Ist einer an, lässt sich ein Artikel aus dieser Vorlage erst veröffentlichen, wenn der Abschnitt Inhalt hat. Bereits veröffentlichte Artikel bleiben veröffentlicht."
     },
     "required": {
       "title": "Pflichtabschnitte sind leer",

@@ -1,7 +1,6 @@
 import { Badge, Section, SettingRow } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
@@ -30,7 +29,6 @@ export function OrganizationNotificationDefaultsScreen() {
       description={t("notifications.organizationDefaultsDescription", {
         name: organization.data?.name ?? "",
       })}
-      icon={BellRing}
       organizationId={organizationId}
     >
       <NotificationPreferences

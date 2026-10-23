@@ -170,12 +170,7 @@ export function PortalAccountsScreen() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: query.queryKey });
   const forPortal = space.audience === "portal";
   return (
-    <SpaceSettingsPage
-      tab="portalAccounts"
-      title={t("portalAccounts.title")}
-      description={t("portalAccounts.description")}
-      icon={Users}
-    >
+    <SpaceSettingsPage title={t("portalAccounts.title")} description={t("portalAccounts.description")}>
       <div className="flex flex-col gap-6">
         {forPortal ? null : (
           <Notice variant="info" title={t("portalAccounts.notForPortalTitle")}>

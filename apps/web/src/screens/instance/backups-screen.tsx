@@ -1147,7 +1147,7 @@ export function InstanceBackupsScreen() {
   const busy = serverBusy || awaitingSince !== null;
   const started = () => setAwaitingSince(Date.now());
   return (
-    <SettingsPage title={t("backups.title")} description={t("backups.description")} icon={DatabaseBackup}>
+    <SettingsPage title={t("backups.title")} description={t("backups.description")}>
       {overview.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {overview.isError ? (
         <LoadError

@@ -1,54 +1,35 @@
 import { type SaveState, SaveStatus, Section, Skeleton, Switch } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { LayoutTemplate } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
-import { SpaceSettingsPage } from "../../spaces/settings/space-settings-page.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { articleTypeIcon, articleTypeLabel } from "../article-types.js";
 import { NamedIcon } from "../icons.js";
 import { knowledgeBaseKeys, type TemplateSections, templateSectionsQuery } from "../queries.js";
 
-export function ArticleTemplatesScreen() {
+export function ArticleTemplateSections() {
   const { t } = useTranslation();
   const { space } = useSpace();
   const templates = useQuery({ ...templateSectionsQuery(space.id), throwOnError: false });
   return (
-    <SpaceSettingsPage
-      tab="articleTemplates"
-      title={t("knowledgeBase.templates.title")}
-      description={t("knowledgeBase.templates.description")}
-      icon={LayoutTemplate}
-    >
-      <div className="flex flex-col gap-6">
-        {templates.isPending ? <Skeleton className="h-field w-full" /> : null}
-        {templates.isError ? (
-          <LoadError
-            what={t("knowledgeBase.templates.loadFailed")}
-            error={templates.error}
-            onRetry={() => templates.refetch()}
-          />
-        ) : null}
-        {templates.data?.map((template) => (
-          <TemplateCard key={template.templateId} template={template} />
-        ))}
-        <p className="text-sm text-text-muted">{t("knowledgeBase.templates.hint")}</p>
-        <p className="text-sm">
-          <Link
-            to="/spaces/$spaceKey/settings/templates"
-            params={{ spaceKey: space.key }}
-            className="font-medium text-accent underline focus-visible:focus-ring"
-          >
-            {t("knowledgeBase.templates.manage")}
-          </Link>
-        </p>
-      </div>
-    </SpaceSettingsPage>
+    <div className="flex flex-col gap-8">
+      {templates.isPending ? <Skeleton className="h-field w-full" /> : null}
+      {templates.isError ? (
+        <LoadError
+          what={t("knowledgeBase.templates.loadFailed")}
+          error={templates.error}
+          onRetry={() => templates.refetch()}
+        />
+      ) : null}
+      {templates.data?.map((template) => (
+        <TemplateCard key={template.templateId} template={template} />
+      ))}
+      <p className="text-sm text-text-muted">{t("knowledgeBase.templates.hint")}</p>
+    </div>
   );
 }
 

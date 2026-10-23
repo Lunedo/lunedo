@@ -9,7 +9,7 @@ import {
   Stepper,
   Switch,
 } from "@lunedo/ui";
-import { MoreHorizontal, Palette } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../../api/organization-queries.js";
 import { SaveIndicator, useSaveStates } from "../../components/auto-save.js";
@@ -39,7 +39,7 @@ export function PreferencesScreen() {
   const set = (key: string, value: unknown) => void save(key, value);
 
   return (
-    <SettingsPage title={t("preferences.title")} description={t("preferences.description")} icon={Palette}>
+    <SettingsPage title={t("preferences.title")} description={t("preferences.description")}>
       <Section title={t("preferences.display")}>
         <SettingRow
           label={t("preferences.colorMode")}

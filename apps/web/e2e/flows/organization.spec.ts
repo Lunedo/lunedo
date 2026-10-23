@@ -1,12 +1,18 @@
 import { expect, test } from "../support/fixtures.js";
-import { expectAccessible, linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
+import {
+  expectAccessible,
+  linkFrom,
+  openSettingsArea,
+  signInWithPassword,
+  waitForMail,
+} from "../support/helpers.js";
 import { forwardFrom, unique } from "../support/people.js";
 
 function pattern(text: string): RegExp {
   return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
-test("invites a member who accepts and signs in", async ({ page, browser, organization }) => {
+test("invites a member who accepts and signs in", async ({ page, browser }) => {
   const suffix = unique();
   const member = {
     name: `Max Member ${suffix}`,
@@ -14,7 +20,8 @@ test("invites a member who accepts and signs in", async ({ page, browser, organi
     password: "member passphrase for testing",
   };
   await page.goto("/settings/preferences");
-  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Members" }).click();
+  await openSettingsArea(page, "Organization");
+  await page.getByRole("list", { name: "People and access" }).getByRole("link", { name: "Members" }).click();
   await expect(page.getByRole("heading", { name: "Members" })).toBeVisible();
   await expectAccessible(page, "members");
 
@@ -56,7 +63,8 @@ test("creates a group, adds a member and gives the group a custom role", async (
   await page.goto("/settings/preferences");
   const member = await organization.invite("Greta");
 
-  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Groups" }).click();
+  await openSettingsArea(page, "Organization");
+  await page.getByRole("list", { name: "People and access" }).getByRole("link", { name: "Groups" }).click();
   await page.getByRole("button", { name: "Create group" }).click();
   const create = page.getByRole("dialog", { name: "Create group" });
   await create.getByLabel("Name", { exact: true }).fill(groupName);
@@ -72,7 +80,7 @@ test("creates a group, adds a member and gives the group a custom role", async (
   await add.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText("The member was added.").first()).toBeVisible();
 
-  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Roles" }).click();
+  await page.getByRole("list", { name: "People and access" }).getByRole("link", { name: "Roles" }).click();
   await page.getByRole("button", { name: "Create role" }).click();
   const role = page.getByRole("dialog", { name: "Create role" });
   await role.getByLabel("Name", { exact: true }).fill(roleName);

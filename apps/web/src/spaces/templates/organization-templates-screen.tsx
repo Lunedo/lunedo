@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -37,7 +36,6 @@ export function OrganizationTemplatesScreen() {
     <SettingsPage
       title={t("templates.title")}
       description={t("templates.organizationDescription")}
-      icon={LayoutTemplate}
       organizationId={organizationId}
       width="wide"
     >

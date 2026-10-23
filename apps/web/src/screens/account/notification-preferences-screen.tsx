@@ -1,6 +1,5 @@
 import { Button, Section, SettingRow } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
-import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { FollowedBlogs } from "../../collaboration/blog/followed-blogs.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
@@ -30,7 +29,6 @@ export function NotificationPreferencesScreen() {
     <SettingsPage
       title={t("notifications.preferencesTitle")}
       description={t("notifications.preferencesDescription")}
-      icon={BellRing}
     >
       <NotificationPreferences
         settings={list.data}

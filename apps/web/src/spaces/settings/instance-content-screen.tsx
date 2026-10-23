@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { instanceSettingsQuery } from "../../api/instance-queries.js";
@@ -40,12 +39,7 @@ export function InstanceContentScreen() {
     mutation.mutateAsync({ key, change: value }).then(() => undefined);
   const canManage = () => state.can("instance.settings.manage");
   return (
-    <SettingsPage
-      title={t("content.title")}
-      description={t("content.instanceDescription")}
-      icon={Trash2}
-      width="wide"
-    >
+    <SettingsPage title={t("content.title")} description={t("content.instanceDescription")} width="wide">
       <Panel title={t("content.pagesSection")}>
         <SettingsList
           settings={settings.data}

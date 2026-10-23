@@ -334,12 +334,7 @@ export function SpaceShortcutsScreen() {
   };
 
   return (
-    <SpaceSettingsPage
-      tab="shortcuts"
-      title={t("spaceShortcuts.title")}
-      description={t("spaceShortcuts.description")}
-      icon={Link2}
-    >
+    <SpaceSettingsPage title={t("spaceShortcuts.title")} description={t("spaceShortcuts.description")}>
       <Panel
         title={t("spaceShortcuts.title")}
         description={t("spaceShortcuts.panelDescription", { max: MAX_SHORTCUTS })}

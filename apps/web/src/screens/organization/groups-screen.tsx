@@ -55,7 +55,6 @@ export function GroupsScreen() {
       width="wide"
       title={t("groups.title")}
       description={t("groups.description")}
-      icon={UsersRound}
       organizationId={organizationId}
       actions={
         canCreate ? (

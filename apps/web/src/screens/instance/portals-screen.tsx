@@ -15,7 +15,7 @@ import {
   VisuallyHidden,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Globe, LibraryBig, Plus } from "lucide-react";
+import { Globe, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -44,7 +44,7 @@ type PortalDomain = {
 export function InstancePortalsScreen() {
   const { t } = useTranslation();
   return (
-    <SettingsPage title={t("portals.title")} description={t("portals.description")} icon={LibraryBig}>
+    <SettingsPage title={t("portals.title")} description={t("portals.description")}>
       <AppLinkSection />
       <DomainsSection />
     </SettingsPage>

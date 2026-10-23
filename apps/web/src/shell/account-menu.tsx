@@ -23,7 +23,7 @@ export function AccountRailItem() {
           onSelect: () => void navigate({ to: "/settings/preferences" }),
         },
         {
-          label: t("navigation.security"),
+          label: t("navigation.signInAndSecurity"),
           icon: LockKeyhole,
           onSelect: () => void navigate({ to: "/settings/security" }),
         },

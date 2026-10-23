@@ -15,7 +15,7 @@ import {
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Building2, MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -71,7 +71,6 @@ export function InstanceOrganizationsScreen() {
       width="wide"
       title={t("instance.organizations.title")}
       description={t("instance.organizations.description")}
-      icon={Building2}
       actions={
         state.can("instance.organizations.create") ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>

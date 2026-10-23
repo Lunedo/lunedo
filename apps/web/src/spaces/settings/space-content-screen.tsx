@@ -53,12 +53,7 @@ export function SpaceContentScreen() {
     await mutation.mutateAsync({ key, change });
   };
   return (
-    <SpaceSettingsPage
-      tab="content"
-      title={t("content.title")}
-      description={t("content.spaceDescription")}
-      icon={Trash2}
-    >
+    <SpaceSettingsPage title={t("content.title")} description={t("content.spaceDescription")}>
       <div className="flex flex-col gap-8">
         {space.role === "admin" ? (
           <Panel title={t("ownership.unownedTitle")} description={t("ownership.spaceUnownedDescription")}>
