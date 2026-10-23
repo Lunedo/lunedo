@@ -7,7 +7,7 @@ curl_image="curlimages/curl:8.18.0@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c6
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 docs="$root/docs/backup.md"
-project="lunedo-storage-$$"
+project="lunedo-storage-${LUNEDO_CI_RUN:-$$}"
 work="$(mktemp -d "${TMPDIR:-/tmp}/lunedo-storage-$$-XXXX")"
 if command -v cygpath >/dev/null; then work="$(cygpath -m "$work")"; fi
 failures=0
@@ -19,6 +19,8 @@ cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 fail() {
   echo "  FAILED: $*" >&2
