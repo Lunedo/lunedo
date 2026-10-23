@@ -10,6 +10,8 @@ export MSYS_NO_PATHCONV=1
 
 image="${1:?usage: scripts/backup-roundtrip.sh <image>}"
 suffix="$$"
+run_id="${LUNEDO_CI_RUN:-local-$$}"
+label=(--label "lunedo.ci.run=${run_id}")
 network="lunedo-roundtrip-${suffix}"
 postgres="lunedo-roundtrip-db-${suffix}"
 postgres_next="lunedo-roundtrip-db-next-${suffix}"
@@ -33,13 +35,15 @@ cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 url() { echo "postgres://lunedo:${password}@${2:-$postgres}:5432/$1"; }
 
 lunedo() {
   local data="$1" database="$2"
   shift 2
-  docker run --rm --network "$network" \
+  docker run "${label[@]}" --rm --network "$network" \
     -e LUNEDO_DATABASE_URL="$(url "$database")" \
     -v "$data:/var/lib/lunedo" -v "$backups:/var/lib/lunedo/backups" \
     "$image" "$@"
@@ -64,7 +68,7 @@ start_postgres() {
     postgres_args=(--tmpfs /var/lib/postgresql/data)
     postgres_settings=(-c fsync=off -c synchronous_commit=off -c full_page_writes=off)
   fi
-  docker run -d --name "$name" --network "$network" ${postgres_args[@]+"${postgres_args[@]}"} \
+  docker run "${label[@]}" -d --name "$name" --network "$network" ${postgres_args[@]+"${postgres_args[@]}"} \
     -e POSTGRES_USER=lunedo -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=source \
     "postgres:${version}-alpine" ${postgres_settings[@]+"${postgres_settings[@]}"} >/dev/null
   for _ in $(seq 1 60); do
@@ -100,24 +104,27 @@ content_summary() {
 }
 
 file_checksums() {
-  docker run --rm -v "$1:/var/lib/lunedo" --entrypoint sh "$image" -c \
+  docker run "${label[@]}" --rm -v "$1:/var/lib/lunedo" --entrypoint sh "$image" -c \
     'cd /var/lib/lunedo/files && find . -type f -exec sha256sum {} + | sort'
 }
 
 copy_secrets() {
   # The operator keeps the secrets separately from backups; the new instance gets the same keys.
-  docker run --rm -v "$1:/var/lib/lunedo" -v "$source_data:/source:ro" --entrypoint sh "$image" -c \
+  docker run "${label[@]}" --rm -v "$1:/var/lib/lunedo" -v "$source_data:/source:ro" --entrypoint sh "$image" -c \
     'cp /source/secrets/* /var/lib/lunedo/secrets/'
 }
 
 echo "Starting PostgreSQL"
-docker network create "$network" >/dev/null
+docker network create "${label[@]}" "$network" >/dev/null
+for volume in "$source_data" "$target_data" "$next_data" "$s3_data" "$backups"; do
+  docker volume create "${label[@]}" "$volume" >/dev/null
+done
 start_postgres "$postgres" 16
 psql_in source -c "create database target"
 psql_in source -c "create database target_s3"
 
 echo "Setting up the source instance through configuration and creating sample data"
-docker run -d --name "${postgres}-api" --network "$network" \
+docker run "${label[@]}" -d --name "${postgres}-api" --network "$network" \
   -e LUNEDO_DATABASE_URL="$(url source)" -e LUNEDO_INSTANCE_URL=https://wiki.example.org \
   -e LUNEDO_OWNER_EMAIL=owner@example.org -e LUNEDO_OWNER_NAME=Owner \
   -e LUNEDO_OWNER_PASSWORD="roundtrip owner ${suffix}" -e LUNEDO_ORGANIZATION_NAME=Roundtrip \
@@ -135,7 +142,7 @@ fi
 psql_in source -c "insert into setting_values (id, level, scope_id, key, value, locked) values
   ('0192f0e0-0000-7000-8000-000000000001', 'instance', '00000000-0000-0000-0000-000000000000', 'locale.language', '\"de\"', true),
   ('0192f0e0-0000-7000-8000-000000000002', 'organization', '0192f0e0-0000-7000-8000-00000000000a', 'locale.timeZone', '\"Europe/Vienna\"', false)"
-docker run --rm -v "$source_data:/var/lib/lunedo" --entrypoint sh "$image" -c \
+docker run "${label[@]}" --rm -v "$source_data:/var/lib/lunedo" --entrypoint sh "$image" -c \
   'mkdir -p /var/lib/lunedo/files/attachments/2026 && head -c 3000000 /dev/urandom > /var/lib/lunedo/files/attachments/2026/large.bin && echo "report" > /var/lib/lunedo/files/report.txt'
 
 echo "Creating and verifying the backup"
@@ -170,7 +177,7 @@ lunedo "$target_data" target audit verify
 echo "Restoring into the next PostgreSQL major version"
 start_postgres "$postgres_next" 17
 copy_secrets "$next_data"
-docker run --rm --network "$network" \
+docker run "${label[@]}" --rm --network "$network" \
   -e LUNEDO_DATABASE_URL="$(url source "$postgres_next")" \
   -v "$next_data:/var/lib/lunedo" -v "$backups:/var/lib/lunedo/backups" \
   "$image" backup restore --input /var/lib/lunedo/backups/roundtrip.ldbak
@@ -180,7 +187,7 @@ diff <(file_checksums "$source_data") <(file_checksums "$next_data")
 echo "Restored into PostgreSQL $(psql_on "$postgres_next" source -c "show server_version" | cut -d. -f1)"
 
 echo "Backing up to S3-compatible storage on a schedule"
-docker run -d --name "$s3" --network "$network" \
+docker run "${label[@]}" -d --name "$s3" --network "$network" \
   -e AWS_ACCESS_KEY_ID=lunedo -e AWS_SECRET_ACCESS_KEY="$s3_secret" "$seaweedfs" >/dev/null
 for _ in $(seq 1 60); do
   docker exec "$s3" wget -qO- http://127.0.0.1:8333/healthz >/dev/null 2>&1 && break
@@ -189,7 +196,7 @@ done
 subnet="$(docker network inspect -f '{{(index .IPAM.Config 0).Subnet}}' "$network")"
 # The schedule fires at the next full minute but one, in UTC, the default time zone of an instance.
 daily_time="$(date -u -d '+2 minutes' +%H:%M)"
-docker run --rm --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
+docker run "${label[@]}" --rm --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
   -v "$source_data:/var/lib/lunedo" -w /app/worker --entrypoint node "$image" --input-type=module -e '
 import { createRequire } from "node:module";
 const { backupS3SecretContext, createDatabasePool, createKeyProvider, Encryption, loadConfig } =
@@ -219,7 +226,7 @@ await pool.query("insert into instance_secrets (name, value) values ($1, $2)", [
 await pool.query("insert into backup_state (singleton, last_slot, enabled_at) values (true, now(), now())");
 await pool.end();
 ' "http://${s3}:8333" "$s3_secret" "$daily_time"
-docker run -d --name "$worker" --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
+docker run "${label[@]}" -d --name "$worker" --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
   -e LUNEDO_OUTBOUND_ALLOWED_NETWORKS="$subnet" \
   -v "$source_data:/var/lib/lunedo" -v "$backups:/var/lib/lunedo/backups" "$image" worker >/dev/null
 state=""
@@ -237,7 +244,7 @@ fi
 name="$(psql_in source -c "select name from backup_runs where trigger = 'scheduled' and state = 'succeeded' limit 1")"
 docker rm -f "$worker" >/dev/null
 content_summary "$postgres" source > "$work/s3-source.txt"
-docker run --rm --network "$network" -v "$backups:/var/lib/lunedo/backups" -w /app/worker \
+docker run "${label[@]}" --rm --network "$network" -v "$backups:/var/lib/lunedo/backups" -w /app/worker \
   --entrypoint node "$image" --input-type=module -e '
 import { createWriteStream } from "node:fs";
 import { createRequire } from "node:module";
