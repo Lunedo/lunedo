@@ -296,6 +296,8 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
     role: space.role,
     archived: space.archived,
     writable,
+    layout: "inline",
+    highlight: search.comment ?? null,
   });
 
   const setEditing = (next: boolean) =>
@@ -434,7 +436,6 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
               ) : null}
               <StarButton target={{ itemId: item.id }} title={title} />
               <WatchMenu target={{ type: "item", id: item.id }} name={title} />
-              {collaboration.commentsButton}
               <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
             </>
           }
@@ -500,11 +501,16 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
         ) : (
           <PageContent pageId={item.id} publishMode collaboration={collaboration.readView} />
         )}
-        <AttachmentsSection pageId={item.id} canEdit={writable} />
-        <PageReactions itemId={item.id} canReact={!space.archived} />
+        {editing ? null : (
+          <>
+            <PageReactions itemId={item.id} canReact={!space.archived} />
+            <AttachmentsSection pageId={item.id} canEdit={writable} />
+            {collaboration.section}
+          </>
+        )}
+        {collaboration.popover}
         {scheduling ? <ScheduleDialog post={post} open={scheduling} onOpenChange={setScheduling} /> : null}
       </article>
-      {collaboration.panel}
     </div>
   );
 }

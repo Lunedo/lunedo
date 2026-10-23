@@ -50,7 +50,7 @@ export function candidateLoader(itemId: string): ComboboxLoader {
   };
 }
 
-function PersonCard({ owner }: { owner: OwnerInfo }) {
+function PersonCard({ owner, chip = false }: { owner: OwnerInfo; chip?: boolean }) {
   const { t } = useTranslation();
   const name = owner.name ?? t("ownership.someone");
   return (
@@ -58,13 +58,25 @@ function PersonCard({ owner }: { owner: OwnerInfo }) {
       align="start"
       label={name}
       trigger={
-        <button
-          type="button"
-          className="max-w-full truncate rounded-sm font-medium text-accent hover:underline focus-visible:focus-ring"
-          title={name}
-        >
-          {name}
-        </button>
+        chip ? (
+          <button
+            type="button"
+            className="inline-flex h-control-sm max-w-full min-w-0 items-center gap-1 rounded-sm text-sm text-text-muted hover:text-text focus-visible:focus-ring"
+            title={t("ownership.ownerIs", { name })}
+            aria-label={t("ownership.ownerIs", { name })}
+          >
+            <PersonAvatar id={owner.id} name={name} pictureRef={owner.pictureRef} size="sm" decorative />
+            <span className="truncate">{name}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="max-w-full truncate rounded-sm font-medium text-accent hover:underline focus-visible:focus-ring"
+            title={name}
+          >
+            {name}
+          </button>
+        )
       }
     >
       <div className="flex min-w-field flex-col gap-3">
@@ -97,6 +109,17 @@ function PersonCard({ owner }: { owner: OwnerInfo }) {
         ) : null}
       </div>
     </Popover>
+  );
+}
+
+export function OwnerChip({ owner }: { owner: OwnerInfo | null }) {
+  const { t } = useTranslation();
+  if (!owner) return <span className="text-sm text-text-muted">{t("ownership.noOwner")}</span>;
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2">
+      <PersonCard owner={owner} chip />
+      {owner.active ? null : <Badge variant="warning">{t("ownership.ownerLeft")}</Badge>}
+    </span>
   );
 }
 

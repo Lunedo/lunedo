@@ -5648,7 +5648,11 @@
     "stopNumberingHeadings": "Stop numbering headings",
     "breadcrumbs": "Path",
     "editedBy": "Edited by {name} on {date}, {time} · Click to open the versions",
-    "editedOn": "Edited on {date}, {time} · Click to open the versions"
+    "editedOn": "Edited on {date}, {time} · Click to open the versions",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "linkCopyFailed": "The link could not be copied",
+    "copyManually": "The browser did not allow access to the clipboard. Copy the link yourself: {url}"
   },
   "pageTitle": {
     "edit": "Rename {title}",
@@ -5958,10 +5962,10 @@
     "ownTemplates": "Own templates"
   },
   "versions": {
-    "history": "Version history",
-    "historyTitle": "History",
-    "historyOf": "History of {title}",
-    "historyHint": "Restoring creates a new state. Nothing in the history is lost.",
+    "history": "Versions",
+    "historyTitle": "Versions",
+    "historyOf": "Versions of {title}",
+    "historyHint": "Restoring creates a new version. Nothing is lost.",
     "loadFailed": "The versions could not be loaded",
     "emptyTitle": "No versions yet",
     "emptyLive": "A version is created after a pause in editing or when the last person editing leaves.",
@@ -6030,7 +6034,7 @@
     "notePlaceholder": "Added the section on lost devices",
     "noteTooLong": "Shorten the note to {max} characters.",
     "notSavedYet": "The latest changes are not saved yet. Check the connection and try again.",
-    "published": "Published as version {version}. Readers see it now.",
+    "published": "Page published. Readers now see it as version {version}.",
     "alreadyPublished": "Nothing new to publish. Readers already see version {version}.",
     "publishFailed": "The draft could not be published",
     "changesSince": "{count, plural, one {# change since version {version}} other {# changes since version {version}}}",
@@ -6063,7 +6067,17 @@
     "notPublishedTitle": "Not published yet",
     "notPublishedDescription": "Only editors see this page until someone publishes it.",
     "publishedMeta": "Published {date} · version {version}",
-    "openOriginal": "Open the original {title}"
+    "openOriginal": "Open the original {title}",
+    "update": "Update",
+    "updateTitle": "Update page",
+    "updateVersion": "Update as version {version}",
+    "updated": "Page updated. Readers now see version {version}.",
+    "updateFailed": "The page could not be updated",
+    "viewLabel": "View",
+    "viewPublished": "Published",
+    "viewDraft": "Draft · {count, plural, one {# change} other {# changes}}",
+    "continueEditing": "Continue editing",
+    "draftView": "Draft with changes marked"
   },
   "gallery": {
     "title": "Create in {space}",
@@ -6215,7 +6229,21 @@
     "hint": "Mention someone with @. Ctrl+Enter sends the comment.",
     "element": "Element",
     "elementGone": "Element removed. The comment stays here.",
-    "showOnBoard": "Show on the whiteboard"
+    "showOnBoard": "Show on the whiteboard",
+    "replyPlaceholder": "Reply …",
+    "pagePlaceholder": "Write a comment … @ mentions someone",
+    "quoted": "“{quote}”",
+    "showResolved": "{count, plural, one {Show # resolved comment} other {Show # resolved comments}}",
+    "hideResolved": "{count, plural, one {Hide # resolved comment} other {Hide # resolved comments}}",
+    "threadGone": "This comment no longer exists. It may have been deleted or its text removed.",
+    "count": "{count, plural, one {# comment} other {# comments}}",
+    "done": "Resolve",
+    "threadActions": "More actions for this comment",
+    "copyLink": "Copy link to comment",
+    "linkCopied": "Link to the comment copied",
+    "linkCopyFailed": "The link could not be copied",
+    "openInBlock": "{count, plural, one {# open comment in this paragraph} other {# open comments in this paragraph}}",
+    "openThread": "Open comment on “{quote}”"
   },
   "tasks": {
     "myTitle": "My tasks",
@@ -6421,7 +6449,7 @@
     "diagramSource": "source",
     "diagramImage": "image",
     "showDiagram": "Show in page",
-    "upload": "Upload files",
+    "upload": "Upload file",
     "uploads": "Uploads in progress",
     "empty": "No files yet. Upload files or drop them on the page.",
     "dropToAttach": "Drop to attach to {title}",
@@ -8585,7 +8613,8 @@
     "limitReached": "A space can have up to {max} values. Remove one to add another.",
     "byImport": "The import",
     "activitySet": "{actor} set the status to",
-    "activityRemoved": "{actor} removed the status"
+    "activityRemoved": "{actor} removed the status",
+    "changeFrom": "Change the status, currently {status}"
   },
   "ownership": {
     "someone": "Someone you cannot see",
@@ -8624,7 +8653,8 @@
     "activityTitle": "Status and owner",
     "activityFailed": "The changes of status and owner could not be loaded",
     "activityEmpty": "The status and the owner have not changed yet.",
-    "activityTransferred": "{actor} changed the owner from {from} to {to}"
+    "activityTransferred": "{actor} changed the owner from {from} to {to}",
+    "ownerIs": "Owner: {name}"
   },
   "exports": {
     "close": "Close",
@@ -8636,7 +8666,7 @@
       "adminHere": "It applies to everyone, including you. Turn on “Allow export” above to export."
     },
     "page": {
-      "menu": "Export",
+      "menu": "Export…",
       "unpublishedTitle": "This page has not been published yet",
       "unpublished": "Exports contain only published content. Publish the page first, then export it."
     },

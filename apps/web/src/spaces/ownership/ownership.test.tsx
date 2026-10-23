@@ -186,19 +186,26 @@ describe("page header", () => {
       routes("reader", { [`GET /api/v1/items/${VPN}`]: () => ({ body: details({ status: verified }) }) }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    expect(await screen.findByRole("button", { name: "Olivia Owner" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Owner: Olivia Owner" })).toBeTruthy();
     expect(screen.getByText("Verified")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Change the status/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Transfer ownership" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).queryByRole("menuitem", { name: "Change the status" })).toBeNull();
+    expect(within(menu).queryByRole("menuitem", { name: "Transfer ownership" })).toBeNull();
+    expect(within(menu).queryByRole("menuitem", { name: "Add label" })).toBeNull();
   });
 
-  it("lets editors set the status from the header", async () => {
+  it("lets editors set the status from the page menu", async () => {
     const { requests } = mockApi(
       routes("editor", { [`PUT /api/v1/items/${VPN}/status`]: () => ({ body: verified }) }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    await userEvent.click(await screen.findByRole("button", { name: /Set status/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Verified" }));
+    await screen.findByRole("button", { name: "Owner: Olivia Owner" });
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Change the status" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change the status" });
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Verified" }));
     await waitFor(() =>
       expect(requests.find((request) => request.method === "PUT")?.body).toEqual({ statusId: VERIFIED }),
     );
@@ -215,10 +222,10 @@ describe("page header", () => {
       }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    const transfer = await screen.findByRole("button", { name: "Transfer ownership" });
-    expect(transfer.parentElement?.className).toContain("whitespace-nowrap");
-    expect(transfer.parentElement?.textContent).toBe("·Transfer ownership");
-    await userEvent.click(transfer);
+    await screen.findByRole("button", { name: "Owner: Olivia Owner" });
+    expect(screen.queryByRole("button", { name: "Transfer ownership" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Transfer ownership" }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Transfer ownership" }));
     expect(await within(dialog).findByText("Choose the new owner.")).toBeTruthy();
@@ -242,7 +249,8 @@ describe("page header", () => {
       }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    await userEvent.click(await screen.findByRole("button", { name: "Transfer ownership" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Transfer ownership" }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("combobox"));
     await userEvent.click(await screen.findByRole("option", { name: /Emil Editor/ }));

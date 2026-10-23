@@ -11,6 +11,8 @@ import { problemMessage } from "../errors/problem-message.js";
 import { useSession } from "../shell/shell-context.js";
 import { type CommentAnchor, CommentsPanel, type DescribeElement, openThreadIds } from "./comments-panel.js";
 import { useOverlayFocusTrap } from "./focus-trap.js";
+import { InlineThreadPopover, type InlineThreadTarget, selectionRange } from "./inline-threads.js";
+import { PageComments } from "./page-comments.js";
 import { collaborationKeys, commentsQuery, recordView, starredQuery, taskStatusesQuery } from "./queries.js";
 import { useSetTaskStatus } from "./task-actions.js";
 
@@ -112,6 +114,8 @@ export interface ContentCollaboration {
   };
   commentsButton: ReactNode;
   panel: ReactNode;
+  section: ReactNode;
+  popover: ReactNode;
   activeThread: string | null;
   commentOn: (anchor: CommentAnchor | null) => void;
 }
@@ -124,6 +128,8 @@ export function useContentCollaboration({
   writable,
   describeElement,
   hint,
+  layout = "panel",
+  highlight = null,
 }: {
   itemId: string;
   spaceId: string;
@@ -132,6 +138,8 @@ export function useContentCollaboration({
   writable: boolean;
   describeElement?: DescribeElement;
   hint?: string;
+  layout?: "panel" | "inline";
+  highlight?: string | null;
 }): ContentCollaboration {
   const { t } = useTranslation();
   const session = useSession();
@@ -139,6 +147,8 @@ export function useContentCollaboration({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<CommentAnchor | null>(null);
   const [active, setActive] = useState<string | null>(null);
+  const [target, setTarget] = useState<InlineThreadTarget | null>(null);
+  const inline = layout === "inline";
   const toggleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => {
@@ -167,14 +177,38 @@ export function useContentCollaboration({
     recordView(itemId);
   }, [itemId]);
 
-  const activate = useCallback((threadId: string) => {
-    setActive(threadId);
-    setOpen(true);
-  }, []);
-  const comment = useCallback((anchor: CommentAnchor | null) => {
-    setPending(anchor);
-    setOpen(true);
-  }, []);
+  const activate = useCallback(
+    (threadId: string) => {
+      setActive(threadId);
+      if (inline) setTarget({ threadId, pending: null, range: null });
+      else setOpen(true);
+    },
+    [inline],
+  );
+  const comment = useCallback(
+    (anchor: CommentAnchor | null) => {
+      if (inline && anchor) {
+        setActive(null);
+        setTarget({ threadId: null, pending: anchor, range: selectionRange() });
+        return;
+      }
+      setPending(anchor);
+      setOpen(true);
+    },
+    [inline],
+  );
+  const permissions = {
+    viewerId,
+    canComment,
+    canModerate: role === "admin" && !archived,
+    canReact: !archived && role !== null,
+  };
+  const highlighted = highlight ?? null;
+  const highlightedThread = comments.data?.threads.find((thread) => thread.id === highlighted);
+  const highlightOpen = highlightedThread !== undefined && openThreads.includes(highlightedThread.id);
+  useEffect(() => {
+    if (inline && highlightOpen && highlighted) activate(highlighted);
+  }, [inline, highlightOpen, highlighted, activate]);
   const canToggleTask = useCallback(
     ({ assignee }: { id: string; assignee: string | null }) =>
       !archived && (writable || (assignee !== null && assignee === viewerId)),
@@ -204,7 +238,29 @@ export function useContentCollaboration({
       activeThread: active,
       onThreadClick: activate,
     },
-    commentsButton: (
+    section: inline ? (
+      <PageComments
+        itemId={itemId}
+        permissions={permissions}
+        highlight={highlightOpen ? null : highlighted}
+      />
+    ) : null,
+    popover: inline ? (
+      <InlineThreadPopover
+        itemId={itemId}
+        target={target}
+        permissions={permissions}
+        onTarget={(next) => {
+          setTarget(next);
+          setActive(next.threadId);
+        }}
+        onClose={() => {
+          setTarget(null);
+          setActive(null);
+        }}
+      />
+    ) : null,
+    commentsButton: inline ? null : (
       <IconButton
         label={
           openThreads.length > 0
@@ -218,28 +274,24 @@ export function useContentCollaboration({
         onClick={() => setOpen(!open)}
       />
     ),
-    panel: open ? (
-      <div
-        ref={panelRef}
-        className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start"
-      >
-        <CommentsPanel
-          itemId={itemId}
-          permissions={{
-            viewerId,
-            canComment,
-            canModerate: role === "admin" && !archived,
-            canReact: !archived && role !== null,
-          }}
-          pending={pending}
-          onPendingDone={() => setPending(null)}
-          activeThread={active}
-          onActivate={setActive}
-          onClose={close}
-          {...(describeElement ? { describeElement } : {})}
-          {...(hint ? { hint } : {})}
-        />
-      </div>
-    ) : null,
+    panel:
+      open && !inline ? (
+        <div
+          ref={panelRef}
+          className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start"
+        >
+          <CommentsPanel
+            itemId={itemId}
+            permissions={permissions}
+            pending={pending}
+            onPendingDone={() => setPending(null)}
+            activeThread={active}
+            onActivate={setActive}
+            onClose={close}
+            {...(describeElement ? { describeElement } : {})}
+            {...(hint ? { hint } : {})}
+          />
+        </div>
+      ) : null,
   };
 }

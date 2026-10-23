@@ -7,6 +7,7 @@ import {
   Notice,
   PageHeader,
   Skeleton,
+  useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
@@ -24,6 +25,7 @@ import {
   History,
   Languages,
   LayoutTemplate,
+  Link2,
   ListOrdered,
   Maximize2,
   Minimize2,
@@ -51,11 +53,8 @@ import { ExportDialog } from "../exports/export-dialog.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
-import { ArticleTypeControl } from "../knowledge-bases/article-type-control.js";
-import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
-import { TranslationsControl } from "../knowledge-bases/translations-control.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
 import { useWatchEntries } from "../notifications/watch-menu.js";
@@ -69,14 +68,12 @@ import { ContentLanguageDialog } from "./content-language-dialog.js";
 import { draftQuery } from "./content-queries.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
-import { OwnerLine } from "./ownership/owner-line.js";
-import { pageStatusesQuery } from "./ownership/ownership-queries.js";
-import { PageStatusControl } from "./ownership/page-status.js";
 import { EditInfo, PageBar } from "./page-bar.js";
-import { PageLabels } from "./page-labels.js";
+import { usePageMeta } from "./page-meta.js";
 import {
-  DraftBanner,
   DraftStatusLine,
+  DraftToggle,
+  type DraftViewMode,
   ModeSwitchDialog,
   PublishButton,
   useModeSwitch,
@@ -95,6 +92,7 @@ import {
 } from "./space-queries.js";
 import { SaveTemplateDialog } from "./templates/save-template-dialog.js";
 import { useConvert } from "./tree/item-actions.js";
+import { DraftChanges } from "./versions/diff-view.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/{-$slug}");
 
@@ -181,6 +179,8 @@ function PageArticle({
   const deleteItem = useDeleteItem(space);
   const { archive, unarchive } = useArchiveItem();
   const discard = useDiscardDraft();
+  const { toast } = useToast();
+  const [draftView, setDraftView] = useState<DraftViewMode>("published");
   const writable = canEdit && sharing.canEditPage !== false && !page.archived && !space.archived;
   const editing = writable && search.edit === true;
   const meeting = page.ancestors.at(-1)?.kind === "meetingSeries";
@@ -203,6 +203,8 @@ function PageArticle({
     role: space.role,
     archived: page.archived || space.archived,
     writable,
+    layout: "inline",
+    highlight: search.comment ?? null,
   });
 
   const setEditing = (next: boolean) =>
@@ -246,23 +248,48 @@ function PageArticle({
 
   const star = useStar({ itemId: page.id }, title);
   const watch = useWatchEntries({ type: "item", id: page.id }, title);
-  const menuItems: MenuItem[] = [star.menuItem, ...watch.items, { type: "separator" }];
+  const meta = usePageMeta({ page, writable });
+  const copyLink = async () => {
+    const url = new URL(pagePath(space.key, page.id, itemSlug(page.title)), globalThis.location.origin);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      toast({ title: t("page.linkCopied") });
+    } catch {
+      toast({
+        variant: "error",
+        title: t("page.linkCopyFailed"),
+        description: t("page.copyManually", { url: url.toString() }),
+      });
+    }
+  };
+  const menuItems: MenuItem[] = [
+    star.menuItem,
+    ...watch.items,
+    { type: "separator" },
+    { label: t("versions.history"), icon: History, onSelect: openHistory },
+    ...meta.menuItems,
+    { type: "separator" },
+  ];
+  if (writable && !meeting && !knowledgeBase) {
+    menuItems.push({
+      label: t("tree.newPageInside"),
+      icon: FilePlus,
+      onSelect: () => openCreate("page", page.id),
+    });
+  }
+  if (!meeting && page.kind === "page") {
+    menuItems.push({ label: t("tree.copy"), icon: Copy, onSelect: () => openCopy(page) });
+  }
+  if (writable && !meeting) {
+    menuItems.push({ label: t("tree.move"), icon: Move, onSelect: () => openMove(page) });
+  }
+  menuItems.push(
+    { label: t("exports.page.menu"), icon: FileDown, onSelect: () => setExporting(true) },
+    { label: t("page.copyLink"), icon: Link2, onSelect: () => void copyLink() },
+  );
   if (writable) {
     menuItems.push(
-      ...(meeting
-        ? []
-        : [
-            ...(knowledgeBase
-              ? []
-              : [
-                  {
-                    label: t("tree.newPageInside"),
-                    icon: FilePlus,
-                    onSelect: () => openCreate("page", page.id),
-                  },
-                ]),
-            { label: t("tree.move"), icon: Move, onSelect: () => openMove(page) },
-          ]),
+      { type: "separator" },
       ...(overview || meeting || knowledgeBase
         ? []
         : [
@@ -282,7 +309,6 @@ function PageArticle({
         icon: ListOrdered,
         onSelect: () => void save({ numberHeadings: !page.numberHeadings }),
       },
-      { type: "separator" },
       ...(knowledgeBase
         ? []
         : [
@@ -291,19 +317,6 @@ function PageArticle({
               icon: publishMode ? Radio : FileCheck,
               onSelect: () => void switchMode(),
             },
-          ]),
-      ...(publishMode && draft.data?.hasChanges && draft.data.basedOn !== null
-        ? [
-            {
-              label: t("versions.discardDraft"),
-              icon: Undo2,
-              onSelect: () => void discard(page, draft.data?.basedOn ?? null),
-            },
-          ]
-        : []),
-      ...(knowledgeBase
-        ? []
-        : [
             {
               label: t("contentLanguage.menu"),
               icon: Languages,
@@ -315,15 +328,17 @@ function PageArticle({
         icon: LayoutTemplate,
         onSelect: () => setSavingTemplate(true),
       },
+      ...(publishMode && draft.data?.hasChanges && draft.data.basedOn !== null
+        ? [
+            {
+              label: t("versions.discardDraft"),
+              icon: Undo2,
+              onSelect: () => void discard(page, draft.data?.basedOn ?? null),
+            },
+          ]
+        : []),
     );
   }
-  if (!meeting && page.kind === "page") {
-    menuItems.push({ label: t("tree.copy"), icon: Copy, onSelect: () => openCopy(page) });
-  }
-  menuItems.push(
-    { label: t("versions.history"), icon: History, onSelect: openHistory },
-    { label: t("exports.page.menu"), icon: FileDown, onSelect: () => setExporting(true) },
-  );
   if (canEdit && !space.archived && !overview) {
     menuItems.push(
       { type: "separator" },
@@ -338,6 +353,12 @@ function PageArticle({
       },
     );
   }
+  const showingDraft =
+    writable &&
+    publishMode &&
+    draftView === "draft" &&
+    draft.data?.hasChanges === true &&
+    draft.data.basedOn !== null;
 
   const pageActions = (
     <>
@@ -361,6 +382,13 @@ function PageArticle({
               {t("page.done")}
             </Button>
           )
+        ) : showingDraft ? (
+          <>
+            <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)} aria-keyshortcuts="E">
+              {t("versions.continueEditing")}
+            </Button>
+            <PublishButton page={page} draft={draft.data} saveState={saveState} article={knowledgeBase} />
+          </>
         ) : (
           <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)} aria-keyshortcuts="E">
             {t("page.edit")}
@@ -368,7 +396,6 @@ function PageArticle({
         )
       ) : null}
       {sharing.shareButton}
-      {collaboration.commentsButton}
       {meeting ? (
         <IconButton
           ref={notesToggle}
@@ -387,6 +414,9 @@ function PageArticle({
   return (
     <div className="flex min-h-full flex-col">
       <PageBar breadcrumbs={breadcrumbs} sticky={!editing}>
+        {writable && publishMode && !editing ? (
+          <DraftToggle draft={draft.data} view={draftView} onViewChange={setDraftView} />
+        ) : null}
         <EditInfo pageId={page.id} editedAt={page.contentUpdatedAt} onOpen={openHistory} />
         {pageActions}
       </PageBar>
@@ -418,7 +448,7 @@ function PageArticle({
             }
             status={<StarredMark target={{ itemId: page.id }} />}
           />
-          <PageMeta page={page} writable={writable} />
+          {editing ? null : meta.line}
           {knowledgeBase ? (
             <ArticleReviewLine
               itemId={page.id}
@@ -464,14 +494,12 @@ function PageArticle({
               {page.archived ? t("archive.pageArchivedDescription") : t("archive.spaceArchivedDescription")}
             </Notice>
           ) : null}
-          {writable && publishMode ? (
-            editing ? (
-              <DraftStatusLine draft={draft.data} />
-            ) : (
-              <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
-            )
+          {writable && publishMode && editing ? <DraftStatusLine draft={draft.data} /> : null}
+          {writable && publishMode && !editing && !page.published && draft.data?.hasChanges ? (
+            <Notice variant="info" title={t("versions.notPublishedTitle")}>
+              {t("versions.notPublishedDescription")}
+            </Notice>
           ) : null}
-          <PageLabels pageId={page.id} />
           {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
           {editing ? (
             <Suspense fallback={<Skeleton className="h-field w-full" />}>
@@ -491,7 +519,16 @@ function PageArticle({
           ) : writable && publishMode && !page.published ? (
             draft.data?.hasChanges === false ? (
               <EmptyPage onEdit={() => setEditing(true)} />
+            ) : draft.data ? (
+              <PageReadView
+                pageId={page.id}
+                document={draft.data.document}
+                references={draft.data.references}
+                numberHeadings={page.numberHeadings}
+              />
             ) : null
+          ) : showingDraft && draft.data?.basedOn ? (
+            <DraftChanges pageId={page.id} basedOn={draft.data.basedOn} />
           ) : (
             <PageContent
               pageId={page.id}
@@ -505,9 +542,16 @@ function PageArticle({
           {overview && !editing && space.organizationId ? (
             <SpaceNews organizationId={space.organizationId} spaceId={space.id} overviewId={page.id} />
           ) : null}
-          <AttachmentsSection pageId={page.id} canEdit={writable} />
-          <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
-          <Backlinks pageId={page.id} />
+          {editing ? null : (
+            <>
+              <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
+              <Backlinks pageId={page.id} />
+              <AttachmentsSection pageId={page.id} canEdit={writable} />
+              {collaboration.section}
+            </>
+          )}
+          {collaboration.popover}
+          {meta.dialogs}
           <ModeSwitchDialog
             page={page}
             draft={draft.data}
@@ -550,43 +594,9 @@ function PageArticle({
               }}
             />
           </div>
-        ) : (
-          collaboration.panel
-        )}
+        ) : null}
       </div>
     </div>
-  );
-}
-
-function PageMeta({ page, writable }: { page: ItemDetails; writable: boolean }) {
-  const { space } = useSpace();
-  const knowledgeBase = isKnowledgeBase(space);
-  const statuses = useQuery({ ...pageStatusesQuery(space.id), enabled: writable, throwOnError: false });
-  const editable = writable && statuses.data?.enabled === true;
-  return (
-    <OwnerLine
-      itemId={page.id}
-      spaceId={space.id}
-      title={page.title}
-      owner={page.owner}
-      transferable={page.ownershipTransferable}
-    >
-      {knowledgeBase ? (
-        <>
-          <ArticleTypeControl
-            itemId={page.id}
-            spaceId={space.id}
-            type={page.articleType}
-            editable={writable}
-          />
-          <TranslationsControl itemId={page.id} spaceId={space.id} spaceKey={space.key} editable={writable} />
-          <ArticlePortalLink itemId={page.id} />
-        </>
-      ) : null}
-      {editable || page.status ? (
-        <PageStatusControl itemId={page.id} spaceId={space.id} status={page.status} editable={editable} />
-      ) : null}
-    </OwnerLine>
   );
 }
 

@@ -19,24 +19,36 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await other.goto(pagePath);
   const paragraph = other.getByText("Hotel Wi-Fi blocks UDP on port 51820.");
   await paragraph.selectText();
-  await other.getByRole("button", { name: "Comment", exact: true }).click();
-  const pending = other.getByRole("region", { name: "Comment on the selected text" });
-  await pending.getByRole("textbox", { name: "Comment on the selected text" }).click();
+  await other.getByRole("button", { name: "Comment", exact: true }).first().click();
+  const popover = other.getByRole("dialog", { name: "Comments" });
+  await popover.getByRole("textbox", { name: "Comment on the selected text" }).click();
   await other.keyboard.type("Happened twice this week.");
-  await pending.getByRole("button", { name: "Comment", exact: true }).click();
-  const panel = other.getByRole("complementary", { name: "Comments" });
-  await expect(panel.getByText("Happened twice this week.")).toBeVisible();
-  await expectAccessible(other, "comments panel");
+  await popover.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(popover.getByText("Happened twice this week.")).toBeVisible();
+  await expectAccessible(other, "comment popover");
+  await other.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
 
   await page.goto(pagePath);
-  await page.getByRole("button", { name: /Comments/ }).click();
-  const ownerPanel = page.getByRole("complementary", { name: "Comments" });
-  await expect(ownerPanel.getByText("Happened twice this week.")).toBeVisible();
-  await ownerPanel.getByRole("button", { name: "Reply", exact: true }).click();
-  await ownerPanel.getByRole("textbox", { name: "Reply" }).click();
+  await page.getByRole("button", { name: "1 open comment in this paragraph" }).click();
+  const ownerPopover = page.getByRole("dialog", { name: "Comments" });
+  await expect(ownerPopover.getByText("Happened twice this week.")).toBeVisible();
+  await ownerPopover.getByRole("textbox", { name: "Reply" }).click();
   await page.keyboard.type("Let us document the fallback.");
-  await ownerPanel.getByRole("button", { name: "Reply", exact: true }).last().click();
-  await expect(panel.getByText("Let us document the fallback.")).toBeVisible();
+  await ownerPopover.getByRole("button", { name: "Reply", exact: true }).click();
+  await expect(ownerPopover.getByText("Let us document the fallback.")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("textbox", { name: "New comment on the page" }).click();
+  await page.keyboard.type("Thanks for the overview.");
+  await page
+    .getByRole("region", { name: /^Comments/ })
+    .getByRole("button", { name: "Comment", exact: true })
+    .click();
+  await other.reload();
+  await expect(
+    other.getByRole("region", { name: "Comments 1" }).getByText("Thanks for the overview."),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Add reaction" }).first().click();
   await page.getByRole("button", { name: "React with 🎉" }).click();

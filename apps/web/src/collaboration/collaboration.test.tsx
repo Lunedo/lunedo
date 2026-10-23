@@ -237,8 +237,16 @@ async function renderAt(path: string) {
   render(<App i18n={i18n} queryClient={createQueryClient()} />);
 }
 
+function wideScreen() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query.includes("min-width"),
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
 describe("comments on a page", () => {
-  it("open from the marked text, show the quote and let readers react but not reply", async () => {
+  it("open from the marked text in a sheet and let readers react but not reply", async () => {
     const { requests } = mockApi(
       routes("reader", {
         [`PUT /api/v1/comments/${THREAD}/reactions/${encodeURIComponent("👍")}`]: () => ({ status: 204 }),
@@ -246,11 +254,11 @@ describe("comments on a page", () => {
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     await userEvent.click(await screen.findByText("blocks UDP"));
-    const panel = await screen.findByRole("complementary", { name: "Comments" });
-    expect(within(panel).getByRole("button", { name: "“blocks UDP”" })).toBeTruthy();
-    expect(within(panel).getByText("Happened twice")).toBeTruthy();
-    expect(within(panel).queryByRole("button", { name: "Reply" })).toBeNull();
-    await userEvent.click(within(panel).getByRole("button", { name: /👍 1/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(sheet).getByText("Happened twice")).toBeTruthy();
+    expect(within(sheet).queryByRole("textbox", { name: "Reply" })).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: "Resolve" })).toBeNull();
+    await userEvent.click(within(sheet).getByRole("button", { name: /👍 1/ }));
     await waitFor(() =>
       expect(
         requests.some((request) => request.method === "PUT" && request.path.includes("/reactions/")),
@@ -258,23 +266,49 @@ describe("comments on a page", () => {
     );
   });
 
-  it("keep the focus inside the panel on narrow screens and return it when closed", async () => {
-    mockApi(routes("reader"));
+  it("open by keyboard in a popover at the mark and return the focus to the mark on Escape", async () => {
+    wideScreen();
+    mockApi(routes("commenter"));
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    const toggle = await screen.findByRole("button", { name: /^Comments/ });
-    await userEvent.click(toggle);
-    const panel = await screen.findByRole("complementary", { name: "Comments" });
-    await waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
-    for (let step = 0; step < 12; step += 1) {
-      await userEvent.tab();
-      expect(panel.contains(document.activeElement)).toBe(true);
-    }
+    const mark = await screen.findByRole("button", { name: "Open comment on “blocks UDP”" });
+    mark.focus();
+    await userEvent.keyboard("{Enter}");
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("1 comment")).toBeTruthy();
+    expect(within(popover).getByRole("button", { name: "Resolve" })).toBeTruthy();
+    expect(screen.queryByRole("complementary", { name: "Comments" })).toBeNull();
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("complementary", { name: "Comments" })).toBeNull());
-    expect(document.activeElement).toBe(toggle);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Comments" })).toBeNull());
+    expect(document.activeElement).toBe(mark);
   });
 
-  it("let commenters comment on selected text of the published version", async () => {
+  it("open the first thread of a paragraph from the counter at the edge", async () => {
+    wideScreen();
+    mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await userEvent.click(await screen.findByRole("button", { name: "1 open comment in this paragraph" }));
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("Happened twice")).toBeTruthy();
+  });
+
+  it("resolve a thread from the popover", async () => {
+    wideScreen();
+    const { requests } = mockApi(
+      routes("commenter", { [`PUT /api/v1/comments/${THREAD}/resolved`]: () => ({ status: 204 }) }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await userEvent.click(await screen.findByText("blocks UDP"));
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    await userEvent.click(within(popover).getByRole("button", { name: "Resolve" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "PUT" && request.path.endsWith("/resolved"))?.body,
+      ).toEqual({ resolved: true }),
+    );
+  });
+
+  it("let commenters comment on selected text of the published version in the same popover", async () => {
+    wideScreen();
     mockApi(routes("commenter"));
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     const text = await screen.findByText(/on port 51820/);
@@ -286,11 +320,70 @@ describe("comments on a page", () => {
     document.getSelection()?.addRange(range);
     Range.prototype.getBoundingClientRect = () => new DOMRect(10, 10, 40, 16);
     fireEvent(document, new Event("selectionchange"));
-    await userEvent.click(await screen.findByRole("button", { name: "Comment" }));
-    const pending = await screen.findByRole("region", { name: "Comment on the selected text" });
-    expect(within(pending).getByText("“on p”")).toBeTruthy();
-    await userEvent.click(within(pending).getByRole("button", { name: "Comment" }));
-    expect(await within(pending).findByText("Write a comment first.")).toBeTruthy();
+    const [onSelection] = await screen.findAllByRole("button", { name: "Comment" });
+    if (!onSelection) throw new Error("No button to comment on the selection");
+    await userEvent.click(onSelection);
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("Comment on the selected text")).toBeTruthy();
+    await userEvent.click(within(popover).getByRole("button", { name: "Comment" }));
+    expect(await within(popover).findByText("Write a comment first.")).toBeTruthy();
+  });
+
+  it("list page comments below the content with resolved inline threads collapsed", async () => {
+    const pageThread = {
+      ...thread,
+      id: "01929b1e-0000-7000-8000-0000000000c2",
+      quote: null,
+      anchor: "page",
+      reactions: [],
+      body: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Looks good" }] }],
+      },
+      replies: [
+        {
+          ...thread,
+          id: "01929b1e-0000-7000-8000-0000000000c3",
+          quote: null,
+          anchor: "page",
+          reactions: [],
+          author: { id: OLIVIA.id, name: OLIVIA.name },
+          body: {
+            type: "doc",
+            content: [{ type: "paragraph", content: [{ type: "text", text: "Thanks" }] }],
+          },
+        },
+      ],
+    };
+    const resolved = { ...thread, resolvedAt: "2026-10-08T08:00:00.000Z" };
+    mockApi(
+      routes("commenter", {
+        [`GET /api/v1/pages/${VPN}/comments`]: () => ({
+          body: { threads: [pageThread, resolved], people: {} },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?comment=${pageThread.id}`);
+    const section = await screen.findByRole("region", { name: "Comments 2" });
+    expect(within(section).getByText("Looks good")).toBeTruthy();
+    expect(within(section).getByText("Thanks")).toBeTruthy();
+    const highlighted = within(section).getByRole("article", { name: "Comment on the page" });
+    await waitFor(() => expect(document.activeElement).toBe(highlighted));
+    expect(highlighted.dataset.highlighted).toBeDefined();
+    expect(within(section).queryByText("Happened twice")).toBeNull();
+    await userEvent.click(within(section).getByRole("button", { name: "Show 1 resolved comment" }));
+    expect(within(section).getByText("Happened twice")).toBeTruthy();
+    expect(within(section).getByRole("button", { name: "Reopen" })).toBeTruthy();
+    expect(within(section).getByRole("textbox", { name: "New comment on the page" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Comments/ })).toBeNull();
+  });
+
+  it("open an inline thread from a deep link", async () => {
+    wideScreen();
+    mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?comment=${THREAD}`);
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("Happened twice")).toBeTruthy();
   });
 });
 

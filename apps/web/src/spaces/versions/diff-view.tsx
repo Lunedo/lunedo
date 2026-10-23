@@ -1,9 +1,13 @@
 import { type DocumentDiff, renderDiffHtml } from "@lunedo/editor-schema";
+import { Skeleton } from "@lunedo/ui";
+import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { applyWidths, readViewContext } from "../../editor/read-view.js";
 import { type References, rememberReferences } from "../../editor/references.js";
+import { LoadError } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
+import { compareQuery } from "../content-queries.js";
 import "../../editor/editor.css";
 
 export type DiffLayout = "inline" | "sideBySide";
@@ -78,7 +82,17 @@ export function DiffView({
   );
 }
 
-function DiffHtml({ html, label, heading = false }: { html: string; label: string; heading?: boolean }) {
+function DiffHtml({
+  html,
+  label,
+  heading = false,
+  plain = false,
+}: {
+  html: string;
+  label: string;
+  heading?: boolean;
+  plain?: boolean;
+}) {
   const container = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (container.current && html) applyWidths(container.current);
@@ -88,10 +102,44 @@ function DiffHtml({ html, label, heading = false }: { html: string; label: strin
       {heading ? <h2 className="text-sm font-semibold text-text-muted">{label}</h2> : null}
       <div
         ref={container}
-        className="ld-content ld-read-view ld-diff min-w-0 rounded-md border border-border bg-surface p-4"
+        className={`ld-content ld-read-view ld-diff min-w-0 ${plain ? "" : "rounded-md border border-border bg-surface p-4"}`}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated documents
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </section>
   );
+}
+
+export function DraftChanges({ pageId, basedOn }: { pageId: string; basedOn: number }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const comparison = useQuery(compareQuery(pageId, basedOn, "draft"));
+  const html = useMemo(() => {
+    if (!comparison.data) return null;
+    try {
+      return renderDiffHtml(
+        comparison.data.diff as DocumentDiff,
+        "after",
+        readViewContext(comparison.data.references, t, format),
+        { labels: { moved: t("versions.diff.moved"), attributes: t("versions.diff.attributes") } },
+      );
+    } catch {
+      return "";
+    }
+  }, [comparison.data, t, format]);
+  useLayoutEffect(() => {
+    if (comparison.data) rememberReferences(comparison.data.references);
+  }, [comparison.data]);
+  if (comparison.isPending) return <Skeleton className="h-field w-full" />;
+  if (comparison.isError) {
+    return (
+      <LoadError
+        what={t("versions.compareFailed")}
+        error={comparison.error}
+        onRetry={() => comparison.refetch()}
+      />
+    );
+  }
+  if (!html) return <p className="text-danger">{t("editor.readView.invalid")}</p>;
+  return <DiffHtml html={html} label={t("versions.draftView")} plain />;
 }

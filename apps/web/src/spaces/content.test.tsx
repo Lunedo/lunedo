@@ -296,7 +296,7 @@ describe("page actions", () => {
       }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    await screen.findByText(/unpublished changes/);
+    await screen.findByRole("radio", { name: "Draft · 3 changes" });
     expect(screen.queryByRole("button", { name: /^Star VPN access/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Watch/ })).toBeNull();
     expect(screen.queryByText("Starred")).toBeNull();
@@ -306,6 +306,9 @@ describe("page actions", () => {
       .getAllByRole("menuitem")
       .map((entry) => entry.textContent);
     expect(entries.slice(0, 2)).toEqual(["Add to starred", "Watch"]);
+    expect(entries).toContain("Versions");
+    expect(entries.indexOf("Versions")).toBeLessThan(entries.indexOf("Copy…"));
+    expect(entries.at(-1)).toBe("Move to trash");
     await userEvent.click(within(menu).getByRole("menuitem", { name: "Add to starred" }));
     await waitFor(() =>
       expect(
@@ -339,20 +342,32 @@ describe("publish mode", () => {
     expect(requests.some((request) => request.path.includes("/draft"))).toBe(false);
   });
 
-  it("tells editors about the draft and discards it with undo", async () => {
+  it("lets editors switch to the draft with its changes marked and discard it with undo", async () => {
+    const diff = diffDocuments(
+      { title: "VPN access", document: doc("Published text") },
+      { title: "VPN access", document: doc("Published text and more") },
+    );
     const { requests } = mockApi(
       routes("editor", {
+        [`GET /api/v1/pages/${VPN}/compare`]: () => ({
+          body: { diff, before: doc("a"), after: doc("b"), references: { people: {}, pages: {} } },
+        }),
         [`POST /api/v1/pages/${VPN}/draft/discard`]: () => ({ body: { discardedDraftId: DRAFT_ID } }),
         [`POST /api/v1/pages/${VPN}/discarded-drafts/${DRAFT_ID}/restore`]: () => ({ status: 204 }),
       }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    expect(
-      await screen.findByText(
-        "Anna Berger worked on a draft with 3 unpublished changes. You see the published version.",
-      ),
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open draft" })).toBeTruthy();
+    expect(await screen.findByText("Published text")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+    await userEvent.click(await screen.findByRole("radio", { name: "Draft · 3 changes" }));
+    const draft = await screen.findByRole("region", { name: "Draft with changes marked" });
+    expect(draft.querySelector("ins.ld-diff-added")?.textContent).toContain("and more");
+    expect(screen.getByRole("button", { name: "Continue editing" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Update" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(requests.some((request) => request.path.includes("/compare?from=7&to=draft"))).toBe(true);
+    await userEvent.click(screen.getByRole("radio", { name: "Published" }));
+    expect(await screen.findByRole("button", { name: "Edit" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Discard draft" }));
     expect(await screen.findByText("Draft discarded")).toBeTruthy();
@@ -369,7 +384,7 @@ describe("publish mode", () => {
       routes("editor", { [`PUT /api/v1/pages/${VPN}/mode`]: () => ({ status: 204 }) }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    await screen.findByText(/unpublished changes/);
+    await screen.findByRole("radio", { name: "Draft · 3 changes" });
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Switch to live mode" }));
     const dialog = await screen.findByRole("dialog");

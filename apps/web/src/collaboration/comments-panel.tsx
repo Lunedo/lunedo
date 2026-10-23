@@ -38,7 +38,7 @@ export function isElementAnchor(anchor: CommentAnchor): anchor is ElementAnchor 
 
 export type DescribeElement = (elementId: string, quote: string) => string;
 
-function isAnchored(thread: CommentThread): boolean {
+export function isAnchored(thread: CommentThread): boolean {
   return thread.anchor === "inline" || thread.anchor === "element";
 }
 
@@ -49,7 +49,7 @@ export interface CommentPermissions {
   canReact: boolean;
 }
 
-function CommentBody({ body, people }: { body: DocumentJson; people: Record<string, string> }) {
+export function CommentBody({ body, people }: { body: DocumentJson; people: Record<string, string> }) {
   const { t } = useTranslation();
   const html = useMemo(() => {
     try {
@@ -68,7 +68,7 @@ function CommentBody({ body, people }: { body: DocumentJson; people: Record<stri
   );
 }
 
-function useCommentActions(itemId: string) {
+export function useCommentActions(itemId: string) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();

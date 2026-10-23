@@ -12,8 +12,13 @@ type Align = "start" | "center" | "end";
 
 const SURFACE = "z-50 rounded-md border border-border bg-surface text-text shadow-popover";
 
+export interface PopoverAnchor {
+  getBoundingClientRect(): DOMRect;
+}
+
 export interface PopoverProps {
-  trigger: ReactNode;
+  trigger?: ReactNode;
+  anchor?: PopoverAnchor;
   children: ReactNode;
   align?: Align;
   side?: Side;
@@ -22,11 +27,13 @@ export interface PopoverProps {
   label?: string;
   labelledBy?: string;
   onCloseAutoFocus?: (event: Event) => void;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
   variant?: "default" | "panel";
 }
 
 export function Popover({
   trigger,
+  anchor,
   children,
   align = "center",
   side = "bottom",
@@ -35,6 +42,7 @@ export function Popover({
   label,
   labelledBy,
   onCloseAutoFocus,
+  onEscapeKeyDown,
   variant = "default",
 }: PopoverProps) {
   const panel = variant === "panel";
@@ -43,7 +51,8 @@ export function Popover({
       {...(open !== undefined ? { open } : {})}
       {...(onOpenChange ? { onOpenChange } : {})}
     >
-      <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger>
+      {anchor ? <PopoverPrimitive.Anchor virtualRef={{ current: anchor }} /> : null}
+      {trigger ? <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger> : null}
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           align={align}
@@ -53,6 +62,7 @@ export function Popover({
           {...(label ? { "aria-label": label } : {})}
           {...(labelledBy ? { "aria-labelledby": labelledBy } : {})}
           {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
+          {...(onEscapeKeyDown ? { onEscapeKeyDown } : {})}
           {...(panel
             ? { style: { maxHeight: "min(70dvh, var(--radix-popover-content-available-height))" } }
             : {})}

@@ -5648,7 +5648,11 @@
     "stopNumberingHeadings": "Überschriften nicht mehr nummerieren",
     "breadcrumbs": "Pfad",
     "editedBy": "Bearbeitet von {name} am {date}, {time} · Klick öffnet die Versionen",
-    "editedOn": "Bearbeitet am {date}, {time} · Klick öffnet die Versionen"
+    "editedOn": "Bearbeitet am {date}, {time} · Klick öffnet die Versionen",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "linkCopyFailed": "Der Link konnte nicht kopiert werden",
+    "copyManually": "Der Browser hat den Zugriff auf die Zwischenablage nicht erlaubt. Kopiere den Link selbst: {url}"
   },
   "pageTitle": {
     "edit": "{title} umbenennen",
@@ -5958,10 +5962,10 @@
     "ownTemplates": "Eigene Vorlagen"
   },
   "versions": {
-    "history": "Versionsverlauf",
-    "historyTitle": "Verlauf",
-    "historyOf": "Verlauf von {title}",
-    "historyHint": "Wiederherstellen erzeugt einen neuen Stand. Im Verlauf geht nichts verloren.",
+    "history": "Versionen",
+    "historyTitle": "Versionen",
+    "historyOf": "Versionen von {title}",
+    "historyHint": "Wiederherstellen legt eine neue Version an. Nichts geht verloren.",
     "loadFailed": "Die Versionen konnten nicht geladen werden",
     "emptyTitle": "Noch keine Versionen",
     "emptyLive": "Eine Version entsteht nach einer Pause beim Bearbeiten oder wenn die letzte bearbeitende Person die Seite verlässt.",
@@ -6030,7 +6034,7 @@
     "notePlaceholder": "Abschnitt zu verlorenen Geräten ergänzt",
     "noteTooLong": "Kürze die Notiz auf {max} Zeichen.",
     "notSavedYet": "Die letzten Änderungen sind noch nicht gespeichert. Prüfe die Verbindung und versuche es erneut.",
-    "published": "Als Version {version} veröffentlicht. Leser sehen sie jetzt.",
+    "published": "Seite veröffentlicht. Leser sehen sie jetzt als Version {version}.",
     "alreadyPublished": "Nichts Neues zu veröffentlichen. Leser sehen bereits Version {version}.",
     "publishFailed": "Der Entwurf konnte nicht veröffentlicht werden",
     "changesSince": "{count, plural, one {# Änderung seit Version {version}} other {# Änderungen seit Version {version}}}",
@@ -6063,7 +6067,17 @@
     "notPublishedTitle": "Noch nicht veröffentlicht",
     "notPublishedDescription": "Bis jemand die Seite veröffentlicht, sehen sie nur Bearbeiter.",
     "publishedMeta": "Veröffentlicht am {date} · Version {version}",
-    "openOriginal": "Original {title} öffnen"
+    "openOriginal": "Original {title} öffnen",
+    "update": "Aktualisieren",
+    "updateTitle": "Seite aktualisieren",
+    "updateVersion": "Als Version {version} aktualisieren",
+    "updated": "Seite aktualisiert. Leser sehen jetzt Version {version}.",
+    "updateFailed": "Die Seite konnte nicht aktualisiert werden",
+    "viewLabel": "Ansicht",
+    "viewPublished": "Veröffentlicht",
+    "viewDraft": "Entwurf · {count, plural, one {# Änderung} other {# Änderungen}}",
+    "continueEditing": "Weiter bearbeiten",
+    "draftView": "Entwurf mit markierten Änderungen"
   },
   "gallery": {
     "title": "In {space} erstellen",
@@ -6215,7 +6229,21 @@
     "hint": "Mit @ erwähnst du jemanden. Strg+Eingabe sendet den Kommentar.",
     "element": "Element",
     "elementGone": "Element entfernt. Der Kommentar bleibt hier erhalten.",
-    "showOnBoard": "Auf dem Whiteboard zeigen"
+    "showOnBoard": "Auf dem Whiteboard zeigen",
+    "replyPlaceholder": "Antworten …",
+    "pagePlaceholder": "Kommentar schreiben … @ erwähnt jemanden",
+    "quoted": "„{quote}“",
+    "showResolved": "{count, plural, one {# erledigten Kommentar anzeigen} other {# erledigte Kommentare anzeigen}}",
+    "hideResolved": "{count, plural, one {# erledigten Kommentar ausblenden} other {# erledigte Kommentare ausblenden}}",
+    "threadGone": "Diesen Kommentar gibt es nicht mehr. Vielleicht wurde er gelöscht oder der Text entfernt.",
+    "count": "{count, plural, one {# Kommentar} other {# Kommentare}}",
+    "done": "Erledigt",
+    "threadActions": "Weitere Aktionen für diesen Kommentar",
+    "copyLink": "Link zum Kommentar kopieren",
+    "linkCopied": "Link zum Kommentar kopiert",
+    "linkCopyFailed": "Der Link konnte nicht kopiert werden",
+    "openInBlock": "{count, plural, one {# offener Kommentar in diesem Absatz} other {# offene Kommentare in diesem Absatz}}",
+    "openThread": "Kommentar zu „{quote}“ öffnen"
   },
   "tasks": {
     "myTitle": "Meine Aufgaben",
@@ -6421,7 +6449,7 @@
     "diagramSource": "Quelle",
     "diagramImage": "Bild",
     "showDiagram": "Auf der Seite zeigen",
-    "upload": "Dateien hochladen",
+    "upload": "Datei hochladen",
     "uploads": "Laufende Uploads",
     "empty": "Noch keine Dateien. Lade Dateien hoch oder ziehe sie auf die Seite.",
     "dropToAttach": "Loslassen, um an {title} anzuhängen",
@@ -8585,7 +8613,8 @@
     "limitReached": "Ein Space kann bis zu {max} Werte haben. Entferne einen, um einen weiteren hinzuzufügen.",
     "byImport": "Der Import",
     "activitySet": "{actor} hat den Status gesetzt auf",
-    "activityRemoved": "{actor} hat den Status entfernt"
+    "activityRemoved": "{actor} hat den Status entfernt",
+    "changeFrom": "Status ändern, aktuell {status}"
   },
   "ownership": {
     "someone": "Jemand, den du nicht sehen kannst",
@@ -8624,7 +8653,8 @@
     "activityTitle": "Status und Besitzer",
     "activityFailed": "Die Änderungen von Status und Besitzer konnten nicht geladen werden",
     "activityEmpty": "Status und Besitzer wurden noch nicht geändert.",
-    "activityTransferred": "{actor} hat den Besitz von {from} an {to} übertragen"
+    "activityTransferred": "{actor} hat den Besitz von {from} an {to} übertragen",
+    "ownerIs": "Besitzer: {name}"
   },
   "exports": {
     "close": "Schließen",
@@ -8636,7 +8666,7 @@
       "adminHere": "Das gilt für alle, auch für dich. Schalte oben „Export erlauben“ ein, um zu exportieren."
     },
     "page": {
-      "menu": "Exportieren",
+      "menu": "Exportieren…",
       "unpublishedTitle": "Diese Seite ist noch nicht veröffentlicht",
       "unpublished": "Exporte enthalten nur veröffentlichte Inhalte. Veröffentliche die Seite zuerst und exportiere sie dann."
     },

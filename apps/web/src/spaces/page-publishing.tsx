@@ -6,6 +6,7 @@ import {
   Field,
   Notice,
   Popover,
+  SegmentedControl,
   Textarea,
   useToast,
 } from "@lunedo/ui";
@@ -58,6 +59,8 @@ export function PublishButton({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const next = (draft?.basedOn ?? 0) + 1;
+  const update = draft !== undefined && draft.basedOn !== null;
+  const failedTitle = update ? t("versions.updateFailed") : t("versions.publishFailed");
   const hiddenBy = page.ancestors.filter((ancestor) => !ancestor.published);
   const focusMovesToEditor = useRef(false);
 
@@ -70,7 +73,7 @@ export function PublishButton({
     try {
       if (!(await settled(saveState))) {
         toast({
-          title: t("versions.publishFailed"),
+          title: failedTitle,
           description: t("versions.notSavedYet"),
           variant: "error",
         });
@@ -95,7 +98,12 @@ export function PublishButton({
       setReviewed(false);
       onMissingSections?.([]);
       if (result.created) {
-        toast({ title: t("versions.published", { version: result.version }), variant: "success" });
+        toast({
+          title: update
+            ? t("versions.updated", { version: result.version })
+            : t("versions.published", { version: result.version }),
+          variant: "success",
+        });
       } else {
         toast({ title: t("versions.alreadyPublished", { version: result.version }) });
       }
@@ -106,7 +114,7 @@ export function PublishButton({
         onMissingSections?.(failure.problem.sections ?? []);
       }
       toast({
-        title: t("versions.publishFailed"),
+        title: failedTitle,
         description: problemMessage(t, failure),
         variant: "error",
       });
@@ -120,7 +128,7 @@ export function PublishButton({
       open={open}
       onOpenChange={setOpen}
       align="end"
-      label={t("versions.publishTitle")}
+      label={update ? t("versions.updateTitle") : t("versions.publishTitle")}
       onCloseAutoFocus={(event) => {
         if (!focusMovesToEditor.current) return;
         focusMovesToEditor.current = false;
@@ -128,7 +136,7 @@ export function PublishButton({
       }}
       trigger={
         <Button variant="primary" icon={Send}>
-          {t("versions.publish")}
+          {update ? t("versions.update") : t("versions.publish")}
         </Button>
       }
     >
@@ -176,7 +184,9 @@ export function PublishButton({
         ) : null}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" loading={busy}>
-            {t("versions.publishVersion", { version: next })}
+            {update
+              ? t("versions.updateVersion", { version: next })
+              : t("versions.publishVersion", { version: next })}
           </Button>
         </div>
       </form>
@@ -298,4 +308,30 @@ export function useModeSwitch(page: ItemDetails, draft: Draft | undefined, confi
       toast({ title: t("versions.modeFailed"), description: problemMessage(t, error), variant: "error" });
     }
   };
+}
+
+export type DraftViewMode = "published" | "draft";
+
+export function DraftToggle({
+  draft,
+  view,
+  onViewChange,
+}: {
+  draft: Draft | undefined;
+  view: DraftViewMode;
+  onViewChange: (view: DraftViewMode) => void;
+}) {
+  const { t } = useTranslation();
+  if (!draft?.hasChanges || draft.basedOn === null) return null;
+  return (
+    <SegmentedControl
+      label={t("versions.viewLabel")}
+      value={view}
+      onValueChange={(value) => onViewChange(value === "draft" ? "draft" : "published")}
+      options={[
+        { value: "published", label: t("versions.viewPublished") },
+        { value: "draft", label: t("versions.viewDraft", { count: draft.changes ?? 0 }) },
+      ]}
+    />
+  );
 }

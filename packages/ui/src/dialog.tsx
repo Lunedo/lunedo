@@ -213,7 +213,7 @@ export interface DrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
-  side?: "left" | "right";
+  side?: "left" | "right" | "bottom";
   size?: "sidebar" | "panel";
   children?: ReactNode;
 }
@@ -239,10 +239,16 @@ export function Drawer({
           onOpenAutoFocus={(event) => focusInitial(event, content, header)}
           onCloseAutoFocus={returnFocus}
           aria-describedby={undefined}
+          {...(side === "bottom" ? { style: { maxHeight: "80dvh" } } : {})}
           className={classNames(
-            "fixed inset-y-0 z-50 flex max-w-full flex-col bg-sidebar text-text shadow-dialog focus-visible:focus-ring",
-            size === "panel" ? "w-panel" : "w-sidebar",
-            side === "left" ? "left-0 border-r border-border" : "right-0 border-l border-border",
+            "fixed z-50 flex max-w-full flex-col text-text shadow-dialog focus-visible:focus-ring",
+            side === "bottom"
+              ? "inset-x-0 bottom-0 rounded-t-lg border-t border-border bg-surface"
+              : classNames(
+                  "inset-y-0 bg-sidebar",
+                  size === "panel" ? "w-panel" : "w-sidebar",
+                  side === "left" ? "left-0 border-r border-border" : "right-0 border-l border-border",
+                ),
           )}
         >
           <div ref={header} className="flex items-center gap-2 border-b border-border px-4 py-3">

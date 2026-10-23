@@ -22,6 +22,7 @@ export function CommentComposer({
   autoFocus = false,
   onSubmit,
   onCancel,
+  compact = false,
 }: {
   pageId: string;
   label: string;
@@ -31,6 +32,7 @@ export function CommentComposer({
   autoFocus?: boolean;
   onSubmit: (body: DocumentJson) => Promise<boolean>;
   onCancel?: () => void;
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const errorId = useId();
@@ -125,11 +127,11 @@ export function CommentComposer({
 
   return (
     <div className="flex flex-col gap-2">
-      <span id={labelId} className="text-sm font-medium">
+      <span id={labelId} className={compact ? "sr-only" : "text-sm font-medium"}>
         {label}
       </span>
       <EditorContent editor={editor} />
-      <p id={hintId} className="text-xs text-text-muted">
+      <p id={hintId} className={compact ? "sr-only" : "text-xs text-text-muted"}>
         {t("comments.hint")}
       </p>
       {error ? (

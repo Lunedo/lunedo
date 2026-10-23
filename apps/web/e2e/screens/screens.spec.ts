@@ -175,18 +175,16 @@ shot(
 shot(
   {
     number: "06",
-    name: "comments-panel",
-    title: "Comments panel",
-    state: "panel open with a page comment and an inline thread",
+    name: "page-comments",
+    title: "Page comments",
+    state: "comments below the content with replies and the input",
   },
   "owner",
   async (page) => {
     await openRich(page);
-    await page
-      .getByRole("button", { name: /^(Kommentare|Comments)/ })
-      .first()
-      .click();
-    await expect(page.getByRole("complementary", { name: /^(Kommentare|Comments)$/ })).toBeVisible();
+    const comments = page.getByRole("region", { name: /^(Kommentare|Comments)/ });
+    await comments.scrollIntoViewIfNeeded();
+    await expect(comments).toBeVisible();
   },
 );
 
@@ -204,7 +202,7 @@ shot(
     const mark = page.locator("[data-thread-id]").first();
     await mark.scrollIntoViewIfNeeded();
     await mark.click();
-    await expect(page.getByRole("complementary", { name: /^(Kommentare|Comments)$/ })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: /^(Kommentare|Comments)$/ })).toBeVisible();
   },
 );
 

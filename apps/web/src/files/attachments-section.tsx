@@ -10,7 +10,6 @@ import {
   FileVideo,
   LocateFixed,
   MoreHorizontal,
-  Paperclip,
   RotateCcw,
   Trash2,
   Upload,
@@ -231,16 +230,16 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
   const renderRow = (attachment: Attachment, diagram: DiagramFile | null) => {
     const Icon = kindIcon(attachment.preview);
     return (
-      <li key={attachment.id} className="flex items-center gap-2 py-1">
+      <li key={attachment.id} className="flex items-center gap-2 py-2">
         <button
           type="button"
           onClick={() => preview?.open(attachment.id)}
           className="flex min-h-hit min-w-0 flex-1 items-center gap-3 rounded-md px-2 text-start hover:bg-hover focus-visible:focus-ring"
         >
-          <Icon aria-hidden="true" className="size-icon-lg shrink-0 text-text-muted" />
+          <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
           <span className="flex min-w-0 flex-col">
             <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate font-medium" title={attachment.name}>
+              <span className="truncate" title={attachment.name}>
                 {diagram
                   ? t("files.diagramName", {
                       type: t(`editor.${diagram.kind}.label`),
@@ -259,7 +258,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
                 </Badge>
               ) : null}
             </span>
-            <span className="truncate text-sm text-text-muted">
+            <span className="truncate text-xs text-text-muted">
               {t("files.rowMeta", {
                 type: typeLabel(t, attachment),
                 size: format.bytes(attachment.size),
@@ -270,7 +269,13 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
           </span>
         </button>
         <Menu
-          trigger={<IconButton label={t("files.actions", { name: attachment.name })} icon={MoreHorizontal} />}
+          trigger={
+            <IconButton
+              label={t("files.actions", { name: attachment.name })}
+              icon={MoreHorizontal}
+              size="sm"
+            />
+          }
           items={[
             {
               label: t("files.preview.open"),
@@ -326,19 +331,20 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
   if (list.length === 0 && pending.length === 0 && !canEdit) return null;
 
   return (
-    <section
-      aria-labelledby={`attachments-${pageId}`}
-      className="flex flex-col gap-2 border-t border-border pt-4"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id={`attachments-${pageId}`} className="flex items-center gap-2 font-semibold">
-          <Paperclip aria-hidden="true" className="size-icon-md" />
+    <section aria-labelledby={`attachments-${pageId}`} className="mt-10 flex flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+        <h2 id={`attachments-${pageId}`} className="text-lg font-semibold">
           {t("files.title")}
-          {list.length > 0 ? <span className="text-text-muted tabular-nums">{list.length}</span> : null}
+          {list.length > 0 ? (
+            <>
+              {" "}
+              <span className="ms-1 font-normal text-text-muted tabular-nums">{list.length}</span>
+            </>
+          ) : null}
         </h2>
         {canEdit ? (
           <>
-            <Button variant="secondary" size="sm" icon={Upload} onClick={() => input.current?.click()}>
+            <Button variant="outline" size="sm" icon={Upload} onClick={() => input.current?.click()}>
               {t("files.upload")}
             </Button>
             <input
@@ -358,24 +364,30 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
         ) : null}
       </div>
       {list.length === 0 && pending.length === 0 ? (
-        <p className="text-sm text-text-muted">{t("files.empty")}</p>
+        <p className="py-3 text-sm text-text-muted">{t("files.empty")}</p>
       ) : null}
       {pending.length > 0 ? (
-        <ul aria-label={t("files.uploads")} className="flex flex-col divide-y divide-border">
+        <ul
+          aria-label={t("files.uploads")}
+          className="flex flex-col divide-y divide-border border-b border-border"
+        >
           {pending.map((item) => (
             <UploadRow key={item.id} item={item} />
           ))}
         </ul>
       ) : null}
       {ordinary.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-border">
+        <ul className="flex flex-col divide-y divide-border border-b border-border">
           {ordinary.map((attachment) => renderRow(attachment, null))}
         </ul>
       ) : null}
       {diagrams.length > 0 ? (
         <>
           <h3 className="mt-2 text-sm font-semibold">{t("files.diagramFiles")}</h3>
-          <ul aria-label={t("files.diagramFiles")} className="flex flex-col divide-y divide-border">
+          <ul
+            aria-label={t("files.diagramFiles")}
+            className="flex flex-col divide-y divide-border border-b border-border"
+          >
             {diagrams.map(({ attachment, diagram }) => renderRow(attachment, diagram))}
           </ul>
         </>

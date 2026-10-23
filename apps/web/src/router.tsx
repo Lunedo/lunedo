@@ -312,6 +312,7 @@ const spaceIndexRoute = createRoute({
 
 const itemSearch = z.object({
   attachment: z.uuid().optional().catch(undefined),
+  comment: z.uuid().optional().catch(undefined),
   edit: z.boolean().optional().catch(undefined),
   notes: z.boolean().optional().catch(undefined),
   reports: z

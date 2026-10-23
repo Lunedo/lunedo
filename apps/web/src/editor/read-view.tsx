@@ -21,6 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
+import { ThreadCounters } from "../collaboration/inline-threads.js";
 import { reportFilters, TaskReport } from "../collaboration/task-report.js";
 import { ReferencedDiagram } from "../diagrams/referenced-diagram.js";
 import type { AttachmentUrl } from "../files/attachment-source.js";
@@ -413,6 +414,41 @@ export function PageReadView({
     }
   };
 
+  const onThreadClick = collaboration.onThreadClick;
+  const threadLabel = useRef(t);
+  threadLabel.current = t;
+  useLayoutEffect(() => {
+    const root = container.current;
+    if (!root || html === null || !onThreadClick) return;
+    const marks = Array.from(root.querySelectorAll<HTMLElement>("[data-thread-id]")).filter((mark) =>
+      openThreads.includes(mark.dataset.threadId ?? ""),
+    );
+    for (const mark of marks) {
+      mark.tabIndex = 0;
+      mark.setAttribute("role", "button");
+      mark.setAttribute(
+        "aria-label",
+        threadLabel.current("comments.openThread", { quote: mark.textContent ?? "" }),
+      );
+    }
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      const mark = (event.target as HTMLElement).closest<HTMLElement>("[data-thread-id]");
+      const id = mark?.dataset.threadId;
+      if (!id || !openThreads.includes(id) || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      onThreadClick(id);
+    };
+    root.addEventListener("keydown", onKeyDown);
+    return () => {
+      root.removeEventListener("keydown", onKeyDown);
+      for (const mark of marks) {
+        mark.removeAttribute("tabindex");
+        mark.removeAttribute("role");
+        mark.removeAttribute("aria-label");
+      }
+    };
+  }, [html, openThreads, onThreadClick]);
+
   const onCommentSelection = collaboration.onCommentSelection;
   useEffect(() => {
     if (!onCommentSelection) return;
@@ -456,6 +492,9 @@ export function PageReadView({
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
         dangerouslySetInnerHTML={{ __html: html }}
       />
+      {onThreadClick && openThreads.length > 0 ? (
+        <ThreadCounters openThreads={openThreads} onOpen={onThreadClick} />
+      ) : null}
       {selection && onCommentSelection ? (
         <div className="absolute z-10" style={{ top: selection.top, left: selection.left }}>
           <Button

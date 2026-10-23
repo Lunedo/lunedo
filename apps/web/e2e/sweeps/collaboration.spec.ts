@@ -3,20 +3,23 @@ import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { screenshot, sweepAppearances, WIDTHS } from "../support/sweeps.js";
 
-test("the comments panel passes the accessibility check wide and narrow", async ({ page, organization }) => {
+test("the comment popover passes the accessibility check wide and narrow", async ({ page, organization }) => {
   const space = await collaborationSpace(page, organization);
   const { id: pageId, path: pagePath } = await vpnPage(page, space);
   await commentOnVpnPage(page, pageId);
   const { page: other } = await organization.signIn(space.colleague);
-  await other.goto(pagePath);
-  await other.getByRole("button", { name: /Comments/ }).click();
-  await expect(
-    other.getByRole("complementary", { name: "Comments" }).getByText("Happened twice this week."),
-  ).toBeVisible();
   for (const width of WIDTHS) {
     await other.setViewportSize({ width, height: 900 });
-    await expectAccessible(other, `comments panel at ${width}`);
-    await screenshot(other, `comments-panel-${width}.png`);
+    await other.goto(pagePath);
+    await other
+      .getByRole("button", { name: /^Open comment on/ })
+      .first()
+      .click();
+    await expect(
+      other.getByRole("dialog", { name: "Comments" }).getByText("Happened twice this week."),
+    ).toBeVisible();
+    await expectAccessible(other, `comment popover at ${width}`);
+    await screenshot(other, `comment-popover-${width}.png`);
   }
 });
 

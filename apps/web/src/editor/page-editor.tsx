@@ -9,6 +9,7 @@ import { GripVertical, PanelTopClose, PanelTopOpen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
+import { ThreadCounters } from "../collaboration/inline-threads.js";
 import { checkMentionAccess } from "../collaboration/people.js";
 import { type Attachment, attachmentsQuery } from "../files/attachments-api.js";
 import { useUploads } from "../files/uploads.js";
@@ -339,8 +340,8 @@ function CollaborativeEditor({
               open={openThreads}
               active={activeThread}
             />
-            {/* biome-ignore lint/a11y/noStaticElementInteractions: clicks on comment marks open their thread, which is also reachable from the comments panel */}
-            {/* biome-ignore lint/a11y/useKeyWithClickEvents: the comments panel offers the same threads by keyboard */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: clicks on comment marks open their thread, which is also reachable from the counter at the edge */}
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: the counter at the edge offers the same threads by keyboard */}
             <div
               ref={surface}
               className="ld-editor-surface relative"
@@ -358,6 +359,9 @@ function CollaborativeEditor({
               )}
               <EditorContent editor={editor} />
               <RemoteCarets editor={editor} provider={collaboration.provider} container={surface} />
+              {onThreadClick && openThreads.length > 0 ? (
+                <ThreadCounters openThreads={openThreads} onOpen={onThreadClick} />
+              ) : null}
             </div>
             {editable ? (
               <>
