@@ -282,7 +282,7 @@ export function ServiceAccountScreen() {
         allowOrganization
         organizationId={organizationId}
         hint={t("serviceAccounts.tokenHint")}
-        onCreate={async (input) => {
+        onCreate={async ({ limitedToOrganization, ...input }) => {
           const created = await request(() =>
             api.POST("/api/v1/service-accounts/{serviceAccountId}/tokens", {
               params: { path: { serviceAccountId } },

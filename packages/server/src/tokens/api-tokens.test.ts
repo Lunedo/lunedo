@@ -198,6 +198,34 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     }
   });
 
+  it("names why the scopes do not fit together", async () => {
+    const org = await organization();
+    const actor = accountPrincipal(org.owner);
+    await expect(
+      test.services.apiTokens.create(actor, {
+        accountId: org.owner,
+        name: "Bound",
+        organizationId: org.id,
+        scopes: { instance: { operations: "view" }, organization: { spaces: "view" } },
+      }),
+    ).rejects.toMatchObject({ code: "organizationTokenInstanceScopes" });
+    await expect(
+      test.services.apiTokens.create(actor, {
+        accountId: org.owner,
+        name: "Writer",
+        scopes: { organization: { spaces: "view" } },
+        contentLevel: "publish",
+      }),
+    ).rejects.toMatchObject({ code: "contentLevelNeedsSpacesManage" });
+    const { apiToken } = await test.services.apiTokens.create(actor, {
+      accountId: org.owner,
+      name: "Everywhere",
+      scopes: { instance: { operations: "view" }, organization: { spaces: "manage" } },
+      contentLevel: "publish",
+    });
+    expect(apiToken.organizationId).toBeNull();
+  });
+
   it("limits a token to the intersection of its scopes and the owner's permissions", async () => {
     const org = await organization();
     const person = await member(org.id, { spaces: "view", settings: "manage" });
@@ -829,7 +857,7 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
           name: "Instance",
           scopes: { instance: { operations: "view" } },
         }),
-      ).rejects.toMatchObject({ code: "invalidScopes" });
+      ).rejects.toMatchObject({ code: "serviceAccountInstanceScopes" });
       await expect(
         test.services.apiTokens.create(accountPrincipal(org.owner), {
           accountId: service.id,

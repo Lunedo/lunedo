@@ -319,7 +319,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base articles for programs", () => 
       },
     );
     expect(refused.statusCode).toBe(400);
-    expect(refused.json().code).toBe("invalidScopes");
+    expect(refused.json().code).toBe("contentLevelNeedsSpacesManage");
     const manage = await owner.post(`/api/v1/service-accounts/${account}/tokens`, {
       name: "Writer",
       scopes: { organization: { spaces: "manage" } },

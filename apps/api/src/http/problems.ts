@@ -31,6 +31,15 @@ export const problems = {
   nameFromProvider: { status: 409, title: "The name is set by an identity provider" },
   invalidProviderConfiguration: { status: 400, title: "The identity provider configuration is not valid" },
   invalidScopes: { status: 400, title: "The scopes are not valid" },
+  organizationTokenInstanceScopes: {
+    status: 400,
+    title: "A token limited to one organization cannot have instance scopes",
+  },
+  serviceAccountInstanceScopes: { status: 400, title: "A service account cannot have instance scopes" },
+  contentLevelNeedsSpacesManage: {
+    status: 400,
+    title: "Writing or publishing content needs the spaces area with manage",
+  },
   invalidResponsible: { status: 400, title: "The responsible person is not valid" },
   invalidInvitation: { status: 400, title: "The invitation is not valid" },
   accountDetailsRequired: { status: 400, title: "The account details are missing" },

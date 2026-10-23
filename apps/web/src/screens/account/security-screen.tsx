@@ -608,12 +608,13 @@ function TokensSection() {
         allowInstance={instanceAccess}
         allowOrganization={organization.organizationId !== null}
         organizationId={organization.organizationId}
-        onCreate={async (input) => {
+        organizationName={organization.organization?.name ?? null}
+        onCreate={async ({ limitedToOrganization, ...input }) => {
           const created = await request(() =>
             api.POST("/api/v1/account/tokens", {
               body: {
                 ...input,
-                ...(input.scopes.organization && organization.organizationId
+                ...(limitedToOrganization && organization.organizationId
                   ? { organizationId: organization.organizationId }
                   : {}),
               },

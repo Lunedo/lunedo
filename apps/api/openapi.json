@@ -7127,13 +7127,21 @@
             }
           },
           "400": {
-            "description": "`expiryInPast`: The expiry lies in the past. `expiryRequired`: An expiry date is required. `expiryTooLate`: The expiry exceeds the maximum lifetime. `invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidScopes`: The scopes are not valid.",
+            "description": "`contentLevelNeedsSpacesManage`: Writing or publishing content needs the spaces area with manage. `expiryInPast`: The expiry lies in the past. `expiryRequired`: An expiry date is required. `expiryTooLate`: The expiry exceeds the maximum lifetime. `invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidScopes`: The scopes are not valid. `organizationTokenInstanceScopes`: A token limited to one organization cannot have instance scopes.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "contentLevelNeedsSpacesManage": {
+                    "value": {
+                      "type": "urn:lunedo:problem:contentLevelNeedsSpacesManage",
+                      "title": "Writing or publishing content needs the spaces area with manage",
+                      "status": 400,
+                      "code": "contentLevelNeedsSpacesManage"
+                    }
+                  },
                   "expiryInPast": {
                     "value": {
                       "type": "urn:lunedo:problem:expiryInPast",
@@ -7180,6 +7188,14 @@
                       "title": "The scopes are not valid",
                       "status": 400,
                       "code": "invalidScopes"
+                    }
+                  },
+                  "organizationTokenInstanceScopes": {
+                    "value": {
+                      "type": "urn:lunedo:problem:organizationTokenInstanceScopes",
+                      "title": "A token limited to one organization cannot have instance scopes",
+                      "status": 400,
+                      "code": "organizationTokenInstanceScopes"
                     }
                   }
                 }
@@ -8117,13 +8133,21 @@
             }
           },
           "400": {
-            "description": "`invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidScopes`: The scopes are not valid.",
+            "description": "`contentLevelNeedsSpacesManage`: Writing or publishing content needs the spaces area with manage. `invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidScopes`: The scopes are not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "contentLevelNeedsSpacesManage": {
+                    "value": {
+                      "type": "urn:lunedo:problem:contentLevelNeedsSpacesManage",
+                      "title": "Writing or publishing content needs the spaces area with manage",
+                      "status": 400,
+                      "code": "contentLevelNeedsSpacesManage"
+                    }
+                  },
                   "invalidInput": {
                     "value": {
                       "type": "urn:lunedo:problem:invalidInput",
@@ -215690,13 +215714,21 @@
             }
           },
           "400": {
-            "description": "`expiryInPast`: The expiry lies in the past. `expiryRequired`: An expiry date is required. `expiryTooLate`: The expiry exceeds the maximum lifetime. `invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidOwner`: The owner is not valid. `invalidScopes`: The scopes are not valid.",
+            "description": "`contentLevelNeedsSpacesManage`: Writing or publishing content needs the spaces area with manage. `expiryInPast`: The expiry lies in the past. `expiryRequired`: An expiry date is required. `expiryTooLate`: The expiry exceeds the maximum lifetime. `invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidOwner`: The owner is not valid. `invalidScopes`: The scopes are not valid. `organizationTokenInstanceScopes`: A token limited to one organization cannot have instance scopes. `serviceAccountInstanceScopes`: A service account cannot have instance scopes.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "contentLevelNeedsSpacesManage": {
+                    "value": {
+                      "type": "urn:lunedo:problem:contentLevelNeedsSpacesManage",
+                      "title": "Writing or publishing content needs the spaces area with manage",
+                      "status": 400,
+                      "code": "contentLevelNeedsSpacesManage"
+                    }
+                  },
                   "expiryInPast": {
                     "value": {
                       "type": "urn:lunedo:problem:expiryInPast",
@@ -215751,6 +215783,22 @@
                       "title": "The scopes are not valid",
                       "status": 400,
                       "code": "invalidScopes"
+                    }
+                  },
+                  "organizationTokenInstanceScopes": {
+                    "value": {
+                      "type": "urn:lunedo:problem:organizationTokenInstanceScopes",
+                      "title": "A token limited to one organization cannot have instance scopes",
+                      "status": 400,
+                      "code": "organizationTokenInstanceScopes"
+                    }
+                  },
+                  "serviceAccountInstanceScopes": {
+                    "value": {
+                      "type": "urn:lunedo:problem:serviceAccountInstanceScopes",
+                      "title": "A service account cannot have instance scopes",
+                      "status": 400,
+                      "code": "serviceAccountInstanceScopes"
                     }
                   }
                 }
@@ -216346,13 +216394,21 @@
             }
           },
           "400": {
-            "description": "`invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidScopes`: The scopes are not valid.",
+            "description": "`contentLevelNeedsSpacesManage`: Writing or publishing content needs the spaces area with manage. `invalidInput`: The request is not valid. `invalidKnowledgeBases`: The knowledge bases are not valid for this token. `invalidScopes`: The scopes are not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "contentLevelNeedsSpacesManage": {
+                    "value": {
+                      "type": "urn:lunedo:problem:contentLevelNeedsSpacesManage",
+                      "title": "Writing or publishing content needs the spaces area with manage",
+                      "status": 400,
+                      "code": "contentLevelNeedsSpacesManage"
+                    }
+                  },
                   "invalidInput": {
                     "value": {
                       "type": "urn:lunedo:problem:invalidInput",

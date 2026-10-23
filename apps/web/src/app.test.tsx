@@ -463,6 +463,104 @@ describe("the web client", () => {
     });
   });
 
+  it("binds a personal token to the organization only when asked and never with instance areas", async () => {
+    const created = {
+      status: 201,
+      body: {
+        id: "01929b1e-0000-7000-8000-0000000000f8",
+        name: "Ops",
+        token: "ld_created_secret",
+        scopes: { organization: { membersAndGroups: "view" } },
+        contentLevel: "read",
+        knowledgeBaseIds: null,
+        expiresAt: null,
+        lastUsedAt: null,
+        createdAt: "2026-10-01T08:00:00.000Z",
+      },
+    };
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: { instance: ["instance.settings.view"], organization: ["organization.view"] },
+      }),
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: false,
+          passkeys: [],
+          recoveryCodes: 0,
+          secondFactorRequired: false,
+          secondFactorRequiredBy: null,
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+      "POST /api/v1/account/tokens": () => created,
+    });
+    const tokenBodies = () =>
+      requests
+        .filter((request) => request.method === "POST" && request.path === "/api/v1/account/tokens")
+        .map((request) => request.body as { organizationId?: string; scopes: Record<string, unknown> });
+    await renderApp("/settings/security");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Create token" }));
+    let dialog = await screen.findByRole("dialog", { name: "Create API token" });
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Ops");
+    const appliesTo = within(dialog).getByRole("radiogroup", { name: "Applies to" });
+    expect(
+      within(appliesTo)
+        .getByRole("radio", { name: `Only ${ORGANIZATION.name}` })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
+        name: "View",
+      }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(tokenBodies()).toHaveLength(1));
+    expect(tokenBodies()[0]?.organizationId).toBe(ORGANIZATION.id);
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Done" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    dialog = await screen.findByRole("dialog", { name: "Create API token" });
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Ops everywhere");
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
+        name: "View",
+      }),
+    );
+    await userEvent.click(
+      within(
+        within(within(dialog).getByRole("group", { name: "Access to the instance" })).getByRole(
+          "radiogroup",
+          {
+            name: "Settings",
+          },
+        ),
+      ).getByRole("radio", {
+        name: "View",
+      }),
+    );
+    const forced = within(dialog).getByRole("radiogroup", { name: "Applies to" });
+    expect(
+      within(forced).getByRole("radio", { name: "All my organizations" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      within(forced)
+        .getByRole("radio", { name: `Only ${ORGANIZATION.name}` })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(within(dialog).getByText(/Instance areas belong to no single organization/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(tokenBodies()).toHaveLength(2));
+    expect(tokenBodies()[1]).not.toHaveProperty("organizationId");
+    expect(tokenBodies()[1]?.scopes).toMatchObject({
+      instance: { settings: "view" },
+      organization: { membersAndGroups: "view" },
+    });
+    expect(tokenBodies()[1]).not.toHaveProperty("limitedToOrganization");
+  });
+
   it("asks for the identity inside the token dialog instead of opening a second dialog", async () => {
     let confirmed = false;
     api({

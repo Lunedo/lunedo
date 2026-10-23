@@ -376,7 +376,7 @@ describe.skipIf(!baseUrl)("granting access", () => {
           organizationId: org.id,
           scopes: { instance: { accounts: "manage" }, organization: { membersAndGroups: "view" } },
         }),
-      ).rejects.toMatchObject({ code: "invalidScopes" });
+      ).rejects.toMatchObject({ code: "organizationTokenInstanceScopes" });
     });
 
     it("grant nothing at the instance level, including rule grants", async () => {

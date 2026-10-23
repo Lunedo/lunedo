@@ -1211,6 +1211,9 @@
     "invalidPicture": "The file is not a PNG, JPEG or WebP image of at most 256 KiB. Choose another image.",
     "nameFromProvider": "Your name comes from your identity provider. Change it there.",
     "invalidScopes": "The token cannot have this access because you do not have it yourself. Choose fewer permissions.",
+    "organizationTokenInstanceScopes": "The token applies to one organization only, so it cannot have instance areas. Choose “All my organizations” under “Applies to” or remove the instance areas.",
+    "serviceAccountInstanceScopes": "A service account belongs to one organization and cannot have instance areas. Remove the instance areas and create the token again.",
+    "contentLevelNeedsSpacesManage": "A token that writes drafts or publishes needs Spaces with Manage. Choose Read under Content or give the token Spaces with Manage.",
     "invalidResponsible": "This person cannot be responsible because they are not a member of the organization. Choose a member.",
     "invalidInvitation": "This invitation was sent to another e-mail address. Sign in with that address or ask for a new invitation.",
     "accountDetailsRequired": "A name and a password are missing. Enter both.",
@@ -2585,7 +2588,11 @@
       "save": "Save content access",
       "saved": "Content access changed",
       "summaryNamed": "{level} in {names}"
-    }
+    },
+    "appliesTo": "Applies to",
+    "appliesToOrganization": "Only {organization}",
+    "appliesToAll": "All my organizations",
+    "instanceAppliesToAll": "Instance areas belong to no single organization, so the token applies to all your organizations."
   },
   "notifications": {
     "title": "Notifications",

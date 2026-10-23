@@ -1211,6 +1211,9 @@
     "invalidPicture": "Die Datei ist kein PNG-, JPEG- oder WebP-Bild mit höchstens 256 KiB. Wähle ein anderes Bild.",
     "nameFromProvider": "Dein Name kommt von deinem Identitätsanbieter. Ändere ihn dort.",
     "invalidScopes": "Das Token kann diesen Zugriff nicht haben, weil du ihn selbst nicht hast. Wähle weniger Berechtigungen.",
+    "organizationTokenInstanceScopes": "Das Token gilt nur für eine Organisation und kann deshalb keine Instanz-Bereiche haben. Wähle bei „Gilt für“ „Alle meine Organisationen“ oder entferne die Instanz-Bereiche.",
+    "serviceAccountInstanceScopes": "Ein Dienstkonto gehört zu einer Organisation und kann keine Instanz-Bereiche haben. Entferne die Instanz-Bereiche und erstelle das Token erneut.",
+    "contentLevelNeedsSpacesManage": "Ein Token, das Entwürfe schreibt oder veröffentlicht, braucht für Spaces die Stufe „Verwalten“. Wähle bei Inhalte „Lesen“ oder gib dem Token Spaces mit „Verwalten“.",
     "invalidResponsible": "Diese Person kann nicht verantwortlich sein, weil sie kein Mitglied der Organisation ist. Wähle ein Mitglied.",
     "invalidInvitation": "Diese Einladung ging an eine andere E-Mail-Adresse. Melde dich mit dieser Adresse an oder bitte um eine neue Einladung.",
     "accountDetailsRequired": "Name und Passwort fehlen. Gib beides ein.",
@@ -2585,7 +2588,11 @@
       "save": "Zugriff speichern",
       "saved": "Zugriff auf Inhalte geändert",
       "summaryNamed": "{level} in {names}"
-    }
+    },
+    "appliesTo": "Gilt für",
+    "appliesToOrganization": "Nur {organization}",
+    "appliesToAll": "Alle meine Organisationen",
+    "instanceAppliesToAll": "Instanz-Bereiche gehören zu keiner einzelnen Organisation, deshalb gilt das Token für alle deine Organisationen."
   },
   "notifications": {
     "title": "Benachrichtigungen",

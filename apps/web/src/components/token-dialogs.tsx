@@ -57,6 +57,7 @@ const tokenForm = z.object({
   name: tokenNameSchema,
   expiry: z.enum(EXPIRY_OPTIONS),
   customDate: z.string(),
+  appliesTo: z.enum(["organization", "all"]),
   instance: z.record(z.string(), z.enum(["none", "view", "manage"])),
   organization: z.record(z.string(), z.enum(["none", "view", "manage"])),
 });
@@ -69,6 +70,7 @@ export interface TokenRequest {
   expiresAt: string | null;
   contentLevel?: ContentLevel;
   knowledgeBaseIds?: string[];
+  limitedToOrganization: boolean;
 }
 
 const CONTENT_AREA = "spaces";
@@ -110,8 +112,10 @@ export function CreateTokenDialog({
   hint,
   maxLifetimeDays,
   organizationId = null,
+  organizationName = null,
 }: {
   organizationId?: string | null;
+  organizationName?: string | null;
   maxLifetimeDays: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -132,12 +136,17 @@ export function CreateTokenDialog({
       name: "",
       expiry: expiryChoices(maxLifetimeDays)[0] ?? "custom",
       customDate: dateInDays(Math.min(30, maxLifetimeDays ?? 30)),
+      appliesTo: "organization",
       instance: Object.fromEntries(instanceAreas.map((area) => [area, NONE])),
       organization: Object.fromEntries(organizationAreas.map((area) => [area, NONE])),
     } as TokenFormValues,
   });
 
   const choices = expiryChoices(maxLifetimeDays);
+  const choosesOrganizations = allowOrganization && organizationName !== null;
+  const instanceChosen =
+    allowInstance && Object.values(form.watch("instance")).some((level) => level !== NONE);
+  const appliesTo = instanceChosen ? "all" : form.watch("appliesTo");
   const latestDate = maxLifetimeDays === null ? undefined : dateInDays(maxLifetimeDays);
 
   useEffect(() => {
@@ -200,6 +209,7 @@ export function CreateTokenDialog({
         expiresAt,
         ...(access.contentLevel ? { contentLevel: access.contentLevel } : {}),
         ...(access.knowledgeBaseIds ? { knowledgeBaseIds: access.knowledgeBaseIds } : {}),
+        limitedToOrganization: choosesOrganizations && !instance && values.appliesTo === "organization",
       });
       setSecret(created.token);
     } catch (failure) {
@@ -261,6 +271,33 @@ export function CreateTokenDialog({
             <Field label={t("tokens.name")} error={form.formState.errors.name?.message}>
               <Input autoComplete="off" autoFocus {...form.register("name")} />
             </Field>
+            {choosesOrganizations ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 font-medium">{t("tokens.appliesTo")}</legend>
+                <Controller
+                  control={form.control}
+                  name="appliesTo"
+                  render={({ field }) => (
+                    <RadioGroup
+                      label={t("tokens.appliesTo")}
+                      value={appliesTo}
+                      onValueChange={field.onChange}
+                      options={[
+                        {
+                          value: "organization",
+                          label: t("tokens.appliesToOrganization", { organization: organizationName }),
+                          ...(instanceChosen ? { disabled: true } : {}),
+                        },
+                        { value: "all", label: t("tokens.appliesToAll") },
+                      ]}
+                    />
+                  )}
+                />
+                {instanceChosen ? (
+                  <p className="text-sm text-text-muted">{t("tokens.instanceAppliesToAll")}</p>
+                ) : null}
+              </fieldset>
+            ) : null}
             {allowOrganization ? (
               <ContentAccessFields
                 value={content}
