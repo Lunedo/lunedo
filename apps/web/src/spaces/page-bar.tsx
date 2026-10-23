@@ -40,12 +40,15 @@ export function Breadcrumbs({ breadcrumbs, className }: { breadcrumbs: Breadcrum
             {crumb.href ? (
               <Link
                 to={crumb.href as never}
+                title={typeof crumb.label === "string" ? crumb.label : undefined}
                 className="truncate rounded-sm hover:text-text hover:underline focus-visible:focus-ring"
               >
                 {crumb.label}
               </Link>
             ) : (
-              <span className="truncate">{crumb.label}</span>
+              <span className="truncate" title={typeof crumb.label === "string" ? crumb.label : undefined}>
+                {crumb.label}
+              </span>
             )}
           </li>
         ))}

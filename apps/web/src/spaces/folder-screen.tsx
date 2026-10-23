@@ -260,7 +260,6 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
             {
               key: "changed",
               header: t("folder.columns.changed"),
-              hideBelow: "sm",
               cell: (item) => <ChangedAt value={item.contentUpdatedAt} />,
             },
           ]}

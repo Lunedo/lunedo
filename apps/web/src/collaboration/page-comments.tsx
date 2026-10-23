@@ -266,7 +266,7 @@ function PageThread({
         {...(reply ? { onReply: reply } : {})}
       />
       {thread.replies.length > 0 ? (
-        <ol className="flex flex-col gap-3 ps-9">
+        <ol className="flex flex-col gap-3 ps-10">
           {thread.replies.map((entry) => (
             <li key={entry.id}>
               <FlatComment
@@ -281,7 +281,7 @@ function PageThread({
         </ol>
       ) : null}
       {replying ? (
-        <div className="ps-9">
+        <div className="ps-10">
           <ReplyComposer itemId={itemId} threadId={thread.id} autoFocus onDone={() => setReplying(false)} />
         </div>
       ) : null}
@@ -381,7 +381,7 @@ export function PageComments({
                     highlighted={thread.id === highlight}
                     footer={
                       permissions.canComment ? (
-                        <div className="ps-9">
+                        <div className="ps-10">
                           <Button
                             size="sm"
                             variant="secondary"
