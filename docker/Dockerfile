@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-bookworm-slim AS base
+FROM node:24.22.1-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
@@ -27,7 +27,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
       pnpm --filter="@lunedo/$app" deploy --prod "/out/$app" || exit 1; \
     done
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:24.22.1-bookworm-slim AS runtime
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Lunedo" \
       org.opencontainers.image.description="Self-hosted wiki, knowledge base and project planning tool" \

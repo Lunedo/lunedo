@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Optional render container: headless Chromium that turns Lunedo's print-ready HTML into PDF.
-FROM node:24-bookworm-slim AS base
+FROM node:24.22.1-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
@@ -18,7 +18,7 @@ RUN pnpm turbo run build --filter=@lunedo/render --filter=@lunedo/web
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm --filter=@lunedo/render deploy --prod /out/render
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:24.22.1-bookworm-slim AS runtime
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Lunedo render" \
       org.opencontainers.image.description="Optional PDF renderer for Lunedo" \
