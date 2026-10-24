@@ -16,6 +16,8 @@ import { useUploads } from "../files/uploads.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
+import { draftQuery } from "../spaces/content-queries.js";
+import { contentQuery } from "../spaces/space-queries.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
 import { BlockGutter } from "./block-gutter.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "./collaboration.js";
@@ -92,6 +94,12 @@ function CollaborativeEditor({
   const { t } = useTranslation();
   const { toast } = useToast();
   const attachments = useQuery({ ...attachmentsQuery(pageId), throwOnError: false });
+  const storedDraft = useQuery({ ...draftQuery(pageId), enabled: draft, throwOnError: false });
+  const storedContent = useQuery({ ...contentQuery(pageId), enabled: !draft, throwOnError: false });
+  const storedReferences = (draft ? storedDraft.data : storedContent.data)?.references;
+  useEffect(() => {
+    if (storedReferences) rememberReferences(storedReferences);
+  }, [storedReferences]);
   useEffect(() => {
     const tooLargeImages = (attachments.data ?? [])
       .filter((attachment) => attachment.tooLargeForPreview)

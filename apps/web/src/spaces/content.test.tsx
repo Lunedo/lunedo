@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
+import { personName } from "../editor/references.js";
 import { initI18n } from "../i18n/index.js";
 import { mockApi, problem, type RecordedRequest } from "../testing/render.js";
 
@@ -1060,6 +1061,30 @@ describe("edit mode", () => {
         requests.find((request) => request.path.endsWith("/appearance.sidebarCollapsedWhileEditing"))?.body,
       ).toEqual({ value: false }),
     );
+  });
+
+  it("knows the names of mentioned people when the editor opens directly", async () => {
+    const mentioned = "01929b1e-0000-7000-8000-0000000000f1";
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/draft`]: () => ({
+          body: {
+            title: "VPN access",
+            document: doc("Draft text"),
+            revision: 9,
+            updatedAt: "2026-10-07T08:00:00.000Z",
+            hasChanges: true,
+            changes: 3,
+            basedOn: 7,
+            contributors: [],
+            references: { people: { [mentioned]: "Lena Hofer" }, pages: {} },
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await screen.findByRole("textbox", { name: "Page content" });
+    await waitFor(() => expect(personName(mentioned)).toBe("Lena Hofer"));
   });
 
   it("asks before discarding the draft and leaves the edit mode afterwards", async () => {
