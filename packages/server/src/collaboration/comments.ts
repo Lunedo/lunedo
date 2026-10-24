@@ -443,6 +443,31 @@ export class CommentService {
     doc.destroy();
   }
 
+  async markOpenThreads(itemId: string, document: DocumentJson): Promise<DocumentJson> {
+    const result = await this.#database.execute<{
+      id: string;
+      quote: string;
+      quote_prefix: string | null;
+      quote_suffix: string | null;
+    }>(sql`
+      select id, quote, quote_prefix, quote_suffix from comments
+      where item_id = ${itemId} and parent_id is null and quote is not null and quote_public
+        and element_id is null and deleted_at is null and resolved_at is null and detached_at is null
+      order by created_at`);
+    let marked = document;
+    const present = JSON.stringify(document);
+    for (const row of result.rows) {
+      if (present.includes(row.id)) continue;
+      const next = withInlineComment(
+        marked,
+        { exact: row.quote, prefix: row.quote_prefix ?? "", suffix: row.quote_suffix ?? "" },
+        row.id,
+      );
+      if (next) marked = next;
+    }
+    return marked;
+  }
+
   async reply(actor: Principal, commentId: string, input: { body: unknown }): Promise<string> {
     const body = validBody(input.body);
     const actorId = actorIdOf(actor);
@@ -521,11 +546,8 @@ export class CommentService {
   async resolve(actor: Principal, commentId: string, resolved: boolean): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const comment = await this.#lock(tx, commentId);
-      if (comment.parentId !== null || comment.quote === null) {
-        throw new SpaceError(
-          "notInlineComment",
-          "Only comments on selected text or an element can be resolved",
-        );
+      if (comment.parentId !== null) {
+        throw new SpaceError("notInlineComment", "Only the first comment of a thread can be resolved");
       }
       await tx.execute(sql`
         update comments set resolved_at = ${resolved ? sql`coalesce(resolved_at, now())` : null},

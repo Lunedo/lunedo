@@ -86,7 +86,7 @@ export function NotificationEntry({
     if (unread) markRead.mutate(item.id);
     if (!link) return;
     onNavigate();
-    void navigate({ to: link.to as never, params: link.params as never });
+    void navigate({ to: link.to as never, params: link.params as never, search: link.search as never });
   };
 
   const stopWatching = (itemId: string) => {

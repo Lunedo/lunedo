@@ -5645,7 +5645,8 @@
     "columns": {
       "name": "Name",
       "kind": "Type",
-      "changed": "Changed"
+      "changed": "Changed",
+      "editedBy": "Edited by"
     }
   },
   "labels": {
@@ -6487,7 +6488,8 @@
     "removeUnavailable": "Stop following {count, plural, one {# blog} other {# blogs}}",
     "removeUnavailableTitle": "Stop following {count, plural, one {# blog you cannot open} other {# blogs you cannot open}}?",
     "unavailableFollowed": "{count, plural, one {You follow # blog of a space you cannot open at the moment. Its notifications resume when your access returns.} other {You follow # blogs of spaces you cannot open at the moment. Their notifications resume when your access returns.}}",
-    "unavailableRemoved": "{count, plural, one {You no longer follow # blog.} other {You no longer follow # blogs.}}"
+    "unavailableRemoved": "{count, plural, one {You no longer follow # blog.} other {You no longer follow # blogs.}}",
+    "commentCount": "{count, plural, one {# comment} other {# comments}}"
   },
   "files": {
     "title": "Attachments",

@@ -456,6 +456,25 @@ export const collaborationPresence = pgTable(
   (table) => [primaryKey({ columns: [table.itemId, table.node] })],
 );
 
+export const collaborationEditors = pgTable(
+  "collaboration_editors",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => treeItems.id, { onDelete: "cascade" }),
+    node: text().notNull(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    connections: integer().notNull(),
+    seenAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.itemId, table.node, table.accountId] }),
+    index().on(table.accountId),
+  ],
+);
+
 export const pageLabels = pgTable(
   "page_labels",
   {

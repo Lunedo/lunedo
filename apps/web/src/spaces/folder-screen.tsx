@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
@@ -258,6 +259,12 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
               cell: (item) => <span className="text-text-muted">{itemKindLabel(t, item.kind)}</span>,
             },
             {
+              key: "editor",
+              header: t("folder.columns.editedBy"),
+              hideBelow: "md",
+              cell: (item) => (item.updatedBy ? <EditedBy person={item.updatedBy} /> : null),
+            },
+            {
               key: "changed",
               header: t("folder.columns.changed"),
               cell: (item) => <ChangedAt value={item.contentUpdatedAt} />,
@@ -275,6 +282,17 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
         </Button>
       ) : null}
     </>
+  );
+}
+
+function EditedBy({ person }: { person: { id: string; name: string | null } }) {
+  const { t } = useTranslation();
+  const name = person.name ?? t("editor.mention.unknown");
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2 text-text-muted" title={name}>
+      <PersonAvatar id={person.id} name={name} size="sm" decorative />
+      <span className="truncate">{name}</span>
+    </span>
   );
 }
 

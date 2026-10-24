@@ -41,7 +41,7 @@ import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
 import type { PageMode } from "./schema.js";
 import { signalDocumentChange, signalSpaceChange } from "./signals.js";
-import { publishedFor, spaceKeyFor, spaceNameFor, visibleItem } from "./visibility.js";
+import { publishedFor, spaceKeyFor, spaceNameFor, visibleItem, visibleParents } from "./visibility.js";
 
 export const LABEL_MAX_LENGTH = 100;
 export const MAX_REFERENCED_DIAGRAM_PAGES = 50;
@@ -896,13 +896,15 @@ export class PageDocumentService {
     viewer: Principal,
     spaceId: string,
     label: string,
-  ): Promise<{ itemId: string; title: string; contentUpdatedAt: Date }[]> {
+  ): Promise<{ itemId: string; title: string; parents: string[]; contentUpdatedAt: Date }[]> {
     const result = await this.#database.execute<{
       id: string;
       title: string;
+      parents: string[] | null;
       content_updated_at: Date | string;
     }>(sql`
-      select t.id, t.title, t.content_updated_at from page_labels l join tree_items t on t.id = l.item_id
+      select t.id, t.title, t.content_updated_at, ${visibleParents(this.#authorization, viewer, sql`t`)} as parents
+      from page_labels l join tree_items t on t.id = l.item_id
       join spaces s on s.id = t.space_id
       where t.space_id = ${spaceId} and l.label = ${label.trim().toLowerCase()}
         and t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -910,6 +912,7 @@ export class PageDocumentService {
     return result.rows.map((row) => ({
       itemId: row.id,
       title: row.title,
+      parents: row.parents ?? [],
       contentUpdatedAt: new Date(row.content_updated_at),
     }));
   }

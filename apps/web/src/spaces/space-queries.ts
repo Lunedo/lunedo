@@ -132,6 +132,7 @@ const SPACE_CHANGE_KINDS = [
   "tasks",
   "blog",
   "meetings",
+  "editing",
 ] as const;
 
 export interface SpaceChangeEvent {
@@ -213,6 +214,7 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(["spaces", event.spaceId, "knowledgeBase"]);
     }
     if (event.kind === "meetings") add(["meetings"]);
+    if (event.kind === "editing" && event.itemId) add(["items", event.itemId, "editors"]);
     if (event.kind === "page" || event.kind === "tree" || event.kind === "tasks") add(["meetings"]);
     if (event.kind === "access") add(["items"]);
   }

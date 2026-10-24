@@ -39,6 +39,7 @@ export interface BlogPost {
   pinnedInSpace: boolean;
   pinnedInOrganization: boolean;
   cover: { attachmentId: string; focusX: number; focusY: number } | null;
+  commentCount: number;
   createdAt: Date;
 }
 
@@ -65,6 +66,7 @@ type PostRow = {
   cover_attachment_id: string | null;
   cover_focus_x: number;
   cover_focus_y: number;
+  comment_count: number | string;
   created_at: Date | string;
   sort_pinned: string;
   sort_date: string;
@@ -115,6 +117,7 @@ function toPost(row: PostRow): BlogPost {
           focusY: Number(row.cover_focus_y),
         }
       : null,
+    commentCount: Number(row.comment_count),
     createdAt: new Date(row.created_at),
   };
 }
@@ -154,6 +157,7 @@ export class BlogService {
         t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
         b.scheduled_by, ${this.#people.visibleName(viewer, sql`scheduler`)} as scheduler_name, b.held_at,
         b.space_pinned_at, b.organization_pinned_at, b.cover_attachment_id, b.cover_focus_x, b.cover_focus_y,
+        (select count(*) from comments c where c.item_id = t.id and c.deleted_at is null) as comment_count,
         t.created_at,
         coalesce(${pinned}, '-infinity'::timestamptz)::text as sort_pinned,
         coalesce(b.published_at, b.scheduled_at, t.created_at)::text as sort_date

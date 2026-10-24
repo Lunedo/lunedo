@@ -162,8 +162,9 @@ export class CommentsController {
   @Put("comments/:commentId/resolved")
   @Permission("comment.resolve", comment)
   @ApiRoute({
-    summary: "Resolve or reopen an inline comment",
-    description: "Resolved inline comments are hidden from the text and listed as resolved.",
+    summary: "Resolve or reopen a comment thread",
+    description:
+      "Resolves or reopens a thread through its first comment. Resolved inline comments are hidden from the text; resolved threads are listed as resolved.",
     tags: [TAG],
     params: commentParams,
     body: resolveSchema,

@@ -33,7 +33,7 @@ import {
   reportKey,
 } from "./documents.js";
 import type { PeopleService } from "./people.js";
-import { spaceNameFor, visibleItem, visiblePages } from "./visibility.js";
+import { spaceNameFor, visibleItem, visiblePages, visibleParents } from "./visibility.js";
 
 export const MAX_DECISION_REPORT_PAGE = 100;
 
@@ -93,6 +93,8 @@ export interface LabeledItem {
   space: { id: string; name: string };
   labels: string[];
   excerpt: string | null;
+  parents: string[];
+  contentUpdatedAt: Date;
 }
 
 export function itemPath(kind: string, spaceKey: string, itemId: string, title: string): string {
@@ -380,8 +382,11 @@ export class ReportService {
       space_id: string;
       space_name: string;
       excerpt: string | null;
+      parents: string[] | null;
+      content_updated_at: Date | string;
     }>(sql`
-      select t.id, t.title, t.kind::text as kind, s.key, s.id as space_id,
+      select t.id, t.title, t.kind::text as kind, s.key, s.id as space_id, t.content_updated_at,
+        ${visibleParents(this.#authorization, viewer, sql`t`)} as parents,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name,
         ${request.excerpts ? sql`coalesce(e.text, nullif(b.excerpt, ''))` : sql`null::text`} as excerpt
       from tree_items t join spaces s on s.id = t.space_id
@@ -402,6 +407,8 @@ export class ReportService {
       space: { id: row.space_id, name: row.space_name },
       labels: labels.get(row.id) ?? [],
       excerpt: row.excerpt,
+      parents: row.parents ?? [],
+      contentUpdatedAt: new Date(row.content_updated_at),
     }));
   }
 

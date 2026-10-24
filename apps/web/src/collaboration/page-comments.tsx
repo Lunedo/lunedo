@@ -307,8 +307,10 @@ export function PageComments({
   const create = useCreateComment(itemId);
   const threads = comments.data?.threads ?? [];
   const people = comments.data?.people ?? {};
-  const page = threads.filter((thread) => !isAnchored(thread) || unmarked.includes(thread.id));
-  const resolved = threads.filter((thread) => isAnchored(thread) && thread.resolvedAt !== null);
+  const page = threads.filter(
+    (thread) => thread.resolvedAt === null && (!isAnchored(thread) || unmarked.includes(thread.id)),
+  );
+  const resolved = threads.filter((thread) => thread.resolvedAt !== null);
   const highlightResolved = resolved.some((thread) => thread.id === highlight);
   const [showResolved, setShowResolved] = useState(highlightResolved);
   if (highlightResolved && !showResolved) setShowResolved(true);
@@ -355,7 +357,7 @@ export function PageComments({
                 permissions={permissions}
                 highlighted={thread.id === highlight}
                 footer={
-                  permissions.canComment && isAnchored(thread) ? (
+                  permissions.canComment ? (
                     <div className="ps-10">
                       <Button
                         size="sm"

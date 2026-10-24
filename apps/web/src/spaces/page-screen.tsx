@@ -73,6 +73,7 @@ import { EditorBar } from "./editor-bar.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { EditInfo, PageBar } from "./page-bar.js";
+import { PageEditors } from "./page-editors.js";
 import { usePageMeta } from "./page-meta.js";
 import {
   DraftToggle,
@@ -466,6 +467,7 @@ function PageArticle({
           {writable && publishMode ? (
             <DraftToggle draft={draft.data} view={draftView} onViewChange={setDraftView} />
           ) : null}
+          <PageEditors pageId={page.id} />
           <EditInfo pageId={page.id} editedAt={page.contentUpdatedAt} onOpen={openHistory} />
           {pageActions}
         </PageBar>

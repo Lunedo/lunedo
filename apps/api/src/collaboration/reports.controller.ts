@@ -165,6 +165,8 @@ export class ReportsController {
           space: { id: exampleReportPage.spaceId, name: "IT operations" },
           labels: ["how-to", "vpn"],
           excerpt: "Remote staff connect through WireGuard.",
+          parents: ["Network"],
+          contentUpdatedAt: "2026-10-05T08:10:00.000Z",
         },
       ],
     },

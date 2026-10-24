@@ -5645,7 +5645,8 @@
     "columns": {
       "name": "Name",
       "kind": "Art",
-      "changed": "Geändert"
+      "changed": "Geändert",
+      "editedBy": "Bearbeitet von"
     }
   },
   "labels": {
@@ -6487,7 +6488,8 @@
     "removeUnavailable": "{count, plural, one {# Blog nicht mehr folgen} other {# Blogs nicht mehr folgen}}",
     "removeUnavailableTitle": "{count, plural, one {# Blog, den du nicht öffnen kannst, nicht mehr folgen?} other {# Blogs, die du nicht öffnen kannst, nicht mehr folgen?}}",
     "unavailableFollowed": "{count, plural, one {Du folgst # Blog eines Space, den du gerade nicht öffnen kannst. Seine Benachrichtigungen kommen wieder, wenn du wieder Zugriff hast.} other {Du folgst # Blogs von Spaces, die du gerade nicht öffnen kannst. Ihre Benachrichtigungen kommen wieder, wenn du wieder Zugriff hast.}}",
-    "unavailableRemoved": "{count, plural, one {Du folgst # Blog nicht mehr.} other {Du folgst # Blogs nicht mehr.}}"
+    "unavailableRemoved": "{count, plural, one {Du folgst # Blog nicht mehr.} other {Du folgst # Blogs nicht mehr.}}",
+    "commentCount": "{count, plural, one {# Kommentar} other {# Kommentare}}"
   },
   "files": {
     "title": "Anhänge",

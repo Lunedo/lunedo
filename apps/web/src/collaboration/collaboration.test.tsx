@@ -412,6 +412,43 @@ describe("comments on a page", () => {
     );
   });
 
+  it("resolve a page comment and move it to the resolved list", async () => {
+    const pageThread = { ...thread, id: "01929b1e-0000-7000-8000-0000000000c4", quote: null, anchor: "page" };
+    const { requests } = mockApi(
+      routes("commenter", {
+        [`GET /api/v1/pages/${VPN}/comments`]: () => ({ body: { threads: [pageThread], people: {} } }),
+        [`PUT /api/v1/comments/${pageThread.id}/resolved`]: () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const section = await screen.findByRole("region", { name: "Comments 1" });
+    await userEvent.click(within(section).getByRole("button", { name: "Resolve" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/${pageThread.id}/resolved`))?.body).toEqual({
+        resolved: true,
+      }),
+    );
+  });
+
+  it("show the people editing the page before the edit info, without the viewer", async () => {
+    mockApi(
+      routes("reader", {
+        [`GET /api/v1/pages/${VPN}/editors`]: () => ({
+          body: {
+            editors: [
+              { id: LUKAS, name: "Lukas Hofer", pictureRef: null },
+              { id: OLIVIA.id, name: OLIVIA.name, pictureRef: null },
+            ],
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const editors = await screen.findByRole("list", { name: "1 person is editing" });
+    expect(within(editors).getByText("Lukas Hofer is editing")).toBeTruthy();
+    expect(within(editors).queryByText("Olivia Owner is editing")).toBeNull();
+  });
+
   it("open an inline thread from a deep link", async () => {
     wideScreen();
     mockApi(routes("reader"));
@@ -501,6 +538,7 @@ describe("blog of a space", () => {
                 scheduledTimeZone: "Europe/Vienna",
                 pinnedInSpace: false,
                 pinnedInOrganization: false,
+                commentCount: 2,
                 createdAt: "2026-10-07T08:00:00.000Z",
               },
             ],
@@ -510,6 +548,7 @@ describe("blog of a space", () => {
       }),
     );
     await renderAt("/spaces/ITOPS/blog");
+    expect(await screen.findByText("2 comments")).toBeTruthy();
     expect(await screen.findByText("Printer maintenance")).toBeTruthy();
     expect(screen.getByText("Scheduled")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Printer maintenance" }).className).toContain("text-lg");

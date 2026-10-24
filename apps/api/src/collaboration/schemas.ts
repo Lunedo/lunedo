@@ -348,6 +348,11 @@ export const blogPostSchema = z
       })
       .nullable()
       .describe("Cover image with the point that stays visible in every crop, or null."),
+    commentCount: z
+      .number()
+      .int()
+      .min(0)
+      .describe("Number of comments and replies on the post that are not deleted."),
     createdAt: timestamp("When the post was created."),
   })
   .describe("A blog post.");
@@ -370,6 +375,7 @@ export const exampleBlogPost = {
   pinnedInSpace: false,
   pinnedInOrganization: true,
   cover: { attachmentId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40", focusX: 0.5, focusY: 0.3 },
+  commentCount: 4,
   createdAt: "2026-10-05T15:00:00.000Z",
 };
 
@@ -814,6 +820,10 @@ export const labeledContentSchema = z
       .string()
       .nullable()
       .describe("Plain text of the excerpt when asked for, or the excerpt of a blog post; null otherwise."),
+    parents: z
+      .array(z.string().describe("Title of a parent."))
+      .describe("Titles of the parents the caller can read, from the top down."),
+    contentUpdatedAt: timestamp("When its content last changed."),
   })
   .describe("A page or blog post with a label.");
 

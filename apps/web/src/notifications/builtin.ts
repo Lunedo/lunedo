@@ -37,11 +37,19 @@ import type { NotificationItem } from "./notifications-api.js";
 const ORGANIZATION = "/settings/organizations/$organizationId";
 
 function contentLink(item: NotificationItem) {
-  const params = item.params as { itemKind?: string; itemTitle?: string; spaceKey?: string };
+  const params = item.params as {
+    itemKind?: string;
+    itemTitle?: string;
+    spaceKey?: string;
+    commentId?: string;
+  };
   if (!item.target.id) return null;
   const slug = slugify(params.itemTitle ?? "");
   const spaceKey = params.spaceKey ?? "";
   return {
+    ...(params.commentId && params.itemKind !== "whiteboard"
+      ? { search: { comment: params.commentId } }
+      : {}),
     to:
       params.itemKind === "blogPost"
         ? blogPostPath(spaceKey, item.target.id, slug)

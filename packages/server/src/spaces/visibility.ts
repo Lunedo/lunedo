@@ -55,6 +55,13 @@ export function visibleItem(
     and ${publishedFor(authorization, viewer, item, space)})`;
 }
 
+export function visibleParents(authorization: AuthorizationService, viewer: Principal, item: SQL): SQL {
+  return sql`array(select pa.title from tree_items pa join spaces pas on pas.id = pa.space_id
+    where pa.id = any(${item}.path) and pa.id <> ${item}.id
+      and ${visibleItem(authorization, viewer, sql`pa`, sql`pas`)}
+    order by array_position(${item}.path, pa.id))`;
+}
+
 export function visiblePages(
   authorization: AuthorizationService,
   viewer: Principal,

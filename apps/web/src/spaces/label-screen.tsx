@@ -27,7 +27,7 @@ interface LabelEntry {
   kind: string;
   href: string;
   where: string;
-  date: string | null;
+  date: string;
 }
 
 const CHIP =
@@ -69,7 +69,7 @@ export function LabelScreen() {
           title: page.title,
           kind: "page",
           href: pagePath(space.key, page.itemId, itemSlug(page.title)),
-          where: spaceName,
+          where: [spaceName, ...page.parents].filter(Boolean).join(" › "),
           date: page.contentUpdatedAt,
         }))
       : everywhere.data?.map((entry) => ({
@@ -77,8 +77,10 @@ export function LabelScreen() {
           title: entry.title,
           kind: entry.kind,
           href: entry.path,
-          where: entry.space.name || t("spaces.personal.label"),
-          date: null,
+          where: [entry.space.name || t("spaces.personal.label"), ...entry.parents]
+            .filter(Boolean)
+            .join(" › "),
+          date: entry.contentUpdatedAt,
         }));
 
   return (
@@ -149,16 +151,10 @@ export function LabelScreen() {
                         {entry.title}
                       </span>
                       <span className="truncate text-xs text-text-muted">
-                        {entry.date ? (
-                          <>
-                            {entry.where} ·{" "}
-                            <time dateTime={entry.date} title={format.dateTime(entry.date)}>
-                              {format.day(entry.date)}
-                            </time>
-                          </>
-                        ) : (
-                          entry.where
-                        )}
+                        {entry.where} ·{" "}
+                        <time dateTime={entry.date} title={format.dateTime(entry.date)}>
+                          {format.day(entry.date)}
+                        </time>
                       </span>
                     </span>
                   </Link>

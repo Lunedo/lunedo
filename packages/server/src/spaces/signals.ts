@@ -15,6 +15,7 @@ export const spaceChangeKinds = [
   "tasks",
   "blog",
   "meetings",
+  "editing",
 ] as const;
 export type SpaceChangeKind = (typeof spaceChangeKinds)[number];
 

@@ -25683,6 +25683,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -25707,6 +25713,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -25739,6 +25746,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -26097,6 +26105,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -26121,6 +26135,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -26153,6 +26168,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -26575,6 +26591,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -26599,6 +26621,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -26631,6 +26654,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -27013,6 +27037,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -27037,6 +27067,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -27069,6 +27100,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -27455,6 +27487,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -27479,6 +27517,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -27511,6 +27550,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -27921,6 +27961,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -27945,6 +27991,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -27977,6 +28024,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -28363,6 +28411,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -28387,6 +28441,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -28419,6 +28474,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -28815,6 +28871,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -28839,6 +28901,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -28871,6 +28934,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -30641,8 +30705,8 @@
     "/api/v1/comments/{commentId}/resolved": {
       "put": {
         "operationId": "comments.resolve",
-        "summary": "Resolve or reopen an inline comment",
-        "description": "Resolved inline comments are hidden from the text and listed as resolved.\n\nRequires the permission `comment.resolve` on the comment in `commentId`.",
+        "summary": "Resolve or reopen a comment thread",
+        "description": "Resolves or reopens a thread through its first comment. Resolved inline comments are hidden from the text; resolved threads are listed as resolved.\n\nRequires the permission `comment.resolve` on the comment in `commentId`.",
         "tags": [
           "Comments"
         ],
@@ -30700,7 +30764,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `notInlineComment`: Only inline comments can be resolved.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `notInlineComment`: Only the first comment of a thread can be resolved.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -30726,7 +30790,7 @@
                   "notInlineComment": {
                     "value": {
                       "type": "urn:lunedo:problem:notInlineComment",
-                      "title": "Only inline comments can be resolved",
+                      "title": "Only the first comment of a thread can be resolved",
                       "status": 400,
                       "code": "notInlineComment"
                     }
@@ -35998,6 +36062,12 @@
                             ],
                             "description": "Cover image with the point that stays visible in every crop, or null."
                           },
+                          "commentCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Number of comments and replies on the post that are not deleted."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -36022,6 +36092,7 @@
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "cover",
+                          "commentCount",
                           "createdAt"
                         ],
                         "additionalProperties": false,
@@ -36134,6 +36205,7 @@
                         "focusX": 0.5,
                         "focusY": 0.3
                       },
+                      "commentCount": 4,
                       "createdAt": "2026-10-05T15:00:00.000Z"
                     }
                   ]
@@ -155718,7 +155790,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements. The event `maintenance` says that maintenance mode was switched on or off or its message changed; reload `GET /api/v1/maintenance`.",
+            "description": "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, or where someone opened or left a page in the editor, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements. The event `maintenance` says that maintenance mode was switched on or off or its message changed; reload `GET /api/v1/maintenance`.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -160833,6 +160905,12 @@
                             ],
                             "description": "Cover image with the point that stays visible in every crop, or null."
                           },
+                          "commentCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Number of comments and replies on the post that are not deleted."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -160857,6 +160935,7 @@
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "cover",
+                          "commentCount",
                           "createdAt"
                         ],
                         "additionalProperties": false,
@@ -160908,6 +160987,7 @@
                         "focusX": 0.5,
                         "focusY": 0.3
                       },
+                      "commentCount": 4,
                       "createdAt": "2026-10-05T15:00:00.000Z"
                     }
                   ],
@@ -161283,6 +161363,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -161307,6 +161393,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -161339,6 +161426,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -199036,7 +199124,7 @@
       "get": {
         "operationId": "items.content",
         "summary": "Get the content of a page",
-        "description": "Returns the content readers see as ProseMirror JSON: the published version in publish mode, the current content in live mode. With it come the names of mentioned people and the titles of linked pages the caller may see. Editors get the draft from the draft endpoint.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "description": "Returns the content readers see as ProseMirror JSON: the published version in publish mode, the current content in live mode. Open comments on text of that content carry their mark, also when they were made after the version was published. With it come the names of mentioned people and the titles of linked pages the caller may see. Editors get the draft from the draft endpoint.\n\nRequires the permission `item.view` on the item in `pageId`.",
         "tags": [
           "Pages"
         ],
@@ -203492,6 +203580,220 @@
                       "title": "Storage is almost full",
                       "status": 507,
                       "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/editors": {
+      "get": {
+        "operationId": "items.editors",
+        "summary": "List the people editing a page now",
+        "description": "Lists the people who have the page open in the editor at this moment. Readers of the page are not listed. The list changes with an `editing` event in the space stream.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The people editing the page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "editors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the account."
+                          },
+                          "name": {
+                            "description": "Name, or null when the caller may not see it.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null when there is none.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "pictureRef"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A person editing the page."
+                      },
+                      "description": "People with the page open in the editor."
+                    }
+                  },
+                  "required": [
+                    "editors"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Who is editing the page now."
+                },
+                "example": {
+                  "editors": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger",
+                      "pictureRef": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -212635,6 +212937,19 @@
                           "string",
                           "null"
                         ]
+                      },
+                      "parents": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "Title of a parent."
+                        },
+                        "description": "Titles of the parents the caller can read, from the top down."
+                      },
+                      "contentUpdatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When its content last changed. ISO 8601 timestamp in UTC."
                       }
                     },
                     "required": [
@@ -212644,7 +212959,9 @@
                       "path",
                       "space",
                       "labels",
-                      "excerpt"
+                      "excerpt",
+                      "parents",
+                      "contentUpdatedAt"
                     ],
                     "additionalProperties": false,
                     "description": "A page or blog post with a label."
@@ -212665,7 +212982,11 @@
                       "how-to",
                       "vpn"
                     ],
-                    "excerpt": "Remote staff connect through WireGuard."
+                    "excerpt": "Remote staff connect through WireGuard.",
+                    "parents": [
+                      "Network"
+                    ],
+                    "contentUpdatedAt": "2026-10-05T08:10:00.000Z"
                   }
                 ]
               }
@@ -224641,6 +224962,12 @@
                             ],
                             "description": "Cover image with the point that stays visible in every crop, or null."
                           },
+                          "commentCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Number of comments and replies on the post that are not deleted."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -224665,6 +224992,7 @@
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "cover",
+                          "commentCount",
                           "createdAt"
                         ],
                         "additionalProperties": false,
@@ -224716,6 +225044,7 @@
                         "focusX": 0.5,
                         "focusY": 0.3
                       },
+                      "commentCount": 4,
                       "createdAt": "2026-10-05T15:00:00.000Z"
                     }
                   ],
@@ -225086,6 +225415,12 @@
                       ],
                       "description": "Cover image with the point that stays visible in every crop, or null."
                     },
+                    "commentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of comments and replies on the post that are not deleted."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -225110,6 +225445,7 @@
                     "pinnedInSpace",
                     "pinnedInOrganization",
                     "cover",
+                    "commentCount",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -225142,6 +225478,7 @@
                     "focusX": 0.5,
                     "focusY": 0.3
                   },
+                  "commentCount": 4,
                   "createdAt": "2026-10-05T15:00:00.000Z"
                 }
               }
@@ -225549,6 +225886,12 @@
                             ],
                             "description": "Cover image with the point that stays visible in every crop, or null."
                           },
+                          "commentCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "Number of comments and replies on the post that are not deleted."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -225573,6 +225916,7 @@
                           "pinnedInSpace",
                           "pinnedInOrganization",
                           "cover",
+                          "commentCount",
                           "createdAt"
                         ],
                         "additionalProperties": false,
@@ -225616,6 +225960,7 @@
                         "focusX": 0.5,
                         "focusY": 0.3
                       },
+                      "commentCount": 4,
                       "createdAt": "2026-10-05T15:00:00.000Z"
                     }
                   ]
@@ -232173,6 +232518,36 @@
                             "type": "string",
                             "format": "date-time",
                             "description": "When the content of the page last changed. ISO 8601 timestamp in UTC."
+                          },
+                          "updatedBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the account."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see it.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who made the change readers see last: the publisher of the current version, or the last editor of a live page or whiteboard. Null for folders and links, or when unknown."
                           }
                         },
                         "required": [
@@ -232200,10 +232575,11 @@
                           "status",
                           "createdAt",
                           "updatedAt",
-                          "contentUpdatedAt"
+                          "contentUpdatedAt",
+                          "updatedBy"
                         ],
                         "additionalProperties": false,
-                        "description": "An item of the page tree."
+                        "description": "A child item."
                       },
                       "description": "Children, in tree order."
                     },
@@ -232254,7 +232630,11 @@
                       },
                       "createdAt": "2026-10-05T08:00:00.000Z",
                       "updatedAt": "2026-10-05T08:00:00.000Z",
-                      "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
+                      "contentUpdatedAt": "2026-10-05T08:00:00.000Z",
+                      "updatedBy": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Berger"
+                      }
                     }
                   ],
                   "nextCursor": null
@@ -239525,6 +239905,14 @@
                         "type": "string",
                         "description": "Title of the page."
                       },
+                      "parents": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "Title of a parent."
+                        },
+                        "description": "Titles of the parents the caller can read, from the top down."
+                      },
                       "contentUpdatedAt": {
                         "type": "string",
                         "format": "date-time",
@@ -239534,6 +239922,7 @@
                     "required": [
                       "itemId",
                       "title",
+                      "parents",
                       "contentUpdatedAt"
                     ],
                     "additionalProperties": false,
@@ -239545,6 +239934,9 @@
                   {
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
                     "title": "VPN access for remote staff",
+                    "parents": [
+                      "Network"
+                    ],
                     "contentUpdatedAt": "2026-10-05T08:10:00.000Z"
                   }
                 ]

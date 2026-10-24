@@ -65,7 +65,7 @@ export const problems = {
   invalidLabel: { status: 400, title: "The label is not valid" },
   invalidComment: { status: 400, title: "The comment does not match the comment schema" },
   invalidAnchor: { status: 400, title: "The selected text cannot carry a comment" },
-  notInlineComment: { status: 400, title: "Only inline comments can be resolved" },
+  notInlineComment: { status: 400, title: "Only the first comment of a thread can be resolved" },
   invalidEmoji: { status: 400, title: "The reaction is not a single emoji" },
   reactionsUnavailable: { status: 400, title: "Only people can react" },
   invalidExcerpt: { status: 400, title: "The excerpt is too long" },

@@ -239,6 +239,7 @@ export {
 export {
   articleType,
   collaborationClients,
+  collaborationEditors,
   collaborationPresence,
   deletedSpaceAdministrators,
   discardedDrafts,

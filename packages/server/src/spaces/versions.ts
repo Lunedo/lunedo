@@ -894,10 +894,52 @@ export class VersionService {
     await this.#database.execute(sql`
       update collaboration_presence set seen_at = now()
       where node = ${node} and item_id = any(${sql.param([...itemIds])}::uuid[])`);
+    await this.#database.execute(sql`
+      update collaboration_editors set seen_at = now()
+      where node = ${node} and item_id = any(${sql.param([...itemIds])}::uuid[])`);
+  }
+
+  async touchEditor(itemId: string, node: string, accountId: string, change: 1 | -1): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const item = await tx.execute<{ space_id: string }>(
+        sql`select space_id from tree_items where id = ${itemId}`,
+      );
+      const spaceId = item.rows[0]?.space_id;
+      if (!spaceId) return;
+      await tx.execute(sql`
+        insert into collaboration_editors (item_id, node, account_id, connections, seen_at)
+        values (${itemId}, ${node}, ${accountId}, ${Math.max(change, 0)}, now())
+        on conflict (item_id, node, account_id) do update
+          set connections = collaboration_editors.connections + ${change}, seen_at = now()`);
+      await tx.execute(sql`
+        delete from collaboration_editors
+        where item_id = ${itemId} and node = ${node} and account_id = ${accountId} and connections <= 0`);
+      await signalSpaceChange(tx, { spaceId, kind: "editing", itemId });
+    });
+  }
+
+  async editors(
+    viewer: Principal,
+    itemId: string,
+  ): Promise<{ id: string; name: string | null; pictureRef: string | null }[]> {
+    const result = await this.#database.execute<{
+      id: string;
+      name: string | null;
+      picture_ref: string | null;
+    }>(sql`
+      select a.id, ${this.#people.visibleName(viewer, sql`a`)} as name, a.picture_ref
+      from accounts a
+      where a.id in (
+        select account_id from collaboration_editors
+        where item_id = ${itemId} and seen_at > now() - make_interval(secs => ${PRESENCE_STALE_SECONDS})
+      )
+      order by a.id`);
+    return result.rows.map((row) => ({ id: row.id, name: row.name, pictureRef: row.picture_ref }));
   }
 
   async endSession(itemId: string, node: string): Promise<number | null> {
     await this.touchPresence(itemId, node, 0);
+    await this.#endEditors(itemId, node);
     const others = await this.#database.execute<{ present: boolean }>(sql`
       select exists (select 1 from collaboration_presence where item_id = ${itemId}
         and seen_at > now() - make_interval(secs => ${PRESENCE_STALE_SECONDS})) as present`);
@@ -905,9 +947,22 @@ export class VersionService {
     return this.versionLiveSession(itemId);
   }
 
+  async #endEditors(itemId: string, node: string): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const removed = await tx.execute<{ space_id: string }>(sql`
+        delete from collaboration_editors e using tree_items t
+        where e.item_id = ${itemId} and e.node = ${node} and t.id = e.item_id
+        returning t.space_id`);
+      const spaceId = removed.rows[0]?.space_id;
+      if (spaceId) await signalSpaceChange(tx, { spaceId, kind: "editing", itemId });
+    });
+  }
+
   async versionIdlePages(): Promise<number> {
     await this.#database.execute(sql`
       delete from collaboration_presence where seen_at <= now() - make_interval(secs => ${PRESENCE_STALE_SECONDS * 5})`);
+    await this.#database.execute(sql`
+      delete from collaboration_editors where seen_at <= now() - make_interval(secs => ${PRESENCE_STALE_SECONDS * 5})`);
     const candidates = await this.#database.execute<{
       item_id: string;
       space_id: string;

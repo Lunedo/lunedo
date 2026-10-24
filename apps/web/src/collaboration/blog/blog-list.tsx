@@ -1,6 +1,6 @@
 import { Badge, Button, IconButton, useToast } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
-import { CircleAlert, Clock, FilePen, Pin, PinOff } from "lucide-react";
+import { CircleAlert, Clock, FilePen, MessageSquare, Pin, PinOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -127,6 +127,12 @@ export function BlogList({
                   {post.title}
                 </Link>
                 {post.excerpt ? <p className="text-text-muted">{post.excerpt}</p> : null}
+                {post.commentCount > 0 ? (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-text-muted">
+                    <MessageSquare aria-hidden="true" className="size-icon-sm" />
+                    {t("blog.commentCount", { count: post.commentCount })}
+                  </span>
+                ) : null}
               </article>
               {post.cover ? (
                 <CoverImage

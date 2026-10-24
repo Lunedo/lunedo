@@ -980,6 +980,7 @@ export {
 } from "./spaces/documents.js";
 export { type IncludedPage, IncludeService, type Inclusion } from "./spaces/includes.js";
 export {
+  type ChildItem,
   cleanLinkUrl,
   ITEM_DESCRIPTION_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
