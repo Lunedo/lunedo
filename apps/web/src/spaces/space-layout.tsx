@@ -197,10 +197,10 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
     [space, canEdit],
   );
   const create = useCallback(
-    (kind: CreateKind) => {
+    (kind: CreateKind, title?: string) => {
       if (kind === "blogPost") setWritingPost(true);
       else if (kind === "meeting") setCreatingSeries(true);
-      else context.openCreate(kind, null);
+      else context.openCreate(kind, null, title);
     },
     [context],
   );

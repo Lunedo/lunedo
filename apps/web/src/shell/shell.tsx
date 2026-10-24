@@ -8,7 +8,7 @@ export interface SpaceCreateTarget {
   name: string;
   knowledgeBase: boolean;
   kinds: readonly CreateKind[];
-  create: (kind: CreateKind) => void;
+  create: (kind: CreateKind, title?: string) => void;
 }
 
 export interface SettingsReturn {

@@ -1,7 +1,7 @@
 import { Button, type CommandGroup, type CommandItem, CommandPalette, Highlighted, Kbd } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { Bookmark, Clock, Globe, History, Layers, SearchX, UserRound, X } from "lucide-react";
+import { Bookmark, Clock, FilePlus, Globe, History, Layers, SearchX, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounced } from "../components/table-state.js";
@@ -9,6 +9,7 @@ import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useCommandGroups } from "../shell/command-groups.js";
 import { isApplePlatform } from "../shell/keyboard.js";
+import { useShell } from "../shell/shell.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { itemHref } from "../spaces/item-paths.js";
 import { spaceByKeyQuery } from "../spaces/space-queries.js";
@@ -85,6 +86,8 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   );
   const otherCommands = commandGroups.filter((group) => !linkGroups.includes(group));
   const clearRecent = useClearRecentSearches(organizationId ?? "");
+  const createTarget = useShell().spaceCreateTarget;
+  const canCreatePage = createTarget?.kinds.includes("page") ?? false;
 
   const results = useQuery({
     ...quickSearchQuery(organizationId ?? "", debounced, inSpace ? space.id : null),
@@ -203,9 +206,32 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     const content = hits.filter((hit) => hit.type !== "comment");
     const local = inSpace ? content.filter((hit) => hit.space?.id === space.id) : content;
     const elsewhere = inSpace ? content.filter((hit) => hit.space?.id !== space.id) : [];
+    const createItems: CommandItem[] =
+      createTarget && canCreatePage
+        ? [
+            {
+              id: "create:page",
+              label: t(
+                createTarget.knowledgeBase ? "search.quick.createArticle" : "search.quick.createPage",
+                {
+                  title: typed,
+                },
+              ),
+              description: t("search.quick.createIn", { space: createTarget.name }),
+              icon: FilePlus,
+              onSelect: () => createTarget.create("page", typed),
+            },
+          ]
+        : [];
+    const commandHeading = t("commands.commands");
+    const commandList: CommandGroup[] = otherCommands.some((group) => group.heading === commandHeading)
+      ? otherCommands.map((group) =>
+          group.heading === commandHeading ? { ...group, items: [...createItems, ...group.items] } : group,
+        )
+      : [{ heading: commandHeading, items: createItems }, ...otherCommands];
     const list: CommandGroup[] = [
       ...linkGroups,
-      ...otherCommands,
+      ...commandList,
       {
         heading: inSpace
           ? t("search.quick.inSpace", { space: space.name || t("spaces.personal.label") })

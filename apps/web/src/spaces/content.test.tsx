@@ -827,6 +827,41 @@ describe("template gallery", () => {
       ).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
   });
+
+  it("creates a page named after the quick search query in the current space", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/template-gallery`]: () => ({ body: [] }),
+        [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({ status: 201, body: page(VPN, "Printer setup") }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    await screen.findByText("Welcome");
+    await userEvent.keyboard("/");
+    const search = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(search).getByRole("combobox"), "Printer setup");
+    const option = await within(search).findByRole("option", { name: /Create page “Printer setup”/ });
+    expect(option.textContent).toContain("in IT Operations");
+    await userEvent.click(option);
+    const dialog = await screen.findByRole("dialog", { name: "Create in IT Operations" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create blank page" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "POST" && request.path.endsWith("/items"))?.body,
+      ).toMatchObject({ kind: "page", title: "Printer setup" }),
+    );
+  });
+
+  it("offers no page from the quick search to readers", async () => {
+    mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    await screen.findByText("Welcome");
+    await userEvent.keyboard("/");
+    const search = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(search).getByRole("combobox"), "Printer setup");
+    expect(await within(search).findByText(/All results for/)).toBeTruthy();
+    expect(within(search).queryByRole("option", { name: /Create page/ })).toBeNull();
+  });
 });
 
 describe("sharing and access", () => {
