@@ -85,7 +85,10 @@ function ArticleGroup({
       header: t("knowledgeBase.list.subcategory"),
       hideBelow: "md",
       cell: (article) => {
-        const sub = article.categoryPath[1]?.title;
+        const sub = article.categoryPath
+          .slice(1)
+          .map((category) => category.title)
+          .join(" › ");
         return sub ? (
           <span className="block max-w-56 truncate" title={sub}>
             {sub}

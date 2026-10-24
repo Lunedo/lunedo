@@ -10311,11 +10311,11 @@
     },
     "list": {
       "title": "Title",
-      "subcategory": "Subcategory",
+      "subcategory": "Topic",
       "owner": "Owner",
       "updated": "Updated",
       "unpublished": "Not published",
-      "noSubcategory": "None",
+      "noSubcategory": "Directly in the area",
       "noOwner": "Nobody",
       "loadFailed": "The articles could not be loaded.",
       "caption": "Articles in {category}",
@@ -10386,7 +10386,7 @@
     },
     "settings": {
       "visibility": "Visibility",
-      "categories": "Categories",
+      "categories": "Areas and topics",
       "typeTitle": "Knowledge base",
       "typeDescription": "This space is a knowledge base. Who may read it is set in its visibility, not in a general visibility of the space.",
       "toVisibility": "Open the visibility settings",
@@ -10406,18 +10406,14 @@
       "knowledgeBase": "the knowledge base"
     },
     "categories": {
-      "title": "Categories",
-      "description": "Folders on the first level are categories, on the second level subcategories.",
       "icon": "Icon",
       "iconHint": "Without an icon the portal shows the first letter of the name.",
       "noIcon": "No icon",
       "intro": "Introduction",
-      "introHint": "One or two sentences that explain what readers find in the category.",
-      "inParent": "in {parent}",
       "moveUp": "Move {title} up",
       "moveDown": "Move {title} down",
       "moved": "{title} moved",
-      "moveFailed": "The category could not be moved"
+      "moveFailed": "The folder could not be moved"
     },
     "templates": {
       "loadFailed": "The article templates could not be loaded.",
@@ -10592,6 +10588,41 @@
     "category": {
       "empty": "This category has no articles yet",
       "emptyDescription": "Articles and subcategories you create here appear in this overview and in the portal once they are published."
+    },
+    "folders": {
+      "title": "Areas and topics",
+      "description": "Folders at the top level are the areas of the portal, folders inside them topics, at any depth. Drag a folder to move it; articles stay in their folder.",
+      "tree": "Folder tree",
+      "treeHint": "Drag the handle to reorder folders; dragged further to the right, a folder goes into the folder above. With the keyboard: Space on the handle, arrow keys, Space. Indent and outdent are in the “…” menu.",
+      "area": "Area",
+      "topic": "Topic",
+      "newArea": "New area",
+      "newInside": "New topic inside",
+      "indent": "Move into the folder above",
+      "outdent": "Move one level up",
+      "actions": "Actions for {title}",
+      "dragHandle": "Move {title}",
+      "expand": "Expand {title}",
+      "collapse": "Collapse {title}",
+      "articles": "{count, plural, one {# article} other {# articles}}",
+      "emptyTitle": "No areas yet",
+      "emptyEditor": "Create an area, for example IT or HR. Inside it you create topics at any depth.",
+      "introHint": "Short text, not a whole page. **bold**, *italic*, [link](https://…) and one note with > at the start of a line.",
+      "introPlaceholderText": "text",
+      "format": "Formatting",
+      "bold": "Bold",
+      "italic": "Italic",
+      "link": "Link",
+      "callout": "Note",
+      "preview": "Preview",
+      "contactAdminOnly": "Only space admins change contact addresses.",
+      "drag": {
+        "instructions": "Press Space to pick up a folder. Move it with the arrow keys, press Space again to drop it or Escape to cancel. Indent and outdent are in the “…” menu of every folder.",
+        "picked": "Picked up {name}.",
+        "over": "{name} is over {target}.",
+        "dropped": "Dropped {name} at {target}.",
+        "cancelled": "Moving {name} cancelled."
+      }
     }
   },
   "helpTarget": {

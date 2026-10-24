@@ -24,22 +24,25 @@ export function useSortableSensors() {
   );
 }
 
-export function useSortableAccessibility(nameOf: (id: UniqueIdentifier) => string): {
+export function useSortableAccessibility(
+  nameOf: (id: UniqueIdentifier) => string,
+  messages: "meetings.drag" | "knowledgeBase.folders.drag" = "meetings.drag",
+): {
   announcements: Announcements;
   screenReaderInstructions: ScreenReaderInstructions;
 } {
   const { t } = useTranslation();
   return {
-    screenReaderInstructions: { draggable: t("meetings.drag.instructions") },
+    screenReaderInstructions: { draggable: t(`${messages}.instructions`) },
     announcements: {
-      onDragStart: ({ active }) => t("meetings.drag.picked", { name: nameOf(active.id) }),
+      onDragStart: ({ active }) => t(`${messages}.picked`, { name: nameOf(active.id) }),
       onDragOver: ({ active, over }) =>
-        over ? t("meetings.drag.over", { name: nameOf(active.id), target: nameOf(over.id) }) : undefined,
+        over ? t(`${messages}.over`, { name: nameOf(active.id), target: nameOf(over.id) }) : undefined,
       onDragEnd: ({ active, over }) =>
         over
-          ? t("meetings.drag.dropped", { name: nameOf(active.id), target: nameOf(over.id) })
-          : t("meetings.drag.cancelled", { name: nameOf(active.id) }),
-      onDragCancel: ({ active }) => t("meetings.drag.cancelled", { name: nameOf(active.id) }),
+          ? t(`${messages}.dropped`, { name: nameOf(active.id), target: nameOf(over.id) })
+          : t(`${messages}.cancelled`, { name: nameOf(active.id) }),
+      onDragCancel: ({ active }) => t(`${messages}.cancelled`, { name: nameOf(active.id) }),
     },
   };
 }

@@ -562,7 +562,7 @@ describe("spaces", () => {
       within(content)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Categories", "Templates", "Review", "Pages and trash", "Page status", "Export"]);
+    ).toEqual(["Areas and topics", "Templates", "Review", "Pages and trash", "Page status", "Export"]);
     expect(within(content).getByRole("link", { name: "Templates" }).getAttribute("aria-current")).toBe(
       "page",
     );

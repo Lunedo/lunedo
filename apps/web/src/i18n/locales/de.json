@@ -10311,11 +10311,11 @@
     },
     "list": {
       "title": "Titel",
-      "subcategory": "Unterkategorie",
+      "subcategory": "Thema",
       "owner": "Verantwortlich",
       "updated": "Aktualisiert",
       "unpublished": "Nicht veröffentlicht",
-      "noSubcategory": "Keine",
+      "noSubcategory": "Direkt im Bereich",
       "noOwner": "Niemand",
       "loadFailed": "Die Artikel konnten nicht geladen werden.",
       "caption": "Artikel in {category}",
@@ -10386,7 +10386,7 @@
     },
     "settings": {
       "visibility": "Sichtbarkeit",
-      "categories": "Kategorien",
+      "categories": "Bereiche und Themen",
       "typeTitle": "Wissensdatenbank",
       "typeDescription": "Dieser Space ist eine Wissensdatenbank. Wer sie lesen darf, legt ihre Sichtbarkeit fest, nicht eine allgemeine Sichtbarkeit des Space.",
       "toVisibility": "Sichtbarkeit öffnen",
@@ -10406,18 +10406,14 @@
       "knowledgeBase": "der Wissensdatenbank"
     },
     "categories": {
-      "title": "Kategorien",
-      "description": "Ordner auf der ersten Ebene sind Kategorien, auf der zweiten Unterkategorien.",
       "icon": "Icon",
       "iconHint": "Ohne Icon zeigt das Portal den Anfangsbuchstaben des Namens.",
       "noIcon": "Kein Icon",
       "intro": "Einleitung",
-      "introHint": "Ein, zwei Sätze, die erklären, was Lesende in der Kategorie finden.",
-      "inParent": "in {parent}",
       "moveUp": "{title} nach oben verschieben",
       "moveDown": "{title} nach unten verschieben",
       "moved": "{title} verschoben",
-      "moveFailed": "Die Kategorie konnte nicht verschoben werden"
+      "moveFailed": "Der Ordner konnte nicht verschoben werden"
     },
     "templates": {
       "loadFailed": "Die Artikelvorlagen konnten nicht geladen werden.",
@@ -10592,6 +10588,41 @@
     "category": {
       "empty": "Diese Kategorie hat noch keine Artikel",
       "emptyDescription": "Artikel und Unterkategorien, die du hier erstellst, erscheinen in dieser Übersicht und, sobald sie veröffentlicht sind, im Portal."
+    },
+    "folders": {
+      "title": "Bereiche und Themen",
+      "description": "Ordner auf der obersten Ebene sind die Bereiche des Portals, Ordner darin Themen, beliebig tief. Zieh einen Ordner, um ihn zu verschieben; Artikel bleiben in ihrem Ordner.",
+      "tree": "Ordnerbaum",
+      "treeHint": "Zieh am Griff, um Ordner zu sortieren; weiter nach rechts gezogen landet ein Ordner im Ordner darüber. Mit der Tastatur: Leertaste am Griff, Pfeiltasten, Leertaste. Einrücken und Ausrücken findest du im Menü „…“.",
+      "area": "Bereich",
+      "topic": "Thema",
+      "newArea": "Neuer Bereich",
+      "newInside": "Neues Thema darin",
+      "indent": "In den Ordner darüber verschieben",
+      "outdent": "Eine Ebene höher verschieben",
+      "actions": "Aktionen für {title}",
+      "dragHandle": "{title} verschieben",
+      "expand": "{title} aufklappen",
+      "collapse": "{title} zuklappen",
+      "articles": "{count, plural, one {# Artikel} other {# Artikel}}",
+      "emptyTitle": "Noch keine Bereiche",
+      "emptyEditor": "Leg einen Bereich an, zum Beispiel IT oder Personal. Darin legst du Themen in beliebiger Tiefe an.",
+      "introHint": "Kurzer Text, keine ganze Seite. **fett**, *kursiv*, [Link](https://…) und ein Hinweis mit > am Zeilenanfang.",
+      "introPlaceholderText": "Text",
+      "format": "Formatierung",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "link": "Link",
+      "callout": "Hinweis",
+      "preview": "Vorschau",
+      "contactAdminOnly": "Nur Space-Admins ändern Kontaktadressen.",
+      "drag": {
+        "instructions": "Drück die Leertaste, um einen Ordner aufzunehmen. Verschieb ihn mit den Pfeiltasten, drück die Leertaste erneut zum Ablegen oder Escape zum Abbrechen. Einrücken und Ausrücken findest du im Menü „…“ jedes Ordners.",
+        "picked": "{name} aufgenommen.",
+        "over": "{name} ist über {target}.",
+        "dropped": "{name} bei {target} abgelegt.",
+        "cancelled": "Verschieben von {name} abgebrochen."
+      }
     }
   },
   "helpTarget": {
