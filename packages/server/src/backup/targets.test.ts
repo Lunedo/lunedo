@@ -158,7 +158,9 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
     expect(await failure(new S3BackupTarget({ ...config, secretAccessKey: "wrong" }, policy))).toBe(
       "write:credentials",
     );
-    expect(() => new S3BackupTarget(config, outboundPolicy([]))).toThrow("LUNEDO_OUTBOUND_ALLOWED_NETWORKS");
+    expect(
+      () => new S3BackupTarget({ ...config, endpoint: "http://127.0.0.1:8333" }, outboundPolicy([])),
+    ).toThrow("LUNEDO_OUTBOUND_ALLOWED_NETWORKS");
     const resolvesPrivately = new S3BackupTarget(
       { ...config, endpoint: "http://storage.internal.test:8333" },
       outboundPolicy([], async () => [{ address: "172.18.0.7", family: 4 }]),
@@ -219,7 +221,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
       { own: new Set([name, lookalike]), logger },
     );
     await target.delete(name);
-    expect(await keys("backups/")).toEqual(["backups/notes.txt", `backups/${lookalike}`]);
+    expect(await keys("backups/")).toEqual([`backups/${lookalike}`, "backups/notes.txt"].sort());
     target.destroy();
   });
 
