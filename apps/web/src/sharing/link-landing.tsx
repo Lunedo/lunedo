@@ -1,10 +1,11 @@
-import { Button, EmptyState, Field, Notice, PasswordInput, Skeleton, useToast } from "@lunedo/ui";
+import { Button, buttonClassName, Field, Notice, PasswordInput, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { FileText, Link2Off, LockKeyhole, LogIn, Paperclip } from "lucide-react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
+import { instanceInfoQuery } from "../api/queries.js";
 import { ApiError, networkError, request, toApiError } from "../api/request.js";
 import { PageReadView } from "../editor/read-view.js";
 import { LoadError } from "../errors/failure.js";
@@ -12,6 +13,7 @@ import { problemMessage } from "../errors/problem-message.js";
 import type { ImageSize } from "../files/attachments-api.js";
 import { typeLabel } from "../files/file-preview.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { LunedoMark } from "../shell/lunedo-mark.js";
 import { Redirect } from "../spaces/redirect.js";
 import { sharedPath } from "../spaces/space-queries.js";
 
@@ -252,12 +254,14 @@ function PasswordForm({
     }
   };
   return (
-    <form onSubmit={(event) => void submit(event)} noValidate className="flex max-w-field flex-col gap-4">
-      <EmptyState
-        icon={LockKeyhole}
-        title={t("sharing.landing.passwordTitle")}
-        description={t("sharing.landing.password")}
-      />
+    <form onSubmit={(event) => void submit(event)} noValidate className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h1 className="flex items-center gap-2 text-lg font-semibold">
+          <LockKeyhole aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+          {t("sharing.landing.passwordTitle")}
+        </h1>
+        <p className="text-sm text-text-muted">{t("sharing.landing.password")}</p>
+      </div>
       <Field
         label={t("sharing.links.password")}
         error={missing ? t("sharing.landing.passwordMissing") : error}
@@ -282,33 +286,33 @@ function Failure({ error, token, onRetry }: { error: unknown; token: string; onR
   const code = error instanceof ApiError ? error.code : null;
   if (code === "signInRequired" || code === "linkNotForYou") {
     return (
-      <EmptyState
-        icon={LogIn}
-        title={
-          code === "signInRequired" ? t("sharing.landing.signInTitle") : t("sharing.landing.notForYouTitle")
-        }
-        description={problemMessage(t, error)}
-        action={
-          code === "signInRequired" ? (
-            <Link
-              to="/sign-in"
-              search={{ redirect: `/s/${token}` }}
-              className="text-accent underline focus-visible:focus-ring"
-            >
-              {t("sharing.landing.signIn")}
-            </Link>
-          ) : undefined
-        }
-      />
+      <div className="flex flex-col gap-3">
+        <h1 className="flex items-center gap-2 text-lg font-semibold">
+          <LogIn aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+          {code === "signInRequired" ? t("sharing.landing.signInTitle") : t("sharing.landing.notForYouTitle")}
+        </h1>
+        <p className="text-sm text-text-muted">{problemMessage(t, error)}</p>
+        {code === "signInRequired" ? (
+          <Link
+            to="/sign-in"
+            search={{ redirect: `/s/${token}` }}
+            className={`${buttonClassName({ variant: "primary" })} self-start`}
+          >
+            {t("sharing.landing.signIn")}
+          </Link>
+        ) : null}
+      </div>
     );
   }
   if (code === "linkNotFound" || code === "notFound") {
     return (
-      <EmptyState
-        icon={Link2Off}
-        title={t("sharing.landing.goneTitle")}
-        description={problemMessage(t, error)}
-      />
+      <div className="flex flex-col gap-2">
+        <h1 className="flex items-center gap-2 text-lg font-semibold">
+          <Link2Off aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+          {t("sharing.landing.goneTitle")}
+        </h1>
+        <p className="text-sm text-text-muted">{problemMessage(t, error)}</p>
+      </div>
     );
   }
   return (
@@ -323,6 +327,23 @@ function Failure({ error, token, onRetry }: { error: unknown; token: string; onR
     >
       {problemMessage(t, error)}
     </Notice>
+  );
+}
+
+function LandingCard({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const info = useQuery({ ...instanceInfoQuery, throwOnError: false });
+  return (
+    <div className="flex min-h-screen items-start justify-center bg-surface-sunken px-4 pt-12 pb-12">
+      <div className="flex w-full max-w-dialog-sm flex-col gap-6 rounded-lg border border-border bg-bg p-6">
+        <p className="flex items-center gap-2 text-sm">
+          <LunedoMark className="size-6" />
+          <span className="font-semibold">{t("brand.name")}</span>
+          {info.data?.name ? <span className="text-text-muted">· {info.data.name}</span> : null}
+        </p>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -361,18 +382,26 @@ export function LinkLandingScreen() {
     void open();
   });
   if (state.kind === "account") return <Redirect to={sharedPath(state.itemId, "")} />;
+  if (state.kind !== "anonymous") {
+    return (
+      <main id="main" tabIndex={-1} className="outline-none">
+        <LandingCard>
+          {state.kind === "opening" ? <Skeleton className="h-field w-full" /> : null}
+          {state.kind === "password" ? (
+            <PasswordForm error={state.error} onSubmit={(password) => open(password)} />
+          ) : null}
+          {state.kind === "failed" ? (
+            <Failure error={state.error} token={token} onRetry={() => void open()} />
+          ) : null}
+        </LandingCard>
+      </main>
+    );
+  }
   return (
     <main id="main" tabIndex={-1} className="min-h-screen bg-bg outline-none">
       <div className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 pt-8 pb-12 md:px-8">
         <p className="text-sm text-text-muted">{t("sharing.landing.banner")}</p>
-        {state.kind === "opening" ? <Skeleton className="h-card w-full" /> : null}
-        {state.kind === "password" ? (
-          <PasswordForm error={state.error} onSubmit={(password) => open(password)} />
-        ) : null}
-        {state.kind === "failed" ? (
-          <Failure error={state.error} token={token} onRetry={() => void open()} />
-        ) : null}
-        {state.kind === "anonymous" ? <AnonymousPage token={token} unlock={state.unlock} /> : null}
+        <AnonymousPage token={token} unlock={state.unlock} />
       </div>
     </main>
   );

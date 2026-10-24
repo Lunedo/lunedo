@@ -215,9 +215,10 @@ test("restricts and shares a page, opens links and decides an access request", a
     await expectAccessible(page, "share dialog with pending change");
     await pending.getByRole("button", { name: "Share page" }).click();
     await expect(
-      dialog.getByRole("region", { name: "People and groups on the access list" }).getByText(colleague.name),
+      dialog.getByRole("region", { name: "Who has access" }).getByText(colleague.name),
     ).toBeVisible();
 
+    await dialog.getByRole("button", { name: "Change", exact: true }).click();
     await dialog.getByRole("combobox", { name: "Who can view this page" }).click();
     await page.getByRole("option", { name: "Only the people and groups on the list" }).click();
     await dialog
@@ -226,7 +227,7 @@ test("restricts and shares a page, opens links and decides an access request", a
       .click();
     await expect(page.getByText(/^Page restricted/)).toBeVisible();
 
-    await dialog.getByRole("tab", { name: "Share links" }).click();
+    await dialog.getByRole("tab", { name: /^Share links/ }).click();
     await dialog.getByRole("button", { name: "Create link" }).click();
     await expect(dialog.getByText("Add at least one person or group.")).toBeVisible();
     await dialog.getByRole("combobox", { name: "People and groups" }).fill(colleague.name);

@@ -210,9 +210,8 @@ describe("sharing a page with people", () => {
 
   it("names the effect of removing someone and keeps the entry when cancelled", async () => {
     const dialog = await openDialog();
-    await userEvent.click(
-      await within(dialog).findByRole("button", { name: "Remove Lukas Hofer from the list" }),
-    );
+    await userEvent.click(await within(dialog).findByRole("button", { name: /^Access of Lukas Hofer/ }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
     const pending = await within(dialog).findByRole("region", {
       name: "Remove Lukas Hofer from the access list?",
     });
@@ -224,6 +223,8 @@ describe("sharing a page with people", () => {
 
   it("restricts viewing after showing who loses access, including people the caller cannot see", async () => {
     const dialog = await openDialog();
+    expect(await within(dialog).findByText("Everyone who can view the space sees this page.")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Change" }));
     await userEvent.click(await within(dialog).findByRole("combobox", { name: "Who can view this page" }));
     await userEvent.click(
       await screen.findByRole("option", { name: "Only the people and groups on the list" }),
@@ -252,6 +253,7 @@ describe("sharing a page with people", () => {
       },
     });
     const dialog = await openDialog();
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Change" }));
     expect(await within(dialog).findByText(/Viewing is restricted on Contracts/)).toBeTruthy();
   });
 
@@ -266,6 +268,7 @@ describe("sharing a page with people", () => {
       },
     });
     const dialog = await openDialog();
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Change" }));
     expect(await within(dialog).findByText("Also named in the restrictions")).toBeTruthy();
     expect(within(dialog).getByText("Lukas Hofer")).toBeTruthy();
     expect(within(dialog).getByText(/need a role in the space/)).toBeTruthy();
@@ -273,6 +276,7 @@ describe("sharing a page with people", () => {
 
   it("explains why someone has access", async () => {
     const dialog = await openDialog();
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Change" }));
     await userEvent.click(
       await within(dialog).findByRole("button", { name: "Why does someone have access?" }),
     );
@@ -325,7 +329,7 @@ describe("sharing a page with people", () => {
 describe("share links", () => {
   async function openLinks() {
     const dialog = await openDialog();
-    await userEvent.click(within(dialog).getByRole("tab", { name: "Share links" }));
+    await userEvent.click(within(dialog).getByRole("tab", { name: /^Share links/ }));
     return dialog;
   }
 
@@ -333,11 +337,12 @@ describe("share links", () => {
     const dialog = await openLinks();
     expect(
       await within(dialog).findByText(
-        "Links for anyone without signing in are turned off in this organization.",
+        /Links for anyone without signing in are turned off in this organization\./,
       ),
     ).toBeTruthy();
-    expect(within(dialog).queryByRole("radio", { name: /Anyone with the link/ })).toBeNull();
-    await userEvent.click(within(dialog).getByRole("radio", { name: /Signed-in members of Platform Team/ }));
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Who can open it" }));
+    expect(screen.queryByRole("option", { name: /Anyone with the link/ })).toBeNull();
+    await userEvent.click(await screen.findByRole("option", { name: /Signed-in members of Platform Team/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Create link" }));
     await waitFor(() =>
       expect(posted(`/api/v1/pages/${PAGE}/share-links`)[0]?.body).toEqual({
@@ -350,8 +355,9 @@ describe("share links", () => {
 
   it("requires people for a link to named people", async () => {
     const dialog = await openLinks();
+    await userEvent.click(await within(dialog).findByRole("combobox", { name: "Who can open it" }));
     await userEvent.click(
-      await within(dialog).findByRole("radio", { name: /Only the people and groups you choose/ }),
+      await screen.findByRole("option", { name: /Only the people and groups you choose/ }),
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create link" }));
     expect(await within(dialog).findByText("Add at least one person or group.")).toBeTruthy();
@@ -361,7 +367,8 @@ describe("share links", () => {
   it("needs an expiry within the maximum for links for anyone", async () => {
     options = { enabled: true, anyone: true, anyoneMaxDays: 7 };
     const dialog = await openLinks();
-    await userEvent.click(await within(dialog).findByRole("radio", { name: /Anyone with the link/ }));
+    await userEvent.click(await within(dialog).findByRole("combobox", { name: "Who can open it" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Anyone with the link/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Create link" }));
     expect(
       await within(dialog).findByText(/Choose an end date. Links for anyone may last at most 7 days/),
@@ -388,14 +395,17 @@ describe("share links", () => {
     });
     const dialog = await openLinks();
     expect(await within(dialog).findByText(/This page is restricted/)).toBeTruthy();
-    expect(within(dialog).getAllByRole("radio")).toHaveLength(1);
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Who can open it" }));
+    expect(await screen.findAllByRole("option")).toHaveLength(1);
   });
 
   it("names the effects before revoking a link", async () => {
     links = [link()];
     const dialog = await openLinks();
-    expect(await within(dialog).findByRole("button", { name: "Copy link" })).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Revoke" }));
+    expect(await within(dialog).findByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(within(dialog).getByRole("tab", { name: /Share links/ }).textContent).toContain("1");
+    await userEvent.click(within(dialog).getByRole("button", { name: /More actions for the link/ }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Revoke" }));
     expect(
       await within(dialog).findByText(
         "The address stops working at once, and 2 people who opened the page only through this link lose access.",

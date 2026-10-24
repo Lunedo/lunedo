@@ -187,7 +187,7 @@ export function NoPageAccess({ pageId }: { pageId: string }) {
   const [sent, setSent] = useState(false);
   const [showMine, setShowMine] = useState(false);
   return (
-    <div className="mx-auto flex w-full max-w-field flex-col items-center gap-4 px-4 pt-16 pb-12 text-center">
+    <div className="mx-auto flex w-full max-w-field flex-col items-center gap-4 px-4 pt-12 pb-12 text-center">
       <span className="flex size-12 items-center justify-center rounded-full bg-surface-sunken text-text-muted">
         <Lock aria-hidden="true" className="size-icon-md" />
       </span>
