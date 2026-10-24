@@ -845,6 +845,50 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       });
       expect(report.counts).toEqual({ open: 3, done: 1, overdue: 1 });
     });
+
+    it("list tasks by who assigned them, sorted by any column and paged in that order", async () => {
+      const context = await setup();
+      await page(
+        context,
+        doc(
+          task(randomUUID(), "beta", { assignee: context.readerId, dueDate: daysFromToday(5) }),
+          task(randomUUID(), "Alpha", { assignee: context.readerId, dueDate: daysFromToday(9) }),
+          task(randomUUID(), "gamma", { assignee: context.readerId }),
+        ),
+        { mode: "live" },
+      );
+      const mine = await test.services.tasks.list(context.reader, { assignee: "me" });
+      expect(mine.items.map((entry) => entry.assignedBy)).toEqual([
+        { id: context.editorId, name: "Editor" },
+        { id: context.editorId, name: "Editor" },
+        { id: context.editorId, name: "Editor" },
+      ]);
+      expect(
+        (await test.services.tasks.list(context.editor, { assignedBy: "me" })).items.map(
+          (entry) => entry.text,
+        ),
+      ).toEqual(["beta", "Alpha", "gamma"]);
+      expect((await test.services.tasks.list(context.reader, { assignedBy: "me" })).items).toEqual([]);
+      const first = await test.services.tasks.list(context.reader, {
+        assignee: "me",
+        sort: "text",
+        direction: "desc",
+        limit: 2,
+      });
+      expect(first.items.map((entry) => entry.text)).toEqual(["gamma", "beta"]);
+      const rest = await test.services.tasks.list(context.reader, {
+        assignee: "me",
+        sort: "text",
+        direction: "desc",
+        after: first.next ?? undefined,
+      });
+      expect(rest.items.map((entry) => entry.text)).toEqual(["Alpha"]);
+      expect(
+        (await test.services.tasks.list(context.reader, { assignee: "me", sort: "text" })).items.map(
+          (entry) => entry.text,
+        ),
+      ).toEqual(["Alpha", "beta", "gamma"]);
+    });
   });
 
   describe("reactions", () => {

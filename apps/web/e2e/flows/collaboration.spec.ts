@@ -59,7 +59,7 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await expect(other.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
 
-  await other.goto("/tasks?filter=done");
+  await other.goto("/tasks?view=done");
   await expect(other.getByText("Test the TCP fallback")).toBeVisible();
   await expectAccessible(other, "my tasks");
 });

@@ -35707,6 +35707,33 @@
                             ],
                             "description": "The assignee, or null."
                           },
+                          "assignedBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who assigned the task to the assignee when publishing, or null."
+                          },
                           "item": {
                             "type": "object",
                             "properties": {
@@ -35760,6 +35787,7 @@
                           "dueDate",
                           "overdue",
                           "assignee",
+                          "assignedBy",
                           "item"
                         ],
                         "additionalProperties": false,
@@ -36147,6 +36175,10 @@
                       "assignee": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                         "name": "Lukas Hofer"
+                      },
+                      "assignedBy": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
+                        "name": "Mira Klein"
                       },
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
@@ -260813,6 +260845,25 @@
             }
           },
           {
+            "name": "assignedBy",
+            "in": "query",
+            "required": false,
+            "description": "`me` for tasks the caller assigned, or an account ID of the person who assigned them.",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "me"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Account ID."
+                }
+              ]
+            }
+          },
+          {
             "name": "spaceId",
             "in": "query",
             "required": false,
@@ -260885,13 +260936,43 @@
             }
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "`due` (default, tasks without a due date last), `text`, `item` (title of the page) or `assignedBy` (name).",
+            "schema": {
+              "default": "due",
+              "type": "string",
+              "enum": [
+                "due",
+                "text",
+                "item",
+                "assignedBy"
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "description": "`asc` (default) or `desc`.",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
             "name": "cursor",
             "in": "query",
             "required": false,
             "description": "Cursor from `nextCursor` of the previous page.",
             "schema": {
               "type": "string",
-              "maxLength": 200
+              "maxLength": 2000
             }
           },
           {
@@ -260971,6 +261052,33 @@
                             ],
                             "description": "The assignee, or null."
                           },
+                          "assignedBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who assigned the task to the assignee when publishing, or null."
+                          },
                           "item": {
                             "type": "object",
                             "properties": {
@@ -261024,12 +261132,13 @@
                           "dueDate",
                           "overdue",
                           "assignee",
+                          "assignedBy",
                           "item"
                         ],
                         "additionalProperties": false,
                         "description": "A task from published content."
                       },
-                      "description": "Tasks sorted by due date, tasks without one last."
+                      "description": "Tasks in the order of `sort`; by default by due date, tasks without one last."
                     },
                     "counts": {
                       "type": "object",
@@ -261088,6 +261197,10 @@
                       "assignee": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                         "name": "Lukas Hofer"
+                      },
+                      "assignedBy": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
+                        "name": "Mira Klein"
                       },
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",

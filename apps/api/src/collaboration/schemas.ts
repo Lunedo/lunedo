@@ -24,6 +24,7 @@ import {
   pageReportSorts,
   taskReportDueWindows,
   taskReportStatuses,
+  taskSorts,
   treeItemKinds,
 } from "@lunedo/server";
 import { z } from "zod";
@@ -240,6 +241,10 @@ export const taskEntrySchema = z
       .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })
       .nullable()
       .describe("The assignee, or null."),
+    assignedBy: z
+      .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })
+      .nullable()
+      .describe("Who assigned the task to the assignee when publishing, or null."),
     item: z
       .object({
         id: uuid("Page or blog post with the task."),
@@ -260,6 +265,7 @@ export const exampleTask = {
   dueDate: "2026-10-17",
   overdue: false,
   assignee: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer" },
+  assignedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21", name: "Mira Klein" },
   item: {
     id: exampleItem.id,
     kind: "page",
@@ -272,7 +278,9 @@ export const exampleTask = {
 
 export const taskListSchema = z
   .object({
-    items: z.array(taskEntrySchema).describe("Tasks sorted by due date, tasks without one last."),
+    items: z
+      .array(taskEntrySchema)
+      .describe("Tasks in the order of `sort`; by default by due date, tasks without one last."),
     counts: z
       .object({
         open: z.number().int().describe("Open tasks that match the filters other than the status."),
@@ -290,6 +298,10 @@ export const taskQuerySchema = z
       .union([z.literal("me"), uuid("Account ID.")])
       .optional()
       .describe("`me` for the caller's tasks, or an account ID. Leave it out for everyone."),
+    assignedBy: z
+      .union([z.literal("me"), uuid("Account ID.")])
+      .optional()
+      .describe("`me` for tasks the caller assigned, or an account ID of the person who assigned them."),
     spaceId: uuid("Only tasks in this space.").optional(),
     seriesId: uuid(
       "Only tasks written in the meetings of this meeting series. Meetings that were skipped are left out.",
@@ -303,7 +315,14 @@ export const taskQuerySchema = z
       .describe(
         "`any` (default), `overdue`, `next7Days` and `next30Days` (including overdue ones) or `none` for tasks without a due date.",
       ),
-    cursor: z.string().max(200).optional().describe("Cursor from `nextCursor` of the previous page."),
+    sort: z
+      .enum(taskSorts)
+      .default("due")
+      .describe(
+        "`due` (default, tasks without a due date last), `text`, `item` (title of the page) or `assignedBy` (name).",
+      ),
+    direction: z.enum(["asc", "desc"]).default("asc").describe("`asc` (default) or `desc`."),
+    cursor: z.string().max(2000).optional().describe("Cursor from `nextCursor` of the previous page."),
     limit: z.coerce
       .number()
       .int()

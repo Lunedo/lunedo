@@ -6307,12 +6307,18 @@
   },
   "tasks": {
     "myTitle": "My tasks",
-    "myDescription": "Tasks assigned to you on pages and blog posts you can read, across all spaces.",
+    "myDescription": "Tasks assigned to you on pages, in blog posts and in meetings, across all spaces.",
     "filter": "Show",
     "filters": {
-      "open": "Open",
-      "overdue": "Overdue",
-      "done": "Done"
+      "all": "All",
+      "anyone": "Everyone",
+      "space": "Space",
+      "due": "Due",
+      "assignedBy": "Assigned by",
+      "chosen": "Chosen",
+      "searchSpace": "Search spaces by name",
+      "nobodyFound": "Nobody with this name found.",
+      "typeName": "Type a name."
     },
     "empty": {
       "open": {
@@ -6326,6 +6332,10 @@
       "done": {
         "title": "No done tasks yet",
         "description": "Tasks you or others check off appear here."
+      },
+      "created": {
+        "title": "No open tasks from you",
+        "description": "Tasks you assign to others in published content appear here."
       }
     },
     "listLabel": "Tasks",
@@ -6385,7 +6395,32 @@
       "pagesHint": "Only tasks on these pages and the pages below them. Leave empty for every page.",
       "labelsHint": "Only tasks on pages with at least one of these labels. Leave empty for every page."
     },
-    "checkOnPages": "Tasks are checked on the pages made from this template."
+    "checkOnPages": "Tasks are checked on the pages made from this template.",
+    "views": {
+      "open": "Open",
+      "done": "Done",
+      "created": "Created by me"
+    },
+    "group": {
+      "label": "Group",
+      "due": "Due date",
+      "space": "Space",
+      "none": "None"
+    },
+    "groups": {
+      "overdue": "Overdue",
+      "thisWeek": "This week",
+      "later": "Later",
+      "none": "No date"
+    },
+    "columns": {
+      "task": "Task",
+      "page": "Page",
+      "due": "Due",
+      "assignedBy": "From",
+      "assignee": "For"
+    },
+    "nobody": "Nobody"
   },
   "blog": {
     "title": "Blog",

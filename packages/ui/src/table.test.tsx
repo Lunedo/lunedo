@@ -30,6 +30,19 @@ function renderTable(props: Partial<Parameters<typeof Table<Person>>[0]> = {}) {
 }
 
 describe("Table", () => {
+  it("puts a heading row with its count before each group of rows", () => {
+    renderTable({
+      rows: [...people, { id: "3", name: "Mira Klein", role: "Member" }],
+      groupOf: (row) => ({ key: row.role, label: row.role, count: row.role === "Admin" ? 1 : 2 }),
+    });
+    const table = screen.getByRole("table", { name: "Members" });
+    const groups = within(table)
+      .getAllByRole("columnheader")
+      .filter((cell) => cell.getAttribute("scope") === "colgroup");
+    expect(groups.map((cell) => cell.textContent)).toEqual(["Admin1", "Member2"]);
+    expect(within(table).getAllByRole("row")).toHaveLength(6);
+  });
+
   it("renders a captioned table with its rows", () => {
     renderTable();
     const table = screen.getByRole("table", { name: "Members" });

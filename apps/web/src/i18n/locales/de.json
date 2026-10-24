@@ -6307,12 +6307,18 @@
   },
   "tasks": {
     "myTitle": "Meine Aufgaben",
-    "myDescription": "Dir zugewiesene Aufgaben auf Seiten und in Blogbeiträgen, die du lesen kannst, über alle Spaces.",
+    "myDescription": "Dir zugewiesene Aufgaben auf Seiten, in Blogbeiträgen und Besprechungen, über alle Spaces.",
     "filter": "Anzeigen",
     "filters": {
-      "open": "Offen",
-      "overdue": "Überfällig",
-      "done": "Erledigt"
+      "all": "Alle",
+      "anyone": "Alle Personen",
+      "space": "Space",
+      "due": "Fällig",
+      "assignedBy": "Zugewiesen von",
+      "chosen": "Ausgewählt",
+      "searchSpace": "Space nach Namen suchen",
+      "nobodyFound": "Niemand mit diesem Namen gefunden.",
+      "typeName": "Tippe einen Namen."
     },
     "empty": {
       "open": {
@@ -6326,6 +6332,10 @@
       "done": {
         "title": "Noch keine erledigten Aufgaben",
         "description": "Aufgaben, die du oder andere abhaken, erscheinen hier."
+      },
+      "created": {
+        "title": "Keine offenen Aufgaben von dir",
+        "description": "Aufgaben, die du anderen in veröffentlichten Inhalten zuweist, erscheinen hier."
       }
     },
     "listLabel": "Aufgaben",
@@ -6385,7 +6395,32 @@
       "pagesHint": "Nur Aufgaben auf diesen Seiten und den Seiten darunter. Leer lassen für alle Seiten.",
       "labelsHint": "Nur Aufgaben auf Seiten mit mindestens einem dieser Labels. Leer lassen für alle Seiten."
     },
-    "checkOnPages": "Aufgaben werden auf den Seiten abgehakt, die aus dieser Vorlage entstehen."
+    "checkOnPages": "Aufgaben werden auf den Seiten abgehakt, die aus dieser Vorlage entstehen.",
+    "views": {
+      "open": "Offen",
+      "done": "Erledigt",
+      "created": "Von mir erstellt"
+    },
+    "group": {
+      "label": "Gruppieren",
+      "due": "Fälligkeit",
+      "space": "Space",
+      "none": "Keine"
+    },
+    "groups": {
+      "overdue": "Überfällig",
+      "thisWeek": "Diese Woche",
+      "later": "Später",
+      "none": "Ohne Datum"
+    },
+    "columns": {
+      "task": "Aufgabe",
+      "page": "Seite",
+      "due": "Fällig",
+      "assignedBy": "Von",
+      "assignee": "Für"
+    },
+    "nobody": "Niemand"
   },
   "blog": {
     "title": "Blog",

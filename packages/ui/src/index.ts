@@ -96,6 +96,7 @@ export {
   type TextareaProps,
   useFieldControl,
 } from "./field.js";
+export { FilterMenu, type FilterMenuProps, type FilterOption } from "./filter-menu.js";
 export { focusFirstInvalid, focusFirstInvalidSoon } from "./focus-invalid.js";
 export {
   type FuzzyMatch,
@@ -175,6 +176,7 @@ export {
   type SortDirection,
   Table,
   type TableColumn,
+  type TableGroup,
   type TablePagination,
   type TableProps,
   type TableSort,

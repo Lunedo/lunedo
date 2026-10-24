@@ -7,7 +7,7 @@ import {
   RotateCcw,
   Search,
 } from "lucide-react";
-import type { Key, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { Fragment, type Key, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { SkeletonText } from "./feedback.js";
@@ -42,6 +42,12 @@ export interface TablePagination {
   onNext: () => void;
 }
 
+export interface TableGroup {
+  key: string;
+  label: ReactNode;
+  count?: number;
+}
+
 export interface TableProps<T> {
   columns: TableColumn<T>[];
   rows: T[];
@@ -54,6 +60,7 @@ export interface TableProps<T> {
   pagination?: TablePagination;
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
+  groupOf?: (row: T) => TableGroup;
 }
 
 const CONTROLS = "a, button, input, select, textarea, label, [role=menuitem], [role=checkbox], [role=switch]";
@@ -88,6 +95,7 @@ export function Table<T>({
   pagination,
   onRowClick,
   rowLabel,
+  groupOf,
 }: TableProps<T>) {
   const labels = useUiLabels();
   const cellClass = (column: TableColumn<T>) =>
@@ -167,46 +175,67 @@ export function Table<T>({
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => (
-                  <tr
-                    key={rowKey(row)}
-                    className={classNames(
-                      "border-b border-border last:border-b-0",
-                      onRowClick &&
-                        "cursor-pointer hover:bg-hover focus-visible:bg-hover focus-visible:focus-ring",
-                    )}
-                    {...(onRowClick
-                      ? {
-                          tabIndex: 0,
-                          "data-row-action": "",
-                          ...(rowLabel ? { "aria-label": rowLabel(row) } : {}),
-                          onClick: (event: MouseEvent<HTMLTableRowElement>) => {
-                            if (fromControl(event.target, event.currentTarget)) return;
-                            onRowClick(row);
-                          },
-                          onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
-                            if (event.target !== event.currentTarget) return;
-                            if (event.key !== "Enter" && event.key !== " ") return;
-                            event.preventDefault();
-                            onRowClick(row);
-                          },
-                        }
-                      : {})}
-                  >
-                    {columns.map((column) => (
-                      <td
-                        key={column.key}
+                rows.map((row, index) => {
+                  const group = groupOf?.(row);
+                  const previous = index > 0 ? rows[index - 1] : undefined;
+                  const startsGroup =
+                    group !== undefined && (previous === undefined || groupOf?.(previous).key !== group.key);
+                  return (
+                    <Fragment key={rowKey(row)}>
+                      {startsGroup ? (
+                        <tr data-table-group={group.key} className="border-b border-border">
+                          <th
+                            scope="colgroup"
+                            colSpan={columns.length}
+                            className="pt-4 pb-2 text-left text-xs font-semibold tracking-label text-text-muted uppercase"
+                          >
+                            {group.label}
+                            {group.count !== undefined ? (
+                              <span className="ml-2 font-normal tabular-nums">{group.count}</span>
+                            ) : null}
+                          </th>
+                        </tr>
+                      ) : null}
+                      <tr
                         className={classNames(
-                          cellClass(column),
-                          "py-2 align-middle",
-                          column.sticky && "bg-inherit",
+                          "border-b border-border last:border-b-0",
+                          onRowClick &&
+                            "cursor-pointer hover:bg-hover focus-visible:bg-hover focus-visible:focus-ring",
                         )}
+                        {...(onRowClick
+                          ? {
+                              tabIndex: 0,
+                              "data-row-action": "",
+                              ...(rowLabel ? { "aria-label": rowLabel(row) } : {}),
+                              onClick: (event: MouseEvent<HTMLTableRowElement>) => {
+                                if (fromControl(event.target, event.currentTarget)) return;
+                                onRowClick(row);
+                              },
+                              onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
+                                if (event.target !== event.currentTarget) return;
+                                if (event.key !== "Enter" && event.key !== " ") return;
+                                event.preventDefault();
+                                onRowClick(row);
+                              },
+                            }
+                          : {})}
                       >
-                        {column.cell(row)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                        {columns.map((column) => (
+                          <td
+                            key={column.key}
+                            className={classNames(
+                              cellClass(column),
+                              "py-2 align-middle",
+                              column.sticky && "bg-inherit",
+                            )}
+                          >
+                            {column.cell(row)}
+                          </td>
+                        ))}
+                      </tr>
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>

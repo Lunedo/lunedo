@@ -19,7 +19,7 @@ import {
 const TAG = "Tasks";
 const taskParams = z.object({ taskId: uuid("ID of the task.") }).strict();
 const pageParams = z.object({ pageId: uuid("ID of the page or blog post.") }).strict();
-const taskCursor = z.tuple([z.string().max(20), z.string().max(40)]);
+const taskCursor = z.tuple([z.string().max(1000), z.string().max(40)]);
 const exampleStatus = {
   id: exampleTask.id,
   done: true,
@@ -53,12 +53,15 @@ export class TasksController {
     const after = decodeCursor(query.cursor, taskCursor);
     const result = await this.#services.tasks.list(actorOf(request), {
       assignee: query.assignee,
+      assignedBy: query.assignedBy,
       spaceId: query.spaceId,
       seriesId: query.seriesId,
       pageIds: query.pageIds,
       labels: query.labels,
       status: query.status,
       due: query.due,
+      sort: query.sort,
+      direction: query.direction,
       after: after ?? undefined,
       limit: query.limit,
     });

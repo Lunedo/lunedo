@@ -234,7 +234,15 @@ const searchRoute = createRoute({
 const myTasksRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/tasks",
-  validateSearch: z.object({ filter: z.enum(["open", "overdue", "done"]).optional().catch(undefined) }),
+  validateSearch: z.object({
+    view: z.enum(["open", "done", "created"]).optional().catch(undefined),
+    space: idSchema.optional().catch(undefined),
+    due: z.enum(["any", "overdue", "next7Days", "next30Days", "none"]).optional().catch(undefined),
+    by: idSchema.optional().catch(undefined),
+    group: z.enum(["due", "space", "none"]).optional().catch(undefined),
+    sort: z.enum(["due", "text", "item", "assignedBy"]).optional().catch(undefined),
+    dir: z.enum(["asc", "desc"]).optional().catch(undefined),
+  }),
   component: lazyRouteComponent(() => import("./collaboration/my-tasks-screen.js"), "MyTasksScreen"),
 });
 

@@ -136,6 +136,7 @@ const task = (id: string, text: string, extra: Record<string, unknown> = {}) => 
   dueDate: null,
   overdue: false,
   assignee: { id: OLIVIA.id, name: OLIVIA.name },
+  assignedBy: null,
   item: {
     id: VPN,
     kind: "page",
@@ -489,7 +490,7 @@ describe("tasks in the read view", () => {
 });
 
 describe("My tasks", () => {
-  it("lists my tasks with counts, marks overdue ones and filters by overdue", async () => {
+  it("groups my tasks by due date, sorts by a column and filters by due date", async () => {
     const { requests } = mockApi(
       routes("reader", {
         "GET /api/v1/tasks": (request) => ({
@@ -497,8 +498,8 @@ describe("My tasks", () => {
             items: request.path.includes("due=overdue")
               ? [task(MY_TASK, "Test the fallback", { dueDate: "2026-10-01", overdue: true })]
               : [
+                  task(OTHER_TASK, "Rotate the key", { assignedBy: { id: OLIVIA.id, name: OLIVIA.name } }),
                   task(MY_TASK, "Test the fallback", { dueDate: "2026-10-01", overdue: true }),
-                  task(OTHER_TASK, "Rotate the key"),
                 ],
             counts: { open: 2, done: 0, overdue: 1 },
             nextCursor: null,
@@ -508,11 +509,51 @@ describe("My tasks", () => {
     );
     await renderAt("/tasks");
     expect(await screen.findByRole("heading", { name: "My tasks" })).toBeTruthy();
-    expect(await screen.findByText("Rotate the key")).toBeTruthy();
-    expect(screen.getByText("2 open")).toBeTruthy();
-    expect(screen.getAllByText(/Overdue since/).length).toBeGreaterThan(0);
-    await userEvent.click(screen.getByRole("radio", { name: "Overdue" }));
+    const table = await screen.findByRole("table", { name: "Tasks" });
+    await within(table).findByText("Rotate the key");
+    const groups = within(table)
+      .getAllByRole("columnheader")
+      .filter((cell) => cell.getAttribute("scope") === "colgroup")
+      .map((cell) => cell.textContent);
+    expect(groups).toEqual(["Overdue1", "No date1"]);
+    await userEvent.click(within(table).getByRole("button", { name: /^Task/ }));
+    await waitFor(() => expect(requests.some((request) => request.path.includes("sort=text"))).toBe(true));
+    await userEvent.click(screen.getByRole("button", { name: "Due: All" }));
+    await userEvent.click(screen.getByRole("button", { name: "Overdue" }));
     await waitFor(() => expect(requests.some((request) => request.path.includes("due=overdue"))).toBe(true));
+  });
+
+  it("lists the tasks I assigned to others and checks one off in the list", async () => {
+    const { requests } = mockApi(
+      routes("reader", {
+        "GET /api/v1/tasks": () => ({
+          body: {
+            items: [task(MY_TASK, "Test the fallback")],
+            counts: { open: 1, done: 0, overdue: 0 },
+            nextCursor: null,
+          },
+        }),
+        [`PUT /api/v1/tasks/${MY_TASK}/status`]: () => ({
+          body: { id: MY_TASK, done: true, changedAt: null, changedBy: null },
+        }),
+      }),
+    );
+    await renderAt("/tasks");
+    await userEvent.click(await screen.findByRole("radio", { name: "Created by me" }));
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.path.includes("assignedBy=me") && !request.path.includes("assignee="),
+        ),
+      ).toBe(true),
+    );
+    expect(await screen.findByRole("columnheader", { name: "For" })).toBeTruthy();
+    await userEvent.click(await screen.findByRole("checkbox", { name: /Test the fallback/ }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/tasks/${MY_TASK}/status`))?.body).toEqual({
+        done: true,
+      }),
+    );
   });
 });
 

@@ -258,7 +258,9 @@ export {
   type TaskFilter,
   type TaskList,
   TaskService,
+  type TaskSort,
   type TaskStatus,
+  taskSorts,
 } from "./collaboration/tasks.js";
 export { configurationForBackup } from "./config/backup-view.js";
 export { clientAddress, trustedProxyList } from "./config/client-address.js";

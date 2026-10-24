@@ -28,6 +28,7 @@ export interface TaskEntry {
   dueDate: string | null;
   overdue: boolean;
   assignee: { id: string; name: string } | null;
+  assignedBy: { id: string; name: string } | null;
   item: {
     id: string;
     kind: "page" | "blogPost";
@@ -38,15 +39,21 @@ export interface TaskEntry {
   };
 }
 
+export const taskSorts = ["due", "text", "item", "assignedBy"] as const;
+export type TaskSort = (typeof taskSorts)[number];
+
 export interface TaskFilter {
   assignee?: string | undefined;
+  assignedBy?: string | undefined;
   spaceId?: string | undefined;
   seriesId?: string | undefined;
   pageIds?: readonly string[] | undefined;
   labels?: readonly string[] | undefined;
   status?: TaskReportStatus | undefined;
   due?: TaskReportDue | undefined;
-  after?: [sortDate: string, id: string] | undefined;
+  sort?: TaskSort | undefined;
+  direction?: "asc" | "desc" | undefined;
+  after?: [sortKey: string, id: string] | undefined;
   limit?: number | undefined;
 }
 
@@ -192,7 +199,17 @@ export class TaskService {
     const today = await this.#today(viewer);
     const limit = Math.min(Math.max(filter.limit ?? 100, 1), MAX_TASK_PAGE);
     const assignee = filter.assignee === "me" ? actorIdOf(viewer) : filter.assignee;
-    const sortDate = sql`coalesce(k.due_date, ${NO_DUE_DATE}::date)`;
+    const assignedBy = filter.assignedBy === "me" ? actorIdOf(viewer) : filter.assignedBy;
+    const sort = filter.sort ?? "due";
+    const sortKey =
+      sort === "due"
+        ? sql`coalesce(k.due_date, ${NO_DUE_DATE}::date)::text`
+        : sort === "text"
+          ? sql`lower(k.text)`
+          : sort === "item"
+            ? sql`lower(t.title)`
+            : sql`lower(coalesce(${this.#people.visibleName(viewer, sql`ab`)}, ''))`;
+    const direction = filter.direction === "desc" ? sql`desc` : sql`asc`;
     const due = filter.due ?? "any";
     const dueCondition =
       due === "overdue"
@@ -207,9 +224,11 @@ export class TaskService {
     const base = sql`
       from tasks k join tree_items t on t.id = k.item_id join spaces s on s.id = t.space_id
       left join accounts a on a.id = k.assignee_id
+      left join accounts ab on ab.id = k.assigned_by_id
       where k.published and t.archived_root_id is null and s.archived_at is null
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         ${assignee ? sql`and k.assignee_id = ${assignee}` : sql``}
+        ${assignedBy ? sql`and k.assigned_by_id = ${assignedBy}` : sql``}
         ${filter.spaceId ? sql`and t.space_id = ${filter.spaceId}` : sql``}
         ${filter.seriesId ? sql`and exists (select 1 from meetings m where m.item_id = t.id and m.series_id = ${filter.seriesId} and m.state <> 'skipped')` : sql``}
         ${filter.pageIds?.length ? sql`and t.path && ${visiblePages(this.#authorization, viewer, filter.pageIds)}` : sql``}
@@ -227,9 +246,11 @@ export class TaskService {
       text: string;
       done: boolean;
       due_date: string | null;
-      sort_date: string;
+      sort_key: string;
       assignee_id: string | null;
       assignee_name: string | null;
+      assigned_by_id: string | null;
+      assigned_by_name: string | null;
       item_id: string;
       kind: "page" | "blogPost";
       title: string;
@@ -237,12 +258,19 @@ export class TaskService {
       key: string;
       space_name: string;
     }>(sql`
-      select k.id, k.text, k.done, k.due_date::text as due_date, ${sortDate}::text as sort_date, k.assignee_id,
-        ${this.#people.visibleName(viewer, sql`a`)} as assignee_name, t.id as item_id, t.kind, t.title, t.space_id,
+      select k.id, k.text, k.done, k.due_date::text as due_date, ${sortKey} as sort_key, k.assignee_id,
+        ${this.#people.visibleName(viewer, sql`a`)} as assignee_name, k.assigned_by_id,
+        ${this.#people.visibleName(viewer, sql`ab`)} as assigned_by_name, t.id as item_id, t.kind, t.title, t.space_id,
         ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key, ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
       ${base} ${statusCondition}
-        ${filter.after ? sql`and (${sortDate}, k.id) > (${filter.after[0]}::date, ${filter.after[1]}::uuid)` : sql``}
-      order by ${sortDate}, k.id
+        ${
+          filter.after
+            ? filter.direction === "desc"
+              ? sql`and (${sortKey}, k.id) < (${filter.after[0]}::text, ${filter.after[1]}::uuid)`
+              : sql`and (${sortKey}, k.id) > (${filter.after[0]}::text, ${filter.after[1]}::uuid)`
+            : sql``
+        }
+      order by ${sortKey} ${direction}, k.id ${direction}
       limit ${limit + 1}`);
     const rows = result.rows.slice(0, limit);
     const last = rows.at(-1);
@@ -256,6 +284,10 @@ export class TaskService {
         overdue: !row.done && row.due_date !== null && row.due_date < today,
         assignee:
           row.assignee_id && row.assignee_name ? { id: row.assignee_id, name: row.assignee_name } : null,
+        assignedBy:
+          row.assigned_by_id && row.assigned_by_name
+            ? { id: row.assigned_by_id, name: row.assigned_by_name }
+            : null,
         item: {
           id: row.item_id,
           kind: row.kind,
@@ -270,7 +302,7 @@ export class TaskService {
         done: Number(count?.done ?? 0),
         overdue: Number(count?.overdue ?? 0),
       },
-      next: result.rows.length > limit && last ? [last.sort_date, last.id] : null,
+      next: result.rows.length > limit && last ? [last.sort_key, last.id] : null,
     };
   }
 }
