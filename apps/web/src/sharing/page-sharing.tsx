@@ -17,13 +17,17 @@ export interface PageSharing {
 }
 
 export function usePageSharing(
-  page: SharedPage & { viewRestriction: "none" | "own" | "inherited"; editRestricted: boolean },
+  page: SharedPage & {
+    viewRestriction: "none" | "own" | "inherited";
+    editRestricted: boolean;
+    spaceRole?: string | null;
+  },
   enabled: boolean,
 ): PageSharing {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const mine = useQuery({ ...myAccessQuery(page.id), enabled, throwOnError: false });
-  const role = mine.data?.role ?? null;
+  const role = mine.data ? (mine.data.role ?? null) : page.editRestricted ? null : (page.spaceRole ?? null);
   const canShare = enabled && role !== null && EDITING.has(role);
   const restricted = page.viewRestriction !== "none" || page.editRestricted;
   const shareButton = canShare ? (

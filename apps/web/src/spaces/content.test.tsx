@@ -877,6 +877,37 @@ describe("sharing and access", () => {
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 
+  it("keeps Share in the page bar while the own access is still loading", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/access/mine`]: (() => new Promise(() => undefined)) as never,
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByRole("button", { name: "Share" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+  });
+
+  it("does not offer Share for an edit-restricted page before the own access is known", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/items/${VPN}`]: () => ({
+          body: {
+            ...page(VPN, "VPN access", { editRestricted: true }),
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            spaceAccess: true,
+            ancestors: [],
+          },
+        }),
+        [`GET /api/v1/pages/${VPN}/access/mine`]: (() => new Promise(() => undefined)) as never,
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await screen.findByRole("heading", { name: "VPN access", level: 1 });
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
+  });
+
   it("opens a page shared with someone outside the space without the space", async () => {
     const shareOnly = {
       ...page(VPN, "VPN access", { mode: "live" }),
@@ -1054,7 +1085,7 @@ describe("edit mode", () => {
     const entries = within(await screen.findByRole("menu"))
       .getAllByRole("menuitem")
       .map((entry) => entry.textContent);
-    expect(entries).toEqual(["Versions", "Show sidebar", "Discard draft"]);
+    expect(entries).toEqual(["Versions", "Share", "Show sidebar", "Discard draft"]);
     await userEvent.click(screen.getByRole("menuitem", { name: "Show sidebar" }));
     await waitFor(() =>
       expect(

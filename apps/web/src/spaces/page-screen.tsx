@@ -148,6 +148,7 @@ function PageView({ page }: { page: ItemDetails }) {
       confidential: space.confidential,
       viewRestriction: page.viewRestriction,
       editRestricted: page.editRestricted,
+      spaceRole: space.role,
     },
     true,
   );
