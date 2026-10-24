@@ -157,7 +157,10 @@ export class BlogService {
         t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,
         b.scheduled_by, ${this.#people.visibleName(viewer, sql`scheduler`)} as scheduler_name, b.held_at,
         b.space_pinned_at, b.organization_pinned_at, b.cover_attachment_id, b.cover_focus_x, b.cover_focus_y,
-        (select count(*) from comments c where c.item_id = t.id and c.deleted_at is null) as comment_count,
+        (select count(*) from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
+          where c.item_id = t.id and c.deleted_at is null
+            and (r.quote is null or r.quote_public
+              or ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`, "editor")})) as comment_count,
         t.created_at,
         coalesce(${pinned}, '-infinity'::timestamptz)::text as sort_pinned,
         coalesce(b.published_at, b.scheduled_at, t.created_at)::text as sort_date

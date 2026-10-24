@@ -383,6 +383,27 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       expect(child?.updatedBy?.name).toBe("Editor");
     });
 
+    it("leaves comments on draft-only text out of the blog count for readers", async () => {
+      const context = await setup();
+      const post = await test.services.blog.create(context.editor, context.space.id, {
+        title: "Office move",
+      });
+      await test.services.documents.replace(context.editor, post.id, doc(paragraph("Public text.")));
+      await test.services.versions.publish(context.editor, post.id);
+      await test.services.documents.replace(
+        context.editor,
+        post.id,
+        doc(paragraph("Public text. Secret plan.")),
+      );
+      await test.services.comments.create(context.editor, post.id, {
+        body: comment("Draft"),
+        anchor: { exact: "Secret plan", prefix: "Public text. ", suffix: "." },
+      });
+      await test.services.comments.create(context.editor, post.id, { body: comment("Nice") });
+      expect((await test.services.blog.get(context.editor, post.id))?.commentCount).toBe(2);
+      expect((await test.services.blog.get(context.reader, post.id))?.commentCount).toBe(1);
+    });
+
     it("lists the people editing a page until they leave", async () => {
       const context = await setup();
       const created = await publishedPage(context, doc(paragraph("Public text.")));
