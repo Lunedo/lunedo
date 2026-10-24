@@ -16,11 +16,19 @@ import { migrated } from "../../spaces/documents.js";
 import type { ArticleAddresses, ArticleRenderer } from "../articles.js";
 import { brandValues, interfaceLanguage, type PortalConfig, type PortalService } from "../portals.js";
 import type { PortalArticle, PortalArticleSummary, PortalCategory, PortalReader } from "../reader.js";
-import { fontFile, fontFiles, portalCss, portalScript, staticSearchScript } from "./assets.js";
+import {
+  fontFile,
+  fontFiles,
+  portalCss,
+  portalScript,
+  portalThemeScript,
+  staticSearchScript,
+} from "./assets.js";
 import { escapeHtml } from "./html.js";
 import { languageName, messagesFor } from "./messages.js";
 import {
   articlePage,
+  brandStyle,
   categoryPage,
   contactPage,
   folderTrail,
@@ -315,14 +323,19 @@ export class StaticSiteBuilder {
         frameSources: [],
         origin: "",
         nonce: "",
-        assets: { style: `${root}/_assets/portal.css`, script: `${root}/_assets/portal.js` },
-        brandStyle: `:root{--kb:${brand.light}}@media (prefers-color-scheme:dark){:root{--kb:${brand.dark}}}`,
+        assets: {
+          style: `${root}/_assets/portal.css`,
+          script: `${root}/_assets/portal.js`,
+          theme: `${root}/_assets/portal-theme.js`,
+        },
+        brandStyle: brandStyle(brand.light, brand.dark),
         logoUrl: logoPath ? `${root}/${logoPath}` : null,
         account: null,
         appLink: null,
         accountLink: null,
         signInUrl: null,
         signOutUrl: "",
+        quickSearch: null,
         categories,
       };
     };
@@ -408,6 +421,7 @@ export class StaticSiteBuilder {
               type: null,
               sort: "title",
               page: 1,
+              deep: true,
             },
             Math.max(list.total, 1),
           ),
@@ -527,6 +541,7 @@ export class StaticSiteBuilder {
     }
     text("_assets/portal.css", portalCss);
     text("_assets/portal.js", portalScript);
+    text("_assets/portal-theme.js", portalThemeScript);
     text("_assets/static-search.js", staticSearchScript);
     text(
       "_assets/minisearch.js",

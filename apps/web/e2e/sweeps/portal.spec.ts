@@ -53,6 +53,8 @@ test("the portal screens pass the review in both themes, wide and narrow", async
       const screens: [string, string][] = [
         ["start", `${publicPortal.path}/`],
         ["category", `${publicPortal.path}/topics/${publicPortal.categories.IT}`],
+        ["topic", `${publicPortal.path}/topics/${publicPortal.categories["Remote access"]}`],
+        ["contact", `${publicPortal.path}/contact`],
         ["how-to", `${publicPortal.path}/${howTo.address}`],
         ["troubleshooting", `${publicPortal.path}/${trouble.address}`],
         ["search", `${publicPortal.path}/search?q=vpn`],

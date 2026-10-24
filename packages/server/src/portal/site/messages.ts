@@ -7,8 +7,6 @@ export interface PortalMessages {
   searchEmpty: string;
   home: (name: string) => string;
   categoriesNavigation: string;
-  allTopics: string;
-  topics: string;
   openMenu: string;
   closeMenu: string;
   account: (name: string) => string;
@@ -35,7 +33,6 @@ export interface PortalMessages {
   filters: { all: string; howTo: string; troubleshooting: string };
   breadcrumb: string;
   contactLine: (category: string) => string;
-  subcategories: string;
   allArticlesIn: (category: string) => string;
   articleTypeGroup: string;
   sortLabel: string;
@@ -128,6 +125,42 @@ export interface PortalMessages {
   previous: string;
   next: string;
   pageOf: (page: number, pages: number) => string;
+  areas: string;
+  allAreas: string;
+  areaKind: string;
+  topicKind: string;
+  topicsIn: (name: string) => string;
+  articlesIn: (name: string) => string;
+  includeSubtopics: string;
+  subtopicCount: (count: number) => string;
+  noDirectArticles: string;
+  showTopics: string;
+  hideTopics: string;
+  expand: (name: string) => string;
+  collapse: (name: string) => string;
+  restricted: string;
+  quickSearch: string;
+  quickTopics: string;
+  quickArticles: string;
+  quickMove: string;
+  quickOpen: string;
+  quickClose: string;
+  quickAll: (count: number) => string;
+  quickNone: (query: string) => string;
+  quickFailed: string;
+  appearance: string;
+  themes: { system: string; light: string; dark: string };
+  coverageAll: (count: number) => string;
+  coverage: (count: number, total: number) => string;
+  onlyIn: (language: string) => string;
+  alsoIn: (language: string) => string;
+  copyLink: string;
+  linkCopied: string;
+  linkCopyFailed: (url: string) => string;
+  copy: string;
+  contact: string;
+  signInRestrictedHeading: string;
+  signInRestrictedText: string;
   languageMenu: string;
   languageCurrent: (language: string) => string;
   fallbackNote: (requested: string, shown: string) => string;
@@ -141,10 +174,8 @@ const en: PortalMessages = {
   searchButton: "Search",
   searchEmpty: "No search term entered. Enter a word, for example VPN.",
   home: (name) => `${name}, start page`,
-  categoriesNavigation: "Categories",
-  allTopics: "All topics",
-  topics: "Topics",
-  openMenu: "Menu and search",
+  categoriesNavigation: "Areas",
+  openMenu: "Menu",
   closeMenu: "Close menu",
   account: (name) => `Account: ${name}`,
   signIn: "Sign in",
@@ -152,10 +183,10 @@ const en: PortalMessages = {
   appLinkDefault: "Go to the wiki",
   accountSettings: "Account settings",
   footerContact: (email) => `Contact: ${email}`,
-  poweredBy: "Provided with Lunedo",
+  poweredBy: "Made with Lunedo",
   defaultHeading: "How can we help?",
   frequentSearches: "Frequently searched:",
-  topicsHeading: "Topics",
+  topicsHeading: "Areas",
   articleCount: (count) => (count === 1 ? "1 article" : `${count} articles`),
   mostRead: "Most read",
   recentlyUpdated: "Recently updated",
@@ -172,7 +203,6 @@ const en: PortalMessages = {
   filters: { all: "All", howTo: "How-tos", troubleshooting: "Troubleshooting" },
   breadcrumb: "Breadcrumb",
   contactLine: (category) => `Questions about ${category}:`,
-  subcategories: "Subcategories",
   allArticlesIn: (category) => `All articles in ${category}`,
   articleTypeGroup: "Article type",
   sortLabel: "Sort",
@@ -214,14 +244,14 @@ const en: PortalMessages = {
   similarArticles: "Similar articles",
   resultsFor: (count, query) =>
     count === 1 ? `1 article for “${query}”` : `${count} articles for “${query}”`,
-  filterByCategory: "Filter by category",
+  filterByCategory: "Filter by area",
   notRightHeading: "Not what you need?",
   notRightText: "Write to us. Choose the area, and your question goes to the team in charge.",
   contactByArea: "Contact by area",
   reviewedOnLong: (date) => `Last reviewed on ${date}`,
   didYouMean: "Did you mean:",
   noResultsHeading: (query) => `No articles for “${query}”`,
-  noResultsLead: "We searched all categories. Another word may help, otherwise write to us.",
+  noResultsLead: "We searched all areas. Another word may help, otherwise write to us.",
   tipSpelling: "Check the spelling",
   tipSpellingText: "A single typo is enough for nothing to be found.",
   tipGeneral: "Search more generally",
@@ -277,6 +307,44 @@ const en: PortalMessages = {
   previous: "Previous",
   next: "Next",
   pageOf: (page, pages) => `Page ${page} of ${pages}`,
+  areas: "Areas",
+  allAreas: "All areas",
+  areaKind: "Area",
+  topicKind: "Topic",
+  topicsIn: (name) => `Topics in ${name}`,
+  articlesIn: (name) => `Articles in ${name}`,
+  includeSubtopics: "Include subtopics",
+  subtopicCount: (count) => (count === 1 ? "1 subtopic" : `${count} subtopics`),
+  noDirectArticles:
+    "No articles are directly in here. Look into the topics above or turn on “Include subtopics”.",
+  showTopics: "Topics",
+  hideTopics: "Hide topics",
+  expand: (name) => `Expand ${name}`,
+  collapse: (name) => `Collapse ${name}`,
+  restricted: "Only for some readers",
+  quickSearch: "Search",
+  quickTopics: "Topics",
+  quickArticles: "Articles",
+  quickMove: "↑↓ select",
+  quickOpen: "↵ open",
+  quickClose: "Close search",
+  quickAll: (count) => (count === 1 ? "Show the result" : `All ${count} results`),
+  quickNone: (query) => `Nothing found for “${query}”. Try another word or open the full search.`,
+  quickFailed: "The search did not answer. Check your connection and type again, or open the full search.",
+  appearance: "Appearance",
+  themes: { system: "Same as the system", light: "Light", dark: "Dark" },
+  coverageAll: (count) => `all ${count}`,
+  coverage: (count, total) => `${count} of ${total} translated`,
+  onlyIn: (language) => `only ${language}`,
+  alsoIn: (language) => `Also in ${language}`,
+  copyLink: "Copy link",
+  linkCopied: "Link copied",
+  linkCopyFailed: (url) => `The link could not be copied. Select it and copy it yourself: ${url}`,
+  copy: "Copy",
+  contact: "Contact",
+  signInRestrictedHeading: "Sign in to see this page",
+  signInRestrictedText:
+    "This page does not exist, or it is only for signed-in readers. Sign in, and you continue right here if you may read it.",
   languageMenu: "Language",
   languageCurrent: (language) => `Language: ${language}`,
   fallbackNote: (requested, shown) =>
@@ -291,10 +359,8 @@ const de: PortalMessages = {
   searchButton: "Suchen",
   searchEmpty: "Kein Suchbegriff eingegeben. Gib ein Wort ein, zum Beispiel VPN.",
   home: (name) => `${name}, Startseite`,
-  categoriesNavigation: "Kategorien",
-  allTopics: "Alle Themen",
-  topics: "Themen",
-  openMenu: "Menü und Suche",
+  categoriesNavigation: "Bereiche",
+  openMenu: "Menü",
   closeMenu: "Menü schließen",
   account: (name) => `Konto: ${name}`,
   signIn: "Anmelden",
@@ -302,10 +368,10 @@ const de: PortalMessages = {
   appLinkDefault: "Zum Wiki",
   accountSettings: "Kontoeinstellungen",
   footerContact: (email) => `Kontakt: ${email}`,
-  poweredBy: "Bereitgestellt mit Lunedo",
+  poweredBy: "Mit Lunedo erstellt",
   defaultHeading: "Wie können wir helfen?",
   frequentSearches: "Häufig gesucht:",
-  topicsHeading: "Themen",
+  topicsHeading: "Bereiche",
   articleCount: (count) => `${count} Artikel`,
   mostRead: "Meistgelesen",
   recentlyUpdated: "Zuletzt aktualisiert",
@@ -322,7 +388,6 @@ const de: PortalMessages = {
   filters: { all: "Alle", howTo: "Anleitungen", troubleshooting: "Störungen" },
   breadcrumb: "Pfad",
   contactLine: (category) => `Fragen zu ${category}:`,
-  subcategories: "Unterkategorien",
   allArticlesIn: (category) => `Alle Artikel in ${category}`,
   articleTypeGroup: "Artikelart",
   sortLabel: "Sortierung",
@@ -364,7 +429,7 @@ const de: PortalMessages = {
   relatedTroubleshooting: "Passende Störungen",
   similarArticles: "Ähnliche Artikel",
   resultsFor: (count, query) => `${count} Artikel zu „${query}“`,
-  filterByCategory: "Nach Kategorie filtern",
+  filterByCategory: "Nach Bereich filtern",
   notRightHeading: "Nicht das Richtige dabei?",
   notRightText: "Schreib uns. Wähle den Bereich, dann geht deine Frage an das zuständige Team.",
   contactByArea: "Kontakt nach Bereich",
@@ -372,7 +437,7 @@ const de: PortalMessages = {
   didYouMean: "Meintest du:",
   noResultsHeading: (query) => `Keine Artikel zu „${query}“`,
   noResultsLead:
-    "Wir haben in allen Kategorien gesucht. Vielleicht hilft ein anderes Wort, sonst schreib uns.",
+    "Wir haben in allen Bereichen gesucht. Vielleicht hilft ein anderes Wort, sonst schreib uns.",
   tipSpelling: "Schreibweise prüfen",
   tipSpellingText: "Ein Tippfehler reicht, damit nichts gefunden wird.",
   tipGeneral: "Allgemeiner suchen",
@@ -432,6 +497,45 @@ const de: PortalMessages = {
   previous: "Zurück",
   next: "Weiter",
   pageOf: (page, pages) => `Seite ${page} von ${pages}`,
+  areas: "Bereiche",
+  allAreas: "Alle Bereiche",
+  areaKind: "Bereich",
+  topicKind: "Thema",
+  topicsIn: (name) => `Themen in ${name}`,
+  articlesIn: (name) => `Artikel in ${name}`,
+  includeSubtopics: "Auch aus Unterthemen",
+  subtopicCount: (count) => (count === 1 ? "1 Unterthema" : `${count} Unterthemen`),
+  noDirectArticles:
+    "Hier liegen keine Artikel direkt. Schau in die Themen oben oder schalte „Auch aus Unterthemen“ ein.",
+  showTopics: "Themen",
+  hideTopics: "Themen ausblenden",
+  expand: (name) => `${name} aufklappen`,
+  collapse: (name) => `${name} zuklappen`,
+  restricted: "Nur für einen Teil der Lesenden",
+  quickSearch: "Suchen",
+  quickTopics: "Themen",
+  quickArticles: "Artikel",
+  quickMove: "↑↓ auswählen",
+  quickOpen: "↵ öffnen",
+  quickClose: "Suche schließen",
+  quickAll: (count) => (count === 1 ? "Ergebnis anzeigen" : `Alle ${count} Ergebnisse`),
+  quickNone: (query) => `Nichts gefunden zu „${query}“. Versuch ein anderes Wort oder öffne die ganze Suche.`,
+  quickFailed:
+    "Die Suche antwortet gerade nicht. Prüfe deine Verbindung und tippe noch einmal, oder öffne die ganze Suche.",
+  appearance: "Darstellung",
+  themes: { system: "Wie das System", light: "Hell", dark: "Dunkel" },
+  coverageAll: (count) => `alle ${count}`,
+  coverage: (count, total) => `${count} von ${total} übersetzt`,
+  onlyIn: (language) => `nur ${language}`,
+  alsoIn: (language) => `Auch auf ${language}`,
+  copyLink: "Link kopieren",
+  linkCopied: "Link kopiert",
+  linkCopyFailed: (url) => `Der Link ließ sich nicht kopieren. Markiere ihn und kopiere ihn selbst: ${url}`,
+  copy: "Kopieren",
+  contact: "Kontakt",
+  signInRestrictedHeading: "Melde dich an, um diese Seite zu sehen",
+  signInRestrictedText:
+    "Diese Seite gibt es nicht, oder sie ist nur für angemeldete Lesende. Melde dich an, dann geht es hier weiter, wenn du sie lesen darfst.",
   languageMenu: "Sprache",
   languageCurrent: (language) => `Sprache: ${language}`,
   fallbackNote: (requested, shown) =>

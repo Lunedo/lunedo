@@ -56,8 +56,10 @@ const portalSchema = z
     topBarThreshold: z
       .number()
       .int()
-      .describe("From this number of categories on, the top bar shows a single topics menu."),
-    poweredBy: z.boolean().describe("Whether the footer says that the portal is provided with Lunedo."),
+      .describe(
+        "Not used any more: the top bar always shows a single menu of all areas. Kept so that existing clients keep working.",
+      ),
+    poweredBy: z.boolean().describe("Whether the footer says that the portal is made with Lunedo."),
     feedbackRetentionMonths: z
       .number()
       .int()
@@ -108,8 +110,8 @@ const appearanceSchema = z
       .min(1)
       .max(TOP_BAR_THRESHOLD_MAX)
       .optional()
-      .describe("See the portal."),
-    poweredBy: z.boolean().optional().describe("Shows “Provided with Lunedo” in the footer."),
+      .describe("Not used any more; accepted so that existing clients keep working."),
+    poweredBy: z.boolean().optional().describe("Shows “Made with Lunedo” in the footer."),
     feedbackRetentionMonths: z
       .number()
       .int()

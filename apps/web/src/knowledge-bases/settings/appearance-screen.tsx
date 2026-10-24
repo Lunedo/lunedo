@@ -143,15 +143,6 @@ function AppearanceForm({ portal }: { portal: PortalSettings }) {
             disabled={!editable}
             onSave={(welcomeText) => save({ welcomeText })}
           />
-          <NumberSetting
-            label={t("knowledgeBase.appearance.threshold")}
-            hint={t("knowledgeBase.appearance.thresholdHint")}
-            value={portal.topBarThreshold}
-            min={1}
-            max={100}
-            disabled={!editable}
-            onSave={(topBarThreshold) => save({ topBarThreshold })}
-          />
           <p className="text-sm text-text-muted">
             {t("knowledgeBase.appearance.orderHint")}{" "}
             <Link

@@ -5,6 +5,7 @@ import {
   accountPrincipal,
   articlePage,
   articlePath,
+  brandStyle,
   brandValues,
   type CategoryState,
   categoryPage,
@@ -34,6 +35,8 @@ import {
   portalCss,
   portalLinks,
   portalScript,
+  portalThemeScript,
+  quickSearchResult,
   RELATED_LIMIT,
   type SearchCursor,
   type SearchState,
@@ -66,6 +69,7 @@ const ARTICLE = /^\/(\d{1,9})(?:-([a-z0-9-]{0,200}))?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SORTS = ["views", "updated", "title"] as const;
 const FILTERS: readonly PortalArticleFilter[] = ["howTo", "troubleshooting"];
+const QUICK_ARTICLES = 6;
 
 interface Target {
   config: PortalConfig;
@@ -277,6 +281,12 @@ function serveAsset(reply: FastifyReply, name: string): FastifyReply {
       .type("text/css; charset=utf-8")
       .send(portalCss);
   }
+  if (name === PORTAL_ASSETS.theme) {
+    return reply
+      .header("cache-control", "public, max-age=31536000, immutable")
+      .type("text/javascript; charset=utf-8")
+      .send(portalThemeScript);
+  }
   if (name === PORTAL_ASSETS.script) {
     return reply
       .header("cache-control", "public, max-age=31536000, immutable")
@@ -414,6 +424,12 @@ async function buildView(
       ? `${target.root}/logo?v=o${config.organizationLogoRef}`
       : null;
   const assetBase = target.domain ? "/_assets" : "/help/_assets";
+  const languages = options.languages ?? pageLanguages(target, target.rest);
+  const coverage =
+    languages.languageLinks.length > 1
+      ? await services.portalReader.languageCoverage(viewer.principal, config)
+      : new Map<string, number>();
+  const total = coverage.get(config.defaultLanguage) ?? 0;
   return {
     config,
     t,
@@ -422,14 +438,25 @@ async function buildView(
     base: target.base,
     links: portalLinks(target.base, target.origin),
     static: false,
-    ...(options.languages ?? pageLanguages(target, target.rest)),
+    alternates: languages.alternates,
+    languageLinks: languages.languageLinks.map((link) => ({
+      ...link,
+      detail:
+        link.language === config.defaultLanguage
+          ? t.coverageAll(total)
+          : t.coverage(coverage.get(link.language) ?? 0, total),
+    })),
     note: options.note ?? null,
     maintenance: await maintenanceNote(services),
     frameSources: await services.embeds.frameSources(),
     origin: target.origin,
     nonce: randomBytes(16).toString("base64"),
-    assets: { style: `${assetBase}/${PORTAL_ASSETS.style}`, script: `${assetBase}/${PORTAL_ASSETS.script}` },
-    brandStyle: `:root{--kb:${brand.light}}@media (prefers-color-scheme:dark){:root{--kb:${brand.dark}}}`,
+    assets: {
+      style: `${assetBase}/${PORTAL_ASSETS.style}`,
+      script: `${assetBase}/${PORTAL_ASSETS.script}`,
+      theme: `${assetBase}/${PORTAL_ASSETS.theme}`,
+    },
+    brandStyle: brandStyle(brand.light, brand.dark),
     logoUrl,
     account: viewer.account ? { name: viewer.account.name, email: viewer.account.email } : null,
     appLink,
@@ -438,6 +465,7 @@ async function buildView(
       ? null
       : `${target.root}/sign-in?return=${encodeURIComponent(`${target.base}${target.rest}`)}`,
     signOutUrl: `${target.root}/sign-out`,
+    quickSearch: `${target.base}/search/quick`,
     categories,
   };
 }
@@ -514,6 +542,7 @@ async function route(
   const view = await buildView(services, target, viewer);
   if (rest === "/" || rest === "") return start(reply, services, target, viewer, view);
   if (rest === "/search") return search(request, reply, services, target, viewer, view, query);
+  if (rest === "/search/quick") return quickSearch(request, reply, services, target, viewer, view, query);
   if (rest === "/contact")
     return sendPage(reply, view, contactPage(view, (query.get("q") ?? "").slice(0, 200)));
   const topic = /^\/topics\/([0-9a-f-]{36})$/i.exec(rest);
@@ -570,9 +599,11 @@ async function category(
   const type = FILTERS.find((filter) => filter === query.get("type")) ?? null;
   const sort = SORTS.find((entry) => entry === query.get("sort")) ?? "views";
   const page = Math.min(Math.max(Number.parseInt(query.get("page") ?? "1", 10) || 1, 1), 1000);
-  const state: CategoryState = { type, sort, page };
+  const deep = query.get("deep") === "1";
+  const state: CategoryState = { type, sort, page, deep };
   const list = await services.portalReader.articles(viewer.principal, target.config, {
     categoryId: id,
+    direct: !deep,
     type,
     sort,
     limit: PORTAL_PAGE_SIZE,
@@ -647,6 +678,45 @@ async function search(
   return sendPage(reply, view, searchPage(view, state, result, more, mostRead));
 }
 
+async function quickSearch(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  services: AccountServices,
+  target: Target,
+  viewer: Viewer,
+  view: PortalView,
+  query: URLSearchParams,
+): Promise<FastifyReply> {
+  reply.header("cache-control", "private, no-store");
+  reply.header("x-content-type-options", "nosniff");
+  const text = (query.get("q") ?? "").trim().slice(0, 200);
+  const empty = {
+    results: [],
+    total: 0,
+    nextCursor: null,
+    categories: [],
+    typeCounts: { all: 0, howTo: 0, troubleshooting: 0 },
+    suggestion: null,
+  };
+  try {
+    const result = text
+      ? await services.portalReader.search(viewer.principal, target.config, {
+          query: text,
+          categoryId: null,
+          type: null,
+          cursor: null,
+          language: target.language,
+        })
+      : empty;
+    return reply
+      .type("application/json; charset=utf-8")
+      .send(quickSearchResult(view, text, result, QUICK_ARTICLES));
+  } catch (error) {
+    request.log.error({ err: error }, "A portal quick search failed");
+    return reply.code(503).type("application/json; charset=utf-8").send({ code: "searchUnavailable" });
+  }
+}
+
 async function articleRoute(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -680,7 +750,6 @@ async function articleRoute(
   }
   const readerLanguage = interfaceLanguage(target.language);
   const articleView = await buildView(services, target, viewer, {
-    language: article.language,
     languages: {
       languageLinks: languageLinks(target, (language) => {
         const alternate = article.alternates.find((entry) => entry.language === language);

@@ -1,4 +1,4 @@
-import { introductionText, parseIntroduction } from "@lunedo/shared";
+import { parseIntroduction } from "@lunedo/shared";
 import type { ArticleSort } from "../../search/adapter.js";
 import { PORTAL_BASE_PLACEHOLDER } from "../articles.js";
 import type { PortalConfig } from "../portals.js";
@@ -14,8 +14,10 @@ import { type Html, html, raw, when } from "./html.js";
 import { hasIcon, icon } from "./icons.js";
 import { languageName, type PortalMessages } from "./messages.js";
 
-export const VISIBLE_TOP_CATEGORIES = 5;
 const TYPE_ICONS = { howTo: "list-ordered", troubleshooting: "triangle-alert" } as const;
+const PATH_SEGMENTS = 3;
+const QUICK_COUNT_MARK = 987654321;
+export const QUICK_TOPICS = 4;
 
 export interface PortalAccount {
   name: string;
@@ -27,6 +29,7 @@ export interface LanguageLink {
   label: string;
   href: string;
   current: boolean;
+  detail?: string | null;
 }
 
 export interface PortalLinks {
@@ -74,7 +77,7 @@ export interface PortalView {
   frameSources: string[];
   origin: string;
   nonce: string;
-  assets: { style: string; script: string };
+  assets: { style: string; script: string; theme: string };
   brandStyle: string;
   logoUrl: string | null;
   account: PortalAccount | null;
@@ -82,6 +85,7 @@ export interface PortalView {
   accountLink: string | null;
   signInUrl: string | null;
   signOutUrl: string;
+  quickSearch: string | null;
   categories: PortalCategory[];
 }
 
@@ -101,20 +105,8 @@ export function mailto(address: string, subject: string, body?: string): string 
   return `mailto:${address}?subject=${encodeURIComponent(subject)}${body ? `&body=${encodeURIComponent(body)}` : ""}`;
 }
 
-export interface TopBar {
-  links: PortalCategory[];
-  more: PortalCategory[];
-  collapsed: boolean;
-}
-
-export function topBar(categories: readonly PortalCategory[], threshold: number): TopBar {
-  const top = categories.filter((category) => category.parentId === null);
-  if (top.length >= threshold) return { links: [], more: top, collapsed: true };
-  return {
-    links: top.slice(0, VISIBLE_TOP_CATEGORIES),
-    more: top.slice(VISIBLE_TOP_CATEGORIES),
-    collapsed: false,
-  };
+export function brandStyle(light: string, dark: string): string {
+  return `:root{--kb:${light}}@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--kb:${dark}}}:root[data-theme=dark]{--kb:${dark}}`;
 }
 
 export function initialOf(title: string): string {
@@ -146,14 +138,22 @@ function shortDate(view: PortalView, date: Date): string {
   }).format(date);
 }
 
-function categoryIcon(category: { title: string; icon: string | null }, size: number): Html {
-  return hasIcon(category.icon)
-    ? html`<span class="cicon s${size}" aria-hidden="true">${icon(category.icon)}</span>`
-    : html`<span class="cicon s${size}" aria-hidden="true" data-initial="${initialOf(category.title)}"></span>`;
+function folderIcon(folder: { title: string; icon: string | null }, size: number): Html {
+  return hasIcon(folder.icon)
+    ? html`<span class="cicon s${size}" aria-hidden="true">${icon(folder.icon)}</span>`
+    : html`<span class="cicon s${size}" aria-hidden="true" data-initial="${initialOf(folder.title)}"></span>`;
 }
 
 function categoryOf(view: PortalView, id: string | null): PortalCategory | undefined {
   return id ? view.categories.find((category) => category.id === id) : undefined;
+}
+
+function areasOf(view: PortalView): PortalCategory[] {
+  return view.categories.filter((category) => category.parentId === null);
+}
+
+function childrenOf(view: PortalView, id: string): PortalCategory[] {
+  return view.categories.filter((category) => category.parentId === id);
 }
 
 export function folderTrail(categories: readonly PortalCategory[], ids: readonly string[]): PortalCategory[] {
@@ -173,14 +173,22 @@ export function ancestorsOf(
   return trail;
 }
 
-function nearestFolder(view: PortalView, ids: readonly string[]): PortalCategory | undefined {
-  return folderTrail(view.categories, ids).at(-1);
+export function shortenPath(titles: readonly string[]): string {
+  const shown =
+    titles.length > PATH_SEGMENTS ? [titles[0] ?? "", "…", ...titles.slice(-(PATH_SEGMENTS - 1))] : titles;
+  return shown.join(" › ");
 }
 
-function pathLabel(view: PortalView, ids: readonly string[]): string {
-  return folderTrail(view.categories, ids)
-    .map((category) => category.title)
-    .join(" › ");
+function pathOf(view: PortalView, ids: readonly string[], below?: string): Html | null {
+  const trail = folderTrail(view.categories, ids);
+  const start = below ? trail.findIndex((folder) => folder.id === below) + 1 : 0;
+  const titles = trail.slice(start).map((folder) => folder.title);
+  if (titles.length === 0) return null;
+  const full = titles.join(" › ");
+  const short = shortenPath(titles);
+  return short === full
+    ? html`<span class="path">${full}</span>`
+    : html`<span class="path" title="${full}">${short}</span>`;
 }
 
 export function introduction(source: string): Html {
@@ -206,8 +214,10 @@ function kindText(view: PortalView, type: PortalArticleSummary["type"]): Html | 
     : null;
 }
 
-function typeBadge(type: PortalArticleSummary["type"]): Html {
-  return html`<span class="tybadge ${type ?? ""}" aria-hidden="true">${icon(type ? TYPE_ICONS[type] : "file-text")}</span>`;
+function onlyIn(view: PortalView, article: { language: string }): Html | null {
+  return view.languageLinks.length > 1 && article.language !== view.lang
+    ? html`<span class="ltag" lang="${view.lang}">${view.t.onlyIn(languageName(article.language, view.lang))}</span>`
+    : null;
 }
 
 function brandMark(view: PortalView): Html {
@@ -231,48 +241,57 @@ function searchForm(
     <p class="err" id="${errorId}"${raw(options.error ? "" : " hidden")} data-search-error>${icon("circle-alert")}${view.t.searchEmpty}</p>`;
 }
 
-function header(
-  view: PortalView,
-  options: { current?: string | null; search?: boolean; navigation?: boolean },
-): Html {
-  const bar = topBar(view.categories, view.config.topBarThreshold);
+function areasMenu(view: PortalView, current: string | null): Html {
+  return html`<details class="dd areas" data-menu><summary>${view.t.areas}${icon("chevron-down")}</summary>
+    <div class="menu mega"><nav aria-label="${view.t.categoriesNavigation}">${areasOf(view).map(
+      (area) =>
+        html`<a href="${view.links.category(area.id)}"${raw(area.id === current ? ' aria-current="page"' : "")}>${folderIcon(area, 32)}<span class="trunc" title="${area.title}">${area.title}</span><span class="n">${area.articles}</span></a>`,
+    )}</nav></div></details>`;
+}
+
+function languageMenu(view: PortalView): Html | null {
+  const current = view.languageLinks.find((link) => link.current);
+  return when(
+    view.languageLinks.length > 1,
+    () =>
+      html`<details class="dd lang" data-menu><summary>${icon("languages")}<span class="code" aria-hidden="true">${(current?.language ?? "").toUpperCase()}</span><span class="sr">${view.t.languageCurrent(current?.label ?? "")}</span></summary>
+        <div class="menu" role="list" aria-label="${view.t.languageMenu}">${view.languageLinks.map(
+          (link) =>
+            html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}><span class="cur">${when(link.current, () => icon("check"))}</span><span class="trunc" title="${link.label}">${link.label}</span>${when(link.detail, () => html`<span class="n" lang="${view.lang}">${link.detail ?? ""}</span>`)}</a>`,
+        )}</div></details>`,
+  );
+}
+
+function themeMenu(view: PortalView): Html {
+  const { t } = view;
+  const choices = [
+    ["system", "sun-moon", t.themes.system],
+    ["light", "sun", t.themes.light],
+    ["dark", "moon", t.themes.dark],
+  ] as const;
+  return html`<details class="dd theme" data-menu data-theme-menu hidden><summary aria-label="${t.appearance}">${icon("sun-moon")}</summary>
+    <div class="menu" role="group" aria-label="${t.appearance}">${choices.map(
+      ([value, name, label]) =>
+        html`<button type="button" data-theme-choice="${value}" aria-pressed="false">${icon(name)}<span>${label}</span><span class="cur">${icon("check")}</span></button>`,
+    )}</div></details>`;
+}
+
+function header(view: PortalView, options: { current?: string | null; navigation?: boolean }): Html {
   const navigation = options.navigation !== false;
   const current = options.current ?? null;
-  const link = (category: PortalCategory) =>
-    html`<a href="${view.links.category(category.id)}"${raw(category.id === current ? ' aria-current="page"' : "")}>${category.title}</a>`;
-  const dropdown = (label: string, items: PortalCategory[]) =>
-    html`<details class="dd" data-menu><summary>${label}${icon("chevron-down")}</summary>
-      <div class="menu">${items.map(
-        (category) =>
-          html`<a href="${view.links.category(category.id)}">${categoryIcon(category, 32)}<span class="trunc" title="${category.title}">${category.title}</span></a>`,
-      )}</div></details>`;
   const account = view.account;
+  const areas = areasOf(view);
   return html`<header class="ph"><div class="pw ph-in">
       <a class="brand" href="${view.links.home}" aria-label="${view.t.home(view.config.name)}">${brandMark(view)}<b class="trunc">${view.config.name}</b></a>
-      ${when(
-        navigation && view.categories.length > 0,
-        () => html`<nav class="nav" aria-label="${view.t.categoriesNavigation}">
-          ${bar.links.map(link)}
-          ${when(bar.more.length > 0, () => dropdown(bar.collapsed ? view.t.topics : view.t.allTopics, bar.more))}
-        </nav>`,
-      )}
+      ${when(navigation && areas.length > 0, () => html`<div class="wide-only">${areasMenu(view, current)}</div>`)}
       <div class="ph-r">
         ${when(
-          navigation && options.search !== false,
-          () => html`<form class="hsearch" role="search" action="${view.links.searchAction}" method="get" data-search>
-            <label class="sr" for="header-search">${view.t.searchLabel}</label>${icon("search")}
-            <input id="header-search" name="q" type="search" placeholder="${view.t.searchLabel}" autocomplete="off" maxlength="200">
-          </form>`,
-        )}
-        ${when(
-          view.languageLinks.length > 1,
+          navigation,
           () =>
-            html`<details class="dd lang" data-menu><summary aria-label="${view.t.languageCurrent(view.languageLinks.find((link) => link.current)?.label ?? "")}">${icon("languages")}<span class="wide">${view.languageLinks.find((link) => link.current)?.label ?? ""}</span>${icon("chevron-down")}</summary>
-              <div class="menu" role="list" aria-label="${view.t.languageMenu}">${view.languageLinks.map(
-                (link) =>
-                  html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}><span class="trunc" title="${link.label}">${link.label}</span>${when(link.current, () => icon("check", "cur"))}</a>`,
-              )}</div></details>`,
+            html`<a class="btn ghost icon" href="${view.links.search()}" aria-label="${view.t.quickSearch}" title="${view.t.quickSearch}"${raw(view.quickSearch ? " data-quick-open" : "")}>${icon("search")}</a>`,
         )}
+        ${languageMenu(view)}
+        ${themeMenu(view)}
         ${when(
           navigation,
           () =>
@@ -280,16 +299,15 @@ function header(
         )}
         ${
           account
-            ? html`<details class="acct" data-menu><summary aria-label="${view.t.account(account.name)}"><span class="av" aria-hidden="true" data-initial="${initialOf(account.name).slice(0, 2)}"></span><span class="name trunc">${account.name.split(" ")[0]}</span>${icon("chevron-down")}</summary>
+            ? html`<details class="acct" data-menu><summary aria-label="${view.t.account(account.name)}"><span class="av" aria-hidden="true" data-initial="${initialOf(account.name).slice(0, 2)}"></span><span class="name trunc wide-only">${account.name}</span>${icon("chevron-down")}</summary>
               <div class="menu"><div class="mh"><b>${account.name}</b><span>${account.email}</span></div>
                 ${when(view.accountLink, () => html`<a href="${view.accountLink ?? ""}">${icon("user-round")}${view.t.accountSettings}</a>`)}
                 ${when(view.appLink, () => html`<a href="${view.appLink?.href ?? ""}">${icon("external-link")}${view.appLink?.label ?? ""}</a>`)}
                 <form method="post" action="${view.signOutUrl}"><button type="submit">${icon("log-out")}${view.t.signOut}</button></form>
               </div></details>`
             : when(
-                navigation && view.signInUrl,
-                () =>
-                  html`<a class="btn ghost" href="${view.signInUrl ?? ""}" aria-label="${view.t.signIn}">${icon("log-in")}<span class="wide">${view.t.signIn}</span></a>`,
+                view.signInUrl,
+                () => html`<a class="btn sm wide-only" href="${view.signInUrl ?? ""}">${view.t.signIn}</a>`,
               )
         }
       </div>
@@ -298,21 +316,36 @@ function header(
       navigation,
       () => html`<div class="pmenu" id="pmenu" hidden><div class="pw">
       ${searchForm(view, "phone-search", "", { button: false })}
-      <nav aria-label="${view.t.categoriesNavigation}">${view.categories
-        .filter((category) => category.parentId === null)
-        .map(
-          (category) =>
-            html`<a href="${view.links.category(category.id)}">${categoryIcon(category, 32)}<span class="trunc">${category.title}</span><span class="n">${view.t.articleCount(category.articles)}</span></a>`,
-        )}</nav></div></div>`,
+      <nav aria-label="${view.t.categoriesNavigation}">${areas.map(
+        (area) =>
+          html`<a href="${view.links.category(area.id)}">${folderIcon(area, 32)}<span class="trunc">${area.title}</span><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
+      )}</nav>
+      ${when(!account && view.signInUrl, () => html`<p class="gap-top"><a class="btn primary" href="${view.signInUrl ?? ""}">${icon("log-in")}${view.t.signIn}</a></p>`)}
+    </div></div>`,
     )}`;
 }
 
+function quickSearchDialog(view: PortalView): Html | null {
+  const { t } = view;
+  return when(
+    view.quickSearch,
+    () =>
+      html`<div class="qs-back" hidden data-quick data-endpoint="${view.quickSearch ?? ""}" data-topics="${t.quickTopics}" data-articles="${t.quickArticles}" data-none="${t.quickNone("{query}")}" data-failed="${t.quickFailed}" data-all-one="${t.quickAll(1)}" data-all-other="${t.quickAll(QUICK_COUNT_MARK).replace(String(QUICK_COUNT_MARK), "{count}")}">
+      <div class="qs" role="dialog" aria-modal="true" aria-label="${t.quickSearch}">
+        <form class="qs-in" role="search" action="${view.links.searchAction}" method="get">${icon("search")}
+          <input name="q" type="search" autocomplete="off" maxlength="200" aria-label="${t.searchLabel}" placeholder="${t.searchPlaceholder}" role="combobox" aria-expanded="false" aria-controls="qs-list" aria-autocomplete="list">
+          <button class="kbd" type="button" data-quick-close><span aria-hidden="true">Esc</span><span class="sr">${t.quickClose}</span></button></form>
+        <div class="qs-list" id="qs-list" role="listbox" aria-label="${t.quickSearch}"></div>
+        <p class="qs-msg" role="status" hidden></p>
+        <div class="qs-foot"><span>${t.quickMove}</span><span>${t.quickOpen}</span><a href="${view.links.searchAction}" data-quick-all hidden></a></div>
+      </div></div>`,
+  );
+}
+
 function footer(view: PortalView): Html {
-  const contact = view.config.contactEmail;
   return html`<footer class="pfoot"><div class="pw"><div class="in">
-    <span>${view.config.name}</span>
-    ${when(contact, () => html`<a href="${mailto(contact ?? "", view.config.name)}">${view.t.footerContact(contact ?? "")}</a>`)}
-    ${when(view.config.poweredBy, () => html`<span class="by">${icon("book-open")}${view.t.poweredBy}</span>`)}
+    <span>${view.config.name}</span><span aria-hidden="true">·</span><a href="${view.links.contact()}">${view.t.contact}</a>
+    ${when(view.config.poweredBy, () => html`<span class="by">${view.t.poweredBy}</span>`)}
   </div></div></footer>`;
 }
 
@@ -321,9 +354,9 @@ export function layout(
   options: {
     title: string;
     current?: string | null;
-    search?: boolean;
     navigation?: boolean;
     robots?: string;
+    overlay?: Html;
   },
   content: Html,
 ): string {
@@ -336,6 +369,7 @@ export function layout(
 <meta name="color-scheme" content="light dark"><meta name="robots" content="${robots}">
 <title>${title}</title>
 ${view.alternates.map((alternate) => html`<link rel="alternate" hreflang="${alternate.hreflang}" href="${alternate.href}">`)}
+<script src="${view.assets.theme}"></script>
 <link rel="stylesheet" href="${view.assets.style}">
 <style nonce="${view.nonce}">${raw(view.brandStyle)}</style>
 <script src="${view.assets.script}" defer></script>
@@ -343,25 +377,20 @@ ${view.alternates.map((alternate) => html`<link rel="alternate" hreflang="${alte
 ${header(view, options)}
 <main id="content" tabindex="-1">${when(view.maintenance, () => html`<div class="pw"><p class="maintnote" role="status">${icon("wrench")}<span>${view.t.maintenance}${when(Boolean(view.maintenance?.message), () => html` <strong>${view.maintenance?.message ?? ""}</strong>`)}</span></p></div>`)}${when(view.note, () => html`<div class="pw"><p class="langnote" role="note" lang="${view.note?.lang ?? ""}">${icon("languages")}${view.note?.text ?? ""}</p></div>`)}${content}</main>
 ${footer(view)}
-</div><div class="toast" role="status" aria-live="polite" hidden data-toast></div></body></html>`.value
+</div>${options.overlay ?? ""}${quickSearchDialog(view)}<div class="toast" role="status" aria-live="polite" hidden data-toast></div></body></html>`
+      .value
   }`;
 }
 
-function rankRow(view: PortalView, article: PortalArticleSummary, index: number): Html {
-  const path = pathLabel(view, article.folderIds);
-  return html`<li><a href="${view.links.article(article)}"><span class="rank">${index + 1}</span><span class="g"><span class="t">${article.title}</span><span class="m">${kindText(view, article.type)}${when(article.type && path, () => html`<span class="dot"></span>`)}${path}</span></span>${icon("chevron-right", "chev")}</a></li>`;
+function articleRow(view: PortalView, article: PortalArticleSummary, options: { below?: string } = {}): Html {
+  const path = pathOf(view, article.folderIds, options.below);
+  return html`<li><a href="${view.links.article(article)}"><span class="doc" aria-hidden="true">${icon("file-text")}</span><span class="g"><span class="t">${article.title}</span>${onlyIn(view, article)}<span class="m">${kindText(view, article.type)}${when(article.type && path, () => html`<span class="dot"></span>`)}${path}${when(article.type || path, () => html`<span class="dot"></span>`)}${view.t.updatedOnShort(shortDate(view, article.updatedAt))}</span></span>${icon("chevron-right", "chev")}</a></li>`;
 }
 
-function recentRow(view: PortalView, article: PortalArticleSummary): Html {
-  return html`<li><a href="${view.links.article(article)}"><span class="g"><span class="t">${article.title}</span><span class="m">${kindText(view, article.type)}${when(article.type, () => html`<span class="dot"></span>`)}${view.t.updatedOnShort(shortDate(view, article.updatedAt))}</span></span>${icon("chevron-right", "chev")}</a></li>`;
-}
-
-function topicTiles(view: PortalView, mini: boolean): Html {
-  const top = view.categories.filter((category) => category.parentId === null);
-  return html`<div class="tiles">${top.map((category) =>
-    mini
-      ? html`<a class="tile mini" href="${view.links.category(category.id)}">${categoryIcon(category, 40)}<h3>${category.title}</h3><span class="m">${view.t.articleCount(category.articles)}</span></a>`
-      : html`<a class="tile" href="${view.links.category(category.id)}">${categoryIcon(category, 56)}<h3>${category.title}</h3>${when(category.description, () => html`<p>${introductionText(category.description)}</p>`)}<span class="foot"><span>${view.t.articleCount(category.articles)}</span><span class="go" aria-hidden="true">${icon("arrow-right")}</span></span></a>`,
+function areaGrid(view: PortalView): Html {
+  return html`<div class="areas">${areasOf(view).map(
+    (area) =>
+      html`<a class="area" href="${view.links.category(area.id)}">${folderIcon(area, 40)}<b class="trunc" title="${area.title}">${area.title}</b><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
   )}</div>`;
 }
 
@@ -373,9 +402,8 @@ export function startPage(
   const empty = view.categories.length === 0 && data.recent.length === 0;
   return layout(
     view,
-    { title: config.name, search: false },
+    { title: config.name },
     html`<section class="hero"><div class="pw">
-      <p class="eyebrow">${icon("life-buoy")}${config.name}</p>
       <h1>${config.welcomeHeading || t.defaultHeading}</h1>
       ${when(config.welcomeText, () => html`<p class="lead">${config.welcomeText}</p>`)}
       ${searchForm(view, "start-search")}
@@ -395,14 +423,14 @@ export function startPage(
       ${when(
         view.categories.length > 0,
         () =>
-          html`<section class="sec" aria-labelledby="topics-heading"><div class="sec-h"><h2 id="topics-heading">${t.topicsHeading}</h2></div>${topicTiles(view, false)}</section>`,
+          html`<section class="sec" aria-labelledby="topics-heading"><h2 class="h2" id="topics-heading">${t.topicsHeading}</h2>${areaGrid(view)}</section>`,
       )}
       <div class="sec cols2">
-        ${when(data.mostRead.length > 0, () => html`<section aria-labelledby="top-heading"><h2 class="h3" id="top-heading">${t.mostRead}</h2><ol class="rlist">${data.mostRead.map((article, index) => rankRow(view, article, index))}</ol></section>`)}
-        ${when(data.recent.length > 0, () => html`<section aria-labelledby="recent-heading"><h2 class="h3" id="recent-heading">${t.recentlyUpdated}</h2><ul class="rlist">${data.recent.map((article) => recentRow(view, article))}</ul></section>`)}
+        ${when(data.mostRead.length > 0, () => html`<section aria-labelledby="top-heading"><h2 class="h3" id="top-heading">${t.mostRead}</h2><ul class="alist">${data.mostRead.map((article) => articleRow(view, article))}</ul></section>`)}
+        ${when(data.recent.length > 0, () => html`<section aria-labelledby="recent-heading"><h2 class="h3" id="recent-heading">${t.recentlyUpdated}</h2><ul class="alist">${data.recent.map((article) => articleRow(view, article))}</ul></section>`)}
       </div>`
       }
-      <section class="help-cta" aria-labelledby="cta-heading"><span class="cicon s56" aria-hidden="true">${icon("message-circle-question")}</span><h2 class="h2" id="cta-heading">${t.noAnswerHeading}</h2><p>${t.noAnswerText}</p><div class="row"><a class="btn primary" href="${view.links.contact()}">${icon("mail")}${t.writeUs}</a></div></section>
+      <section class="help-cta" aria-labelledby="cta-heading"><h2 class="h3" id="cta-heading">${t.noAnswerHeading}</h2><p>${t.noAnswerText}</p><a class="btn primary" href="${view.links.contact()}">${icon("mail")}${t.writeUs}</a></section>
     </div>`,
   );
 }
@@ -414,20 +442,57 @@ function crumbs(view: PortalView, items: { label: string; href?: string }[]): Ht
   )}</nav>`;
 }
 
+function treeItem(view: PortalView, folder: PortalCategory, current: string | null, open: Set<string>): Html {
+  const children = childrenOf(view, folder.id);
+  const expanded = open.has(folder.id);
+  const listId = `t-${folder.id}`;
+  return html`<li><div class="trow">${
+    children.length > 0
+      ? html`<button class="tg" type="button" hidden data-tree-toggle aria-controls="${listId}" aria-expanded="${String(expanded)}" aria-label="${expanded ? view.t.collapse(folder.title) : view.t.expand(folder.title)}" data-expand="${view.t.expand(folder.title)}" data-collapse="${view.t.collapse(folder.title)}">${icon("chevron-right")}</button>`
+      : html`<span class="tg" aria-hidden="true"></span>`
+  }<a href="${view.links.category(folder.id)}"${raw(folder.id === current ? ' aria-current="page"' : "")}>${when(folder.restricted, () => html`<span class="lock" title="${view.t.restricted}">${icon("lock")}<span class="sr">${view.t.restricted}</span></span>`)}<span class="trunc" title="${folder.title}">${folder.title}</span><span class="n">${folder.articles}</span></a></div>${when(
+    children.length > 0,
+    () =>
+      html`<ul id="${listId}"${raw(expanded ? "" : " hidden")}>${children.map((child) => treeItem(view, child, current, open))}</ul>`,
+  )}</li>`;
+}
+
+function treeNav(view: PortalView, current: string | null, trail: readonly PortalCategory[]): Html | null {
+  const area = trail[0];
+  if (!area) return null;
+  const open = new Set(trail.map((folder) => folder.id));
+  return html`<div class="side"><button class="btn sm treebtn" type="button" hidden data-tree-drawer aria-expanded="false" aria-controls="ptree" data-open-label="${view.t.showTopics}" data-close-label="${view.t.hideTopics}">${icon("folder")}<span>${view.t.showTopics}</span></button>
+    <nav class="ptree" id="ptree" aria-label="${view.t.topicsIn(area.title)}">
+      <a class="back" href="${view.links.home}">${icon("chevron-left")}${view.t.allAreas}</a>
+      <a class="troot" href="${view.links.category(area.id)}"${raw(area.id === current ? ' aria-current="page"' : "")}>${folderIcon(area, 32)}<span class="trunc" title="${area.title}">${area.title}</span><span class="n">${area.articles}</span></a>
+      <ul>${childrenOf(view, area.id).map((folder) => treeItem(view, folder, current, open))}</ul>
+    </nav></div>`;
+}
+
 export interface CategoryState {
   type: PortalArticleFilter | null;
   sort: ArticleSort;
   page: number;
+  deep: boolean;
 }
 
 function categoryQuery(state: CategoryState, changes: Partial<CategoryState>): string {
   const next = { ...state, ...changes };
   const params = new URLSearchParams();
+  if (next.deep) params.set("deep", "1");
   if (next.type) params.set("type", next.type);
   if (next.sort !== "views") params.set("sort", next.sort);
   if (next.page > 1) params.set("page", String(next.page));
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function contactLine(view: PortalView, folder: PortalCategory): Html | null {
+  return when(
+    folder.contactEmail,
+    () =>
+      html`<p class="contactline">${icon("mail")}${view.t.contactLine(folder.title)} <a href="${mailto(folder.contactEmail ?? "", folder.title)}">${folder.contactEmail ?? ""}</a></p>`,
+  );
 }
 
 export function categoryPage(
@@ -439,19 +504,27 @@ export function categoryPage(
 ): string {
   const { t } = view;
   const trail = ancestorsOf(view.categories, category);
-  const subcategories = view.categories.filter((entry) => entry.parentId === category.id);
+  const subfolders = childrenOf(view, category.id);
   const path = view.links.category(category.id);
   const dynamic = !view.static;
-  const filters: [PortalArticleFilter | null, string, number][] = [
-    [null, t.filters.all, list.typeCounts.all],
-    ["howTo", t.filters.howTo, list.typeCounts.howTo],
-    ["troubleshooting", t.filters.troubleshooting, list.typeCounts.troubleshooting],
+  const filters: [PortalArticleFilter | null, string][] = [
+    [null, t.filters.all],
+    ["howTo", t.filters.howTo],
+    ["troubleshooting", t.filters.troubleshooting],
   ];
   const pages = Math.max(1, Math.ceil(list.total / pageSize));
+  const empty =
+    state.type !== null
+      ? t.noArticlesOfType
+      : subfolders.length > 0 && !state.deep
+        ? t.noDirectArticles
+        : t.noArticlesOfType;
   return layout(
     view,
     { title: category.title, current: trail[0]?.id ?? category.id },
-    html`<div class="pw">
+    html`<div class="pw split">
+      ${treeNav(view, category.id, trail)}
+      <div class="main">
       ${crumbs(
         view,
         trail.map((entry) =>
@@ -460,49 +533,54 @@ export function categoryPage(
             : { label: entry.title, href: view.links.category(entry.id) },
         ),
       )}
-      <header class="chead">${categoryIcon(category, 72)}<div><h1>${category.title}</h1>
-        ${when(category.description, () => html`<div class="lead intro">${introduction(category.description)}</div>`)}
-        ${when(category.contactEmail, () => html`<p class="contactline">${icon("mail")}${t.contactLine(category.title)} <a href="${mailto(category.contactEmail ?? "", category.title)}">${category.contactEmail ?? ""}</a></p>`)}
-      </div></header>
+      <header class="chead">${category.restricted ? html`<span class="cicon s40" aria-hidden="true">${icon("lock")}</span>` : folderIcon(category, 40)}<h1>${category.title}</h1></header>
+      ${when(category.description, () => html`<div class="intro">${introduction(category.description)}</div>`)}
+      ${contactLine(view, category)}
       ${when(
-        subcategories.length > 0,
+        subfolders.length > 0,
         () =>
-          html`<section class="sec s14" aria-labelledby="subs-heading"><h2 class="sr" id="subs-heading">${t.subcategories}</h2><div class="subgrid">${subcategories.map(
-            (sub) =>
-              html`<a class="subtile" href="${view.links.category(sub.id)}">${categoryIcon(sub, 40)}<b>${sub.title}</b>${when(sub.description, () => html`<span class="d">${introductionText(sub.description)}</span>`)}<span class="n">${t.articleCount(sub.articles)}</span></a>`,
+          html`<section class="sec s8" aria-labelledby="subs-heading"><h2 class="h4" id="subs-heading">${t.topicsIn(category.title)}</h2><div class="subgrid">${subfolders.map(
+            (sub) => {
+              const below = childrenOf(view, sub.id).length;
+              return html`<a class="subtile" href="${view.links.category(sub.id)}">${sub.restricted ? html`<span class="cicon s32" aria-hidden="true">${icon("lock")}</span>` : folderIcon(sub, 32)}<span class="g"><b class="trunc" title="${sub.title}">${sub.title}</b><span class="n">${t.articleCount(sub.articles)}${when(below > 0, () => html` · ${t.subtopicCount(below)}`)}</span></span></a>`;
+            },
           )}</div></section>`,
       )}
-      <section class="sec s16" aria-labelledby="list-heading">
-        <div class="listbar"><h2 id="list-heading">${t.allArticlesIn(category.title)}</h2>
-          ${when(
-            dynamic && list.typeCounts.howTo + list.typeCounts.troubleshooting > 0,
-            () =>
-              html`<nav class="pills" aria-label="${t.articleTypeGroup}">${filters.map(
-                ([type, label, count]) =>
-                  html`<a class="pill" href="${path}${categoryQuery(state, { type, page: 1 })}"${raw(state.type === type ? ' aria-current="true"' : "")}>${label} <span class="n">${count}</span></a>`,
-              )}</nav>`,
-          )}
+      <section class="sec s8" aria-labelledby="list-heading">
+        <div class="listbar"><h2 class="h4" id="list-heading">${state.deep ? t.allArticlesIn(category.title) : t.articlesIn(category.title)} <span class="cnt">${list.total}</span></h2>
           ${when(
             dynamic,
-            () => html`<form method="get" action="${path}" data-autosubmit>
-            ${when(state.type, () => html`<input type="hidden" name="type" value="${state.type ?? ""}">`)}
-            <span class="sel"><label class="sr" for="sort">${t.sortLabel}</label><select id="sort" name="sort">${(
-              ["views", "updated", "title"] as const
-            ).map(
-              (sort) =>
-                html`<option value="${sort}"${raw(state.sort === sort ? " selected" : "")}>${t.sorts[sort]}</option>`,
-            )}</select>${icon("chevron-down")}</span>
-            <noscript><button class="btn" type="submit">${t.sortLabel}</button></noscript>
-          </form>`,
+            () => html`<div class="chips">
+            ${when(
+              subfolders.length > 0,
+              () =>
+                html`<a class="pill" href="${path}${categoryQuery(state, { deep: !state.deep, page: 1 })}" aria-pressed="${String(state.deep)}" role="button">${state.deep ? icon("check") : null}${t.includeSubtopics}</a>`,
+            )}
+            ${when(
+              list.typeCounts.howTo + list.typeCounts.troubleshooting > 0,
+              () =>
+                html`<nav class="pills" aria-label="${t.articleTypeGroup}">${filters.map(
+                  ([type, label]) =>
+                    html`<a class="pill" href="${path}${categoryQuery(state, { type, page: 1 })}"${raw(state.type === type ? ' aria-current="true"' : "")}>${label}</a>`,
+                )}</nav>`,
+            )}
+            <form method="get" action="${path}" data-autosubmit>
+              ${when(state.deep, () => html`<input type="hidden" name="deep" value="1">`)}
+              ${when(state.type, () => html`<input type="hidden" name="type" value="${state.type ?? ""}">`)}
+              <span class="sel"><label class="sr" for="sort">${t.sortLabel}</label><select id="sort" name="sort">${(
+                ["views", "updated", "title"] as const
+              ).map(
+                (sort) =>
+                  html`<option value="${sort}"${raw(state.sort === sort ? " selected" : "")}>${t.sorts[sort]}</option>`,
+              )}</select>${icon("chevron-down")}</span>
+              <noscript><button class="btn" type="submit">${t.sortLabel}</button></noscript>
+            </form></div>`,
           )}
         </div>
         ${
           list.articles.length === 0
-            ? html`<p class="hint">${t.noArticlesOfType}</p>`
-            : html`<ul class="alist">${list.articles.map((article) => {
-                const sub = nearestFolder(view, article.folderIds);
-                return html`<li><a href="${view.links.article(article)}">${typeBadge(article.type)}<span class="g"><span class="t">${article.title}</span><span class="m">${article.type ? t.types[article.type] : ""}${when(article.type && sub, () => html`<span class="dot"></span>`)}${sub?.title ?? ""}${when(article.type || sub, () => html`<span class="dot"></span>`)}${t.updatedOnShort(shortDate(view, article.updatedAt))}</span></span>${icon("chevron-right", "chev")}</a></li>`;
-              })}</ul>`
+            ? html`<p class="hint emptyline">${empty}</p>`
+            : html`<ul class="alist">${list.articles.map((article) => articleRow(view, article, { below: category.id }))}</ul>`
         }
         ${when(
           dynamic && pages > 1,
@@ -513,6 +591,7 @@ export function categoryPage(
         </nav>`,
         )}
       </section>
+      </div>
     </div>`,
   );
 }
@@ -553,19 +632,28 @@ export function articlePage(
   const mail = contact ? mailto(contact, subject, shared ? t.mailBody(shared) : undefined) : null;
   const toc = article.headings.filter((heading) => heading.level <= 2);
   const trail = folders.map((folder) => ({ label: folder.title, href: view.links.category(folder.id) }));
+  const others = article.fallback
+    ? []
+    : view.languageLinks.filter(
+        (link) => !link.current && article.alternates.some((entry) => entry.language === link.language),
+      );
   return layout(
     view,
     { title: article.title, current: folders[0]?.id ?? null },
-    html`<div class="pw">
+    html`<div class="pw split">
+      ${treeNav(view, folders.at(-1)?.id ?? null, folders)}
+      <div class="main">
       ${crumbs(view, trail)}
       <div class="art">
         <article>
           <header class="ahead">
             <div class="row1">${when(article.type, () => html`<span class="kind ${article.type ?? ""}">${icon(article.type ? TYPE_ICONS[article.type] : "file-text")}${article.type ? t.types[article.type] : ""}</span>`)}
-              ${when(data.editUrl, () => html`<span class="editbox"><span class="hint wide">${t.editHint}</span><a class="btn" href="${data.editUrl ?? ""}">${icon("square-pen")}${t.edit}</a></span>`)}</div>
-            <h1>${article.title}</h1>
-            ${when(article.lead, () => html`<p class="lead">${article.lead}</p>`)}
-            <div class="meta"><span>${icon("history")}${changedOn(view, article)}</span></div>
+              ${when(data.editUrl, () => html`<span class="editbox"><span class="hint wide-only">${t.editHint}</span><a class="btn sm" href="${data.editUrl ?? ""}">${icon("square-pen")}${t.edit}</a></span>`)}</div>
+            <h1 lang="${article.language}">${article.title}</h1>
+            ${when(article.lead, () => html`<p class="lead" lang="${article.language}">${article.lead}</p>`)}
+            <div class="meta"><span>${icon("history")}${changedOn(view, article)}</span>
+              ${others.map((link) => html`<a href="${link.href}" hreflang="${link.language}">${icon("globe")}${t.alsoIn(languageName(link.language, view.lang))}</a>`)}
+              ${when(shared && !view.static, () => html`<button class="linkbtn" type="button" data-copy="${shared ?? ""}" data-copied="${t.linkCopied}" data-copy-failed="${t.linkCopyFailed(shared ?? "")}">${icon("copy")}${t.copyLink}</button>`)}</div>
           </header>
           ${when(
             toc.length > 1,
@@ -575,20 +663,12 @@ export function articlePage(
               )}</nav></details>`,
           )}
           <div class="body" lang="${article.language}">${raw(decorateArticleHtml(article.html, view.base, view.root))}</div>
-          ${when(
-            data.related.length > 0,
-            () =>
-              html`<section class="related" aria-labelledby="related-heading"><h2 class="h3" id="related-heading">${t.relatedTroubleshooting}</h2><ul class="linkrows">${data.related.map(
-                (entry) =>
-                  html`<li><a href="${view.links.article(entry)}">${typeBadge(entry.type)}<span class="g"><span class="t">${entry.title}</span></span>${icon("chevron-right", "chev")}</a></li>`,
-              )}</ul></section>`,
-          )}
           ${
             view.static
-              ? html`<section class="fb" id="feedback" aria-labelledby="contact-heading"><div class="contact"><h2 class="h3" id="contact-heading">${t.contactHeading}</h2>${contactBlock(view, contact, mail, subject)}</div></section>`
+              ? html`<section class="fb" id="feedback" aria-labelledby="contact-heading"><div class="contact"><h2 class="h4" id="contact-heading">${t.contactHeading}</h2>${contactBlock(view, contact, mail, subject)}</div></section>`
               : html`<section class="fb" id="feedback" aria-labelledby="feedback-heading" data-feedback="${article.itemId}" data-endpoint="${view.root}/feedback">
             <div class="q"><h2 id="feedback-heading">${t.helpfulQuestion}</h2>
-              <div class="row" data-step="ask"><button class="btn" type="button" data-rate="yes">${icon("thumbs-up")}${t.yes}</button><button class="btn" type="button" data-rate="no">${icon("thumbs-down")}${t.no}</button></div></div>
+              <div class="row" data-step="ask"><button class="btn sm" type="button" data-rate="yes">${icon("thumbs-up")}${t.yes}</button><button class="btn sm" type="button" data-rate="no">${icon("thumbs-down")}${t.no}</button></div></div>
             <p class="hint" data-step="ask">${t.ratingHint}</p>
             <p class="thanks" data-step="thanks" hidden>${icon("circle-check")}${t.thanks}</p>
             <div class="field" data-step="text" hidden><label for="missing">${t.missingLabel}</label><textarea class="ta" id="missing" maxlength="2000" placeholder="${t.missingPlaceholder}" aria-describedby="missing-hint"></textarea><span class="hint" id="missing-hint">${t.missingHint}</span></div>
@@ -602,18 +682,21 @@ export function articlePage(
           </section>`
           }
           ${when(
+            data.related.length > 0,
+            () =>
+              html`<section class="related" aria-labelledby="related-heading"><h2 class="h4" id="related-heading">${t.relatedTroubleshooting}</h2><ul class="alist">${data.related.map((entry) => articleRow(view, entry))}</ul></section>`,
+          )}
+          ${when(
             data.similar.length > 0,
             () =>
-              html`<section class="related" aria-labelledby="similar-heading"><h2 class="h3" id="similar-heading">${t.similarArticles}</h2><div class="relgrid">${data.similar.map(
-                (entry) =>
-                  html`<a href="${view.links.article(entry)}">${typeBadge(entry.type)}${entry.title}<span class="m">${entry.type ? t.types[entry.type] : ""}${when(entry.type && nearestFolder(view, entry.folderIds), () => raw(" · "))}${nearestFolder(view, entry.folderIds)?.title ?? ""}</span></a>`,
-              )}</div></section>`,
+              html`<section class="related" aria-labelledby="similar-heading"><h2 class="h4" id="similar-heading">${t.similarArticles}</h2><ul class="alist">${data.similar.map((entry) => articleRow(view, entry))}</ul></section>`,
           )}
         </article>
         <aside><nav class="toc" aria-label="${t.onThisPage}">
           ${when(toc.length > 0, () => html`<h2>${t.onThisPage}</h2>${toc.map((heading) => html`<a href="#${heading.id}">${heading.title}</a>`)}`)}
           <div class="tocfoot">${when(!view.static, () => html`<a href="#feedback">${icon("message-circle-question")}${t.giveFeedback}</a>`)}${when(mail, () => html`<a href="${mail ?? ""}">${icon("mail")}${t.writeUs}</a>`)}</div>
         </nav></aside>
+      </div>
       </div>
     </div>`,
   );
@@ -622,8 +705,8 @@ export function articlePage(
 function areaChoice(view: PortalView, subject: string): Html {
   const { t } = view;
   const options = [
-    ...view.categories
-      .filter((category) => category.parentId === null && category.contactEmail)
+    ...areasOf(view)
+      .filter((category) => category.contactEmail)
       .map((category) => ({
         label: category.title,
         icon: category.icon,
@@ -634,10 +717,11 @@ function areaChoice(view: PortalView, subject: string): Html {
       : []),
   ];
   if (options.length === 0) return html`<p class="hint">${t.noContact}</p>`;
-  return html`<div class="mailgrid">${options.map(
+  return html`<ul class="maillist">${options.map(
     (option) =>
-      html`<a href="${mailto(option.email, subject)}" title="${option.email}">${categoryIcon({ title: option.label, icon: option.icon }, 40)}<span class="g"><b>${option.label}</b><span class="m">${option.email}</span></span>${icon("arrow-up-right", "chev")}</a>`,
-  )}</div>`;
+      html`<li>${folderIcon({ title: option.label, icon: option.icon }, 32)}<span class="g"><b class="trunc" title="${option.label}">${option.label}</b><span class="m">${option.email}</span></span>
+        <span class="row"><a class="btn sm" href="${mailto(option.email, subject)}">${icon("mail")}${t.mailButton}</a>${when(!view.static, () => html`<button class="btn sm ghost" type="button" data-copy="${option.email}" data-copied="${t.copied}" data-copy-failed="${t.copyFailed(option.email)}" aria-label="${t.copyAddress}: ${option.label}">${icon("copy")}${t.copy}</button>`)}</span></li>`,
+  )}</ul>`;
 }
 
 function excerpt(parts: { text: string; highlighted: boolean }[]): Html {
@@ -677,7 +761,7 @@ export function searchPage(
   ];
   return layout(
     view,
-    { title: t.resultsFor(result.total, state.query), search: false, robots: "noindex,follow" },
+    { title: t.resultsFor(result.total, state.query), robots: "noindex,follow" },
     html`<div class="pw">
       <div class="shead">${searchForm(view, "search", state.query)}</div>
       ${when(result.suggestion, () => html`<p class="suggest">${t.didYouMean} <a href="${view.links.search(result.suggestion ?? "")}">${result.suggestion ?? ""}</a></p>`)}
@@ -705,7 +789,7 @@ export function searchPage(
             result.results.length === 0
               ? html`<p class="hint">${t.noArticlesOfType}</p>`
               : html`<ul class="res">${result.results.map((hit) => {
-                  const path = pathLabel(view, hit.folderIds);
+                  const path = pathOf(view, hit.folderIds);
                   const other = hit.language !== view.lang;
                   return html`<li${raw(other ? ` lang="${hit.language}"` : "")}><span class="path" lang="${view.lang}">${kindText(view, hit.type)}${when(hit.type && path, () => html`<span class="dot"></span>`)}${path}${when(other, () => html`<span class="ltag">${icon("languages")}${languageName(hit.language, view.lang)}</span>`)}</span>
                     <a class="t" href="${view.links.article(hit)}">${hit.title}</a>
@@ -728,10 +812,9 @@ function noResultsPage(
   mostRead: PortalArticleSummary[],
 ): string {
   const { t } = view;
-  const top = view.categories.filter((category) => category.parentId === null);
   return layout(
     view,
-    { title: t.noResultsHeading(state.query), search: false, robots: "noindex,follow" },
+    { title: t.noResultsHeading(state.query), robots: "noindex,follow" },
     html`<div class="pw"><div class="center">
       <div class="shead flush spaced">${searchForm(view, "search", state.query)}</div>
       <span class="cicon s56" aria-hidden="true">${icon("search-x")}</span>
@@ -739,11 +822,11 @@ function noResultsPage(
       <p class="lead">${t.noResultsLead}</p>
       ${when(result.suggestion, () => html`<p class="suggest">${t.didYouMean} <a href="${view.links.search(result.suggestion ?? "")}">${result.suggestion ?? ""}</a></p>`)}
       <div class="tips"><div><b>${t.tipSpelling}</b>${t.tipSpellingText}</div><div><b>${t.tipGeneral}</b>${t.tipGeneralText}</div>
-        <div><b>${t.tipBrowse}</b>${top.map((category, index) => html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`)}</div></div>
+        <div><b>${t.tipBrowse}</b>${areasOf(view).map((category, index) => html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`)}</div></div>
       <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${t.areaHeading}</h2><p>${t.areaText}</p>
         ${areaChoice(view, t.searchSubject(state.query))}
         <p class="hint">${t.zeroResultsCounted}</p></section>
-      ${when(mostRead.length > 0, () => html`<section class="sec s14" aria-labelledby="top-heading"><h2 class="h3" id="top-heading">${t.mostRead}</h2><ol class="rlist">${mostRead.map((article, index) => rankRow(view, article, index))}</ol></section>`)}
+      ${when(mostRead.length > 0, () => html`<section class="sec s14" aria-labelledby="top-heading"><h2 class="h3" id="top-heading">${t.mostRead}</h2><ul class="alist">${mostRead.map((article) => articleRow(view, article))}</ul></section>`)}
     </div></div>`,
   );
 }
@@ -752,12 +835,12 @@ export function searchFailedPage(view: PortalView, query: string): string {
   const { t } = view;
   return layout(
     view,
-    { title: t.searchFailedHeading, search: false, robots: "noindex,follow" },
+    { title: t.searchFailedHeading, robots: "noindex,follow" },
     html`<div class="pw"><div class="center">
       <div class="shead flush">${searchForm(view, "search", query)}</div>
       <div class="alert" role="alert">${icon("circle-alert")}<div><b>${t.searchFailedHeading}</b><p>${t.searchFailedText(query)}</p>
         <p class="gap-top"><a class="btn primary" href="${view.links.search(query)}">${icon("refresh-cw")}${t.searchAgain}</a></p></div></div>
-      ${when(view.categories.length > 0, () => html`<section class="sec s14" aria-labelledby="topics-heading"><h2 class="h3" id="topics-heading">${t.topicsHeading}</h2>${topicTiles(view, true)}</section>`)}
+      ${when(view.categories.length > 0, () => html`<section class="sec s14" aria-labelledby="topics-heading"><h2 class="h3" id="topics-heading">${t.topicsHeading}</h2>${areaGrid(view)}</section>`)}
     </div></div>`,
   );
 }
@@ -766,7 +849,7 @@ export function emptySearchPage(view: PortalView): string {
   const { t } = view;
   return layout(
     view,
-    { title: t.searchLabel, search: false, robots: "noindex,follow" },
+    { title: t.searchLabel, robots: "noindex,follow" },
     html`<div class="pw"><div class="center"><div class="shead flush">${searchForm(view, "search", "", { error: true })}</div></div></div>`,
   );
 }
@@ -777,7 +860,6 @@ export function contactPage(view: PortalView, query: string): string {
     view,
     { title: t.writeUs },
     html`<div class="pw"><div class="center">
-      <span class="cicon s56" aria-hidden="true">${icon("message-circle-question")}</span>
       <h1>${t.noAnswerHeading}</h1>
       <p class="lead">${t.noAnswerText}</p>
       <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${query ? t.areaHeading : t.contactAreaHeading}</h2><p>${query ? t.areaText : t.contactAreaText}</p>
@@ -789,6 +871,19 @@ export function contactPage(view: PortalView, query: string): string {
 export function notFoundPage(view: PortalView): string {
   const { t } = view;
   const contact = view.config.contactEmail;
+  if (!view.account && view.signInUrl && !view.static) {
+    return layout(
+      view,
+      { title: t.signInRestrictedHeading, robots: "noindex,nofollow" },
+      html`<div class="pw"><div class="center">
+        <section class="signcard" aria-labelledby="restricted-heading"><p class="kindline">${icon("lock")}${t.restricted}</p>
+          <h1 id="restricted-heading">${t.signInRestrictedHeading}</h1>
+          <p class="lead">${t.signInRestrictedText}</p>
+          <p class="gap-top"><a class="btn primary" href="${view.signInUrl}">${icon("log-in")}${t.signIn}</a></p></section>
+        ${when(view.categories.length > 0, () => html`<section class="sec s14" aria-labelledby="topics-heading"><h2 class="h3" id="topics-heading">${t.notFoundBrowse}</h2>${areaGrid(view)}</section>`)}
+      </div></div>`,
+    );
+  }
   return layout(
     view,
     { title: t.notFoundHeading, robots: "noindex,nofollow" },
@@ -797,7 +892,7 @@ export function notFoundPage(view: PortalView): string {
       <h1>${t.notFoundHeading}</h1>
       <p class="lead">${t.notFoundLead}</p>
       <div class="gap-top-lg">${searchForm(view, "search")}</div>
-      ${when(view.categories.length > 0, () => html`<section class="sec s14" aria-labelledby="topics-heading"><h2 class="h3" id="topics-heading">${t.notFoundBrowse}</h2>${topicTiles(view, true)}</section>`)}
+      ${when(view.categories.length > 0, () => html`<section class="sec s14" aria-labelledby="topics-heading"><h2 class="h3" id="topics-heading">${t.notFoundBrowse}</h2>${areaGrid(view)}</section>`)}
       <p class="hint note">${
         contact
           ? html`${t.notFoundLink} <a href="${mailto(contact, t.outdatedLinkSubject)}">${contact}</a>`
@@ -818,25 +913,31 @@ export function signInPage(
   data: { methods: PortalSignInMethod[]; failed: boolean },
 ): string {
   const { t, config } = view;
+  const last = data.methods.length - 1;
   return layout(
     view,
-    { title: t.signIn, navigation: false, robots: "noindex,nofollow" },
-    html`<div class="signin"><div class="card">
-      <span class="logo">${brandMark(view)}</span>
-      <h1>${t.signInHeading}</h1>
-      <p class="lead">${t.signInReturn(t.signInLead(config.name))}</p>
+    {
+      title: t.signIn,
+      navigation: false,
+      robots: "noindex,nofollow",
+      overlay: html`<div class="dlg-back"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="signin-heading" aria-describedby="signin-lead">
+      <span class="logo">${brandMark(view)}<b>${config.name}</b></span>
+      <h1 id="signin-heading">${t.signInHeading}</h1>
+      <p class="lead" id="signin-lead">${t.signInReturn(t.signInLead(config.name))}</p>
       ${when(data.failed, () => html`<div class="alert inline" role="alert">${icon("circle-alert")}<div><p>${t.signInFailed}</p></div></div>`)}
       ${
         data.methods.length === 0
           ? html`<p class="hint">${t.signInNoMethod}</p>`
           : html`<div class="methods">${data.methods.map((method, index) =>
               method.action
-                ? html`<form method="post" action="${method.action}"><button class="btn lg${index === 0 ? " primary" : ""}" type="submit">${icon("key-round")}${method.label}</button></form>`
-                : html`<a class="btn lg${index === 0 ? " primary" : ""}" href="${method.href ?? ""}">${icon("mail")}${method.label}</a>`,
+                ? html`<form method="post" action="${method.action}"><button class="btn lg${index === last ? " primary" : ""}" type="submit">${icon("key-round")}${method.label}</button></form>`
+                : html`<a class="btn lg${index === last ? " primary" : ""}" href="${method.href ?? ""}">${icon("mail")}${method.label}</a>`,
             )}</div>`
       }
       ${when(config.contactEmail, () => html`<p class="fine">${t.signInProblems} <a href="${mailto(config.contactEmail ?? "", t.signIn)}">${config.contactEmail ?? ""}</a></p>`)}
     </div></div>`,
+    },
+    html`<div class="gated"></div>`,
   );
 }
 
@@ -896,7 +997,7 @@ export function staticSearchPage(view: PortalView, data: StaticSearchData): stri
   const { t } = view;
   return layout(
     view,
-    { title: t.searchLabel, search: false, robots: "noindex,follow" },
+    { title: t.searchLabel, robots: "noindex,follow" },
     html`<div class="pw">
       <div class="shead">${searchForm(view, "search")}</div>
       <div data-static-search data-index="${data.index}" data-base="${data.base}" data-fallback-index="${data.fallbackIndex ?? ""}" data-fallback-base="${data.fallbackBase ?? ""}" data-fallback-language="${data.fallbackLanguage}" data-fallback-label="${languageName(data.fallbackLanguage, view.lang)}" data-results-one="${t.resultsFor(1, "{query}")}" data-results-other="${t.resultsFor(COUNT_MARK, "{query}").replace(String(COUNT_MARK), "{count}")}" data-results-none="${t.noResultsHeading("{query}")}" data-typehow-to="${t.types.howTo}" data-typetroubleshooting="${t.types.troubleshooting}">
@@ -904,12 +1005,10 @@ export function staticSearchPage(view: PortalView, data: StaticSearchData): stri
         <ul class="res" data-results hidden></ul>
         <div class="center" data-empty hidden><span class="cicon s56" aria-hidden="true">${icon("search-x")}</span><p class="lead">${t.noResultsLead}</p>
           <div class="tips"><div><b>${t.tipSpelling}</b>${t.tipSpellingText}</div><div><b>${t.tipGeneral}</b>${t.tipGeneralText}</div>
-            <div><b>${t.tipBrowse}</b>${view.categories
-              .filter((category) => category.parentId === null)
-              .map(
-                (category, index) =>
-                  html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`,
-              )}</div></div>
+            <div><b>${t.tipBrowse}</b>${areasOf(view).map(
+              (category, index) =>
+                html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`,
+            )}</div></div>
           <p class="gap-top"><a class="btn" href="${view.links.contact()}">${icon("mail")}${t.contactByArea}</a></p></div>
         <div class="alert" role="alert" data-failed hidden>${icon("circle-alert")}<div><b>${t.searchFailedHeading}</b><p>${t.staticSearchFailed}</p></div></div>
         <noscript><p class="hint">${t.staticSearchNeedsScript}</p></noscript>
@@ -918,4 +1017,40 @@ export function staticSearchPage(view: PortalView, data: StaticSearchData): stri
     <script src="${view.root}/_assets/minisearch.js" defer></script>
     <script src="${view.root}/_assets/static-search.js" defer></script>`,
   );
+}
+
+export interface QuickSearchResult {
+  topics: { title: string; path: string; count: number; href: string }[];
+  articles: { title: string; path: string; type: string | null; href: string }[];
+  total: number;
+  all: string;
+}
+
+export function quickSearchResult(
+  view: PortalView,
+  query: string,
+  result: PortalSearchResult,
+  limit: number,
+): QuickSearchResult {
+  const needle = query.toLocaleLowerCase(view.lang);
+  const topics = view.categories
+    .filter((folder) => needle !== "" && folder.title.toLocaleLowerCase(view.lang).includes(needle))
+    .slice(0, QUICK_TOPICS)
+    .map((folder) => ({
+      title: folder.title,
+      path: shortenPath(
+        ancestorsOf(view.categories, folder)
+          .slice(0, -1)
+          .map((entry) => entry.title),
+      ),
+      count: folder.articles,
+      href: view.links.category(folder.id),
+    }));
+  const articles = result.results.slice(0, limit).map((hit) => ({
+    title: hit.title,
+    path: shortenPath(folderTrail(view.categories, hit.folderIds).map((folder) => folder.title)),
+    type: hit.type ? view.t.types[hit.type] : null,
+    href: view.links.article(hit),
+  }));
+  return { topics, articles, total: result.total, all: view.links.search(query) };
 }

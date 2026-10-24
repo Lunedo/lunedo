@@ -106,9 +106,9 @@ A knowledge base has a default language and can enable further languages under *
 
 In the portal:
 
-- The default language has the addresses without prefix; every other language is under `/<language>/`, for example `/help/help/en/`. From two enabled languages on, the top bar shows a language choice that leads to the same page in the other language.
+- The default language has the addresses without prefix; every other language is under `/<language>/`, for example `/help/help/en/`. From two enabled languages on, the top bar shows a language choice that leads to the same page in the other language and says how much is translated, such as "English · 14 of 46 translated", counted for the reader. Lists mark articles that are shown in the default language with "only German" (in the reader's language), and an article with a translation links to it with "Also in …".
 - A reader who opens an article in a language without a published translation sees the article in the default language with a short note in the reader's language.
-- The texts of the portal (buttons, headings, dates) follow the language of the shown article, so that a page is never mixed. Lunedo has portal texts in English and German; other languages use the English texts.
+- The texts of the portal (buttons, headings, dates) always follow the chosen language, also on an article shown in the default language; the article itself is marked with its own language. Lunedo has portal texts in English and German; other languages use the English texts.
 - The search looks in the reader's language first. When it finds nothing there, it shows the results in the default language with a note. Category pages and lists show the translation where one exists and the original otherwise.
 - Public knowledge bases name the other languages of a page with `hreflang` links for search engines, plus `x-default` for the default language.
 
@@ -186,7 +186,17 @@ The portal shows "Last reviewed on" with the date of the last review while a rev
 
 ## The portal
 
-Readers open a knowledge base in its portal: a start page with the search and the categories, a page per category, the articles, the search and a contact page. The portal has no navigation, page tree, editor, notifications or settings of the app, and follows the light or dark mode of the reader's system. Which one people see depends only on the address they open; nobody is redirected between portal and app.
+Readers open a knowledge base in its portal: a start page with the search and the areas, a page per folder, the articles, the search and a contact page. The portal has no navigation, page tree or editor, notifications or settings of the app. Which one people see depends only on the address they open; nobody is redirected between portal and app.
+
+### Layout
+
+- The top bar shows the logo and name, **Areas** with a menu of all top-level folders and their article counts, a search icon, the language and appearance choices and **Sign in** or the account menu. The search icon, `Ctrl`+`K` and `/` open a search window with matching topics and articles, each with its folder path; `↑`/`↓` choose, `Enter` opens, and **All results** leads to the search page. Without JavaScript the icon leads to the search page.
+- The appearance follows the reader's system until the reader chooses light or dark in the top bar; the choice is kept in the browser. In dark mode the brand color uses its dark shade, so buttons stay readable.
+- The start page shows the heading, the search with frequent searches, the areas as a compact grid, **Most read** and **Recently updated** with the folder path of each article (shortened in the middle when long) and **Didn't find an answer?**.
+- Every folder page, at every depth, shows the tree of its area on the left (collapsible, with counts and a lock on folders with a view restriction), the breadcrumb, icon, title, introduction and contact line, its subfolders as tiles and its own articles with type filters and sorting. **Include subtopics** adds the articles of all folders below. A folder that only holds subfolders says so.
+- Articles show the tree on the left and **On this page** on the right, **Was this helpful?**, **Write to us**, **Copy link** and related articles.
+- At phone width the top bar becomes a menu, and the tree opens behind a **Topics** button.
+- The footer is one line: name, **Contact** and, when switched on, "Made with Lunedo".
 
 ### Addresses
 
@@ -208,7 +218,8 @@ On its own domain only the portal answers; the app and `/api/` are not reachable
 ### Signing in
 
 - Under `/help/<path>/` the portal uses the session of the app.
-- Anonymous visitors of a knowledge base that is not public see the sign-in page of the portal on every address, with one button per identity provider of the instance and "Sign in with an e-mail address", which leads to the normal sign-in and back to the requested address.
+- Anonymous visitors of a knowledge base that is not public see the sign-in as a dialog over the portal on every address: the top bar stays, no content is shown behind it, and there is one button per identity provider of the instance and "Sign in with an e-mail address", which leads to the normal sign-in and back to the requested address.
+- In a public knowledge base, an anonymous visitor who opens the address of a folder or article they cannot read gets a page that offers to sign in and continue there. Hidden and missing addresses get the same page, so it reveals nothing; after signing in, a page the reader still cannot read is "We can't find this page".
 - On an own domain the portal has a session of its own. A visitor without one is sent to the instance; when they are already signed in there, they come back at once with a session for the domain, otherwise they sign in first. People who do not belong to the organization of the domain are asked once per account and domain ("Sign in to <domain> with your account?", **Continue**); the answer is remembered and recorded in the audit log as `portalHandoff.consented`. Members of the organization are not asked. The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain, and can be used once. The cookie of the domain (`__Host-lunedo-portal`) is host-only, `Secure`, `HttpOnly` and `SameSite=Lax`.
 - The session of a domain belongs to the session of the instance. Signing out in the portal signs out everywhere; when the instance session ends (sign-out, expiry, deactivation, "sign out everywhere"), the session of the domain ends too.
 - Requests that change something in the portal (rating, notes, sign-out) must come from the portal's own origin.
@@ -234,8 +245,7 @@ Space admins set the appearance under **Space settings → Appearance and start 
 - **Logo**: PNG, JPEG or WebP up to 256 KiB. Without one, the portal shows the organization's logo or the first letter of its name.
 - **Brand color**: a color of the fixed palette, or an own color for light and dark mode. An own color must reach a contrast of 4.5:1 as text on the background and for text on it, in both modes. Otherwise Lunedo proposes the nearest shade that passes and saves it only after confirmation (`brandContrast` with `light` and `dark`, then `confirmProposal`).
 - **Start page**: heading and a short text above the search.
-- **Categories in the top bar**: the top bar shows up to five categories in their order and the rest under "All topics". From the set number of categories on (default 10), it shows only "Topics" with a menu of all categories.
-- **"Provided with Lunedo"** in the footer, on by default.
+- **"Made with Lunedo"** in the footer, on by default.
 - **Notes of readers** are kept for 1 to 60 months (default 12). Shortening the period deletes older notes at once, after confirmation.
 
 The help icon of the app can open a knowledge base of the organization instead of the Lunedo documentation: **Organization settings → General → Help**. Only knowledge bases that everyone signed in may read can be chosen.

@@ -2,7 +2,30 @@ import { describe, expect, it } from "vitest";
 import type { PortalCategory } from "../reader.js";
 import { portalCss } from "./assets.js";
 import { html, raw } from "./html.js";
-import { decorateArticleHtml, initialOf, mailto, topBar } from "./views.js";
+import {
+  ancestorsOf,
+  brandStyle,
+  decorateArticleHtml,
+  folderTrail,
+  initialOf,
+  introduction,
+  mailto,
+  shortenPath,
+} from "./views.js";
+
+function category(): PortalCategory {
+  return {
+    id: "category",
+    parentId: null,
+    level: 1,
+    title: "Category",
+    description: "",
+    icon: null,
+    contactEmail: null,
+    restricted: false,
+    articles: 1,
+  };
+}
 
 function categories(count: number): PortalCategory[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -18,35 +41,46 @@ function categories(count: number): PortalCategory[] {
   }));
 }
 
-describe("the top bar of the portal", () => {
-  it("shows three categories as they are", () => {
-    const bar = topBar(categories(3), 10);
-    expect(bar.links.map((entry) => entry.title)).toEqual(["Category 1", "Category 2", "Category 3"]);
-    expect(bar.more).toEqual([]);
-    expect(bar.collapsed).toBe(false);
+describe("folders of any depth in the portal", () => {
+  const folders: PortalCategory[] = [
+    ...categories(2),
+    { ...category(), id: "ms", parentId: "category-1", level: 2, title: "Microsoft" },
+    { ...category(), id: "outlook", parentId: "ms", level: 3, title: "Outlook" },
+    { ...category(), id: "web", parentId: "outlook", level: 4, title: "Web App" },
+  ];
+
+  it("walks up to the area and keeps the folder path in order", () => {
+    const web = folders.find((folder) => folder.id === "web");
+    expect(web && ancestorsOf(folders, web).map((folder) => folder.title)).toEqual([
+      "Category 1",
+      "Microsoft",
+      "Outlook",
+      "Web App",
+    ]);
+    expect(folderTrail(folders, ["category-1", "hidden", "outlook"]).map((folder) => folder.id)).toEqual([
+      "category-1",
+      "outlook",
+    ]);
   });
 
-  it("shows five of six categories and puts the sixth under all topics", () => {
-    const bar = topBar(categories(6), 10);
-    expect(bar.links).toHaveLength(5);
-    expect(bar.more.map((entry) => entry.title)).toEqual(["Category 6"]);
-    expect(bar.collapsed).toBe(false);
+  it("shortens long paths in the middle", () => {
+    expect(shortenPath(["IT", "Microsoft"])).toBe("IT › Microsoft");
+    expect(shortenPath(["IT", "Microsoft", "Outlook"])).toBe("IT › Microsoft › Outlook");
+    expect(shortenPath(["IT", "Microsoft", "Outlook", "Web App"])).toBe("IT › … › Outlook › Web App");
   });
 
-  it("shows only the topics menu from the configured number of categories on", () => {
-    const bar = topBar(categories(12), 10);
-    expect(bar.links).toEqual([]);
-    expect(bar.more).toHaveLength(12);
-    expect(bar.collapsed).toBe(true);
-    expect(topBar(categories(6), 6).collapsed).toBe(true);
+  it("renders the formatted introduction with escaped text and only safe links", () => {
+    expect(introduction("Use **VPN** <b>now</b>\n\n> Note [x](javascript:alert(1))").value).toBe(
+      '<p>Use <strong>VPN</strong> &lt;b&gt;now&lt;/b&gt;</p><div class="callout">Note [x](javascript:alert(1))</div>',
+    );
   });
 
-  it("ignores subcategories", () => {
-    const list = [
-      ...categories(2),
-      { ...categories(1)[0], id: "sub", parentId: "category-1", level: 2 } as PortalCategory,
-    ];
-    expect(topBar(list, 10).links).toHaveLength(2);
+  it("switches the brand color with the chosen appearance as well as with the system", () => {
+    const style = brandStyle("#0B6F78", "#5BC0C8");
+    expect(style).toContain(":root{--kb:#0B6F78}");
+    expect(style).toContain(":root:not([data-theme=light]){--kb:#5BC0C8}");
+    expect(style).toContain(":root[data-theme=dark]{--kb:#5BC0C8}");
+    expect(portalCss).toContain(":root[data-theme=dark]{color-scheme:dark;");
   });
 });
 
@@ -84,10 +118,8 @@ describe("portal markup", () => {
 
 describe("the language choice of the portal", () => {
   it("hides the browser's disclosure marker and marks the current language", () => {
-    expect(portalCss).toContain(".dd.lang summary::-webkit-details-marker{display:none}");
-    expect(portalCss).toMatch(
-      /\.dd\.lang summary\{display:inline-flex;align-items:center;gap:[^;]+;[^}]*list-style:none/,
-    );
+    expect(portalCss).toContain(".dd summary::-webkit-details-marker{display:none}");
+    expect(portalCss).toContain(".dd summary{list-style:none;");
     expect(portalCss).toContain('.dd.lang .menu a[aria-current="true"]{font-weight:600}');
   });
 });

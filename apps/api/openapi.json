@@ -241679,11 +241679,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                      "description": "Not used any more: the top bar always shows a single menu of all areas. Kept so that existing clients keep working."
                     },
                     "poweredBy": {
                       "type": "boolean",
-                      "description": "Whether the footer says that the portal is provided with Lunedo."
+                      "description": "Whether the footer says that the portal is made with Lunedo."
                     },
                     "feedbackRetentionMonths": {
                       "type": "integer",
@@ -242042,11 +242042,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                      "description": "Not used any more: the top bar always shows a single menu of all areas. Kept so that existing clients keep working."
                     },
                     "poweredBy": {
                       "type": "boolean",
-                      "description": "Whether the footer says that the portal is provided with Lunedo."
+                      "description": "Whether the footer says that the portal is made with Lunedo."
                     },
                     "feedbackRetentionMonths": {
                       "type": "integer",
@@ -242409,13 +242409,13 @@
                     "maxLength": 400
                   },
                   "topBarThreshold": {
-                    "description": "See the portal.",
+                    "description": "Not used any more; accepted so that existing clients keep working.",
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 100
                   },
                   "poweredBy": {
-                    "description": "Shows “Provided with Lunedo” in the footer.",
+                    "description": "Shows “Made with Lunedo” in the footer.",
                     "type": "boolean"
                   },
                   "feedbackRetentionMonths": {
@@ -242549,11 +242549,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                      "description": "Not used any more: the top bar always shows a single menu of all areas. Kept so that existing clients keep working."
                     },
                     "poweredBy": {
                       "type": "boolean",
-                      "description": "Whether the footer says that the portal is provided with Lunedo."
+                      "description": "Whether the footer says that the portal is made with Lunedo."
                     },
                     "feedbackRetentionMonths": {
                       "type": "integer",
@@ -243178,11 +243178,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                      "description": "Not used any more: the top bar always shows a single menu of all areas. Kept so that existing clients keep working."
                     },
                     "poweredBy": {
                       "type": "boolean",
-                      "description": "Whether the footer says that the portal is provided with Lunedo."
+                      "description": "Whether the footer says that the portal is made with Lunedo."
                     },
                     "feedbackRetentionMonths": {
                       "type": "integer",
@@ -243567,11 +243567,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                      "description": "Not used any more: the top bar always shows a single menu of all areas. Kept so that existing clients keep working."
                     },
                     "poweredBy": {
                       "type": "boolean",
-                      "description": "Whether the footer says that the portal is provided with Lunedo."
+                      "description": "Whether the footer says that the portal is made with Lunedo."
                     },
                     "feedbackRetentionMonths": {
                       "type": "integer",
