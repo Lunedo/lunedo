@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  buttonClassName,
   Checkbox,
   EmptyState,
   Field,
@@ -15,11 +16,12 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { ChevronDown, Inbox, KeyRound, Send } from "lucide-react";
+import { ChevronDown, Inbox, KeyRound, Lock, Send } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
@@ -49,12 +51,21 @@ function statusLabel(t: TFunction, status: string): string {
   return translateKey(t, `sharing.requests.status.${status}`);
 }
 
+function statusVariant(status: string): "warning" | "success" | "danger" | "neutral" {
+  if (status === "open") return "warning";
+  if (status === "approved" || status === "satisfied") return "success";
+  if (status === "declined") return "danger";
+  return "neutral";
+}
+
 export function RequestAccessForm({
   target,
   onSent,
+  leave,
 }: {
   target: { type: "page"; id: string } | { type: "space"; id: string; name: string };
   onSent?: () => void;
+  leave?: boolean;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -119,25 +130,83 @@ export function RequestAccessForm({
           onChange={(event) => setMessage(event.target.value)}
         />
       </Field>
-      <Button type="submit" variant="primary" icon={Send} loading={busy} className="self-start">
-        {target.type === "page"
-          ? t("sharing.requests.requestPage")
-          : t("sharing.requests.requestSpace", { name: target.name })}
-      </Button>
+      <div className={leave ? "flex flex-wrap justify-center gap-2" : "flex"}>
+        <Button type="submit" variant="primary" icon={Send} loading={busy}>
+          {target.type === "page"
+            ? t("sharing.requests.requestPage")
+            : t("sharing.requests.requestSpace", { name: target.name })}
+        </Button>
+        {leave ? (
+          <Link to="/home" className={buttonClassName({ variant: "secondary" })}>
+            {t("sharing.requests.toForYou")}
+          </Link>
+        ) : null}
+      </div>
     </form>
+  );
+}
+
+const RECENT_REQUESTS = 5;
+
+function RecentRequests() {
+  const { t } = useTranslation();
+  const mine = useQuery({
+    queryKey: sharingKeys.myRequests,
+    queryFn: () => request(() => api.GET("/api/v1/access-requests/mine")),
+    throwOnError: false,
+  });
+  const entries = (mine.data ?? []).slice(0, RECENT_REQUESTS);
+  if (entries.length === 0) return null;
+  return (
+    <section aria-labelledby="recent-requests" className="flex w-full flex-col gap-1 text-left">
+      <h2 id="recent-requests" className="text-sm text-text-muted">
+        {t("sharing.requests.mineTitle")}
+      </h2>
+      <ul className="flex flex-col divide-y divide-border border-y border-border">
+        {entries.map((entry) => (
+          <li key={entry.id} className="flex min-h-hit items-center gap-2 py-2">
+            <span className="min-w-0 flex-1 truncate" title={requestTarget(t, entry)}>
+              {requestTarget(t, entry)}
+            </span>
+            <Badge variant={statusVariant(entry.status)}>{statusLabel(t, entry.status)}</Badge>
+          </li>
+        ))}
+      </ul>
+      <Link
+        to="/access-requests"
+        className="self-start text-sm text-accent hover:underline focus-visible:focus-ring"
+      >
+        {t("sharing.requests.allMine")}
+      </Link>
+    </section>
   );
 }
 
 export function NoPageAccess({ pageId }: { pageId: string }) {
   const { t } = useTranslation();
+  const [sent, setSent] = useState(false);
+  const [showMine, setShowMine] = useState(false);
   return (
-    <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 md:px-8">
-      <EmptyState
-        icon={KeyRound}
-        title={t("sharing.requests.noAccessTitle")}
-        description={t("sharing.requests.noAccess")}
-      />
-      <RequestAccessForm target={{ type: "page", id: pageId }} />
+    <div className="mx-auto flex w-full max-w-field flex-col items-center gap-4 px-4 pt-16 pb-12 text-center">
+      <span className="flex size-12 items-center justify-center rounded-full bg-surface-sunken text-text-muted">
+        <Lock aria-hidden="true" className="size-icon-md" />
+      </span>
+      <h1 className="text-xl font-semibold tracking-heading">{t("sharing.requests.noAccessTitle")}</h1>
+      <p className="text-text-muted">{t("sharing.requests.noAccess")}</p>
+      <div className="w-full text-left">
+        <RequestAccessForm target={{ type: "page", id: pageId }} leave onSent={() => setSent(true)} />
+      </div>
+      {sent || showMine ? (
+        <RecentRequests />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowMine(true)}
+          className="text-sm text-accent hover:underline focus-visible:focus-ring"
+        >
+          {t("sharing.requests.mineLink")}
+        </button>
+      )}
     </div>
   );
 }
@@ -270,6 +339,31 @@ export function AccessRequestActions({
   );
 }
 
+export function AccessRequestRow({ entry }: { entry: AccessRequest }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const name = entry.requester.name ?? t("spaces.holders.unknownPerson");
+  return (
+    <li className="flex items-start gap-3 py-3">
+      <PersonAvatar id={entry.requester.id} name={name} size="sm" decorative />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="wrap-anywhere">
+          {t("sharing.requests.summary", { name, target: requestTarget(t, entry) })}
+        </span>
+        <span className="text-sm text-text-muted wrap-anywhere">
+          {[
+            t("sharing.requests.sentOn", { date: format.dateTime(entry.createdAt) }),
+            entry.message ? t("notifications.quoted", { text: entry.message }) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+        {entry.status === "open" ? <AccessRequestActions entry={entry} /> : null}
+      </div>
+    </li>
+  );
+}
+
 export function AccessRequestCard({
   entry,
   canDecide,
@@ -354,7 +448,7 @@ function MyRequestRow({ entry }: { entry: AccessRequest }) {
           {t("sharing.requests.sentOn", { date: format.dateTime(entry.createdAt) })}
         </p>
       </div>
-      <Badge variant={entry.status === "open" ? "warning" : "neutral"}>{statusLabel(t, entry.status)}</Badge>
+      <Badge variant={statusVariant(entry.status)}>{statusLabel(t, entry.status)}</Badge>
       {target ? (
         <Link to={target} className="min-h-hit px-2 text-accent underline focus-visible:focus-ring">
           {t("sharing.requests.open")}
@@ -487,10 +581,10 @@ export function SpaceAccessRequests({ spaceId }: { spaceId: string }) {
   if (requests.data.length === 0)
     return <p className="text-sm text-text-muted">{t("sharing.requests.noneOpen")}</p>;
   return (
-    <div className="flex flex-col gap-3">
+    <ul className="flex flex-col divide-y divide-border border-y border-border">
       {requests.data.map((entry) => (
-        <AccessRequestCard key={entry.id} entry={entry} canDecide />
+        <AccessRequestRow key={entry.id} entry={entry} />
       ))}
-    </div>
+    </ul>
   );
 }

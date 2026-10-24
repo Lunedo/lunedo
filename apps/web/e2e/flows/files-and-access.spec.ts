@@ -248,6 +248,7 @@ test("restricts and shares a page, opens links and decides an access request", a
     await other.getByRole("textbox", { name: /Message/ }).fill("I prepare the budget review.");
     await other.getByRole("button", { name: "Request access" }).click();
     await expect(other.getByText("Request sent")).toBeVisible();
+    await expect(other.getByRole("region", { name: "Your access requests" }).getByText("Open")).toBeVisible();
 
     const requests = (await (await page.request.get(`/api/v1/spaces/${spaceId}/access-requests`)).json()) as {
       id: string;

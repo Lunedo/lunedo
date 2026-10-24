@@ -6902,13 +6902,15 @@
       "withdrawFailed": "Die Anfrage wurde nicht zurückgezogen",
       "status": {
         "open": "Offen",
-        "approved": "Genehmigt",
+        "approved": "Erlaubt",
         "declined": "Abgelehnt",
         "withdrawn": "Zurückgezogen",
         "satisfied": "Zugriff auf anderem Weg erhalten"
       },
       "give": "Zugriff geben",
-      "approvedAs": "{name} hat jetzt Zugriff als {role}"
+      "approvedAs": "{name} hat jetzt Zugriff als {role}",
+      "toForYou": "Zu Für dich",
+      "allMine": "Alle deine Anfragen anzeigen"
     },
     "give": {
       "open": "Zugriff geben",

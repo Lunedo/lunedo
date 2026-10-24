@@ -953,12 +953,38 @@ describe("sharing and access", () => {
       "GET /api/v1/space-keys/ITOPS": () => problem(404, "notFound"),
       [`GET /api/v1/items/${VPN}`]: () => problem(404, "notFound"),
       [`POST /api/v1/pages/${VPN}/access-requests`]: () => ({ status: 202 }),
+      "GET /api/v1/access-requests/mine": () => ({
+        body: [
+          {
+            id: REQUEST,
+            requester: { id: OLIVIA.id, name: OLIVIA.name, email: null },
+            spaceId: SPACE_ID,
+            spaceName: "IT Operations",
+            itemId: null,
+            itemTitle: null,
+            message: "",
+            status: "approved",
+            role: "reader",
+            decidedBy: null,
+            decidedAt: null,
+            createdAt: "2026-10-05T08:00:00.000Z",
+          },
+        ],
+      }),
     });
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    expect(await screen.findByText("This page does not exist or you have no access")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", {
+        name: "This page does not exist or you have no access",
+        level: 1,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Go to For you" }).getAttribute("href")).toBe("/home");
     await userEvent.type(screen.getByRole("textbox", { name: /Message/ }), "I take over the VPN rollout.");
     await userEvent.click(screen.getByRole("button", { name: "Request access" }));
     expect(await screen.findByText("Request sent")).toBeTruthy();
+    const recent = await screen.findByRole("region", { name: "Your access requests" });
+    expect(within(recent).getByText("Approved")).toBeTruthy();
     expect(requests.find((request) => request.method === "POST")?.body).toEqual({
       message: "I take over the VPN rollout.",
     });
