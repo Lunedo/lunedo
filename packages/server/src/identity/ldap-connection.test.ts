@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { webcrypto } from "node:crypto";
-import { type AddressInfo, createServer as createNetServer } from "node:net";
+import { type AddressInfo, createServer as createNetServer, type Socket } from "node:net";
 import { createServer, type Server } from "node:tls";
 import { ldapConfigSchema } from "@lunedo/shared";
 import * as x509 from "@peculiar/x509";
@@ -65,6 +65,7 @@ async function authorityAndServer() {
 
 describe("directory connections", () => {
   let tlsServer: Server;
+  const sockets = new Set<Socket>();
   let url: string;
   let authority: string;
   let serverCertificate: string;
@@ -74,11 +75,16 @@ describe("directory connections", () => {
     authority = material.authority;
     serverCertificate = material.server;
     tlsServer = createServer({ key: material.serverKey, cert: material.server }, (socket) => socket.end());
+    tlsServer.on("connection", (socket: Socket) => {
+      sockets.add(socket);
+      socket.on("close", () => sockets.delete(socket));
+    });
     await new Promise<void>((resolve) => tlsServer.listen(0, "127.0.0.1", resolve));
     url = `ldaps://localhost:${(tlsServer.address() as AddressInfo).port}`;
   });
 
   afterAll(async () => {
+    for (const socket of sockets) socket.destroy();
     await new Promise((resolve) => tlsServer?.close(resolve));
   });
 
