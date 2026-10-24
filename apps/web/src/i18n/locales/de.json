@@ -2614,8 +2614,6 @@
     "close": "Benachrichtigungen schließen",
     "preferences": "Einstellungen für Benachrichtigungen",
     "filter": "Anzeigen",
-    "all": "Alle",
-    "unread": "Ungelesen",
     "markAllRead": "Alle als gelesen markieren",
     "markRead": "Als gelesen markieren",
     "unreadLabel": "Ungelesen",
@@ -2625,8 +2623,7 @@
     "times": "{count, plural, one {einmal} other {# Mal}}",
     "groups": {
       "today": "Heute",
-      "yesterday": "Gestern",
-      "earlier": "Früher"
+      "yesterday": "Gestern"
     },
     "preferencesTitle": "Benachrichtigungen",
     "preferencesDescription": "Wähle, wie du von jeder Art von Ereignis erfährst.",
@@ -2934,7 +2931,35 @@
     "notWatched": "Nicht beobachtet",
     "watchAgain": "Wieder beobachten",
     "watchingAgain": "Du beobachtest {name} wieder.",
-    "resetChannel": "{channel} für {event} auf den geerbten Wert zurücksetzen"
+    "resetChannel": "{channel} für {event} auf den geerbten Wert zurücksetzen",
+    "unreadOnly": "Nur ungelesene",
+    "showAllPage": "Alle anzeigen",
+    "space": "Space",
+    "allSpaces": "Alle Spaces",
+    "findSpace": "Space nach Namen suchen",
+    "kinds": {
+      "all": "Alle",
+      "mentions": "Erwähnungen",
+      "watched": "Beobachtet",
+      "requests": "Anfragen"
+    },
+    "emptyKinds": {
+      "all": "Keine Benachrichtigungen",
+      "mentions": "Keine Erwähnungen",
+      "watched": "Nichts Neues zu beobachteten Inhalten",
+      "requests": "Keine Zugriffsanfragen zu entscheiden"
+    },
+    "labels": {
+      "content.mentioned": "Erwähnung",
+      "access.requested": "Zugriffsanfrage",
+      "access.requestDecided": "Zugriffsanfrage",
+      "page.shared": "Geteilt",
+      "comment.created": "Kommentar",
+      "content.changed": "Beobachtet",
+      "page.statusChanged": "Beobachtet",
+      "task.assigned": "Aufgabe"
+    },
+    "quoted": "„{text}“"
   },
   "mail": {
     "title": "E-Mail",
@@ -6881,7 +6906,9 @@
         "declined": "Abgelehnt",
         "withdrawn": "Zurückgezogen",
         "satisfied": "Zugriff auf anderem Weg erhalten"
-      }
+      },
+      "give": "Zugriff geben",
+      "approvedAs": "{name} hat jetzt Zugriff als {role}"
     },
     "give": {
       "open": "Zugriff geben",

@@ -158567,6 +158567,30 @@
                 "false"
               ]
             }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "description": "Only `mentions`, notifications about `watched` content, or access `requests` to decide. Leave it out for all.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mentions",
+                "watched",
+                "requests"
+              ]
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "description": "Only notifications about content or access requests of this space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {

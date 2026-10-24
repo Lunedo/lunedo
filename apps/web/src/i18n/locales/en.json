@@ -2614,8 +2614,6 @@
     "close": "Close notifications",
     "preferences": "Notification settings",
     "filter": "Show",
-    "all": "All",
-    "unread": "Unread",
     "markAllRead": "Mark all as read",
     "markRead": "Mark as read",
     "unreadLabel": "Unread",
@@ -2625,8 +2623,7 @@
     "times": "{count, plural, one {once} other {# times}}",
     "groups": {
       "today": "Today",
-      "yesterday": "Yesterday",
-      "earlier": "Earlier"
+      "yesterday": "Yesterday"
     },
     "preferencesTitle": "Notifications",
     "preferencesDescription": "Choose how you learn about each kind of event.",
@@ -2934,7 +2931,35 @@
     "notWatched": "Not watched",
     "watchAgain": "Watch again",
     "watchingAgain": "You watch {name} again.",
-    "resetChannel": "Reset {channel} for {event} to the inherited value"
+    "resetChannel": "Reset {channel} for {event} to the inherited value",
+    "unreadOnly": "Unread only",
+    "showAllPage": "Show all",
+    "space": "Space",
+    "allSpaces": "All spaces",
+    "findSpace": "Search spaces by name",
+    "kinds": {
+      "all": "All",
+      "mentions": "Mentions",
+      "watched": "Watched",
+      "requests": "Requests"
+    },
+    "emptyKinds": {
+      "all": "No notifications",
+      "mentions": "No mentions",
+      "watched": "Nothing new on watched content",
+      "requests": "No access requests to decide"
+    },
+    "labels": {
+      "content.mentioned": "Mention",
+      "access.requested": "Access request",
+      "access.requestDecided": "Access request",
+      "page.shared": "Shared",
+      "comment.created": "Comment",
+      "content.changed": "Watched",
+      "page.statusChanged": "Watched",
+      "task.assigned": "Task"
+    },
+    "quoted": "“{text}”"
   },
   "mail": {
     "title": "E-mail",
@@ -6881,7 +6906,9 @@
         "declined": "Declined",
         "withdrawn": "Withdrawn",
         "satisfied": "Access given another way"
-      }
+      },
+      "give": "Give access",
+      "approvedAs": "{name} can now access it as {role}"
     },
     "give": {
       "open": "Give access",

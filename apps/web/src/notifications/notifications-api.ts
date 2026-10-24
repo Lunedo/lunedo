@@ -20,7 +20,7 @@ import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spa
 export const notificationKeys = {
   all: ["notifications"] as const,
   unread: ["notifications", "unread"] as const,
-  list: (unreadOnly: boolean) => ["notifications", "list", unreadOnly] as const,
+  list: (filter: NotificationFilter) => ["notifications", "list", filter] as const,
 };
 
 export function useUnreadCount() {
@@ -32,9 +32,17 @@ export function useUnreadCount() {
   });
 }
 
-export function useNotificationList(unreadOnly: boolean) {
+export type NotificationKind = "mentions" | "watched" | "requests";
+
+export interface NotificationFilter {
+  unreadOnly: boolean;
+  kind?: NotificationKind;
+  spaceId?: string;
+}
+
+export function useNotificationList(filter: NotificationFilter) {
   return useInfiniteQuery({
-    queryKey: notificationKeys.list(unreadOnly),
+    queryKey: notificationKeys.list(filter),
     throwOnError: false,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
@@ -44,7 +52,9 @@ export function useNotificationList(unreadOnly: boolean) {
             query: {
               limit: 30,
               ...(pageParam ? { cursor: pageParam } : {}),
-              ...(unreadOnly ? { unread: "true" as const } : {}),
+              ...(filter.unreadOnly ? { unread: "true" as const } : {}),
+              ...(filter.kind ? { kind: filter.kind } : {}),
+              ...(filter.spaceId ? { spaceId: filter.spaceId } : {}),
             },
           },
         }),

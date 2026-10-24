@@ -2,45 +2,77 @@ import {
   Button,
   classNames,
   EmptyState,
+  FilterMenu,
   focusWhenShown,
   Popover,
   Skeleton,
   Spinner,
+  Switch,
   Tabs,
   WIDE_HIT_AREA,
 } from "@lunedo/ui";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import type { TFunction } from "i18next";
 import { BellOff, CheckCheck, Settings } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDebounced } from "../components/table-state.js";
 import { LoadError } from "../errors/failure.js";
+import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { spacesQuery } from "../search/search-api.js";
+import { useOrganizationState } from "../shell/shell-context.js";
 import { NotificationEntry } from "./notification-entry.js";
-import { type NotificationItem, useMarkAllRead, useNotificationList } from "./notifications-api.js";
+import {
+  type NotificationFilter,
+  type NotificationItem,
+  type NotificationKind,
+  useMarkAllRead,
+  useNotificationList,
+} from "./notifications-api.js";
 
-type Filter = "all" | "unread";
+type Kind = "all" | NotificationKind;
+
+function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 export function groupByDay(
   items: readonly NotificationItem[],
   now = new Date(),
-): { key: "today" | "yesterday" | "earlier"; items: NotificationItem[] }[] {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const yesterday = new Date(start.getTime() - 86_400_000);
-  const groups = {
-    today: [] as NotificationItem[],
-    yesterday: [] as NotificationItem[],
-    earlier: [] as NotificationItem[],
-  };
+): { key: string; label: "today" | "yesterday" | "date"; date: Date; items: NotificationItem[] }[] {
+  const today = dayKey(now);
+  const yesterday = dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const groups: {
+    key: string;
+    label: "today" | "yesterday" | "date";
+    date: Date;
+    items: NotificationItem[];
+  }[] = [];
   for (const item of items) {
-    const updated = new Date(item.updatedAt);
-    if (updated >= start) groups.today.push(item);
-    else if (updated >= yesterday) groups.yesterday.push(item);
-    else groups.earlier.push(item);
+    const date = new Date(item.updatedAt);
+    const key = dayKey(date);
+    const last = groups.at(-1);
+    if (last && last.key === key) {
+      last.items.push(item);
+      continue;
+    }
+    groups.push({
+      key,
+      label: key === today ? "today" : key === yesterday ? "yesterday" : "date",
+      date,
+      items: [item],
+    });
   }
-  return (["today", "yesterday", "earlier"] as const)
-    .map((key) => ({ key, items: groups[key] }))
-    .filter((group) => group.items.length > 0);
+  return groups;
+}
+
+function dayHeading(t: TFunction, format: Formatter, group: ReturnType<typeof groupByDay>[number]): string {
+  if (group.label === "today") return t("notifications.groups.today");
+  if (group.label === "yesterday") return t("notifications.groups.yesterday");
+  return format.calendarDate(group.date);
 }
 
 export function NotificationPopover({
@@ -61,20 +93,79 @@ export function NotificationPopover({
       variant="panel"
       labelledBy="notifications-title"
     >
-      {open ? <NotificationList onClose={() => onOpenChange(false)} /> : null}
+      {open ? <NotificationFeed variant="popover" onClose={() => onOpenChange(false)} /> : null}
     </Popover>
   );
 }
 
-function NotificationList({ onClose }: { onClose: () => void }) {
+export function NotificationsScreen() {
+  const { t } = useTranslation();
+  useDocumentTitle(t("notifications.title"));
+  return (
+    <main
+      id="main"
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
+      tabIndex={0}
+      className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
+    >
+      <div className="mx-auto flex w-full max-w-content flex-col px-4 pt-6 pb-12 md:px-8">
+        <NotificationFeed variant="page" onClose={() => undefined} />
+      </div>
+    </main>
+  );
+}
+
+function SpaceFilter({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { t } = useTranslation();
+  const organization = useOrganizationState();
+  const [search, setSearch] = useState("");
+  const [names, setNames] = useState<Record<string, string>>({});
+  const term = useDebounced(search.trim());
+  const spaces = useQuery({
+    ...spacesQuery(organization.organizationId ?? "", term, 20),
+    enabled: organization.organizationId !== null,
+    throwOnError: false,
+  });
+  const options = [
+    { value: "", label: t("notifications.allSpaces") },
+    ...(spaces.data?.items ?? []).map((space) => ({ value: space.id, label: space.name || space.key })),
+  ];
+  return (
+    <FilterMenu
+      label={t("notifications.space")}
+      value={value}
+      options={options}
+      {...(value
+        ? { valueLabel: names[value] ?? options.find((option) => option.value === value)?.label ?? "" }
+        : {})}
+      search={{ value: search, onChange: setSearch, placeholder: t("notifications.findSpace") }}
+      onValueChange={(next) => {
+        const label = options.find((option) => option.value === next)?.label;
+        if (next && label) setNames((current) => ({ ...current, [next]: label }));
+        onChange(next);
+      }}
+    />
+  );
+}
+
+function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; onClose: () => void }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const [filter, setFilter] = useState<Filter>("all");
-  const list = useNotificationList(filter === "unread");
+  const page = variant === "page";
+  const [kind, setKind] = useState<Kind>("all");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [spaceId, setSpaceId] = useState("");
+  const filter: NotificationFilter = {
+    unreadOnly,
+    ...(kind === "all" ? {} : { kind }),
+    ...(page && spaceId ? { spaceId } : {}),
+  };
+  const list = useNotificationList(filter);
   const markAll = useMarkAllRead();
   const body = useRef<HTMLDivElement>(null);
-  const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = list.data?.pages.flatMap((entry) => entry.items) ?? [];
   const hasUnread = items.some((item) => item.readAt === null);
+  const kinds: Kind[] = page ? ["all", "mentions", "watched", "requests"] : ["all", "mentions", "watched"];
 
   const loadMore = async () => {
     const before = body.current?.querySelectorAll("[data-notification]").length ?? 0;
@@ -100,116 +191,148 @@ function NotificationList({ onClose }: { onClose: () => void }) {
     target.focus();
   };
 
+  const markAllButton = hasUnread ? (
+    <button
+      type="button"
+      aria-busy={markAll.isPending || undefined}
+      onClick={() => markAll.mutate(new Date().toISOString())}
+      className={classNames(
+        WIDE_HIT_AREA,
+        "inline-flex h-control-sm shrink-0 items-center gap-1 rounded-sm px-1 text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
+      )}
+    >
+      {markAll.isPending ? (
+        <Spinner label={t("ui.loading")} />
+      ) : (
+        <CheckCheck aria-hidden="true" className="size-icon-sm" />
+      )}
+      {t("notifications.markAllRead")}
+    </button>
+  ) : null;
+
+  const content = (
+    <div ref={body} className={page ? "pt-2" : "pb-2"}>
+      {list.isPending ? (
+        <div className="flex flex-col gap-3 p-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : null}
+      {list.isError ? (
+        <div className="p-2">
+          <LoadError
+            what={t("failures.loadNotifications")}
+            error={list.error}
+            onRetry={() => list.refetch()}
+          />
+        </div>
+      ) : null}
+      {list.isSuccess && items.length === 0 ? (
+        unreadOnly ? (
+          <EmptyState
+            icon={CheckCheck}
+            title={t("notifications.allRead")}
+            action={
+              <Button variant="secondary" onClick={() => setUnreadOnly(false)}>
+                {t("notifications.showAll")}
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={BellOff}
+            title={t(`notifications.emptyKinds.${kind}`)}
+            description={t("notifications.noneDescription")}
+          />
+        )
+      ) : null}
+      {groupByDay(items).map((group) => (
+        <section key={group.key} aria-labelledby={`notifications-${variant}-${group.key}`} className="pt-2">
+          <h3
+            id={`notifications-${variant}-${group.key}`}
+            className="border-b border-border px-2 pb-1 font-semibold text-text-muted text-xs uppercase tracking-label"
+          >
+            {dayHeading(t, format, group)}
+          </h3>
+          <ul className="flex flex-col divide-y divide-border">
+            {group.items.map((item) => (
+              <NotificationEntry key={item.id} item={item} format={format} onNavigate={onClose} />
+            ))}
+          </ul>
+        </section>
+      ))}
+      {list.hasNextPage ? (
+        <div className="flex justify-center p-2">
+          <Button variant="secondary" size="sm" onClick={() => void loadMore()}>
+            {list.isFetchingNextPage ? <Spinner label={t("ui.loading")} /> : t("notifications.more")}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: arrow keys move between the notifications like in a menu
     <div onKeyDown={onKeyDown} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-2 px-4 pt-3">
-        <h2 id="notifications-title" className="min-w-0 flex-1 font-semibold wrap-anywhere">
-          {t("notifications.title")}
-        </h2>
-        {hasUnread ? (
-          <button
-            type="button"
-            aria-busy={markAll.isPending || undefined}
-            onClick={() => markAll.mutate(new Date().toISOString())}
+      <header className={classNames("flex flex-wrap items-center gap-2", page ? "pb-4" : "px-4 pt-3")}>
+        {page ? (
+          <h1
+            id="notifications-title"
+            className="w-full min-w-0 text-xl font-semibold tracking-heading wrap-anywhere sm:w-auto sm:flex-1"
+          >
+            {t("notifications.title")}
+          </h1>
+        ) : (
+          <h2 id="notifications-title" className="min-w-0 flex-1 font-semibold wrap-anywhere">
+            {t("notifications.title")}
+          </h2>
+        )}
+        <Switch checked={unreadOnly} onCheckedChange={setUnreadOnly} label={t("notifications.unreadOnly")} />
+        {page ? (
+          <Link
+            to="/settings/notifications"
             className={classNames(
               WIDE_HIT_AREA,
-              "inline-flex h-control-sm shrink-0 items-center gap-1 rounded-sm px-1 text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
+              "inline-flex h-control-sm items-center gap-1 rounded-sm text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
             )}
           >
-            {markAll.isPending ? (
-              <Spinner label={t("ui.loading")} />
-            ) : (
-              <CheckCheck aria-hidden="true" className="size-icon-sm" />
-            )}
-            {t("notifications.markAllRead")}
-          </button>
+            <Settings aria-hidden="true" className="size-icon-sm" />
+            {t("notifications.preferences")}
+          </Link>
         ) : null}
       </header>
-      <div className="flex min-h-0 flex-1 flex-col px-2">
+      <div className={classNames("flex min-h-0 flex-1 flex-col", page ? "" : "px-2")}>
         <Tabs
           label={t("notifications.filter")}
-          value={filter}
-          onValueChange={(value) => setFilter(value as Filter)}
-          tabs={[
-            { value: "all", label: t("notifications.all") },
-            { value: "unread", label: t("notifications.unread") },
-          ]}
-          fill
+          value={kind}
+          onValueChange={(value) => setKind(value as Kind)}
+          tabs={kinds.map((value) => ({ value, label: t(`notifications.kinds.${value}`) }))}
+          fill={!page}
         >
-          <div ref={body} className="pb-2">
-            {list.isPending ? (
-              <div className="flex flex-col gap-3 p-2">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : null}
-            {list.isError ? (
-              <div className="p-2">
-                <LoadError
-                  what={t("failures.loadNotifications")}
-                  error={list.error}
-                  onRetry={() => list.refetch()}
-                />
-              </div>
-            ) : null}
-            {list.isSuccess && items.length === 0 ? (
-              filter === "unread" ? (
-                <EmptyState
-                  icon={CheckCheck}
-                  title={t("notifications.allRead")}
-                  action={
-                    <Button variant="secondary" onClick={() => setFilter("all")}>
-                      {t("notifications.showAll")}
-                    </Button>
-                  }
-                />
-              ) : (
-                <EmptyState
-                  icon={BellOff}
-                  title={t("notifications.none")}
-                  description={t("notifications.noneDescription")}
-                />
-              )
-            ) : null}
-            {groupByDay(items).map((group) => (
-              <section key={group.key} aria-labelledby={`notifications-${group.key}`} className="pt-2">
-                <h3
-                  id={`notifications-${group.key}`}
-                  className="px-2 pb-1 font-semibold text-text-muted text-xs uppercase tracking-label"
-                >
-                  {t(`notifications.groups.${group.key}`)}
-                </h3>
-                <ul className="flex flex-col">
-                  {group.items.map((item) => (
-                    <NotificationEntry key={item.id} item={item} format={format} onNavigate={onClose} />
-                  ))}
-                </ul>
-              </section>
-            ))}
-            {list.hasNextPage ? (
-              <div className="flex justify-center p-2">
-                <Button variant="secondary" size="sm" onClick={() => void loadMore()}>
-                  {list.isFetchingNextPage ? <Spinner label={t("ui.loading")} /> : t("notifications.more")}
-                </Button>
-              </div>
-            ) : null}
-          </div>
+          {page ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <SpaceFilter value={spaceId} onChange={setSpaceId} />
+              <span className="ml-auto">{markAllButton}</span>
+            </div>
+          ) : null}
+          {content}
         </Tabs>
       </div>
-      <footer className="flex justify-end border-t border-border px-4 py-2">
-        <Link
-          to="/settings/notifications"
-          onClick={onClose}
-          className={classNames(
-            WIDE_HIT_AREA,
-            "inline-flex h-control-sm items-center gap-1 rounded-sm text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
-          )}
-        >
-          <Settings aria-hidden="true" className="size-icon-sm" />
-          {t("notifications.preferences")}
-        </Link>
-      </footer>
+      {page ? null : (
+        <footer className="flex items-center justify-between gap-2 border-t border-border px-4 py-2">
+          <Link
+            to="/notifications"
+            onClick={onClose}
+            className={classNames(
+              WIDE_HIT_AREA,
+              "inline-flex h-control-sm items-center rounded-sm text-sm font-medium text-accent hover:underline focus-visible:focus-ring",
+            )}
+          >
+            {t("notifications.showAllPage")}
+          </Link>
+          {markAllButton}
+        </footer>
+      )}
     </div>
   );
 }

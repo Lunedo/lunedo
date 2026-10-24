@@ -278,6 +278,12 @@ const personalSpaceRoute = createRoute({
   component: lazyRouteComponent(() => import("./spaces/personal-space-screen.js"), "PersonalSpaceScreen"),
 });
 
+const notificationsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/notifications",
+  component: lazyRouteComponent(() => import("./notifications/notification-panel.js"), "NotificationsScreen"),
+});
+
 const myAccessRequestsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/access-requests",
@@ -1033,6 +1039,7 @@ const routeTree = rootRoute.addChildren([
     openNotificationRoute,
     searchRoute,
     myTasksRoute,
+    notificationsRoute,
     blogRoute,
     spacesRoute,
     personalSpaceRoute,

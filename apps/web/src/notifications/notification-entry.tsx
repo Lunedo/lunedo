@@ -1,10 +1,15 @@
 import { Button, formatDuration, IconButton, useToast } from "@lunedo/ui";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Bell, BellOff, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { api } from "../api/client.js";
+import { request } from "../api/request.js";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { useFailureToast } from "../errors/failure.js";
 import type { Formatter } from "../format/format.js";
 import { translateKey } from "../i18n/translate.js";
+import { AccessRequestActions } from "../sharing/access-requests.js";
 import { useSession } from "../shell/shell-context.js";
 import { notificationTypes } from "./notification-types.js";
 import { type NotificationItem, useMarkRead } from "./notifications-api.js";
@@ -54,6 +59,36 @@ export function countText(t: Parameters<typeof translateKey>[0], item: Notificat
   const key = `notifications.counts.${item.type}`;
   const specific = translateKey(t, key, { count: item.count });
   return specific === key ? translateKey(t, "notifications.times", { count: item.count }) : specific;
+}
+
+function kindLabel(t: Parameters<typeof translateKey>[0], type: string): string | null {
+  const key = `notifications.labels.${type}`;
+  const label = translateKey(t, key);
+  return label === key ? null : label;
+}
+
+function PendingRequest({ requestId }: { requestId: string }) {
+  const { t } = useTranslation();
+  const session = useSession();
+  const entry = useQuery({
+    queryKey: ["accessRequests", requestId],
+    queryFn: () =>
+      request(() => api.GET("/api/v1/access-requests/{requestId}", { params: { path: { requestId } } })),
+    throwOnError: false,
+    retry: false,
+  });
+  if (!entry.data || entry.data.status !== "open" || entry.data.requester.id === session.account?.id)
+    return null;
+  return (
+    <>
+      {entry.data.message ? (
+        <span className="block text-sm text-text-muted wrap-anywhere">
+          {t("notifications.quoted", { text: entry.data.message })}
+        </span>
+      ) : null}
+      <AccessRequestActions entry={entry.data} />
+    </>
+  );
 }
 
 export function NotificationEntry({
@@ -122,7 +157,13 @@ export function NotificationEntry({
         aria-hidden="true"
         className={`mt-2 size-2 shrink-0 rounded-full ${unread ? "bg-accent" : "bg-transparent"}`}
       />
-      <Icon aria-hidden="true" className="mt-1 size-icon-md shrink-0 text-text-muted" />
+      {item.actor?.id && item.actor.name ? (
+        <span className="mt-1 shrink-0">
+          <PersonAvatar id={item.actor.id} name={item.actor.name} size="sm" decorative />
+        </span>
+      ) : (
+        <Icon aria-hidden="true" className="mt-1 size-icon-md shrink-0 text-text-muted" />
+      )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <button
           type="button"
@@ -132,6 +173,7 @@ export function NotificationEntry({
         >
           <span className={`block wrap-anywhere ${unread ? "font-medium" : ""}`}>{text}</span>
           <span className="block text-sm text-text-muted">
+            {kindLabel(t, item.type) ? `${kindLabel(t, item.type)} · ` : ""}
             {item.count > 1 ? `${countText(t, item)} · ` : ""}
             <time dateTime={item.updatedAt} title={format.dateTime(item.updatedAt)}>
               {format.short(item.updatedAt)}
@@ -139,6 +181,9 @@ export function NotificationEntry({
           </span>
           {unread ? <span className="sr-only">{t("notifications.unreadLabel")}</span> : null}
         </button>
+        {item.type === "access.requested" && item.target.id ? (
+          <PendingRequest requestId={item.target.id} />
+        ) : null}
         {watchedItem && stillWatched ? (
           <div>
             <Button variant="secondary" size="sm" icon={BellOff} onClick={() => stopWatching(watchedItem)}>

@@ -4,6 +4,7 @@ import {
   Checkbox,
   EmptyState,
   Field,
+  Menu,
   Notice,
   PageHeader,
   Select,
@@ -14,7 +15,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { Inbox, KeyRound, Send } from "lucide-react";
+import { ChevronDown, Inbox, KeyRound, Send } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -200,6 +201,71 @@ function Decision({ entry, onDecided }: { entry: AccessRequest; onDecided: (next
           {t("sharing.requests.decline")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+export function AccessRequestActions({
+  entry,
+  onDecided,
+}: {
+  entry: AccessRequest;
+  onDecided?: (next: AccessRequest) => void;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<"approve" | "decline" | null>(null);
+  const roles = entry.itemId ? PAGE_ROLES : SPACE_ROLES;
+  const name = entry.requester.name ?? t("spaces.holders.unknownPerson");
+  const decide = async (approve: boolean, role: (typeof SPACE_ROLES)[number] = "reader") => {
+    setBusy(approve ? "approve" : "decline");
+    try {
+      const next = await request(() =>
+        api.POST("/api/v1/access-requests/{requestId}/decide", {
+          params: { path: { requestId: entry.id } },
+          body: approve ? { approve: true, role, includeDescendants: false } : { approve: false },
+        }),
+      );
+      await queryClient.invalidateQueries({ queryKey: sharingKeys.requests(entry.spaceId) });
+      await queryClient.invalidateQueries({ queryKey: ["accessRequests", entry.id] });
+      toast({
+        title: approve
+          ? t("sharing.requests.approvedAs", { name, role: accessRoleLabel(t, role) })
+          : t("sharing.requests.declined", { name }),
+        variant: "success",
+      });
+      onDecided?.(next);
+    } catch (error) {
+      toast({
+        title: t("sharing.requests.decideFailed"),
+        description: problemMessage(t, error),
+        variant: "error",
+        action: { label: t("ui.retry"), onSelect: () => void decide(approve, role) },
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Menu
+        align="start"
+        trigger={
+          <Button size="sm" variant="primary" loading={busy === "approve"}>
+            {t("sharing.requests.give")}
+            <ChevronDown aria-hidden="true" className="size-icon-sm" />
+          </Button>
+        }
+        items={roles.map((role) => ({
+          label: accessRoleLabel(t, role),
+          icon: KeyRound,
+          onSelect: () => void decide(true, role),
+        }))}
+      />
+      <Button size="sm" variant="secondary" loading={busy === "decline"} onClick={() => void decide(false)}>
+        {t("sharing.requests.decline")}
+      </Button>
     </div>
   );
 }

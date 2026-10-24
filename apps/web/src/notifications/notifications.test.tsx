@@ -77,20 +77,23 @@ afterEach(() => {
 });
 
 describe("groupByDay", () => {
-  it("sorts notifications into today, yesterday and earlier", () => {
+  it("sorts notifications into today, yesterday and one group per earlier day", () => {
     const now = new Date("2026-10-01T12:00:00");
     const groups = groupByDay(
       [
         notification("a", { updatedAt: "2026-10-01T09:00:00" }),
         notification("b", { updatedAt: "2026-09-30T23:00:00" }),
         notification("c", { updatedAt: "2026-09-20T09:00:00" }),
+        notification("d", { updatedAt: "2026-09-20T08:00:00" }),
+        notification("e", { updatedAt: "2026-09-18T08:00:00" }),
       ],
       now,
     );
-    expect(groups.map((group) => [group.key, group.items.map((item) => item.id)])).toEqual([
+    expect(groups.map((group) => [group.label, group.items.map((item) => item.id)])).toEqual([
       ["today", ["a"]],
       ["yesterday", ["b"]],
-      ["earlier", ["c"]],
+      ["date", ["c", "d"]],
+      ["date", ["e"]],
     ]);
   });
 });
@@ -302,36 +305,122 @@ describe("the notification panel", () => {
       ),
     ).toBeTruthy();
     expect(within(panel).getByRole("heading", { name: "Today" })).toBeTruthy();
-    expect(within(panel).getByRole("heading", { name: "Earlier" })).toBeTruthy();
+    expect(within(panel).getByRole("heading", { name: /^Sep 1/ })).toBeTruthy();
+    expect(within(panel).queryByRole("tab", { name: "Requests" })).toBeNull();
     const rows = within(panel)
       .getAllByRole("button")
       .filter((button) => button.hasAttribute("data-notification"));
-    within(panel).getByRole("button", { name: "Mark all as read" }).focus();
+    within(panel).getByRole("switch", { name: "Unread only" }).focus();
     await userEvent.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(rows[0]);
     await userEvent.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(rows[1]);
     await userEvent.keyboard("{End}");
     expect(document.activeElement).toBe(rows.at(-1));
-    expect(within(panel).getByRole("link", { name: "Notification settings" }).getAttribute("href")).toBe(
-      "/settings/notifications",
-    );
+    expect(within(panel).getByRole("link", { name: "Show all" }).getAttribute("href")).toBe("/notifications");
 
     await userEvent.click(within(panel).getByRole("button", { name: "Mark all as read" }));
     await waitFor(() =>
       expect(requests.some((request) => request.path === "/api/v1/notifications/read-all")).toBe(true),
     );
     const bell = await screen.findByRole("button", { name: "Notifications" });
-    await userEvent.click(within(panel).getByRole("tab", { name: "Unread" }));
+    await userEvent.click(within(panel).getByRole("switch", { name: "Unread only" }));
     expect(await within(panel).findByText("You have read everything.")).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("unread=true"))).toBe(true);
     expect(
       within(panel).queryByText("Reminders and notices about your organizations appear here."),
     ).toBeNull();
     await userEvent.click(within(panel).getByRole("button", { name: "Show all" }));
-    expect(within(panel).getByRole("tab", { name: "All" }).getAttribute("aria-selected")).toBe("true");
+    expect(within(panel).getByRole("switch", { name: "Unread only" }).getAttribute("aria-checked")).toBe(
+      "false",
+    );
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Notifications" })).toBeNull());
     expect(document.activeElement).toBe(bell);
+  });
+});
+
+describe("the notifications page", () => {
+  it("filters by kind and decides an access request in the entry", async () => {
+    const REQUEST = "01929b1e-0000-7000-8000-0000000000f1";
+    const SPACE = "01929b1e-0000-7000-8000-0000000000f2";
+    const FELIX = { id: "01929b1e-0000-7000-8000-0000000000f3", name: "Felix Gruber", email: null };
+    const asked = notification("01929b1e-0000-7000-8000-0000000000f4", {
+      type: "access.requested",
+      target: { type: "accessRequest", id: REQUEST },
+      actor: { type: "account", id: FELIX.id, name: FELIX.name },
+      actorCount: 1,
+      params: {
+        requestId: REQUEST,
+        target: "space",
+        requesterName: FELIX.name,
+        spaceId: SPACE,
+        spaceName: "People",
+        spaceKey: "HR",
+        itemTitle: null,
+        message: "For the onboarding in November",
+      },
+    });
+    const { requests } = mockApi({
+      "GET /api/v1/instance/info": () => ({
+        body: {
+          name: "Example Wiki",
+          setupComplete: true,
+          language: "en",
+          accentColor: "petrol",
+          passwordMinLength: 12,
+          selfRegistration: false,
+          organization: null,
+        },
+      }),
+      "GET /api/v1/auth/session": () => ({
+        body: { sessionKind: "full", account: ACCOUNT, methods: ["password"], recentlyAuthenticated: true },
+      }),
+      "GET /api/v1/organizations": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
+      "GET /api/v1/account/preferences": () => ({ body: [] }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 1 } }),
+      "GET /api/v1/notifications": () => ({ body: { items: [asked], nextCursor: null } }),
+      [`GET /api/v1/access-requests/${REQUEST}`]: () => ({
+        body: {
+          id: REQUEST,
+          requester: FELIX,
+          spaceId: SPACE,
+          spaceName: "People",
+          itemId: null,
+          itemTitle: null,
+          message: "For the onboarding in November",
+          status: "open",
+          role: null,
+          decidedBy: null,
+          decidedAt: null,
+          createdAt: new Date().toISOString(),
+        },
+      }),
+      [`POST /api/v1/access-requests/${REQUEST}/decide`]: () => ({
+        body: { status: "approved", role: "commenter" },
+      }),
+    });
+    window.history.replaceState(null, "", "/notifications");
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    expect(
+      await screen.findByRole("heading", { name: "Notifications", level: 1 }, { timeout: 5000 }),
+    ).toBeTruthy();
+    expect(await screen.findByText("“For the onboarding in November”")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Give access" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Can comment" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith("/decide"))?.body).toEqual({
+        approve: true,
+        role: "commenter",
+        includeDescendants: false,
+      }),
+    );
+    await userEvent.click(screen.getByRole("tab", { name: "Requests" }));
+    await waitFor(() =>
+      expect(requests.some((request) => request.path.includes("kind=requests"))).toBe(true),
+    );
   });
 });
 

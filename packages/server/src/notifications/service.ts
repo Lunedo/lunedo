@@ -88,6 +88,14 @@ const listColumns = {
   readAt: notifications.readAt,
 };
 
+export const notificationKinds = ["mentions", "watched", "requests"] as const;
+export type NotificationKind = (typeof notificationKinds)[number];
+export const notificationKindTypes: Record<NotificationKind, readonly string[]> = {
+  mentions: ["content.mentioned"],
+  watched: ["comment.created", "content.changed", "page.statusChanged", "ownership.transferred"],
+  requests: ["access.requested"],
+};
+
 type ListRow = {
   id: string;
   type: string;
@@ -395,7 +403,13 @@ export class NotificationService {
 
   async list(
     recipientId: string,
-    request: { after?: NotificationCursor | undefined; limit: number; unreadOnly?: boolean },
+    request: {
+      after?: NotificationCursor | undefined;
+      limit: number;
+      unreadOnly?: boolean;
+      kind?: NotificationKind | undefined;
+      spaceId?: string | undefined;
+    },
   ): Promise<NotificationPage> {
     const visible = this.visibility(recipientId);
     const items: NotificationItem[] = [];
@@ -408,6 +422,13 @@ export class NotificationService {
             eq(notifications.recipientId, recipientId),
             eq(notifications.inApp, true),
             request.unreadOnly ? isNull(notifications.readAt) : undefined,
+            request.kind ? inArray(notifications.type, [...notificationKindTypes[request.kind]]) : undefined,
+            request.spaceId
+              ? sql`((${notifications.targetType} = 'item' and exists (select 1 from tree_items t
+                    where t.id::text = ${notifications.targetId} and t.space_id = ${request.spaceId}))
+                  or (${notifications.targetType} = 'accessRequest' and exists (select 1 from access_requests r
+                    where r.id::text = ${notifications.targetId} and r.space_id = ${request.spaceId})))`
+              : undefined,
             cursor
               ? sql`(${notifications.updatedAt}, ${notifications.id}) < (${cursor[0]}::timestamptz, ${cursor[1]}::uuid)`
               : undefined,

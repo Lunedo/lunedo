@@ -690,9 +690,11 @@ export {
   NOTIFICATIONS_CHANNEL,
   type NotificationCursor,
   type NotificationItem,
+  type NotificationKind,
   type NotificationPage,
   NotificationService,
   type NotifyInput,
+  notificationKinds,
 } from "./notifications/service.js";
 export {
   browserPushSetting,

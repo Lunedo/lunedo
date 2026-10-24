@@ -5,6 +5,7 @@ import {
   currentRequestContext,
   type ImportChangeSignal,
   type NotificationCursor,
+  notificationKinds,
   type RequestContext,
   runWithRequestContext,
   type SettingChangeSignal,
@@ -78,7 +79,21 @@ const cursorSchema = z.tuple([
   idSchema,
 ]);
 
-const listQuery = z.object({ ...pageQuery, unread: z.enum(["true", "false"]).optional() }).strict();
+const listQuery = z
+  .object({
+    ...pageQuery,
+    unread: z.enum(["true", "false"]).optional(),
+    kind: z
+      .enum(notificationKinds)
+      .optional()
+      .describe(
+        "Only `mentions`, notifications about `watched` content, or access `requests` to decide. Leave it out for all.",
+      ),
+    spaceId: idSchema
+      .optional()
+      .describe("Only notifications about content or access requests of this space."),
+  })
+  .strict();
 
 const notificationSchema = z.object({
   id: idSchema,
@@ -162,6 +177,8 @@ export class NotificationsController {
       after,
       limit: query.limit,
       unreadOnly: query.unread === "true",
+      kind: query.kind,
+      spaceId: query.spaceId,
     });
     return { items: page.items, nextCursor: page.next ? encodeCursor(page.next) : null };
   }
