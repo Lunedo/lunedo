@@ -159,6 +159,7 @@ export {
   attendance,
   decisions,
   meetingAttendees,
+  meetingGuests,
   meetingOccurrenceOverrides,
   meetingPrivateNotes,
   meetingReminder,

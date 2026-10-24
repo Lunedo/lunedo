@@ -92,7 +92,7 @@ export function useReopenMeeting() {
   };
 }
 
-type DateDialogPurpose = "close" | "skip" | "move";
+type DateDialogPurpose = "close" | "skip";
 
 export function MeetingDateDialog({
   meeting,
@@ -116,7 +116,7 @@ export function MeetingDateDialog({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const dateInput = useRef<HTMLInputElement>(null);
-  const needsDate = purpose === "move" || !meeting.rhythm;
+  const needsDate = !meeting.rhythm;
   const allowUnscheduled = !meeting.rhythm;
 
   const submit = async () => {
@@ -135,23 +135,13 @@ export function MeetingDateDialog({
         if (await close(meeting, needsDate ? startsAt : undefined)) onOpenChange(false);
         return;
       }
-      if (purpose === "skip") {
-        await request(() =>
-          api.POST("/api/v1/meetings/{meetingId}/skip", {
-            params: { path: { meetingId: meeting.id } },
-            body: needsDate ? { nextStartsAt: startsAt } : {},
-          }),
-        );
-        toast({ variant: "success", title: t("meetings.skip.done", { title: meeting.title }) });
-      } else {
-        await request(() =>
-          api.PUT("/api/v1/meetings/{meetingId}/start", {
-            params: { path: { meetingId: meeting.id } },
-            body: { startsAt },
-          }),
-        );
-        toast({ variant: "success", title: t("meetings.move.done") });
-      }
+      await request(() =>
+        api.POST("/api/v1/meetings/{meetingId}/skip", {
+          params: { path: { meetingId: meeting.id } },
+          body: needsDate ? { nextStartsAt: startsAt } : {},
+        }),
+      );
+      toast({ variant: "success", title: t("meetings.skip.done", { title: meeting.title }) });
       await refresh(meeting.id);
       onOpenChange(false);
     } catch (failure) {

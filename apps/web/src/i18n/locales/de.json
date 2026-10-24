@@ -1646,7 +1646,20 @@
     "portalInvitationAccountExists": "Diese E-Mail-Adresse gehört schon zu einem Lunedo-Konto. Melde dich damit an und bitte die Einladenden, diesem Konto Zugriff zu geben.",
     "staticSiteNotPublic": "Nur öffentliche Wissensdatenbanken lassen sich als statische Website herunterladen, weil eine statische Website keine Anmeldung hat. Mach die Wissensdatenbank zuerst in der Sichtbarkeit öffentlich.",
     "maintenanceMode": "Lunedo wird gerade gewartet und speichert keine Änderungen. Es wurde nichts geändert; versuche es nach der Wartung noch einmal.",
-    "signInPaused": "Die Anmeldung ist während der Wartung pausiert; nur Instanz-Administratoren können sich jetzt anmelden. Versuche es nach der Wartung noch einmal."
+    "signInPaused": "Die Anmeldung ist während der Wartung pausiert; nur Instanz-Administratoren können sich jetzt anmelden. Versuche es nach der Wartung noch einmal.",
+    "invalidLayout": "Jedes Modul der Übersicht braucht genau einen Platz. Lade die Seite neu und versuch es erneut.",
+    "tooManyOverviewLinks": "Die Übersicht kann bis zu 20 Seiten verlinken. Löse zuerst einige.",
+    "invalidOverviewLink": "Hefte Seiten dieses Space an, die du öffnen kannst.",
+    "tooManyExtraMeetings": "Eine Serie kann bis zu 10 zusätzliche Besprechungen gleichzeitig planen. Halte oder lösche zuerst einige.",
+    "extraMeetingNotSkippable": "Eine zusätzliche Besprechung hat keinen nächsten Termin. Verschieb sie oder leg sie in den Papierkorb.",
+    "invalidGuestName": "Gib einen Namen mit bis zu 200 Zeichen ein.",
+    "invalidGuestNote": "Die Notiz kann bis zu 500 Zeichen haben. Kürze sie und versuch es erneut.",
+    "tooManyGuests": "Eine Besprechung kann bis zu 50 Gäste haben. Entferne zuerst einige.",
+    "guestNotFound": "Der Gast wurde inzwischen entfernt. Lade die Seite neu.",
+    "meetingRequired": "Ein Thema nur für eine Besprechung braucht eine offene Besprechung. Leg es auf der Besprechungsseite an.",
+    "invalidUpdate": "Ein Update kann bis zu 5.000 Zeichen haben. Kürze es und versuch es erneut.",
+    "updateFormatted": "Dieses Update hat Formatierungen, die verloren gingen. Ändere es unter „Notizen“.",
+    "invalidTask": "Beschreib die Aufgabe mit bis zu 500 Zeichen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -7074,7 +7087,9 @@
       "loadOlder": "Ältere Besprechungen zeigen",
       "openTasks": "Offene Aufgaben",
       "noTasksTitle": "Keine offenen Aufgaben",
-      "noTasksDescription": "Aufgaben aus den Besprechungen dieser Serie erscheinen hier, bis sie erledigt sind."
+      "noTasksDescription": "Aufgaben aus den Besprechungen dieser Serie erscheinen hier, bis sie erledigt sind.",
+      "next": "Nächste Besprechung",
+      "settingsShort": "Serie"
     },
     "settings": {
       "title": "Einstellungen von {name}",
@@ -7099,7 +7114,9 @@
       },
       "noAccessTitle": "{count, plural, one {Eine teilnehmende Person kann diese Seite nicht lesen} other {# Teilnehmende können diese Seite nicht lesen}}",
       "noAccess": "{names} hat keinen Zugriff. Teile die Seite, damit die Notizen alle erreichen.",
-      "share": "Seite teilen"
+      "share": "Seite teilen",
+      "date": "Termin",
+      "extra": "Zusätzlich"
     },
     "attendance": {
       "title": "Teilnehmende",
@@ -7111,10 +7128,14 @@
       "change": "{name}: {state}. Anwesenheit ändern",
       "failed": "Die Anwesenheit konnte nicht gespeichert werden",
       "add": "Teilnehmende Person hinzufügen",
-      "person": "Hinzuzufügende Person",
+      "person": "Person",
       "addConfirm": "Zu dieser Besprechung hinzufügen",
       "addFailed": "Die Person konnte nicht hinzugefügt werden",
-      "personRequired": "Wähle zuerst eine Person."
+      "personRequired": "Wähle zuerst eine Person.",
+      "added": "{name} hinzugefügt",
+      "kind": "Wen hinzufügen",
+      "of": "Anwesenheit von {name}",
+      "withAccount": "Person mit Konto"
     },
     "close": {
       "action": "Besprechung schließen",
@@ -7148,7 +7169,11 @@
       "descriptionWithRhythm": "Wähle das neue Datum und die Uhrzeit, in {timeZone}. Der Rhythmus der Serie bleibt.",
       "confirm": "Besprechung verschieben",
       "done": "Besprechung verschoben.",
-      "failed": "Die Besprechung konnte nicht verschoben werden"
+      "failed": "Die Besprechung konnte nicht verschoben werden",
+      "to": "Verschieben auf",
+      "missing": "Gib ein Datum und eine Uhrzeit ein.",
+      "rhythmStays": "Der Rhythmus der Serie bleibt.",
+      "zone": "Uhrzeit in {timeZone}."
     },
     "topics": {
       "title": "Laufende Themen",
@@ -7261,7 +7286,9 @@
       "copyFailed": "Die Blöcke konnten nicht kopiert werden",
       "ownTitle": "Deine privaten Notizen",
       "ownDescription": "Nur du siehst diese Liste.",
-      "savedAt": "gespeichert {date}"
+      "savedAt": "gespeichert {date}",
+      "shared": "Notizen",
+      "editShared": "Notizen bearbeiten"
     },
     "home": {
       "upcoming": "Nächste Besprechungen",
@@ -7318,7 +7345,191 @@
       "twoDays": "2 Tage vorher",
       "oneWeek": "1 Woche vorher"
     },
-    "inactive": "Inaktiv"
+    "inactive": "Inaktiv",
+    "agenda": {
+      "title": "Offene Themen",
+      "discussed": "Themen dieser Besprechung",
+      "loadFailed": "Die Themen dieser Besprechung konnten nicht geladen werden",
+      "person": "Person",
+      "everyone": "Alle Personen",
+      "expandAll": "Alle aufklappen",
+      "collapseAll": "Alle zuklappen",
+      "topic": "Thema",
+      "add": "Hinzufügen",
+      "titlePlaceholder": "Neues Thema, z. B. Druckerkosten 2027",
+      "titleRequired": "Gib einen Titel für das Thema ein.",
+      "ownerPlaceholder": "Verantwortlich",
+      "running": "Laufend",
+      "runningHint": "Bleibt offen, bis es jemand schließt. Aus: nur für diese Besprechung, schließt mit ihr.",
+      "topicAdded": "Laufendes Thema angelegt",
+      "oneOffAdded": "Thema nur für diese Besprechung angelegt",
+      "empty": "Keine offenen Themen. Füge eines mit „Thema“ hinzu.",
+      "noneForPerson": "Diese Person hat keine offenen Themen.",
+      "archiveBefore": "Geschlossene Themen findest du im",
+      "archiveLink": "Archiv der Serie",
+      "dragTopic": "{title} verschieben",
+      "moveUp": "{title} nach oben",
+      "moveDown": "{title} nach unten",
+      "moveFailed": "Die Reihenfolge konnte nicht geändert werden",
+      "expand": "{title} aufklappen",
+      "collapse": "{title} zuklappen",
+      "onlyToday": "nur heute",
+      "forThisMeeting": "für diese Besprechung",
+      "runningSince": "laufend seit {date}",
+      "lastUpdate": "zuletzt: {text}",
+      "noUpdate": "noch kein Update",
+      "newUpdate": "neues Update",
+      "previous": "Frühere Updates",
+      "emptyUpdate": "(leer)",
+      "updateLabel": "Update zu {title} in dieser Besprechung",
+      "updatePlaceholder": "Update in dieser Besprechung …",
+      "saveFailed": "Das Update wurde nicht gespeichert",
+      "formatted": "Dieses Update hat Formatierungen. Ändere es unter „Notizen“, damit nichts verloren geht.",
+      "topicTasks": "Aufgaben zu diesem Thema",
+      "noTasks": "Noch keine Aufgaben.",
+      "addTask": "Aufgabe hinzufügen",
+      "taskText": "Aufgabe",
+      "taskPlaceholder": "Was ist zu tun?",
+      "taskPerson": "Person",
+      "taskDue": "Fällig am",
+      "taskRequired": "Beschreib zuerst die Aufgabe.",
+      "createTask": "Anlegen",
+      "taskAdded": "Aufgabe angelegt",
+      "taskFailed": "Die Aufgabe wurde nicht angelegt",
+      "decide": "Als Entscheidung schließen",
+      "resolve": "Erledigt",
+      "drop": "Verwerfen",
+      "decisionNeedsText": "Schreib die Entscheidung in das Feld, dann klick noch einmal.",
+      "autosave": "Das Update wird automatisch gespeichert.",
+      "closed": {
+        "decided": "Entscheidung festgehalten. {title} ist jetzt im Archiv.",
+        "resolved": "{title} ist erledigt und jetzt im Archiv.",
+        "dropped": "{title} wurde verworfen und ist jetzt im Archiv."
+      },
+      "openTasks": "{count, plural, one {# offene Aufgabe} other {# offene Aufgaben}}",
+      "moved": "Reihenfolge für alle geändert: {title}"
+    },
+    "outcomes": {
+      "decisions": "Entscheidungen",
+      "tasks": "Neue Aufgaben",
+      "fromTopics": "entstehen aus den Themen",
+      "noDecisions": "Noch keine Entscheidung in dieser Besprechung.",
+      "noTasks": "Noch keine Aufgaben aus dieser Besprechung."
+    },
+    "drag": {
+      "instructions": "Drück die Leertaste, um einen Eintrag aufzunehmen. Verschieb ihn mit den Pfeiltasten, drück die Leertaste erneut zum Ablegen oder Escape zum Abbrechen. Die Pfeilknöpfe neben jedem Eintrag verschieben ihn ebenfalls.",
+      "picked": "{name} aufgenommen.",
+      "over": "{name} ist über {target}.",
+      "dropped": "{name} bei {target} abgelegt.",
+      "cancelled": "Verschieben von {name} abgebrochen."
+    },
+    "extra": {
+      "action": "Zusätzliche Besprechung anlegen",
+      "short": "Zusätzliche Besprechung",
+      "on": "Zusätzliche Besprechung am",
+      "hint": "Außerhalb des Rhythmus. Sie zeigt dieselben offenen Themen.",
+      "confirm": "Besprechung anlegen",
+      "done": "Zusätzliche Besprechung angelegt",
+      "failed": "Die zusätzliche Besprechung konnte nicht angelegt werden"
+    },
+    "guests": {
+      "badge": "Gast",
+      "withoutAccount": "Person ohne Konto",
+      "name": "Name",
+      "namePlaceholder": "Name, z. B. Martin Huber",
+      "nameRequired": "Gib den Namen der Person ein.",
+      "note": "Notiz",
+      "notePlaceholder": "Optional, z. B. die Firma",
+      "hint": "Nur für die Anwesenheit dieser Besprechung. Die Person bekommt keinen Zugriff.",
+      "remove": "{name} entfernen",
+      "removed": "{name} entfernt",
+      "removeFailed": "Der Gast konnte nicht entfernt werden"
+    },
+    "overview": {
+      "customize": "Übersicht anpassen",
+      "done": "Fertig",
+      "all": "Alle",
+      "updated": "aktualisiert {date}",
+      "drag": "{name} verschieben",
+      "left": "{name} in die linke Spalte",
+      "right": "{name} in die rechte Spalte",
+      "up": "{name} nach oben",
+      "down": "{name} nach unten",
+      "hide": "{name} ausblenden",
+      "column": "Spalte {number}",
+      "emptyColumn": "Zieh ein Modul hierher.",
+      "addModules": "Module hinzufügen:",
+      "allShown": "Alle Module sind eingeblendet.",
+      "sharedHint": "Gilt für alle Mitglieder der Serie.",
+      "saveFailed": "Die Übersicht konnte nicht gespeichert werden",
+      "pinned": "Angeheftete Seiten für „Links“",
+      "pin": "Seite anheften",
+      "pinPlaceholder": "Seiten dieses Space suchen",
+      "unpin": "{title} lösen",
+      "modules": {
+        "topics": "Offene Themen",
+        "tasks": "Offene Aufgaben",
+        "decisions": "Entscheidungen",
+        "meetings": "Besprechungen",
+        "attendance": "Teilnahme",
+        "links": "Links"
+      },
+      "empty": {
+        "topics": "Keine offenen Themen.",
+        "tasks": "Keine offenen Aufgaben.",
+        "decisions": "Noch keine Entscheidungen.",
+        "meetings": "Noch keine Besprechungen.",
+        "attendance": "Keine Mitglieder.",
+        "links": "Keine angehefteten Seiten. Hefte welche unter „Übersicht anpassen“ an."
+      },
+      "kinds": {
+        "page": "Seite",
+        "folder": "Ordner",
+        "blogPost": "Blogbeitrag",
+        "whiteboard": "Whiteboard"
+      },
+      "lastMeetings": "{count, plural, =0 {noch keine Besprechung abgehalten} one {letzte Besprechung} other {letzte # Besprechungen}}"
+    },
+    "tabs": {
+      "label": "Bereiche der Serie",
+      "overview": "Übersicht",
+      "topics": "Themen",
+      "tasks": "Aufgaben",
+      "decisions": "Entscheidungen",
+      "meetings": "Besprechungen",
+      "archive": "Geschlossen (Archiv)",
+      "allLabels": "Alle Labels",
+      "noClosedTopics": "Noch keine geschlossenen Themen.",
+      "person": "Person",
+      "sort": "Sortierung",
+      "byDue": "Nach Fälligkeit",
+      "byPerson": "Nach Person",
+      "byText": "Nach Aufgabe",
+      "period": "Zeitraum",
+      "periods": {
+        "any": "Alle",
+        "30": "Letzte 30 Tage",
+        "90": "Letzte 90 Tage",
+        "365": "Letztes Jahr"
+      },
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst",
+      "meetingStates": {
+        "all": "Alle",
+        "held": "Abgehalten",
+        "skipped": "Ausgelassen"
+      },
+      "skippedMoved": "Ausgelassen, die Agenda ist weitergewandert",
+      "pages": "Seiten",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "columns": {
+        "topic": "Thema",
+        "since": "Seit",
+        "updates": "Updates",
+        "tasks": "Aufgaben"
+      }
+    }
   },
   "confidential": {
     "badge": "Vertraulich",

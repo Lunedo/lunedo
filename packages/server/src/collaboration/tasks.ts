@@ -39,7 +39,7 @@ export interface TaskEntry {
   };
 }
 
-export const taskSorts = ["due", "text", "item", "assignedBy"] as const;
+export const taskSorts = ["due", "text", "item", "assignedBy", "assignee"] as const;
 export type TaskSort = (typeof taskSorts)[number];
 
 export interface TaskFilter {
@@ -208,7 +208,9 @@ export class TaskService {
           ? sql`lower(k.text)`
           : sort === "item"
             ? sql`lower(t.title)`
-            : sql`lower(coalesce(${this.#people.visibleName(viewer, sql`ab`)}, ''))`;
+            : sort === "assignee"
+              ? sql`lower(coalesce(${this.#people.visibleName(viewer, sql`a`)}, ''))`
+              : sql`lower(coalesce(${this.#people.visibleName(viewer, sql`ab`)}, ''))`;
     const direction = filter.direction === "desc" ? sql`desc` : sql`asc`;
     const due = filter.due ?? "any";
     const dueCondition =

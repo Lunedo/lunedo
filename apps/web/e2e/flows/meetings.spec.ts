@@ -31,32 +31,58 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
   });
   expect(quarterly.upcoming.title).toContain("Quarterly review");
 
-  await page.getByRole("button", { name: "Add topic" }).first().click();
-  const topicDialog = page.getByRole("dialog", { name: "Add a running topic" });
-  await topicDialog.getByLabel("Title").fill("Positions in AD");
-  await topicDialog.getByRole("button", { name: "Add topic" }).click();
-  await expect(page.getByRole("link", { name: /Positions in AD/ })).toBeVisible();
+  await page.getByRole("tab", { name: /Topics/ }).click();
+  await page.getByRole("button", { name: "Topic", exact: true }).click();
+  await page.getByRole("textbox", { name: "Title" }).fill("Positions in AD");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Positions in AD" })).toBeVisible();
 
   await page.getByRole("link", { name: "Open agenda" }).click();
   await expect(page.getByRole("region", { name: "Meeting details" })).toBeVisible();
-  const attendee = page.getByRole("button", { name: new RegExp(`${colleague.name}: Not recorded`) });
-  await attendee.click();
-  await page.getByRole("menuitem", { name: "Present" }).click();
-  await expect(page.getByRole("button", { name: new RegExp(`${colleague.name}: Present`) })).toBeVisible();
+  await page.getByRole("combobox", { name: `Attendance of ${colleague.name}` }).click();
+  await page.getByRole("option", { name: "Present" }).click();
+  await expect(page.getByRole("combobox", { name: `Attendance of ${colleague.name}` })).toContainText(
+    "Present",
+  );
+  await page.getByRole("button", { name: "Person", exact: true }).click();
+  await page.getByRole("radio", { name: "Person without an account" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Martin Huber");
+  await page.getByRole("button", { name: "Add to this meeting" }).click();
+  await expect(page.getByRole("list", { name: "Attendees" }).getByText("Guest")).toBeVisible();
   const meetingUrl = page.url();
 
-  await page.getByRole("link", { name: "Jour fixe IT" }).first().click();
-  await page.getByRole("link", { name: /Positions in AD/ }).click();
-  await page.getByRole("button", { name: "Close as decision" }).click();
-  const decide = page.getByRole("dialog", { name: /Close Positions in AD as a decision/ });
-  await decide.getByLabel("Decision").fill("Positions are kept in AD and synchronized nightly.");
-  await decide.getByRole("button", { name: "Record decision" }).click();
-  await expect(page.getByText("Decided", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Topic", exact: true }).click();
+  await page.getByRole("textbox", { name: "Title" }).fill("Printer costs");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const agenda = page.getByRole("list", { name: /Open topics/ });
+  await expect(agenda.getByRole("listitem")).toHaveCount(2);
+  await agenda.getByRole("listitem").nth(1).hover();
+  await page.getByRole("button", { name: "Move Printer costs up" }).click();
+  await expect(agenda.getByRole("listitem").first()).toContainText("Printer costs");
+  await page.getByRole("button", { name: "Move Printer costs", exact: true }).focus();
+  await page.keyboard.press("Space");
+  await expect(
+    page.getByText(/^(Picked up Printer costs|Printer costs is over Printer costs).$/),
+  ).toBeAttached();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByText("Printer costs is over Positions in AD.")).toBeAttached();
+  await page.keyboard.press("Space");
+  await expect(agenda.getByRole("listitem").first()).toContainText("Positions in AD");
 
+  await page.getByRole("button", { name: "Show Positions in AD" }).click();
   await page
-    .getByRole("navigation", { name: "Breadcrumbs" })
-    .getByRole("link", { name: "Jour fixe IT" })
-    .click();
+    .getByRole("textbox", { name: "Update on Positions in AD in this meeting" })
+    .fill("Positions are kept in AD and synchronized nightly.");
+  await page.getByRole("button", { name: "Close as decision" }).click();
+  await expect(page.getByText(/Decision recorded/).first()).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: /Decisions/ })
+      .getByText("Positions are kept in AD and synchronized nightly."),
+  ).toBeVisible();
+  await expect(agenda.getByRole("listitem")).toHaveCount(1);
+
+  await page.getByRole("link", { name: "Jour fixe IT", exact: true }).first().click();
   await expect(page.getByText("Positions are kept in AD and synchronized nightly.")).toBeVisible();
 
   await page.goto(meetingUrl);

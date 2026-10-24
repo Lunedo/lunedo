@@ -15,6 +15,11 @@ export type SeriesListEntry = Ok<"/api/v1/spaces/{spaceId}/meeting-series", "get
 export type MeetingSummary = Ok<"/api/v1/meeting-series/{seriesId}/meetings", "get">["items"][number];
 export type Meeting = Ok<"/api/v1/meetings/{meetingId}", "get">;
 export type Attendee = Meeting["attendees"][number];
+export type Guest = Meeting["guests"][number];
+export type Agenda = Ok<"/api/v1/meetings/{meetingId}/agenda", "get">;
+export type AgendaTopic = Agenda["topics"][number];
+export type AgendaTask = Agenda["tasks"][number];
+export type AttendanceRate = Ok<"/api/v1/meeting-series/{seriesId}/attendance", "get">[number];
 export type Topic = Ok<"/api/v1/meeting-series/{seriesId}/topics", "get">[number];
 export type TopicDetails = Ok<"/api/v1/topics/{topicId}", "get">;
 export type DecisionEntry = Ok<"/api/v1/meeting-series/{seriesId}/decisions", "get">[number];
@@ -39,6 +44,8 @@ export const meetingKeys = {
     ["meetings", "series", seriesId, "decisions", query] as const,
   seriesNotes: (seriesId: string) => ["meetings", "series", seriesId, "notes"] as const,
   meeting: (meetingId: string) => ["meetings", "meeting", meetingId] as const,
+  agenda: (meetingId: string) => ["meetings", "meeting", meetingId, "agenda"] as const,
+  attendance: (seriesId: string) => ["meetings", "series", seriesId, "attendance"] as const,
   notes: (meetingId: string) => ["meetings", "meeting", meetingId, "notes"] as const,
   topic: (topicId: string) => ["meetings", "topic", topicId] as const,
   upcoming: (oneOnOne?: boolean) => ["meetings", "upcoming", oneOnOne ?? null] as const,
@@ -66,6 +73,24 @@ export function meetingQuery(meetingId: string) {
     queryKey: meetingKeys.meeting(meetingId),
     queryFn: () =>
       request(() => api.GET("/api/v1/meetings/{meetingId}", { params: { path: { meetingId } } })),
+  });
+}
+
+export function agendaQuery(meetingId: string) {
+  return queryOptions({
+    queryKey: meetingKeys.agenda(meetingId),
+    queryFn: () =>
+      request(() => api.GET("/api/v1/meetings/{meetingId}/agenda", { params: { path: { meetingId } } })),
+  });
+}
+
+export function attendanceQuery(seriesId: string) {
+  return queryOptions({
+    queryKey: meetingKeys.attendance(seriesId),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/meeting-series/{seriesId}/attendance", { params: { path: { seriesId } } }),
+      ),
   });
 }
 

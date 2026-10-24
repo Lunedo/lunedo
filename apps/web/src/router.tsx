@@ -431,6 +431,10 @@ const seriesRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/meetings/$seriesId",
   params: { parse: (params) => ({ ...params, seriesId: z.uuid().parse(params.seriesId) }) },
+  validateSearch: z.object({
+    tab: z.enum(["overview", "topics", "tasks", "decisions", "meetings"]).optional().catch(undefined),
+    status: z.enum(["open", "closed", "all"]).optional().catch(undefined),
+  }),
   component: lazyRouteComponent(() => import("./meetings/series-screen.js"), "SeriesScreen"),
 });
 

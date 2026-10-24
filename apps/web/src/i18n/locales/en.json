@@ -1646,7 +1646,20 @@
     "portalInvitationAccountExists": "This e-mail address already belongs to a Lunedo account. Sign in with it and ask the people who invited you to give that account access.",
     "staticSiteNotPublic": "Only public knowledge bases can be downloaded as a static website, because a static website has no sign-in. Make the knowledge base public in its visibility settings first.",
     "maintenanceMode": "Lunedo is in maintenance and saves no changes right now. Nothing was changed; try again when the maintenance has ended.",
-    "signInPaused": "Signing in is paused during maintenance; only instance administrators can sign in now. Try again when the maintenance has ended."
+    "signInPaused": "Signing in is paused during maintenance; only instance administrators can sign in now. Try again when the maintenance has ended.",
+    "invalidLayout": "Every module of the overview needs exactly one place. Reload the page and try again.",
+    "tooManyOverviewLinks": "The overview can link up to 20 pages. Unpin some first.",
+    "invalidOverviewLink": "Pin pages of this space that you can open.",
+    "tooManyExtraMeetings": "A series can plan up to 10 additional meetings at a time. Hold or delete some first.",
+    "extraMeetingNotSkippable": "An additional meeting has no next date. Move it or move it to the trash instead.",
+    "invalidGuestName": "Enter a name with up to 200 characters.",
+    "invalidGuestNote": "The note can have up to 500 characters. Shorten it and try again.",
+    "tooManyGuests": "A meeting can have up to 50 guests. Remove some first.",
+    "guestNotFound": "The guest was removed in the meantime. Reload the page.",
+    "meetingRequired": "A topic for one meeting only needs an open meeting. Add it on the meeting page.",
+    "invalidUpdate": "An update can have up to 5,000 characters. Shorten it and try again.",
+    "updateFormatted": "This update has formatting that would get lost. Change it under “Notes”.",
+    "invalidTask": "Describe the task with up to 500 characters."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -7074,7 +7087,9 @@
       "loadOlder": "Show older meetings",
       "openTasks": "Open tasks",
       "noTasksTitle": "No open tasks",
-      "noTasksDescription": "Tasks written in the meetings of this series appear here until they are done."
+      "noTasksDescription": "Tasks written in the meetings of this series appear here until they are done.",
+      "next": "Next meeting",
+      "settingsShort": "Series"
     },
     "settings": {
       "title": "Settings of {name}",
@@ -7099,7 +7114,9 @@
       },
       "noAccessTitle": "{count, plural, one {An attendee cannot read this page} other {# attendees cannot read this page}}",
       "noAccess": "{names} has no access. Share the page so the notes reach everyone.",
-      "share": "Share page"
+      "share": "Share page",
+      "date": "Date",
+      "extra": "Additional"
     },
     "attendance": {
       "title": "Attendees",
@@ -7111,10 +7128,14 @@
       "change": "{name}: {state}. Change attendance",
       "failed": "The attendance could not be saved",
       "add": "Add attendee",
-      "person": "Person to add",
+      "person": "Person",
       "addConfirm": "Add to this meeting",
       "addFailed": "The person could not be added",
-      "personRequired": "Choose a person first."
+      "personRequired": "Choose a person first.",
+      "added": "{name} added",
+      "kind": "Who to add",
+      "of": "Attendance of {name}",
+      "withAccount": "Person with an account"
     },
     "close": {
       "action": "Close meeting",
@@ -7148,7 +7169,11 @@
       "descriptionWithRhythm": "Choose the new date and time, in {timeZone}. The rhythm of the series stays.",
       "confirm": "Move meeting",
       "done": "Meeting moved.",
-      "failed": "The meeting could not be moved"
+      "failed": "The meeting could not be moved",
+      "to": "Move to",
+      "missing": "Enter a date and a time.",
+      "rhythmStays": "The rhythm of the series stays.",
+      "zone": "Time in {timeZone}."
     },
     "topics": {
       "title": "Running topics",
@@ -7261,7 +7286,9 @@
       "copyFailed": "The blocks could not be copied",
       "ownTitle": "Your private notes",
       "ownDescription": "Only you can see this list.",
-      "savedAt": "saved {date}"
+      "savedAt": "saved {date}",
+      "shared": "Notes",
+      "editShared": "Edit notes"
     },
     "home": {
       "upcoming": "Upcoming meetings",
@@ -7318,7 +7345,191 @@
       "twoDays": "2 days before",
       "oneWeek": "1 week before"
     },
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "agenda": {
+      "title": "Open topics",
+      "discussed": "Topics of this meeting",
+      "loadFailed": "The topics of this meeting could not be loaded",
+      "person": "Person",
+      "everyone": "Everyone",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "topic": "Topic",
+      "add": "Add",
+      "titlePlaceholder": "New topic, for example printer costs 2027",
+      "titleRequired": "Enter a title for the topic.",
+      "ownerPlaceholder": "Owner",
+      "running": "Running",
+      "runningHint": "Stays open until someone closes it. Off: only for this meeting, closes with it.",
+      "topicAdded": "Running topic added",
+      "oneOffAdded": "Topic added for this meeting only",
+      "empty": "No open topics. Add one with “Topic”.",
+      "noneForPerson": "No open topics of this person.",
+      "archiveBefore": "Closed topics are in the",
+      "archiveLink": "archive of the series",
+      "dragTopic": "Move {title}",
+      "moveUp": "Move {title} up",
+      "moveDown": "Move {title} down",
+      "moveFailed": "The order could not be changed",
+      "expand": "Show {title}",
+      "collapse": "Hide {title}",
+      "onlyToday": "only today",
+      "forThisMeeting": "for this meeting",
+      "runningSince": "running since {date}",
+      "lastUpdate": "last: {text}",
+      "noUpdate": "no update yet",
+      "newUpdate": "new update",
+      "previous": "Earlier updates",
+      "emptyUpdate": "(empty)",
+      "updateLabel": "Update on {title} in this meeting",
+      "updatePlaceholder": "Update in this meeting …",
+      "saveFailed": "The update was not saved",
+      "formatted": "This update has formatting. Change it under “Notes”, so that nothing gets lost.",
+      "topicTasks": "Tasks of this topic",
+      "noTasks": "No tasks yet.",
+      "addTask": "Add task",
+      "taskText": "Task",
+      "taskPlaceholder": "What needs to be done?",
+      "taskPerson": "Person",
+      "taskDue": "Due on",
+      "taskRequired": "Describe the task first.",
+      "createTask": "Create",
+      "taskAdded": "Task created",
+      "taskFailed": "The task was not created",
+      "decide": "Close as decision",
+      "resolve": "Done",
+      "drop": "Drop",
+      "decisionNeedsText": "Write the decision into the field, then click again.",
+      "autosave": "The update is saved automatically.",
+      "closed": {
+        "decided": "Decision recorded. {title} is now in the archive.",
+        "resolved": "{title} is done and now in the archive.",
+        "dropped": "{title} was dropped and is now in the archive."
+      },
+      "openTasks": "{count, plural, one {# open task} other {# open tasks}}",
+      "moved": "Order changed for everyone: {title}"
+    },
+    "outcomes": {
+      "decisions": "Decisions",
+      "tasks": "New tasks",
+      "fromTopics": "come from the topics",
+      "noDecisions": "No decision in this meeting yet.",
+      "noTasks": "No tasks from this meeting yet."
+    },
+    "drag": {
+      "instructions": "Press space to pick up an item. Move it with the arrow keys, press space again to drop it or escape to cancel. The arrow buttons next to each item move it as well.",
+      "picked": "Picked up {name}.",
+      "over": "{name} is over {target}.",
+      "dropped": "{name} dropped at {target}.",
+      "cancelled": "Moving {name} was cancelled."
+    },
+    "extra": {
+      "action": "Add additional meeting",
+      "short": "Additional meeting",
+      "on": "Additional meeting on",
+      "hint": "Outside the rhythm. It shows the same open topics.",
+      "confirm": "Add meeting",
+      "done": "Additional meeting added",
+      "failed": "The additional meeting could not be added"
+    },
+    "guests": {
+      "badge": "Guest",
+      "withoutAccount": "Person without an account",
+      "name": "Name",
+      "namePlaceholder": "Name, for example Martin Huber",
+      "nameRequired": "Enter the name of the person.",
+      "note": "Note",
+      "notePlaceholder": "Optional, for example the company",
+      "hint": "Only for the attendance of this meeting. The person gets no access.",
+      "remove": "Remove {name}",
+      "removed": "{name} removed",
+      "removeFailed": "The guest could not be removed"
+    },
+    "overview": {
+      "customize": "Customize overview",
+      "done": "Done",
+      "all": "All",
+      "updated": "updated {date}",
+      "drag": "Move {name}",
+      "left": "Move {name} to the left column",
+      "right": "Move {name} to the right column",
+      "up": "Move {name} up",
+      "down": "Move {name} down",
+      "hide": "Hide {name}",
+      "column": "column {number}",
+      "emptyColumn": "Drag a module here.",
+      "addModules": "Add modules:",
+      "allShown": "All modules are shown.",
+      "sharedHint": "Applies to all members of the series.",
+      "saveFailed": "The overview could not be saved",
+      "pinned": "Pinned pages for “Links”",
+      "pin": "Pin a page",
+      "pinPlaceholder": "Search pages of this space",
+      "unpin": "Unpin {title}",
+      "modules": {
+        "topics": "Open topics",
+        "tasks": "Open tasks",
+        "decisions": "Decisions",
+        "meetings": "Meetings",
+        "attendance": "Attendance",
+        "links": "Links"
+      },
+      "empty": {
+        "topics": "No open topics.",
+        "tasks": "No open tasks.",
+        "decisions": "No decisions yet.",
+        "meetings": "No meetings yet.",
+        "attendance": "No members.",
+        "links": "No pinned pages. Pin some under “Customize overview”."
+      },
+      "kinds": {
+        "page": "Page",
+        "folder": "Folder",
+        "blogPost": "Blog post",
+        "whiteboard": "Whiteboard"
+      },
+      "lastMeetings": "{count, plural, =0 {no meetings held yet} one {last meeting} other {last # meetings}}"
+    },
+    "tabs": {
+      "label": "Parts of the series",
+      "overview": "Overview",
+      "topics": "Topics",
+      "tasks": "Tasks",
+      "decisions": "Decisions",
+      "meetings": "Meetings",
+      "archive": "Closed (archive)",
+      "allLabels": "All labels",
+      "noClosedTopics": "No closed topics yet.",
+      "person": "Person",
+      "sort": "Sort",
+      "byDue": "By due date",
+      "byPerson": "By person",
+      "byText": "By task",
+      "period": "Period",
+      "periods": {
+        "any": "All",
+        "30": "Last 30 days",
+        "90": "Last 90 days",
+        "365": "Last year"
+      },
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "meetingStates": {
+        "all": "All",
+        "held": "Held",
+        "skipped": "Skipped"
+      },
+      "skippedMoved": "Skipped, the agenda moved on",
+      "pages": "Pages",
+      "previous": "Back",
+      "next": "Next",
+      "columns": {
+        "topic": "Topic",
+        "since": "Since",
+        "updates": "Updates",
+        "tasks": "Tasks"
+      }
+    }
   },
   "confidential": {
     "badge": "Confidential",

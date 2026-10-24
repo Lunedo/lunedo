@@ -143,6 +143,7 @@ import {
   mailCredentialReminderJob,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
+import { AgendaService } from "./meetings/agenda.js";
 import { DecisionService } from "./meetings/decisions.js";
 import { MeetingService } from "./meetings/meetings.js";
 import { meetingNotificationTypes } from "./meetings/notifications.js";
@@ -353,6 +354,7 @@ export interface AccountServices {
   guestShares: GuestShareService;
   confidentialSpaces: ConfidentialSpaceService;
   meetings: MeetingService;
+  agenda: AgendaService;
   meetingReminders: MeetingReminders;
   topics: TopicService;
   decisions: DecisionService;
@@ -975,6 +977,7 @@ export function createAccountServices(options: {
   });
   const meetingReminders = new MeetingReminders({ database, authorization, notifications });
   const topics = new TopicService({ database, authorization, people, documents, meetings, activity });
+  const agenda = new AgendaService({ database, authorization, people, documents, meetings });
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people, documents });
   const includes = new IncludeService({ database, authorization, documents });
@@ -1270,6 +1273,7 @@ export function createAccountServices(options: {
     meetings,
     meetingReminders,
     topics,
+    agenda,
     decisions,
     reports,
     includes,

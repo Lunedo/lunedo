@@ -319,7 +319,7 @@ export const taskQuerySchema = z
       .enum(taskSorts)
       .default("due")
       .describe(
-        "`due` (default, tasks without a due date last), `text`, `item` (title of the page) or `assignedBy` (name).",
+        "`due` (default, tasks without a due date last), `text`, `item` (title of the page), `assignedBy` or `assignee` (names).",
       ),
     direction: z.enum(["asc", "desc"]).default("asc").describe("`asc` (default) or `desc`."),
     cursor: z.string().max(2000).optional().describe("Cursor from `nextCursor` of the previous page."),

@@ -9,7 +9,12 @@ import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
 import {
+  addAgendaTaskSchema,
   addAttendeeSchema,
+  addGuestSchema,
+  agendaSchema,
+  agendaTaskCreatedSchema,
+  attendanceRatesSchema,
   attendanceSchema,
   closeTopicSchema,
   createSeriesSchema,
@@ -22,14 +27,19 @@ import {
   examplePrivateNotes,
   exampleSeries,
   exampleTopic,
+  extraMeetingSchema,
+  guestCreatedSchema,
   meetingSchema,
   meetingSummarySchema,
   meetingsQuerySchema,
   moveMeetingSchema,
+  moveTopicSchema,
   nextDateSchema,
   privateNotesListSchema,
   privateNotesSchema,
+  saveOverviewSchema,
   savePrivateNotesSchema,
+  saveUpdateSchema,
   seriesListSchema,
   seriesSchema,
   topicDetailsSchema,
@@ -51,6 +61,8 @@ const seriesParams = z.object({ seriesId: uuid("ID of the meeting series.") }).s
 const meetingParams = z.object({ meetingId: uuid("ID of the meeting page.") }).strict();
 const attendeeParams = meetingParams.extend({ accountId: uuid("ID of the attendee.") }).strict();
 const topicParams = z.object({ topicId: uuid("ID of the running topic.") }).strict();
+const agendaTopicParams = meetingParams.extend({ topicId: uuid("ID of the running topic.") }).strict();
+const guestParams = meetingParams.extend({ guestId: uuid("ID of the guest entry.") }).strict();
 const meetingCursor = z.tuple([z.string().max(64), z.string().max(40)]);
 const ended = z
   .object({ ended: z.boolean().describe("True to end the series, false to continue it.") })
@@ -388,6 +400,269 @@ export class MeetingsController {
     @Req() request: FastifyRequest,
   ) {
     await this.#services.meetings.move(actorOf(request), meetingId, body.startsAt);
+  }
+
+  @Get("meetings/:meetingId/agenda")
+  @Permission("item.view", meeting)
+  @ApiRoute({
+    summary: "Get the agenda of a meeting",
+    description:
+      "Returns the topics of the meeting in the order of the series: all open topics while the meeting is open, the discussed topics once it is closed. Each topic has this meeting's update, the last earlier updates and its tasks. Also returns the decisions and tasks written in this meeting.",
+    tags: [TAG],
+    params: meetingParams,
+    response: {
+      description: "The agenda.",
+      schema: agendaSchema,
+      example: {
+        meetingId: exampleMeeting.id,
+        seriesId: exampleSeries.id,
+        current: true,
+        topics: [
+          {
+            id: exampleTopic.id,
+            title: exampleTopic.title,
+            status: "open",
+            outcome: null,
+            oneOff: false,
+            owner: exampleTopic.owner,
+            labels: exampleTopic.labels,
+            createdAt: exampleTopic.createdAt,
+            update: { text: "HR sends the list on Friday.", formatted: false },
+            previous: [],
+            tasks: [],
+          },
+        ],
+        decisions: [],
+        tasks: [],
+      },
+    },
+  })
+  async agenda(@Param("meetingId") meetingId: string, @Req() request: FastifyRequest) {
+    return this.#services.agenda.agenda(actorOf(request), meetingId);
+  }
+
+  @Put("meetings/:meetingId/topics/:topicId/update")
+  @Permission("item.edit", meeting)
+  @ApiRoute({
+    summary: "Save this meeting's update of a topic",
+    description:
+      "Writes the update into the topic's block of the meeting notes as plain paragraphs and keeps its tasks. An update with formatting is refused so that nothing gets lost; change it in the notes instead.",
+    tags: [TAG],
+    status: 204,
+    params: agendaTopicParams,
+    body: saveUpdateSchema,
+    bodyExample: { text: "HR sends the list on Friday." },
+    errors: ["invalidUpdate", "updateFormatted", "meetingClosed", "seriesEnded"],
+  })
+  async saveUpdate(
+    @Param("meetingId") meetingId: string,
+    @Param("topicId") topicId: string,
+    @Body() body: z.output<typeof saveUpdateSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.agenda.saveUpdate(actorOf(request), meetingId, topicId, body.text);
+  }
+
+  @Post("meetings/:meetingId/topics/:topicId/tasks")
+  @Permission("item.edit", meeting)
+  @ApiRoute({
+    summary: "Add a task to a topic",
+    description:
+      "Adds a task to the topic's block of the meeting notes. It appears in the tasks of the topic, the series and the assignee.",
+    tags: [TAG],
+    status: 201,
+    params: agendaTopicParams,
+    body: addAgendaTaskSchema,
+    bodyExample: {
+      text: "Send the list of positions",
+      assigneeId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+      dueDate: "2026-10-16",
+    },
+    response: {
+      description: "The task.",
+      schema: agendaTaskCreatedSchema,
+      example: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c01" },
+    },
+    errors: ["invalidTask", "invalidMember", "meetingClosed", "seriesEnded"],
+  })
+  async addAgendaTask(
+    @Param("meetingId") meetingId: string,
+    @Param("topicId") topicId: string,
+    @Body() body: z.output<typeof addAgendaTaskSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return { id: await this.#services.agenda.addTask(actorOf(request), meetingId, topicId, body) };
+  }
+
+  @Put("meeting-series/:seriesId/topic-order")
+  @Permission("item.edit", series)
+  @ApiRoute({
+    summary: "Move an open topic",
+    description:
+      "Places an open topic after another one. The order is the same in every meeting and for everyone.",
+    tags: [TAG],
+    status: 204,
+    params: seriesParams,
+    body: moveTopicSchema,
+    bodyExample: { topicId: exampleTopic.id, afterId: null },
+    errors: ["seriesEnded"],
+  })
+  async moveTopic(
+    @Param("seriesId") seriesId: string,
+    @Body() body: z.output<typeof moveTopicSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.agenda.moveTopic(actorOf(request), seriesId, body.topicId, body.afterId);
+  }
+
+  @Post("meeting-series/:seriesId/meetings")
+  @Permission("item.edit", series)
+  @ApiRoute({
+    summary: "Plan an additional meeting",
+    description:
+      "Creates a meeting outside the rhythm. It shows the open topics of the series and does not change the next regular meeting.",
+    tags: [TAG],
+    status: 201,
+    params: seriesParams,
+    body: extraMeetingSchema,
+    bodyExample: { startsAt: "2026-10-14T13:00:00.000Z" },
+    response: {
+      description: "The new meeting.",
+      schema: meetingSchema,
+      example: { ...exampleMeeting, extra: true, recurrenceId: null },
+    },
+    errors: ["tooManyExtraMeetings", "seriesEnded"],
+  })
+  async addExtraMeeting(
+    @Param("seriesId") seriesId: string,
+    @Body() body: z.output<typeof extraMeetingSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const actor = actorOf(request);
+    const id = await this.#services.meetings.addExtra(actor, seriesId, body.startsAt);
+    return this.#services.meetings.meeting(actor, id);
+  }
+
+  @Put("meeting-series/:seriesId/overview")
+  @Permission("item.edit", series)
+  @ApiRoute({
+    summary: "Arrange the series overview",
+    description:
+      "Sets the modules of both columns, the hidden modules and the pinned items. The layout is the same for all members of the series.",
+    tags: [TAG],
+    status: 204,
+    params: seriesParams,
+    body: saveOverviewSchema,
+    bodyExample: {
+      columns: [
+        ["topics", "tasks"],
+        ["meetings", "decisions"],
+      ],
+      hidden: ["attendance", "links"],
+      links: [],
+    },
+    errors: ["invalidLayout", "tooManyOverviewLinks", "invalidOverviewLink", "seriesEnded"],
+  })
+  async saveOverview(
+    @Param("seriesId") seriesId: string,
+    @Body() body: z.output<typeof saveOverviewSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.meetings.setOverview(actorOf(request), seriesId, {
+      columns: [body.columns[0] ?? [], body.columns[1] ?? []],
+      hidden: body.hidden,
+      links: body.links,
+    });
+  }
+
+  @Get("meeting-series/:seriesId/attendance")
+  @Permission("item.view", series)
+  @ApiRoute({
+    summary: "Get the attendance of the members",
+    description: "Counts per member how often they were present in the last held meetings.",
+    tags: [TAG],
+    params: seriesParams,
+    response: {
+      description: "Attendance per member.",
+      schema: attendanceRatesSchema,
+      example: [
+        {
+          id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+          name: "Anna Berger",
+          pictureRef: null,
+          present: 9,
+          meetings: 10,
+        },
+      ],
+    },
+  })
+  async attendanceRates(@Param("seriesId") seriesId: string, @Req() request: FastifyRequest) {
+    return this.#services.meetings.attendance(actorOf(request), seriesId);
+  }
+
+  @Post("meetings/:meetingId/guests")
+  @Permission("item.edit", meeting)
+  @ApiRoute({
+    summary: "Add a guest without an account",
+    description:
+      "Records a person without an account for the attendance of this meeting, for example a service provider. Guests get no access to anything.",
+    tags: [TAG],
+    status: 201,
+    params: meetingParams,
+    body: addGuestSchema,
+    bodyExample: { name: "Martin Huber", note: "Printer service" },
+    response: {
+      description: "The guest entry.",
+      schema: guestCreatedSchema,
+      example: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6c00" },
+    },
+    errors: ["invalidGuestName", "invalidGuestNote", "tooManyGuests"],
+  })
+  async addGuest(
+    @Param("meetingId") meetingId: string,
+    @Body() body: z.output<typeof addGuestSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return { id: await this.#services.meetings.addGuest(actorOf(request), meetingId, body) };
+  }
+
+  @Put("meetings/:meetingId/guests/:guestId")
+  @Permission("item.edit", meeting)
+  @ApiRoute({
+    summary: "Record the attendance of a guest",
+    description: "Sets present, excused or absent for a guest without an account.",
+    tags: [TAG],
+    status: 204,
+    params: guestParams,
+    body: attendanceSchema,
+    bodyExample: { attendance: "present" },
+    errors: ["guestNotFound"],
+  })
+  async guestAttendance(
+    @Param("meetingId") meetingId: string,
+    @Param("guestId") guestId: string,
+    @Body() body: z.output<typeof attendanceSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.meetings.setGuestAttendance(actorOf(request), meetingId, guestId, body.attendance);
+  }
+
+  @Delete("meetings/:meetingId/guests/:guestId")
+  @Permission("item.edit", meeting)
+  @ApiRoute({
+    summary: "Remove a guest",
+    description: "Removes a guest without an account from this meeting.",
+    tags: [TAG],
+    status: 204,
+    params: guestParams,
+    errors: ["guestNotFound"],
+  })
+  async removeGuest(
+    @Param("meetingId") meetingId: string,
+    @Param("guestId") guestId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.meetings.removeGuest(actorOf(request), meetingId, guestId);
   }
 
   @Post("meetings/:meetingId/attendees")

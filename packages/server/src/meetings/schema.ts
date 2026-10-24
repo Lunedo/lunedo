@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   index,
   integer,
   jsonb,
@@ -20,6 +21,13 @@ import { timestamps } from "../database/columns.js";
 import { treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
+const binaryOrderedText = customType<{ data: string }>({ dataType: () => 'text COLLATE "C"' });
+
+export interface OverviewLayout {
+  columns: [string[], string[]];
+  hidden: string[];
+  links: string[];
+}
 
 export const scheduleSources = ["manual", "calendar"] as const;
 export type ScheduleSource = (typeof scheduleSources)[number];
@@ -60,6 +68,7 @@ export const meetingSeries = pgTable(
     source: scheduleSource().notNull().default("manual"),
     calendarUid: text(),
     reminder: meetingReminder().notNull().default("oneDay"),
+    overviewLayout: jsonb().$type<OverviewLayout>(),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },
@@ -117,6 +126,7 @@ export const meetings = pgTable(
     startsAt: timestampColumn(),
     durationMinutes: integer().notNull(),
     state: meetingState().notNull().default("upcoming"),
+    extra: boolean().notNull().default(false),
     closedAt: timestampColumn(),
     closedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     nextMeetingId: uuid().references((): AnyPgColumn => meetings.itemId, { onDelete: "set null" }),
@@ -125,7 +135,9 @@ export const meetings = pgTable(
     ...timestamps(),
   },
   (table) => [
-    uniqueIndex("meetings_one_upcoming").on(table.seriesId).where(sql`${table.state} = 'upcoming'`),
+    uniqueIndex("meetings_one_upcoming")
+      .on(table.seriesId)
+      .where(sql`${table.state} = 'upcoming' and not ${table.extra}`),
     uniqueIndex("meetings_occurrence_unique")
       .on(table.seriesId, table.recurrenceId)
       .where(sql`${table.recurrenceId} is not null`),
@@ -163,6 +175,30 @@ export const meetingAttendees = pgTable(
   ],
 );
 
+export const meetingGuests = pgTable(
+  "meeting_guests",
+  {
+    id: uuid().primaryKey(),
+    meetingId: uuid()
+      .notNull()
+      .references(() => meetings.itemId, { onDelete: "cascade" }),
+    name: text().notNull(),
+    note: text(),
+    attendance: attendance(),
+    position: integer().notNull().default(0),
+    addedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    updatedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    ...timestamps(),
+  },
+  (table) => [
+    index().on(table.meetingId),
+    index().on(table.addedBy),
+    index().on(table.updatedBy),
+    check("meeting_guests_name", sql`length(${table.name}) between 1 and 200`),
+    check("meeting_guests_note", sql`length(${table.note}) <= 500`),
+  ],
+);
+
 export const meetingTopics = pgTable(
   "meeting_topics",
   {
@@ -180,6 +216,8 @@ export const meetingTopics = pgTable(
     closedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     decisionId: uuid(),
     lastUpdateAt: timestampColumn(),
+    agendaPosition: binaryOrderedText(),
+    oneOff: boolean().notNull().default(false),
     ...timestamps(),
   },
   (table) => [

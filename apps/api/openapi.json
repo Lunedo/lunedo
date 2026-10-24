@@ -148383,6 +148383,10 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991,
                               "description": "Number of attendees marked present."
+                            },
+                            "extra": {
+                              "type": "boolean",
+                              "description": "True for an additional meeting outside the rhythm."
                             }
                           },
                           "required": [
@@ -148393,7 +148397,8 @@
                             "recurrenceId",
                             "durationMinutes",
                             "attendees",
-                            "present"
+                            "present",
+                            "extra"
                           ],
                           "additionalProperties": false,
                           "description": "A meeting of a series."
@@ -148409,6 +148414,89 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
                       "description": "Open running topics the caller can see."
+                    },
+                    "overview": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A module of the series overview. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "topics",
+                                "tasks",
+                                "decisions",
+                                "meetings",
+                                "attendance",
+                                "links"
+                              ]
+                            }
+                          },
+                          "description": "Modules of the left and the right column, from top to bottom."
+                        },
+                        "hidden": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "A module of the series overview. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "topics",
+                              "tasks",
+                              "decisions",
+                              "meetings",
+                              "attendance",
+                              "links"
+                            ]
+                          },
+                          "description": "Modules that are not shown."
+                        },
+                        "links": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the item."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the item."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the item, such as `page` or `folder`."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of its space."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "kind",
+                              "spaceKey"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A pinned item."
+                          },
+                          "description": "Pinned items for the Links module that the caller can open, in their order."
+                        }
+                      },
+                      "required": [
+                        "columns",
+                        "hidden",
+                        "links"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The overview of the series, the same for all members."
                     },
                     "createdAt": {
                       "type": "string",
@@ -148431,6 +148519,7 @@
                     "calendarUid",
                     "upcoming",
                     "openTopics",
+                    "overview",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -148481,9 +148570,27 @@
                     "recurrenceId": "2026-10-12T07:30:00.000Z",
                     "durationMinutes": 45,
                     "attendees": 5,
-                    "present": 0
+                    "present": 0,
+                    "extra": false
                   },
                   "openTopics": 3,
+                  "overview": {
+                    "columns": [
+                      [
+                        "topics",
+                        "tasks"
+                      ],
+                      [
+                        "meetings",
+                        "decisions"
+                      ]
+                    ],
+                    "hidden": [
+                      "attendance",
+                      "links"
+                    ],
+                    "links": []
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -149093,6 +149200,10 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991,
                               "description": "Number of attendees marked present."
+                            },
+                            "extra": {
+                              "type": "boolean",
+                              "description": "True for an additional meeting outside the rhythm."
                             }
                           },
                           "required": [
@@ -149103,7 +149214,8 @@
                             "recurrenceId",
                             "durationMinutes",
                             "attendees",
-                            "present"
+                            "present",
+                            "extra"
                           ],
                           "additionalProperties": false,
                           "description": "A meeting of a series."
@@ -149119,6 +149231,89 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
                       "description": "Open running topics the caller can see."
+                    },
+                    "overview": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A module of the series overview. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "topics",
+                                "tasks",
+                                "decisions",
+                                "meetings",
+                                "attendance",
+                                "links"
+                              ]
+                            }
+                          },
+                          "description": "Modules of the left and the right column, from top to bottom."
+                        },
+                        "hidden": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "A module of the series overview. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "topics",
+                              "tasks",
+                              "decisions",
+                              "meetings",
+                              "attendance",
+                              "links"
+                            ]
+                          },
+                          "description": "Modules that are not shown."
+                        },
+                        "links": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the item."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the item."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the item, such as `page` or `folder`."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of its space."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "kind",
+                              "spaceKey"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A pinned item."
+                          },
+                          "description": "Pinned items for the Links module that the caller can open, in their order."
+                        }
+                      },
+                      "required": [
+                        "columns",
+                        "hidden",
+                        "links"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The overview of the series, the same for all members."
                     },
                     "createdAt": {
                       "type": "string",
@@ -149141,6 +149336,7 @@
                     "calendarUid",
                     "upcoming",
                     "openTopics",
+                    "overview",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -149191,9 +149387,27 @@
                     "recurrenceId": "2026-10-12T07:30:00.000Z",
                     "durationMinutes": 45,
                     "attendees": 5,
-                    "present": 0
+                    "present": 0,
+                    "extra": false
                   },
                   "openTopics": 3,
+                  "overview": {
+                    "columns": [
+                      [
+                        "topics",
+                        "tasks"
+                      ],
+                      [
+                        "meetings",
+                        "decisions"
+                      ]
+                    ],
+                    "hidden": [
+                      "attendance",
+                      "links"
+                    ],
+                    "links": []
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -149397,6 +149611,224 @@
                       "title": "The instance is in maintenance mode",
                       "status": 503,
                       "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meeting-series/{seriesId}/attendance": {
+      "get": {
+        "operationId": "meetings.attendanceRates",
+        "summary": "Get the attendance of the members",
+        "description": "Counts per member how often they were present in the last held meetings.\n\nRequires the permission `item.view` on the item in `seriesId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "seriesId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attendance per member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Account ID of the member."
+                      },
+                      "name": {
+                        "description": "Name, or null when the caller may not see the person.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "pictureRef": {
+                        "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "present": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Meetings the member was marked present in."
+                      },
+                      "meetings": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Meetings counted."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "pictureRef",
+                      "present",
+                      "meetings"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Attendance of one member."
+                  },
+                  "description": "Attendance of the members over the last 10 held meetings the caller can read."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Berger",
+                    "pictureRef": null,
+                    "present": 9,
+                    "meetings": 10
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -150098,6 +150530,10 @@
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991,
                             "description": "Number of attendees marked present."
+                          },
+                          "extra": {
+                            "type": "boolean",
+                            "description": "True for an additional meeting outside the rhythm."
                           }
                         },
                         "required": [
@@ -150108,7 +150544,8 @@
                           "recurrenceId",
                           "durationMinutes",
                           "attendees",
-                          "present"
+                          "present",
+                          "extra"
                         ],
                         "additionalProperties": false,
                         "description": "A meeting of a series."
@@ -150140,7 +150577,8 @@
                       "recurrenceId": "2026-10-12T07:30:00.000Z",
                       "durationMinutes": 45,
                       "attendees": 5,
-                      "present": 0
+                      "present": 0,
+                      "extra": false
                     }
                   ],
                   "nextCursor": null
@@ -150258,6 +150696,876 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "meetings.addExtraMeeting",
+        "summary": "Plan an additional meeting",
+        "description": "Creates a meeting outside the rhythm. It shows the open topics of the series and does not change the next regular meeting.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "seriesId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "startsAt": {
+                    "description": "Start of the additional meeting. ISO 8601 timestamp; an offset is allowed.",
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "startsAt"
+                ],
+                "additionalProperties": false,
+                "description": "An additional meeting outside the rhythm. It shows the open topics of the series."
+              },
+              "example": {
+                "startsAt": "2026-10-14T13:00:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new meeting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the meeting page."
+                    },
+                    "seriesId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The series, or null when the caller cannot read it."
+                    },
+                    "seriesTitle": {
+                      "description": "Name of the series, or null when the caller cannot read it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the meeting page."
+                    },
+                    "state": {
+                      "type": "string",
+                      "description": "`upcoming` is the next meeting, `closed` and `skipped` are done, `reopened` was closed and is open again. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "upcoming",
+                        "closed",
+                        "reopened",
+                        "skipped"
+                      ]
+                    },
+                    "current": {
+                      "type": "boolean",
+                      "description": "Whether the meeting is open: upcoming or reopened."
+                    },
+                    "startsAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Start, or null when not scheduled yet. ISO 8601 timestamp in UTC."
+                    },
+                    "recurrenceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original start in the rhythm, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "durationMinutes": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Duration in minutes."
+                    },
+                    "timeZone": {
+                      "description": "Time zone of the series, or null when the caller cannot read the series.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "closedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the meeting was closed or skipped. ISO 8601 timestamp in UTC."
+                    },
+                    "closedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "description": "Name, if visible.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who closed it."
+                    },
+                    "nextMeetingId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The meeting created when this one was closed or skipped, or null when the caller cannot read the series."
+                    },
+                    "rhythm": {
+                      "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date. Null when the caller cannot read the series.",
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "attendees": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Account ID."
+                          },
+                          "name": {
+                            "description": "Name, if visible.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "attendance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "present",
+                                  "excused",
+                                  "absent"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Attendance, or null when not recorded. New values can be added in later versions; handle unknown values."
+                          },
+                          "member": {
+                            "description": "Whether the person is a member of the series, or null when the caller cannot read it.",
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
+                          },
+                          "canRead": {
+                            "type": "boolean",
+                            "description": "Whether the person can read the meeting page."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "pictureRef",
+                          "attendance",
+                          "member",
+                          "active",
+                          "canRead"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An attendee."
+                      },
+                      "description": "Attendees in order."
+                    },
+                    "extra": {
+                      "type": "boolean",
+                      "description": "True for an additional meeting outside the rhythm."
+                    },
+                    "guests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the guest entry."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name as entered."
+                          },
+                          "note": {
+                            "description": "Optional note, such as the company.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "attendance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "present",
+                                  "excused",
+                                  "absent"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Attendance, or null when not recorded. New values can be added in later versions; handle unknown values."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "note",
+                          "attendance"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A person without an account. Guests have no access to anything."
+                      },
+                      "description": "Guests without an account, in order."
+                    },
+                    "calendarUid": {
+                      "description": "Calendar UID of the meeting when it comes from a calendar.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "seriesId",
+                    "seriesTitle",
+                    "title",
+                    "state",
+                    "current",
+                    "startsAt",
+                    "recurrenceId",
+                    "durationMinutes",
+                    "timeZone",
+                    "closedAt",
+                    "closedBy",
+                    "nextMeetingId",
+                    "rhythm",
+                    "attendees",
+                    "extra",
+                    "guests",
+                    "calendarUid"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A meeting."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                  "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesTitle": "Jour fixe IT",
+                  "title": "Jour fixe IT · 12 Oct 2026",
+                  "state": "upcoming",
+                  "current": true,
+                  "startsAt": "2026-10-12T07:30:00.000Z",
+                  "recurrenceId": null,
+                  "durationMinutes": 45,
+                  "timeZone": "Europe/Vienna",
+                  "closedAt": null,
+                  "closedBy": null,
+                  "nextMeetingId": null,
+                  "rhythm": true,
+                  "attendees": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger",
+                      "pictureRef": null,
+                      "attendance": "present",
+                      "member": true,
+                      "active": true,
+                      "canRead": true
+                    }
+                  ],
+                  "extra": true,
+                  "guests": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6c00",
+                      "name": "Martin Huber",
+                      "note": "Printer service",
+                      "attendance": null
+                    }
+                  ],
+                  "calendarUid": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `tooManyExtraMeetings`: The series has too many additional meetings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "tooManyExtraMeetings": {
+                    "value": {
+                      "type": "urn:lunedo:problem:tooManyExtraMeetings",
+                      "title": "The series has too many additional meetings",
+                      "status": 400,
+                      "code": "tooManyExtraMeetings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`seriesEnded`: The meeting series has ended.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "seriesEnded": {
+                    "value": {
+                      "type": "urn:lunedo:problem:seriesEnded",
+                      "title": "The meeting series has ended",
+                      "status": 409,
+                      "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meeting-series/{seriesId}/overview": {
+      "put": {
+        "operationId": "meetings.saveOverview",
+        "summary": "Arrange the series overview",
+        "description": "Sets the modules of both columns, the hidden modules and the pinned items. The layout is the same for all members of the series.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "seriesId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "type": "array",
+                    "items": {
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 40
+                      }
+                    },
+                    "description": "Modules of the left and the right column. Known modules: topics, tasks, decisions, meetings, attendance, links."
+                  },
+                  "hidden": {
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "description": "Modules that are not shown. Modules left out anywhere are hidden too."
+                  },
+                  "links": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "A page, folder, blog post or whiteboard of the same space."
+                    },
+                    "description": "Pinned items, up to 20."
+                  }
+                },
+                "required": [
+                  "columns",
+                  "hidden",
+                  "links"
+                ],
+                "additionalProperties": false,
+                "description": "The overview layout."
+              },
+              "example": {
+                "columns": [
+                  [
+                    "topics",
+                    "tasks"
+                  ],
+                  [
+                    "meetings",
+                    "decisions"
+                  ]
+                ],
+                "hidden": [
+                  "attendance",
+                  "links"
+                ],
+                "links": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidLayout`: The overview layout is not valid. `invalidOverviewLink`: The overview cannot link this page. `tooManyOverviewLinks`: The overview links too many pages.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidLayout": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidLayout",
+                      "title": "The overview layout is not valid",
+                      "status": 400,
+                      "code": "invalidLayout"
+                    }
+                  },
+                  "invalidOverviewLink": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidOverviewLink",
+                      "title": "The overview cannot link this page",
+                      "status": 400,
+                      "code": "invalidOverviewLink"
+                    }
+                  },
+                  "tooManyOverviewLinks": {
+                    "value": {
+                      "type": "urn:lunedo:problem:tooManyOverviewLinks",
+                      "title": "The overview links too many pages",
+                      "status": 400,
+                      "code": "tooManyOverviewLinks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`seriesEnded`: The meeting series has ended.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "seriesEnded": {
+                    "value": {
+                      "type": "urn:lunedo:problem:seriesEnded",
+                      "title": "The meeting series has ended",
+                      "status": 409,
+                      "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -150505,6 +151813,249 @@
         }
       }
     },
+    "/api/v1/meeting-series/{seriesId}/topic-order": {
+      "put": {
+        "operationId": "meetings.moveTopic",
+        "summary": "Move an open topic",
+        "description": "Places an open topic after another one. The order is the same in every meeting and for everyone.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "seriesId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "topicId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The topic to move."
+                  },
+                  "afterId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The topic it goes after, or null for the top."
+                  }
+                },
+                "required": [
+                  "topicId",
+                  "afterId"
+                ],
+                "additionalProperties": false,
+                "description": "A new place of an open topic in the order of the series."
+              },
+              "example": {
+                "topicId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                "afterId": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`seriesEnded`: The meeting series has ended.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "seriesEnded": {
+                    "value": {
+                      "type": "urn:lunedo:problem:seriesEnded",
+                      "title": "The meeting series has ended",
+                      "status": 409,
+                      "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/meeting-series/{seriesId}/topics": {
       "get": {
         "operationId": "meetings.topics",
@@ -150700,6 +152251,10 @@
                         },
                         "description": "Labels."
                       },
+                      "oneOff": {
+                        "type": "boolean",
+                        "description": "True for a topic of one meeting only; it closes with that meeting."
+                      },
                       "raisedIn": {
                         "anyOf": [
                           {
@@ -150745,6 +152300,12 @@
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991,
                         "description": "Number of updates the caller can read."
+                      },
+                      "openTasks": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Open tasks written in those updates."
                       },
                       "lastUpdateAt": {
                         "anyOf": [
@@ -150796,8 +152357,10 @@
                       "outcome",
                       "owner",
                       "labels",
+                      "oneOff",
                       "raisedIn",
                       "updates",
+                      "openTasks",
                       "lastUpdateAt",
                       "createdAt",
                       "closedAt",
@@ -150822,12 +152385,14 @@
                     "labels": [
                       "directory"
                     ],
+                    "oneOff": false,
                     "raisedIn": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
                       "title": "Jour fixe IT · 12 Oct 2026",
                       "startsAt": "2026-10-12T07:30:00.000Z"
                     },
                     "updates": 3,
+                    "openTasks": 1,
                     "lastUpdateAt": "2026-10-05T08:30:00.000Z",
                     "createdAt": "2026-09-21T08:00:00.000Z",
                     "closedAt": null,
@@ -151024,6 +152589,10 @@
                     "type": "string",
                     "format": "uuid",
                     "description": "Meeting the topic is raised in; the current meeting when left out."
+                  },
+                  "oneOff": {
+                    "description": "True for a topic of the given meeting only. It closes when that meeting is closed. Needs `meetingId`.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -151124,6 +152693,10 @@
                       },
                       "description": "Labels."
                     },
+                    "oneOff": {
+                      "type": "boolean",
+                      "description": "True for a topic of one meeting only; it closes with that meeting."
+                    },
                     "raisedIn": {
                       "anyOf": [
                         {
@@ -151169,6 +152742,12 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
                       "description": "Number of updates the caller can read."
+                    },
+                    "openTasks": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Open tasks written in those updates."
                     },
                     "lastUpdateAt": {
                       "anyOf": [
@@ -151326,8 +152905,10 @@
                     "outcome",
                     "owner",
                     "labels",
+                    "oneOff",
                     "raisedIn",
                     "updates",
+                    "openTasks",
                     "lastUpdateAt",
                     "createdAt",
                     "closedAt",
@@ -151353,12 +152934,14 @@
                   "labels": [
                     "directory"
                   ],
+                  "oneOff": false,
                   "raisedIn": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z"
                   },
                   "updates": 3,
+                  "openTasks": 1,
                   "lastUpdateAt": "2026-10-05T08:30:00.000Z",
                   "createdAt": "2026-09-21T08:00:00.000Z",
                   "closedAt": null,
@@ -151821,6 +153404,59 @@
                       },
                       "description": "Attendees in order."
                     },
+                    "extra": {
+                      "type": "boolean",
+                      "description": "True for an additional meeting outside the rhythm."
+                    },
+                    "guests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the guest entry."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name as entered."
+                          },
+                          "note": {
+                            "description": "Optional note, such as the company.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "attendance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "present",
+                                  "excused",
+                                  "absent"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Attendance, or null when not recorded. New values can be added in later versions; handle unknown values."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "note",
+                          "attendance"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A person without an account. Guests have no access to anything."
+                      },
+                      "description": "Guests without an account, in order."
+                    },
                     "calendarUid": {
                       "description": "Calendar UID of the meeting when it comes from a calendar.",
                       "type": [
@@ -151845,6 +153481,8 @@
                     "nextMeetingId",
                     "rhythm",
                     "attendees",
+                    "extra",
+                    "guests",
                     "calendarUid"
                   ],
                   "additionalProperties": false,
@@ -151876,7 +153514,599 @@
                       "canRead": true
                     }
                   ],
+                  "extra": false,
+                  "guests": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6c00",
+                      "name": "Martin Huber",
+                      "note": "Printer service",
+                      "attendance": null
+                    }
+                  ],
                   "calendarUid": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meetings/{meetingId}/agenda": {
+      "get": {
+        "operationId": "meetings.agenda",
+        "summary": "Get the agenda of a meeting",
+        "description": "Returns the topics of the meeting in the order of the series: all open topics while the meeting is open, the discussed topics once it is closed. Each topic has this meeting's update, the last earlier updates and its tasks. Also returns the decisions and tasks written in this meeting.\n\nRequires the permission `item.view` on the item in `meetingId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "meetingId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meetingId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The agenda.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "meetingId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "The meeting."
+                    },
+                    "seriesId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Its series."
+                    },
+                    "current": {
+                      "type": "boolean",
+                      "description": "True while the meeting is open: then the list holds all open topics. A closed meeting lists the topics it discussed."
+                    },
+                    "topics": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the topic."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title."
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "Whether the topic is open. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "open",
+                              "closed"
+                            ]
+                          },
+                          "outcome": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "resolved",
+                                  "decided",
+                                  "dropped"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "How a closed topic ended. New values can be added in later versions; handle unknown values."
+                          },
+                          "oneOff": {
+                            "type": "boolean",
+                            "description": "True for a topic of this meeting only; it closes with the meeting."
+                          },
+                          "owner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, if visible.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who owns the topic."
+                          },
+                          "labels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Labels."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the topic was raised. ISO 8601 timestamp in UTC."
+                          },
+                          "update": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "text": {
+                                    "type": "string",
+                                    "description": "The update of this meeting as plain text, paragraphs on own lines."
+                                  },
+                                  "formatted": {
+                                    "type": "boolean",
+                                    "description": "True when the update has formatting; change it in the notes then."
+                                  }
+                                },
+                                "required": [
+                                  "text",
+                                  "formatted"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "This meeting's update, or null when the notes have no block for the topic."
+                          },
+                          "previous": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "meetingId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Meeting of the update."
+                                },
+                                "meetingTitle": {
+                                  "type": "string",
+                                  "description": "Title of that meeting."
+                                },
+                                "startsAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Start of that meeting. ISO 8601 timestamp in UTC."
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "description": "The update as plain text."
+                                }
+                              },
+                              "required": [
+                                "meetingId",
+                                "meetingTitle",
+                                "startsAt",
+                                "text"
+                              ],
+                              "additionalProperties": false,
+                              "description": "An earlier update."
+                            },
+                            "description": "The last earlier updates the caller can read, newest first."
+                          },
+                          "tasks": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the task."
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "description": "Text of the task."
+                                },
+                                "done": {
+                                  "type": "boolean",
+                                  "description": "Whether the task is done."
+                                },
+                                "dueDate": {
+                                  "description": "Due date as `YYYY-MM-DD`, or null.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "assignee": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "description": "Account ID."
+                                        },
+                                        "name": {
+                                          "description": "Name, if visible.",
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "The assignee, or null."
+                                },
+                                "meetingId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Meeting the task was written in."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "text",
+                                "done",
+                                "dueDate",
+                                "assignee",
+                                "meetingId"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A task."
+                            },
+                            "description": "Tasks written in the updates of this topic."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "status",
+                          "outcome",
+                          "oneOff",
+                          "owner",
+                          "labels",
+                          "createdAt",
+                          "update",
+                          "previous",
+                          "tasks"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A topic on the agenda."
+                      },
+                      "description": "Topics in the order of the series."
+                    },
+                    "decisions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Decision ID."
+                          },
+                          "topicId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Topic it closed, or null."
+                          },
+                          "topicTitle": {
+                            "description": "Title of that topic, if visible.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "text": {
+                            "type": "string",
+                            "description": "The statement as plain text."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "topicId",
+                          "topicTitle",
+                          "text"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A decision."
+                      },
+                      "description": "Decisions recorded in this meeting."
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the task."
+                          },
+                          "text": {
+                            "type": "string",
+                            "description": "Text of the task."
+                          },
+                          "done": {
+                            "type": "boolean",
+                            "description": "Whether the task is done."
+                          },
+                          "dueDate": {
+                            "description": "Due date as `YYYY-MM-DD`, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "assignee": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, if visible.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The assignee, or null."
+                          },
+                          "meetingId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Meeting the task was written in."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "done",
+                          "dueDate",
+                          "assignee",
+                          "meetingId"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A task."
+                      },
+                      "description": "Tasks written in this meeting."
+                    }
+                  },
+                  "required": [
+                    "meetingId",
+                    "seriesId",
+                    "current",
+                    "topics",
+                    "decisions",
+                    "tasks"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The agenda of a meeting."
+                },
+                "example": {
+                  "meetingId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                  "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "current": true,
+                  "topics": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                      "title": "Positions in AD",
+                      "status": "open",
+                      "outcome": null,
+                      "oneOff": false,
+                      "owner": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Berger"
+                      },
+                      "labels": [
+                        "directory"
+                      ],
+                      "createdAt": "2026-09-21T08:00:00.000Z",
+                      "update": {
+                        "text": "HR sends the list on Friday.",
+                        "formatted": false
+                      },
+                      "previous": [],
+                      "tasks": []
+                    }
+                  ],
+                  "decisions": [],
+                  "tasks": []
                 }
               }
             }
@@ -153124,6 +155354,712 @@
                       "title": "The meeting series has ended",
                       "status": 409,
                       "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meetings/{meetingId}/guests": {
+      "post": {
+        "operationId": "meetings.addGuest",
+        "summary": "Add a guest without an account",
+        "description": "Records a person without an account for the attendance of this meeting, for example a service provider. Guests get no access to anything.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "meetingId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meetingId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 400,
+                    "description": "Name of the person, 1 to 200 characters."
+                  },
+                  "note": {
+                    "description": "Optional note, up to 500 characters.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 1000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false,
+                "description": "A guest without an account, recorded for the attendance of this meeting only."
+              },
+              "example": {
+                "name": "Martin Huber",
+                "note": "Printer service"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The guest entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the guest entry."
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The new guest entry."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6c00"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidGuestName`: The name of the guest is not valid. `invalidGuestNote`: The note about the guest is too long. `invalidInput`: The request is not valid. `tooManyGuests`: The meeting has too many guests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidGuestName": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidGuestName",
+                      "title": "The name of the guest is not valid",
+                      "status": 400,
+                      "code": "invalidGuestName"
+                    }
+                  },
+                  "invalidGuestNote": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidGuestNote",
+                      "title": "The note about the guest is too long",
+                      "status": 400,
+                      "code": "invalidGuestNote"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "tooManyGuests": {
+                    "value": {
+                      "type": "urn:lunedo:problem:tooManyGuests",
+                      "title": "The meeting has too many guests",
+                      "status": 400,
+                      "code": "tooManyGuests"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meetings/{meetingId}/guests/{guestId}": {
+      "delete": {
+        "operationId": "meetings.removeGuest",
+        "summary": "Remove a guest",
+        "description": "Removes a guest without an account from this meeting.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "meetingId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meetingId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the guest entry.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`guestNotFound`: The guest is not on this meeting. `notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "guestNotFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:guestNotFound",
+                      "title": "The guest is not on this meeting",
+                      "status": 404,
+                      "code": "guestNotFound"
+                    }
+                  },
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "meetings.guestAttendance",
+        "summary": "Record the attendance of a guest",
+        "description": "Sets present, excused or absent for a guest without an account.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "meetingId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meetingId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the guest entry.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "attendance": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "present",
+                          "excused",
+                          "absent"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "`present`, `excused`, `absent`, or null to clear."
+                  }
+                },
+                "required": [
+                  "attendance"
+                ],
+                "additionalProperties": false,
+                "description": "The attendance of one attendee."
+              },
+              "example": {
+                "attendance": "present"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`guestNotFound`: The guest is not on this meeting. `notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "guestNotFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:guestNotFound",
+                      "title": "The guest is not on this meeting",
+                      "status": 404,
+                      "code": "guestNotFound"
+                    }
+                  },
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -154448,6 +157384,581 @@
                       "title": "The meeting series has ended",
                       "status": 409,
                       "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meetings/{meetingId}/topics/{topicId}/tasks": {
+      "post": {
+        "operationId": "meetings.addAgendaTask",
+        "summary": "Add a task to a topic",
+        "description": "Adds a task to the topic's block of the meeting notes. It appears in the tasks of the topic, the series and the assignee.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "meetingId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meetingId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "topicId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the running topic.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "What is to be done, 1 to 500 characters."
+                  },
+                  "assigneeId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Who does it."
+                  },
+                  "dueDate": {
+                    "description": "Due date as `YYYY-MM-DD`.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false,
+                "description": "A task for a topic, written into this meeting's update."
+              },
+              "example": {
+                "text": "Send the list of positions",
+                "assigneeId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                "dueDate": "2026-10-16"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the task."
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The new task."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c01"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidMember`: The person cannot take part. `invalidTask`: The task is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidMember": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidMember",
+                      "title": "The person cannot take part",
+                      "status": 400,
+                      "code": "invalidMember"
+                    }
+                  },
+                  "invalidTask": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidTask",
+                      "title": "The task is not valid",
+                      "status": 400,
+                      "code": "invalidTask"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`meetingClosed`: The meeting is closed already. `seriesEnded`: The meeting series has ended.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "meetingClosed": {
+                    "value": {
+                      "type": "urn:lunedo:problem:meetingClosed",
+                      "title": "The meeting is closed already",
+                      "status": 409,
+                      "code": "meetingClosed"
+                    }
+                  },
+                  "seriesEnded": {
+                    "value": {
+                      "type": "urn:lunedo:problem:seriesEnded",
+                      "title": "The meeting series has ended",
+                      "status": 409,
+                      "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meetings/{meetingId}/topics/{topicId}/update": {
+      "put": {
+        "operationId": "meetings.saveUpdate",
+        "summary": "Save this meeting's update of a topic",
+        "description": "Writes the update into the topic's block of the meeting notes as plain paragraphs and keeps its tasks. An update with formatting is refused so that nothing gets lost; change it in the notes instead.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
+        "tags": [
+          "Meetings"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "meetingId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meetingId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the meeting page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "topicId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the running topic.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "description": "The update as plain text, up to 5000 characters. Empty clears it."
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false,
+                "description": "This meeting's update of a topic."
+              },
+              "example": {
+                "text": "HR sends the list on Friday."
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidUpdate`: The update is too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidUpdate": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidUpdate",
+                      "title": "The update is too long",
+                      "status": 400,
+                      "code": "invalidUpdate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`meetingClosed`: The meeting is closed already. `seriesEnded`: The meeting series has ended. `updateFormatted`: The update has formatting that plain text would lose.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "meetingClosed": {
+                    "value": {
+                      "type": "urn:lunedo:problem:meetingClosed",
+                      "title": "The meeting is closed already",
+                      "status": 409,
+                      "code": "meetingClosed"
+                    }
+                  },
+                  "seriesEnded": {
+                    "value": {
+                      "type": "urn:lunedo:problem:seriesEnded",
+                      "title": "The meeting series has ended",
+                      "status": 409,
+                      "code": "seriesEnded"
+                    }
+                  },
+                  "updateFormatted": {
+                    "value": {
+                      "type": "urn:lunedo:problem:updateFormatted",
+                      "title": "The update has formatting that plain text would lose",
+                      "status": 409,
+                      "code": "updateFormatted"
                     }
                   }
                 }
@@ -240813,6 +244324,10 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991,
                               "description": "Number of attendees marked present."
+                            },
+                            "extra": {
+                              "type": "boolean",
+                              "description": "True for an additional meeting outside the rhythm."
                             }
                           },
                           "required": [
@@ -240823,7 +244338,8 @@
                             "recurrenceId",
                             "durationMinutes",
                             "attendees",
-                            "present"
+                            "present",
+                            "extra"
                           ],
                           "additionalProperties": false,
                           "description": "A meeting of a series."
@@ -240839,6 +244355,89 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
                       "description": "Open running topics the caller can see."
+                    },
+                    "overview": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A module of the series overview. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "topics",
+                                "tasks",
+                                "decisions",
+                                "meetings",
+                                "attendance",
+                                "links"
+                              ]
+                            }
+                          },
+                          "description": "Modules of the left and the right column, from top to bottom."
+                        },
+                        "hidden": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "A module of the series overview. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "topics",
+                              "tasks",
+                              "decisions",
+                              "meetings",
+                              "attendance",
+                              "links"
+                            ]
+                          },
+                          "description": "Modules that are not shown."
+                        },
+                        "links": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the item."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the item."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the item, such as `page` or `folder`."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of its space."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "kind",
+                              "spaceKey"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A pinned item."
+                          },
+                          "description": "Pinned items for the Links module that the caller can open, in their order."
+                        }
+                      },
+                      "required": [
+                        "columns",
+                        "hidden",
+                        "links"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The overview of the series, the same for all members."
                     },
                     "createdAt": {
                       "type": "string",
@@ -240861,6 +244460,7 @@
                     "calendarUid",
                     "upcoming",
                     "openTopics",
+                    "overview",
                     "createdAt"
                   ],
                   "additionalProperties": false,
@@ -240911,9 +244511,27 @@
                     "recurrenceId": "2026-10-12T07:30:00.000Z",
                     "durationMinutes": 45,
                     "attendees": 5,
-                    "present": 0
+                    "present": 0,
+                    "extra": false
                   },
                   "openTopics": 3,
+                  "overview": {
+                    "columns": [
+                      [
+                        "topics",
+                        "tasks"
+                      ],
+                      [
+                        "meetings",
+                        "decisions"
+                      ]
+                    ],
+                    "hidden": [
+                      "attendance",
+                      "links"
+                    ],
+                    "links": []
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -260939,7 +264557,7 @@
             "name": "sort",
             "in": "query",
             "required": false,
-            "description": "`due` (default, tasks without a due date last), `text`, `item` (title of the page) or `assignedBy` (name).",
+            "description": "`due` (default, tasks without a due date last), `text`, `item` (title of the page), `assignedBy` or `assignee` (names).",
             "schema": {
               "default": "due",
               "type": "string",
@@ -260947,7 +264565,8 @@
                 "due",
                 "text",
                 "item",
-                "assignedBy"
+                "assignedBy",
+                "assignee"
               ]
             }
           },
@@ -261722,6 +265341,10 @@
                       },
                       "description": "Labels."
                     },
+                    "oneOff": {
+                      "type": "boolean",
+                      "description": "True for a topic of one meeting only; it closes with that meeting."
+                    },
                     "raisedIn": {
                       "anyOf": [
                         {
@@ -261767,6 +265390,12 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
                       "description": "Number of updates the caller can read."
+                    },
+                    "openTasks": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Open tasks written in those updates."
                     },
                     "lastUpdateAt": {
                       "anyOf": [
@@ -261924,8 +265553,10 @@
                     "outcome",
                     "owner",
                     "labels",
+                    "oneOff",
                     "raisedIn",
                     "updates",
+                    "openTasks",
                     "lastUpdateAt",
                     "createdAt",
                     "closedAt",
@@ -261951,12 +265582,14 @@
                   "labels": [
                     "directory"
                   ],
+                  "oneOff": false,
                   "raisedIn": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z"
                   },
                   "updates": 3,
+                  "openTasks": 1,
                   "lastUpdateAt": "2026-10-05T08:30:00.000Z",
                   "createdAt": "2026-09-21T08:00:00.000Z",
                   "closedAt": null,
@@ -262245,6 +265878,10 @@
                       },
                       "description": "Labels."
                     },
+                    "oneOff": {
+                      "type": "boolean",
+                      "description": "True for a topic of one meeting only; it closes with that meeting."
+                    },
                     "raisedIn": {
                       "anyOf": [
                         {
@@ -262290,6 +265927,12 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
                       "description": "Number of updates the caller can read."
+                    },
+                    "openTasks": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Open tasks written in those updates."
                     },
                     "lastUpdateAt": {
                       "anyOf": [
@@ -262447,8 +266090,10 @@
                     "outcome",
                     "owner",
                     "labels",
+                    "oneOff",
                     "raisedIn",
                     "updates",
+                    "openTasks",
                     "lastUpdateAt",
                     "createdAt",
                     "closedAt",
@@ -262474,12 +266119,14 @@
                   "labels": [
                     "directory"
                   ],
+                  "oneOff": false,
                   "raisedIn": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z"
                   },
                   "updates": 3,
+                  "openTasks": 1,
                   "lastUpdateAt": "2026-10-05T08:30:00.000Z",
                   "createdAt": "2026-09-21T08:00:00.000Z",
                   "closedAt": null,

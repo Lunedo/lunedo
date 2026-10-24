@@ -58,7 +58,9 @@ import { UploadsProvider } from "../files/uploads.js";
 import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
+import { AgendaSection } from "../meetings/agenda.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
+import { MeetingOutcomes } from "../meetings/meeting-outcomes.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
 import { useWatchEntries } from "../notifications/watch-menu.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -425,7 +427,7 @@ function PageArticle({
           </>
         ) : (
           <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)} aria-keyshortcuts="E">
-            {t("page.edit")}
+            {meeting ? t("meetings.notes.editShared") : t("page.edit")}
           </Button>
         )
       ) : null}
@@ -571,50 +573,57 @@ function PageArticle({
               />
             )
           ) : null}
-          {editing ? (
-            <div hidden={previewing}>
-              <Suspense fallback={<Skeleton className="h-field w-full" />}>
-                <PageEditor
+          {meeting && !editing ? (
+            <AgendaSection meetingId={page.id} spaceKey={space.key} writable={writable} />
+          ) : null}
+          {meeting ? <h2 className="text-lg font-semibold">{t("meetings.notes.shared")}</h2> : null}
+          <div className={meeting ? "ld-meeting-notes flex flex-col gap-4" : "contents"}>
+            {editing ? (
+              <div hidden={previewing}>
+                <Suspense fallback={<Skeleton className="h-field w-full" />}>
+                  <PageEditor
+                    pageId={page.id}
+                    spaceId={space.id}
+                    spaceKey={space.key}
+                    draft={publishMode}
+                    numberHeadings={page.numberHeadings}
+                    missingSections={missingSections}
+                    showStatus={false}
+                    toolbarContainer={toolbarHost}
+                    onPresenceChange={setCoEditors}
+                    onSaveStateChange={(state) => {
+                      saveState.current = state;
+                      setShownSaveState(state);
+                    }}
+                    {...collaboration.editor}
+                  />
+                </Suspense>
+              </div>
+            ) : writable && publishMode && !page.published ? (
+              draft.data?.hasChanges === false ? (
+                <EmptyPage onEdit={() => setEditing(true)} />
+              ) : draft.data ? (
+                <PageReadView
                   pageId={page.id}
-                  spaceId={space.id}
-                  spaceKey={space.key}
-                  draft={publishMode}
+                  document={draft.data.document}
+                  references={draft.data.references}
                   numberHeadings={page.numberHeadings}
-                  missingSections={missingSections}
-                  showStatus={false}
-                  toolbarContainer={toolbarHost}
-                  onPresenceChange={setCoEditors}
-                  onSaveStateChange={(state) => {
-                    saveState.current = state;
-                    setShownSaveState(state);
-                  }}
-                  {...collaboration.editor}
                 />
-              </Suspense>
-            </div>
-          ) : writable && publishMode && !page.published ? (
-            draft.data?.hasChanges === false ? (
-              <EmptyPage onEdit={() => setEditing(true)} />
-            ) : draft.data ? (
-              <PageReadView
+              ) : null
+            ) : showingDraft && draft.data?.basedOn ? (
+              <DraftChanges pageId={page.id} basedOn={draft.data.basedOn} />
+            ) : (
+              <PageContent
                 pageId={page.id}
-                document={draft.data.document}
-                references={draft.data.references}
+                publishMode={publishMode}
+                meta={false}
                 numberHeadings={page.numberHeadings}
+                collaboration={collaboration.readView}
+                {...(writable ? { onEdit: () => setEditing(true) } : {})}
               />
-            ) : null
-          ) : showingDraft && draft.data?.basedOn ? (
-            <DraftChanges pageId={page.id} basedOn={draft.data.basedOn} />
-          ) : (
-            <PageContent
-              pageId={page.id}
-              publishMode={publishMode}
-              meta={false}
-              numberHeadings={page.numberHeadings}
-              collaboration={collaboration.readView}
-              {...(writable ? { onEdit: () => setEditing(true) } : {})}
-            />
-          )}
+            )}
+          </div>
+          {meeting && !editing ? <MeetingOutcomes meetingId={page.id} /> : null}
           {overview && !editing && space.organizationId ? (
             <SpaceNews organizationId={space.organizationId} spaceId={space.id} overviewId={page.id} />
           ) : null}

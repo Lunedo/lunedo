@@ -607,17 +607,34 @@ export {
   smtpSetting,
 } from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
+export {
+  AGENDA_TASK_TEXT_MAX_LENGTH,
+  type Agenda,
+  AgendaService,
+  type AgendaTask,
+  type AgendaTopic,
+  UPDATE_TEXT_MAX_LENGTH,
+} from "./meetings/agenda.js";
 export { type DecisionEntry, type DecisionFilter, DecisionService } from "./meetings/decisions.js";
 export {
+  ATTENDANCE_WINDOW,
+  type AttendanceRate,
   type CreateSeriesInput,
   DEFAULT_TEMPLATE_ID,
+  GUEST_NAME_MAX_LENGTH,
+  GUEST_NOTE_MAX_LENGTH,
   MAX_ATTENDEES,
+  MAX_EXTRA_MEETINGS,
+  MAX_GUESTS,
+  MAX_OVERVIEW_LINKS,
   MAX_SERIES_MEMBERS,
   type MeetingAttendee,
   type MeetingDetails,
+  type MeetingGuest,
   MeetingService,
   type MeetingSummary,
   ONE_ON_ONE_TEMPLATE_ID,
+  overviewModules,
   SERIES_NAME_MAX_LENGTH,
   type SeriesDetails,
   type SeriesScheduleInput,

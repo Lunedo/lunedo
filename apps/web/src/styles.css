@@ -42,3 +42,7 @@
     content: attr(data-initials);
   }
 }
+
+.ld-meeting-notes [data-section="runningTopics"] {
+  display: none;
+}
