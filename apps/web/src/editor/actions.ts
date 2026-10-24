@@ -8,6 +8,7 @@ export interface EditorActions {
   comment?(): void;
   pickFiles?(): void;
   openEmbedDialog?(): void;
+  openTableSize?(): void;
 }
 
 const registry = new WeakMap<Editor, EditorActions>();

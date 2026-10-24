@@ -323,7 +323,10 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
       group: "insert",
       label: t("editor.toolbar.table"),
       icon: Table,
-      run: () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      run: () =>
+        actions.openTableSize
+          ? actions.openTableSize()
+          : chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     },
     {
       id: "mention",

@@ -221,8 +221,15 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.table",
     descriptionKey: "editor.blocks.tableDescription",
     keywords: ["table", "grid", "tabelle"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    run: (editor, range) => {
+      const picker = editorActions(editor)?.openTableSize;
+      if (picker) {
+        editor.chain().focus().deleteRange(range).run();
+        picker();
+        return;
+      }
+      editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    },
   },
   {
     id: "taskReport",

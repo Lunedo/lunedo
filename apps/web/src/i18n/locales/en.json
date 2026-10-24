@@ -5234,6 +5234,18 @@
     },
     "tasks": {
       "add": "Add task"
+    },
+    "tableSize": {
+      "title": "Insert table",
+      "heading": "Table · {columns} × {rows}",
+      "grid": "Choose the size",
+      "cell": "{columns} columns × {rows} rows",
+      "columns": "Columns",
+      "rows": "Rows",
+      "header": "Header row",
+      "insert": "Insert",
+      "tip": "Tip: /table 4x3",
+      "invalid": "Enter a number from 1 to {max} for columns and rows."
     }
   },
   "spaces": {

@@ -5234,6 +5234,18 @@
     },
     "tasks": {
       "add": "Aufgabe hinzufügen"
+    },
+    "tableSize": {
+      "title": "Tabelle einfügen",
+      "heading": "Tabelle · {columns} × {rows}",
+      "grid": "Größe wählen",
+      "cell": "{columns} Spalten × {rows} Zeilen",
+      "columns": "Spalten",
+      "rows": "Zeilen",
+      "header": "Kopfzeile",
+      "insert": "Einfügen",
+      "tip": "Tipp: /tabelle 4x3",
+      "invalid": "Gib für Spalten und Zeilen je eine Zahl von 1 bis {max} ein."
     }
   },
   "spaces": {

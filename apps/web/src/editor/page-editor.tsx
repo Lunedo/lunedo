@@ -37,6 +37,7 @@ import {
 } from "./save-indicator.js";
 import type { SaveState } from "./save-state.js";
 import { TableControls } from "./table-controls.js";
+import { TableSizePicker } from "./table-size-picker.js";
 import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
 import { sameToolbarItems, toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
@@ -107,6 +108,7 @@ function CollaborativeEditor({
   const [linkOpen, setLinkOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
   const uploads = useUploads();
   const fileInput = useRef<HTMLInputElement>(null);
   const account = session.account;
@@ -121,6 +123,7 @@ function CollaborativeEditor({
       openEmojiPicker: () => setEmojiOpen(true),
       openLinkDialog: () => setLinkOpen(true),
       openEmbedDialog: () => setEmbedOpen(true),
+      openTableSize: () => setTableOpen(true),
       openFind: () => setFindOpen(true),
       focusToolbar: () => toolbar.current?.focus(),
       ...(uploads ? { pickFiles: () => fileInput.current?.click() } : {}),
@@ -403,6 +406,7 @@ function CollaborativeEditor({
             ) : null}
             <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
             <EmbedDialog editor={editor} open={embedOpen} onOpenChange={setEmbedOpen} />
+            {tableOpen ? <TableSizePicker editor={editor} open onOpenChange={setTableOpen} /> : null}
             <EmojiPicker
               open={emojiOpen}
               onOpenChange={setEmojiOpen}
