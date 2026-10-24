@@ -6,7 +6,7 @@ import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
-import { accountPrincipal } from "./accounts/principal.js";
+import { accountPrincipal, SYSTEM } from "./accounts/principal.js";
 import { ProfileService } from "./accounts/profile.js";
 import {
   ANNOUNCEMENT_STARTS_SCHEDULE,
@@ -839,6 +839,7 @@ export function createAccountServices(options: {
       configuration: backupOptions?.configuration ?? {},
       lunedoVersion: backupOptions?.lunedoVersion ?? "dev",
       schemaVersion: currentSchemaVersion(),
+      instanceUrl: async () => (await instanceAddress.get()).url,
     },
     testRestore: {
       databaseUrl: backupDatabaseUrl,
@@ -883,6 +884,11 @@ export function createAccountServices(options: {
     database,
     knownSchemaVersions: knownSchemaVersions(),
     migrate: () => runMigrations(options.pool, { logger }),
+    adoptInstanceUrl: async (url) => {
+      if ((await instanceAddress.get()).source === "environment") return false;
+      await instanceAddress.change(SYSTEM, url);
+      return true;
+    },
     ...(backupOptions?.archiver ? { archiver: backupOptions.archiver } : {}),
     logger,
   });

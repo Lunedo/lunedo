@@ -221053,6 +221053,18 @@
                     "minLength": 1,
                     "maxLength": 65536,
                     "description": "The content of the key file or the master key ring of the earlier server."
+                  },
+                  "instanceUrl": {
+                    "description": "Address to set after the restore, usually the one this instance runs under. Null or left out keeps the address from the backup. Ignored when LUNEDO_INSTANCE_URL sets the address.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2048
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -221368,6 +221380,13 @@
                             ],
                             "description": "`all` with the file store, `database` without it. Null when the header is not readable."
                           },
+                          "instanceUrl": {
+                            "description": "Address of the instance that created the backup, from its header. Null for backups made before Lunedo recorded it.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "readable": {
                             "type": "boolean",
                             "description": "Whether the header of the backup could be read."
@@ -221379,6 +221398,7 @@
                           "createdAt",
                           "lunedoVersion",
                           "scope",
+                          "instanceUrl",
                           "readable"
                         ],
                         "additionalProperties": false,
@@ -221600,6 +221620,13 @@
                             ],
                             "description": "`all` with the file store, `database` without it. Null when the header is not readable."
                           },
+                          "instanceUrl": {
+                            "description": "Address of the instance that created the backup, from its header. Null for backups made before Lunedo recorded it.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "readable": {
                             "type": "boolean",
                             "description": "Whether the header of the backup could be read."
@@ -221611,6 +221638,7 @@
                           "createdAt",
                           "lunedoVersion",
                           "scope",
+                          "instanceUrl",
                           "readable"
                         ],
                         "additionalProperties": false,
@@ -221803,6 +221831,36 @@
                       ],
                       "description": "Why the restore failed, or null."
                     },
+                    "address": {
+                      "type": "object",
+                      "properties": {
+                        "backup": {
+                          "description": "Address of the instance that created the backup, or null when the backup does not say.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "requested": {
+                          "description": "Address the restore was asked to set afterwards, or null to keep the one from the backup.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "adopted": {
+                          "type": "boolean",
+                          "description": "Whether the requested address was set."
+                        }
+                      },
+                      "required": [
+                        "backup",
+                        "requested",
+                        "adopted"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The address of the instance before and after the restore."
+                    },
                     "startedAt": {
                       "type": "string",
                       "description": "When the restore started."
@@ -221820,6 +221878,7 @@
                     "backup",
                     "steps",
                     "failure",
+                    "address",
                     "startedAt",
                     "finishedAt"
                   ],

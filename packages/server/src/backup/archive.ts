@@ -67,6 +67,7 @@ const headerSchema = z.object({
   cipher: z.string(),
   chunkSize: z.int().positive(),
   scope: z.enum(backupScopes).optional(),
+  instanceUrl: z.string().max(2048).optional(),
 });
 
 export type BackupHeader = z.infer<typeof headerSchema>;
@@ -286,6 +287,7 @@ export function openBackupArchive(options: {
   lunedoVersion: string;
   schemaVersion: string;
   scope?: BackupScope;
+  instanceUrl?: string | null | undefined;
   chunkSize?: number;
 }): BackupArchiveWriter {
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
@@ -301,6 +303,7 @@ export function openBackupArchive(options: {
     cipher: CIPHER,
     chunkSize,
     ...(options.scope === "database" ? { scope: "database" as const } : {}),
+    ...(options.instanceUrl ? { instanceUrl: options.instanceUrl } : {}),
   };
   const headerBytes = encodeBackupHeader(header);
   const pack = tar.pack();
@@ -382,6 +385,7 @@ export interface CreateBackupOptions {
   config: Record<string, string>;
   lunedoVersion: string;
   schemaVersion: string;
+  instanceUrl?: string | null | undefined;
   logger: Logger;
 }
 
@@ -418,6 +422,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
       masterKeys: options.masterKeys,
       lunedoVersion: options.lunedoVersion,
       schemaVersion: options.schemaVersion,
+      instanceUrl: options.instanceUrl,
       scope,
     });
     finished.catch(() => {});

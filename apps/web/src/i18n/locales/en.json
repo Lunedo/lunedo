@@ -2218,6 +2218,21 @@
         "wait": "Sign-in is available once the restore is finished and Lunedo has restarted.",
         "otherBackup": "Choose another backup",
         "checkKeys": "Check the keys"
+      },
+      "address": {
+        "title": "Address of the instance",
+        "differs": "The backup comes from {backup}. This instance runs under {current}.",
+        "unknown": "The backup does not name its address. This instance runs under {current}.",
+        "adopt": "Use the new address",
+        "adoptHint": "After the restore, {current} applies. Sign-in, links in e-mails and passkeys work under this address.",
+        "keep": "Keep the old one",
+        "keepHint": "The instance keeps pointing to {backup}, for example when that address will point to this server later.",
+        "keepUnknownHint": "The address from the backup stays as it is.",
+        "willAdopt": "The new address is set after the restore.",
+        "willKeep": "The address from the backup stays.",
+        "adopted": "The new address was set.",
+        "kept": "The address from the backup was kept.",
+        "configured": "The address comes from LUNEDO_INSTANCE_URL and was therefore not changed."
       }
     }
   },

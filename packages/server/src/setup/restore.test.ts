@@ -76,6 +76,7 @@ describe.skipIf(!baseUrl)("restoring a backup during the setup", () => {
   let masterKey: Buffer;
   let database: FakeDatabase;
   let migrate: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  let adopt: ReturnType<typeof vi.fn<(url: string) => Promise<boolean>>>;
   let notified: string[];
   let keyRing: KeyRingHolder;
   let service: SetupRestoreService;
@@ -110,9 +111,11 @@ describe.skipIf(!baseUrl)("restoring a backup during the setup", () => {
       config: {},
       lunedoVersion: "1.0.3",
       schemaVersion,
+      instanceUrl: "https://old.example.org",
       logger,
     });
     database = new FakeDatabase(Buffer.alloc(0));
+    adopt = vi.fn<(url: string) => Promise<boolean>>(async () => true);
     migrate = vi.fn<() => Promise<void>>(async () => {});
     notified = [];
     keyRing = new KeyRingHolder(new FileKeyProvider(path.join(secretsDir, "master-keys")), logger);
@@ -138,6 +141,7 @@ describe.skipIf(!baseUrl)("restoring a backup during the setup", () => {
       database: test.database,
       knownSchemaVersions: [schemaVersion],
       migrate,
+      adoptInstanceUrl: (url) => adopt(url),
       archiver: () => database,
       logger,
     });
@@ -159,6 +163,7 @@ describe.skipIf(!baseUrl)("restoring a backup during the setup", () => {
         name: "lunedo-2026-10-23.ldbak",
         lunedoVersion: "1.0.3",
         scope: "all",
+        instanceUrl: "https://old.example.org",
         readable: true,
       }),
       expect.objectContaining({ name: "broken.ldbak", readable: false }),
@@ -207,7 +212,29 @@ describe.skipIf(!baseUrl)("restoring a backup during the setup", () => {
     const paused = await test.pool.query("select restored_at from backup_state where singleton");
     expect(paused.rows[0]?.restored_at).not.toBeNull();
     expect(notified).toEqual(["restored"]);
+    expect(adopt).not.toHaveBeenCalled();
     expect(await service.status("someone-elses-token-0000000000000000000000")).toBeNull();
+  });
+
+  it("takes over the address of the new instance after the migrations when asked to", async () => {
+    const token = await service.start({
+      source: { type: "directory", name: "lunedo-2026-10-23.ldbak" },
+      ...keys(),
+      instanceUrl: "https://new.example.org",
+    });
+    const status = await until(
+      () => service.status(token),
+      (value) => value?.state !== "running",
+    );
+    expect(status?.state).toBe("done");
+    expect(status?.address).toEqual({
+      backup: "https://old.example.org",
+      requested: "https://new.example.org",
+      adopted: true,
+    });
+    expect(adopt).toHaveBeenCalledWith("https://new.example.org");
+    expect(migrate.mock.invocationCallOrder[0] ?? 0).toBeLessThan(adopt.mock.invocationCallOrder[0] ?? 0);
+    expect(notified).toEqual(["restored"]);
   });
 
   it("stops before anything is replaced when the backup key does not fit", async () => {

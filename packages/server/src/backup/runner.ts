@@ -47,6 +47,7 @@ export interface BackupSources {
   configuration: Record<string, string>;
   lunedoVersion: string;
   schemaVersion: string;
+  instanceUrl?: (() => Promise<string | null>) | undefined;
   logger: Logger;
 }
 
@@ -424,6 +425,7 @@ export async function writeBackup(
       config: sources.configuration,
       lunedoVersion: sources.lunedoVersion,
       schemaVersion: sources.schemaVersion,
+      instanceUrl: await sources.instanceUrl?.(),
       logger: sources.logger,
     });
     return { name, location: options.target.location(name), sizeBytes: destination.bytes(), manifest };
@@ -455,6 +457,7 @@ export async function writeBackupFile(sources: BackupSources, output: string): P
         config: sources.configuration,
         lunedoVersion: sources.lunedoVersion,
         schemaVersion: sources.schemaVersion,
+        instanceUrl: await sources.instanceUrl?.(),
         logger: sources.logger,
       });
     } finally {

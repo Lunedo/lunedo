@@ -61,6 +61,7 @@ export interface RestoreStatus {
   backup: string;
   steps: { id: RestoreStepId; state: RestoreStepState }[];
   failure: { code: RestoreFailure; message: string } | null;
+  address: { backup: string | null; requested: string | null; adopted: boolean };
   startedAt: string;
   finishedAt: string | null;
 }
@@ -76,6 +77,7 @@ export interface BackupEntry {
   createdAt: string | null;
   lunedoVersion: string | null;
   scope: "all" | "database" | null;
+  instanceUrl: string | null;
   readable: boolean;
 }
 
@@ -98,6 +100,7 @@ export interface StartRestoreInput {
   source: RestoreSourceInput;
   backupKey: string;
   masterKeys: string;
+  instanceUrl?: string | null | undefined;
 }
 
 export interface UploadState {
@@ -145,6 +148,7 @@ export interface SetupRestoreOptions {
   database: Database;
   knownSchemaVersions: readonly string[];
   migrate: () => Promise<void>;
+  adoptInstanceUrl?: (url: string) => Promise<boolean>;
   archiver?: (databaseUrl: string) => DatabaseArchiver;
   s3Target?: (config: S3TargetConfig) => Pick<S3BackupTarget, "list" | "readHeader" | "source">;
   logger: Logger;
@@ -208,10 +212,19 @@ async function headerEntry(
       createdAt: header.createdAt,
       lunedoVersion: header.lunedoVersion,
       scope: header.scope ?? "all",
+      instanceUrl: header.instanceUrl ?? null,
       readable: true,
     };
   } catch {
-    return { name, size, createdAt: null, lunedoVersion: null, scope: null, readable: false };
+    return {
+      name,
+      size,
+      createdAt: null,
+      lunedoVersion: null,
+      scope: null,
+      instanceUrl: null,
+      readable: false,
+    };
   }
 }
 
@@ -397,7 +410,7 @@ export class SetupRestoreService {
     const stored = this.#active ?? (await this.#readStatus());
     if (!stored || stored.tokenHash !== hashToken(token).toString("hex")) return null;
     const { id: _id, tokenHash: _hash, ...status } = stored;
-    return status;
+    return { ...status, address: status.address ?? { backup: null, requested: null, adopted: false } };
   }
 
   async #readStatus(): Promise<StoredStatus | null> {
@@ -489,6 +502,7 @@ export class SetupRestoreService {
           { id: "migrations", state: "waiting" },
         ],
         failure: null,
+        address: { backup: null, requested: input.instanceUrl ?? null, adopted: false },
         startedAt: new Date().toISOString(),
         finishedAt: null,
       };
@@ -498,7 +512,7 @@ export class SetupRestoreService {
         { backup: source.name, source: input.source.type },
         "Restore during the setup started",
       );
-      void this.#run(status, source, keys).finally(() => {
+      void this.#run(status, source, keys, input.instanceUrl ?? null).finally(() => {
         this.#busy = false;
       });
       return token;
@@ -541,6 +555,7 @@ export class SetupRestoreService {
     status: StoredStatus,
     source: { name: string; local: string | null; remote: BackupSource | null },
     keys: { backupKeys: KeyRing; masterKeys: KeyRing },
+    instanceUrl: string | null,
   ): Promise<void> {
     const { logger } = this.#options;
     let current: RestoreStepId = source.remote ? "download" : "verify";
@@ -551,6 +566,7 @@ export class SetupRestoreService {
       current = "verify";
       await this.#step(status, "verify", "running");
       const { header } = await readBackupHeader(file);
+      status.address = { ...status.address, backup: header.instanceUrl ?? null };
       checkBackupHeader(header, {
         backupKeys: keys.backupKeys,
         knownSchemaVersions: this.#options.knownSchemaVersions,
@@ -600,6 +616,10 @@ export class SetupRestoreService {
       await this.#step(status, "migrations", "running");
       await this.#options.migrate();
       await pauseBackupsAfterRestore(this.#options.workDir, this.#options.database, logger);
+      if (instanceUrl && (await this.#options.adoptInstanceUrl?.(instanceUrl))) {
+        status.address = { ...status.address, adopted: true };
+        logger.info("The restored instance took over the address it runs under");
+      }
       await this.#step(status, "migrations", "done");
       status.state = "done";
       status.finishedAt = new Date().toISOString();

@@ -2218,6 +2218,21 @@
         "wait": "Zur Anmeldung geht es, sobald die Wiederherstellung fertig ist und Lunedo neu gestartet hat.",
         "otherBackup": "Andere Sicherung wählen",
         "checkKeys": "Schlüssel prüfen"
+      },
+      "address": {
+        "title": "Adresse der Instanz",
+        "differs": "Die Sicherung kommt von {backup}. Diese Instanz läuft unter {current}.",
+        "unknown": "Die Sicherung nennt ihre Adresse nicht. Diese Instanz läuft unter {current}.",
+        "adopt": "Neue Adresse übernehmen",
+        "adoptHint": "Nach dem Restore gilt {current}. Anmeldung, Links in E-Mails und Passkeys funktionieren unter dieser Adresse.",
+        "keep": "Alte behalten",
+        "keepHint": "Die Instanz verweist weiter auf {backup}, zum Beispiel wenn die Adresse später auf diesen Server zeigt.",
+        "keepUnknownHint": "Die Adresse aus der Sicherung bleibt, wie sie ist.",
+        "willAdopt": "Nach dem Restore wird die neue Adresse übernommen.",
+        "willKeep": "Die Adresse aus der Sicherung bleibt.",
+        "adopted": "Die neue Adresse wurde übernommen.",
+        "kept": "Die Adresse aus der Sicherung wurde behalten.",
+        "configured": "Die Adresse kommt aus LUNEDO_INSTANCE_URL und wurde deshalb nicht geändert."
       }
     }
   },

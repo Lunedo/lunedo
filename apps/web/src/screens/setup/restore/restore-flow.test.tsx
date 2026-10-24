@@ -86,6 +86,7 @@ describe("restoring from the setup", () => {
               createdAt: "2026-10-23T02:00:00.000Z",
               lunedoVersion: "1.0.3",
               scope: "all",
+              instanceUrl: "https://old.example.org",
               readable: true,
             },
           ],
@@ -106,6 +107,7 @@ describe("restoring from the setup", () => {
               step("migrations", done ? "done" : "waiting"),
             ],
             failure: null,
+            address: { backup: "https://old.example.org", requested: window.location.origin, adopted: done },
             startedAt: "2026-10-24T10:00:00.000Z",
             finishedAt: done ? "2026-10-24T10:02:00.000Z" : null,
           },
@@ -120,6 +122,14 @@ describe("restoring from the setup", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(await screen.findByRole("heading", { name: "Keys" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        `The backup comes from https://old.example.org. This instance runs under ${window.location.origin}.`,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Use the new address/ }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     expect(screen.getByText("Enter the backup key.")).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByLabelText("Backup key"));
@@ -138,10 +148,12 @@ describe("restoring from the setup", () => {
       source: { type: "directory", name: BACKUP },
       backupKey: "1:backup",
       masterKeys: "LUNEDO_MASTER_KEYS=1:master\nLUNEDO_BACKUP_KEY=1:backup\n",
+      instanceUrl: window.location.origin,
     });
     expect(screen.getByRole("button", { name: "Go to sign-in" }).hasAttribute("disabled")).toBe(true);
     expect(await screen.findByText("Restored", {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.getByText("Migrations applied")).toBeTruthy();
+    expect(screen.getByText(/The new address was set\./)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Go to sign-in" }).hasAttribute("disabled")).toBe(false);
   });
 
@@ -163,6 +175,7 @@ describe("restoring from the setup", () => {
             code: "backupKey",
             message: "The backup is encrypted with backup key version 1 (fingerprint ab)",
           },
+          address: { backup: null, requested: null, adopted: false },
           startedAt: "2026-10-24T10:00:00.000Z",
           finishedAt: "2026-10-24T10:00:01.000Z",
         },
@@ -296,5 +309,45 @@ describe("uploading a backup in parts", () => {
     expect(FakeRequest.sent[0]?.size).toBe(8 * 1024 * 1024);
     expect(FakeRequest.sent.slice(1).every((part) => part.size <= 4 * 1024 * 1024)).toBe(true);
     expect(FakeRequest.sent.filter((part) => part.url.endsWith(`offset=${8 * 1024 * 1024}`))).toHaveLength(2);
+  });
+
+  it("keeps the address of the backup when chosen", async () => {
+    const { requests } = mockApi({
+      "GET /api/v1/instance/info": () => ({ body: INFO }),
+      "GET /api/v1/setup": () => ({ body: { completed: false, session: true } }),
+      "GET /api/v1/setup/restore/sources": () => ({
+        body: {
+          directory: "/var/lib/lunedo/backups",
+          freeBytes: 1e11,
+          backups: [
+            {
+              name: BACKUP,
+              size: 4_200_000,
+              createdAt: "2026-10-23T02:00:00.000Z",
+              lunedoVersion: "1.0.3",
+              scope: "all",
+              instanceUrl: "https://old.example.org",
+              readable: true,
+            },
+          ],
+        },
+      }),
+      "POST /api/v1/setup/restore": () => ({ status: 202 }),
+    });
+    await renderSetup("/setup?restore=server");
+    await userEvent.click(await screen.findByRole("radio", { name: new RegExp(BACKUP) }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.click(await screen.findByRole("radio", { name: /Keep the old one/ }));
+    await userEvent.type(screen.getByLabelText("Backup key"), "1:backup");
+    await userEvent.upload(
+      screen.getByLabelText("Master keys"),
+      new File(["LUNEDO_MASTER_KEYS=1:master\n"], "keys.env"),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path === "/api/v1/setup/restore")?.body).toMatchObject({
+        instanceUrl: null,
+      }),
+    );
   });
 });

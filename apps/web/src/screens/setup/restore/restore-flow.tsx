@@ -37,7 +37,8 @@ type Source = RestoreStart["source"];
 interface RestoreDraft {
   source: Source | null;
   sourcePage: SourcePage | null;
-  setSource: (source: Source | null, page: SourcePage) => void;
+  backupUrl: string | null;
+  setSource: (source: Source | null, page: SourcePage, backupUrl?: string | null) => void;
 }
 
 const RestoreDraftContext = createContext<RestoreDraft | null>(null);
@@ -45,14 +46,17 @@ const RestoreDraftContext = createContext<RestoreDraft | null>(null);
 export function RestoreDraftProvider({ children }: { children: ReactNode }) {
   const [source, setSourceState] = useState<Source | null>(null);
   const [sourcePage, setSourcePage] = useState<SourcePage | null>(null);
+  const [backupUrl, setBackupUrl] = useState<string | null>(null);
   return (
     <RestoreDraftContext.Provider
       value={{
         source,
         sourcePage,
-        setSource: (next, page) => {
+        backupUrl,
+        setSource: (next, page, url = null) => {
           setSourceState(next);
           setSourcePage(page);
+          setBackupUrl(url);
         },
       }}
     >
@@ -115,6 +119,7 @@ export function RestoreFlow({
       >
         <KeysPage
           source={draft.source}
+          backupUrl={draft.backupUrl}
           back={back(() => goTo(sourcePage))}
           onStarted={() => goTo("progress")}
         />
@@ -258,7 +263,11 @@ function ServerPage({ back, onNext }: { back: ReactNode; onNext: () => void }) {
       document.querySelector<HTMLElement>("#restore-backups [role=radio]")?.focus();
       return;
     }
-    draft.setSource({ type: "directory", name: chosen, ...(directory ? { directory } : {}) }, "server");
+    draft.setSource(
+      { type: "directory", name: chosen, ...(directory ? { directory } : {}) },
+      "server",
+      listing?.backups.find((backup) => backup.name === chosen)?.instanceUrl ?? null,
+    );
     onNext();
   };
 
@@ -380,7 +389,11 @@ function BucketPage({ back, onNext }: { back: ReactNode; onNext: () => void }) {
       else document.querySelector<HTMLElement>("#restore-backups [role=radio]")?.focus();
       return;
     }
-    draft.setSource({ type: "s3", name: chosen, ...target() }, "s3");
+    draft.setSource(
+      { type: "s3", name: chosen, ...target() },
+      "s3",
+      backups.find((backup) => backup.name === chosen)?.instanceUrl ?? null,
+    );
     onNext();
   };
 
@@ -491,7 +504,12 @@ function UploadPage({ back, onNext }: { back: ReactNode; onNext: () => void }) {
         onProgress: setReceived,
       });
       setDone(result.file);
-      draft.setSource({ type: "upload", name: result.file ?? "" }, "upload");
+      const listed = await listServerBackups().catch(() => null);
+      draft.setSource(
+        { type: "upload", name: result.file ?? "" },
+        "upload",
+        listed?.backups.find((backup) => backup.name === result.file)?.instanceUrl ?? null,
+      );
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) setFailure(error);
     } finally {
@@ -630,8 +648,73 @@ function backupKeyFrom(text: string): string | null {
   return line ? line.trim().slice("LUNEDO_BACKUP_KEY=".length) : null;
 }
 
-function KeysPage({ source, back, onStarted }: { source: Source; back: ReactNode; onStarted: () => void }) {
+function sameAddress(left: string, right: string): boolean {
+  return left.replace(/\/+$/, "").toLowerCase() === right.replace(/\/+$/, "").toLowerCase();
+}
+
+function AddressChoice({
+  backupUrl,
+  current,
+  adopt,
+  onChange,
+}: {
+  backupUrl: string | null;
+  current: string;
+  adopt: boolean;
+  onChange: (adopt: boolean) => void;
+}) {
   const { t } = useTranslation();
+  return (
+    <section
+      aria-labelledby="restore-address"
+      className="flex flex-col gap-3 rounded-md border border-border p-4"
+    >
+      <h3 id="restore-address" className="font-semibold">
+        {t("setup.restore.address.title")}
+      </h3>
+      <p className="text-sm">
+        {backupUrl
+          ? t("setup.restore.address.differs", { backup: backupUrl, current })
+          : t("setup.restore.address.unknown", { current })}
+      </p>
+      <RadioGroup
+        label={t("setup.restore.address.title")}
+        value={adopt ? "adopt" : "keep"}
+        onValueChange={(value) => onChange(value === "adopt")}
+        options={[
+          {
+            value: "adopt",
+            label: t("setup.restore.address.adopt"),
+            description: t("setup.restore.address.adoptHint", { current }),
+          },
+          {
+            value: "keep",
+            label: t("setup.restore.address.keep"),
+            description: backupUrl
+              ? t("setup.restore.address.keepHint", { backup: backupUrl })
+              : t("setup.restore.address.keepUnknownHint"),
+          },
+        ]}
+      />
+    </section>
+  );
+}
+
+function KeysPage({
+  source,
+  backupUrl,
+  back,
+  onStarted,
+}: {
+  source: Source;
+  backupUrl: string | null;
+  back: ReactNode;
+  onStarted: () => void;
+}) {
+  const { t } = useTranslation();
+  const current = globalThis.location.origin;
+  const differs = backupUrl === null || !sameAddress(backupUrl, current);
+  const [adopt, setAdopt] = useState(true);
   const [backupKey, setBackupKey] = useState("");
   const [keyFile, setKeyFile] = useState<{ name: string; text: string } | null>(null);
   const [errors, setErrors] = useState<{ backupKey?: string; masterKeys?: string }>({});
@@ -658,7 +741,12 @@ function KeysPage({ source, back, onStarted }: { source: Source; back: ReactNode
     setBusy(true);
     setFailure(null);
     try {
-      await startRestore({ source, backupKey: backupKey.trim(), masterKeys: keyFile.text });
+      await startRestore({
+        source,
+        backupKey: backupKey.trim(),
+        masterKeys: keyFile.text,
+        instanceUrl: differs && adopt ? current : null,
+      });
       onStarted();
     } catch (error) {
       setFailure(problemMessage(t, error));
@@ -714,6 +802,9 @@ function KeysPage({ source, back, onStarted }: { source: Source; back: ReactNode
         <p className="text-sm text-text-muted">{t("setup.restore.keys.masterKeysHint")}</p>
         {errors.masterKeys ? <p className="text-danger text-sm">{errors.masterKeys}</p> : null}
       </div>
+      {differs ? (
+        <AddressChoice backupUrl={backupUrl} current={current} adopt={adopt} onChange={setAdopt} />
+      ) : null}
       <Notice variant="warning">{t("setup.restore.keys.warning")}</Notice>
       <Actions back={back} next={() => void start()} busy={busy} nextLabel={t("setup.restore.keys.start")} />
     </>
@@ -792,6 +883,27 @@ function ProgressPage({ onKeys, onSource }: { onKeys: () => void; onSource: () =
             <span className="font-mono text-xs">{failure.message}</span>
           </span>
         </Notice>
+      ) : null}
+      {status &&
+      (status.address.requested ||
+        (status.address.backup && !sameAddress(status.address.backup, globalThis.location.origin))) ? (
+        <p className="text-sm">
+          {status.address.backup
+            ? t("setup.restore.address.differs", {
+                backup: status.address.backup,
+                current: globalThis.location.origin,
+              })
+            : t("setup.restore.address.unknown", { current: globalThis.location.origin })}{" "}
+          {status.state !== "done"
+            ? status.address.requested
+              ? t("setup.restore.address.willAdopt")
+              : t("setup.restore.address.willKeep")
+            : status.address.adopted
+              ? t("setup.restore.address.adopted")
+              : status.address.requested
+                ? t("setup.restore.address.configured")
+                : t("setup.restore.address.kept")}
+        </p>
       ) : null}
       {status?.state === "done" ? (
         <Notice variant="success" title={t("setup.restore.progress.doneTitle")}>

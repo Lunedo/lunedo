@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+import { instanceUrlSchema } from "@lunedo/shared";
 import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -28,6 +29,12 @@ const backupSchema = z
       .enum(["all", "database"])
       .nullable()
       .describe("`all` with the file store, `database` without it. Null when the header is not readable."),
+    instanceUrl: z
+      .string()
+      .nullable()
+      .describe(
+        "Address of the instance that created the backup, from its header. Null for backups made before Lunedo recorded it.",
+      ),
     readable: z.boolean().describe("Whether the header of the backup could be read."),
   })
   .describe("A backup that can be restored.");
@@ -116,6 +123,12 @@ const startSchema = z
       .min(1)
       .max(65536)
       .describe("The content of the key file or the master key ring of the earlier server."),
+    instanceUrl: instanceUrlSchema
+      .nullable()
+      .optional()
+      .describe(
+        "Address to set after the restore, usually the one this instance runs under. Null or left out keeps the address from the backup. Ignored when LUNEDO_INSTANCE_URL sets the address.",
+      ),
   })
   .strict()
   .describe("What to restore and the keys to read it.");
@@ -153,6 +166,21 @@ const statusSchema = z
       })
       .nullable()
       .describe("Why the restore failed, or null."),
+    address: z
+      .object({
+        backup: z
+          .string()
+          .nullable()
+          .describe("Address of the instance that created the backup, or null when the backup does not say."),
+        requested: z
+          .string()
+          .nullable()
+          .describe(
+            "Address the restore was asked to set afterwards, or null to keep the one from the backup.",
+          ),
+        adopted: z.boolean().describe("Whether the requested address was set."),
+      })
+      .describe("The address of the instance before and after the restore."),
     startedAt: z.string().describe("When the restore started."),
     finishedAt: z.string().nullable().describe("When it finished, or null while it runs."),
   })

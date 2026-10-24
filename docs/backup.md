@@ -245,7 +245,7 @@ The header JSON:
 }
 ```
 
-A backup without the file store adds `"scope": "database"`; a backup with everything leaves the field out, so older versions read it unchanged.
+A backup without the file store adds `"scope": "database"`; a backup with everything leaves the field out, so older versions read it unchanged. Backups name the address of the instance that made them in `"instanceUrl"`, so that a restore during the setup can show where a backup comes from; backups of older versions lack the field.
 
 The header is readable without the key, so a backup can be identified and checked before decryption. It is authenticated: the first 10 + n bytes are part of the authenticated data of every encrypted chunk, so any change to the header makes decryption fail.
 
@@ -282,6 +282,8 @@ Because the whole backup is verified before anything is written, a rejected back
 Deleting a backup, starting a test restore and **Back up now** answer with the problem `backupTargetFailed` (status 502) when the target cannot be used: `problem` names the cause (`notFound`, `permission`, `connection`, `credentials`, `missingSecret` and the other causes of **Test connection**), and the detail says what to do.
 
 ## How a restore changes the instance
+
+A restore during the setup ends with a restart of every process, so that the restored data and keys are loaded. Lunedo ends itself and relies on a supervisor to start it again: Docker with `restart: unless-stopped` (as in the Compose file of the setup script) or a systemd unit with `Restart=always`. Without one, start Lunedo again by hand. `pnpm dev:apps` during development does not restart a process that ended; start it again yourself.
 
 A restore runs in three phases, so that a failure leaves either the old instance or a clearly marked incomplete one, never a silent mix:
 
