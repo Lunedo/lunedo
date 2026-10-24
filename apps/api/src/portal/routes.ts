@@ -707,7 +707,8 @@ async function articleRoute(
   await services.portalStatistics
     .recordView(target.config.spaceId, article.itemId)
     .catch((error: unknown) => request.log.warn({ err: error }, "A portal article view was not counted"));
-  const scope = article.subcategoryId ?? article.categoryId;
+  const scope = article.folderIds.at(-1) ?? null;
+  const parentScope = article.folderIds.at(-2) ?? null;
   const related =
     article.type === "howTo" && scope
       ? (
@@ -731,10 +732,10 @@ async function articleRoute(
         })
       ).articles
     : [];
-  if (similar.length === 0 && article.subcategoryId && article.categoryId) {
+  if (similar.length === 0 && parentScope) {
     similar = (
       await reader.articles(viewer.principal, target.config, {
-        categoryId: article.categoryId,
+        categoryId: parentScope,
         limit: RELATED_LIMIT,
         exclude,
         language: target.language,

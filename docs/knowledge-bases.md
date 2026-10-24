@@ -50,7 +50,7 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base`, `POST …/knowledge-base/aud
 A knowledge base contains only articles and categories:
 
 - **Articles** are pages. They always use publish mode: readers see the last published version while authors work on a draft. Live mode is not offered.
-- **Categories** are folders. A folder at the top level is a category, a folder inside a category is a subcategory. Deeper folders belong to their subcategory.
+- **Categories** are folders, nested to any depth, for example IT › Microsoft › Outlook › Web App. The portal calls the top-level folders **areas** and the folders below them **topics**; it is one kind of folder in every other respect.
 - Articles are placed in categories or at the top level, never below another article. Articles and categories keep their kind; they cannot be converted.
 
 Blog posts, meeting series, whiteboards and links are refused, through the interface, the API, moves, copies and every other path, with `knowledgeBaseContent`. A page in live mode or a page with subpages cannot be moved or copied into a knowledge base (`knowledgeBaseMode`, `knowledgeBasePlacement`); switch it to publish mode or move its subpages first.
@@ -86,11 +86,13 @@ Every article gets a number when it is created or moved into the knowledge base.
 
 ## Categories
 
-Under **Space settings → Categories**, editors set the icon and the introduction of a category and change the order of categories. The portal shows the categories in this order. Without an icon, it shows the name when it has at most three characters, otherwise its first letter.
+Every folder, at every depth, has an icon, an introduction and a contact address. The portal shows the folders in their order. Without an icon, it shows the name when it has at most three characters, otherwise its first letter.
 
-Each category can have a contact address, which readers use when an article did not help. A subcategory without its own address uses the address of its category; a category without one uses the address of the knowledge base. Space admins set the addresses. Lunedo sends nothing itself and creates no tickets.
+The introduction is short formatted text of up to 1,000 characters, not a page: `**bold**`, `*italic*`, links as `[text](https://…)` or `[text](mailto:…)`, and one callout as lines starting with `>`. Links with other schemes stay plain text, and further quoted blocks are shown as normal paragraphs.
 
-API: `GET /api/v1/spaces/{spaceId}/categories`, `PUT /api/v1/categories/{itemId}` for the icon, `PUT /api/v1/categories/{itemId}/contact` and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact`. Title, introduction and order change like for every folder.
+A folder's contact address is what readers use when an article did not help. A folder without its own address uses the address of the nearest folder above it that has one, and finally the address of the knowledge base. Space admins set the addresses. Lunedo sends nothing itself and creates no tickets.
+
+API: `GET /api/v1/spaces/{spaceId}/categories` lists every folder the caller can read, with its depth (`level`), introduction (`description`), icon and the contact address that applies. `PUT /api/v1/categories/{itemId}` sets the icon, `PUT /api/v1/categories/{itemId}/contact` the contact address, both at any depth, and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact` the address of the knowledge base. Title, introduction and order change like for every folder. Articles carry the whole folder path above them as `categoryPath`.
 
 ## Languages
 
@@ -189,7 +191,7 @@ Readers open a knowledge base in its portal: a start page with the search and th
 ### Addresses
 
 - Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way.
-- Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Categories are at `topics/<id>`, the search at `search?q=…`.
+- Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Every folder, at any depth, is at `topics/<id>`, the search at `search?q=…`.
 - An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404. A signed-in person who can read nothing in a knowledge base that is not public gets the same answer as for a portal that does not exist, without its name or welcome text.
 - The change of a path or domain is recorded in the audit log as `knowledgeBase.portalAddressChanged`.
 
@@ -214,14 +216,14 @@ On its own domain only the portal answers; the app and `/api/` are not reachable
 ### Who sees what
 
 - The portal shows only published versions. Drafts and articles that were never published are not shown, also not to editors.
-- Category lists and article counts are computed for each reader from the search index. A category the reader cannot read, and every article in it, is neither shown nor counted.
+- Folder lists and article counts are computed for each reader from the search index, for every folder at every depth. A folder the reader cannot read, and every article in it, is neither shown nor counted.
 - People who may edit an article see **Edit**, which opens the article in the editor of the app. In the app, **View in portal** opens the knowledge base and, on a published article, the article in the portal.
 - The account menu shows the name, the e-mail address, a link to the app and **Sign out**. The link to the app appears only for people who can see at least one space and never for portal accounts. Its name is set by instance administrators under **Instance settings → Knowledge base portals**; empty means "Go to the wiki".
 - Frequent searches on the start page are the most searched terms of the last 90 days that had results, each searched at least three times. A reader sees only terms with which they find something themselves.
 
 ### Contact
 
-- "Didn't help? Write to us" under an article opens the reader's mail program with the contact address of the article's category (inherited from the category above, then from the knowledge base), the article title as subject and the link to the article in the body. "Copy address" helps readers without a mail program.
+- "Didn't help? Write to us" under an article opens the reader's mail program with the contact address of the article's folder (inherited from the folders above, then from the knowledge base), the article title as subject and the link to the article in the body. "Copy address" helps readers without a mail program.
 - On a search without results, and on the contact page, the reader chooses the area: each top-level category with a contact address, and "Something else" for the address of the knowledge base.
 - Lunedo sends nothing itself and creates no tickets.
 

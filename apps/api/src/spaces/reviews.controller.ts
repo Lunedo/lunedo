@@ -164,7 +164,7 @@ const reviewItemSchema = z
           .object({ id: uuid("ID of the category."), title: z.string().describe("Title.") })
           .describe("A category."),
       )
-      .describe("Category and subcategory the caller can read, top level first."),
+      .describe("Folders above the article that the caller can read, top level first."),
     owner: personSchema.nullable().describe("The owner, or null when the article has no active owner."),
     ownerActive: z.boolean().describe("Whether the article has an active owner."),
     formerOwner: personSchema

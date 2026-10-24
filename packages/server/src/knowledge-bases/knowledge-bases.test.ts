@@ -369,12 +369,13 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
   });
 
   describe("categories", () => {
-    it("inherits contact addresses from the subcategory, the category and the knowledge base", async () => {
+    it("inherits contact addresses through folders of any depth and the knowledge base", async () => {
       const { editor, kb } = await setup();
       const it = await create(editor, kb.id, { kind: "folder", title: "IT" });
       const network = await create(editor, kb.id, { kind: "folder", title: "Network", parentId: it.id });
       const deeper = await create(editor, kb.id, { kind: "folder", title: "VPN", parentId: network.id });
-      const article = await create(editor, kb.id, { parentId: deeper.id });
+      const deepest = await create(editor, kb.id, { kind: "folder", title: "Clients", parentId: deeper.id });
+      const article = await create(editor, kb.id, { parentId: deepest.id });
       await test.services.versions.publish(editor, article.id);
       const contact = async () =>
         (await test.services.knowledgeBases.article(editor, article.id))?.contactEmail;
@@ -391,6 +392,11 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
       expect(await contact()).toBe("network@example.org");
       await test.services.knowledgeBases.updateCategory(network.id, { contactEmail: null });
       expect(await contact()).toBe("it@example.org");
+      await test.services.knowledgeBases.updateCategory(deeper.id, {
+        contactEmail: "vpn@example.org",
+        icon: "wifi",
+      });
+      expect(await contact()).toBe("vpn@example.org");
 
       const categories = await test.services.knowledgeBases.categories(editor, kb.id);
       expect(
@@ -403,13 +409,17 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
       ).toEqual([
         ["IT", 1, "category", 1],
         ["Network", 2, "parentCategory", 1],
+        ["VPN", 3, "category", 1],
+        ["Clients", 4, "parentCategory", 1],
       ]);
       expect(categories[0]?.icon).toBe("monitor");
+      expect(categories[2]?.icon).toBe("wifi");
+      expect(categories[3]?.effectiveContactEmail).toBe("vpn@example.org");
       expect(
         (await test.services.knowledgeBases.article(editor, article.id))?.categoryPath.map((c) => c.title),
-      ).toEqual(["IT", "Network"]);
+      ).toEqual(["IT", "Network", "VPN", "Clients"]);
       await expect(
-        test.services.knowledgeBases.updateCategory(deeper.id, { icon: "wifi" }),
+        test.services.knowledgeBases.updateCategory(article.id, { icon: "wifi" }),
       ).rejects.toMatchObject({
         code: "notCategory",
       });

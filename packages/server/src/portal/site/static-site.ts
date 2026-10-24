@@ -23,6 +23,7 @@ import {
   articlePage,
   categoryPage,
   contactPage,
+  folderTrail,
   type LanguageLink,
   notFoundPage,
   type PortalLinks,
@@ -48,8 +49,7 @@ interface SiteArticle {
   language: string;
   title: string;
   type: PortalArticleSummary["type"];
-  categoryId: string | null;
-  subcategoryId: string | null;
+  folderIds: string[];
   oldSlugs: string[];
   document: DocumentJson;
   found: PortalArticle;
@@ -189,8 +189,7 @@ export class StaticSiteBuilder {
         language: row.language,
         title: row.title,
         type: row.article_type,
-        categoryId: found.article.categoryId,
-        subcategoryId: found.article.subcategoryId,
+        folderIds: found.article.folderIds,
         oldSlugs: row.old_slugs,
         document: migrated(row.document, row.schema_version),
         found: found.article,
@@ -247,8 +246,7 @@ export class StaticSiteBuilder {
       language: article.language,
       title: article.title,
       type: article.type,
-      categoryId: article.categoryId,
-      subcategoryId: article.subcategoryId,
+      folderIds: article.folderIds,
       updatedAt: article.found.updatedAt,
       reviewedAt: article.found.reviewedAt,
       views: 0,
@@ -371,17 +369,12 @@ export class StaticSiteBuilder {
         .sort((left, right) => left.title.localeCompare(right.title, language));
       const counted = new Map<string, number>();
       for (const summary of shown) {
-        for (const id of [summary.categoryId, summary.subcategoryId]) {
-          if (id) counted.set(id, (counted.get(id) ?? 0) + 1);
-        }
+        for (const id of summary.folderIds) counted.set(id, (counted.get(id) ?? 0) + 1);
       }
       const categories = await this.#reader.countedCategories(ANONYMOUS, config, counted);
       categoriesOf.set(language, categories);
       const listed = (categoryId: string | null) => {
-        const list = shown.filter(
-          (summary) =>
-            categoryId === null || summary.categoryId === categoryId || summary.subcategoryId === categoryId,
-        );
+        const list = shown.filter((summary) => categoryId === null || summary.folderIds.includes(categoryId));
         const howTo = list.filter((summary) => summary.type === "howTo").length;
         const troubleshooting = list.filter((summary) => summary.type === "troubleshooting").length;
         return {
@@ -441,16 +434,14 @@ export class StaticSiteBuilder {
           const article = byNumber.get(summary.number)?.get(summary.language);
           if (!article || article.language !== language) return [];
           const body = plainText(article.document).slice(0, MAX_INDEXED_TEXT);
-          const category = categories.find(
-            (entry) => entry.id === (summary.subcategoryId ?? summary.categoryId),
-          );
+          const trail = folderTrail(categories, summary.folderIds);
           return [
             {
               id: `${summary.language}:${summary.number}`,
               number: summary.number,
               title: summary.title,
               text: body,
-              category: category?.title ?? "",
+              category: trail.map((entry) => entry.title).join(" › "),
               type: summary.type ?? "",
               url: articleFile(article),
               excerpt: excerptOf(article),

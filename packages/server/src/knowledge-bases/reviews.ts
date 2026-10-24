@@ -12,6 +12,7 @@ import type { PeopleService, VisiblePerson } from "../spaces/people.js";
 import type { ArticleType } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { visibleItem } from "../spaces/visibility.js";
+import { folderIds, folderTitles } from "./folders.js";
 import type { ReviewInterval, ReviewLeadDays, ReviewRecipients, ReviewVia } from "./schema.js";
 import { translationState } from "./translations.js";
 
@@ -498,12 +499,6 @@ export class ReviewService {
       })})`;
   }
 
-  #category(viewer: Principal, index: number): SQL {
-    return sql`(select c.id from tree_items c join spaces cs on cs.id = c.space_id
-      where c.id = t.path[${index}] and c.kind = 'folder' and c.id <> t.id
-        and ${visibleItem(this.#authorization, viewer, sql`c`, sql`cs`)})`;
-  }
-
   async list(
     viewer: Principal,
     spaceId: string,
@@ -568,10 +563,8 @@ export class ReviewService {
     }>(
       sql`
       select * from (select t.id, t.title, t.article_type,
-        array_remove(array[${this.#category(viewer, 1)}, ${this.#category(viewer, 2)}], null) as category_ids,
-        array(select c.title from tree_items c
-          where c.id = any(array[${this.#category(viewer, 1)}, ${this.#category(viewer, 2)}])
-          order by cardinality(c.path)) as category_titles,
+        ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
+        ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles,
         t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
         ${this.#people.visiblePictureRef(viewer, sql`o`)} as owner_picture_ref, ${ownerActive} as owner_active,
         r.interval_months, kb.review_interval_months as inherited_months, r.published_at, r.reviewed_at, r.due_at,

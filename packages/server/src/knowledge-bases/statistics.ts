@@ -1,4 +1,4 @@
-import { type SQL, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -12,6 +12,7 @@ import type {
 } from "../portal/statistics.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
 import { visibleItem } from "../spaces/visibility.js";
+import { folderIds, folderTitles } from "./folders.js";
 
 export const statisticsPeriods = ["7d", "30d", "90d", "12m"] as const;
 export type StatisticsPeriod = (typeof statisticsPeriods)[number];
@@ -96,12 +97,6 @@ export class KnowledgeBaseStatisticsService {
     if (!result.rows[0]) throw new SpaceError("notKnowledgeBase", "The space is not a knowledge base");
   }
 
-  #category(viewer: Principal, index: number): SQL {
-    return sql`(select c.id from tree_items c join spaces cs on cs.id = c.space_id
-      where c.id = t.path[${index}] and c.kind = 'folder' and c.id <> t.id
-        and ${visibleItem(this.#authorization, viewer, sql`c`, sql`cs`)})`;
-  }
-
   async #articles(
     viewer: Principal,
     spaceId: string,
@@ -115,10 +110,8 @@ export class KnowledgeBaseStatisticsService {
       category_titles: string[];
     }>(sql`
       select t.id, t.title,
-        array_remove(array[${this.#category(viewer, 1)}, ${this.#category(viewer, 2)}], null) as category_ids,
-        array(select c.title from tree_items c
-          where c.id = any(array[${this.#category(viewer, 1)}, ${this.#category(viewer, 2)}])
-          order by cardinality(c.path)) as category_titles
+        ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
+        ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = any(${sql.param(ids)}::uuid[]) and t.space_id = ${spaceId} and t.kind = 'page'
         and t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);

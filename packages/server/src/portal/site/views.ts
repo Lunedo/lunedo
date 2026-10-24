@@ -1,3 +1,4 @@
+import { introductionText, parseIntroduction } from "@lunedo/shared";
 import type { ArticleSort } from "../../search/adapter.js";
 import { PORTAL_BASE_PLACEHOLDER } from "../articles.js";
 import type { PortalConfig } from "../portals.js";
@@ -155,6 +156,50 @@ function categoryOf(view: PortalView, id: string | null): PortalCategory | undef
   return id ? view.categories.find((category) => category.id === id) : undefined;
 }
 
+export function folderTrail(categories: readonly PortalCategory[], ids: readonly string[]): PortalCategory[] {
+  return ids.flatMap((id) => categories.find((category) => category.id === id) ?? []);
+}
+
+export function ancestorsOf(
+  categories: readonly PortalCategory[],
+  category: PortalCategory,
+): PortalCategory[] {
+  const trail: PortalCategory[] = [];
+  for (let current: PortalCategory | undefined = category; current; ) {
+    trail.unshift(current);
+    const parentId: string | null = current.parentId;
+    current = parentId ? categories.find((entry) => entry.id === parentId) : undefined;
+  }
+  return trail;
+}
+
+function nearestFolder(view: PortalView, ids: readonly string[]): PortalCategory | undefined {
+  return folderTrail(view.categories, ids).at(-1);
+}
+
+function pathLabel(view: PortalView, ids: readonly string[]): string {
+  return folderTrail(view.categories, ids)
+    .map((category) => category.title)
+    .join(" › ");
+}
+
+export function introduction(source: string): Html {
+  return html`${parseIntroduction(source).map(
+    (block) =>
+      html`<${raw(block.type === "callout" ? 'div class="callout"' : "p")}>${block.content.map((inline) =>
+        inline.type === "break"
+          ? raw("<br>")
+          : inline.type === "link"
+            ? html`<a href="${inline.href}">${inline.text}</a>`
+            : inline.bold
+              ? html`<strong>${inline.text}</strong>`
+              : inline.italic
+                ? html`<em>${inline.text}</em>`
+                : html`${inline.text}`,
+      )}</${raw(block.type === "callout" ? "div" : "p")}>`,
+  )}`;
+}
+
 function kindText(view: PortalView, type: PortalArticleSummary["type"]): Html | null {
   return type
     ? html`<span class="tkind ${type}">${icon(TYPE_ICONS[type])}${view.t.types[type]}</span>`
@@ -303,8 +348,8 @@ ${footer(view)}
 }
 
 function rankRow(view: PortalView, article: PortalArticleSummary, index: number): Html {
-  const category = categoryOf(view, article.categoryId);
-  return html`<li><a href="${view.links.article(article)}"><span class="rank">${index + 1}</span><span class="g"><span class="t">${article.title}</span><span class="m">${kindText(view, article.type)}${when(article.type && category, () => html`<span class="dot"></span>`)}${category?.title ?? ""}</span></span>${icon("chevron-right", "chev")}</a></li>`;
+  const path = pathLabel(view, article.folderIds);
+  return html`<li><a href="${view.links.article(article)}"><span class="rank">${index + 1}</span><span class="g"><span class="t">${article.title}</span><span class="m">${kindText(view, article.type)}${when(article.type && path, () => html`<span class="dot"></span>`)}${path}</span></span>${icon("chevron-right", "chev")}</a></li>`;
 }
 
 function recentRow(view: PortalView, article: PortalArticleSummary): Html {
@@ -316,7 +361,7 @@ function topicTiles(view: PortalView, mini: boolean): Html {
   return html`<div class="tiles">${top.map((category) =>
     mini
       ? html`<a class="tile mini" href="${view.links.category(category.id)}">${categoryIcon(category, 40)}<h3>${category.title}</h3><span class="m">${view.t.articleCount(category.articles)}</span></a>`
-      : html`<a class="tile" href="${view.links.category(category.id)}">${categoryIcon(category, 56)}<h3>${category.title}</h3>${when(category.description, () => html`<p>${category.description}</p>`)}<span class="foot"><span>${view.t.articleCount(category.articles)}</span><span class="go" aria-hidden="true">${icon("arrow-right")}</span></span></a>`,
+      : html`<a class="tile" href="${view.links.category(category.id)}">${categoryIcon(category, 56)}<h3>${category.title}</h3>${when(category.description, () => html`<p>${introductionText(category.description)}</p>`)}<span class="foot"><span>${view.t.articleCount(category.articles)}</span><span class="go" aria-hidden="true">${icon("arrow-right")}</span></span></a>`,
   )}</div>`;
 }
 
@@ -393,7 +438,7 @@ export function categoryPage(
   pageSize: number,
 ): string {
   const { t } = view;
-  const parent = categoryOf(view, category.parentId);
+  const trail = ancestorsOf(view.categories, category);
   const subcategories = view.categories.filter((entry) => entry.parentId === category.id);
   const path = view.links.category(category.id);
   const dynamic = !view.static;
@@ -405,11 +450,18 @@ export function categoryPage(
   const pages = Math.max(1, Math.ceil(list.total / pageSize));
   return layout(
     view,
-    { title: category.title, current: parent?.id ?? category.id },
+    { title: category.title, current: trail[0]?.id ?? category.id },
     html`<div class="pw">
-      ${crumbs(view, parent ? [{ label: parent.title, href: view.links.category(parent.id) }, { label: category.title }] : [{ label: category.title }])}
+      ${crumbs(
+        view,
+        trail.map((entry) =>
+          entry.id === category.id
+            ? { label: entry.title }
+            : { label: entry.title, href: view.links.category(entry.id) },
+        ),
+      )}
       <header class="chead">${categoryIcon(category, 72)}<div><h1>${category.title}</h1>
-        ${when(category.description, () => html`<p class="lead">${category.description}</p>`)}
+        ${when(category.description, () => html`<div class="lead intro">${introduction(category.description)}</div>`)}
         ${when(category.contactEmail, () => html`<p class="contactline">${icon("mail")}${t.contactLine(category.title)} <a href="${mailto(category.contactEmail ?? "", category.title)}">${category.contactEmail ?? ""}</a></p>`)}
       </div></header>
       ${when(
@@ -417,7 +469,7 @@ export function categoryPage(
         () =>
           html`<section class="sec s14" aria-labelledby="subs-heading"><h2 class="sr" id="subs-heading">${t.subcategories}</h2><div class="subgrid">${subcategories.map(
             (sub) =>
-              html`<a class="subtile" href="${view.links.category(sub.id)}">${categoryIcon(sub, 40)}<b>${sub.title}</b>${when(sub.description, () => html`<span class="d">${sub.description}</span>`)}<span class="n">${t.articleCount(sub.articles)}</span></a>`,
+              html`<a class="subtile" href="${view.links.category(sub.id)}">${categoryIcon(sub, 40)}<b>${sub.title}</b>${when(sub.description, () => html`<span class="d">${introductionText(sub.description)}</span>`)}<span class="n">${t.articleCount(sub.articles)}</span></a>`,
           )}</div></section>`,
       )}
       <section class="sec s16" aria-labelledby="list-heading">
@@ -448,7 +500,7 @@ export function categoryPage(
           list.articles.length === 0
             ? html`<p class="hint">${t.noArticlesOfType}</p>`
             : html`<ul class="alist">${list.articles.map((article) => {
-                const sub = categoryOf(view, article.subcategoryId);
+                const sub = nearestFolder(view, article.folderIds);
                 return html`<li><a href="${view.links.article(article)}">${typeBadge(article.type)}<span class="g"><span class="t">${article.title}</span><span class="m">${article.type ? t.types[article.type] : ""}${when(article.type && sub, () => html`<span class="dot"></span>`)}${sub?.title ?? ""}${when(article.type || sub, () => html`<span class="dot"></span>`)}${t.updatedOnShort(shortDate(view, article.updatedAt))}</span></span>${icon("chevron-right", "chev")}</a></li>`;
               })}</ul>`
         }
@@ -494,20 +546,16 @@ export function articlePage(
   data: { related: PortalArticleSummary[]; similar: PortalArticleSummary[]; editUrl: string | null },
 ): string {
   const { t } = view;
-  const category = categoryOf(view, article.categoryId);
-  const sub = categoryOf(view, article.subcategoryId);
+  const folders = folderTrail(view.categories, article.folderIds);
   const subject = t.mailSubject(article.title);
   const contact = article.contactEmail;
   const shared = articleUrl(view, article);
   const mail = contact ? mailto(contact, subject, shared ? t.mailBody(shared) : undefined) : null;
   const toc = article.headings.filter((heading) => heading.level <= 2);
-  const trail = [
-    ...(category ? [{ label: category.title, href: view.links.category(category.id) }] : []),
-    ...(sub ? [{ label: sub.title, href: view.links.category(sub.id) }] : []),
-  ];
+  const trail = folders.map((folder) => ({ label: folder.title, href: view.links.category(folder.id) }));
   return layout(
     view,
-    { title: article.title, current: article.categoryId },
+    { title: article.title, current: folders[0]?.id ?? null },
     html`<div class="pw">
       ${crumbs(view, trail)}
       <div class="art">
@@ -558,7 +606,7 @@ export function articlePage(
             () =>
               html`<section class="related" aria-labelledby="similar-heading"><h2 class="h3" id="similar-heading">${t.similarArticles}</h2><div class="relgrid">${data.similar.map(
                 (entry) =>
-                  html`<a href="${view.links.article(entry)}">${typeBadge(entry.type)}${entry.title}<span class="m">${entry.type ? t.types[entry.type] : ""}${when(entry.type && categoryOf(view, entry.subcategoryId ?? entry.categoryId), () => raw(" · "))}${categoryOf(view, entry.subcategoryId ?? entry.categoryId)?.title ?? ""}</span></a>`,
+                  html`<a href="${view.links.article(entry)}">${typeBadge(entry.type)}${entry.title}<span class="m">${entry.type ? t.types[entry.type] : ""}${when(entry.type && nearestFolder(view, entry.folderIds), () => raw(" · "))}${nearestFolder(view, entry.folderIds)?.title ?? ""}</span></a>`,
               )}</div></section>`,
           )}
         </article>
@@ -657,10 +705,9 @@ export function searchPage(
             result.results.length === 0
               ? html`<p class="hint">${t.noArticlesOfType}</p>`
               : html`<ul class="res">${result.results.map((hit) => {
-                  const category = categoryOf(view, hit.categoryId);
-                  const sub = categoryOf(view, hit.subcategoryId);
+                  const path = pathLabel(view, hit.folderIds);
                   const other = hit.language !== view.lang;
-                  return html`<li${raw(other ? ` lang="${hit.language}"` : "")}><span class="path" lang="${view.lang}">${kindText(view, hit.type)}${when(hit.type && category, () => html`<span class="dot"></span>`)}${category?.title ?? ""}${when(sub, () => html` › ${sub?.title ?? ""}`)}${when(other, () => html`<span class="ltag">${icon("languages")}${languageName(hit.language, view.lang)}</span>`)}</span>
+                  return html`<li${raw(other ? ` lang="${hit.language}"` : "")}><span class="path" lang="${view.lang}">${kindText(view, hit.type)}${when(hit.type && path, () => html`<span class="dot"></span>`)}${path}${when(other, () => html`<span class="ltag">${icon("languages")}${languageName(hit.language, view.lang)}</span>`)}</span>
                     <a class="t" href="${view.links.article(hit)}">${hit.title}</a>
                     ${when(hit.excerpt.length > 0, () => html`<p>${excerpt(hit.excerpt)}</p>`)}
                     <span class="path" lang="${view.lang}">${icon("history")}${changedOn(view, hit)}</span></li>`;

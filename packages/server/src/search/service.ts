@@ -373,6 +373,16 @@ export class SearchService {
     return this.#adapter.articleCounts(this.#database, viewer, spaceId, language);
   }
 
+  async portalLanguageCounts(
+    principal: Principal,
+    organizationId: string,
+    spaceId: string,
+  ): Promise<Map<string, number>> {
+    const viewer = await loadPortalViewer(this.#database, principal, organizationId);
+    if (!viewer) return new Map();
+    return this.#adapter.languageCounts(this.#database, viewer, spaceId);
+  }
+
   async #visibleSpaces(principal: Principal, organizationId: string): Promise<Map<string, SearchSpace>> {
     const result = await this.#database.execute<SearchSpace & Record<string, unknown>>(sql`
       select s.id, s.key, s.name, s.personal_of is not null as personal from spaces s

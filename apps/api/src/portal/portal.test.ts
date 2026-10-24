@@ -171,6 +171,54 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(category.body).toContain("VPN einrichten");
   });
 
+  it("gives every folder of any depth its own page with breadcrumb, introduction, contact and counts", async () => {
+    const kb = await knowledgeBase("public");
+    await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/contact`, { contactEmail: "help@example.org" });
+    const it = await folder(kb.id, "IT");
+    const microsoft = await folder(kb.id, "Microsoft", it);
+    const outlook = await folder(kb.id, "Outlook", microsoft);
+    const web = await folder(kb.id, "Web App", outlook);
+    await owner.put(`/api/v1/categories/${microsoft}/contact`, { contactEmail: "m365@example.org" });
+    const icon = await owner.put(`/api/v1/categories/${web}`, { icon: "globe" });
+    expect(icon.statusCode, icon.body).toBe(204);
+    const intro = await owner.patch(`/api/v1/items/${web}`, {
+      description:
+        "Outlook **im Browser**, siehe [Anleitung](https://example.org/owa).\n\n> Nie <script> speichern",
+    });
+    expect(intro.statusCode, intro.body).toBe(200);
+    const signIn = await article(kb.id, web, "Wie melde ich mich an", "Im Browser anmelden.");
+    await article(kb.id, outlook, "Welche Version habe ich", "Version ansehen.");
+    await index();
+    const reader = anonymous();
+    const page = await reader.get(`${kb.path}/topics/${web}`);
+    expect(page.statusCode, page.body).toBe(200);
+    for (const id of [it, microsoft, outlook]) expect(page.body).toContain(`${kb.path}/topics/${id}"`);
+    expect(page.body).toContain("Outlook <strong>im Browser</strong>, siehe ");
+    expect(page.body).toContain('<a href="https://example.org/owa">Anleitung</a>');
+    expect(page.body).toContain('<div class="callout">Nie &lt;script&gt; speichern</div>');
+    expect(page.body).toContain("m365@example.org");
+    expect(page.body).toContain("Wie melde ich mich an");
+    const entry = await reader.get(`${kb.path}/${signIn.number}-wie-melde-ich-mich-an`);
+    expect(entry.body).toContain("mailto:m365@example.org?subject=");
+    expect(entry.body).toContain(`${kb.path}/topics/${web}"`);
+    const categories = await owner.get(`/api/v1/spaces/${kb.id}/categories`);
+    expect(
+      (
+        categories.json() as {
+          title: string;
+          level: number;
+          articles: number;
+          effectiveContactEmail: string;
+        }[]
+      ).map((entry) => [entry.title, entry.level, entry.articles, entry.effectiveContactEmail]),
+    ).toEqual([
+      ["IT", 1, 2, "help@example.org"],
+      ["Microsoft", 2, 2, "m365@example.org"],
+      ["Outlook", 3, 2, "m365@example.org"],
+      ["Web App", 4, 1, "m365@example.org"],
+    ]);
+  });
+
   it("serves article images to readers who may read the article and to nobody else", async () => {
     const kb = await knowledgeBase("public");
     const entry = await article(kb.id, null, "Bild", "Mit Bild.");

@@ -13,6 +13,7 @@ function categories(count: number): PortalCategory[] {
     description: "",
     icon: null,
     contactEmail: null,
+    restricted: false,
     articles: 1,
   }));
 }

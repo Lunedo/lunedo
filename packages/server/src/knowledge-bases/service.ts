@@ -21,10 +21,11 @@ import { signalSpaceChange } from "../spaces/signals.js";
 import { audienceVisibility, type Space, type SpaceService } from "../spaces/spaces.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { PageTemplate, TemplateService } from "../templates/templates.js";
+import { folderIds, folderTitles } from "./folders.js";
 import { type TranslationState, translationState } from "./translations.js";
 
 export const MAX_AUDIENCE_GROUPS = 100;
-export const CATEGORY_LEVELS = 2;
+export const MAX_FOLDERS = 2000;
 
 const contactEmailSchema = z.email().max(254);
 
@@ -363,10 +364,6 @@ export class KnowledgeBaseService {
     return this.settings(spaceId);
   }
 
-  #categoryLevel(item: SQL): SQL {
-    return sql`(select count(*) from tree_items anc where anc.id = any(${item}.path) and anc.id <> ${item}.id)`;
-  }
-
   async categories(viewer: Principal, spaceId: string): Promise<Category[]> {
     await this.#requireKnowledgeBase(spaceId);
     const result = await this.#database.execute<{
@@ -387,19 +384,28 @@ export class KnowledgeBaseService {
             and ${visibleItem(this.#authorization, viewer, sql`a`, sql`sa`)}) as articles
       from tree_items c join spaces s on s.id = c.space_id
       left join knowledge_base_categories kc on kc.item_id = c.id
-      where c.space_id = ${spaceId} and c.kind = 'folder' and cardinality(c.path) <= ${CATEGORY_LEVELS}
+      where c.space_id = ${spaceId} and c.kind = 'folder'
         and c.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`c`, sql`s`)}
       order by cardinality(c.path), c.position, c.id
-      limit 1000`);
+      limit ${MAX_FOLDERS}`);
     const fallback = (await this.settings(spaceId)).contactEmail;
     const rows = result.rows;
     const byId = new Map(rows.map((row) => [row.id, row]));
+    const inherited = (parentId: string | null): string | null => {
+      for (let id = parentId; id; ) {
+        const parent = byId.get(id);
+        if (!parent) return null;
+        if (parent.contact_email) return parent.contact_email;
+        id = parent.parent_id;
+      }
+      return null;
+    };
     return rows.map((row) => {
-      const parent = row.parent_id ? byId.get(row.parent_id) : undefined;
+      const fromParent = row.contact_email ? null : inherited(row.parent_id);
       const [effective, source]: [string | null, ContactSource | null] = row.contact_email
         ? [row.contact_email, "category"]
-        : parent?.contact_email
-          ? [parent.contact_email, "parentCategory"]
+        : fromParent
+          ? [fromParent, "parentCategory"]
           : fallback
             ? [fallback, "knowledgeBase"]
             : [null, null];
@@ -420,15 +426,12 @@ export class KnowledgeBaseService {
   }
 
   async #requireCategory(executor: Executor, itemId: string): Promise<{ spaceId: string }> {
-    const result = await executor.execute<{ space_id: string; level: number }>(sql`
-      select t.space_id, cardinality(t.path) as level from tree_items t join spaces s on s.id = t.space_id
+    const result = await executor.execute<{ space_id: string }>(sql`
+      select t.space_id from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId} and t.kind = 'folder' and s.type = 'knowledgeBase' and t.trash_entry_id is null`);
     const row = result.rows[0];
-    if (!row || Number(row.level) > CATEGORY_LEVELS) {
-      throw new SpaceError(
-        "notCategory",
-        "Only folders on the first two levels of a knowledge base are categories with their own settings",
-      );
+    if (!row) {
+      throw new SpaceError("notCategory", "Only folders of a knowledge base have these settings");
     }
     return { spaceId: row.space_id };
   }
@@ -463,15 +466,9 @@ export class KnowledgeBaseService {
   }
 
   #articleSelect(viewer: Principal): SQL {
-    const category = (
-      index: number,
-    ) => sql`(select c.id from tree_items c join spaces cs on cs.id = c.space_id
-      where c.id = t.path[${index}] and c.kind = 'folder' and c.id <> t.id
-        and ${visibleItem(this.#authorization, viewer, sql`c`, sql`cs`)})`;
     return sql`select t.id, t.space_id, t.title, t.article_type, an.number, article_slug(t.title) as slug,
-        array_remove(array[${category(1)}, ${category(2)}], null) as category_ids,
-        array(select c.title from tree_items c where c.id = any(array[${category(1)}, ${category(2)}])
-          order by cardinality(c.path)) as category_titles,
+        ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
+        ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles,
         t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
         t.published_version_id is not null as published, t.content_updated_at,
         case when t.translation_of is null then kb.default_language else t.content_language end as language,
@@ -592,8 +589,9 @@ export class KnowledgeBaseService {
   async #contactFor(spaceId: string, categoryIds: readonly string[]): Promise<string | null> {
     const result = await this.#database.execute<{ contact_email: string | null }>(sql`
       select coalesce(
-        (select contact_email from knowledge_base_categories where item_id = ${categoryIds[1] ?? null}::uuid),
-        (select contact_email from knowledge_base_categories where item_id = ${categoryIds[0] ?? null}::uuid),
+        (select kc.contact_email from knowledge_base_categories kc
+          where kc.item_id = any(${sql.param([...categoryIds])}::uuid[]) and kc.contact_email is not null
+          order by array_position(${sql.param([...categoryIds])}::uuid[], kc.item_id) desc limit 1),
         (select contact_email from knowledge_bases where space_id = ${spaceId})) as contact_email`);
     return result.rows[0]?.contact_email ?? null;
   }

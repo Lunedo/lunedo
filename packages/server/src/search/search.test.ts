@@ -360,6 +360,7 @@ describe.skipIf(!baseUrl)("search", () => {
       indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
       articles: adapter.articles.bind(adapter),
       articleCounts: adapter.articleCounts.bind(adapter),
+      languageCounts: adapter.languageCounts.bind(adapter),
       search: (executor, request) => {
         requests.push(request);
         return adapter.search(executor, request);

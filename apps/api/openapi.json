@@ -12117,7 +12117,7 @@
                         "additionalProperties": false,
                         "description": "A category."
                       },
-                      "description": "Category and subcategory of the article, as far as the caller can see them. Empty at the top level."
+                      "description": "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level."
                     },
                     "ownerId": {
                       "anyOf": [
@@ -12831,7 +12831,7 @@
                         "additionalProperties": false,
                         "description": "A category."
                       },
-                      "description": "Category and subcategory of the article, as far as the caller can see them. Empty at the top level."
+                      "description": "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level."
                     },
                     "ownerId": {
                       "anyOf": [
@@ -14417,7 +14417,7 @@
                         "additionalProperties": false,
                         "description": "A category."
                       },
-                      "description": "Category and subcategory of the article, as far as the caller can see them. Empty at the top level."
+                      "description": "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level."
                     },
                     "ownerId": {
                       "anyOf": [
@@ -29170,7 +29170,7 @@
       "put": {
         "operationId": "knowledgeBases.updateCategory",
         "summary": "Change a category",
-        "description": "Sets the icon of a category. Title, introduction text and order change like for every folder; the contact address has its own route for space admins.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Sets the icon of a folder at any depth. Title, introduction and order change like for every folder; the contact address has its own route for space admins.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Knowledge bases"
         ],
@@ -29411,7 +29411,7 @@
       "put": {
         "operationId": "knowledgeBases.setCategoryContact",
         "summary": "Set the contact address of a category",
-        "description": "Sets the address readers write to from articles of the category and its subcategories, or null to inherit it. Only space admins of the knowledge base can change it.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "description": "Sets the address readers write to from articles of the folder and every folder below it without an address of its own, or null to inherit it. Works at any depth. Only space admins of the knowledge base can change it.\n\nRequires the permission `item.view` on the item in `itemId`.",
         "tags": [
           "Knowledge bases"
         ],
@@ -228143,7 +228143,7 @@
                               "additionalProperties": false,
                               "description": "A category."
                             },
-                            "description": "Category and subcategory of the article, as far as the caller can see them. Empty at the top level."
+                            "description": "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level."
                           },
                           "ownerId": {
                             "anyOf": [
@@ -228935,7 +228935,7 @@
                               "additionalProperties": false,
                               "description": "A category."
                             },
-                            "description": "Category and subcategory of the article, as far as the caller can see them. Empty at the top level."
+                            "description": "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level."
                           },
                           "ownerId": {
                             "anyOf": [
@@ -229475,7 +229475,7 @@
                         "additionalProperties": false,
                         "description": "A category."
                       },
-                      "description": "Category and subcategory of the article, as far as the caller can see them. Empty at the top level."
+                      "description": "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level."
                     },
                     "ownerId": {
                       "anyOf": [
@@ -231890,7 +231890,7 @@
       "get": {
         "operationId": "knowledgeBases.categories",
         "summary": "List the categories of a knowledge base",
-        "description": "Lists the folders on the first two levels of the knowledge base, which are its categories and subcategories, in tree order. Deeper folders belong to their subcategory.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "description": "Lists every folder of the knowledge base the caller can read, at any depth, top level first and then by position. Top-level folders are the areas of the portal, deeper folders its topics.\n\nRequires the permission `space.view` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
@@ -231921,7 +231921,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Categories the caller can read.",
+            "description": "Folders the caller can read.",
             "content": {
               "application/json": {
                 "schema": {
@@ -231944,21 +231944,21 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Parent category, or null for a top-level category."
+                        "description": "Parent folder, or null for a top-level folder (an area of the portal)."
                       },
                       "level": {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 1,
                         "maximum": 9007199254740991,
-                        "description": "1 for a category, 2 for a subcategory."
+                        "description": "Depth of the folder: 1 at the top level, 2 inside it, and so on."
                       },
                       "title": {
                         "type": "string",
-                        "description": "Title of the category."
+                        "description": "Title of the folder."
                       },
                       "description": {
                         "type": "string",
-                        "description": "Short introduction text."
+                        "description": "Short introduction. Supports `**bold**`, `*italic*`, links as `[text](https://…)` and one callout as lines starting with `>`."
                       },
                       "icon": {
                         "description": "Name of a Lucide icon, or null.",
@@ -231989,7 +231989,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Contact address that applies: of the category, else of its parent category, else of the knowledge base."
+                        "description": "Contact address that applies: of the folder, else of the nearest parent folder with one, else of the knowledge base."
                       },
                       "contactSource": {
                         "anyOf": [
@@ -232005,7 +232005,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Where the contact address that applies comes from, or null when none is set."
+                        "description": "Where the contact address that applies comes from: the folder itself, a parent folder or the knowledge base; null when none is set."
                       },
                       "position": {
                         "type": "string",
@@ -232015,7 +232015,7 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991,
-                        "description": "Number of articles in the category and below that the caller can read."
+                        "description": "Number of articles in the folder and below that the caller can read."
                       }
                     },
                     "required": [
@@ -232032,9 +232032,9 @@
                       "articles"
                     ],
                     "additionalProperties": false,
-                    "description": "A category of a knowledge base."
+                    "description": "A folder of a knowledge base, at any depth."
                   },
-                  "description": "Categories, top level first."
+                  "description": "Folders, top level first."
                 },
                 "example": [
                   {
@@ -251654,7 +251654,7 @@
                               "additionalProperties": false,
                               "description": "A category."
                             },
-                            "description": "Category and subcategory the caller can read, top level first."
+                            "description": "Folders above the article that the caller can read, top level first."
                           },
                           "owner": {
                             "anyOf": [
@@ -254612,7 +254612,7 @@
                                   "additionalProperties": false,
                                   "description": "A category."
                                 },
-                                "description": "Category and subcategory the caller can read, top level first."
+                                "description": "Folders above the article that the caller can read, top level first."
                               }
                             },
                             "required": [
@@ -254692,7 +254692,7 @@
                                   "additionalProperties": false,
                                   "description": "A category."
                                 },
-                                "description": "Category and subcategory the caller can read, top level first."
+                                "description": "Folders above the article that the caller can read, top level first."
                               }
                             },
                             "required": [
