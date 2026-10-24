@@ -103,7 +103,8 @@ test("two people hold a one-on-one that administrators cannot read, with private
   const first = await organization.signIn(anna);
   try {
     await first.page.goto("/home");
-    await first.page.getByRole("button", { name: "New one-on-one" }).click();
+    await first.page.getByRole("button", { name: "Create", exact: true }).click();
+    await first.page.getByRole("menuitem", { name: "New one-on-one" }).click();
     const dialog = first.page.getByRole("dialog", { name: "Start a one-on-one" });
     await dialog.getByRole("combobox", { name: "With" }).fill(ben.name.split(" ")[0] ?? "");
     await first.page.getByRole("option", { name: new RegExp(ben.name) }).click();
