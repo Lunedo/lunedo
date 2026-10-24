@@ -217,7 +217,8 @@
       "content": "1rem",
       "lg": "1.25rem",
       "xl": "1.625rem",
-      "2xl": "2rem"
+      "2xl": "2rem",
+      "display": "1.875rem"
     },
     "lineHeight": { "tight": 1.2, "ui": 1.45, "content": 1.65 },
     "letterSpacing": { "heading": "-0.015em", "label": "0.05em" }
@@ -252,6 +253,7 @@
     "controlCompact": { "sm": "1.5rem", "md": "1.75rem", "lg": "2.25rem", "field": "2rem" },
     "cardWidth": "25rem",
     "cardWidthWide": "40rem",
+    "columnWidth": "35rem",
     "pageWidth": "56rem",
     "panelWidth": "22.5rem",
     "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem" },

@@ -78,6 +78,7 @@ const signInRoute = createRoute({
   validateSearch: redirectSearch.extend({
     reason: z.enum(["sessionEnded", "signedOut"]).optional(),
     error: z.string().max(100).optional(),
+    emergency: z.boolean().optional().catch(undefined),
   }),
   beforeLoad: async ({ context, search }) => {
     const session = await context.queryClient.fetchQuery(sessionQuery);

@@ -179,6 +179,7 @@ function testFailure(error: ProviderPolicyError | ProviderResponseError): TestFa
 }
 
 export interface SignInOptions {
+  providers: SignInProvider[];
   emailStep: boolean;
   directProvider: SignInProvider | null;
   lastProvider: SignInProvider | null;
@@ -1123,6 +1124,7 @@ export class ProviderSignInService {
     const passwordSignIn = await this.#settings.get(passwordSignInSetting, {});
     const directProvider = providers.length === 1 && !passwordSignIn ? (providers[0] ?? null) : null;
     return {
+      providers,
       emailStep: directProvider === null,
       directProvider,
       lastProvider: providers.find((provider) => provider.id === lastProviderId) ?? null,

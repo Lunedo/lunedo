@@ -58,6 +58,7 @@ function signedOutApi(options: Record<string, unknown>, overrides: Record<string
     "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
+        providers: [],
         emailStep: true,
         directProvider: null,
         lastProvider: null,
@@ -144,7 +145,7 @@ describe("the sign-in page", () => {
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Emergency sign-in for the instance owner" }));
+    await userEvent.click(screen.getByRole("link", { name: "Emergency sign-in" }));
     const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
     await userEvent.type(within(dialog).getByLabelText("E-mail"), OLIVIA.email);
     await userEvent.type(within(dialog).getByLabelText("Password"), "correct horse battery");
@@ -169,7 +170,7 @@ describe("the sign-in page", () => {
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
     expect(screen.queryByLabelText("Work e-mail address or sign-in name")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Emergency sign-in for the instance owner" }));
+    await userEvent.click(screen.getByRole("link", { name: "Emergency sign-in" }));
     const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
     await userEvent.type(within(dialog).getByLabelText("E-mail"), OLIVIA.email);
     await userEvent.type(within(dialog).getByLabelText("Password"), "correct horse battery");
@@ -181,11 +182,29 @@ describe("the sign-in page", () => {
     });
   });
 
-  it("offers the provider used last as a shortcut", async () => {
-    const { requests } = signedOutApi({ lastProvider: { ...ENTRA, name: "Microsoft Entra ID" } });
+  it("offers the providers above the e-mail address, the one used last first", async () => {
+    const other = {
+      ...ENTRA,
+      id: "01929b1e-0000-7000-8000-0000000000d1",
+      preset: "generic",
+      name: "Nordwind SSO",
+    };
+    const { requests } = signedOutApi({
+      providers: [other, ENTRA],
+      lastProvider: ENTRA,
+    });
     await renderPath("/sign-in");
-    await userEvent.click(await screen.findByRole("button", { name: "Microsoft Entra ID" }));
-    await waitFor(() => expect(requests.some((request) => request.path.endsWith("/start"))).toBe(true));
+    const microsoft = await screen.findByRole("button", { name: "Sign in with Microsoft" });
+    const nordwind = screen.getByRole("button", { name: "Continue with Nordwind SSO" });
+    const email = screen.getByLabelText("Work e-mail address or sign-in name");
+    expect(microsoft.compareDocumentPosition(nordwind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(nordwind.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(microsoft);
+    await waitFor(() =>
+      expect(requests.some((request) => request.path === `/api/v1/auth/providers/${ENTRA.id}/start`)).toBe(
+        true,
+      ),
+    );
   });
 
   it("explains a refused sign-in with what to do and the reference", async () => {

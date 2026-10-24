@@ -1277,17 +1277,17 @@
     "internalError": "Der Server konnte die Anfrage nicht ausführen. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "busy": "Der Server ist ausgelastet. Versuche es gleich erneut.",
     "uploadTimeout": "Der Upload wurde nicht rechtzeitig fertig, wahrscheinlich wegen einer langsamen Verbindung. Versuche es mit einer schnelleren Verbindung oder einer kleineren Datei erneut.",
-    "passwordExpired": "Dein Verzeichnispasswort ist abgelaufen. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die IT. Lunedo ändert Verzeichnispasswörter nie.",
-    "passwordMustChange": "Dein Verzeichnispasswort muss geändert werden, bevor du dich anmelden kannst. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die IT. Lunedo ändert Verzeichnispasswörter nie.",
-    "accountLocked": "Dein Verzeichniskonto ist gesperrt, meist nach zu vielen falschen Passwörtern. Warte, bis die Sperre endet, oder wende dich an die IT.",
-    "accountDisabled": "Dein Verzeichniskonto ist deaktiviert. Wende dich an die IT, wenn du weiterhin Zugang brauchst.",
-    "outsideSignInHours": "Dein Verzeichniskonto darf sich zu dieser Zeit nicht anmelden. Versuche es innerhalb deiner erlaubten Zeiten erneut oder wende dich an die IT.",
+    "passwordExpired": "Dein Verzeichnispasswort ist abgelaufen. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die Administration von {organization}. Lunedo ändert Verzeichnispasswörter nie.",
+    "passwordMustChange": "Dein Verzeichnispasswort muss geändert werden, bevor du dich anmelden kannst. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die Administration von {organization}. Lunedo ändert Verzeichnispasswörter nie.",
+    "accountLocked": "Dein Verzeichniskonto ist gesperrt, meist nach zu vielen falschen Passwörtern. Warte, bis die Sperre endet, oder wende dich an die Administration von {organization}.",
+    "accountDisabled": "Dein Verzeichniskonto ist deaktiviert. Wende dich an die Administration von {organization}, wenn du wieder Zugriff brauchst.",
+    "outsideSignInHours": "Dein Verzeichniskonto darf sich zu dieser Zeit nicht anmelden. Versuche es innerhalb deiner erlaubten Zeiten erneut oder wende dich an die Administration von {organization}.",
     "providerInitiatedSignIn": "Die Anmeldung, die beim Identitätsanbieter beginnt, ist für diese Instanz ausgeschaltet. Beginne stattdessen auf der Anmeldeseite von Lunedo.",
     "invalidSamlMetadata": "Lunedo konnte die SAML-Metadaten nicht verwenden. Prüfe, ob die Adresse oder Datei die Metadaten des Identitätsanbieters enthält, und versuche es erneut.",
     "invalidSamlMetadataDetail": "Lunedo konnte die SAML-Metadaten nicht verwenden: {detail}. Prüfe, ob die Adresse oder Datei die Metadaten des Identitätsanbieters enthält, und versuche es erneut.",
     "invalidCertificate": "Diese Datei ist kein CA-Zertifikat, das Lunedo verwenden kann. Lade das Zertifikat der Stelle hoch, die das Zertifikat des Verzeichnisservers ausgestellt hat, im PEM-Format.",
-    "directoryInvalidCredentials": "Der Anmeldename oder das Passwort ist nicht korrekt. Prüfe beides und versuche es erneut. Wenn du dein Passwort vergessen hast, setze es auf dem in deiner Organisation üblichen Weg zurück oder wende dich an die IT.",
-    "directoryUnavailable": "Das Verzeichnis war nicht erreichbar. Versuche es in ein paar Minuten erneut; wenn es weiter scheitert, wende dich an die IT.",
+    "directoryInvalidCredentials": "Der Anmeldename oder das Passwort ist nicht korrekt. Prüfe beides und versuche es erneut. Wenn du dein Passwort vergessen hast, setze es auf dem in deiner Organisation üblichen Weg zurück oder wende dich an die Administration von {organization}.",
+    "directoryUnavailable": "Das Verzeichnis war nicht erreichbar. Versuche es in ein paar Minuten erneut; wenn es weiter scheitert, wende dich an die Administration von {organization}.",
     "confirmationMismatch": "Der eingegebene Name passt nicht zum Konto. Gib den Namen genau wie angezeigt ein und versuche es erneut.",
     "anonymizeSelf": "Du kannst dein eigenes Konto nicht anonymisieren. Bitte eine andere Person aus der Administration.",
     "notPlaceholder": "Dieses Konto ist kein Platzhalter mehr oder wurde bereits zusammengeführt. Lade die Seite neu.",
@@ -1756,10 +1756,10 @@
       "directoryPassword": "Passwort bei {provider}"
     },
     "emergency": {
-      "link": "Notfall-Anmeldung für den Instanz-Owner",
       "title": "Notfall-Anmeldung",
       "description": "Nur für den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
-      "submit": "Weiter"
+      "submit": "Weiter",
+      "footerLink": "Notfall-Anmeldung"
     },
     "providers": {
       "continueWith": "Weiter mit {name}",
@@ -1772,11 +1772,9 @@
       "or": "oder",
       "change": "Ändern",
       "domainUses": "{domain} meldet sich mit {name} an",
-      "lastUsed": "Zuletzt hast du verwendet:",
       "noneTitle": "Für diese Adresse ist keine Anmeldung eingerichtet",
       "noneDescription": "Prüfe die Adresse auf Tippfehler. Wenn sie stimmt, bitte deine Administration, dich einzuladen oder die Anmeldung für deine Domain einzurichten. Wenn du einen Passkey hast, kannst du ihn unten verwenden."
     },
-    "signInTitle": "Bei {name} anmelden",
     "signIn": "Anmelden",
     "signInFailed": "Anmeldung fehlgeschlagen",
     "signInWithPasskey": "Mit Passkey anmelden",
@@ -1870,7 +1868,22 @@
     "portalAccountCreated": "Dein Lesekonto ist bereit. Melde dich im Portal von {knowledgeBase} an.",
     "openPortal": "{knowledgeBase} öffnen",
     "passwordRuleMet": "Erfüllt.",
-    "passwordRuleOpen": "Noch nicht erfüllt."
+    "passwordRuleOpen": "Noch nicht erfüllt.",
+    "signInHeading": "Anmelden",
+    "signInLead": "Melde dich mit deinem Arbeitskonto an.",
+    "corner": {
+      "languageCurrent": "{label}: {language},",
+      "appearance": "Darstellung",
+      "appearanceCurrent": "Darstellung: {mode}"
+    },
+    "appearance": {
+      "system": "Wie das System",
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
+    "brand": {
+      "withLunedo": "mit Lunedo"
+    }
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",

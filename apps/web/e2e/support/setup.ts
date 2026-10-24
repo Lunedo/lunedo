@@ -161,7 +161,7 @@ export async function runSetupSteps(
   shown: StepShown = ignore,
   ownerName: string = OWNER.name,
 ): Promise<void> {
-  const signIn = page.getByRole("heading", { name: `Sign in to ${ORGANIZATION_NAME}` });
+  const signIn = page.getByRole("heading", { name: "Sign in", exact: true });
   const done: string[] = [];
   while (!(await signIn.isVisible())) {
     const any = STAGES.reduce((found, stage) => found.or(stage.shown(page)), signIn);
@@ -184,7 +184,7 @@ export async function signInOwner(page: Page): Promise<void> {
   const { ownerSecret } = readState();
   expect(ownerSecret).toBeTruthy();
   await page.goto("/sign-in");
-  await expect(page.getByRole("heading", { name: `Sign in to ${ORGANIZATION_NAME}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await expectAccessible(page, "sign-in");
   await signInWithPassword(page, OWNER.email, OWNER.password);
   await expect(page.getByRole("heading", { name: "Confirm it's you" })).toBeVisible();

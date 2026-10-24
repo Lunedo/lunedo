@@ -307,7 +307,16 @@ describe("generateThemeCss", () => {
 
   it("maps layout widths for maximum widths and sizes", () => {
     const theme = ruleBody(css, "@theme inline");
-    for (const name of ["card", "card-wide", "page", "panel", "dialog-sm", "dialog-md", "dialog-lg"]) {
+    for (const name of [
+      "card",
+      "card-wide",
+      "column",
+      "page",
+      "panel",
+      "dialog-sm",
+      "dialog-md",
+      "dialog-lg",
+    ]) {
       expect(theme).toContain(`--spacing-${name}:`);
       expect(theme).toContain(`--container-${name}:`);
     }

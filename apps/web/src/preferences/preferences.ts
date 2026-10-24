@@ -150,6 +150,34 @@ export function rememberAppearance(values: PreferenceValues): void {
   }
 }
 
+const colorModeListeners = new Set<() => void>();
+let signedOutColorMode: ColorMode | null = null;
+
+function storeColorMode(colorMode: ColorMode): void {
+  try {
+    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
+    const stored = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify({ ...stored, colorMode }));
+  } catch {
+    return;
+  }
+}
+
+export function chooseSignedOutColorMode(colorMode: ColorMode): void {
+  signedOutColorMode = colorMode;
+  storeColorMode(colorMode);
+  for (const listener of colorModeListeners) listener();
+}
+
+export function subscribeSignedOutColorMode(listener: () => void): () => void {
+  colorModeListeners.add(listener);
+  return () => colorModeListeners.delete(listener);
+}
+
+export function currentSignedOutColorMode(): ColorMode {
+  return signedOutColorMode ?? storedAppearance().colorMode ?? "system";
+}
+
 export function isAccentColor(value: unknown): value is AccentColor {
   return accentColors.includes(value as AccentColor);
 }

@@ -58,6 +58,7 @@ function api(overrides: Record<string, (request: RecordedRequest) => Reply | Pro
     "GET /api/v1/auth/session": () => (signedIn ? { body: SESSION } : problem(401, "notSignedIn")),
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
+        providers: [],
         emailStep: true,
         directProvider: null,
         lastProvider: null,
@@ -121,7 +122,7 @@ describe("the web client", () => {
   it("sends a signed-out visitor to the sign-in page and back after both factors", async () => {
     const { requests } = api();
     await renderApp("/settings/security");
-    expect(await screen.findByRole("heading", { name: "Sign in to Platform Team" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
     expect(new URL(window.location.href).searchParams.get("redirect")).toBe("/settings/security");
 
     await userEvent.type(
@@ -154,8 +155,8 @@ describe("the web client", () => {
       "PUT /api/v1/account/preferences/locale.language": () => ({ status: 204 }),
     });
     await renderApp("/sign-in");
-    await userEvent.click(await screen.findByRole("combobox", { name: "Language" }));
-    await userEvent.click(screen.getByRole("option", { name: "Deutsch" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Language: English/ }));
+    await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Deutsch" }));
     cleanup();
     signedIn = true;
     await renderApp("/settings/preferences");
@@ -164,6 +165,17 @@ describe("the web client", () => {
         requests.find((request) => request.path === "/api/v1/account/preferences/locale.language")?.body,
       ).toEqual({ value: "de" }),
     );
+  });
+
+  it("switches the appearance on the sign-in page at once and remembers it in the browser", async () => {
+    api({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
+    await renderApp("/sign-in");
+    localStorage.removeItem("lunedo.appearance");
+    await userEvent.click(await screen.findByRole("button", { name: /^Appearance: / }));
+    await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Dark" }));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    expect(JSON.parse(localStorage.getItem("lunedo.appearance") ?? "{}").colorMode).toBe("dark");
+    expect(screen.getByRole("button", { name: "Appearance: Dark" })).toBeTruthy();
   });
 
   it("keeps a person's own language over the one chosen on the sign-in page", async () => {

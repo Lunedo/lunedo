@@ -27,7 +27,11 @@ export function RegisterScreen() {
     }
   });
   return (
-    <AuthCard title={t("auth.registerTitle")} description={sent ? undefined : t("auth.registerDescription")}>
+    <AuthCard
+      title={t("auth.registerTitle")}
+      description={sent ? undefined : t("auth.registerDescription")}
+      links={<BackToSignIn />}
+    >
       {sent ? (
         <Notice variant="success">{t("auth.registerSent")}</Notice>
       ) : (
@@ -45,7 +49,6 @@ export function RegisterScreen() {
           </Button>
         </form>
       )}
-      <BackToSignIn />
     </AuthCard>
   );
 }

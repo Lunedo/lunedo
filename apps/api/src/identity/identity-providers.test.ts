@@ -67,6 +67,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
   it("chooses the provider by e-mail domain and keeps its management to permitted people", async () => {
     const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
     expect(options.json()).toEqual({
+      providers: [expect.objectContaining({ id: providerId, type: "oidc" })],
       emailStep: true,
       directProvider: null,
       lastProvider: null,

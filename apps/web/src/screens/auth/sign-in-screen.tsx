@@ -18,7 +18,7 @@ import { translateKey } from "../../i18n/translate.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
 import { startProviderSignIn } from "../../session/provider-sign-in.js";
 import { leavesApp, safeRedirect } from "../../session/redirect.js";
-import { AuthCard } from "./auth-layout.js";
+import { AUTH_LINK, AuthCard, OrDivider } from "./auth-layout.js";
 import { DirectorySignInForm, type DirectoryTarget, secondFactors } from "./directory-sign-in.js";
 
 const route = getRouteApi("/public/sign-in");
@@ -41,6 +41,14 @@ export function providerErrorMessage(t: (key: string) => string, code: string): 
 
 type Step = { email: string; next: DiscoveredStep };
 
+export function orderedProviders<T extends { id: string }>(
+  providers: readonly T[],
+  lastId: string | null,
+): T[] {
+  const last = providers.find((provider) => provider.id === lastId);
+  return last ? [last, ...providers.filter((provider) => provider !== last)] : [...providers];
+}
+
 export function SignInScreen() {
   const { t } = useTranslation();
   const search = route.useSearch();
@@ -52,11 +60,9 @@ export function SignInScreen() {
   const [step, setStep] = useState<Step | null>(null);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [providerBusy, setProviderBusy] = useState<string | null>(null);
-  const [emergency, setEmergency] = useState(false);
   const [shortcut, setShortcut] = useState<DirectoryTarget | null>(null);
   const emailStep = useSchemaForm(emailForm, { defaultValues: { email: "" } });
   const passwordStep = useSchemaForm(passwordForm, { defaultValues: { password: "" } });
-  const name = info.data?.organization?.name ?? info.data?.name ?? "";
   const data = options.data;
 
   const signedIn = async () => {
@@ -145,6 +151,14 @@ export function SignInScreen() {
     }
   };
 
+  const setEmergency = (open: boolean) => {
+    void navigate({
+      to: "/sign-in",
+      search: { ...search, emergency: open ? true : undefined },
+      replace: true,
+    });
+  };
+
   const changeEmail = () => {
     setStep(null);
     setShortcut(null);
@@ -186,20 +200,25 @@ export function SignInScreen() {
     </div>
   ) : null;
 
-  const emergencyLink = data ? (
-    <p className="text-center text-sm">
-      <button
-        type="button"
-        className="inline-flex min-h-hit items-center rounded-sm px-2 font-medium text-text-muted hover:underline focus-visible:focus-ring"
-        onClick={() => setEmergency(true)}
-      >
-        {t("auth.emergency.link")}
-      </button>
-    </p>
-  ) : null;
-
   return (
-    <AuthCard title={t("auth.signInTitle", { name })} description={globalThis.location?.host}>
+    <AuthCard
+      title={t("auth.signInHeading")}
+      description={t("auth.signInLead")}
+      links={
+        <>
+          {data?.passwordSignIn && (!step || step.next.step === "password") && !shortcut ? (
+            <Link to="/reset-password" className={AUTH_LINK}>
+              {t("auth.forgotPassword")}
+            </Link>
+          ) : null}
+          {info.data?.selfRegistration ? (
+            <Link to="/register" className={AUTH_LINK}>
+              {t("auth.registerLink")}
+            </Link>
+          ) : null}
+        </>
+      }
+    >
       {search.reason === "sessionEnded" ? <Notice variant="info">{t("auth.sessionEnded")}</Notice> : null}
       {search.error ? (
         <Notice variant="danger" title={t("auth.providers.failedTitle")}>
@@ -260,6 +279,33 @@ export function SignInScreen() {
       ) : null}
       {data?.emailStep && !step && !shortcut ? (
         <>
+          {data.providers.length > 0 ? (
+            <>
+              <div className="flex flex-col gap-2">
+                {orderedProviders(data.providers, data.lastProvider?.id ?? null).map((provider) => (
+                  <ProviderButton
+                    key={provider.id}
+                    provider={provider}
+                    busy={providerBusy === provider.id}
+                    onClick={() => {
+                      if (provider.type === "ldap") {
+                        setError(null);
+                        setShortcut({
+                          providerId: provider.id,
+                          name: provider.name,
+                          signInName: null,
+                          email: null,
+                        });
+                        return;
+                      }
+                      void signInWithProvider(provider.id);
+                    }}
+                  />
+                ))}
+              </div>
+              <OrDivider label={t("auth.discover.or")} />
+            </>
+          ) : null}
           <form className="flex flex-col gap-4" onSubmit={submitWith(discover)} noValidate>
             <Field label={t("auth.workEmail")} error={emailStep.formState.errors.email?.message}>
               <Input
@@ -269,48 +315,19 @@ export function SignInScreen() {
                 {...emailStep.register("email")}
               />
             </Field>
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              block
-              loading={emailStep.formState.isSubmitting}
-            >
-              {t("auth.continue")}
-            </Button>
-          </form>
-          {passkeyButton ? (
-            <>
-              <div className="flex items-center gap-3 text-sm text-text-muted">
-                <span className="flex-1 border-border border-t" aria-hidden="true" />
-                {t("auth.discover.or")}
-                <span className="flex-1 border-border border-t" aria-hidden="true" />
-              </div>
-              {passkeyButton}
-            </>
-          ) : null}
-          {data.lastProvider ? (
-            <p className="text-center text-sm text-text-muted">
-              {t("auth.discover.lastUsed")}{" "}
-              <button
-                type="button"
-                className="font-medium text-accent hover:underline focus-visible:focus-ring"
-                disabled={providerBusy !== null}
-                onClick={() => {
-                  const last = data.lastProvider;
-                  if (!last) return;
-                  if (last.type === "ldap") {
-                    setError(null);
-                    setShortcut({ providerId: last.id, name: last.name, signInName: null, email: null });
-                    return;
-                  }
-                  void signInWithProvider(last.id);
-                }}
+            <div className="flex flex-col gap-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                block
+                loading={emailStep.formState.isSubmitting}
               >
-                {data.lastProvider.name}
-              </button>
-            </p>
-          ) : null}
+                {t("auth.continue")}
+              </Button>
+              {passkeyButton}
+            </div>
+          </form>
         </>
       ) : null}
       {step?.next.step === "provider" ? (
@@ -354,11 +371,6 @@ export function SignInScreen() {
                 {...passwordStep.register("password")}
               />
             </Field>
-            <div className="-mt-2 flex justify-end text-sm">
-              <Link to="/reset-password" className="font-medium text-accent hover:underline">
-                {t("auth.forgotPassword")}
-              </Link>
-            </div>
             <Button
               type="submit"
               variant="primary"
@@ -380,20 +392,11 @@ export function SignInScreen() {
           {passkeyButton}
         </>
       ) : null}
-      {emergencyLink}
-      {info.data?.selfRegistration ? (
-        <p className="text-center text-sm">
-          <Link to="/register" className="font-medium text-accent hover:underline">
-            {t("auth.registerLink")}
-          </Link>
-        </p>
-      ) : null}
       <EmergencyDialog
-        open={emergency}
+        open={search.emergency === true}
         onOpenChange={setEmergency}
         signIn={async (values) => {
           await signInWithPassword(values.email, values.password);
-          setEmergency(false);
         }}
       />
     </AuthCard>

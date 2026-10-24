@@ -633,6 +633,9 @@ export const signInProviderSchema = z
 
 export const signInOptionsSchema = z
   .object({
+    providers: z
+      .array(signInProviderSchema)
+      .describe("Every active provider, offered as a button above the e-mail address."),
     emailStep: z
       .boolean()
       .describe(

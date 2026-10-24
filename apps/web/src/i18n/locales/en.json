@@ -1277,17 +1277,17 @@
     "internalError": "The server could not complete the request. Try again; if it keeps failing, ask your administrator to check the server log.",
     "busy": "The server is busy. Try again in a moment.",
     "uploadTimeout": "The upload did not finish in time, probably because the connection is slow. Try again on a faster connection or with a smaller file.",
-    "passwordExpired": "Your directory password has expired. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Lunedo never changes directory passwords.",
-    "passwordMustChange": "Your directory password must be changed before you can sign in. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Lunedo never changes directory passwords.",
-    "accountLocked": "Your directory account is locked, usually after too many wrong passwords. Wait until it unlocks or contact IT.",
-    "accountDisabled": "Your directory account is disabled. Contact IT if you still need access.",
-    "outsideSignInHours": "Your directory account may not sign in at this time. Try again during your permitted hours or contact IT.",
+    "passwordExpired": "Your directory password has expired. Change it the way your organization usually does, for example when signing in to your computer, or contact the administrators of {organization}. Lunedo never changes directory passwords.",
+    "passwordMustChange": "Your directory password must be changed before you can sign in. Change it the way your organization usually does, for example when signing in to your computer, or contact the administrators of {organization}. Lunedo never changes directory passwords.",
+    "accountLocked": "Your directory account is locked, usually after too many wrong passwords. Wait until it unlocks or contact the administrators of {organization}.",
+    "accountDisabled": "Your directory account is disabled. Contact the administrators of {organization} if you need access again.",
+    "outsideSignInHours": "Your directory account may not sign in at this time. Try again during your permitted hours or contact the administrators of {organization}.",
     "providerInitiatedSignIn": "Sign-in started at the identity provider is turned off for this instance. Start on the Lunedo sign-in page instead.",
     "invalidSamlMetadata": "Lunedo could not use the SAML metadata. Check that the address or file contains the metadata of the identity provider and try again.",
     "invalidSamlMetadataDetail": "Lunedo could not use the SAML metadata: {detail}. Check that the address or file contains the metadata of the identity provider and try again.",
     "invalidCertificate": "This file is not a CA certificate Lunedo can use. Upload the certificate of the authority that issued the directory server's certificate, in PEM format.",
-    "directoryInvalidCredentials": "The sign-in name or the password is not correct. Check both and try again. If you forgot your password, reset it the way your organization usually does or contact IT.",
-    "directoryUnavailable": "The directory could not be reached. Try again in a few minutes; if it keeps failing, contact IT.",
+    "directoryInvalidCredentials": "The sign-in name or the password is not correct. Check both and try again. If you forgot your password, reset it the way your organization usually does or contact the administrators of {organization}.",
+    "directoryUnavailable": "The directory could not be reached. Try again in a few minutes; if it keeps failing, contact the administrators of {organization}.",
     "confirmationMismatch": "The typed name does not match the account. Type the name exactly as shown, then try again.",
     "anonymizeSelf": "You cannot anonymize your own account. Ask another administrator.",
     "notPlaceholder": "This account is not a placeholder anymore, or it was merged already. Reload the page.",
@@ -1756,10 +1756,10 @@
       "directoryPassword": "Password at {provider}"
     },
     "emergency": {
-      "link": "Emergency sign-in for the instance owner",
       "title": "Emergency sign-in",
       "description": "Only for the instance owner, when sign-in through providers does not work. Every use is recorded in the audit log, and all instance administrators are notified at once.",
-      "submit": "Continue"
+      "submit": "Continue",
+      "footerLink": "Emergency sign-in"
     },
     "providers": {
       "continueWith": "Continue with {name}",
@@ -1772,11 +1772,9 @@
       "or": "or",
       "change": "Change",
       "domainUses": "{domain} signs in with {name}",
-      "lastUsed": "Last time you used",
       "noneTitle": "No sign-in method is set up for this address",
       "noneDescription": "Check the address for typos. If it is right, ask your administrator to invite you or to set up sign-in for your domain. If you have a passkey, you can use it below."
     },
-    "signInTitle": "Sign in to {name}",
     "signIn": "Sign in",
     "signInFailed": "Sign-in failed",
     "signInWithPasskey": "Sign in with a passkey",
@@ -1870,7 +1868,22 @@
     "portalAccountCreated": "Your reader account is ready. Sign in on the portal of {knowledgeBase}.",
     "openPortal": "Open {knowledgeBase}",
     "passwordRuleMet": "Met.",
-    "passwordRuleOpen": "Not met yet."
+    "passwordRuleOpen": "Not met yet.",
+    "signInHeading": "Sign in",
+    "signInLead": "Sign in with your work account.",
+    "corner": {
+      "languageCurrent": "{label}: {language},",
+      "appearance": "Appearance",
+      "appearanceCurrent": "Appearance: {mode}"
+    },
+    "appearance": {
+      "system": "Same as the system",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "brand": {
+      "withLunedo": "with Lunedo"
+    }
   },
   "reauthentication": {
     "withProvider": "Continue with {name}",

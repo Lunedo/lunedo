@@ -24108,6 +24108,60 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the provider."
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "oidc",
+                              "saml",
+                              "ldap"
+                            ],
+                            "description": "Protocol of the provider."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name shown on the sign-in page."
+                          },
+                          "preset": {
+                            "type": "string",
+                            "enum": [
+                              "entraId",
+                              "google",
+                              "generic",
+                              "adfs",
+                              "activeDirectory"
+                            ],
+                            "description": "Kind of provider."
+                          },
+                          "logoRef": {
+                            "description": "Reference to the uploaded logo, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "name",
+                          "preset",
+                          "logoRef"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A provider people sign in through."
+                      },
+                      "description": "Every active provider, offered as a button above the e-mail address."
+                    },
                     "emailStep": {
                       "type": "boolean",
                       "description": "Whether the page asks for the e-mail address first. False only when `directProvider` is set."
@@ -24239,6 +24293,7 @@
                     }
                   },
                   "required": [
+                    "providers",
                     "emailStep",
                     "directProvider",
                     "lastProvider",

@@ -259,7 +259,7 @@ for (const provider of identityProviders) {
       await expect(page.getByRole("button", { name: `Continue with E2E ${provider.name}` })).toBeVisible();
       await expect(page.getByLabel("Work e-mail address or sign-in name")).toHaveCount(0);
 
-      await page.getByRole("button", { name: "Emergency sign-in for the instance owner" }).click();
+      await page.getByRole("link", { name: "Emergency sign-in" }).click();
       const dialog = page.getByRole("dialog", { name: "Emergency sign-in" });
       await dialog.getByLabel("E-mail").fill(OWNER.email);
       await dialog.getByLabel("Password", { exact: true }).fill(OWNER.password);

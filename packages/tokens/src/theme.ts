@@ -51,6 +51,7 @@ function sizeDeclarations(tokens: DesignTokens, namespace: string): Declarations
   return [
     [`--${namespace}-card`, layout.cardWidth],
     [`--${namespace}-card-wide`, layout.cardWidthWide],
+    [`--${namespace}-column`, layout.columnWidth],
     [`--${namespace}-page`, layout.pageWidth],
     [`--${namespace}-panel`, layout.panelWidth],
     [`--${namespace}-content`, layout.contentWidth],

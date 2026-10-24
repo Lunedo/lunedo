@@ -2,8 +2,8 @@ import { recoveryCodeSchema, totpCodeSchema } from "@lunedo/shared";
 import { Button, Field, Input, Notice } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Fingerprint } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fingerprint } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
@@ -14,7 +14,8 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
 import { leavesApp, safeRedirect } from "../../session/redirect.js";
-import { AuthCard } from "./auth-layout.js";
+import { AuthCard, AuthLinkButton } from "./auth-layout.js";
+import { BackToSignIn } from "./reset-password-screen.js";
 
 type Factor = "totp" | "passkey" | "recoveryCode";
 
@@ -89,7 +90,28 @@ export function SecondFactorScreen() {
   const alternatives = available.filter((candidate) => candidate !== factor);
 
   return (
-    <AuthCard title={t("auth.verifyTitle")} description={t("auth.verifyDescription")}>
+    <AuthCard
+      title={t("auth.verifyTitle")}
+      description={t("auth.verifyDescription")}
+      links={
+        <>
+          {!expired
+            ? alternatives.map((alternative) => (
+                <AuthLinkButton
+                  key={alternative}
+                  onClick={() => {
+                    setFactor(alternative);
+                    setError(null);
+                  }}
+                >
+                  {t(`auth.useFactor.${alternative}`)}
+                </AuthLinkButton>
+              ))
+            : null}
+          <BackToSignIn redirect={search.redirect} />
+        </>
+      }
+    >
       {error ? (
         <Notice variant="danger" title={t("failures.verifySecondFactor")}>
           {error}
@@ -157,37 +179,6 @@ export function SecondFactorScreen() {
           </Button>
         </form>
       ) : null}
-      {!expired && alternatives.length > 0 ? (
-        <p className="flex flex-wrap justify-center gap-x-2 text-sm">
-          {alternatives.map((alternative, index) => (
-            <Fragment key={alternative}>
-              {index > 0 ? (
-                <span aria-hidden="true" className="text-text-muted">
-                  ·
-                </span>
-              ) : null}
-              <button
-                type="button"
-                className="font-medium text-accent hover:underline"
-                onClick={() => {
-                  setFactor(alternative);
-                  setError(null);
-                }}
-              >
-                {t(`auth.useFactor.${alternative}`)}
-              </button>
-            </Fragment>
-          ))}
-        </p>
-      ) : null}
-      <Link
-        to="/sign-in"
-        search={search.redirect ? { redirect: search.redirect } : {}}
-        className="inline-flex items-center gap-1 self-center text-sm text-text-muted hover:text-text"
-      >
-        <ArrowLeft aria-hidden="true" className="size-icon-sm" />
-        {t("auth.backToSignIn")}
-      </Link>
     </AuthCard>
   );
 }

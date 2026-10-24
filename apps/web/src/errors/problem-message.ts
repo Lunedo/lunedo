@@ -5,6 +5,16 @@ import { translateKey } from "../i18n/translate.js";
 
 const KNOWN = new Set(Object.keys(en.problems));
 
+let organization = "";
+
+export function setProblemOrganization(name: string): void {
+  organization = name;
+}
+
+function organizationValues(t: TFunction): { organization: string } {
+  return { organization: organization || t("brand.name") };
+}
+
 const DIRECTORY_PROBLEMS: Record<string, string> = {
   invalidCredentials: "problems.directoryInvalidCredentials",
   providerUnavailable: "problems.directoryUnavailable",
@@ -72,10 +82,10 @@ export function problemMessage(t: TFunction, error: unknown): string {
   if (error.code === "settingLocked" && problem.lockedBy) {
     return t("problems.settingLockedBy", { level: translateKey(t, `settings.levels.${problem.lockedBy}`) });
   }
-  return translateKey(t, problemKey(error));
+  return translateKey(t, problemKey(error), organizationValues(t));
 }
 
 export function directoryProblemMessage(t: TFunction, error: unknown): string {
   const key = error instanceof ApiError ? DIRECTORY_PROBLEMS[error.code] : undefined;
-  return key ? translateKey(t, key) : problemMessage(t, error);
+  return key ? translateKey(t, key, organizationValues(t)) : problemMessage(t, error);
 }

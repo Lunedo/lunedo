@@ -13,11 +13,13 @@ import { useTranslation } from "react-i18next";
 import { createFormatter, type Formatter } from "../format/format.js";
 import { isLanguage, rememberLanguage, takeChosenLanguage } from "../i18n/index.js";
 import {
+  currentSignedOutColorMode,
   defaultPreferences,
   type PreferenceValues,
   preferenceKeys,
   rememberAppearance,
   storedAppearance,
+  subscribeSignedOutColorMode,
   toPreferenceValues,
   usePreferenceList,
   useUpdatePreference,
@@ -53,12 +55,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     ...defaultPreferences(isLanguage(i18n.language) ? i18n.language : "en"),
     ...storedAppearance(),
   }));
+  const signedOutColorMode = useSyncExternalStore(
+    subscribeSignedOutColorMode,
+    currentSignedOutColorMode,
+    currentSignedOutColorMode,
+  );
   const values = useMemo(
     () =>
       list.data
         ? toPreferenceValues(list.data, fallback)
-        : { ...fallback, language: currentLanguage(i18n.language) },
-    [list.data, fallback, i18n.language],
+        : { ...fallback, colorMode: signedOutColorMode, language: currentLanguage(i18n.language) },
+    [list.data, fallback, i18n.language, signedOutColorMode],
   );
   const accentColor = useAccentColor();
   const update = useUpdatePreference();
