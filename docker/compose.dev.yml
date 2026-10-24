@@ -12,6 +12,7 @@ x-node-modules: &node-modules
   - node-modules-worker:/repo/apps/worker/node_modules
   - node-modules-render:/repo/apps/render/node_modules
   - node-modules-editor-schema:/repo/packages/editor-schema/node_modules
+  - node-modules-fractional-indexing:/repo/packages/fractional-indexing/node_modules
   - node-modules-shared:/repo/packages/shared/node_modules
   - node-modules-ui:/repo/packages/ui/node_modules
   - node-modules-tokens:/repo/packages/tokens/node_modules
@@ -251,6 +252,7 @@ volumes:
   node-modules-worker:
   node-modules-render:
   node-modules-editor-schema:
+  node-modules-fractional-indexing:
   node-modules-shared:
   node-modules-ui:
   node-modules-tokens:
