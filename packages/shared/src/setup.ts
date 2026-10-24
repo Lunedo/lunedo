@@ -98,6 +98,12 @@ export const setupStepSchemas = {
           url: z.string().nullable(),
           source: z.enum(["configuration", "setting"]).nullable(),
         }),
+        reachability: z.object({
+          status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["notSet", "unreachable", "otherServer"]).nullable(),
+          url: z.string().nullable().describe("The address the server tried to reach itself at."),
+        }),
         https: z.object({
           status: checkStatus,
           ...checkHelp,

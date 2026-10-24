@@ -24,6 +24,12 @@ import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import { applyFormats, formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
+import {
+  checkReachability,
+  type ProbeOptions,
+  rememberedReachability,
+  rememberReachability,
+} from "./reachability.js";
 import { SetupStepError } from "./setup-service.js";
 
 const CLOCK_TOLERANCE_MS = 5_000;
@@ -165,14 +171,15 @@ export interface SetupStepDependencies {
   backupKeys: KeyRing;
   filesDir: string;
   configuredInstanceUrl?: string | undefined;
+  probe?: ProbeOptions | undefined;
 }
 
 export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "systemCheck",
-    order: 10,
+    order: 20,
     required: true,
-    async describe({ request }) {
+    async describe({ request, state, completed }) {
       const [database, clock] = await checkDatabaseAndClock(deps.pool);
       const stored = await deps.settings.get(instanceUrlSetting, {});
       const configured = deps.configuredInstanceUrl ?? "";
@@ -181,6 +188,11 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
       const httpsUrl = url.startsWith("https:");
       const httpsRequest = request.protocol === "https";
       const httpsOk = url ? httpsUrl : httpsRequest;
+      let reachability = completed ? rememberedReachability(state, url) : null;
+      if (!reachability) {
+        reachability = await checkReachability(deps.database, url, deps.probe);
+        await rememberReachability(deps.database, reachability);
+      }
       return {
         checks: {
           database,
@@ -195,11 +207,12 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             url: url || null,
             source,
           },
+          reachability,
           https: {
             status: httpsOk ? "ok" : "warning",
             cause: httpsOk ? null : url ? "instanceUrlNotHttps" : "requestNotHttps",
             fixCommand: null,
-            docs: "setup.md#https",
+            docs: "reverse-proxy.md#tls-and-the-instance-address",
             instanceUrl: httpsUrl,
             request: httpsRequest,
           },
@@ -221,7 +234,7 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
 export function instanceStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "instance",
-    order: 20,
+    order: 10,
     required: true,
     async describe({ request }) {
       return {
@@ -503,8 +516,8 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
 
 export function builtinSetupSteps(deps: SetupStepDependencies): SetupStep[] {
   return [
-    systemCheckStep(deps),
     instanceStep(deps),
+    systemCheckStep(deps),
     ownerStep(deps),
     keyBackupStep(deps),
     organizationStep(deps),

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { problemMessage } from "../../../errors/problem-message.js";
-import { needsHttpsWarning } from "../../../forms/addresses.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
 import { runSetupAction } from "../setup-api.js";
 import { useDraftDefaults, useKeepDraft } from "../setup-drafts.js";
@@ -58,11 +57,6 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
           {...form.register("url")}
         />
       </Field>
-      {needsHttpsWarning(form.watch("url")) ? (
-        <Notice variant="warning" title={t("setup.instance.notHttpsTitle")}>
-          {t("setup.instance.notHttps")}
-        </Notice>
-      ) : null}
       <Field label={t("setup.instance.name")} error={form.formState.errors.name?.message}>
         <Input autoComplete="off" {...form.register("name")} />
       </Field>

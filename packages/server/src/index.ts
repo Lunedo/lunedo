@@ -935,6 +935,7 @@ export {
   SettingsService,
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
+export { checkReachability, type ProbeFetch, type ProbeOptions } from "./setup/reachability.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
 export {
   type AccessExplanation,

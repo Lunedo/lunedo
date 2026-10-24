@@ -62,7 +62,20 @@ function checks(patch: Record<string, unknown> = {}) {
       ownerUid: 0,
       ownerGid: 0,
     },
-    instanceUrl: { status: "warning", ...help, cause: "notSet", configured: false, url: null, source: null },
+    instanceUrl: {
+      status: "ok",
+      ...help,
+      configured: true,
+      url: "https://wiki.example.org",
+      source: "setting",
+    },
+    reachability: {
+      status: "warning",
+      ...help,
+      cause: "unreachable",
+      docs: "setup.md#address-reachable",
+      url: "https://wiki.example.org",
+    },
     https: { status: "ok", ...help, instanceUrl: true, request: true },
     ...patch,
   };
@@ -94,10 +107,9 @@ describe("the system check", () => {
     expect(screen.getAllByRole("link", { name: /Read the documentation/ })[0]?.getAttribute("href")).toBe(
       "https://github.com/lunedo/lunedo/blob/main/docs/setup.md#file-storage",
     );
-    expect(screen.getByText("You set the address in the next step.")).toBeTruthy();
-    expect(screen.getByText("Next step")).toBeTruthy();
-    expect(screen.queryByText("Address did not pass the check")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "Check again" })).toHaveLength(1);
+    expect(screen.getByText("Address did not pass the check")).toBeTruthy();
+    expect(screen.getByText(/^The server got no answer at https:\/\/wiki\.example\.org,/)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Check again" })).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(true);
 
     await userEvent.click(screen.getAllByRole("button", { name: "Check again" })[0] as HTMLElement);
@@ -105,7 +117,7 @@ describe("the system check", () => {
     expect(refresh).toHaveBeenCalledTimes(2);
   });
 
-  it("shows the instance URL set through the configuration", async () => {
+  it("confirms the address and shows HTTPS as a warning with the guide to a reverse proxy", async () => {
     mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
     await renderWithProviders(
       <PreferencesProvider>
@@ -114,14 +126,21 @@ describe("the system check", () => {
           details={
             {
               checks: checks({
-                instanceUrl: {
+                fileStorage: {
+                  ...checks().fileStorage,
                   status: "ok",
-                  fixCommand: null,
-                  docs: "setup.md#instance-url",
                   cause: null,
-                  configured: true,
-                  url: "https://wiki.example.org",
-                  source: "configuration",
+                  fixCommand: null,
+                  freeBytes: 1e10,
+                },
+                reachability: { ...checks().reachability, status: "ok", cause: null },
+                https: {
+                  status: "warning",
+                  cause: "instanceUrlNotHttps",
+                  fixCommand: null,
+                  docs: "reverse-proxy.md#tls-and-the-instance-address",
+                  instanceUrl: false,
+                  request: false,
                 },
               }),
             } as never
@@ -132,8 +151,12 @@ describe("the system check", () => {
         />
       </PreferencesProvider>,
     );
-    expect(screen.getByText("Set through LUNEDO_INSTANCE_URL: https://wiki.example.org")).toBeTruthy();
-    expect(screen.queryByText("Instance URL did not pass the check")).toBeNull();
+    expect(screen.getByText("https://wiki.example.org can be reached")).toBeTruthy();
+    expect(screen.getByText("HTTPS did not pass the check")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /How to set up HTTPS/ }).getAttribute("href")).toBe(
+      "https://github.com/lunedo/lunedo/blob/main/docs/reverse-proxy.md#tls-and-the-instance-address",
+    );
+    expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(false);
   });
 });
 

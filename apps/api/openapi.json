@@ -220814,6 +220814,90 @@
         }
       }
     },
+    "/api/v1/setup/probe/{challenge}": {
+      "get": {
+        "operationId": "setup.probe",
+        "summary": "Answer the reachability probe of the system check",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "challenge",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The answer the system check expects from this instance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "answer": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "answer"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/setup/session": {
       "post": {
         "operationId": "setup.startSession",
@@ -221316,6 +221400,60 @@
                                         ],
                                         "additionalProperties": false
                                       },
+                                      "reachability": {
+                                        "type": "object",
+                                        "properties": {
+                                          "status": {
+                                            "type": "string",
+                                            "enum": [
+                                              "ok",
+                                              "warning",
+                                              "error"
+                                            ]
+                                          },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "notSet",
+                                                  "unreachable",
+                                                  "otherServer"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          },
+                                          "url": {
+                                            "description": "The address the server tried to reach itself at.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs",
+                                          "url"
+                                        ],
+                                        "additionalProperties": false
+                                      },
                                       "https": {
                                         "type": "object",
                                         "properties": {
@@ -221375,6 +221513,7 @@
                                       "clock",
                                       "fileStorage",
                                       "instanceUrl",
+                                      "reachability",
                                       "https"
                                     ],
                                     "additionalProperties": false

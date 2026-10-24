@@ -63,7 +63,7 @@ describe("the setup code page", () => {
     await waitFor(() => expect(window.location.hash).toBe(""));
     expect(window.location.pathname).toBe("/setup");
 
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.click(screen.getByRole("button", { name: "Set up a new instance" }));
     await waitFor(() =>
       expect(requests.find((request) => request.path === "/api/v1/setup/session")?.body).toEqual({
         code: CODE,
@@ -77,7 +77,7 @@ describe("the setup code page", () => {
     expect((await screen.findByLabelText("Setup code")).getAttribute("value") ?? "").toBe("");
     expect(
       screen.getByText(
-        "The code is in the .env file if you used the setup script or set LUNEDO_SETUP_CODE. Otherwise it is in the log of the Lunedo container:",
+        /^It is in the \.env file \(LUNEDO_SETUP_CODE\) if you used the setup script, otherwise in the log of the container:/,
       ),
     ).toBeTruthy();
     expect(screen.getByText('docker compose logs lunedo | grep "Setup link"')).toBeTruthy();
@@ -89,7 +89,8 @@ describe("the setup steps", () => {
     api();
     await renderSetup("/setup");
     await screen.findByLabelText("Setup code");
-    expect(screen.getByRole("combobox", { name: "Language of the setup" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Language of the setup: English/ })).toBeTruthy();
+    expect(screen.queryByRole("contentinfo")).toBeNull();
   });
 
   it("says where the code comes from when it is wrong", async () => {
@@ -118,84 +119,163 @@ describe("the setup steps", () => {
     });
     await renderSetup("/setup");
     await userEvent.type(await screen.findByLabelText("Setup code"), CODE);
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.click(screen.getByRole("button", { name: "Set up a new instance" }));
     expect(await screen.findByText(/Copy the code from LUNEDO_SETUP_CODE in the \.env file/)).toBeTruthy();
   });
 
   it("keeps what was typed when going back", async () => {
-    const check = { status: "ok", cause: null, fixCommand: null, docs: "setup.md" };
-    mockApi({
-      "GET /api/v1/instance/info": () => ({
-        body: {
-          name: "Lunedo",
-          setupComplete: false,
-          language: "en",
-          accentColor: "petrol",
-          passwordMinLength: 12,
-          selfRegistration: false,
-          organization: null,
-        },
-      }),
-      "GET /api/v1/setup": () => ({ body: { completed: false, session: true } }),
-      "POST /api/v1/setup/steps/systemCheck/acknowledge": () => ({ body: {} }),
-      "GET /api/v1/setup/steps": () => ({
-        body: {
-          ready: false,
-          steps: [
-            {
-              id: "systemCheck",
-              required: true,
-              completed: true,
-              details: {
-                checks: {
-                  database: { ...check, version: "16", migrationsUpToDate: true },
-                  clock: { ...check, offsetMs: 0, toleranceMs: 5000 },
-                  fileStorage: {
-                    ...check,
-                    path: "/files",
-                    exists: true,
-                    writable: true,
-                    freeBytes: 10_000_000_000,
-                    minimumFreeBytes: 1,
-                    processUid: 1,
-                    processGid: 1,
-                    ownerUid: 1,
-                    ownerGid: 1,
-                  },
-                  instanceUrl: {
-                    ...check,
-                    status: "warning",
-                    cause: "notSet",
-                    configured: false,
-                    url: null,
-                    source: null,
-                  },
-                  https: { ...check, instanceUrl: true, request: true },
-                },
-              },
-            },
-            {
-              id: "instance",
-              required: true,
-              completed: false,
-              details: {
-                url: "",
-                name: "Lunedo",
-                suggestedUrl: "https://wiki.example.org",
-                urlFromEnvironment: false,
-              },
-            },
-          ],
-        },
-      }),
-    });
+    stepsApi([{ ...INSTANCE, completed: false }]);
     await renderSetup("/setup");
     const name = await screen.findByLabelText("Instance name");
     await userEvent.clear(name);
     await userEvent.type(name, "Team wiki");
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(await screen.findByText("You set the address in the next step.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { name: "Welcome" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Set up a new instance" }));
     expect(((await screen.findByLabelText("Instance name")) as HTMLInputElement).value).toBe("Team wiki");
   });
+
+  it("shows the step in a menu where only reached steps can be chosen, and goes back with the browser", async () => {
+    stepsApi([
+      INSTANCE,
+      SYSTEM_CHECK,
+      { ...OWNER, completed: false, details: { ...OWNER.details, totpConfirmed: false } },
+      { ...KEYS, completed: false, details: { downloaded: false, provider: "file" } },
+      { ...ORGANIZATION, completed: false, details: { organization: null, formats: null } },
+    ]);
+    await renderSetup("/setup");
+    const menu = await screen.findByRole("button", { name: "Step 4 of 7 · Owner account" });
+    expect(screen.getByRole("progressbar", { name: "Step 4 of 7 · Owner account" })).toBeTruthy();
+    await userEvent.click(menu);
+    expect(screen.getByRole("menuitem", { name: "Instance" }).getAttribute("aria-disabled")).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Keys" }).getAttribute("aria-disabled")).toBe("true");
+    await userEvent.click(screen.getByRole("menuitem", { name: "System check" }));
+    expect(await screen.findByRole("heading", { name: "System check" })).toBeTruthy();
+    expect(screen.getByText("https://wiki.example.org can be reached")).toBeTruthy();
+    window.history.back();
+    expect(await screen.findByRole("heading", { name: "Owner account" })).toBeTruthy();
+  });
+
+  it("sums up every step, jumps back to change one and finishes with the next steps", async () => {
+    const { requests } = stepsApi([INSTANCE, SYSTEM_CHECK, OWNER, KEYS, ORGANIZATION], {
+      "POST /api/v1/setup/complete": () => ({ status: 204 }),
+    });
+    await renderSetup("/setup");
+    expect(await screen.findByRole("heading", { name: "Summary" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Instance" }).textContent).toContain(
+      "https://wiki.example.org",
+    );
+    expect(screen.getByRole("region", { name: "System check" }).textContent).toContain(
+      "4 OK, 1 warning (HTTPS)",
+    );
+    expect(screen.getByRole("region", { name: "Owner account" }).textContent).toContain("Authenticator app");
+    expect(screen.getByRole("region", { name: "Keys" }).textContent).toContain("Yes, confirmed");
+    expect(screen.getByRole("region", { name: "Organization" }).textContent).toContain("Platform Team");
+
+    await userEvent.click(screen.getByRole("button", { name: "Change Instance" }));
+    expect(await screen.findByLabelText("Instance name")).toBeTruthy();
+    window.history.back();
+    await userEvent.click(await screen.findByRole("button", { name: "Finish setup" }));
+    expect(await screen.findByRole("heading", { name: "Lunedo is ready" })).toBeTruthy();
+    expect(requests.some((request) => request.path === "/api/v1/setup/complete")).toBe(true);
+    expect(screen.getByRole("button", { name: "Invite" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create space" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Go to For you" })).toBeTruthy();
+  });
 });
+
+const CHECK = { status: "ok", cause: null, fixCommand: null, docs: "setup.md" };
+const INSTANCE = {
+  id: "instance",
+  required: true,
+  completed: true,
+  details: {
+    url: "https://wiki.example.org",
+    name: "Lunedo",
+    suggestedUrl: "https://wiki.example.org",
+    urlFromEnvironment: false,
+  },
+};
+const SYSTEM_CHECK = {
+  id: "systemCheck",
+  required: true,
+  completed: true,
+  details: {
+    checks: {
+      database: { ...CHECK, version: "16", migrationsUpToDate: true },
+      clock: { ...CHECK, offsetMs: 0, toleranceMs: 5000 },
+      fileStorage: {
+        ...CHECK,
+        path: "/files",
+        exists: true,
+        writable: true,
+        freeBytes: 10_000_000_000,
+        minimumFreeBytes: 1,
+        processUid: 1,
+        processGid: 1,
+        ownerUid: 1,
+        ownerGid: 1,
+      },
+      instanceUrl: { ...CHECK, configured: true, url: "https://wiki.example.org", source: "setting" },
+      reachability: { ...CHECK, url: "https://wiki.example.org" },
+      https: {
+        ...CHECK,
+        status: "warning",
+        cause: "instanceUrlNotHttps",
+        instanceUrl: false,
+        request: false,
+      },
+    },
+  },
+};
+const OWNER = {
+  id: "owner",
+  required: true,
+  completed: true,
+  details: {
+    owner: { name: "Olivia Owner", email: "olivia@example.org" },
+    totpConfirmed: true,
+    passwordMaxLength: 1024,
+  },
+};
+const KEYS = {
+  id: "keyBackup",
+  required: true,
+  completed: true,
+  details: { downloaded: true, provider: "file" },
+};
+const ORGANIZATION = {
+  id: "organization",
+  required: true,
+  completed: true,
+  details: {
+    organization: {
+      id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
+      name: "Platform Team",
+      slug: "platform-team",
+      language: "en",
+      timeZone: "Europe/Vienna",
+    },
+    formats: { dateFormat: "D MMM YYYY", timeFormat: "24h", numberFormat: "en-US", firstDayOfWeek: "monday" },
+  },
+};
+
+function stepsApi(steps: object[], extra: Parameters<typeof mockApi>[0] = {}) {
+  return mockApi({
+    "GET /api/v1/instance/info": () => ({
+      body: {
+        name: "Lunedo",
+        setupComplete: false,
+        language: "en",
+        accentColor: "petrol",
+        passwordMinLength: 12,
+        selfRegistration: false,
+        organization: null,
+      },
+    }),
+    "GET /api/v1/setup": () => ({ body: { completed: false, session: true } }),
+    "GET /api/v1/setup/steps": () => ({ body: { ready: false, steps } }),
+    ...extra,
+  });
+}

@@ -1912,15 +1912,13 @@
       "instance": "Instance",
       "owner": "Owner account",
       "keyBackup": "Keys",
-      "organization": "Organization"
+      "organization": "Organization",
+      "welcome": "Welcome",
+      "summary": "Summary"
     },
     "code": {
-      "name": "Setup code",
-      "title": "Set up Lunedo",
-      "description": "Enter the setup code. It proves that you operate this server.",
       "label": "Setup code",
-      "where": "The code is in the .env file if you used the setup script or set LUNEDO_SETUP_CODE. Otherwise it is in the log of the Lunedo container:",
-      "hint": "The code stops working once the setup is complete."
+      "where": "It is in the .env file (LUNEDO_SETUP_CODE) if you used the setup script, otherwise in the log of the container:"
     },
     "language": "Language of the setup",
     "systemCheck": {
@@ -1931,21 +1929,17 @@
         "database": "Database",
         "fileStorage": "File storage",
         "clock": "Clock",
-        "instanceUrl": "Address",
-        "https": "HTTPS"
+        "https": "HTTPS",
+        "reachability": "Address"
       },
       "status": {
         "ok": "OK",
         "warning": "Check",
-        "error": "Must be fixed",
-        "later": "Next step"
+        "error": "Must be fixed"
       },
-      "urlNextStep": "You set the address in the next step.",
       "databaseOk": "PostgreSQL {version}, migrations applied",
       "storageFree": "Writable, {free} free",
       "clockOk": "In sync with the database",
-      "urlOk": "Set: {url}",
-      "urlConfigured": "Set through LUNEDO_INSTANCE_URL: {url}",
       "httpsOk": "Enabled",
       "failedTitle": "{check} did not pass the check",
       "checkAgain": "Check again",
@@ -1990,24 +1984,38 @@
         },
         "https": {
           "instanceUrlNotHttps": {
-            "cause": "The address of the instance does not start with https://.",
-            "action": "Run Lunedo behind a reverse proxy with TLS and use an https:// address before you invite people."
+            "cause": "The address of the instance does not start with https://. Lunedo itself does not speak TLS; a reverse proxy in front of it does.",
+            "action": "Set up a reverse proxy with TLS, for example Caddy, Traefik or nginx, and use an https:// address before you invite people."
           },
           "requestNotHttps": {
-            "cause": "This page was not loaded over HTTPS.",
-            "action": "Run Lunedo behind a reverse proxy with TLS before you invite people. If one is in place, add its address to LUNEDO_TRUSTED_PROXIES so Lunedo sees the protocol."
+            "cause": "This page was not loaded over HTTPS. Lunedo itself does not speak TLS; a reverse proxy in front of it does.",
+            "action": "Set up a reverse proxy with TLS before you invite people. If one is in place, add its address to LUNEDO_TRUSTED_PROXIES so Lunedo sees the protocol."
+          }
+        },
+        "reachability": {
+          "notSet": {
+            "cause": "No address is set for the instance yet.",
+            "action": "Enter the address Lunedo is reached at in the Instance step."
+          },
+          "unreachable": {
+            "cause": "The server got no answer at {url}, for example because the name does not resolve, a firewall blocks the connection or the certificate is not valid.",
+            "action": "Check DNS, the reverse proxy and the certificate, or whether this server may reach itself through the address. People outside may not be affected."
+          },
+          "otherServer": {
+            "cause": "A server other than this instance answered at {url}.",
+            "action": "Check that the reverse proxy forwards the address to this Lunedo container and that the address in the Instance step is right."
           }
         }
-      }
+      },
+      "reachabilityOk": "{url} can be reached",
+      "httpsGuide": "How to set up HTTPS"
     },
     "instance": {
       "title": "Your instance",
       "description": "The address and name people see.",
       "url": "Address",
-      "urlHint": "Used in links, e-mails and for passkeys.",
-      "name": "Instance name",
-      "notHttpsTitle": "The address does not use HTTPS",
-      "notHttps": "Most identity providers accept only HTTPS redirect URIs, and browsers keep the sign-in cookie only over HTTPS. Use an HTTPS address, for example through a reverse proxy, unless you only test on this computer."
+      "urlHint": "Taken from the current address. Used in links, e-mails and for passkeys.",
+      "name": "Instance name"
     },
     "owner": {
       "title": "Owner account",
@@ -2039,7 +2047,50 @@
       "language": "Default language",
       "timeZone": "Default time zone",
       "formats": "Formats",
-      "formatsHint": "Proposed for the language and time zone. Everyone can change them for themselves later."
+      "formatsHint": "Proposed for the language and time zone. Everyone can change them for themselves later.",
+      "formatsSuggested": "Adjust the formats (proposed: {formats})"
+    },
+    "welcome": {
+      "title": "Welcome",
+      "description": "Enter the setup code. It proves that you operate this server. Choose the language at the top right.",
+      "newInstance": "Set up a new instance"
+    },
+    "summary": {
+      "title": "Summary",
+      "description": "Check everything once more. Afterwards the instance is set up and you sign in as the owner.",
+      "result": "Result",
+      "checksOk": "{count} OK",
+      "checksWarning": "{count, plural, one {# warning} other {# warnings}} ({names})",
+      "name": "Name",
+      "email": "E-mail address",
+      "secondFactor": "Second factor",
+      "authenticatorApp": "Authenticator app",
+      "keysStored": "Stored",
+      "keysConfirmed": "Yes, confirmed",
+      "missing": "Not done yet",
+      "languageAndTimeZone": "Language, time zone",
+      "change": "Change",
+      "changeSection": "Change {section}"
+    },
+    "ready": {
+      "title": "Lunedo is ready",
+      "description": "Three steps worth doing next. Everything can also be done later in the settings.",
+      "forYou": "Go to For you",
+      "invite": {
+        "title": "Invite people",
+        "description": "By e-mail or through an allowed domain.",
+        "action": "Invite"
+      },
+      "space": {
+        "title": "Create the first space",
+        "description": "A place for a team or a topic.",
+        "action": "Create space"
+      },
+      "provider": {
+        "title": "Connect an identity provider",
+        "description": "Sign-in through Microsoft Entra ID, Keycloak, SAML or LDAP.",
+        "action": "Connect"
+      }
     }
   },
   "preferences": {

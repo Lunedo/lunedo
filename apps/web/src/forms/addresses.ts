@@ -18,13 +18,3 @@ export function isWebAddress(value: string): boolean {
     return false;
   }
 }
-
-export function needsHttpsWarning(address: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(address.trim());
-  } catch {
-    return false;
-  }
-  return url.protocol === "http:" && !isLoopbackHost(url.hostname);
-}

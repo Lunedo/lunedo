@@ -1,4 +1,4 @@
-import { createLogger } from "@lunedo/server";
+import { checkReachability, createLogger, type ProbeFetch } from "@lunedo/server";
 import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -65,31 +65,34 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
 
     const status = (await get("/api/v1/setup/steps")).json();
     expect(status.steps.map((step: { id: string }) => step.id)).toEqual([
-      "systemCheck",
       "instance",
+      "systemCheck",
       "owner",
       "keyBackup",
       "organization",
     ]);
     expect(status.ready).toBe(false);
-    expect(status.steps[0].details.checks).toMatchObject({
+    const checks = async () =>
+      (await get("/api/v1/setup/steps"))
+        .json()
+        .steps.find((step: { id: string }) => step.id === "systemCheck").details.checks;
+    expect(status.steps[1].details.checks).toMatchObject({
       database: { status: "ok", migrationsUpToDate: true },
       fileStorage: { writable: true },
       instanceUrl: { status: "warning", configured: false },
+      reachability: { status: "warning", cause: "notSet", url: null },
       clock: { status: "ok" },
     });
     expect((await post("/api/v1/setup/complete")).json()).toMatchObject({ code: "setupNotReady" });
 
-    expect((await post("/api/v1/setup/steps/systemCheck/acknowledge")).statusCode).toBe(200);
     expect(
       (await post("/api/v1/setup/steps/instance/save", { url: "not a url", name: "x" })).statusCode,
     ).toBe(400);
     expect(
       (await post("/api/v1/setup/steps/instance/save", { url: TEST_ORIGIN, name: "Test wiki" })).statusCode,
     ).toBe(200);
-    expect((await get("/api/v1/setup/steps")).json().steps[0].details.checks.https).toMatchObject({
-      status: "ok",
-    });
+    expect((await checks()).https).toMatchObject({ status: "ok" });
+    expect((await post("/api/v1/setup/steps/systemCheck/acknowledge")).statusCode).toBe(200);
 
     expect(
       (
@@ -330,6 +333,94 @@ describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from 
 
   afterAll(async () => {
     await test?.close();
+  });
+
+  it("confirms that the address of the instance leads to this instance", async () => {
+    const resolve = async () => ["203.0.113.20"];
+    const throughThisInstance: ProbeFetch = async (url) => {
+      const answered = await test.app.inject({ method: "GET", url: new URL(url).pathname });
+      return new Response(answered.body, { status: answered.statusCode });
+    };
+    expect(
+      await checkReachability(test.runtime.database, `${TEST_ORIGIN}/`, {
+        fetch: throughThisInstance,
+        resolve,
+      }),
+    ).toMatchObject({ status: "ok", cause: null, url: `${TEST_ORIGIN}/` });
+
+    const elsewhere: ProbeFetch = async () => new Response(JSON.stringify({ answer: "guessed" }));
+    expect(
+      await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: elsewhere, resolve }),
+    ).toMatchObject({ status: "warning", cause: "otherServer" });
+
+    const flooding: ProbeFetch = async () => new Response(`{"answer":"${"x".repeat(10_000)}"}`);
+    expect(
+      await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: flooding, resolve }),
+    ).toMatchObject({ status: "warning", cause: "otherServer" });
+
+    const nothing: ProbeFetch = async () => {
+      throw new TypeError("fetch failed");
+    };
+    expect(
+      await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: nothing, resolve }),
+    ).toMatchObject({ status: "warning", cause: "unreachable" });
+
+    let replayed = "";
+    const recording: ProbeFetch = async (url, init) => {
+      replayed = new URL(url).pathname;
+      return throughThisInstance(url, init);
+    };
+    await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: recording, resolve });
+    expect((await test.app.inject({ method: "GET", url: replayed })).statusCode).toBe(404);
+    expect(
+      (await test.app.inject({ method: "GET", url: `/api/v1/setup/probe/${"A".repeat(43)}` })).statusCode,
+    ).toBe(404);
+  });
+
+  it("follows redirects of the probe only on the same host and never to link-local addresses", async () => {
+    const requested: string[] = [];
+    const redirecting =
+      (location: (url: URL) => string): ProbeFetch =>
+      async (url, init) => {
+        requested.push(url);
+        expect(init.redirect).toBe("manual");
+        const target = new URL(url);
+        if (target.protocol === "http:")
+          return new Response(null, { status: 308, headers: { location: location(target) } });
+        const answered = await test.app.inject({ method: "GET", url: target.pathname });
+        return new Response(answered.body, { status: answered.statusCode });
+      };
+    const resolve = async () => ["203.0.113.20"];
+    const httpOrigin = TEST_ORIGIN.replace(/^https:/, "http:");
+
+    const sameHost = redirecting((url) => `https://${url.host}${url.pathname}`);
+    expect(
+      await checkReachability(test.runtime.database, httpOrigin, { fetch: sameHost, resolve }),
+    ).toMatchObject({
+      cause: null,
+    });
+    expect(requested.map((url) => new URL(url).protocol)).toEqual(["http:", "https:"]);
+
+    requested.length = 0;
+    const otherHost = redirecting((url) => `https://other.example${url.pathname}`);
+    expect(
+      await checkReachability(test.runtime.database, httpOrigin, { fetch: otherHost, resolve }),
+    ).toMatchObject({
+      cause: "otherServer",
+    });
+    expect(requested).toHaveLength(1);
+
+    requested.length = 0;
+    expect(
+      await checkReachability(test.runtime.database, "http://metadata.example", {
+        fetch: sameHost,
+        resolve: async () => ["169.254.169.254"],
+      }),
+    ).toMatchObject({ cause: "unreachable" });
+    expect(
+      await checkReachability(test.runtime.database, "http://[fe80::1]", { fetch: sameHost, resolve }),
+    ).toMatchObject({ cause: "unreachable" });
+    expect(requested).toEqual([]);
   });
 
   it("keeps accepting the origin of the setup session until setup is complete", async () => {

@@ -107,6 +107,7 @@ export interface ErrorStateProps {
   details?: ReactNode;
   command?: string;
   documentationUrl?: string;
+  documentationLabel?: string;
   onRetry?: () => void;
   retryLabel?: string;
   variant?: "danger" | "warning";
@@ -119,6 +120,7 @@ export function ErrorState({
   details,
   command,
   documentationUrl,
+  documentationLabel,
   onRetry,
   retryLabel,
   variant = "danger",
@@ -155,7 +157,7 @@ export function ErrorState({
             rel="noreferrer"
             className="inline-flex w-fit items-center gap-1 rounded-sm text-accent underline-offset-2 hover:underline focus-visible:focus-ring"
           >
-            {labels.documentation}
+            {documentationLabel ?? labels.documentation}
             <Icon icon={ExternalLink} size="sm" />
           </a>
         )}

@@ -1,7 +1,7 @@
 import type { SetupStepDetails } from "@lunedo/shared";
 import { Badge, Button, ErrorState, List, ListRow, Notice } from "@lunedo/ui";
 import type { TFunction } from "i18next";
-import { CircleAlert, CircleCheck, CircleDashed, CircleX, RotateCcw } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleX, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { docsUrl } from "../../../docs/docs-url.js";
@@ -12,19 +12,20 @@ import { useFormat } from "../../../preferences/preferences-provider.js";
 import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
-type Status = "ok" | "warning" | "error" | "later";
+type Status = "ok" | "warning" | "error";
 type Checks = SetupStepDetails<"systemCheck">["checks"];
 type CheckKey = keyof Checks;
 
-const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX, later: CircleDashed } as const;
-const BADGES = { ok: "success", warning: "warning", error: "danger", later: "neutral" } as const;
-const CHECK_ORDER: CheckKey[] = ["database", "fileStorage", "clock", "instanceUrl", "https"];
+const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX } as const;
+const BADGES = { ok: "success", warning: "warning", error: "danger" } as const;
+const CHECK_ORDER = ["database", "fileStorage", "clock", "reachability", "https"] as const;
+type ShownCheck = (typeof CHECK_ORDER)[number];
 
 function unknownId(t: TFunction, id: number | null): string {
   return id === null ? t("setup.systemCheck.unknownId") : String(id);
 }
 
-function passedDescription(t: TFunction, format: Formatter, checks: Checks, key: CheckKey): string {
+function passedDescription(t: TFunction, format: Formatter, checks: Checks, key: ShownCheck): string {
   switch (key) {
     case "database":
       return t("setup.systemCheck.databaseOk", { version: checks.database.version ?? "" });
@@ -32,17 +33,11 @@ function passedDescription(t: TFunction, format: Formatter, checks: Checks, key:
       return t("setup.systemCheck.storageFree", { free: format.bytes(checks.fileStorage.freeBytes ?? 0) });
     case "clock":
       return t("setup.systemCheck.clockOk");
-    case "instanceUrl":
-      return checks.instanceUrl.source === "configuration"
-        ? t("setup.systemCheck.urlConfigured", { url: checks.instanceUrl.url ?? "" })
-        : t("setup.systemCheck.urlOk", { url: checks.instanceUrl.url ?? "" });
+    case "reachability":
+      return t("setup.systemCheck.reachabilityOk", { url: checks.reachability.url ?? "" });
     case "https":
       return t("setup.systemCheck.httpsOk");
   }
-}
-
-function setLater(checks: Checks, key: CheckKey): boolean {
-  return key === "instanceUrl" && checks.instanceUrl.cause === "notSet";
 }
 
 export function checkExplanation(
@@ -52,7 +47,7 @@ export function checkExplanation(
   key: CheckKey,
 ): { cause: string; action: string } | null {
   const check = checks[key];
-  if (check.status === "ok" || check.cause === null || setLater(checks, key)) return null;
+  if (check.status === "ok" || check.cause === null) return null;
   const storage = checks.fileStorage;
   const values: Record<string, string | number> = {
     path: storage.path,
@@ -62,6 +57,7 @@ export function checkExplanation(
     minimum: format.bytes(storage.minimumFreeBytes),
     seconds: Math.round(Math.abs(checks.clock.offsetMs ?? 0) / 1000),
     tolerance: Math.round(checks.clock.toleranceMs / 1000),
+    url: checks.reachability.url ?? "",
   };
   const base = `setup.systemCheck.causes.${key}.${check.cause}`;
   return {
@@ -106,7 +102,7 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
       <List>
         {CHECK_ORDER.map((key) => {
           const check = checks[key];
-          const status: Status = setLater(checks, key) ? "later" : check.status;
+          const status: Status = check.status;
           const title = translateKey(t, `setup.systemCheck.checks.${key}`);
           const explanation = checkExplanation(t, format, checks, key);
           return (
@@ -114,13 +110,7 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
               key={key}
               icon={ICONS[status]}
               title={title}
-              description={
-                status === "later"
-                  ? t("setup.systemCheck.urlNextStep")
-                  : explanation
-                    ? null
-                    : passedDescription(t, format, checks, key)
-              }
+              description={explanation ? null : passedDescription(t, format, checks, key)}
               actions={<Badge variant={BADGES[status]}>{t(`setup.systemCheck.status.${status}`)}</Badge>}
             >
               {explanation ? (
@@ -131,6 +121,7 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
                   action={explanation.action}
                   {...(check.fixCommand ? { command: check.fixCommand } : {})}
                   documentationUrl={docsUrl(check.docs)}
+                  {...(key === "https" ? { documentationLabel: t("setup.systemCheck.httpsGuide") } : {})}
                   onRetry={() => void checkAgain(key)}
                   retryLabel={
                     checking === key ? t("setup.systemCheck.checking") : t("setup.systemCheck.checkAgain")

@@ -1,18 +1,17 @@
 import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithProviders } from "../../../testing/render.js";
 import { InstanceStep } from "./instance-step.js";
 
 describe("the instance step", () => {
-  it("warns about an address without HTTPS unless it is a loopback address", async () => {
+  it("takes the address from the current URL and leaves the HTTPS check to the system check", async () => {
     await renderWithProviders(
       <InstanceStep
         completed={false}
         details={{
           url: "",
           name: "Lunedo",
-          suggestedUrl: "http://localhost:5173",
+          suggestedUrl: "http://wiki.example.org",
           urlFromEnvironment: false,
         }}
         back={null}
@@ -20,14 +19,11 @@ describe("the instance step", () => {
         refresh={async () => undefined}
       />,
     );
-    expect(screen.queryByText("The address does not use HTTPS")).toBeNull();
-    const address = screen.getByLabelText("Address");
-    await userEvent.clear(address);
-    await userEvent.type(address, "http://wiki.example.org");
-    expect(await screen.findByText("The address does not use HTTPS")).toBeTruthy();
-    await userEvent.clear(address);
-    await userEvent.type(address, "https://wiki.example.org");
-    expect(screen.queryByText("The address does not use HTTPS")).toBeNull();
+    expect((screen.getByLabelText("Address") as HTMLInputElement).value).toBe("http://wiki.example.org");
+    expect(
+      screen.getByText("Taken from the current address. Used in links, e-mails and for passkeys."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("shows an address from the server environment as read-only", async () => {

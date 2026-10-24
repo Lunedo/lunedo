@@ -51,6 +51,12 @@ async function requireSetupComplete(queryClient: QueryClient) {
 const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/setup",
+  validateSearch: z.object({
+    step: z
+      .enum(["welcome", "instance", "systemCheck", "owner", "keyBackup", "organization", "summary"])
+      .optional()
+      .catch(undefined),
+  }),
   beforeLoad: async ({ context }) => {
     const info = await context.queryClient.ensureQueryData(instanceInfoQuery);
     if (info.setupComplete) throw redirect({ to: "/sign-in" });

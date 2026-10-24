@@ -22,7 +22,9 @@ export type SetupStep =
   | "recovery codes"
   | "owner ready"
   | "key backup"
-  | "organization";
+  | "organization"
+  | "summary"
+  | "ready";
 
 interface SetupStage {
   name: SetupStep;
@@ -33,7 +35,7 @@ interface SetupStage {
 const STAGES: SetupStage[] = [
   {
     name: "system check",
-    shown: (page) => page.getByRole("heading", { name: "System check" }),
+    shown: (page) => page.getByRole("heading", { name: "System check", level: 1 }),
     run: async (page) => {
       await expectAccessible(page, "system check");
       await page.getByRole("button", { name: "Continue" }).click();
@@ -41,7 +43,7 @@ const STAGES: SetupStage[] = [
   },
   {
     name: "instance",
-    shown: (page) => page.getByRole("heading", { name: "Your instance" }),
+    shown: (page) => page.getByRole("heading", { name: "Your instance", level: 1 }),
     run: async (page) => {
       await page.getByLabel("Instance name").fill("Example Wiki");
       await page.getByRole("button", { name: "Continue" }).click();
@@ -97,7 +99,7 @@ const STAGES: SetupStage[] = [
   },
   {
     name: "key backup",
-    shown: (page) => page.getByRole("heading", { name: "Back up your keys" }),
+    shown: (page) => page.getByRole("heading", { name: "Back up your keys", level: 1 }),
     run: async (page) => {
       const download = page.waitForEvent("download");
       await page.getByRole("button", { name: "Download keys" }).click();
@@ -111,10 +113,26 @@ const STAGES: SetupStage[] = [
   },
   {
     name: "organization",
-    shown: (page) => page.getByRole("heading", { name: "First organization" }),
+    shown: (page) => page.getByRole("heading", { name: "First organization", level: 1 }),
     run: async (page) => {
       await page.getByLabel("Name", { exact: true }).fill(ORGANIZATION_NAME);
+      await page.getByRole("button", { name: "Continue" }).click();
+    },
+  },
+  {
+    name: "summary",
+    shown: (page) => page.getByRole("heading", { name: "Summary", level: 1 }),
+    run: async (page) => {
+      await expectAccessible(page, "setup summary");
+      await expect(page.getByRole("region", { name: "Organization" })).toContainText(ORGANIZATION_NAME);
       await page.getByRole("button", { name: "Finish setup" }).click();
+    },
+  },
+  {
+    name: "ready",
+    shown: (page) => page.getByRole("heading", { name: "Lunedo is ready", level: 1 }),
+    run: async (page) => {
+      await page.getByRole("button", { name: "Go to For you" }).click();
     },
   },
 ];
@@ -133,18 +151,18 @@ export async function enterSetupCode(page: Page, shown: StepShown = ignore): Pro
   expect(setupCode).toBeTruthy();
   await page.goto("/");
   await expect(page).toHaveURL(/\/setup$/);
-  await expect(page.getByRole("heading", { name: "Set up Lunedo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome", level: 1 })).toBeVisible();
   await expectAccessible(page, "setup code");
   await shown("setup code", page);
   await page.getByLabel("Setup code").fill("WRONG-CODE-0000");
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Set up a new instance" }).click();
   await expect(page.getByText(/^The setup code is not correct or was already used\./)).toBeVisible();
   await page.goto("about:blank");
   await page.goto(`/setup#code=${setupCode ?? ""}`);
   await expect(page.getByLabel("Setup code")).toHaveValue(setupCode ?? "");
   await expect(page).toHaveURL(/\/setup$/);
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByRole("heading", { name: "Set up Lunedo" })).toBeHidden();
+  await page.getByRole("button", { name: "Set up a new instance" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome", level: 1 })).toBeHidden();
   await page.context().storageState({ path: SETUP_STORAGE });
 }
 

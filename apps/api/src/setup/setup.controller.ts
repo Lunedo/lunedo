@@ -7,11 +7,13 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { COOKIES, clearCookie, readCookie, setCookie } from "../http/cookies.js";
+import { ProblemException } from "../http/problems.js";
 
 const SETUP_COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
 const codeSchema = z.object({ code: setupCodeSchema }).strict();
 const identifier = z.string().regex(/^[a-z][a-zA-Z]{0,63}$/);
 const actionParams = z.object({ step: identifier, action: identifier }).strict();
+const probeParams = z.object({ challenge: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/) }).strict();
 const stepsSchema = z.object({
   steps: z.array(setupStepStateSchema),
   ready: z.boolean(),
@@ -60,6 +62,25 @@ export class SetupController {
   ) {
     const token = await this.#setup.exchangeCode(body.code, request.ip, request.headers.origin ?? "");
     setCookie(reply, COOKIES.setup, token, SETUP_COOKIE_MAX_AGE_SECONDS);
+  }
+
+  @Get("probe/:challenge")
+  @SetupCodeRoute()
+  @ApiRoute({
+    summary: "Answer the reachability probe of the system check",
+    tags: ["Setup"],
+    params: probeParams,
+    response: {
+      description: "The answer the system check expects from this instance.",
+      schema: z.object({ answer: z.string() }),
+    },
+    errors: ["notFound"],
+  })
+  async probe(@Param("challenge") challenge: string, @Res({ passthrough: true }) reply: FastifyReply) {
+    const answer = await this.#setup.probeAnswer(challenge);
+    if (!answer) throw new ProblemException("notFound", "The probe does not exist or has expired");
+    reply.header("cache-control", "no-store");
+    return { answer };
   }
 
   @Get("steps")

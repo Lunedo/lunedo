@@ -195,25 +195,27 @@ The code is exchanged for a setup session, held in the cookie `__Host-lunedo-set
 
 ## Steps
 
-Steps are registered by the modules; the assistant shows them in order:
+The assistant opens with **Welcome**: the setup code and **Set up a new instance**. The steps are registered by the modules; the assistant shows them in order, followed by a summary:
 
 | Step | Required | Content |
 |---|---|---|
-| `systemCheck` | yes | Database version and migrations, file storage, instance URL, HTTPS, clock difference between application and database. Warnings do not block setup. |
-| `instance` | yes | Instance URL and name. |
+| `instance` | yes | Instance URL, taken from the address the setup is opened with, and name. |
+| `systemCheck` | yes | Database version and migrations, file storage, clock difference between application and database, whether the instance URL leads to this instance, HTTPS. Warnings do not block setup. |
 | `owner` | yes | Owner account with password and TOTP, then ten recovery codes. The step can be repeated until setup is complete. |
 | `keyBackup` | yes | One-time download of the master keys and backup keys, then a confirmation that they are stored safely. |
 | `organization` | yes | The first organization with name, language, time zone and formats. The owner becomes its owner and has it as home organization. |
 
+The summary lists every step with **Change**, which goes back to it, and **Finish setup**, which completes the setup. The last page suggests what to do next: invite people, create a space, connect an identity provider. The steps are not shown as a list: a small menu „Step n of 7“ above the title lists them, and steps already reached can be chosen there. The browser back button goes back one step.
+
 E-mail is set up afterwards in the instance settings. Until then, the instance overview shows that invitations and e-mail notifications are not sent.
 
-The organization step proposes date format, time format, number format and first day of the week from the language and time zone it opens with: German gets `DD.MM.YYYY`, 24-hour time, `de-DE` numbers (`de-CH` in Swiss time zones) and Monday; English in time zones of the Americas gets `MM/DD/YYYY`, 12-hour time, `en-US` and Sunday, otherwise `DD/MM/YYYY`, 24-hour time, `en-US` and Monday. The proposal is shown for confirmation and stored at the organization level. Choosing another language in the step does not change the formats.
+The organization step proposes date format, time format, number format and first day of the week from the language and time zone it opens with: German gets `DD.MM.YYYY`, 24-hour time, `de-DE` numbers (`de-CH` in Swiss time zones) and Monday; English in time zones of the Americas gets `MM/DD/YYYY`, 12-hour time, `en-US` and Sunday, otherwise `DD/MM/YYYY`, 24-hour time, `en-US` and Monday. The proposal is shown in one line and opens for changes on click; it is stored at the organization level. Choosing another language in the step does not change the formats.
 
 The setup state is stored in the database, so all nodes agree on it.
 
 ## System check
 
-Every `GET /api/v1/setup/steps` runs all checks again. Each check reports a `status` (`ok`, `warning` or `error`), a `cause` code when it did not pass, a `fixCommand` when a shell command fixes the cause, and `docs`, the section below that explains it. Errors block the setup; warnings do not.
+The system check comes after the instance step, so it can check the address. Until the step is confirmed, every `GET /api/v1/setup/steps` runs all checks again. Each check reports a `status` (`ok`, `warning` or `error`), a `cause` code when it did not pass, a `fixCommand` when a shell command fixes the cause, and `docs`, the section that explains it. Errors block the setup; warnings do not.
 
 ### Database
 
@@ -235,9 +237,13 @@ The check writes and removes a file in `LUNEDO_FILES_DIR` and reports the `path`
 
 `notSet`: neither the instance step nor `LUNEDO_INSTANCE_URL` has set the address of the instance yet. When `LUNEDO_INSTANCE_URL` is set, the check shows it as configured until the instance step stores an address.
 
+### Address reachable
+
+The server stores a random challenge and its answer in the database, requests `<instance URL>/api/v1/setup/probe/<challenge>` and compares the answer, so only a node of this instance can pass. The request follows up to three redirects on the same host, never connects to link-local addresses such as cloud metadata services, and gives up after 4 seconds; a confirmed result is kept with the step. `notSet`: no instance URL is known. `unreachable`: nothing answered, for example because the name does not resolve, a firewall blocks the connection or the certificate is not valid. `otherServer`: another server answered, or a redirect led to another host. The check is a warning only, because a server may not be allowed to reach itself through its public address while people outside can.
+
 ### HTTPS
 
-`instanceUrlNotHttps`: the instance URL, stored or from `LUNEDO_INSTANCE_URL`, does not start with `https:`. Once an instance URL is known, only that address is checked, not the address the setup is opened with. `requestNotHttps`: no instance URL is known and the request reached Lunedo without TLS, or a reverse proxy is not listed in `LUNEDO_TRUSTED_PROXIES` and its `X-Forwarded-Proto` header is ignored. Run Lunedo behind a reverse proxy with TLS before inviting people.
+Lunedo does not speak TLS itself; a reverse proxy in front of it does, see [reverse-proxy.md](reverse-proxy.md) for Caddy, Traefik and nginx. `instanceUrlNotHttps`: the instance URL, stored or from `LUNEDO_INSTANCE_URL`, does not start with `https:`. Once an instance URL is known, only that address is checked, not the address the setup is opened with. `requestNotHttps`: no instance URL is known and the request reached Lunedo without TLS, or a reverse proxy is not listed in `LUNEDO_TRUSTED_PROXIES` and its `X-Forwarded-Proto` header is ignored. Both are warnings; set up TLS before inviting people.
 
 ## Endpoints
 
@@ -247,11 +253,12 @@ All endpoints are internal. After setup they answer `404` like routes that do no
 |---|---|
 | `GET /api/v1/setup` | public until setup is complete |
 | `POST /api/v1/setup/session` with `{ "code": "..." }` | public until setup is complete |
+| `GET /api/v1/setup/probe/{challenge}` | public until setup is complete; answers only a challenge of a running system check |
 | `GET /api/v1/setup/steps` | setup session |
 | `POST /api/v1/setup/steps/{step}/{action}` | setup session |
 | `POST /api/v1/setup/complete` | setup session |
 
-Actions: `systemCheck/acknowledge`, `instance/save`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `organization/save`.
+Actions: `instance/save`, `systemCheck/acknowledge`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `organization/save`.
 
 ## Setup through configuration
 

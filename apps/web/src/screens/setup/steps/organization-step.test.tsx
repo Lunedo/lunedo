@@ -29,6 +29,12 @@ describe("the organization step", () => {
       }),
     });
     await renderStep();
+    expect(screen.queryByRole("combobox", { name: "Date format" })).toBeNull();
+    const formats = screen.getByRole("button", {
+      name: /^Adjust the formats \(proposed: \d{1,2} \w{3} \d{4} · 14:30 · 1,234\.56 · Monday\)$/,
+    });
+    expect(formats.getAttribute("aria-expanded")).toBe("false");
+    await userEvent.click(formats);
     expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("D MMM YYYY");
 
     await userEvent.click(screen.getByRole("combobox", { name: "Default language" }));

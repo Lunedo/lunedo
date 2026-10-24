@@ -1912,15 +1912,13 @@
       "instance": "Instanz",
       "owner": "Owner-Konto",
       "keyBackup": "Schlüssel",
-      "organization": "Organisation"
+      "organization": "Organisation",
+      "welcome": "Willkommen",
+      "summary": "Zusammenfassung"
     },
     "code": {
-      "name": "Setup-Code",
-      "title": "Lunedo einrichten",
-      "description": "Gib den Setup-Code ein. Er belegt, dass du diesen Server betreibst.",
       "label": "Setup-Code",
-      "where": "Der Code steht in der Datei .env, wenn du das Setup-Skript verwendet oder LUNEDO_SETUP_CODE gesetzt hast. Sonst steht er im Log des Lunedo-Containers:",
-      "hint": "Der Code funktioniert nicht mehr, sobald die Einrichtung abgeschlossen ist."
+      "where": "Steht in der Datei .env (LUNEDO_SETUP_CODE), wenn du das Setup-Skript verwendet hast, sonst im Log des Containers:"
     },
     "language": "Sprache der Einrichtung",
     "systemCheck": {
@@ -1931,21 +1929,17 @@
         "database": "Datenbank",
         "fileStorage": "Dateispeicher",
         "clock": "Uhrzeit",
-        "instanceUrl": "Adresse",
-        "https": "HTTPS"
+        "https": "HTTPS",
+        "reachability": "Adresse"
       },
       "status": {
         "ok": "OK",
         "warning": "Prüfen",
-        "error": "Muss behoben werden",
-        "later": "Nächster Schritt"
+        "error": "Muss behoben werden"
       },
-      "urlNextStep": "Die Adresse legst du im nächsten Schritt fest.",
       "databaseOk": "PostgreSQL {version}, Migrationen ausgeführt",
       "storageFree": "Beschreibbar, {free} frei",
       "clockOk": "Stimmt mit der Datenbank überein",
-      "urlOk": "Festgelegt: {url}",
-      "urlConfigured": "Über LUNEDO_INSTANCE_URL festgelegt: {url}",
       "httpsOk": "Aktiv",
       "failedTitle": "{check}: Prüfung nicht bestanden",
       "checkAgain": "Erneut prüfen",
@@ -1990,24 +1984,38 @@
         },
         "https": {
           "instanceUrlNotHttps": {
-            "cause": "Die Adresse der Instanz beginnt nicht mit https://.",
-            "action": "Betreibe Lunedo hinter einem Reverse Proxy mit TLS und verwende eine https://-Adresse, bevor du Personen einlädst."
+            "cause": "Die Adresse der Instanz beginnt nicht mit https://. Lunedo selbst spricht kein TLS, das übernimmt ein Reverse Proxy davor.",
+            "action": "Richte einen Reverse Proxy mit TLS ein, zum Beispiel Caddy, Traefik oder nginx, und verwende eine https://-Adresse, bevor du Personen einlädst."
           },
           "requestNotHttps": {
-            "cause": "Diese Seite wurde nicht über HTTPS geladen.",
-            "action": "Betreibe Lunedo hinter einem Reverse Proxy mit TLS, bevor du Personen einlädst. Gibt es schon einen, trage seine Adresse in LUNEDO_TRUSTED_PROXIES ein, damit Lunedo das Protokoll erkennt."
+            "cause": "Diese Seite kam ohne HTTPS an. Lunedo selbst spricht kein TLS, das übernimmt ein Reverse Proxy davor.",
+            "action": "Richte einen Reverse Proxy mit TLS ein, bevor du Personen einlädst. Gibt es schon einen, trage seine Adresse in LUNEDO_TRUSTED_PROXIES ein, damit Lunedo das Protokoll sieht."
+          }
+        },
+        "reachability": {
+          "notSet": {
+            "cause": "Für die Instanz ist noch keine Adresse eingetragen.",
+            "action": "Gib im Schritt Instanz die Adresse ein, unter der Lunedo erreichbar ist."
+          },
+          "unreachable": {
+            "cause": "Der Server hat unter {url} keine Antwort bekommen, zum Beispiel weil der Name nicht aufgelöst wird, eine Firewall die Verbindung blockiert oder das Zertifikat nicht gültig ist.",
+            "action": "Prüfe DNS, Reverse Proxy und Zertifikat, oder ob dieser Server sich selbst über die Adresse erreichen darf. Personen außerhalb sind davon unter Umständen nicht betroffen."
+          },
+          "otherServer": {
+            "cause": "Unter {url} hat ein anderer Server geantwortet als diese Instanz.",
+            "action": "Prüfe, ob der Reverse Proxy die Adresse an diesen Lunedo-Container weiterleitet, und ob die Adresse im Schritt Instanz stimmt."
           }
         }
-      }
+      },
+      "reachabilityOk": "{url} ist erreichbar",
+      "httpsGuide": "So richtest du HTTPS ein"
     },
     "instance": {
       "title": "Deine Instanz",
       "description": "Die Adresse und der Name, die alle sehen.",
       "url": "Adresse",
-      "urlHint": "Wird in Links, E-Mails und für Passkeys verwendet.",
-      "name": "Name der Instanz",
-      "notHttpsTitle": "Die Adresse verwendet kein HTTPS",
-      "notHttps": "Die meisten Identitätsanbieter akzeptieren nur HTTPS-Redirect-URIs, und Browser behalten das Anmelde-Cookie nur über HTTPS. Verwende eine HTTPS-Adresse, etwa über einen Reverse Proxy, außer du testest nur auf diesem Computer."
+      "urlHint": "Aus der aktuellen Adresse übernommen. Wird in Links, E-Mails und für Passkeys verwendet.",
+      "name": "Name der Instanz"
     },
     "owner": {
       "title": "Owner-Konto",
@@ -2039,7 +2047,50 @@
       "language": "Standardsprache",
       "timeZone": "Standardzeitzone",
       "formats": "Formate",
-      "formatsHint": "Passend zu Sprache und Zeitzone vorgeschlagen. Alle können sie später für sich ändern."
+      "formatsHint": "Passend zu Sprache und Zeitzone vorgeschlagen. Alle können sie später für sich ändern.",
+      "formatsSuggested": "Formate anpassen (vorgeschlagen: {formats})"
+    },
+    "welcome": {
+      "title": "Willkommen",
+      "description": "Gib den Setup-Code ein. Er belegt, dass du diesen Server betreibst. Die Sprache wählst du oben rechts.",
+      "newInstance": "Neue Instanz einrichten"
+    },
+    "summary": {
+      "title": "Zusammenfassung",
+      "description": "Prüf alles noch einmal. Danach ist die Instanz eingerichtet und du meldest dich als Owner an.",
+      "result": "Ergebnis",
+      "checksOk": "{count} OK",
+      "checksWarning": "{count, plural, one {# Warnung} other {# Warnungen}} ({names})",
+      "name": "Name",
+      "email": "E-Mail-Adresse",
+      "secondFactor": "Zweiter Faktor",
+      "authenticatorApp": "Authenticator-App",
+      "keysStored": "Gesichert",
+      "keysConfirmed": "Ja, bestätigt",
+      "missing": "Noch nicht erledigt",
+      "languageAndTimeZone": "Sprache, Zeitzone",
+      "change": "Ändern",
+      "changeSection": "{section} ändern"
+    },
+    "ready": {
+      "title": "Lunedo ist bereit",
+      "description": "Drei Schritte, die sich als Nächstes lohnen. Alles geht auch später in den Einstellungen.",
+      "forYou": "Zu Für dich",
+      "invite": {
+        "title": "Personen einladen",
+        "description": "Per E-Mail oder über eine erlaubte Domain.",
+        "action": "Einladen"
+      },
+      "space": {
+        "title": "Ersten Space erstellen",
+        "description": "Ein Ort für ein Team oder ein Thema.",
+        "action": "Space erstellen"
+      },
+      "provider": {
+        "title": "Identitätsanbieter verbinden",
+        "description": "Anmeldung über Microsoft Entra ID, Keycloak, SAML oder LDAP.",
+        "action": "Verbinden"
+      }
     }
   },
   "preferences": {

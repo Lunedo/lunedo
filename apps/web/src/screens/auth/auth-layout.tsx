@@ -1,12 +1,9 @@
-import { Combobox } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useSearch } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { instanceInfoQuery } from "../../api/queries.js";
-import { languageItems } from "../../components/pickers.js";
 import { setProblemOrganization } from "../../errors/problem-message.js";
-import { isLanguage, rememberChosenLanguage, rememberLanguage } from "../../i18n/index.js";
 import { isAccentColor } from "../../preferences/preferences.js";
 import { setAccentColor } from "../../preferences/preferences-provider.js";
 import { organizationLogoUrl } from "../../shell/brand.js";
@@ -61,25 +58,6 @@ export function AuthLayout() {
           <span>{host}</span>
         </footer>
       </div>
-    </div>
-  );
-}
-
-export function LanguagePicker({ label, ownLanguage = false }: { label: string; ownLanguage?: boolean }) {
-  const { t, i18n } = useTranslation();
-  return (
-    <div className="w-field max-w-full">
-      <Combobox
-        aria-label={label}
-        value={i18n.language}
-        onValueChange={(language) => {
-          if (!isLanguage(language)) return;
-          rememberLanguage(language);
-          if (ownLanguage) rememberChosenLanguage(language);
-          void i18n.changeLanguage(language);
-        }}
-        items={languageItems(t)}
-      />
     </div>
   );
 }
