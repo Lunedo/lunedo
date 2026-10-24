@@ -1,11 +1,12 @@
 import { Button, type CommandGroup, type CommandItem, CommandPalette, Highlighted, Kbd } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { Bookmark, Clock, Globe, History, Layers, Search, SearchX, UserRound, X } from "lucide-react";
+import { Bookmark, Clock, Globe, History, Layers, SearchX, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounced } from "../components/table-state.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { useFormat } from "../preferences/preferences-provider.js";
 import { useCommandGroups } from "../shell/command-groups.js";
 import { isApplePlatform } from "../shell/keyboard.js";
 import { useOrganizationState } from "../shell/shell-context.js";
@@ -77,6 +78,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const debounced = useDebounced(typed, QUICK_DEBOUNCE_MS);
   const settled = debounced === typed;
   const remember = useRememberSearch(organizationId);
+  const format = useFormat();
   const commandGroups = useCommandGroups(query, () => onOpenChange(false));
   const linkGroups = commandGroups.filter((group) =>
     group.items.some((item) => item.id === "confluence-link"),
@@ -187,7 +189,11 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         {
           id: `hit:${hit.type}:${hit.id}`,
           label: hitTitle(t, hit),
-          description: withPath ? hitPath(t, hit).join(" › ") : <Highlighted parts={hit.excerpt} />,
+          description: withPath ? (
+            `${hitPath(t, hit).join(" › ")} · ${format.calendarDate(hit.updatedAt)}`
+          ) : (
+            <Highlighted parts={hit.excerpt} />
+          ),
           icon: hitIcon(hit),
           href,
           onSelect: () => go(href),
@@ -204,7 +210,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         heading: inSpace
           ? t("search.quick.inSpace", { space: space.name || t("spaces.personal.label") })
           : t("search.quick.pagesAndPosts"),
-        items: local.flatMap((hit) => hitItem(hit, false)),
+        items: local.flatMap((hit) => hitItem(hit, true)),
       },
       {
         heading: t("search.quick.comments"),
@@ -212,6 +218,22 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
       },
       { heading: t("search.quick.otherSpaces"), items: elsewhere.flatMap((hit) => hitItem(hit, true)) },
     ];
+    if (settled && !spaces.isPlaceholderData) {
+      list.push({
+        heading: t("search.quick.spaces"),
+        items: (spaces.data?.items ?? []).map((entry) => {
+          const href = `/spaces/${encodeURIComponent(entry.key)}`;
+          return {
+            id: `space:${entry.id}`,
+            label: entry.name || entry.key,
+            description: entry.key,
+            icon: Layers,
+            href,
+            onSelect: () => go(href),
+          };
+        }),
+      });
+    }
     if (settled && !people.isPlaceholderData) {
       list.push({
         heading: t("search.quick.people"),
@@ -230,23 +252,6 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
           }),
       });
     }
-    if (settled && !spaces.isPlaceholderData) {
-      list.push({
-        heading: t("search.quick.spaces"),
-        items: (spaces.data?.items ?? []).map((entry) => {
-          const href = `/spaces/${encodeURIComponent(entry.key)}`;
-          return {
-            id: `space:${entry.id}`,
-            label: entry.name || entry.key,
-            description: entry.key,
-            icon: Layers,
-            href,
-            onSelect: () => go(href),
-          };
-        }),
-      });
-    }
-    const all = searchPageHref(typed, noFilters);
     const more: CommandItem[] = [];
     if (inSpace && current && local.length === 0) {
       more.push({
@@ -257,16 +262,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         onSelect: () => setScope("all"),
       });
     }
-    more.push({
-      id: "search:all",
-      label: t("search.quick.searchAll", { query: typed }),
-      description: t("search.quick.searchAllHint"),
-      icon: Search,
-      href: all,
-      alwaysShown: true,
-      onSelect: () => go(all),
-    });
-    list.push({ heading: t("search.quick.more"), items: more });
+    if (more.length > 0) list.push({ heading: t("search.quick.more"), items: more });
     return list;
   })();
 
@@ -333,7 +329,22 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
             <Kbd>{mod}</Kbd>
             <Kbd>↵</Kbd> {t("search.quick.newTab")}
           </span>
-          <span className="sm:ml-auto">{t("search.onlyReadable")}</span>
+          {typed ? (
+            <a
+              href={searchPageHref(typed, noFilters)}
+              onClick={(event) => {
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+                event.preventDefault();
+                onOpenChange(false);
+                go(searchPageHref(typed, noFilters));
+              }}
+              className="text-accent hover:underline focus-visible:focus-ring sm:ml-auto"
+            >
+              {t("search.quick.allResults", { query: typed })}
+            </a>
+          ) : (
+            <span className="sm:ml-auto">{t("search.onlyReadable")}</span>
+          )}
         </>
       }
     />

@@ -1,6 +1,6 @@
 import { Button, Dialog, Field, focusFirstInvalidSoon, IconButton, Input, Menu, useToast } from "@lunedo/ui";
 import { Link, useRouter } from "@tanstack/react-router";
-import { Bookmark, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
@@ -103,38 +103,35 @@ function NameDialog({
   );
 }
 
-export function SaveSearchButton({
+export function SaveSearchDialog({
   organizationId,
   query,
   filters,
+  open,
+  onOpenChange,
 }: {
   organizationId: string;
   query: string;
   filters: SearchFilters;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const save = useSaveSearch(organizationId);
+  if (!open) return null;
   return (
-    <>
-      <Button icon={Bookmark} onClick={() => setOpen(true)}>
-        {t("search.saved.save")}
-      </Button>
-      {open ? (
-        <NameDialog
-          open
-          onOpenChange={setOpen}
-          title={t("search.saved.saveTitle")}
-          submitLabel={t("search.saved.save")}
-          initialName={query.trim().slice(0, MAX_NAME)}
-          onSubmit={async (name) => {
-            await save.mutateAsync({ name, query, filters });
-            toast({ title: t("search.saved.saved"), variant: "success" });
-          }}
-        />
-      ) : null}
-    </>
+    <NameDialog
+      open
+      onOpenChange={onOpenChange}
+      title={t("search.saved.saveTitle")}
+      submitLabel={t("search.saved.save")}
+      initialName={query.trim().slice(0, MAX_NAME)}
+      onSubmit={async (name) => {
+        await save.mutateAsync({ name, query, filters });
+        toast({ title: t("search.saved.saved"), variant: "success" });
+      }}
+    />
   );
 }
 
@@ -180,13 +177,12 @@ function SavedSearchEntry({ organizationId, entry }: { organizationId: string; e
   };
 
   return (
-    <li className="flex items-center gap-1">
+    <li className="flex max-w-full items-center rounded-md bg-surface-sunken text-sm">
       <Link
         to={href}
-        className="flex min-h-hit min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-accent hover:underline focus-visible:focus-ring"
+        className="flex min-h-control-sm min-w-0 items-center rounded-md px-2 hover:underline focus-visible:focus-ring"
       >
-        <Bookmark aria-hidden="true" className="size-icon-md shrink-0" />
-        <span className="truncate" title={entry.name}>
+        <span className="max-w-card truncate" title={entry.name}>
           {entry.name}
         </span>
       </Link>
@@ -221,30 +217,30 @@ function SavedSearchEntry({ organizationId, entry }: { organizationId: string; e
   );
 }
 
-export function SavedSearchList({ organizationId }: { organizationId: string }) {
+export function SavedSearchChips({ organizationId }: { organizationId: string }) {
   const { t } = useTranslation();
   const saved = useSavedSearches(organizationId);
+  if (saved.isError) {
+    return (
+      <p className="text-sm text-text-muted">
+        {t("search.saved.loadFailed")}{" "}
+        <Button variant="outline" size="sm" onClick={() => void saved.refetch()}>
+          {t("ui.retry")}
+        </Button>
+      </p>
+    );
+  }
+  if (!saved.data || saved.data.length === 0) return null;
   return (
-    <section aria-labelledby="saved-searches" className="flex flex-col gap-1">
-      <h2 id="saved-searches" className="text-xs font-semibold text-text-muted uppercase">
-        {t("search.savedSearches")}
+    <section aria-labelledby="saved-searches" className="flex flex-wrap items-center gap-2">
+      <h2 id="saved-searches" className="text-sm text-text-muted">
+        {t("search.saved.label")}
       </h2>
-      {saved.isError ? (
-        <p className="text-sm text-text-muted">
-          {t("search.saved.loadFailed")}{" "}
-          <Button variant="outline" size="sm" onClick={() => void saved.refetch()}>
-            {t("ui.retry")}
-          </Button>
-        </p>
-      ) : saved.data && saved.data.length === 0 ? (
-        <p className="text-sm text-text-muted">{t("search.saved.none")}</p>
-      ) : (
-        <ul className="flex flex-col">
-          {(saved.data ?? []).map((entry) => (
-            <SavedSearchEntry key={entry.id} organizationId={organizationId} entry={entry} />
-          ))}
-        </ul>
-      )}
+      <ul className="flex flex-wrap items-center gap-2">
+        {saved.data.map((entry) => (
+          <SavedSearchEntry key={entry.id} organizationId={organizationId} entry={entry} />
+        ))}
+      </ul>
     </section>
   );
 }

@@ -113,60 +113,57 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
     <article
       data-search-result=""
       tabIndex={-1}
-      className="flex gap-3 border-b border-border py-4 outline-none"
+      className="flex flex-col gap-1 border-b border-border py-3 outline-none"
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-text-muted">
-        <Icon aria-hidden="true" className="size-icon-md" />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-text-muted">
-          {path.map((part, index) => (
-            <span key={part.id} className="flex min-w-0 items-center gap-1">
-              {index > 0 ? <ChevronRight aria-hidden="true" className="size-icon-sm shrink-0" /> : null}
-              <span className="truncate" title={part.title}>
-                {part.title}
-              </span>
+      <p className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-text-muted">
+        <Icon aria-hidden="true" className="mr-1 size-icon-sm shrink-0" />
+        {path.map((part, index) => (
+          <span key={part.id} className="flex min-w-0 items-center gap-1">
+            {index > 0 ? <ChevronRight aria-hidden="true" className="size-icon-sm shrink-0" /> : null}
+            <span className="truncate" title={part.title}>
+              {part.title}
             </span>
-          ))}
+          </span>
+        ))}
+      </p>
+      <h3 className="text-content font-semibold">
+        {target ? (
+          <Link
+            to={target.to}
+            search={target.attachment ? { attachment: target.attachment } : {}}
+            hash={target.hash}
+            className="text-text hover:underline focus-visible:focus-ring"
+          >
+            {title}
+          </Link>
+        ) : (
+          <span className="text-text">{title}</span>
+        )}
+      </h3>
+      {target ? null : <p className="text-sm text-text-muted">{t("search.topicOutsideSpace")}</p>}
+      {hit.type === "whiteboard" ? (
+        <WhiteboardPreview
+          itemId={hit.itemId}
+          label={t("whiteboards.previewOf", { title: hit.title })}
+          className="aspect-video w-field max-w-full"
+        />
+      ) : null}
+      {hit.excerpt.length > 0 ? (
+        <p className="line-clamp-3">
+          <Highlighted parts={hit.excerpt} />
         </p>
-        <h3 className="text-content font-semibold">
-          {target ? (
-            <Link
-              to={target.to}
-              search={target.attachment ? { attachment: target.attachment } : {}}
-              hash={target.hash}
-              className="text-text hover:underline focus-visible:focus-ring"
-            >
-              {title}
-            </Link>
-          ) : (
-            <span className="text-text">{title}</span>
-          )}
-        </h3>
-        {target ? null : <p className="text-sm text-text-muted">{t("search.topicOutsideSpace")}</p>}
-        {hit.type === "whiteboard" ? (
-          <WhiteboardPreview
-            itemId={hit.itemId}
-            label={t("whiteboards.previewOf", { title: hit.title })}
-            className="aspect-video w-field max-w-full"
-          />
-        ) : null}
-        {hit.excerpt.length > 0 ? (
-          <p className="line-clamp-3 text-text-muted">
-            <Highlighted parts={hit.excerpt} />
-          </p>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-muted">
-          {hit.status ? <StatusBadge status={hit.status} /> : null}
-          {hit.archived ? <Badge>{t("search.archived")}</Badge> : null}
-          <span>{typeLabel(t, hit.type)}</span>
-          {hit.author ? <span>{hit.author.name}</span> : null}
-          <span>{t("search.updated", { date: format.date(hit.updatedAt) })}</span>
-          {hit.labels.slice(0, 3).map((label) => (
-            <Badge key={label}>{label}</Badge>
-          ))}
-        </div>
-      </div>
+      ) : null}
+      <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-text-muted">
+        <span>{[typeLabel(t, hit.type), hit.author?.name].filter(Boolean).join(" · ")} ·</span>
+        <time dateTime={hit.updatedAt} title={format.dateTime(hit.updatedAt)}>
+          {format.calendarDate(hit.updatedAt)}
+        </time>
+        {hit.status ? <StatusBadge status={hit.status} /> : null}
+        {hit.archived ? <Badge>{t("search.archived")}</Badge> : null}
+        {hit.labels.slice(0, 3).map((label) => (
+          <Badge key={label}>{label}</Badge>
+        ))}
+      </p>
     </article>
   );
 }

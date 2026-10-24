@@ -390,13 +390,9 @@ describe("the search page", () => {
     expect(sent.get("spaceIds")).toBe(SPACE);
     expect(sent.get("sort")).toBe("newest");
     expect(Date.now() - Date.parse(sent.get("updatedAfter") ?? "")).toBeGreaterThan(6 * 86_400_000);
-    const filters = screen.getByRole("complementary", { name: "Filters" });
-    expect(
-      within(filters)
-        .getByRole("checkbox", { name: /Operations/ })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
-    await userEvent.click(within(filters).getByRole("checkbox", { name: /Security/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Space: Operations" }));
+    expect(screen.getByRole("button", { name: /^Operations/ }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: /^Security/ }));
     await waitFor(() =>
       expect(new URL(window.location.href).searchParams.get("spaces")).toBe(`${SPACE},${OTHER_SPACE}`),
     );
@@ -409,9 +405,15 @@ describe("the search page", () => {
     const promise = field.getAttribute("placeholder");
     expect(promise).toBe("Search pages, blog posts, comments, attachments and meetings");
     expect(await screen.findByText(promise ?? "")).toBeTruthy();
-    const filters = screen.getByRole("complementary", { name: "Filters" });
-    expect(within(filters).getByRole("checkbox", { name: "Page" })).toBeTruthy();
-    expect(within(filters).getByRole("radio", { name: "Last 7 days" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Type" }));
+    expect(screen.getByRole("button", { name: "Page" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "Updated" }));
+    expect(screen.getByRole("button", { name: "Last 7 days" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "More search actions" }));
+    expect(screen.getByRole("menuitem", { name: "Operators" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(await screen.findByRole("button", { name: "tls certificate" })).toBeTruthy();
     window.history.replaceState(null, "", "/");
   });

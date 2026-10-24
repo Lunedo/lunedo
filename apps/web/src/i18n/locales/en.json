@@ -6338,10 +6338,6 @@
         "title": "No open tasks",
         "description": "Tasks assigned to you in published content appear here."
       },
-      "overdue": {
-        "title": "Nothing overdue",
-        "description": "None of your open tasks is past its due date."
-      },
       "done": {
         "title": "No done tasks yet",
         "description": "Tasks you or others check off appear here."
@@ -7061,9 +7057,7 @@
       "members": "{count, plural, one {# member} other {# members}}",
       "membersLabel": "Members of the series",
       "template": "Template: {name}",
-      "settings": "Series settings",
       "more": "More actions for the series",
-      "noAccess": "No access",
       "withoutAccessTitle": "{count, plural, one {A member cannot read the meetings} other {# members cannot read the meetings}}",
       "withoutAccess": "{names} has no role in this space. Ask a space admin to give access.",
       "withoutAccessAdmin": "{names} has no role in this space. Give access so the notes can be read.",
@@ -7075,17 +7069,12 @@
       "continuedToast": "Series continued.",
       "endFailed": "The series could not be changed",
       "delete": "Move series to trash",
-      "nextAt": "Next meeting · {date}",
-      "nextUnscheduled": "Next meeting · not scheduled yet",
       "openTopics": "{count, plural, one {# open topic} other {# open topics}}",
       "invited": "{count, plural, one {# attendee} other {# attendees}}",
       "attended": "{count} of {total} attended",
-      "nextActions": "Plan",
       "openAgenda": "Open agenda",
-      "meetingsTitle": "Meetings",
       "meetingsFailed": "The meetings could not be loaded",
       "loadOlder": "Show older meetings",
-      "openTasks": "Open tasks",
       "noTasksTitle": "No open tasks",
       "noTasksDescription": "Tasks written in the meetings of this series appear here until they are done.",
       "next": "Next meeting",
@@ -7106,12 +7095,6 @@
       "label": "Meeting details",
       "loadFailed": "The meeting details could not be loaded",
       "when": "{start} to {end}",
-      "state": {
-        "upcoming": "This is the next meeting of the series.",
-        "closed": "This meeting is closed. The notes are available to all attendees.",
-        "reopened": "This meeting was reopened. Close it again when the notes are complete.",
-        "skipped": "This meeting was skipped. Its agenda moved to the following meeting."
-      },
       "noAccessTitle": "{count, plural, one {An attendee cannot read this page} other {# attendees cannot read this page}}",
       "noAccess": "{names} has no access. Share the page so the notes reach everyone.",
       "share": "Share page",
@@ -7165,8 +7148,6 @@
     "move": {
       "action": "Move meeting",
       "title": "Move the meeting",
-      "description": "Choose the new date and time, in {timeZone}. The rhythm of the series stays.",
-      "descriptionWithRhythm": "Choose the new date and time, in {timeZone}. The rhythm of the series stays.",
       "confirm": "Move meeting",
       "done": "Meeting moved.",
       "failed": "The meeting could not be moved",
@@ -7199,7 +7180,6 @@
       "status": "Status",
       "statusFilter": {
         "open": "Open",
-        "closed": "Closed",
         "all": "All"
       },
       "clearFilters": "Clear filters",
@@ -7255,17 +7235,7 @@
       "saveFailed": "The topic could not be saved"
     },
     "decisions": {
-      "title": "Decision log",
-      "filter": "Filter decisions",
-      "topic": "Topic",
-      "anyTopic": "Any topic",
-      "text": "Text contains",
-      "textExample": "BitLocker",
-      "from": "Meetings from",
-      "to": "Meetings until",
       "loadFailed": "The decision log could not be loaded",
-      "noMatch": "No decision matches the filters",
-      "clearFilters": "Clear filters",
       "empty": "No decisions yet. Record one in a meeting with /decision.",
       "noStatement": "Decision without text"
     },
@@ -9180,7 +9150,6 @@
     "titleWithQuery": "Search: {query}",
     "field": "Search",
     "placeholder": "Search pages, blog posts, comments, attachments and meetings",
-    "submit": "Search",
     "results": "Results",
     "total": "{count, plural, one {# result} other {# results}}",
     "failed": "Search failed",
@@ -9197,7 +9166,6 @@
     "decisionIn": "Decision in “{title}”",
     "topicOutsideSpace": "Running topics open in their space. Ask a space administrator for access to the space to open this one.",
     "archived": "Archived",
-    "updated": "Updated {date}",
     "savedSearches": "Saved searches",
     "types": {
       "page": "Page",
@@ -9223,8 +9191,6 @@
       "spaces": "Spaces",
       "contentBy": "Show content by this person",
       "searchAllSpaces": "Search all spaces",
-      "searchAll": "Search all results for “{query}”",
-      "searchAllHint": "Opens the search page with filters",
       "more": "More",
       "failed": "Search failed.",
       "nothingInSpace": "Nothing in {space} matches “{query}”.",
@@ -9234,7 +9200,8 @@
       "allSpaces": "All spaces",
       "move": "move",
       "open": "open",
-      "newTab": "open in a new tab"
+      "newTab": "open in a new tab",
+      "allResults": "All results for “{query}”"
     },
     "saved": {
       "save": "Save search",
@@ -9254,15 +9221,10 @@
       "renameTitle": "Rename saved search",
       "delete": "Delete saved search",
       "loadFailed": "Saved searches could not be loaded.",
-      "none": "Save a search to run it again later. Only you see your saved searches."
+      "saveAction": "Save search",
+      "label": "Saved:"
     },
     "filters": {
-      "title": "Filters",
-      "button": "Filters",
-      "buttonWithCount": "Filters · {count}",
-      "showFewer": "Show fewer",
-      "showAll": "Show all {count}",
-      "clearOthers": "{count, plural, one {Remove # other selected value} other {Remove # other selected values}}",
       "space": "Space",
       "type": "Type",
       "updated": "Updated",
@@ -9276,7 +9238,12 @@
       "findAuthor": "Search people",
       "language": "Language",
       "includeArchived": "Include archived content",
-      "clear": "{count, plural, one {Clear # filter} other {Clear # filters}}"
+      "reset": "Reset filters",
+      "otherSpace": "Chosen space",
+      "chosenPerson": "Chosen person",
+      "otherStatus": "Chosen status",
+      "options": "Options",
+      "more": "More"
     },
     "sort": {
       "label": "Sort",
@@ -9318,7 +9285,8 @@
       "allSpaces": "Search all spaces",
       "includeArchived": "Include archived content",
       "clearFilters": "{count, plural, one {Clear # filter} other {Clear # filters}}"
-    }
+    },
+    "moreActions": "More search actions"
   },
   "announcements": {
     "title": "Announcements",

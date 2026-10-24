@@ -55,4 +55,28 @@ describe("FilterMenu", () => {
     expect(search).toHaveBeenCalledWith("L");
     expect(screen.getByText("Nobody found")).toBeTruthy();
   });
+
+  it("toggles several values without closing and shows how many are chosen", async () => {
+    const user = userEvent.setup();
+    const toggle = vi.fn();
+    renderUi(
+      <FilterMenu
+        multiple
+        label="Space"
+        selected={["it", "hr"]}
+        onToggle={toggle}
+        options={[
+          { value: "it", label: "IT Operations", group: "Spaces" },
+          { value: "hr", label: "People", group: "Spaces" },
+          { value: "archived", label: "Include archived", group: "Options" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Space: 2" }));
+    expect(screen.getByText("Options")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "People" }));
+    expect(toggle).toHaveBeenCalledWith("hr", false);
+    await user.click(screen.getByRole("button", { name: "Include archived" }));
+    expect(toggle).toHaveBeenCalledWith("archived", true);
+  });
 });

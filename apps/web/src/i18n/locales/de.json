@@ -6338,10 +6338,6 @@
         "title": "Keine offenen Aufgaben",
         "description": "Aufgaben, die dir in veröffentlichten Inhalten zugewiesen werden, erscheinen hier."
       },
-      "overdue": {
-        "title": "Nichts überfällig",
-        "description": "Keine deiner offenen Aufgaben hat ihr Fälligkeitsdatum überschritten."
-      },
       "done": {
         "title": "Noch keine erledigten Aufgaben",
         "description": "Aufgaben, die du oder andere abhaken, erscheinen hier."
@@ -7061,9 +7057,7 @@
       "members": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
       "membersLabel": "Mitglieder der Serie",
       "template": "Vorlage: {name}",
-      "settings": "Serieneinstellungen",
       "more": "Weitere Aktionen für die Serie",
-      "noAccess": "Kein Zugriff",
       "withoutAccessTitle": "{count, plural, one {Ein Mitglied kann die Besprechungen nicht lesen} other {# Mitglieder können die Besprechungen nicht lesen}}",
       "withoutAccess": "{names} hat keine Rolle in diesem Space. Bitte einen Space-Admin, Zugriff zu geben.",
       "withoutAccessAdmin": "{names} hat keine Rolle in diesem Space. Gib Zugriff, damit die Notizen gelesen werden können.",
@@ -7075,17 +7069,12 @@
       "continuedToast": "Serie fortgesetzt.",
       "endFailed": "Die Serie konnte nicht geändert werden",
       "delete": "Serie in den Papierkorb verschieben",
-      "nextAt": "Nächste Besprechung · {date}",
-      "nextUnscheduled": "Nächste Besprechung · noch nicht geplant",
       "openTopics": "{count, plural, one {# offenes Thema} other {# offene Themen}}",
       "invited": "{count, plural, one {# teilnehmende Person} other {# Teilnehmende}}",
       "attended": "{count} von {total} anwesend",
-      "nextActions": "Planen",
       "openAgenda": "Agenda öffnen",
-      "meetingsTitle": "Besprechungen",
       "meetingsFailed": "Die Besprechungen konnten nicht geladen werden",
       "loadOlder": "Ältere Besprechungen zeigen",
-      "openTasks": "Offene Aufgaben",
       "noTasksTitle": "Keine offenen Aufgaben",
       "noTasksDescription": "Aufgaben aus den Besprechungen dieser Serie erscheinen hier, bis sie erledigt sind.",
       "next": "Nächste Besprechung",
@@ -7106,12 +7095,6 @@
       "label": "Besprechungsdetails",
       "loadFailed": "Die Besprechungsdetails konnten nicht geladen werden",
       "when": "{start} bis {end}",
-      "state": {
-        "upcoming": "Das ist die nächste Besprechung der Serie.",
-        "closed": "Diese Besprechung ist abgeschlossen. Die Notizen stehen allen Teilnehmenden zur Verfügung.",
-        "reopened": "Diese Besprechung wurde wieder geöffnet. Schließe sie erneut, wenn die Notizen vollständig sind.",
-        "skipped": "Diese Besprechung wurde ausgelassen. Ihre Agenda ist in die folgende Besprechung gewandert."
-      },
       "noAccessTitle": "{count, plural, one {Eine teilnehmende Person kann diese Seite nicht lesen} other {# Teilnehmende können diese Seite nicht lesen}}",
       "noAccess": "{names} hat keinen Zugriff. Teile die Seite, damit die Notizen alle erreichen.",
       "share": "Seite teilen",
@@ -7165,8 +7148,6 @@
     "move": {
       "action": "Besprechung verschieben",
       "title": "Besprechung verschieben",
-      "description": "Wähle das neue Datum und die Uhrzeit, in {timeZone}. Der Rhythmus der Serie bleibt.",
-      "descriptionWithRhythm": "Wähle das neue Datum und die Uhrzeit, in {timeZone}. Der Rhythmus der Serie bleibt.",
       "confirm": "Besprechung verschieben",
       "done": "Besprechung verschoben.",
       "failed": "Die Besprechung konnte nicht verschoben werden",
@@ -7199,7 +7180,6 @@
       "status": "Status",
       "statusFilter": {
         "open": "Offen",
-        "closed": "Geschlossen",
         "all": "Alle"
       },
       "clearFilters": "Filter zurücksetzen",
@@ -7255,17 +7235,7 @@
       "saveFailed": "Das Thema konnte nicht gespeichert werden"
     },
     "decisions": {
-      "title": "Entscheidungsprotokoll",
-      "filter": "Entscheidungen filtern",
-      "topic": "Thema",
-      "anyTopic": "Alle Themen",
-      "text": "Text enthält",
-      "textExample": "BitLocker",
-      "from": "Besprechungen ab",
-      "to": "Besprechungen bis",
       "loadFailed": "Das Entscheidungsprotokoll konnte nicht geladen werden",
-      "noMatch": "Keine Entscheidung passt zu den Filtern",
-      "clearFilters": "Filter zurücksetzen",
       "empty": "Noch keine Entscheidungen. Halte eine in einer Besprechung mit /Entscheidung fest.",
       "noStatement": "Entscheidung ohne Text"
     },
@@ -9180,7 +9150,6 @@
     "titleWithQuery": "Suche: {query}",
     "field": "Suchbegriff",
     "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
-    "submit": "Suchen",
     "results": "Ergebnisse",
     "total": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
     "failed": "Die Suche ist fehlgeschlagen",
@@ -9197,7 +9166,6 @@
     "decisionIn": "Entscheidung in „{title}“",
     "topicOutsideSpace": "Laufende Themen öffnen sich in ihrem Space. Bitte die Space-Administration um Zugriff auf den Space, um dieses Thema zu öffnen.",
     "archived": "Archiviert",
-    "updated": "Geändert am {date}",
     "savedSearches": "Gespeicherte Suchen",
     "types": {
       "page": "Seite",
@@ -9223,8 +9191,6 @@
       "spaces": "Spaces",
       "contentBy": "Inhalte dieser Person anzeigen",
       "searchAllSpaces": "In allen Spaces suchen",
-      "searchAll": "Alle Ergebnisse für „{query}“ anzeigen",
-      "searchAllHint": "Öffnet die Suchseite mit Filtern",
       "more": "Mehr",
       "failed": "Die Suche ist fehlgeschlagen.",
       "nothingInSpace": "In {space} passt nichts zu „{query}“.",
@@ -9234,7 +9200,8 @@
       "allSpaces": "Alle Spaces",
       "move": "bewegen",
       "open": "öffnen",
-      "newTab": "in neuem Tab öffnen"
+      "newTab": "in neuem Tab öffnen",
+      "allResults": "Alle Ergebnisse für „{query}“"
     },
     "saved": {
       "save": "Suche speichern",
@@ -9254,15 +9221,10 @@
       "renameTitle": "Gespeicherte Suche umbenennen",
       "delete": "Gespeicherte Suche löschen",
       "loadFailed": "Gespeicherte Suchen konnten nicht geladen werden.",
-      "none": "Speichere eine Suche, um sie später erneut auszuführen. Nur du siehst deine gespeicherten Suchen."
+      "saveAction": "Suche speichern",
+      "label": "Gespeichert:"
     },
     "filters": {
-      "title": "Filter",
-      "button": "Filter",
-      "buttonWithCount": "Filter · {count}",
-      "showFewer": "Weniger anzeigen",
-      "showAll": "Alle {count} anzeigen",
-      "clearOthers": "{count, plural, one {# weiteren ausgewählten Wert entfernen} other {# weitere ausgewählte Werte entfernen}}",
       "space": "Space",
       "type": "Art",
       "updated": "Geändert",
@@ -9272,11 +9234,16 @@
       "lastYear": "Letzte 12 Monate",
       "label": "Label",
       "status": "Seitenstatus",
-      "author": "Verfasst von",
+      "author": "Von",
       "findAuthor": "Personen suchen",
       "language": "Sprache",
       "includeArchived": "Archivierte Inhalte einbeziehen",
-      "clear": "{count, plural, one {# Filter zurücksetzen} other {# Filter zurücksetzen}}"
+      "reset": "Filter zurücksetzen",
+      "otherSpace": "Gewählter Space",
+      "chosenPerson": "Gewählte Person",
+      "otherStatus": "Gewählter Status",
+      "options": "Optionen",
+      "more": "Weitere"
     },
     "sort": {
       "label": "Sortierung",
@@ -9318,7 +9285,8 @@
       "allSpaces": "In allen Spaces suchen",
       "includeArchived": "Archivierte Inhalte einbeziehen",
       "clearFilters": "{count, plural, one {# Filter zurücksetzen} other {# Filter zurücksetzen}}"
-    }
+    },
+    "moreActions": "Weitere Suchaktionen"
   },
   "announcements": {
     "title": "Ankündigungen",

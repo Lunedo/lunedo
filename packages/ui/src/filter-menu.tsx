@@ -12,38 +12,60 @@ export interface FilterOption {
   label: string;
   count?: number;
   description?: string;
+  group?: string;
 }
 
-export interface FilterMenuProps {
+interface FilterMenuCommonProps {
   label: string;
-  value: string;
   options: FilterOption[];
-  onValueChange: (value: string) => void;
-  defaultValue?: string;
   valueLabel?: string;
   search?: { value: string; onChange: (value: string) => void; placeholder: string };
   emptyText?: string;
 }
 
-const CHIP =
-  "inline-flex h-control-field max-w-full items-center gap-1.5 rounded-md border bg-control px-3 text-sm whitespace-nowrap hover:bg-hover focus-visible:focus-ring";
+export interface SingleFilterMenuProps extends FilterMenuCommonProps {
+  multiple?: false;
+  value: string;
+  onValueChange: (value: string) => void;
+  defaultValue?: string;
+}
 
-export function FilterMenu({
-  label,
-  value,
-  options,
-  onValueChange,
-  defaultValue = "",
-  valueLabel,
-  search,
-  emptyText,
-}: FilterMenuProps) {
+export interface MultiFilterMenuProps extends FilterMenuCommonProps {
+  multiple: true;
+  selected: readonly string[];
+  onToggle: (value: string, on: boolean) => void;
+}
+
+export type FilterMenuProps = SingleFilterMenuProps | MultiFilterMenuProps;
+
+const CHIP =
+  "inline-flex h-control-field max-w-full items-center gap-2 rounded-md border bg-control px-3 text-sm whitespace-nowrap hover:bg-hover focus-visible:focus-ring";
+
+export function FilterMenu(props: FilterMenuProps) {
+  const { label, options, valueLabel, search, emptyText } = props;
   const labels = useUiLabels();
   const [open, setOpen] = useState(false);
   const listId = useId();
   const list = useRef<HTMLUListElement>(null);
-  const active = value !== defaultValue;
-  const shown = valueLabel ?? options.find((option) => option.value === value)?.label;
+  const isSelected = (value: string) =>
+    props.multiple ? props.selected.includes(value) : props.value === value;
+  const active = props.multiple ? props.selected.length > 0 : props.value !== (props.defaultValue ?? "");
+  const chosen = props.multiple
+    ? props.selected.length === 1
+      ? options.find((option) => option.value === props.selected[0])?.label
+      : props.selected.length > 1
+        ? String(props.selected.length)
+        : undefined
+    : options.find((option) => option.value === props.value)?.label;
+  const shown = valueLabel ?? chosen;
+  const choose = (value: string) => {
+    if (props.multiple) {
+      props.onToggle(value, !props.selected.includes(value));
+      return;
+    }
+    props.onValueChange(value);
+    setOpen(false);
+  };
   const move = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const buttons = Array.from(list.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
@@ -109,17 +131,21 @@ export function FilterMenu({
             {options.length === 0 ? (
               <li className="px-2 py-2 text-sm text-text-muted">{emptyText ?? labels.noMatches}</li>
             ) : (
-              options.map((option) => {
-                const selected = option.value === value;
+              options.map((option, index) => {
+                const selected = isSelected(option.value);
+                const heading =
+                  option.group && option.group !== options[index - 1]?.group ? option.group : null;
                 return (
                   <li key={option.value}>
+                    {heading ? (
+                      <p className="px-2 pt-2 pb-1 text-xs font-semibold tracking-label text-text-muted uppercase">
+                        {heading}
+                      </p>
+                    ) : null}
                     <button
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => {
-                        onValueChange(option.value);
-                        setOpen(false);
-                      }}
+                      onClick={() => choose(option.value)}
                       className={classNames(
                         WIDE_HIT_AREA,
                         "flex min-h-row w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-hover focus-visible:bg-hover focus-visible:outline-none",
