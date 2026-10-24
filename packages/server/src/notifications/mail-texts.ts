@@ -153,7 +153,7 @@ const german: Record<ContentNotificationType, Line> = {
       ? `Der geplante Beitrag ${text(p.itemTitle)} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.`
       : `Der geplante Beitrag ${text(p.itemTitle)} wartet auf Freigabe, weil ${c.actor ?? "die Person, die ihn geplant hat,"} ihn nicht mehr bearbeiten kann.`,
   "page.shared": (p, c) =>
-    `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} ${text(p.itemTitle)} für dich freigegeben: ${
+    `${people("de", c)} ${plural("de", c) ? "haben" : "hat"} ${text(p.itemTitle)} mit dir geteilt: ${
       p.role === "editor"
         ? "Du kannst die Seite bearbeiten"
         : p.role === "commenter"

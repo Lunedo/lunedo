@@ -193,7 +193,7 @@ const de: Texts = {
     body: text(params.taskText),
   }),
   "page.shared": ({ params, actor }) => ({
-    title: `${actor ?? "Jemand"} hat eine Seite für dich freigegeben`,
+    title: `${actor ?? "Jemand"} hat eine Seite mit dir geteilt`,
     body: text(params.itemTitle),
   }),
   "access.requested": ({ params }) => ({

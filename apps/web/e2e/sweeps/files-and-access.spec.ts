@@ -54,13 +54,13 @@ test("sharing screens pass the accessibility check in English and German, light 
   });
   await sweepAppearances(page, "share-dialog", async () => {
     await page.goto(pagePath);
-    await page.getByRole("button", { name: /^(Share|Freigeben)$/ }).click();
+    await page.getByRole("button", { name: /^(Share|Teilen)$/ }).click();
     await expect(page.getByRole("dialog").getByText(colleague.name).first()).toBeVisible();
   });
   await sweepAppearances(page, "share-links", async () => {
     await page.goto(pagePath);
-    await page.getByRole("button", { name: /^(Share|Freigeben)$/ }).click();
-    await page.getByRole("tab", { name: /^(Share links|Freigabelinks)$/ }).click();
+    await page.getByRole("button", { name: /^(Share|Teilen)$/ }).click();
+    await page.getByRole("tab", { name: /^(Share links|Links)$/ }).click();
     await expect(
       page.getByRole("dialog").getByRole("button", { name: /^(Copy link|Link kopieren)$/ }),
     ).toBeVisible();

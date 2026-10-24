@@ -447,7 +447,7 @@ shot(
   "owner",
   async (page) => {
     await visit(page, world().personal.salary.path);
-    await page.getByRole("button", { name: /^(Freigeben|Share)$/ }).click();
+    await page.getByRole("button", { name: /^(Teilen|Share)$/ }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
   },
 );

@@ -1366,10 +1366,10 @@
     "requestNotFound": "Die Zugriffsanfrage wurde zurückgezogen oder entfernt. Lade die Seite neu.",
     "personNotFound": "Die Person wurde nicht gefunden. Suche erneut nach dem Namen.",
     "nameTaken": "Eine Datei mit diesem Namen gibt es bereits.",
-    "alreadyShared": "Die Seite ist bereits für sie freigegeben. Ändere stattdessen ihren Eintrag.",
+    "alreadyShared": "Die Seite ist bereits mit ihnen geteilt. Ändere stattdessen ihren Eintrag.",
     "restrictionWithoutViewers": "Eine eingeschränkte Seite braucht mindestens eine Person oder Gruppe, die sie ansehen kann. Füge zuerst jemanden hinzu.",
     "restrictionWithoutEditors": "Eine zum Bearbeiten eingeschränkte Seite braucht mindestens eine Person oder Gruppe, die sie bearbeiten kann. Füge zuerst jemanden mit „Kann bearbeiten“ hinzu.",
-    "shareLinksDisabled": "Freigabelinks sind in dieser Organisation ausgeschaltet. Gib die Seite stattdessen für Personen frei.",
+    "shareLinksDisabled": "Links sind in dieser Organisation ausgeschaltet. Teile die Seite stattdessen mit Personen.",
     "anyoneLinksDisabled": "Links für alle sind in dieser Organisation ausgeschaltet. Wähle einen Link für angemeldete Personen.",
     "restrictedPage": "Eine eingeschränkte Seite kann nicht über einen Link für alle geöffnet werden. Wähle einen Link für bestimmte Personen.",
     "requestClosed": "Über die Zugriffsanfrage wurde bereits entschieden oder sie wurde zurückgezogen. Lade die Seite neu.",
@@ -1422,9 +1422,9 @@
     "comparisonWithheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen. Übernimm zuerst die Einschränkungen bei den Berechtigungsabweichungen.",
     "shareBeyondOwnAccess": "Deine eigene Rolle im Space gibt dir diesen Zugriff auf die Seite nicht. Wähle eine niedrigere Rolle oder frag einen Space-Admin.",
     "shareBeyondOwnAccessBelow": "Deine eigene Rolle im Space deckt {count, plural, one {# Seite} other {# Seiten}} darunter nicht ab. Gib nur diese Seite frei, wähle eine niedrigere Rolle oder frag einen Space-Admin.",
-    "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite freigeben kann.",
+    "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite teilen kann.",
     "confidentialSharing": "Der Inhalt gibt Gruppen oder über breite Links Zugriff. Entferne diese Einträge und verschiebe ihn dann in den vertraulichen Space.",
-    "confidentialSharingPages": "{count, plural, one {# Seite gibt} other {# Seiten geben}} Gruppen oder über breite Links Zugriff. Entferne die Gruppen aus Freigaben, Links und Beschränkungen und widerrufe die breiten Links, dann verschiebe erneut.",
+    "confidentialSharingPages": "{count, plural, one {# Seite gibt} other {# Seiten geben}} Gruppen oder über breite Links Zugriff. Entferne die Gruppen aus Zugriffslisten, Links und Beschränkungen und widerrufe die breiten Links, dann verschiebe erneut.",
     "restrictedParentInTrash": "Diese Seite lag unter einer eingeschränkten Seite. Stelle sie zusammen mit den Seiten darüber wieder her oder frage Space- oder Organisationsadministratoren.",
     "restrictedParentInTrashAsk": "Diese Seite lag unter einer eingeschränkten Seite. Bitte Space- oder Organisationsadministratoren, zuerst die Seiten darüber wiederherzustellen.",
     "restrictedParentInTrashNamed": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Stelle die Seite zusammen mit den Seiten darüber wieder her, damit diese Einschränkung bleibt.",
@@ -2360,12 +2360,12 @@
         "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen und Versionen, die eine Seitenversion noch zeigt, etwa Zeichnungen, bleiben immer erhalten und zählen nicht mit."
       },
       "sharing_shareLinks": {
-        "label": "Freigabelinks",
-        "description": "Wer eine Seite freigeben darf, kann Links für bestimmte Personen, die Organisation oder alle Angemeldeten erstellen."
+        "label": "Links zum Teilen",
+        "description": "Wer eine Seite teilen darf, kann Links für bestimmte Personen, die Organisation oder alle Angemeldeten erstellen."
       },
       "sharing_anyoneLinks": {
         "label": "Links für alle ohne Anmeldung",
-        "description": "Wer den Link öffnet, sieht nur die freigegebene Seite. Jeder Link braucht ein Ablaufdatum. Eingeschränkte Seiten bekommen nie solche Links."
+        "description": "Wer den Link öffnet, sieht nur die geteilte Seite. Jeder Link braucht ein Ablaufdatum. Eingeschränkte Seiten bekommen nie solche Links."
       },
       "sharing_anyoneLinkMaxDays": {
         "label": "Längste Gültigkeit eines Links für alle",
@@ -2373,7 +2373,7 @@
       },
       "sharing_membersInviteGuests": {
         "label": "Mitglieder können Gäste zu einer Seite einladen",
-        "description": "Wenn eingeschaltet, kann jede Person, die eine Seite freigeben darf, jemanden per E-Mail als Gast einladen. Die Administration der Organisation kann das immer."
+        "description": "Wenn eingeschaltet, kann jede Person, die eine Seite teilen darf, jemanden per E-Mail als Gast einladen. Die Administration der Organisation kann das immer."
       },
       "files_keepVersionsMaximum": {
         "label": "Höchstens behaltene Versionen für Organisationen und Spaces",
@@ -2646,7 +2646,7 @@
       "mailCredentialExpiring": "Zugangsdaten für E-Mail laufen bald ab",
       "mentions": "Erwähnungen von mir",
       "tasks": "Mir zugewiesene Aufgaben",
-      "shares": "Für mich freigegebene Seiten und Antworten auf meine Zugriffsanfragen",
+      "shares": "Mit mir geteilte Seiten und Antworten auf meine Zugriffsanfragen",
       "accessRequests": "Zugriffsanfragen, über die ich entscheide",
       "comments": "Kommentare und Antworten zu beobachteten Inhalten",
       "changes": "Änderungen an beobachteten Inhalten",
@@ -2715,7 +2715,7 @@
         "published": "Neuer Beitrag in {spaceName}: {itemTitle}"
       },
       "page": {
-        "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}.",
+        "shared": "{actor} hat {itemTitle} mit dir geteilt: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}.",
         "statusChanged": "{status, select, none {{actor} hat den Status von {itemTitle} entfernt} other {{actor} hat den Status von {itemTitle} auf {status} gesetzt}}"
       },
       "ownership": {
@@ -2825,7 +2825,7 @@
         "muted": "Stummgeschaltet",
         "notWatching": "Nicht beobachtet"
       },
-      "keepsMentions": "Erwähnungen, Aufgaben, Freigaben und Zugriffsanfragen kommen weiter an",
+      "keepsMentions": "Erwähnungen, Aufgaben, geteilte Seiten und Zugriffsanfragen kommen weiter an",
       "automatic": "Weil du ihn erstellt, bearbeitet oder kommentiert hast",
       "inSpace": "in {space}",
       "kinds": {
@@ -2855,7 +2855,7 @@
       "mutedViaSeries": "Über seine Besprechungsserie stummgeschaltet.",
       "muteTitle": "{name} stummschalten?",
       "muteDescription": "Du bekommst keine Benachrichtigungen mehr aus {name}, auch nicht zu Änderungen und Kommentaren. Du kannst die Stummschaltung jederzeit aufheben.",
-      "keepActionable": "Weiter benachrichtigen bei Erwähnungen, mir zugewiesenen Aufgaben, für mich freigegebenen Seiten und Zugriffsanfragen, über die ich entscheide",
+      "keepActionable": "Weiter benachrichtigen bei Erwähnungen, mir zugewiesenen Aufgaben, mit mir geteilten Seiten und Zugriffsanfragen, über die ich entscheide",
       "muteConfirm": "Stummschalten",
       "cancel": "Abbrechen",
       "menuWatched": "Beobachtungsoptionen für {name}: beobachtet",
@@ -3205,7 +3205,7 @@
       "person": "Person",
       "personHint": "Ein Mitglied oder einen Gast nach Namen suchen.",
       "chooseTitle": "Person auswählen",
-      "choose": "Hier erscheinen ihre Spaces, freigegebenen Seiten und Links, jeweils mit Grund.",
+      "choose": "Hier erscheinen ihre Spaces, geteilten Seiten und Links, jeweils mit Grund.",
       "exportAll": "Alle als CSV exportieren",
       "exportPerson": "Als CSV exportieren",
       "loadFailed": "den Zugriff dieser Person",
@@ -3213,7 +3213,7 @@
       "nothing": "{name} hat keinen Zugriff auf Spaces oder Seiten dieser Organisation.",
       "wholeSpace": "ganzer Space",
       "withPagesBelow": "und die Seiten darunter",
-      "restrictedPages": "{count, plural, one {# freigegebene eingeschränkte Seite, die du nicht lesen kannst} other {# freigegebene eingeschränkte Seiten, die du nicht lesen kannst}}",
+      "restrictedPages": "{count, plural, one {# geteilte eingeschränkte Seite, die du nicht lesen kannst} other {# geteilte eingeschränkte Seiten, die du nicht lesen kannst}}",
       "why": "Warum?",
       "confidentialSpaces": "{count, plural, one {Mitglied in # vertraulichen Space} other {Mitglied in # vertraulichen Spaces}}",
       "inactive": "Ohne Wirkung",
@@ -3901,7 +3901,7 @@
         "restrictionSet": "Seite beschränkt",
         "restrictionRemoved": "Seitenbeschränkung aufgehoben",
         "ownerTransferred": "Besitzer geändert",
-        "shared": "Seite freigegeben",
+        "shared": "Seite geteilt",
         "shareChanged": "Seitenzugriff geändert",
         "unshared": "Seitenzugriff entfernt",
         "guestInvited": "Gast zu einer Seite eingeladen",
@@ -3944,10 +3944,10 @@
         "deletedByModerator": "Kommentar von einem Space-Admin gelöscht"
       },
       "shareLink": {
-        "created": "Freigabelink erstellt",
-        "changed": "Freigabelink geändert",
-        "revoked": "Freigabelink widerrufen",
-        "opened": "Freigabelink geöffnet"
+        "created": "Link erstellt",
+        "changed": "Link geändert",
+        "revoked": "Link widerrufen",
+        "opened": "Link geöffnet"
       },
       "accessRequest": {
         "decided": "Zugriffsanfrage entschieden"
@@ -5163,7 +5163,7 @@
       "from": "Eingebettet von {service}",
       "loadsWhenVisible": "Der Inhalt wird vom Dienst geladen, sobald du dorthin scrollst.",
       "address": "Adresse",
-      "addressHint": "Füge den Freigabelink des Videos, Designs, der Präsentation oder des Dokuments ein.",
+      "addressHint": "Füge den geteilten Link des Videos, Designs, der Präsentation oder des Dokuments ein.",
       "addressInvalid": "Gib eine Adresse ein, die mit https:// oder http:// beginnt.",
       "title": "Titel",
       "titleHint": "Wird mit dem Link im Druck, in Word und dann angezeigt, wenn der Dienst nicht erreichbar ist.",
@@ -5520,7 +5520,7 @@
       "restrictedDescription": "Seiten, die nur ihre Zugriffslisten sehen oder bearbeiten können. Du siehst die Titel, aber nicht den Inhalt. Das Entfernen einer Einschränkung wird im Audit-Log festgehalten.",
       "restrictedFailed": "die eingeschränkten Seiten",
       "noRestrictedTitle": "Keine eingeschränkten Seiten",
-      "noRestricted": "Seiten, die im Freigabedialog eingeschränkt werden, erscheinen hier.",
+      "noRestricted": "Seiten, die beim Teilen eingeschränkt werden, erscheinen hier.",
       "orphaned": "Niemand auf der Liste ist aktiv",
       "viewRestricted": "Ansehen eingeschränkt",
       "editRestricted": "Bearbeiten eingeschränkt",
@@ -5733,7 +5733,7 @@
     "spaceDeleted": "{name} gelöscht",
     "deleteFailed": "Der Space konnte nicht gelöscht werden",
     "collaborationSection": "Zusammenarbeit",
-    "sharingSection": "Freigabe",
+    "sharingSection": "Teilen",
     "filesSection": "Dateien",
     "importsSection": "Importe",
     "importsSectionDescription": "Grenzen für Importe aus Confluence. Den Import-Ordner selbst legt die Person fest, die den Server betreibt.",
@@ -6210,8 +6210,8 @@
     "choosePage": "Startseite",
     "searchPage": "Seite nach Titel suchen",
     "removeOrganizationPage": "Startseite entfernen",
-    "shared": "Für dich freigegeben",
-    "noShared": "Seiten, die andere für dich freigeben, erscheinen hier.",
+    "shared": "Mit dir geteilt",
+    "noShared": "Seiten, die andere mit dir teilen, erscheinen hier.",
     "sharedMeta": "{name}, {when}"
   },
   "starred": {
@@ -6604,15 +6604,15 @@
       "editLosing": "{count, plural, one {# Person kann diese Seite dann nicht mehr bearbeiten} other {# Personen können diese Seite dann nicht mehr bearbeiten}}",
       "loadFailed": "Die Änderung des Zugriffs konnte nicht berechnet werden"
     },
-    "share": "Freigeben",
-    "dialogTitle": "„{title}“ freigeben",
+    "share": "Teilen",
+    "dialogTitle": "„{title}“ teilen",
     "dialogDescription": "Gib Personen Zugriff auf diese Seite, schränke sie ein oder erstelle einen Link.",
     "loadFailed": "wer Zugriff auf diese Seite hat",
     "changeFailed": "Der Zugriff wurde nicht geändert",
     "tabs": {
-      "label": "Freigabe",
-      "people": "Personen und Zugriff",
-      "links": "Freigabelinks"
+      "label": "Teilen",
+      "people": "Personen",
+      "links": "Links"
     },
     "roles": {
       "reader": "Kann lesen",
@@ -6623,16 +6623,16 @@
     },
     "people": {
       "addLabel": "Personen oder Gruppen hinzufügen",
-      "addHint": "Personen außerhalb des Space sehen nur, was du für sie freigibst, nicht den Space selbst.",
+      "addHint": "Personen außerhalb des Space sehen nur, was du mit ihnen teilst, nicht den Space selbst.",
       "addPlaceholder": "Nach Name oder E-Mail-Adresse suchen",
       "chooseSomeone": "Wähle eine Person oder Gruppe aus den Suchergebnissen.",
       "role": "Zugriff",
       "includeBelow": "Auch die Seiten darunter",
-      "share": "Freigeben",
+      "share": "Teilen",
       "titleVisible": "Hinzugefügte Personen sehen den Titel „{title}“ in ihrer Benachrichtigung.",
-      "shareTitle": "Für {name} freigeben ({role})?",
-      "shareConfirm": "Seite freigeben",
-      "shared": "Für {name} freigegeben",
+      "shareTitle": "Mit {name} teilen ({role})?",
+      "shareConfirm": "Seite teilen",
+      "shared": "Mit {name} geteilt",
       "listTitle": "Personen und Gruppen auf der Zugriffsliste",
       "listHint": "Sie haben zusätzlich zu den Rollen im Space Zugriff auf diese Seite. Ist die Seite eingeschränkt, haben nur sie Zugriff.",
       "empty": "Noch niemand steht auf der Liste. Alle mit einer Rolle im Space haben Zugriff.",
@@ -6655,7 +6655,7 @@
       "removeTitle": "{name} von der Zugriffsliste entfernen?",
       "removeConfirm": "Zugriff entfernen",
       "removed": "{name} von der Liste entfernt",
-      "viaLinkTitle": "Über einen Freigabelink geöffnet",
+      "viaLinkTitle": "Über einen Link geöffnet",
       "viaLink": "Über Link",
       "lastOpened": "zuletzt geöffnet am {date}"
     },
@@ -6707,10 +6707,10 @@
       "spaceOrganization": "{role} im Space als Mitglied der Organisation",
       "spaceInstance": "{role} im Space als Konto der Instanz",
       "spaceVisibility": "{role} durch die Sichtbarkeit des Space",
-      "share": "{role}: Die Seite ist für diese Person freigegeben",
-      "shareAbove": "{role}: freigegeben auf der Seite darüber „{title}“",
-      "shareAboveHidden": "{role}: freigegeben auf einer Seite darüber",
-      "link": "Hat einen Freigabelink geöffnet ({scope})",
+      "share": "{role}: Die Seite ist mit dieser Person geteilt",
+      "shareAbove": "{role}: geteilt auf der Seite darüber „{title}“",
+      "shareAboveHidden": "{role}: geteilt auf einer Seite darüber",
+      "link": "Hat einen Link geöffnet ({scope})",
       "other": "Ein anderer Grund",
       "hiddenPage": "einer Seite, die du nicht sehen kannst",
       "restricted": "Das Ansehen ist bei {pages} eingeschränkt, und die Person steht nicht auf deren Liste.",
@@ -6718,16 +6718,16 @@
       "unpublished": "Die Seite ist noch nicht veröffentlicht und für Lesezugriff noch nicht sichtbar.",
       "inTrash": "Die Seite liegt im Papierkorb.",
       "accountInactive": "Das Konto ist nicht aktiv.",
-      "noAccess": "Keine Rolle im Space, keine Freigabe und kein Link gibt Zugriff.",
+      "noAccess": "Keine Rolle im Space, kein Eintrag auf der Zugriffsliste und kein Link gibt Zugriff.",
       "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space.",
       "inactive": "{reason}. Ohne Wirkung: Die Mitgliedschaft in der Organisation ist beendet."
     },
     "links": {
-      "loadFailed": "die Freigabelinks",
-      "disabledTitle": "Freigabelinks sind ausgeschaltet",
-      "disabled": "Die Administration der Organisation kann sie einschalten. Du kannst die Seite weiterhin für Personen freigeben.",
-      "new": "Link erstellen",
-      "createTitle": "Neuer Freigabelink",
+      "loadFailed": "die Links",
+      "disabledTitle": "Links sind ausgeschaltet",
+      "disabled": "Die Administration der Organisation kann sie einschalten. Du kannst die Seite weiterhin mit Personen teilen.",
+      "new": "Neuer Link",
+      "createTitle": "Neuer Link",
       "scope": "Wer ihn öffnen kann",
       "scopes": {
         "people": "Nur die Personen und Gruppen, die du auswählst",
@@ -6792,8 +6792,8 @@
       "manage": "Zugriff verwalten"
     },
     "sharedPage": {
-      "shared": "Für dich freigegeben",
-      "sharedBy": "Von {name} für dich freigegeben"
+      "shared": "Mit dir geteilt",
+      "sharedBy": "Von {name} mit dir geteilt"
     },
     "requests": {
       "title": "Zugriffsanfrage",
@@ -8946,7 +8946,7 @@
     "indexBuilding": "Die Suche wird vorbereitet",
     "indexBuildingDescription": "Bis alle Seiten erfasst sind, fehlen möglicherweise Inhalte. Versuche es in einigen Minuten erneut.",
     "commentOn": "Kommentar zu „{title}“",
-    "sharedWithYou": "Für dich freigegeben",
+    "sharedWithYou": "Mit dir geteilt",
     "attachmentOn": "{name} in „{title}“",
     "decisionIn": "Entscheidung in „{title}“",
     "topicOutsideSpace": "Laufende Themen öffnen sich in ihrem Space. Bitte die Space-Administration um Zugriff auf den Space, um dieses Thema zu öffnen.",
@@ -9795,7 +9795,7 @@
   },
   "copy": {
     "title": "{title} kopieren",
-    "description": "Die Kopie entsteht aus der veröffentlichten Version, mit Anhängen und Labels. Kommentare, Freigaben und Beschränkungen bleiben beim Original.",
+    "description": "Die Kopie entsteht aus der veröffentlichten Version, mit Anhängen und Labels. Kommentare, geteilter Zugriff und Beschränkungen bleiben beim Original.",
     "space": "Space",
     "parent": "Einordnen unter",
     "parentHint": "Suche Seiten und Ordner nach Titel oder behalte die oberste Ebene.",
@@ -9918,7 +9918,7 @@
       },
       "signedIn": {
         "title": "Alle angemeldeten Personen",
-        "description": "Alle mit einem internen Konto dieser Instanz. Gäste nur, wenn ihnen der Space freigegeben ist."
+        "description": "Alle mit einem internen Konto dieser Instanz. Gäste nur, wenn der Space mit ihnen geteilt ist."
       },
       "groups": {
         "title": "Bestimmte Gruppen",
