@@ -272,6 +272,24 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     expect(await test.services.topics.get(context.lead, oneOff)).toMatchObject({ status: "open" });
   });
 
+  it("moves the topics for one meeting to the next meeting when that meeting is skipped", async () => {
+    const context = await setup();
+    const oneOff = await test.services.topics.create(context.lead, context.seriesId, {
+      title: "Only today",
+      meetingId: context.meetingId,
+      oneOff: true,
+    });
+    const { nextMeetingId } = await test.services.meetings.skip(context.lead, context.meetingId);
+    const next = await test.services.agenda.agenda(context.lead, nextMeetingId);
+    expect(next.topics.map((topic) => topic.id)).toContain(oneOff);
+    expect(await test.services.topics.get(context.lead, oneOff)).toMatchObject({
+      status: "open",
+      raisedIn: { id: nextMeetingId },
+    });
+    await test.services.meetings.close(context.lead, nextMeetingId);
+    expect(await test.services.topics.get(context.lead, oneOff)).toMatchObject({ status: "closed" });
+  });
+
   it("plans an additional meeting outside the rhythm with the same open topics", async () => {
     const context = await setup();
     const [first = ""] = await topics(context, "Firewall");

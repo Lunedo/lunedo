@@ -1247,6 +1247,9 @@ export class MeetingService {
       await tx.execute(
         sql`update meetings set next_meeting_id = ${nextMeetingId} where item_id = ${meetingId}`,
       );
+      await tx.execute(sql`
+        update meeting_topics set raised_in_id = ${nextMeetingId}, updated_at = now()
+        where series_id = ${series.item_id} and one_off and status = 'open' and raised_in_id = ${meetingId}`);
       await signalSpaceChange(tx, { spaceId: series.space_id, kind: "meetings", itemId: series.item_id });
       return { nextMeetingId };
     });
