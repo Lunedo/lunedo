@@ -1593,6 +1593,30 @@ describe("app shell", () => {
     expect(within(without).queryByRole("link", { name: "My space" })).toBeNull();
   });
 
+  it("marks My space as the current entry anywhere in the own personal space", async () => {
+    const personal = { ...space("admin"), key: "PERSONAL1", name: "", personal: true, ownerId: OLIVIA.id };
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/space-keys/PERSONAL1": () => ({ body: { space: personal, redirected: false } }),
+    });
+    await renderAt(`/spaces/PERSONAL1/folders/${RUNBOOKS}/runbooks`);
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    await waitFor(() =>
+      expect(within(navigation).getByRole("link", { name: "My space" }).getAttribute("aria-current")).toBe(
+        "page",
+      ),
+    );
+    cleanup();
+
+    mockApi({ ...baseRoutes(), ...spaceRoutes(), ...shellRoutes() });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const other = await screen.findByRole("navigation", { name: "Main navigation" });
+    await within(other).findByRole("link", { name: "Space settings" });
+    expect(within(other).getByRole("link", { name: "My space" }).getAttribute("aria-current")).toBeNull();
+  });
+
   it("offers the kinds of the current space in the Create menu", async () => {
     mockApi({ ...baseRoutes(), ...spaceRoutes("editor"), ...shellRoutes() });
     await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);

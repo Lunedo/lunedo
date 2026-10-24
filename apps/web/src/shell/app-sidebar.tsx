@@ -7,8 +7,9 @@ import { useTranslation } from "react-i18next";
 import { starredQuery, tasksQuery } from "../collaboration/queries.js";
 import { recentlyViewedQuery } from "../search/search-api.js";
 import { SpaceBadge } from "../spaces/space-badge.js";
+import { spaceByKeyQuery } from "../spaces/space-queries.js";
 import { useShell } from "./shell.js";
-import { useOrganizationState } from "./shell-context.js";
+import { useOrganizationState, useSession } from "./shell-context.js";
 import { useSidebarSlots } from "./sidebar-slot.js";
 
 const SIDEBAR_SPACES = 7;
@@ -95,9 +96,25 @@ function TasksEntry({ collapsed, current }: { collapsed: boolean; current: boole
   );
 }
 
-function PersonalSpaceEntry({ collapsed, current }: { collapsed: boolean; current: boolean }) {
+const SPACE_PATH = /^\/spaces\/([^/?#]+)/;
+
+function useInOwnPersonalSpace(): boolean {
+  const location = useLocation();
+  const session = useSession();
+  const match = SPACE_PATH.exec(location.pathname);
+  const key = match?.[1] ? decodeURIComponent(match[1]) : null;
+  const space = useQuery({ ...spaceByKeyQuery(key ?? ""), enabled: key !== null, throwOnError: false });
+  const found = space.data?.space;
+  return (
+    location.pathname === "/personal-space" ||
+    (found !== undefined && found.personal && found.ownerId === session.account?.id)
+  );
+}
+
+function PersonalSpaceEntry({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   const organization = useOrganizationState();
+  const current = useInOwnPersonalSpace();
   const guest = organization.organization?.membershipKind === "guest";
   if (guest || !organization.can("instance.personalSpace.use")) return null;
   return (
@@ -222,7 +239,7 @@ export function AppSidebar() {
             collapsed={collapsed}
           />
           <TasksEntry collapsed={collapsed} current={tasksActive} />
-          <PersonalSpaceEntry collapsed={collapsed} current={location.pathname === "/personal-space"} />
+          <PersonalSpaceEntry collapsed={collapsed} />
         </ul>
         <div className="w-full border-t border-border" />
         <div
