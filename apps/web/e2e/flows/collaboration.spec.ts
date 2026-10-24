@@ -30,15 +30,14 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await expect(popover).toBeHidden();
 
   await page.goto(pagePath);
-  const thread = page
-    .getByRole("region", { name: /^Comments/ })
-    .getByRole("article", { name: /^Comment on “/ });
+  await page.getByRole("button", { name: "1 open comment in this paragraph" }).click();
+  const thread = page.getByRole("dialog", { name: "Comments" });
   await expect(thread.getByText("Happened twice this week.")).toBeVisible();
-  await thread.getByRole("button", { name: "Reply", exact: true }).first().click();
   await thread.getByRole("textbox", { name: "Reply" }).click();
   await page.keyboard.type("Let us document the fallback.");
   await thread.getByRole("button", { name: "Reply", exact: true }).last().click();
   await expect(thread.getByText("Let us document the fallback.")).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await page.getByRole("textbox", { name: "New comment on the page" }).click();
   await page.keyboard.type("Thanks for the overview.");
@@ -209,7 +208,7 @@ test("shows recent pages, starred items, tasks, mentions and new posts on For yo
   await other.goto(pagePath);
   await other.getByRole("button", { name: "More actions" }).click();
   await other.getByRole("menuitem", { name: "Add to starred" }).click();
-  await expect(other.getByText("VPN access starred")).toBeVisible();
+  await expect(other.getByText("VPN access starred", { exact: true })).toBeVisible();
   await other.goto("/home");
   const main = other.getByRole("main");
   await expect(main.getByRole("link", { name: /VPN access/ }).first()).toBeVisible();
