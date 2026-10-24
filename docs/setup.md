@@ -195,7 +195,7 @@ The code is exchanged for a setup session, held in the cookie `__Host-lunedo-set
 
 ## Steps
 
-The assistant opens with **Welcome**: the setup code and **Set up a new instance**. The steps are registered by the modules; the assistant shows them in order, followed by a summary:
+The assistant opens with **Welcome**: the setup code, **Set up a new instance**, and three ways to restore a backup instead (see [Restore during the setup](#restore-during-the-setup)). The steps are registered by the modules; the assistant shows them in order, followed by a summary:
 
 | Step | Required | Content |
 |---|---|---|
@@ -258,7 +258,27 @@ All endpoints are internal. After setup they answer `404` like routes that do no
 | `POST /api/v1/setup/steps/{step}/{action}` | setup session |
 | `POST /api/v1/setup/complete` | setup session |
 
+| `GET /api/v1/setup/restore/sources`, `POST /api/v1/setup/restore/s3` | setup session |
+| `POST /api/v1/setup/restore/uploads`, `GET` and `PUT /api/v1/setup/restore/uploads/{uploadId}` | setup session |
+| `POST /api/v1/setup/restore` | setup session |
+| `GET /api/v1/setup/restore/status` | the browser that started the restore, through the cookie `__Host-lunedo-restore`, also after the restart |
+
 Actions: `instance/save`, `systemCheck/acknowledge`, `owner/createAccount`, `owner/beginTotp`, `owner/confirmTotp`, `keyBackup/download`, `keyBackup/confirm`, `organization/save`.
+
+## Restore during the setup
+
+Instead of setting up a new instance, **Welcome** restores a backup into this empty instance, like `lunedo backup restore` on the command line, which this builds on. Every step needs the setup session and works only while the instance is not set up.
+
+1. **Backup**, from one of three places:
+   - **Upload a backup**: a `.ldbak` file from the browser, sent in parts of at most 8 MiB, so the body limit of a reverse proxy does not matter. A part that the proxy still refuses with `413` is split further, down to 256 KiB. An interrupted upload continues where it stopped, also after a reload when the same file is chosen again. The file may be as large as the free space of `LUNEDO_BACKUP_DIR`, where it is stored.
+   - **From an S3 target**: endpoint, bucket, prefix and the access keys of the bucket the earlier server backed up to. **Connect and load backups** lists them with date, size, version and scope. The server downloads the chosen one into `LUNEDO_BACKUP_DIR` itself, not through the browser. The keys are used for this restore only and are never stored; a restored database brings its own backup target, as after `backup restore`. Endpoints in private networks need `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`, as for backup targets.
+   - **From the server**: the backups in `LUNEDO_BACKUP_DIR`, or in another directory given as an absolute path that Lunedo may read. Only files ending with `.ldbak` are listed.
+2. **Keys**: the backup key of the earlier server (the line `LUNEDO_BACKUP_KEY` of the key file from its setup, or the content of its `backup-keys`) and its master keys as a file (`lunedo-keys.env` from its setup, or `master-keys` from its secrets directory). The file is read in the browser and sent with the request; it is not stored as a file. Lunedo checks both against the header of the backup before it changes anything.
+3. **Restore**: the steps *Backup verified*, *Database*, *File store* and *Migrations*, plus *Download* for a bucket, each with its state. The restore replaces the database and the file store of this instance, even though they already hold the setup state. Where Lunedo manages the keys in its secrets directory (`master-keys`, `backup-keys`), the keys of the backup replace them; configured keys (`LUNEDO_MASTER_KEYS`, `LUNEDO_BACKUP_KEY`) stay, and the restore stops before it changes anything when the configured master keys cannot read the backup. Afterwards the backups are paused until the target is confirmed, as described in [backup.md](backup.md#after-a-restore).
+
+When the restore is complete, every process of the instance ends itself gracefully, so that the container restarts with the restored data and keys; the Compose file of the setup script restarts it with `restart: unless-stopped`. Run Lunedo under a supervisor that restarts it, or start it again by hand. The progress page waits for the restart and then offers **Go to sign-in** with an account from the backup. The progress is kept in `setup-restore.json` in `LUNEDO_WORK_DIR` for a day. The restore runs in the API process that received it; with several API nodes, give them the same `LUNEDO_BACKUP_DIR` and `LUNEDO_WORK_DIR`, or restore on one node. A restore that a restart interrupts is reported as interrupted; when the database was already replaced, Lunedo refuses to start until a restore completes, as after an interrupted `backup restore`.
+
+The log records the start, the end and failures of the restore, as for `backup restore`; the keys, the access keys of a bucket and the content are never logged.
 
 ## Setup through configuration
 

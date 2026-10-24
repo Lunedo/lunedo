@@ -220898,6 +220898,1597 @@
         }
       }
     },
+    "/api/v1/setup/restore": {
+      "post": {
+        "operationId": "setupRestore.start",
+        "summary": "Restore a backup into this instance",
+        "description": "Verifies the backup with the given keys and restores it in the background. The status is read with the cookie this request sets. Afterwards the processes of the instance restart, and scheduled backups stay paused until the backup target is confirmed.",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "directory"
+                          },
+                          "directory": {
+                            "description": "Directory on the server; LUNEDO_BACKUP_DIR if not set.",
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "description": "File name of the backup."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A backup in a directory of the server."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "upload"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "description": "File name of the completed upload."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A backup uploaded in parts."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "endpoint": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Endpoint of S3-compatible storage, or null for Amazon S3."
+                          },
+                          "region": {
+                            "default": "us-east-1",
+                            "description": "Region of the bucket.",
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "bucket": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "description": "Name of the bucket."
+                          },
+                          "prefix": {
+                            "default": "",
+                            "description": "Prefix of the backups in the bucket.",
+                            "type": "string",
+                            "maxLength": 512
+                          },
+                          "forcePathStyle": {
+                            "default": true,
+                            "description": "Address the bucket in the path instead of the host.",
+                            "type": "boolean"
+                          },
+                          "accessKeyId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "description": "Access key. Used for this restore only, never stored."
+                          },
+                          "secretAccessKey": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "description": "Secret key. Used for this restore only, never stored."
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "s3"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "description": "Name of the backup in the bucket."
+                          }
+                        },
+                        "required": [
+                          "endpoint",
+                          "bucket",
+                          "accessKeyId",
+                          "secretAccessKey",
+                          "type",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A backup in a bucket; the server downloads it directly."
+                      }
+                    ],
+                    "description": "Where the backup comes from."
+                  },
+                  "backupKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "The backup key ring of the earlier server, as in LUNEDO_BACKUP_KEY or its key file."
+                  },
+                  "masterKeys": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536,
+                    "description": "The content of the key file or the master key ring of the earlier server."
+                  }
+                },
+                "required": [
+                  "source",
+                  "backupKey",
+                  "masterKeys"
+                ],
+                "additionalProperties": false,
+                "description": "What to restore and the keys to read it."
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted."
+          },
+          "400": {
+            "description": "`directoryNotReadable`: Lunedo cannot read the directory. `invalidInput`: The request is not valid. `invalidKeys`: The keys are not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "directoryNotReadable": {
+                    "value": {
+                      "type": "urn:lunedo:problem:directoryNotReadable",
+                      "title": "Lunedo cannot read the directory",
+                      "status": 400,
+                      "code": "directoryNotReadable"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidKeys": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidKeys",
+                      "title": "The keys are not valid",
+                      "status": 400,
+                      "code": "invalidKeys"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`setupSessionRequired`: Enter the setup code first.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "setupSessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:setupSessionRequired",
+                      "title": "Enter the setup code first",
+                      "status": 401,
+                      "code": "setupSessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`backupNotFound`: The backup is not in the backup target. `notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "backupNotFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:backupNotFound",
+                      "title": "The backup is not in the backup target",
+                      "status": 404,
+                      "code": "backupNotFound"
+                    }
+                  },
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`restoreRunning`: A restore is already running.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "restoreRunning": {
+                    "value": {
+                      "type": "urn:lunedo:problem:restoreRunning",
+                      "title": "A restore is already running",
+                      "status": 409,
+                      "code": "restoreRunning"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`backupTargetFailed`: The backup target could not be used.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "backupTargetFailed": {
+                    "value": {
+                      "type": "urn:lunedo:problem:backupTargetFailed",
+                      "title": "The backup target could not be used",
+                      "status": 502,
+                      "code": "backupTargetFailed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/restore/s3": {
+      "post": {
+        "operationId": "setupRestore.s3",
+        "summary": "List the backups in a bucket",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endpoint": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Endpoint of S3-compatible storage, or null for Amazon S3."
+                  },
+                  "region": {
+                    "default": "us-east-1",
+                    "description": "Region of the bucket.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "bucket": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Name of the bucket."
+                  },
+                  "prefix": {
+                    "default": "",
+                    "description": "Prefix of the backups in the bucket.",
+                    "type": "string",
+                    "maxLength": 512
+                  },
+                  "forcePathStyle": {
+                    "default": true,
+                    "description": "Address the bucket in the path instead of the host.",
+                    "type": "boolean"
+                  },
+                  "accessKeyId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Access key. Used for this restore only, never stored."
+                  },
+                  "secretAccessKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "description": "Secret key. Used for this restore only, never stored."
+                  }
+                },
+                "required": [
+                  "endpoint",
+                  "bucket",
+                  "accessKeyId",
+                  "secretAccessKey"
+                ],
+                "additionalProperties": false,
+                "description": "The bucket the backups of the earlier server are in."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The backups in the bucket, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "backups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "File name of the backup."
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Size in bytes."
+                          },
+                          "createdAt": {
+                            "description": "When the backup was created, from its header.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lunedoVersion": {
+                            "description": "The Lunedo version that created the backup.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "scope": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "all",
+                                  "database"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "`all` with the file store, `database` without it. Null when the header is not readable."
+                          },
+                          "readable": {
+                            "type": "boolean",
+                            "description": "Whether the header of the backup could be read."
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "size",
+                          "createdAt",
+                          "lunedoVersion",
+                          "scope",
+                          "readable"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A backup that can be restored."
+                      },
+                      "description": "Backups, newest first."
+                    }
+                  },
+                  "required": [
+                    "backups"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`setupSessionRequired`: Enter the setup code first.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "setupSessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:setupSessionRequired",
+                      "title": "Enter the setup code first",
+                      "status": 401,
+                      "code": "setupSessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "`backupTargetFailed`: The backup target could not be used.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "backupTargetFailed": {
+                    "value": {
+                      "type": "urn:lunedo:problem:backupTargetFailed",
+                      "title": "The backup target could not be used",
+                      "status": 502,
+                      "code": "backupTargetFailed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/restore/sources": {
+      "get": {
+        "operationId": "setupRestore.sources",
+        "summary": "List the backups in a directory of the server",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "required": false,
+            "description": "An absolute directory on the server. Defaults to LUNEDO_BACKUP_DIR.",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The directory, the free space of the backup directory and the backups.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "directory": {
+                      "type": "string",
+                      "description": "The directory that was listed."
+                    },
+                    "freeBytes": {
+                      "type": "number",
+                      "description": "Free space in the backup directory, the limit for uploads."
+                    },
+                    "backups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "File name of the backup."
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Size in bytes."
+                          },
+                          "createdAt": {
+                            "description": "When the backup was created, from its header.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lunedoVersion": {
+                            "description": "The Lunedo version that created the backup.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "scope": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "all",
+                                  "database"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "`all` with the file store, `database` without it. Null when the header is not readable."
+                          },
+                          "readable": {
+                            "type": "boolean",
+                            "description": "Whether the header of the backup could be read."
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "size",
+                          "createdAt",
+                          "lunedoVersion",
+                          "scope",
+                          "readable"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A backup that can be restored."
+                      },
+                      "description": "Backups, newest first."
+                    }
+                  },
+                  "required": [
+                    "directory",
+                    "freeBytes",
+                    "backups"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`directoryNotReadable`: Lunedo cannot read the directory. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "directoryNotReadable": {
+                    "value": {
+                      "type": "urn:lunedo:problem:directoryNotReadable",
+                      "title": "Lunedo cannot read the directory",
+                      "status": 400,
+                      "code": "directoryNotReadable"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`setupSessionRequired`: Enter the setup code first.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "setupSessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:setupSessionRequired",
+                      "title": "Enter the setup code first",
+                      "status": 401,
+                      "code": "setupSessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/restore/status": {
+      "get": {
+        "operationId": "setupRestore.status",
+        "summary": "Get the progress of the restore",
+        "description": "Answers only the browser that started the restore, through its cookie, also after the restart that ends it.",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The progress.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "done",
+                        "failed"
+                      ],
+                      "description": "State of the restore."
+                    },
+                    "backup": {
+                      "type": "string",
+                      "description": "File name of the backup."
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "download",
+                              "verify",
+                              "database",
+                              "files",
+                              "migrations"
+                            ],
+                            "description": "The step: download from the bucket, verify, database, file store, migrations."
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "running",
+                              "done",
+                              "failed"
+                            ],
+                            "description": "State of the step."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "state"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A step of the restore."
+                      },
+                      "description": "The steps in order."
+                    },
+                    "failure": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "backupKey",
+                                "masterKeys",
+                                "invalidBackup",
+                                "source",
+                                "restore",
+                                "migrations",
+                                "interrupted"
+                              ],
+                              "description": "Why the restore failed."
+                            },
+                            "message": {
+                              "type": "string",
+                              "description": "What went wrong, in English, as the command line restore says it."
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why the restore failed, or null."
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "description": "When the restore started."
+                    },
+                    "finishedAt": {
+                      "description": "When it finished, or null while it runs.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "backup",
+                    "steps",
+                    "failure",
+                    "startedAt",
+                    "finishedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Progress of the restore during the setup."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/restore/uploads": {
+      "post": {
+        "operationId": "setupRestore.startUpload",
+        "summary": "Start uploading a backup",
+        "description": "Announces a backup file that is sent in parts of at most 8 MiB, so the body limit of a reverse proxy does not matter. The file may be as large as the free space of the backup directory.",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "File name of the backup."
+                  },
+                  "size": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10995116277760,
+                    "description": "Size of the file in bytes."
+                  }
+                },
+                "required": [
+                  "name",
+                  "size"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The upload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f-]{36}$",
+                      "description": "ID of the upload."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "File name the backup gets in the backup directory."
+                    },
+                    "size": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Size of the whole file in bytes."
+                    },
+                    "received": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Bytes received so far; the next part starts here."
+                    },
+                    "complete": {
+                      "type": "boolean",
+                      "description": "Whether the whole file was received."
+                    },
+                    "file": {
+                      "description": "File name in the backup directory once complete.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "size",
+                    "received",
+                    "complete",
+                    "file"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A backup that is being uploaded in parts."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`setupSessionRequired`: Enter the setup code first.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "setupSessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:setupSessionRequired",
+                      "title": "Enter the setup code first",
+                      "status": 401,
+                      "code": "setupSessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notEnoughSpace`: There is not enough free space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notEnoughSpace": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notEnoughSpace",
+                      "title": "There is not enough free space",
+                      "status": 409,
+                      "code": "notEnoughSpace"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/restore/uploads/{uploadId}": {
+      "get": {
+        "operationId": "setupRestore.upload",
+        "summary": "Get an upload",
+        "description": "Says how many bytes arrived, so an interrupted upload continues where it stopped.",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the upload.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f-]{36}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The upload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f-]{36}$",
+                      "description": "ID of the upload."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "File name the backup gets in the backup directory."
+                    },
+                    "size": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Size of the whole file in bytes."
+                    },
+                    "received": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Bytes received so far; the next part starts here."
+                    },
+                    "complete": {
+                      "type": "boolean",
+                      "description": "Whether the whole file was received."
+                    },
+                    "file": {
+                      "description": "File name in the backup directory once complete.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "size",
+                    "received",
+                    "complete",
+                    "file"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A backup that is being uploaded in parts."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`setupSessionRequired`: Enter the setup code first.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "setupSessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:setupSessionRequired",
+                      "title": "Enter the setup code first",
+                      "status": 401,
+                      "code": "setupSessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `uploadNotFound`: The upload does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "uploadNotFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:uploadNotFound",
+                      "title": "The upload does not exist",
+                      "status": 404,
+                      "code": "uploadNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "setupRestore.appendUpload",
+        "summary": "Upload a part of a backup",
+        "description": "Send the next bytes with `Content-Type: application/octet-stream` and `offset` set to the bytes received so far. A part has at most 8 MiB.",
+        "tags": [
+          "Setup"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the upload.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f-]{36}$"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": true,
+            "description": "Position of the part in the file.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The bytes of the part.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The upload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f-]{36}$",
+                      "description": "ID of the upload."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "File name the backup gets in the backup directory."
+                    },
+                    "size": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Size of the whole file in bytes."
+                    },
+                    "received": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Bytes received so far; the next part starts here."
+                    },
+                    "complete": {
+                      "type": "boolean",
+                      "description": "Whether the whole file was received."
+                    },
+                    "file": {
+                      "description": "File name in the backup directory once complete.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "size",
+                    "received",
+                    "complete",
+                    "file"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A backup that is being uploaded in parts."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`setupSessionRequired`: Enter the setup code first.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "setupSessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:setupSessionRequired",
+                      "title": "Enter the setup code first",
+                      "status": 401,
+                      "code": "setupSessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `uploadNotFound`: The upload does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "uploadNotFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:uploadNotFound",
+                      "title": "The upload does not exist",
+                      "status": 404,
+                      "code": "uploadNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`uploadOffset`: The upload continues at another position.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadOffset": {
+                    "value": {
+                      "type": "urn:lunedo:problem:uploadOffset",
+                      "title": "The upload continues at another position",
+                      "status": 409,
+                      "code": "uploadOffset"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`uploadTooLarge`: The file is larger than uploads allow.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTooLarge": {
+                    "value": {
+                      "type": "urn:lunedo:problem:uploadTooLarge",
+                      "title": "The file is larger than uploads allow",
+                      "status": 413,
+                      "code": "uploadTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupportedMediaType`: The request body has an unsupported type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "unsupportedMediaType": {
+                    "value": {
+                      "type": "urn:lunedo:problem:unsupportedMediaType",
+                      "title": "The request body has an unsupported type",
+                      "status": 415,
+                      "code": "unsupportedMediaType"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/setup/session": {
       "post": {
         "operationId": "setup.startSession",

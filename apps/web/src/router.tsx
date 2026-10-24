@@ -56,6 +56,7 @@ const setupRoute = createRoute({
       .enum(["welcome", "instance", "systemCheck", "owner", "keyBackup", "organization", "summary"])
       .optional()
       .catch(undefined),
+    restore: z.enum(["upload", "s3", "server", "keys", "progress"]).optional().catch(undefined),
   }),
   beforeLoad: async ({ context }) => {
     const info = await context.queryClient.ensureQueryData(instanceInfoQuery);

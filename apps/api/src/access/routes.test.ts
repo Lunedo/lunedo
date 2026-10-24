@@ -31,7 +31,9 @@ describe.skipIf(!databaseBaseUrl)("routes of the complete API", () => {
     for (const wrapper of discovery.getControllers()) {
       if (
         !wrapper.metatype ||
-        !["AuthController", "AccountController", "SetupController"].includes(wrapper.metatype.name)
+        !["AuthController", "AccountController", "SetupController", "SetupRestoreController"].includes(
+          wrapper.metatype.name,
+        )
       ) {
         continue;
       }
@@ -69,7 +71,12 @@ describe.skipIf(!databaseBaseUrl)("routes of the complete API", () => {
       if (route.includes("/api/v1/setup/steps") || route.endsWith("/api/v1/setup/complete")) {
         expect(kind, route).toBe("setupSession");
       }
+      if (route.includes("/api/v1/setup/restore") && !route.endsWith("/api/v1/setup/restore/status")) {
+        expect(kind, route).toBe("setupSession");
+      }
     }
+    expect(access["GET /api/v1/setup/restore/status"]).toBe("public");
+    expect(access["POST /api/v1/setup/restore"]).toBe("setupSession");
     expect(access["POST /api/v1/account/password"]).toBe("session");
   });
 });

@@ -2,7 +2,7 @@ import { type SetupStepId, setupCodeSchema } from "@lunedo/shared";
 import { Button, Field, Input, Notice } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -11,6 +11,8 @@ import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
+import { OrDivider } from "../auth/auth-layout.js";
+import { RestoreDraftProvider, RestoreFlow } from "./restore/restore-flow.js";
 import { setupStateQuery, setupStepsQuery } from "./setup-api.js";
 import { SetupDraftsProvider } from "./setup-drafts.js";
 import { SetupFrame, type SetupProgress } from "./setup-frame.js";
@@ -49,14 +51,62 @@ export function SetupScreen() {
   }, [router]);
   if (finished) return <ReadyScreen organizationId={finished.organizationId} />;
   if (state.isPending) return <SetupFrame title="" loading />;
-  if (state.data?.session) {
+  return (
+    <RestoreDraftProvider>
+      {state.data?.session ? (
+        <WithSession onFinished={(organizationId) => setFinished({ organizationId })} />
+      ) : (
+        <Welcome linkedCode={linkedCode} />
+      )}
+    </RestoreDraftProvider>
+  );
+}
+
+function WithSession({ onFinished }: { onFinished: (organizationId: string | null) => void }) {
+  const navigate = useNavigate();
+  const search = route.useSearch();
+  if (search.restore) {
     return (
-      <SetupDraftsProvider>
-        <SetupSteps onFinished={(organizationId) => setFinished({ organizationId })} />
-      </SetupDraftsProvider>
+      <RestoreFlow
+        page={search.restore}
+        goTo={(page) => void navigate({ to: "/setup", search: { restore: page } })}
+        onWelcome={() => void navigate({ to: "/setup", search: { step: "welcome" } })}
+      />
     );
   }
-  return <Welcome linkedCode={linkedCode} />;
+  return (
+    <SetupDraftsProvider>
+      <SetupSteps onFinished={onFinished} />
+    </SetupDraftsProvider>
+  );
+}
+
+function RestoreChoices({ onChoose }: { onChoose: (page: "upload" | "s3" | "server") => void }) {
+  const { t } = useTranslation();
+  return (
+    <section className="mt-4 flex flex-col" aria-labelledby="restore-choices">
+      <OrDivider label={t("setup.welcome.orRestore")} id="restore-choices" />
+      <ul className="mt-2 flex flex-col">
+        {(["upload", "s3", "server"] as const).map((page) => (
+          <li key={page} className="border-border border-t">
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 py-3 text-left hover:bg-hover focus-visible:focus-ring"
+              onClick={() => onChoose(page)}
+            >
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="font-medium">{t(`setup.welcome.restore.${page}.title`)}</span>
+                <span className="text-sm text-text-muted">
+                  {t(`setup.welcome.restore.${page}.description`)}
+                </span>
+              </span>
+              <ChevronRight aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 const codeForm = z.object({ code: setupCodeSchema });
@@ -77,18 +127,22 @@ function WelcomeFrame({ children }: { children: ReactNode }) {
 
 function Welcome({ linkedCode }: { linkedCode: string }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const form = useSchemaForm(codeForm, { defaultValues: { code: linkedCode } });
-  const submit = form.handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await request(() => api.POST("/api/v1/setup/session", { body: values }), { sessionHandling: false });
-      await queryClient.invalidateQueries({ queryKey: setupStateQuery.queryKey });
-    } catch (failure) {
-      setError(problemMessage(t, failure));
-    }
-  });
+  const enter = (restore?: "upload" | "s3" | "server") =>
+    form.handleSubmit(async (values) => {
+      setError(null);
+      try {
+        await request(() => api.POST("/api/v1/setup/session", { body: values }), { sessionHandling: false });
+        if (restore) await navigate({ to: "/setup", search: { restore } });
+        await queryClient.invalidateQueries({ queryKey: setupStateQuery.queryKey });
+      } catch (failure) {
+        setError(problemMessage(t, failure));
+      }
+    });
+  const submit = enter();
   return (
     <WelcomeFrame>
       <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
@@ -120,6 +174,7 @@ function Welcome({ linkedCode }: { linkedCode: string }) {
           </Button>
         </div>
       </form>
+      <RestoreChoices onChoose={(page) => void enter(page)()} />
     </WelcomeFrame>
   );
 }
@@ -193,6 +248,7 @@ function SetupSteps({ onFinished }: { onFinished: (organizationId: string | null
             {t("setup.welcome.newInstance")}
           </Button>
         </div>
+        <RestoreChoices onChoose={(page) => void navigate({ to: "/setup", search: { restore: page } })} />
       </WelcomeFrame>
     );
   }

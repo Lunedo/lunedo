@@ -139,11 +139,11 @@ export function AuthLinkButton({ children, onClick }: { children: ReactNode; onC
   );
 }
 
-export function OrDivider({ label }: { label: string }) {
+export function OrDivider({ label, id }: { label: string; id?: string }) {
   return (
     <div className="flex items-center gap-3 text-sm text-text-muted">
       <span className="flex-1 border-border border-t" aria-hidden="true" />
-      {label}
+      <span id={id}>{label}</span>
       <span className="flex-1 border-border border-t" aria-hidden="true" />
     </div>
   );

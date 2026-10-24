@@ -1659,7 +1659,13 @@
     "meetingRequired": "Ein Thema nur für eine Besprechung braucht eine offene Besprechung. Leg es auf der Besprechungsseite an.",
     "invalidUpdate": "Ein Update kann bis zu 5.000 Zeichen haben. Kürze es und versuch es erneut.",
     "updateFormatted": "Dieses Update hat Formatierungen, die verloren gingen. Ändere es unter „Notizen“.",
-    "invalidTask": "Beschreib die Aufgabe mit bis zu 500 Zeichen."
+    "invalidTask": "Beschreib die Aufgabe mit bis zu 500 Zeichen.",
+    "directoryNotReadable": "Lunedo kann diesen Ordner auf dem Server nicht lesen. Gib einen absoluten Pfad zu einem Ordner an, den der Benutzer von Lunedo lesen darf.",
+    "uploadNotFound": "Dieses Hochladen gibt es nicht mehr. Wähle die Datei erneut aus.",
+    "uploadOffset": "Der Server hat an einer anderen Stelle aufgehört. Lunedo setzt dort fort; versuche es erneut.",
+    "notEnoughSpace": "Im Sicherungsordner ist nicht genug Platz für diese Datei. Schaffe Platz auf dem Server und versuche es erneut.",
+    "restoreRunning": "Es läuft schon eine Wiederherstellung. Warte, bis sie fertig ist.",
+    "invalidKeys": "Ein Schlüssel hat nicht das erwartete Format. Füge den Backup-Schlüssel so ein, wie er in der Schlüsseldatei steht, und wähle die Datei mit den Master-Schlüsseln."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2053,7 +2059,22 @@
     "welcome": {
       "title": "Willkommen",
       "description": "Gib den Setup-Code ein. Er belegt, dass du diesen Server betreibst. Die Sprache wählst du oben rechts.",
-      "newInstance": "Neue Instanz einrichten"
+      "newInstance": "Neue Instanz einrichten",
+      "orRestore": "oder wiederherstellen",
+      "restore": {
+        "upload": {
+          "title": "Sicherung hochladen",
+          "description": "Eine .ldbak-Datei von deinem Rechner, auch mehrere GB."
+        },
+        "s3": {
+          "title": "Aus einem S3-Ziel",
+          "description": "Die Sicherungen, die der alte Server in einen Bucket geschrieben hat."
+        },
+        "server": {
+          "title": "Vom Server",
+          "description": "Eine Datei, die schon im Sicherungsordner dieses Servers liegt."
+        }
+      }
     },
     "summary": {
       "title": "Zusammenfassung",
@@ -2090,6 +2111,113 @@
         "title": "Identitätsanbieter verbinden",
         "description": "Anmeldung über Microsoft Entra ID, Keycloak, SAML oder LDAP.",
         "action": "Verbinden"
+      }
+    },
+    "restore": {
+      "steps": {
+        "backup": "Sicherung",
+        "keys": "Schlüssel",
+        "restore": "Wiederherstellen"
+      },
+      "found": "Gefunden in {where}",
+      "noBackups": "In {where} liegt keine Sicherung. Sicherungen enden auf .ldbak.",
+      "chooseBackup": "Sicherung",
+      "chooseFirst": "Wähle eine Sicherung aus.",
+      "version": "Version {version}",
+      "scopeAll": "alles",
+      "scopeDatabase": "ohne Dateispeicher",
+      "unreadable": "{size} · nicht lesbar, keine Sicherung von Lunedo oder beschädigt",
+      "upload": {
+        "title": "Sicherung hochladen",
+        "description": "Die Datei wird in Stücken übertragen. Bricht die Verbindung ab, geht es an der Stelle weiter. Ein Reverse Proxy mit Größenlimit stört dabei nicht.",
+        "drop": "Datei hierher ziehen oder",
+        "choose": "auswählen",
+        "limit": ".ldbak · bis zur freien Größe des Sicherungsordners ({free})",
+        "limitUnknown": ".ldbak · bis zur freien Größe des Sicherungsordners",
+        "received": "{received} von {total}",
+        "remaining": "noch etwa {count, plural, one {# Minute} other {# Minuten}}",
+        "progress": "Fortschritt des Hochladens",
+        "done": "Hochgeladen und im Sicherungsordner abgelegt.",
+        "cancel": "Hochladen abbrechen",
+        "wrongType": "Das ist keine Sicherung von Lunedo. Wähle eine Datei, die auf .ldbak endet.",
+        "tooLarge": "Die Datei ist größer als der freie Platz im Sicherungsordner ({free}). Schaffe Platz auf dem Server oder lege die Datei direkt dort ab und wähle „Vom Server“.",
+        "wait": "Warte, bis die Datei ganz hochgeladen ist.",
+        "chooseFirst": "Wähle zuerst die Sicherung aus.",
+        "failed": "Die Sicherung konnte nicht hochgeladen werden",
+        "noSpace": "Im Sicherungsordner ist nicht genug Platz"
+      },
+      "s3": {
+        "title": "Aus einem S3-Ziel",
+        "description": "Gib die Zugangsdaten des Buckets ein, in den der alte Server gesichert hat. Lunedo lädt die Sicherung direkt von dort, nicht über deinen Browser.",
+        "endpoint": "Endpunkt",
+        "endpointHint": "Leer lassen für Amazon S3, sonst zum Beispiel https://s3.eu-central-1.example.com.",
+        "bucket": "Bucket",
+        "prefix": "Präfix (optional)",
+        "accessKey": "Access Key",
+        "secretKey": "Secret Key",
+        "region": "Region",
+        "required": "Gib einen Wert ein.",
+        "notStored": "Die Zugangsdaten gelten nur für diese Wiederherstellung und werden nicht gespeichert. Bringt die Sicherung ein eigenes Sicherungsziel mit, gilt danach dieses.",
+        "connect": "Verbinden und Sicherungen laden",
+        "failed": "Die Sicherungen im Bucket konnten nicht geladen werden"
+      },
+      "server": {
+        "title": "Vom Server",
+        "description": "Sicherungen, die schon auf diesem Server liegen.",
+        "otherDirectory": "Anderen Ordner angeben",
+        "directory": "Ordner auf dem Server",
+        "directoryHint": "Ein absoluter Pfad, den Lunedo lesen darf, zum Beispiel /var/lib/lunedo/backups.",
+        "load": "Ordner laden",
+        "loadFailed": "Die Sicherungen auf dem Server konnten nicht geladen werden"
+      },
+      "keys": {
+        "title": "Schlüssel",
+        "description": "Die Sicherung ist mit dem Backup-Schlüssel verschlüsselt. Die Master-Schlüssel braucht Lunedo, um gespeicherte Geheimnisse wieder zu lesen.",
+        "backupKey": "Backup-Schlüssel",
+        "backupKeyHint": "Aus der Datei, die du beim ersten Setup heruntergeladen hast (LUNEDO_BACKUP_KEY).",
+        "backupKeyMissing": "Gib den Backup-Schlüssel ein.",
+        "masterKeys": "Master-Schlüssel",
+        "chooseFile": "Schlüsseldatei auswählen",
+        "masterKeysHint": "Die Datei lunedo-keys.env aus dem ersten Setup oder die Datei master-keys aus dem Secrets-Ordner des alten Servers. Lunedo übernimmt die Schlüssel in diese Instanz und speichert die Datei selbst nicht.",
+        "masterKeysMissing": "Wähle die Datei mit den Master-Schlüsseln aus.",
+        "warning": "Das Wiederherstellen füllt diese leere Instanz mit allen Daten der Sicherung. Danach meldest du dich mit einem Konto aus der Sicherung an.",
+        "start": "Wiederherstellen",
+        "failed": "Die Wiederherstellung konnte nicht beginnen"
+      },
+      "progress": {
+        "title": "Wird wiederhergestellt",
+        "description": "Das dauert je nach Größe einige Minuten. Du kannst das Fenster offen lassen.",
+        "steps": {
+          "download": "Sicherung aus dem Bucket geladen",
+          "verify": "Sicherung geprüft",
+          "database": "Datenbank wiederhergestellt",
+          "files": "Dateispeicher wiederhergestellt",
+          "migrations": "Migrationen ausgeführt"
+        },
+        "states": {
+          "waiting": "Wartet",
+          "running": "Läuft",
+          "done": "OK",
+          "failed": "Fehler"
+        },
+        "failedTitle": "Die Wiederherstellung ist fehlgeschlagen",
+        "failures": {
+          "backupKey": "Der Backup-Schlüssel passt nicht zu dieser Sicherung. An der Instanz wurde nichts geändert. Prüfe den Schlüssel und versuche es erneut.",
+          "masterKeys": "Die Master-Schlüssel passen nicht zu dieser Sicherung. An der Instanz wurde nichts geändert. Wähle die Schlüsseldatei des Servers, von dem die Sicherung stammt.",
+          "invalidBackup": "Die Sicherung ist unvollständig, beschädigt oder von einer neueren Lunedo-Version. An der Instanz wurde nichts geändert. Wähle eine andere Sicherung oder aktualisiere Lunedo.",
+          "source": "Die Sicherung konnte nicht aus dem Bucket geladen werden. Prüfe die Verbindung zum Bucket und versuche es erneut.",
+          "restore": "Die Sicherung konnte nicht vollständig eingespielt werden. Die Meldung unten nennt den Grund; danach startet Lunedo erst, wenn eine Wiederherstellung vollständig durchläuft.",
+          "migrations": "Die Daten sind wiederhergestellt, aber die Migrationen sind fehlgeschlagen. Starte Lunedo neu; es führt die Migrationen beim Start erneut aus.",
+          "interrupted": "Die Wiederherstellung wurde unterbrochen, zum Beispiel durch einen Neustart. Starte sie erneut."
+        },
+        "doneTitle": "Wiederhergestellt",
+        "paused": "Danach pausiert Lunedo die geplanten Sicherungen, bis jemand das Sicherungsziel bestätigt. So schreibt eine Kopie nicht in die Sicherungen des Originals.",
+        "restarting": "Lunedo startet neu, um die wiederhergestellten Daten zu laden. Das dauert einen Moment.",
+        "missing": "In diesem Browser wurde keine Wiederherstellung gestartet, oder ihr Ergebnis ist älter als ein Tag.",
+        "toSignIn": "Zur Anmeldung",
+        "wait": "Zur Anmeldung geht es, sobald die Wiederherstellung fertig ist und Lunedo neu gestartet hat.",
+        "otherBackup": "Andere Sicherung wählen",
+        "checkKeys": "Schlüssel prüfen"
       }
     }
   },

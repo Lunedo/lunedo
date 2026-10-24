@@ -66,6 +66,7 @@ import { builtinSettings } from "../settings/builtin.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
 import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
+import { restartWhenRestored } from "../setup/restore.js";
 import { sharingSettings } from "../sharing/settings.js";
 import { spaceSettings } from "../spaces/settings.js";
 import { storageSettings } from "../storage/settings.js";
@@ -156,6 +157,7 @@ export async function createServerRuntime(options: {
   /** Encrypted data for key checks and rotation; defaults to the registered columns and streams. */
   encrypted?: { columns?: readonly EncryptedColumn[]; streamOwners?: readonly EncryptedStreamOwner[] };
   mailTransport?: (options: SmtpOptions) => MailTransport;
+  restartAfterRestore?: () => void;
 }): Promise<ServerRuntime> {
   const { role } = options;
   const config = loadConfig(options.env);
@@ -227,6 +229,7 @@ export async function createServerRuntime(options: {
     const keyRing = new KeyRingHolder(createKeyProvider(config), logger);
     await loadMasterKeyRing({ keyRing, database, columns, streams });
     await keyRing.subscribe(listener);
+    await restartWhenRestored(listener, logger, options.restartAfterRestore);
     const encryption = new Encryption(() => keyRing.ring);
 
     const settingsRegistry = new SettingsRegistry().register(
@@ -309,6 +312,8 @@ export async function createServerRuntime(options: {
         backupDir: config.paths.backups,
         workDir: config.paths.work,
         secretsDir: config.paths.secrets,
+        masterKeysPath: config.keys.masterKeysPath,
+        backupKeysConfigured: config.keys.backupKeys !== undefined,
         configuration: configurationForBackup(options.env),
         lunedoVersion: options.env.LUNEDO_VERSION ?? "dev",
         beforeUpdateEnvironment: config.backupBeforeUpdate,

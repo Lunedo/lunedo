@@ -35,6 +35,7 @@ import {
   SettingError,
   SettingLockedError,
   SetupNotFoundError,
+  SetupRestoreError,
   SetupStepError,
   ShareLinkRateLimitedError,
   SignInBlockedError,
@@ -335,6 +336,8 @@ function map(error: unknown): Mapped | null {
       extensions: { fields: zodFields(error) },
     };
   }
+  if (error instanceof SetupRestoreError)
+    return { code: codeOf(error.code, "invalidInput"), detail: error.message };
   if (error instanceof SetupStepError)
     return { code: codeOf(error.code, "setupNotReady"), detail: error.message };
   if (error instanceof HttpException) return { code: problemForStatus(error.getStatus()) };

@@ -6,6 +6,7 @@ export const COOKIES = {
   pending: "__Host-lunedo-pending",
   device: "__Host-lunedo-device",
   setup: "__Host-lunedo-setup",
+  restore: "__Host-lunedo-restore",
   providerFlow: "__Host-lunedo-provider",
   link: "__Host-lunedo-link",
   lastProvider: "__Host-lunedo-last-provider",

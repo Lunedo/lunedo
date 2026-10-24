@@ -1659,7 +1659,13 @@
     "meetingRequired": "A topic for one meeting only needs an open meeting. Add it on the meeting page.",
     "invalidUpdate": "An update can have up to 5,000 characters. Shorten it and try again.",
     "updateFormatted": "This update has formatting that would get lost. Change it under “Notes”.",
-    "invalidTask": "Describe the task with up to 500 characters."
+    "invalidTask": "Describe the task with up to 500 characters.",
+    "directoryNotReadable": "Lunedo cannot read this directory on the server. Give the absolute path of a directory the user Lunedo runs as may read.",
+    "uploadNotFound": "This upload no longer exists. Choose the file again.",
+    "uploadOffset": "The server stopped at another position. Lunedo continues from there; try again.",
+    "notEnoughSpace": "There is not enough space in the backup directory for this file. Free up space on the server and try again.",
+    "restoreRunning": "A restore is already running. Wait until it is finished.",
+    "invalidKeys": "A key does not have the expected format. Paste the backup key as it is in the key file, and choose the file with the master keys."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2053,7 +2059,22 @@
     "welcome": {
       "title": "Welcome",
       "description": "Enter the setup code. It proves that you operate this server. Choose the language at the top right.",
-      "newInstance": "Set up a new instance"
+      "newInstance": "Set up a new instance",
+      "orRestore": "or restore",
+      "restore": {
+        "upload": {
+          "title": "Upload a backup",
+          "description": "A .ldbak file from your computer, also several GB."
+        },
+        "s3": {
+          "title": "From an S3 target",
+          "description": "The backups the earlier server wrote to a bucket."
+        },
+        "server": {
+          "title": "From the server",
+          "description": "A file that is already in the backup directory of this server."
+        }
+      }
     },
     "summary": {
       "title": "Summary",
@@ -2090,6 +2111,113 @@
         "title": "Connect an identity provider",
         "description": "Sign-in through Microsoft Entra ID, Keycloak, SAML or LDAP.",
         "action": "Connect"
+      }
+    },
+    "restore": {
+      "steps": {
+        "backup": "Backup",
+        "keys": "Keys",
+        "restore": "Restore"
+      },
+      "found": "Found in {where}",
+      "noBackups": "There is no backup in {where}. Backups end with .ldbak.",
+      "chooseBackup": "Backup",
+      "chooseFirst": "Choose a backup.",
+      "version": "version {version}",
+      "scopeAll": "everything",
+      "scopeDatabase": "without the file store",
+      "unreadable": "{size} · not readable, not a Lunedo backup or damaged",
+      "upload": {
+        "title": "Upload a backup",
+        "description": "The file is sent in parts. If the connection drops, it continues where it stopped. A reverse proxy with a size limit does not get in the way.",
+        "drop": "Drop the file here or",
+        "choose": "choose it",
+        "limit": ".ldbak · up to the free space of the backup directory ({free})",
+        "limitUnknown": ".ldbak · up to the free space of the backup directory",
+        "received": "{received} of {total}",
+        "remaining": "about {count, plural, one {# minute} other {# minutes}} left",
+        "progress": "Upload progress",
+        "done": "Uploaded and stored in the backup directory.",
+        "cancel": "Cancel the upload",
+        "wrongType": "This is not a Lunedo backup. Choose a file that ends with .ldbak.",
+        "tooLarge": "The file is larger than the free space in the backup directory ({free}). Free up space on the server, or put the file there directly and choose “From the server”.",
+        "wait": "Wait until the whole file is uploaded.",
+        "chooseFirst": "Choose the backup first.",
+        "failed": "The backup could not be uploaded",
+        "noSpace": "There is not enough space in the backup directory"
+      },
+      "s3": {
+        "title": "From an S3 target",
+        "description": "Enter the credentials of the bucket the earlier server backed up to. Lunedo downloads the backup directly from there, not through your browser.",
+        "endpoint": "Endpoint",
+        "endpointHint": "Leave empty for Amazon S3, otherwise for example https://s3.eu-central-1.example.com.",
+        "bucket": "Bucket",
+        "prefix": "Prefix (optional)",
+        "accessKey": "Access key",
+        "secretKey": "Secret key",
+        "region": "Region",
+        "required": "Enter a value.",
+        "notStored": "The credentials are used for this restore only and are not stored. If the backup brings its own backup target, that one applies afterwards.",
+        "connect": "Connect and load backups",
+        "failed": "The backups in the bucket could not be loaded"
+      },
+      "server": {
+        "title": "From the server",
+        "description": "Backups that are already on this server.",
+        "otherDirectory": "Use another directory",
+        "directory": "Directory on the server",
+        "directoryHint": "An absolute path Lunedo may read, for example /var/lib/lunedo/backups.",
+        "load": "Load directory",
+        "loadFailed": "The backups on the server could not be loaded"
+      },
+      "keys": {
+        "title": "Keys",
+        "description": "The backup is encrypted with the backup key. Lunedo needs the master keys to read stored secrets again.",
+        "backupKey": "Backup key",
+        "backupKeyHint": "From the file you downloaded during the first setup (LUNEDO_BACKUP_KEY).",
+        "backupKeyMissing": "Enter the backup key.",
+        "masterKeys": "Master keys",
+        "chooseFile": "Choose the key file",
+        "masterKeysHint": "The file lunedo-keys.env from the first setup, or the file master-keys from the secrets directory of the earlier server. Lunedo takes the keys over into this instance and does not keep the file itself.",
+        "masterKeysMissing": "Choose the file with the master keys.",
+        "warning": "The restore fills this empty instance with all data of the backup. Afterwards you sign in with an account from the backup.",
+        "start": "Restore",
+        "failed": "The restore could not start"
+      },
+      "progress": {
+        "title": "Restoring",
+        "description": "Depending on the size, this takes a few minutes. You can keep the window open.",
+        "steps": {
+          "download": "Backup downloaded from the bucket",
+          "verify": "Backup verified",
+          "database": "Database restored",
+          "files": "File store restored",
+          "migrations": "Migrations applied"
+        },
+        "states": {
+          "waiting": "Waiting",
+          "running": "Running",
+          "done": "OK",
+          "failed": "Failed"
+        },
+        "failedTitle": "The restore failed",
+        "failures": {
+          "backupKey": "The backup key does not fit this backup. Nothing was changed on the instance. Check the key and try again.",
+          "masterKeys": "The master keys do not fit this backup. Nothing was changed on the instance. Choose the key file of the server the backup comes from.",
+          "invalidBackup": "The backup is incomplete, damaged or from a newer Lunedo version. Nothing was changed on the instance. Choose another backup or update Lunedo.",
+          "source": "The backup could not be downloaded from the bucket. Check the connection to the bucket and try again.",
+          "restore": "The backup could not be restored completely. The message below gives the reason; Lunedo starts again only once a restore runs completely.",
+          "migrations": "The data is restored, but the migrations failed. Restart Lunedo; it runs the migrations again at start.",
+          "interrupted": "The restore was interrupted, for example by a restart. Start it again."
+        },
+        "doneTitle": "Restored",
+        "paused": "Afterwards Lunedo pauses the scheduled backups until someone confirms the backup target. That way a copy does not write into the backups of the original.",
+        "restarting": "Lunedo restarts to load the restored data. This takes a moment.",
+        "missing": "No restore was started in this browser, or its result is older than a day.",
+        "toSignIn": "Go to sign-in",
+        "wait": "Sign-in is available once the restore is finished and Lunedo has restarted.",
+        "otherBackup": "Choose another backup",
+        "checkKeys": "Check the keys"
       }
     }
   },

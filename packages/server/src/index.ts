@@ -936,6 +936,19 @@ export {
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
 export { checkReachability, type ProbeFetch, type ProbeOptions } from "./setup/reachability.js";
+export {
+  type BackupEntry,
+  parseKeyInput,
+  RESTART_CHANNEL,
+  type RestoreStatus,
+  type S3SourceInput,
+  SetupRestoreError,
+  type SetupRestoreOptions,
+  SetupRestoreService,
+  type StartRestoreInput,
+  UPLOAD_CHUNK_MAX_BYTES,
+  type UploadState,
+} from "./setup/restore.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
 export {
   type AccessExplanation,

@@ -36,6 +36,7 @@ import { OrganizationsController } from "../organizations/organizations.controll
 import { PortalController } from "../portal/portal.controller.js";
 import { SavedSearchesController } from "../search/saved-searches.controller.js";
 import { SearchController } from "../search/search.controller.js";
+import { SetupRestoreController } from "../setup/restore.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
 import { ShareLinksController } from "../sharing/links.controller.js";
 import { PageAccessController } from "../sharing/page-access.controller.js";
@@ -66,6 +67,7 @@ export const apiControllers = (): Type[] => [
   AuthController,
   AccountController,
   SetupController,
+  SetupRestoreController,
   OrganizationsController,
   GroupsController,
   InstanceController,

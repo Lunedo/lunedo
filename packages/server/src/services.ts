@@ -61,7 +61,12 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { KeyRotation } from "./crypto/rotation.js";
 import type { Database } from "./database/database.js";
-import { currentSchemaVersion, knownSchemaVersions, schemaVersionTimes } from "./database/migrate.js";
+import {
+  currentSchemaVersion,
+  knownSchemaVersions,
+  runMigrations,
+  schemaVersionTimes,
+} from "./database/migrate.js";
 import type { DatabasePool } from "./database/pool.js";
 import { DiagramService } from "./diagrams/diagrams.js";
 import { EmbedServices } from "./embeds/embeds.js";
@@ -204,6 +209,7 @@ import { SavedSearchService } from "./search/saved-searches.js";
 import { SearchService } from "./search/service.js";
 import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
+import { SetupRestoreService } from "./setup/restore.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
 import { AccessExplanationService } from "./sharing/explain.js";
@@ -274,6 +280,7 @@ export interface AccountServices {
   security: AccountSecurityService;
   setup: SetupService;
   setupRegistry: SetupRegistry;
+  setupRestore: SetupRestoreService;
   authorization: AuthorizationService;
   organizations: OrganizationService;
   memberships: MembershipService;
@@ -412,6 +419,8 @@ export function createAccountServices(options: {
     backupDir: string;
     workDir: string;
     secretsDir: string;
+    masterKeysPath?: string;
+    backupKeysConfigured?: boolean;
     configuration: Record<string, string>;
     lunedoVersion: string;
     beforeUpdateEnvironment: boolean;
@@ -853,6 +862,30 @@ export function createAccountServices(options: {
     logger,
     ...(backupOptions?.clock ? { clock: backupOptions.clock } : {}),
   });
+  const setupRestore = new SetupRestoreService({
+    backupDir,
+    workDir,
+    filesDir: options.filesDir,
+    databaseUrl: backupDatabaseUrl,
+    objectStore: files.store.kind === "s3" ? files.store : undefined,
+    policy: backupOptions?.policy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
+    keys: {
+      provider: options.keyProvider ?? "file",
+      masterKeysPath:
+        backupOptions?.masterKeysPath ??
+        path.join(backupOptions?.secretsDir ?? options.filesDir, "master-keys"),
+      backupKeysPath: backupOptions?.backupKeysConfigured
+        ? null
+        : path.join(backupOptions?.secretsDir ?? options.filesDir, "backup-keys"),
+    },
+    keyRing: options.keyRing,
+    pool: options.pool,
+    database,
+    knownSchemaVersions: knownSchemaVersions(),
+    migrate: () => runMigrations(options.pool, { logger }),
+    ...(backupOptions?.archiver ? { archiver: backupOptions.archiver } : {}),
+    logger,
+  });
   const attachments = new AttachmentService({ database, files, settings, people, audit, storage });
   const templates = new TemplateService({
     database,
@@ -1195,6 +1228,7 @@ export function createAccountServices(options: {
     security,
     setup,
     setupRegistry,
+    setupRestore,
     authorization,
     organizations,
     memberships,

@@ -573,8 +573,11 @@ export interface RestoreBackupOptions extends ReadOptions {
   /** Overwrite a database or file store that is not empty. */
   force: boolean;
   markRestoredIn?: string | undefined;
+  onProgress?: ((stage: RestoreStage) => void) | undefined;
   logger: Logger;
 }
+
+export type RestoreStage = "verified" | "database" | "files";
 
 /**
  * Restores a backup into an empty instance, or with `force` over an existing one.
@@ -622,6 +625,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
     await rm(staging, { recursive: true, force: true });
     throw error;
   }
+  options.onProgress?.("verified");
 
   const earlierRestoreIncomplete = await hasRestoreMarker(options.filesDir);
   await writeRestoreMarker(options.filesDir, source.name);
@@ -634,6 +638,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
       if (name === DATABASE_ENTRY) {
         await options.database.restore(content, { replaceExisting: !databaseEmpty });
         databaseRestored = true;
+        options.onProgress?.("database");
       } else if (name.startsWith(CONFIG_PREFIX) && options.configDir) {
         const target = path.join(options.configDir, ...name.slice(CONFIG_PREFIX.length).split("/"));
         await mkdir(path.dirname(target), { recursive: true });
@@ -668,6 +673,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
   }
   if (options.markRestoredIn) await writeRestoredMarker(options.markRestoredIn);
   await removeRestoreMarker(options.filesDir);
+  options.onProgress?.("files");
   options.logger.info(
     { schemaVersion: first.manifest.schemaVersion, entries: first.manifest.entries.length },
     "Backup restored",
