@@ -10784,7 +10784,20 @@
     "tasksOpen": "Meine Aufgaben, {count, plural, one {# offen} other {{shown} offen}}",
     "spaceType": "Space",
     "open": "Navigation öffnen",
-    "mySpace": "Mein Space"
+    "mySpace": "Mein Space",
+    "spaces": "Spaces",
+    "spacesPanel": "Spaces",
+    "searchSpaces": "Spaces suchen",
+    "closeSpaces": "Spaces schließen",
+    "kinds": {
+      "space": "Space",
+      "knowledgeBase": "Wissensdatenbank"
+    },
+    "noSpaces": "Du kannst noch keinen Space lesen.",
+    "noSpacesFound": "Kein Space passt zu „{query}“. Versuche einen anderen Namen oder Schlüssel.",
+    "loadMoreSpaces": "Mehr laden",
+    "showAllSpaces": "Alle Spaces anzeigen",
+    "createSpace": "Space erstellen"
   },
   "create": {
     "button": "Erstellen",

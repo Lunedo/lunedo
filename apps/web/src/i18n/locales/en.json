@@ -10784,7 +10784,20 @@
     "tasksOpen": "My tasks, {count, plural, one {# open} other {{shown} open}}",
     "spaceType": "Space",
     "open": "Open navigation",
-    "mySpace": "My space"
+    "mySpace": "My space",
+    "spaces": "Spaces",
+    "spacesPanel": "Spaces",
+    "searchSpaces": "Search spaces",
+    "closeSpaces": "Close spaces",
+    "kinds": {
+      "space": "Space",
+      "knowledgeBase": "Knowledge base"
+    },
+    "noSpaces": "You cannot read any space yet.",
+    "noSpacesFound": "No space matches “{query}”. Try another name or key.",
+    "loadMoreSpaces": "Load more",
+    "showAllSpaces": "Show all spaces",
+    "createSpace": "Create space"
   },
   "create": {
     "button": "Create",

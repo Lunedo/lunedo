@@ -2,7 +2,7 @@ import { classNames, Icon, RailButton, SidebarGroup, SidebarItem } from "@lunedo
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Layers, ListChecks, type LucideIcon, User } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { starredQuery, tasksQuery } from "../collaboration/queries.js";
 import { recentlyViewedQuery } from "../search/search-api.js";
@@ -11,6 +11,7 @@ import { spaceByKeyQuery } from "../spaces/space-queries.js";
 import { useShell } from "./shell.js";
 import { useOrganizationState, useSession } from "./shell-context.js";
 import { useSidebarSlots } from "./sidebar-slot.js";
+import { SpacesEntry, SpacesPanel } from "./spaces-panel.js";
 
 const SIDEBAR_SPACES = 7;
 
@@ -130,7 +131,6 @@ function PersonalSpaceEntry({ collapsed }: { collapsed: boolean }) {
 
 function SpacesNavigation({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const location = useLocation();
   const starred = useQuery({ ...starredQuery(), throwOnError: false });
   const recent = useQuery({ ...recentlyViewedQuery, throwOnError: false });
   const favorites = (starred.data?.spaces ?? []).slice(0, SIDEBAR_SPACES);
@@ -141,7 +141,6 @@ function SpacesNavigation({ collapsed }: { collapsed: boolean }) {
     visited.push({ key: item.spaceKey, name: item.spaceName });
   }
   const recentSpaces = visited.slice(0, Math.max(0, SIDEBAR_SPACES - favorites.length));
-  const allActive = location.pathname === "/spaces";
   const entry = (space: { key: string; name: string; personal: boolean }) => (
     <SidebarEntry
       key={space.key}
@@ -164,15 +163,6 @@ function SpacesNavigation({ collapsed }: { collapsed: boolean }) {
           {recentSpaces.map((space) => entry({ ...space, personal: false }))}
         </SidebarGroup>
       ) : null}
-      <ul className={classNames("flex flex-col gap-px", !collapsed && "pt-3")}>
-        <SidebarEntry
-          to="/spaces"
-          icon={Layers}
-          label={t("sidebar.allSpaces")}
-          current={allActive}
-          collapsed={collapsed}
-        />
-      </ul>
     </div>
   );
 }
@@ -188,6 +178,17 @@ export function AppSidebar() {
   const homeActive = location.pathname === "/home" || location.pathname === "/blog";
   const tasksActive = location.pathname === "/tasks";
   const { closeMobileSidebar } = shell;
+  const [spacesOpen, setSpacesOpen] = useState(false);
+  const spacesEntry = useRef<HTMLButtonElement>(null);
+  const spacesPanelId = useId();
+  const closeSpaces = useCallback((returnFocus: boolean) => {
+    setSpacesOpen(false);
+    if (returnFocus) spacesEntry.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname) setSpacesOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (location.pathname) closeMobileSidebar();
@@ -226,7 +227,7 @@ export function AppSidebar() {
           "shrink-0 flex-col border-r border-border bg-sidebar",
           overlay
             ? "fixed inset-y-0 left-0 z-40 flex w-sidebar shadow-dialog md:static md:shadow-none"
-            : "hidden md:flex",
+            : "relative hidden md:flex",
           collapsed ? "w-rail items-center" : "w-sidebar",
         )}
       >
@@ -240,7 +241,15 @@ export function AppSidebar() {
           />
           <TasksEntry collapsed={collapsed} current={tasksActive} />
           <PersonalSpaceEntry collapsed={collapsed} />
+          <SpacesEntry
+            collapsed={collapsed}
+            open={spacesOpen}
+            onToggle={() => setSpacesOpen((open) => !open)}
+            entryRef={spacesEntry}
+            panelId={spacesPanelId}
+          />
         </ul>
+        {spacesOpen ? <SpacesPanel id={spacesPanelId} onClose={closeSpaces} entryRef={spacesEntry} /> : null}
         <div className="w-full border-t border-border" />
         <div
           className={classNames(

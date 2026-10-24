@@ -1516,9 +1516,8 @@ describe("app shell", () => {
         .getAllByRole("link")
         .map((link) => link.getAttribute("title")),
     ).toEqual(["Marketing"]);
-    expect(within(navigation).getByRole("link", { name: "All spaces" }).getAttribute("aria-current")).toBe(
-      "page",
-    );
+    expect(within(navigation).queryByRole("link", { name: "All spaces" })).toBeNull();
+    expect(within(navigation).getByRole("button", { name: "Spaces" })).toBeTruthy();
     expect(within(navigation).queryByRole("button", { name: "Collapse sidebar" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
     cleanup();
@@ -1555,11 +1554,15 @@ describe("app shell", () => {
     await renderAt("/spaces");
     const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
     await waitFor(() => expect(navigation.hasAttribute("data-collapsed")).toBe(true));
-    for (const name of ["For you", "My tasks", "My space", "All spaces"]) {
+    for (const name of ["For you", "My tasks", "My space"]) {
       const link = within(navigation).getByRole("link", { name });
       expect(link.getAttribute("aria-label")).toBe(name);
       expect(link.textContent).toBe("");
     }
+    const spaces = within(navigation).getByRole("button", { name: "Spaces" });
+    expect(spaces.textContent).toBe("");
+    await userEvent.click(spaces);
+    expect(await screen.findByRole("dialog", { name: "Spaces" })).toBeTruthy();
     expect(within(navigation).queryByRole("list", { name: "Favorites" })).toBeNull();
   });
 
@@ -1615,6 +1618,105 @@ describe("app shell", () => {
     const other = await screen.findByRole("navigation", { name: "Main navigation" });
     await within(other).findByRole("link", { name: "Space settings" });
     expect(within(other).getByRole("link", { name: "My space" }).getAttribute("aria-current")).toBeNull();
+  });
+
+  describe("the spaces panel", () => {
+    const knowledgeBase = {
+      ...space("admin"),
+      id: MARKETING_ID,
+      key: "HELP",
+      name: "Help center",
+      type: "knowledgeBase",
+    };
+
+    function panelRoutes(
+      extra: Record<string, (request: RecordedRequest) => { status?: number; body?: unknown }> = {},
+    ) {
+      return {
+        ...baseRoutes(),
+        ...spaceRoutes(),
+        ...shellRoutes(),
+        "GET /api/v1/spaces": (request: RecordedRequest) => {
+          const url = new URL(request.path, "http://localhost");
+          const q = url.searchParams.get("q");
+          const cursor = url.searchParams.get("cursor");
+          if (q) return { body: { items: q === "help" ? [knowledgeBase] : [], nextCursor: null } };
+          return cursor
+            ? { body: { items: [knowledgeBase], nextCursor: null } }
+            : { body: { items: [{ ...space("admin"), type: "standard" }], nextCursor: "next" } };
+        },
+        [`PUT /api/v1/starred/spaces/${MARKETING_ID}`]: () => ({ status: 204 }),
+        ...extra,
+      };
+    }
+
+    it("opens from the sidebar with the search focused, lists the groups and closes with Escape", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("min-width"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      mockApi(panelRoutes());
+      await renderAt("/spaces");
+      const entry = await screen.findByRole("button", { name: "Spaces" });
+      await userEvent.click(entry);
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      expect(entry.getAttribute("aria-expanded")).toBe("true");
+      await waitFor(() =>
+        expect(document.activeElement).toBe(within(panel).getByRole("searchbox", { name: "Search spaces" })),
+      );
+      const favorites = within(panel).getByRole("region", { name: "Favorites" });
+      expect(within(favorites).getByRole("link", { name: /IT Operations/ })).toBeTruthy();
+      const recent = within(panel).getByRole("region", { name: "Recently visited" });
+      expect(within(recent).getByRole("link", { name: /Marketing/ })).toBeTruthy();
+      const all = await within(panel).findByRole("region", { name: "All spaces" });
+      expect(within(all).getByText("Space")).toBeTruthy();
+      await userEvent.click(within(panel).getByRole("button", { name: "Load more" }));
+      expect(await within(all).findByRole("link", { name: /Help center/ })).toBeTruthy();
+      expect(within(all).getByText("Knowledge base")).toBeTruthy();
+      expect(within(panel).getByRole("button", { name: "Show all spaces" })).toBeTruthy();
+      expect(within(panel).getByRole("button", { name: "Create space" })).toBeTruthy();
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Spaces" })).toBeNull());
+      expect(document.activeElement).toBe(entry);
+    });
+
+    it("searches all spaces, stars one and closes when clicking outside", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("min-width"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      const { requests } = mockApi(panelRoutes());
+      await renderAt("/spaces");
+      await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      await userEvent.type(within(panel).getByRole("searchbox", { name: "Search spaces" }), "help");
+      await within(panel).findByRole("link", { name: /Help center/ });
+      const all = within(panel).getByRole("region", { name: "All spaces" });
+      await waitFor(() => expect(within(panel).queryByRole("region", { name: "Favorites" })).toBeNull());
+      await userEvent.click(within(all).getByRole("button", { name: /^Star Help center/ }));
+      await waitFor(() =>
+        expect(
+          requests.some(
+            (request) => request.method === "PUT" && request.path.endsWith(`/starred/spaces/${MARKETING_ID}`),
+          ),
+        ).toBe(true),
+      );
+      await userEvent.click(screen.getByRole("heading", { level: 1 }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Spaces" })).toBeNull());
+    });
+
+    it("becomes a full-screen sheet with a close button on narrow screens", async () => {
+      mockApi(panelRoutes());
+      await renderAt("/spaces");
+      await userEvent.click(await screen.findByRole("button", { name: "Open navigation" }));
+      await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      expect(panel.className).toContain("fixed inset-0");
+      await userEvent.click(within(panel).getByRole("button", { name: "Close spaces" }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Spaces" })).toBeNull());
+    });
   });
 
   it("offers the kinds of the current space in the Create menu", async () => {
