@@ -1646,6 +1646,12 @@ describe("app shell", () => {
             : { body: { items: [{ ...space("admin"), type: "standard" }], nextCursor: "next" } };
         },
         [`PUT /api/v1/starred/spaces/${MARKETING_ID}`]: () => ({ status: 204 }),
+        "GET /api/v1/space-keys/MKT": () => ({
+          body: {
+            space: { ...space("reader"), id: MARKETING_ID, key: "MKT", name: "Marketing" },
+            redirected: false,
+          },
+        }),
         ...extra,
       };
     }

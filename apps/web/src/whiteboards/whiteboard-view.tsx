@@ -138,7 +138,7 @@ const NO_SNAPSHOT = {
   synced: false,
   loaded: false,
   problem: null,
-  saveState: "offline",
+  saveState: "connecting",
 } as const;
 
 export function WhiteboardView({

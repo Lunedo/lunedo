@@ -719,3 +719,63 @@ describe("the search", () => {
     );
   });
 });
+
+describe("the spaces flyout", () => {
+  it("lists only spaces of the current organization, also among starred and recent ones", async () => {
+    const OTHER = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60";
+    const sales = {
+      id: "01929b1e-0000-7000-8000-0000000000d1",
+      key: "SALES",
+      name: "Sales",
+      personal: false,
+      ownerId: null,
+      ownerName: null,
+      type: "team",
+      organizationId: ORGANIZATION.id,
+    };
+    const foreign = {
+      ...sales,
+      id: "01929b1e-0000-7000-8000-0000000000d2",
+      key: "SALES2",
+      organizationId: OTHER,
+    };
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/spaces": () => ({ body: { items: [sales], nextCursor: null } }),
+      "GET /api/v1/starred": () => ({
+        body: {
+          items: [],
+          spaces: [
+            {
+              id: foreign.id,
+              key: foreign.key,
+              name: foreign.name,
+              personal: false,
+              mySpace: false,
+              starredAt: "2026-10-08T07:00:00.000Z",
+            },
+          ],
+        },
+      }),
+      "GET /api/v1/recent": () => ({ body: [] }),
+      [`GET /api/v1/space-keys/${foreign.key}`]: () => ({ body: { space: foreign, role: "reader" } }),
+    });
+    await renderApp("/tasks");
+    await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+    const panel = await screen.findByRole("dialog");
+    expect(await within(panel).findByText("Sales")).toBeTruthy();
+    await waitFor(() => expect(within(panel).getAllByText("Sales")).toHaveLength(1));
+    const listed = requests.find((request) => request.path.startsWith("/api/v1/spaces?"));
+    expect(listed?.path).toContain(`organizationId=${ORGANIZATION.id}`);
+  });
+});
+
+describe("an address that does not exist", () => {
+  it("shows the not-found page inside the app shell for signed-in people", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/does/not/exist");
+    expect(await screen.findByText("Page not found")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "My tasks" })).toBeTruthy();
+    expect(screen.getByRole("main").id).toBe("main");
+  });
+});

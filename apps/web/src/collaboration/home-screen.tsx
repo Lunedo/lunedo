@@ -1,4 +1,4 @@
-import { Button, EmptyState, PageHeader, Section, Skeleton } from "@lunedo/ui";
+import { Button, EmptyState, PageHeader, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Layers, ListChecks } from "lucide-react";
@@ -18,9 +18,9 @@ import { useCan, useOrganizationState } from "../shell/shell-context.js";
 import { CreateSpaceDialog } from "../spaces/create-space-dialog.js";
 import { itemIcon } from "../spaces/item-icons.js";
 import { itemHref } from "../spaces/item-paths.js";
-import { SpaceBadge } from "../spaces/space-badge.js";
+import { referenceSpaceName, SpaceBadge } from "../spaces/space-badge.js";
 import { postHref } from "./blog/blog-list.js";
-import { HomeEmpty, HomeRow } from "./home-rows.js";
+import { HomeEmpty, HomeRow, HomeRowsSkeleton } from "./home-rows.js";
 import { homeQuery } from "./queries.js";
 
 function SectionLink({ to, children }: { to: string; children: ReactNode }) {
@@ -45,7 +45,7 @@ function SharedWithYou() {
   const shared = useQuery({ ...sharedWithMeQuery(), throwOnError: false });
   return (
     <Section title={t("home.shared")}>
-      {shared.isPending ? <Skeleton className="my-2 h-field w-full" /> : null}
+      {shared.isPending ? <HomeRowsSkeleton /> : null}
       {shared.isError ? (
         <LoadError what={t("home.shared")} error={shared.error} onRetry={() => shared.refetch()} />
       ) : null}
@@ -111,21 +111,14 @@ function FirstStart() {
 function HomeSections() {
   const { t } = useTranslation();
   const format = useFormat();
-  const home = useQuery(homeQuery());
-  if (home.isPending) {
-    return (
-      <div className="grid gap-8 md:grid-cols-2">
-        <Skeleton className="h-field w-full" />
-        <Skeleton className="h-field w-full" />
-      </div>
-    );
-  }
-  if (home.isError) {
-    return <LoadError what={t("home.loadFailed")} error={home.error} onRetry={() => home.refetch()} />;
-  }
+  const home = useQuery({ ...homeQuery(), throwOnError: false });
   const data = home.data;
+  const pending = home.isPending ? <HomeRowsSkeleton /> : null;
   return (
     <div className="flex flex-col gap-8">
+      {home.isError ? (
+        <LoadError what={t("home.loadFailed")} error={home.error} onRetry={() => home.refetch()} />
+      ) : null}
       <DueForReview />
       <div className="grid items-start gap-8 md:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-8">
@@ -134,8 +127,9 @@ function HomeSections() {
             title={t("home.tasks")}
             actions={<SectionLink to="/tasks">{t("home.allTasks")}</SectionLink>}
           >
-            {data.tasks.length === 0 ? <HomeEmpty text={t("home.noTasks")} /> : null}
-            {data.tasks.map((task) => (
+            {pending}
+            {data?.tasks.length === 0 ? <HomeEmpty text={t("home.noTasks")} /> : null}
+            {data?.tasks.map((task) => (
               <HomeRow
                 key={task.id}
                 to={
@@ -158,8 +152,9 @@ function HomeSections() {
             ))}
           </Section>
           <Section title={t("home.recent")}>
-            {data.recent.length === 0 ? <HomeEmpty text={t("home.noRecent")} /> : null}
-            {data.recent.map((item) => {
+            {pending}
+            {data?.recent.length === 0 ? <HomeEmpty text={t("home.noRecent")} /> : null}
+            {data?.recent.map((item) => {
               const href = itemHref(
                 { id: item.id, kind: item.kind, title: item.title, link: null },
                 item.spaceKey,
@@ -170,7 +165,9 @@ function HomeSections() {
                   to={href}
                   leading={<ItemIcon kind={item.kind} />}
                   title={item.title}
-                  meta={`${item.spaceName} · ${format.short(item.viewedAt)}`}
+                  meta={[referenceSpaceName(t, item), format.short(item.viewedAt)]
+                    .filter(Boolean)
+                    .join(" · ")}
                 />
               ) : null;
             })}
@@ -180,8 +177,9 @@ function HomeSections() {
         <div className="flex min-w-0 flex-col gap-8">
           <OneOnOnes />
           <Section title={t("home.mentions")}>
-            {data.mentions.length === 0 ? <HomeEmpty text={t("home.noMentions")} /> : null}
-            {data.mentions.map((mention) => {
+            {pending}
+            {data?.mentions.length === 0 ? <HomeEmpty text={t("home.noMentions")} /> : null}
+            {data?.mentions.map((mention) => {
               const item = mention.item;
               const href = itemHref(
                 { id: item.id, kind: item.kind, title: item.title, link: null },
@@ -203,19 +201,20 @@ function HomeSections() {
             })}
           </Section>
           <Section title={t("home.starred")}>
-            {data.starred.items.length === 0 && data.starred.spaces.length === 0 ? (
+            {pending}
+            {data && data.starred.items.length === 0 && data.starred.spaces.length === 0 ? (
               <HomeEmpty text={t("home.noStarred")} />
             ) : null}
-            {data.starred.spaces.map((space) => (
+            {data?.starred.spaces.map((space) => (
               <HomeRow
                 key={space.id}
                 to={`/spaces/${space.key}`}
                 leading={<SpaceBadge space={space} size="sm" />}
-                title={space.name || t("spaces.personal.label")}
+                title={space.name || (space.mySpace ? t("spaces.personal.mine") : t("spaces.personal.label"))}
                 meta={space.personal ? t("spaces.personal.label") : t("sidebar.spaceType")}
               />
             ))}
-            {data.starred.items.map((item) => {
+            {data?.starred.items.map((item) => {
               const href = itemHref(
                 { id: item.id, kind: item.kind, title: item.title, link: null },
                 item.spaceKey,
@@ -226,7 +225,7 @@ function HomeSections() {
                   to={href}
                   leading={<ItemIcon kind={item.kind} />}
                   title={item.title}
-                  meta={item.spaceName}
+                  meta={referenceSpaceName(t, item)}
                 />
               ) : null;
             })}
@@ -235,8 +234,9 @@ function HomeSections() {
             title={t("home.posts")}
             actions={<SectionLink to="/blog">{t("home.allPosts")}</SectionLink>}
           >
-            {data.posts.length === 0 ? <HomeEmpty text={t("home.noPosts")} /> : null}
-            {data.posts.map((post) => (
+            {pending}
+            {data?.posts.length === 0 ? <HomeEmpty text={t("home.noPosts")} /> : null}
+            {data?.posts.map((post) => (
               <HomeRow
                 key={post.id}
                 to={postHref(post)}
@@ -283,15 +283,7 @@ export function HomeScreen() {
     >
       <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
         <PageHeader title={t("home.title")} />
-        {withoutOrganization ? (
-          <WithoutOrganizationNotice />
-        ) : firstStart ? (
-          <FirstStart />
-        ) : hasSpaces === null ? (
-          <Skeleton className="h-field w-full" />
-        ) : (
-          <HomeSections />
-        )}
+        {withoutOrganization ? <WithoutOrganizationNotice /> : firstStart ? <FirstStart /> : <HomeSections />}
       </div>
     </main>
   );

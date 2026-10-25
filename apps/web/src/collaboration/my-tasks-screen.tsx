@@ -265,38 +265,42 @@ export function MyTasksScreen() {
     >
       <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
         <PageHeader title={t("tasks.myTitle")} description={t("tasks.myDescription")} />
-        <div className="flex flex-wrap items-center gap-2">
-          <SegmentedControl
-            label={t("tasks.filter")}
-            value={view}
-            onValueChange={(value) => change({ view: value as TaskView })}
-            options={taskViews.map((value) => ({ value, label: t(`tasks.views.${value}`) }))}
-          />
-          <FilterMenu
-            label={t("tasks.filters.space")}
-            value={search.space ?? ""}
-            valueLabel={search.space ? (spaceName ?? t("tasks.filters.chosen")) : t("tasks.filters.all")}
-            options={spaceOptions}
-            search={{
-              value: spaceSearch,
-              onChange: setSpaceSearch,
-              placeholder: t("tasks.filters.searchSpace"),
-            }}
-            onValueChange={(value) => {
-              remember(value, spaceOptions);
-              change({ space: value || undefined });
-            }}
-          />
-          <FilterMenu
-            label={t("tasks.filters.due")}
-            value={due}
-            defaultValue="any"
-            options={taskDueFilters.map((value) => ({
-              value,
-              label: value === "any" ? t("tasks.filters.all") : t(`tasks.due.${value}`),
-            }))}
-            onValueChange={(value) => change({ due: value as (typeof taskDueFilters)[number] })}
-          />
+        <div data-filter-row="" className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+          <span className="shrink-0">
+            <SegmentedControl
+              label={t("tasks.filter")}
+              value={view}
+              onValueChange={(value) => change({ view: value as TaskView })}
+              options={taskViews.map((value) => ({ value, label: t(`tasks.views.${value}`) }))}
+            />
+          </span>
+          <span className="flex shrink-0 gap-2">
+            <FilterMenu
+              label={t("tasks.filters.space")}
+              value={search.space ?? ""}
+              valueLabel={search.space ? (spaceName ?? t("tasks.filters.chosen")) : t("tasks.filters.all")}
+              options={spaceOptions}
+              search={{
+                value: spaceSearch,
+                onChange: setSpaceSearch,
+                placeholder: t("tasks.filters.searchSpace"),
+              }}
+              onValueChange={(value) => {
+                remember(value, spaceOptions);
+                change({ space: value || undefined });
+              }}
+            />
+            <FilterMenu
+              label={t("tasks.filters.due")}
+              value={due}
+              defaultValue="any"
+              options={taskDueFilters.map((value) => ({
+                value,
+                label: value === "any" ? t("tasks.filters.all") : t(`tasks.due.${value}`),
+              }))}
+              onValueChange={(value) => change({ due: value as (typeof taskDueFilters)[number] })}
+            />
+          </span>
           {view === "created" ? null : (
             <FilterMenu
               label={t("tasks.filters.assignedBy")}
@@ -315,7 +319,7 @@ export function MyTasksScreen() {
               }}
             />
           )}
-          <span className="ml-auto">
+          <span className="ml-auto shrink-0">
             <FilterMenu
               label={t("tasks.group.label")}
               value={grouping}

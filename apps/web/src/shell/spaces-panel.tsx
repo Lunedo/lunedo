@@ -13,7 +13,7 @@ import { LoadError } from "../errors/failure.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { recentlyViewedQuery } from "../search/search-api.js";
 import { CreateSpaceDialog } from "../spaces/create-space-dialog.js";
-import { SpaceBadge } from "../spaces/space-badge.js";
+import { SpaceBadge, useSpaceDisplayName } from "../spaces/space-badge.js";
 import { spaceByKeyQuery, spaceKeys } from "../spaces/space-queries.js";
 import { useOrganizationState } from "./shell-context.js";
 
@@ -26,6 +26,8 @@ interface PanelSpace {
   key: string;
   name: string;
   personal: boolean;
+  ownerId?: string | null;
+  ownerName?: string | null;
   type: string | null;
 }
 
@@ -93,7 +95,7 @@ export function SpacesEntry({
 
 function SpaceRow({ space, onOpen }: { space: PanelSpace; onOpen: () => void }) {
   const { t } = useTranslation();
-  const name = space.name || t("spaces.personal.label");
+  const name = useSpaceDisplayName()({ ...space, ownerName: space.ownerName ?? null });
   const kind =
     space.type === null
       ? null
@@ -157,8 +159,10 @@ export function SpacesPanel({
   const query = useDebounced(text.trim(), 250);
   const starred = useQuery({ ...starredQuery(), throwOnError: false });
   const recent = useQuery({ ...recentlyViewedQuery, throwOnError: false });
+  const organizationId = organization.organizationId;
   const all = useInfiniteQuery({
-    queryKey: [...spaceKeys.list({ search: query, organizationId: null }), "panel"],
+    queryKey: [...spaceKeys.list({ search: query, organizationId }), "panel"],
+    enabled: organizationId !== null,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       request(() =>
@@ -166,6 +170,7 @@ export function SpacesPanel({
           params: {
             query: {
               limit: PAGE_SIZE,
+              ...(organizationId ? { organizationId } : {}),
               ...(query ? { q: query } : {}),
               ...(pageParam ? { cursor: pageParam } : {}),
             },
@@ -180,6 +185,8 @@ export function SpacesPanel({
     key: space.key,
     name: space.name,
     personal: space.personal,
+    ownerId: space.ownerId,
+    ownerName: space.ownerName,
     type: space.type,
   }));
   const known = new Map(listed.map((space) => [space.id, space]));
@@ -204,7 +211,7 @@ export function SpacesPanel({
     });
   }
   const recentSpaces = visited.slice(0, RECENT_SHOWN);
-  const missing = [...favorites, ...recentSpaces].filter((space) => space.type === null);
+  const missing = [...favorites, ...recentSpaces].filter((space) => !known.has(space.id));
   const details = useQueries({
     queries: missing.map((space) => ({ ...spaceByKeyQuery(space.key), throwOnError: false })),
   });
@@ -213,6 +220,13 @@ export function SpacesPanel({
       detail.data ? [[detail.data.space.id, detail.data.space.type] as const] : [],
     ),
   );
+  const organizationOf = new Map<string, string | null>([
+    ...listed.map((space) => [space.id, organizationId] as const),
+    ...details.flatMap((detail) =>
+      detail.data ? [[detail.data.space.id, detail.data.space.organizationId] as const] : [],
+    ),
+  ]);
+  const inOrganization = (space: PanelSpace) => organizationOf.get(space.id) === organizationId;
   const withType = (space: PanelSpace): PanelSpace => ({
     ...space,
     type: space.type ?? typeOf.get(space.id) ?? null,
@@ -279,12 +293,18 @@ export function SpacesPanel({
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-2">
         <Group
           label={t("sidebar.favorites")}
-          spaces={favorites.map(withType).filter((space) => matches(space, query))}
+          spaces={favorites
+            .filter(inOrganization)
+            .map(withType)
+            .filter((space) => matches(space, query))}
           onOpen={opened}
         />
         <Group
           label={t("sidebar.recentSpaces")}
-          spaces={recentSpaces.map(withType).filter((space) => matches(space, query))}
+          spaces={recentSpaces
+            .filter(inOrganization)
+            .map(withType)
+            .filter((space) => matches(space, query))}
           onOpen={opened}
         />
         {all.isPending ? (

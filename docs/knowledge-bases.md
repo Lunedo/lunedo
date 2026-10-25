@@ -1,12 +1,12 @@
 # Knowledge bases
 
-A knowledge base is a space of the type **knowledge base**. It holds articles, such as how-tos and troubleshooting articles, sorted into categories. Authors write in the normal Lunedo interface with the same editor, versions, comments, permissions and search as in every other space. Readers use the **portal**, a lean site of its own without the navigation, page tree or editor of the app (see [The portal](#the-portal)).
+A knowledge base is a space of the type **knowledge base**. It holds articles, such as how-tos and troubleshooting articles, sorted into areas and topics. Authors write in the normal Lunedo interface with the same editor, versions, comments, permissions and search as in every other space. Readers use the **portal**, a lean site of its own without the navigation, page tree or editor of the app (see [The portal](#the-portal)).
 
 ## Creating a knowledge base
 
 In the create dialog, choose **Knowledge base** as the type of space. The type cannot be changed later, and every existing space is a standard space.
 
-- A knowledge base has no overview page. Its start page lists the articles by category.
+- A knowledge base has no overview page. Its start page lists the articles by area.
 - It cannot be confidential, and personal spaces are never knowledge bases.
 - The creator becomes space admin. The dialog suggests no other roles for a knowledge base; add editors there or later under **Space settings → Permissions**. Who may edit is set with these roles; who may read is set with the audience.
 
@@ -39,7 +39,7 @@ Portal accounts are for readers without an account of the organization, for exam
 
 API: `GET` and `POST /api/v1/spaces/{spaceId}/portal-accounts`, `DELETE /api/v1/spaces/{spaceId}/portal-invitations/{invitationId}`, `POST /api/v1/spaces/{spaceId}/portal-accounts/{accountId}/deactivate` and `DELETE /api/v1/spaces/{spaceId}/portal-accounts/{accountId}`, all with the permission to manage the organization's members; `GET /api/v1/account/portals` for the portal account itself.
 
-Categories and articles can narrow the audience with view restrictions, as pages can in every space. They can never widen it. Shares of single articles and share links work as in every other space.
+Areas, topics and articles can narrow the audience with view restrictions, as pages can in every space. They can never widen it. Shares of single articles and share links work as in every other space.
 
 Space admins change the audience under **Space settings → Visibility**. The change is saved with **Save visibility**. A change that lets more people read, for example from groups to all signed-in people or to public, or adding a group, asks for confirmation first and names the number of articles without a view restriction that become readable. Narrowing saves without asking. Every change is recorded in the audit log as `knowledgeBase.audienceChanged`, with the old and new audience, the groups, whether it widened and the number of articles; the reader roles of groups are recorded as permission changes.
 
@@ -47,11 +47,11 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base`, `POST …/knowledge-base/aud
 
 ## Content
 
-A knowledge base contains only articles and categories:
+A knowledge base contains only articles, areas and topics:
 
 - **Articles** are pages. They always use publish mode: readers see the last published version while authors work on a draft. Live mode is not offered.
-- **Categories** are folders, nested to any depth, for example IT › Microsoft › Outlook › Web App. The portal calls the top-level folders **areas** and the folders below them **topics**; it is one kind of folder in every other respect.
-- Articles are placed in categories or at the top level, never below another article. Articles and categories keep their kind; they cannot be converted.
+- **Areas and topics** are folders, nested to any depth, for example IT › Microsoft › Outlook › Web App. The top-level folders are **areas** and the folders below them **topics**, in the app and in the portal; it is one kind of folder in every other respect. The API calls them categories.
+- Articles are placed in an area, in a topic or at the top level, never below another article. Articles and folders keep their kind; they cannot be converted.
 
 Blog posts, meeting series, whiteboards and links are refused, through the interface, the API, moves, copies and every other path, with `knowledgeBaseContent`. A page in live mode or a page with subpages cannot be moved or copied into a knowledge base (`knowledgeBaseMode`, `knowledgeBasePlacement`); switch it to publish mode or move its subpages first.
 
@@ -84,7 +84,7 @@ Images in the sections **Steps**, **What you see** and **Solution** are framed b
 
 Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. Only titles that were published in this knowledge base count: working titles before the first publication never become addresses, and an article moved into another knowledge base starts there without the short forms of its old knowledge base. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
 
-## Categories
+## Areas and topics
 
 Every folder, at every depth, has an icon, an introduction and a contact address. The portal shows the folders in their order. Without an icon, it shows the name when it has at most three characters, otherwise its first letter.
 
@@ -143,7 +143,7 @@ Each reminder is scheduled for the moment it is due when the due date is set, an
 
 ### Review list
 
-**Review** in the sidebar of the knowledge base lists the articles that are due or overdue, due within 30 days, whose source page changed, or that have no owner. Everyone with edit rights in the knowledge base sees it, each person only with the articles they may edit. The list shows title, category, owner, interval, last review and the state, both as text and as a ring that fills up as the interval passes. Filters show due articles, articles due within 30 days or articles without an owner, and **Only my articles** shows the articles you own.
+**Review** in the sidebar of the knowledge base lists the articles that are due or overdue, due within 30 days, whose source page changed, or that have no owner. Everyone with edit rights in the knowledge base sees it, each person only with the articles they may edit. The list shows title, area or topic, owner, interval, last review and the state, both as text and as a ring that fills up as the interval passes. Filters show due articles, articles due within 30 days or articles without an owner, and **Only my articles** shows the articles you own.
 
 Articles without an owner show **Set owner** to space admins, who choose a person with edit rights by name. When an owner's account is deactivated, the space admins are notified, as for every space.
 

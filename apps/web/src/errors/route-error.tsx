@@ -7,10 +7,21 @@ import { ApiError, isApiError } from "../api/request.js";
 import { isRetryable } from "./failure.js";
 import { problemMessage } from "./problem-message.js";
 
-export function NotFoundScreen() {
+export function AppNotFoundScreen() {
+  return <NotFoundScreen inShell />;
+}
+
+export function NotFoundScreen({ inShell = false }: { inShell?: boolean }) {
   const { t } = useTranslation();
   return (
-    <main className="flex min-h-full items-center justify-center p-6">
+    <main
+      {...(inShell ? { id: "main" } : {})}
+      className={
+        inShell
+          ? "flex min-w-0 flex-1 items-center justify-center overflow-y-auto p-6"
+          : "flex min-h-full items-center justify-center p-6"
+      }
+    >
       <EmptyState
         icon={Compass}
         title={t("errors.notFoundTitle")}

@@ -9,7 +9,12 @@ import {
 } from "@tanstack/react-router";
 import { z } from "zod";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
-import { NotFoundScreen, RouteErrorScreen, ScreenErrorScreen } from "./errors/route-error.js";
+import {
+  AppNotFoundScreen,
+  NotFoundScreen,
+  RouteErrorScreen,
+  ScreenErrorScreen,
+} from "./errors/route-error.js";
 import { printRouteSearch } from "./exports/print-search.js";
 import { reviewSearch } from "./knowledge-bases/reviews/review-search.js";
 import { statisticsSearch } from "./knowledge-bases/statistics/statistics-search.js";
@@ -39,7 +44,7 @@ const providerSearch = z.object({
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
-  notFoundComponent: NotFoundScreen,
+  notFoundComponent: () => <NotFoundScreen />,
   errorComponent: RouteErrorScreen,
 });
 
@@ -198,6 +203,12 @@ const appRoute = createRoute({
     session: await requireSession(context.queryClient, location.href),
   }),
   component: lazyRouteComponent(() => import("./shell/app-shell.js"), "AppShell"),
+});
+
+const appNotFoundRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "$",
+  component: AppNotFoundScreen,
 });
 
 const printRoute = createRoute({
@@ -1042,6 +1053,7 @@ const routeTree = rootRoute.addChildren([
   ]),
   printRoute,
   appRoute.addChildren([
+    appNotFoundRoute,
     homeRoute,
     forYouRoute,
     openNotificationRoute,

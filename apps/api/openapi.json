@@ -29345,7 +29345,7 @@
             }
           },
           "409": {
-            "description": "`notCategory`: The folder is not a category.",
+            "description": "`notCategory`: The item is not an area or a topic.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -29355,7 +29355,7 @@
                   "notCategory": {
                     "value": {
                       "type": "urn:lunedo:problem:notCategory",
-                      "title": "The folder is not a category",
+                      "title": "The item is not an area or a topic",
                       "status": 409,
                       "code": "notCategory"
                     }
@@ -29589,7 +29589,7 @@
             }
           },
           "409": {
-            "description": "`notCategory`: The folder is not a category.",
+            "description": "`notCategory`: The item is not an area or a topic.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -29599,7 +29599,7 @@
                   "notCategory": {
                     "value": {
                       "type": "urn:lunedo:problem:notCategory",
-                      "title": "The folder is not a category",
+                      "title": "The item is not an area or a topic",
                       "status": 409,
                       "code": "notCategory"
                     }
@@ -35575,6 +35575,10 @@
                             "type": "string",
                             "description": "Name of that space."
                           },
+                          "mySpace": {
+                            "type": "boolean",
+                            "description": "Whether the item lies in the caller's own personal space."
+                          },
                           "viewedAt": {
                             "type": "string",
                             "format": "date-time",
@@ -35588,6 +35592,7 @@
                           "spaceId",
                           "spaceKey",
                           "spaceName",
+                          "mySpace",
                           "viewedAt"
                         ],
                         "additionalProperties": false,
@@ -35638,6 +35643,10 @@
                                 "type": "string",
                                 "description": "Name of that space."
                               },
+                              "mySpace": {
+                                "type": "boolean",
+                                "description": "Whether the item lies in the caller's own personal space."
+                              },
                               "starredAt": {
                                 "type": "string",
                                 "format": "date-time",
@@ -35651,6 +35660,7 @@
                               "spaceId",
                               "spaceKey",
                               "spaceName",
+                              "mySpace",
                               "starredAt"
                             ],
                             "additionalProperties": false,
@@ -35680,6 +35690,10 @@
                                 "type": "boolean",
                                 "description": "Whether it is a personal space."
                               },
+                              "mySpace": {
+                                "type": "boolean",
+                                "description": "Whether it is the caller's own personal space."
+                              },
                               "starredAt": {
                                 "type": "string",
                                 "format": "date-time",
@@ -35691,6 +35705,7 @@
                               "key",
                               "name",
                               "personal",
+                              "mySpace",
                               "starredAt"
                             ],
                             "additionalProperties": false,
@@ -35897,6 +35912,10 @@
                               "spaceName": {
                                 "type": "string",
                                 "description": "Name of that space."
+                              },
+                              "mySpace": {
+                                "type": "boolean",
+                                "description": "Whether the item lies in the caller's own personal space."
                               }
                             },
                             "required": [
@@ -35905,7 +35924,8 @@
                               "title",
                               "spaceId",
                               "spaceKey",
-                              "spaceName"
+                              "spaceName",
+                              "mySpace"
                             ],
                             "additionalProperties": false,
                             "description": "A page or blog post."
@@ -36203,6 +36223,7 @@
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
+                      "mySpace": false,
                       "viewedAt": "2026-10-07T08:00:00.000Z"
                     }
                   ],
@@ -36215,6 +36236,7 @@
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                         "spaceKey": "ITOPS",
                         "spaceName": "IT Operations",
+                        "mySpace": false,
                         "starredAt": "2026-10-06T08:00:00.000Z"
                       }
                     ],
@@ -36254,7 +36276,8 @@
                         "title": "VPN access for remote staff",
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                         "spaceKey": "ITOPS",
-                        "spaceName": "IT Operations"
+                        "spaceName": "IT Operations",
+                        "mySpace": false
                       },
                       "commentId": null,
                       "actor": {
@@ -158469,6 +158492,10 @@
                           "spaceName": {
                             "type": "string",
                             "description": "Name of that space."
+                          },
+                          "mySpace": {
+                            "type": "boolean",
+                            "description": "Whether the item lies in the caller's own personal space."
                           }
                         },
                         "required": [
@@ -158477,7 +158504,8 @@
                           "title",
                           "spaceId",
                           "spaceKey",
-                          "spaceName"
+                          "spaceName",
+                          "mySpace"
                         ],
                         "additionalProperties": false,
                         "description": "A page or blog post."
@@ -158548,7 +158576,8 @@
                       "title": "VPN access for remote staff",
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
-                      "spaceName": "IT Operations"
+                      "spaceName": "IT Operations",
+                      "mySpace": false
                     },
                     "commentId": null,
                     "actor": {
@@ -171522,6 +171551,10 @@
                             "spaceName": {
                               "type": "string",
                               "description": "Name of that space."
+                            },
+                            "mySpace": {
+                              "type": "boolean",
+                              "description": "Whether the item lies in the caller's own personal space."
                             }
                           },
                           "required": [
@@ -171530,7 +171563,8 @@
                             "title",
                             "spaceId",
                             "spaceKey",
-                            "spaceName"
+                            "spaceName",
+                            "mySpace"
                           ],
                           "additionalProperties": false,
                           "description": "A page or blog post."
@@ -171555,7 +171589,8 @@
                     "title": "VPN access for remote staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "spaceKey": "ITOPS",
-                    "spaceName": "IT Operations"
+                    "spaceName": "IT Operations",
+                    "mySpace": false
                   }
                 }
               }
@@ -171790,6 +171825,10 @@
                             "spaceName": {
                               "type": "string",
                               "description": "Name of that space."
+                            },
+                            "mySpace": {
+                              "type": "boolean",
+                              "description": "Whether the item lies in the caller's own personal space."
                             }
                           },
                           "required": [
@@ -171798,7 +171837,8 @@
                             "title",
                             "spaceId",
                             "spaceKey",
-                            "spaceName"
+                            "spaceName",
+                            "mySpace"
                           ],
                           "additionalProperties": false,
                           "description": "A page or blog post."
@@ -171823,7 +171863,8 @@
                     "title": "VPN access for remote staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "spaceKey": "ITOPS",
-                    "spaceName": "IT Operations"
+                    "spaceName": "IT Operations",
+                    "mySpace": false
                   }
                 }
               }
@@ -182514,13 +182555,23 @@
                                   "personal": {
                                     "type": "boolean",
                                     "description": "Whether this is a personal space."
+                                  },
+                                  "knowledgeBase": {
+                                    "type": "boolean",
+                                    "description": "Whether the space is a knowledge base, whose pages are articles."
+                                  },
+                                  "mine": {
+                                    "type": "boolean",
+                                    "description": "Whether it is the caller's own personal space."
                                   }
                                 },
                                 "required": [
                                   "id",
                                   "key",
                                   "name",
-                                  "personal"
+                                  "personal",
+                                  "knowledgeBase",
+                                  "mine"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A space the caller can open."
@@ -182874,6 +182925,10 @@
                                     "type": "boolean",
                                     "description": "Whether this is a personal space."
                                   },
+                                  "mine": {
+                                    "type": "boolean",
+                                    "description": "Whether it is the caller's own personal space."
+                                  },
                                   "count": {
                                     "type": "integer",
                                     "minimum": -9007199254740991,
@@ -182886,6 +182941,7 @@
                                   "key",
                                   "name",
                                   "personal",
+                                  "mine",
                                   "count"
                                 ],
                                 "additionalProperties": false,
@@ -183148,7 +183204,9 @@
                         "id": "01929b1e-7c1a-7000-8000-000000000010",
                         "key": "ITOPS",
                         "name": "IT Operations",
-                        "personal": false
+                        "personal": false,
+                        "knowledgeBase": false,
+                        "mine": false
                       },
                       "sharedWithYou": false,
                       "path": [],
@@ -183187,6 +183245,7 @@
                         "key": "ITOPS",
                         "name": "IT Operations",
                         "personal": false,
+                        "mine": false,
                         "count": 1
                       }
                     ],
@@ -216465,6 +216524,10 @@
                         "type": "string",
                         "description": "Name of that space."
                       },
+                      "mySpace": {
+                        "type": "boolean",
+                        "description": "Whether the item lies in the caller's own personal space."
+                      },
                       "viewedAt": {
                         "type": "string",
                         "format": "date-time",
@@ -216478,6 +216541,7 @@
                       "spaceId",
                       "spaceKey",
                       "spaceName",
+                      "mySpace",
                       "viewedAt"
                     ],
                     "additionalProperties": false,
@@ -216493,6 +216557,7 @@
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations",
+                    "mySpace": false,
                     "viewedAt": "2026-10-07T08:00:00.000Z"
                   }
                 ]
@@ -265874,6 +265939,10 @@
                             "type": "string",
                             "description": "Name of that space."
                           },
+                          "mySpace": {
+                            "type": "boolean",
+                            "description": "Whether the item lies in the caller's own personal space."
+                          },
                           "starredAt": {
                             "type": "string",
                             "format": "date-time",
@@ -265887,6 +265956,7 @@
                           "spaceId",
                           "spaceKey",
                           "spaceName",
+                          "mySpace",
                           "starredAt"
                         ],
                         "additionalProperties": false,
@@ -265916,6 +265986,10 @@
                             "type": "boolean",
                             "description": "Whether it is a personal space."
                           },
+                          "mySpace": {
+                            "type": "boolean",
+                            "description": "Whether it is the caller's own personal space."
+                          },
                           "starredAt": {
                             "type": "string",
                             "format": "date-time",
@@ -265927,6 +266001,7 @@
                           "key",
                           "name",
                           "personal",
+                          "mySpace",
                           "starredAt"
                         ],
                         "additionalProperties": false,
@@ -265951,6 +266026,7 @@
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
+                      "mySpace": false,
                       "starredAt": "2026-10-06T08:00:00.000Z"
                     }
                   ],

@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 
-export type SaveState = "editing" | "saving" | "saved" | "offline" | "error";
+export type SaveState = "connecting" | "editing" | "saving" | "saved" | "offline" | "error";
 
 export const TYPING_PAUSE_MS = 800;
 
@@ -35,9 +35,10 @@ export class SaveTracker {
   #dirty = false;
   #typing = false;
   #online = false;
+  #lost = false;
   #failed = false;
   #typingTimer: unknown = null;
-  #state: SaveState = "saved";
+  #state: SaveState = "connecting";
 
   constructor(doc: Y.Doc, scheduler: Scheduler = timers) {
     this.#doc = doc;
@@ -87,7 +88,15 @@ export class SaveTracker {
   }
 
   connection(online: boolean): void {
+    if (this.#online && !online) this.#lost = true;
+    if (online) this.#lost = false;
     this.#online = online;
+    this.#update();
+  }
+
+  connectionLost(): void {
+    this.#online = false;
+    this.#lost = true;
     this.#update();
   }
 
@@ -97,7 +106,7 @@ export class SaveTracker {
   }
 
   #compute(): SaveState {
-    if (!this.#online) return "offline";
+    if (!this.#online) return this.#lost ? "offline" : "connecting";
     if (this.#failed) return "error";
     if (!this.#dirty) return "saved";
     return this.#typing ? "editing" : "saving";

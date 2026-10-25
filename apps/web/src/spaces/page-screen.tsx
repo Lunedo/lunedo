@@ -32,6 +32,7 @@ import {
   MoreHorizontal,
   Move,
   NotebookPen,
+  Paperclip,
   Pencil,
   Radio,
   Trash2,
@@ -54,7 +55,7 @@ import { LoadError } from "../errors/failure.js";
 import { ExportDialog } from "../exports/export-dialog.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
-import { UploadsProvider } from "../files/uploads.js";
+import { UploadsProvider, useUploads } from "../files/uploads.js";
 import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
@@ -179,6 +180,8 @@ function PageArticle({
 }) {
   const { t } = useTranslation();
   const { space, canEdit, openMove, openCopy, openCreate } = useSpace();
+  const uploads = useUploads();
+  const attachInput = useRef<HTMLInputElement>(null);
   const search = route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -298,6 +301,13 @@ function PageArticle({
   }
   if (writable && !meeting) {
     menuItems.push({ label: t("tree.move"), icon: Move, onSelect: () => openMove(page) });
+  }
+  if (writable) {
+    menuItems.push({
+      label: t("files.attach"),
+      icon: Paperclip,
+      onSelect: () => attachInput.current?.click(),
+    });
   }
   menuItems.push(
     { label: t("exports.page.menu"), icon: FileDown, onSelect: () => setExporting(true) },
@@ -629,7 +639,9 @@ function PageArticle({
           ) : null}
           {editing ? null : (
             <>
-              <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
+              {overview ? null : (
+                <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
+              )}
               <Backlinks pageId={page.id} />
               <AttachmentsSection pageId={page.id} canEdit={writable} />
               {collaboration.section}
@@ -637,6 +649,22 @@ function PageArticle({
           )}
           {collaboration.popover}
           {meta.dialogs}
+          {writable ? (
+            <input
+              ref={attachInput}
+              data-page-attach=""
+              type="file"
+              multiple
+              hidden
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                if (files.length > 0) uploads?.start(files);
+              }}
+            />
+          ) : null}
           <ConfirmDialog
             open={confirmingDiscard}
             onOpenChange={setConfirmingDiscard}

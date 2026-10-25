@@ -6,7 +6,7 @@ import { initI18n } from "../i18n/index.js";
 import { mockApi, type RecordedRequest } from "../testing/render.js";
 import { filtersOf } from "./search-api.js";
 import { fromSearchParams, noFilters, toSearchParams } from "./search-params.js";
-import { hitHref, hitPath, hitTitle, typeLabel } from "./search-results.js";
+import { hitHref, hitPath, hitTitle, hitTypeLabel, typeLabel } from "./search-results.js";
 
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const SPACE = "01929b1e-0000-7000-8000-000000000010";
@@ -30,6 +30,8 @@ function hit(id: string, title: string, spaceId = SPACE) {
       key: spaceId === SPACE ? "OPS" : "SEC",
       name: spaceId === SPACE ? "Operations" : "Security",
       personal: false,
+      knowledgeBase: false,
+      mine: false,
     },
     sharedWithYou: false,
     path: [],
@@ -209,6 +211,11 @@ describe("results of attachments, running topics and decisions", () => {
     );
     expect(hitTitle(t, file)).toBe("handbook.docx on “Gateway”");
     expect(typeLabel(t, "attachment")).toBe("Attachment");
+    const page = hit("01929b1e-0000-7000-8000-0000000000aa", "Gateway");
+    expect(hitTypeLabel(t, page)).toBe("Page");
+    expect(hitTypeLabel(t, { ...page, space: page.space && { ...page.space, knowledgeBase: true } })).toBe(
+      "Article",
+    );
 
     const topic = {
       ...base,

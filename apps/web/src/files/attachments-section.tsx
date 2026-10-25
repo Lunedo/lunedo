@@ -328,7 +328,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
     );
   }
   const list = attachments.data;
-  if (list.length === 0 && pending.length === 0 && !canEdit) return null;
+  if (list.length === 0 && pending.length === 0) return null;
 
   return (
     <section aria-labelledby={`attachments-${pageId}`} className="mt-10 flex flex-col">
@@ -363,9 +363,6 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
           </>
         ) : null}
       </div>
-      {list.length === 0 && pending.length === 0 ? (
-        <p className="py-3 text-sm text-text-muted">{t("files.empty")}</p>
-      ) : null}
       {pending.length > 0 ? (
         <ul
           aria-label={t("files.uploads")}

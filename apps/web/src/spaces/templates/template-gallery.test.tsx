@@ -64,7 +64,7 @@ describe("the gallery in a knowledge base", () => {
     expect(await within(dialog).findByRole("button", { name: /Blank article/, pressed: true })).toBeTruthy();
     expect(within(dialog).queryByText("All categories")).toBeNull();
     expect(within(dialog).queryByText(/page/i)).toBeNull();
-    const choice = await within(dialog).findByRole("combobox", { name: "Category" });
+    const choice = await within(dialog).findByRole("combobox", { name: "Area or topic" });
     await waitFor(() => expect(choice.hasAttribute("disabled")).toBe(false));
     await userEvent.click(choice);
     await userEvent.click(await screen.findByRole("option", { name: "IT › Remote access" }));
@@ -84,7 +84,7 @@ describe("the gallery in a knowledge base", () => {
       inRouter(<TemplateGallery space={space} parentId={IT} onOpenChange={() => undefined} />),
     );
     const dialog = await screen.findByRole("dialog", { name: "New article in Help Center" });
-    await within(dialog).findByRole("combobox", { name: "Category" });
+    await within(dialog).findByRole("combobox", { name: "Area or topic" });
     await userEvent.type(within(dialog).getByRole("textbox", { name: /Title of the article/ }), "Printer");
     await userEvent.click(within(dialog).getByRole("button", { name: "Create blank article" }));
     await waitFor(() =>

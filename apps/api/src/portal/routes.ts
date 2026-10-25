@@ -65,6 +65,7 @@ const FEEDBACK_LIMIT = 30;
 const FEEDBACK_WINDOW_SECONDS = 600;
 const SEARCH_COUNT_LIMIT = 60;
 const SEARCH_COUNT_WINDOW_SECONDS = 600;
+const QUICK_COUNT_BODY_LIMIT = 1024;
 const ARTICLE = /^\/(\d{1,9})(?:-([a-z0-9-]{0,200}))?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SORTS = ["views", "updated", "title"] as const;
@@ -491,6 +492,7 @@ async function route(
     }
     if (rest === "/sign-out") return signOut(reply, services, target, viewer);
     if (rest === "/feedback") return feedback(request, reply, services, target, viewer);
+    if (rest === "/search/quick/count") return countQuickSearch(request, reply, services, target, viewer);
     if (rest === "/authorize" && !target.domain) {
       const body = await readBody(request, CONSENT_BODY_LIMIT);
       if (body === null) return reply.code(413).send();
@@ -676,6 +678,46 @@ async function search(
         ).articles
       : [];
   return sendPage(reply, view, searchPage(view, state, result, more, mostRead));
+}
+
+async function countQuickSearch(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  services: AccountServices,
+  target: Target,
+  viewer: Viewer,
+): Promise<FastifyReply> {
+  const body = await readBody(request, QUICK_COUNT_BODY_LIMIT);
+  if (body === null) return reply.code(413).send();
+  let term = "";
+  try {
+    const parsed = JSON.parse(body) as { q?: unknown };
+    term = typeof parsed.q === "string" ? parsed.q.trim().slice(0, 200) : "";
+  } catch {
+    return reply.code(400).send();
+  }
+  if (!term) return reply.code(400).send();
+  if (!(await services.portalReader.admits(viewer.principal, target.config))) return reply.code(404).send();
+  const limit = await services.rateLimiter.consume(
+    `portal-search:client:${clientSubject(request.ip)}`,
+    SEARCH_COUNT_LIMIT,
+    SEARCH_COUNT_WINDOW_SECONDS,
+  );
+  if (limit.allowed) {
+    const result = await services.portalReader.search(viewer.principal, target.config, {
+      query: term,
+      categoryId: null,
+      type: null,
+      cursor: null,
+      language: target.language,
+    });
+    await services.portalStatistics.recordSearch(target.config.spaceId, {
+      term,
+      results: result.total,
+      categoryId: null,
+    });
+  }
+  return reply.code(204).header("cache-control", "no-store").send();
 }
 
 async function quickSearch(

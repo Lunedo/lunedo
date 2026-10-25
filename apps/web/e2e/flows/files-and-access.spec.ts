@@ -40,9 +40,11 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
 }) => {
   const { pageId, pagePath } = await place(page, organization);
   await page.goto(pagePath);
-  const section = attachments(page);
-  await expect(section.getByText("No files yet. Upload files or drop them on the page.")).toBeVisible();
-  await section.locator('input[type="file"]').setInputFiles({
+  await expect(attachments(page)).toBeHidden();
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Attach files" }).click();
+  await (await chooser).setFiles({
     name: "notes.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("First version of the notes"),
@@ -160,7 +162,7 @@ test("previews every supported type without running scripts inside the files", a
     { name: "budget.xlsx", mimeType: "application/octet-stream", buffer: xlsx("Budget total") },
     { name: "chime.wav", mimeType: "audio/wav", buffer: wav() },
   ];
-  await attachments(page).locator('input[type="file"]').setInputFiles(files);
+  await page.locator("input[data-page-attach]").setInputFiles(files);
   for (const file of files) await expect(row(page, file.name)).toBeVisible();
   const open = async (name: string) => {
     await row(page, name).click();

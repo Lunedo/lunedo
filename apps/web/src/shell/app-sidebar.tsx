@@ -6,7 +6,7 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { useTranslation } from "react-i18next";
 import { starredQuery, tasksQuery } from "../collaboration/queries.js";
 import { recentlyViewedQuery } from "../search/search-api.js";
-import { SpaceBadge } from "../spaces/space-badge.js";
+import { referenceSpaceName, SpaceBadge } from "../spaces/space-badge.js";
 import { spaceByKeyQuery } from "../spaces/space-queries.js";
 import { useShell } from "./shell.js";
 import { useOrganizationState, useSession } from "./shell-context.js";
@@ -138,16 +138,16 @@ function SpacesNavigation({ collapsed }: { collapsed: boolean }) {
   const visited: { key: string; name: string }[] = [];
   for (const item of recent.data ?? []) {
     if (favoriteKeys.has(item.spaceKey) || visited.some((space) => space.key === item.spaceKey)) continue;
-    visited.push({ key: item.spaceKey, name: item.spaceName });
+    visited.push({ key: item.spaceKey, name: referenceSpaceName(t, item) || item.spaceKey });
   }
   const recentSpaces = visited.slice(0, Math.max(0, SIDEBAR_SPACES - favorites.length));
-  const entry = (space: { key: string; name: string; personal: boolean }) => (
+  const entry = (space: { key: string; name: string; personal: boolean; mySpace?: boolean }) => (
     <SidebarEntry
       key={space.key}
       to="/spaces/$spaceKey"
       params={{ spaceKey: space.key }}
       icon={Layers}
-      label={space.name || t("spaces.personal.label")}
+      label={space.name || (space.mySpace ? t("spaces.personal.mine") : t("spaces.personal.label"))}
       current={false}
       collapsed={collapsed}
       leading={<SpaceBadge space={space} size="sm" />}

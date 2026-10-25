@@ -209,12 +209,16 @@ export function AutoSaveTextField({
     />
   );
   return (
-    <div className="flex flex-col gap-1">
-      <Field label={label} {...(hint ? { hint } : {})} {...(fieldError ? { error: fieldError } : {})}>
-        {control}
-      </Field>
-      {tracker.state === "error" && !tracker.retryable ? null : <SaveIndicator tracker={tracker} />}
-    </div>
+    <Field
+      label={label}
+      {...(hint ? { hint } : {})}
+      {...(fieldError ? { error: fieldError } : {})}
+      {...(tracker.state === "error" && !tracker.retryable
+        ? {}
+        : { labelAction: <SaveIndicator tracker={tracker} /> })}
+    >
+      {control}
+    </Field>
   );
 }
 

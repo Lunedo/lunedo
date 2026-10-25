@@ -3,6 +3,7 @@ import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
+import { actorIdOf } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import { type PageStatus, pageStatusEnabledCondition } from "../spaces/status.js";
 import { visibleItem } from "../spaces/visibility.js";
@@ -66,6 +67,8 @@ export interface SearchSpace {
   key: string;
   name: string;
   personal: boolean;
+  knowledgeBase: boolean;
+  mine: boolean;
 }
 
 export interface SearchReference {
@@ -108,7 +111,12 @@ export interface SearchHit {
 
 export interface SearchFacets {
   contentTypes: FacetCount<SearchContentType>[];
-  spaces: (FacetCount<string | null> & { key: string | null; name: string | null; personal: boolean })[];
+  spaces: (FacetCount<string | null> & {
+    key: string | null;
+    name: string | null;
+    personal: boolean;
+    mine: boolean;
+  })[];
   labels: FacetCount<string>[];
   authors: (FacetCount<string> & { name: string })[];
   statuses: (FacetCount<string> & Omit<PageStatus, "id">)[];
@@ -385,7 +393,9 @@ export class SearchService {
 
   async #visibleSpaces(principal: Principal, organizationId: string): Promise<Map<string, SearchSpace>> {
     const result = await this.#database.execute<SearchSpace & Record<string, unknown>>(sql`
-      select s.id, s.key, s.name, s.personal_of is not null as personal from spaces s
+      select s.id, s.key, s.name, s.personal_of is not null as personal, s.type = 'knowledgeBase' as "knowledgeBase",
+        coalesce(s.personal_of = ${actorIdOf(principal)}, false) as mine
+      from spaces s
       where (s.organization_id = ${organizationId} or s.personal_of is not null)
         and ${this.#authorization.spaceFilter(principal, sql`s`)}`);
     return new Map(result.rows.map((row) => [row.id, row]));
@@ -615,6 +625,7 @@ export class SearchService {
           key: space?.key ?? null,
           name: space?.name ?? null,
           personal: space?.personal ?? false,
+          mine: space?.mine ?? false,
         };
       }),
       labels: facets.labels,

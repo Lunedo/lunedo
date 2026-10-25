@@ -1591,11 +1591,11 @@
     "knowledgeBaseConfidential": "Eine Wissensdatenbank kann nicht vertraulich sein. Erstelle sie ohne die Option vertraulich.",
     "invalidAudience": "Nur Wissensdatenbanken haben eine Zielgruppe. Wähle für diesen Space stattdessen eine Sichtbarkeit.",
     "knowledgeBaseVisibility": "Wer eine Wissensdatenbank lesen darf, legst du in ihrer Sichtbarkeit fest.",
-    "knowledgeBaseContent": "Eine Wissensdatenbank enthält nur Artikel und Kategorien. Lege Blogbeiträge, Besprechungen, Whiteboards und Links in einem anderen Space an.",
+    "knowledgeBaseContent": "Eine Wissensdatenbank enthält nur Artikel, Bereiche und Themen. Lege Blogbeiträge, Besprechungen, Whiteboards und Links in einem anderen Space an.",
     "knowledgeBaseMode": "Artikel stehen immer im Veröffentlichen-Modus. Stelle die Seite auf Veröffentlichen um, bevor du sie in die Wissensdatenbank verschiebst.",
-    "knowledgeBasePlacement": "Artikel und Kategorien stehen in Kategorien oder ganz oben, nicht unter anderen Artikeln. Wähle stattdessen eine Kategorie.",
+    "knowledgeBasePlacement": "Artikel, Bereiche und Themen stehen in einem Bereich, in einem Thema oder ganz oben, nicht unter anderen Artikeln. Wähle stattdessen einen Bereich oder ein Thema.",
     "notKnowledgeBase": "Der Space ist keine Wissensdatenbank.",
-    "notCategory": "Nur Ordner auf den ersten beiden Ebenen einer Wissensdatenbank sind Kategorien mit eigenen Einstellungen.",
+    "notCategory": "Nur Bereiche und Themen einer Wissensdatenbank haben diese Einstellungen. Öffne den Ordner, zu dem sie gehören.",
     "invalidIcon": "Wähle ein Icon aus der Liste.",
     "invalidArticleType": "Nur Artikel einer Wissensdatenbank haben eine Artikelart.",
     "invalidContactEmail": "Gib eine E-Mail-Adresse ein, zum Beispiel hilfe@example.org.",
@@ -4954,6 +4954,7 @@
       "saving": "Wird gespeichert …",
       "saved": "Gespeichert",
       "offline": "Offline, Änderungen bleiben in diesem Tab erhalten",
+      "connecting": "Verbinde …",
       "error": "Nicht gespeichert",
       "savedDraft": "Im Entwurf gespeichert"
     },
@@ -5641,6 +5642,7 @@
     },
     "personal": {
       "label": "Persönlicher Space",
+      "mine": "Mein Space",
       "nameOf": "Persönlicher Space von {name}",
       "open": "Mein persönlicher Space",
       "opening": "Dein persönlicher Space wird geöffnet",
@@ -5671,7 +5673,7 @@
       "personalNameHint": "Lass ihn leer, um deinen Namen zu zeigen.",
       "description": "Beschreibung",
       "key": "Schlüssel",
-      "keyDescription": "Der Schlüssel steht in den Adressen des Space und seiner Seiten.",
+      "keyHint": "2 bis 10 Buchstaben oder Ziffern. Er steht in den Adressen des Space und seiner Seiten, zum Beispiel /spaces/ITOPS.",
       "keyRedirectTitle": "Alte Links funktionieren weiter",
       "keyRedirect": "Adressen mit {old} führen zum neuen Schlüssel, bis ein anderer Space {old} übernimmt. Links auf Seiten funktionieren immer weiter.",
       "saveKey": "Schlüssel ändern",
@@ -5893,13 +5895,13 @@
     "createWhiteboard": "Whiteboard erstellen",
     "whiteboardTitle": "Neues Whiteboard",
     "category": {
-      "title": "Neue Kategorie",
-      "create": "Kategorie erstellen",
-      "descriptionHint": "Optional. Lesende sehen sie im Portal oben in der Kategorie."
+      "title": "Neuer Bereich",
+      "create": "Bereich erstellen",
+      "descriptionHint": "Optional. Lesende sehen sie im Portal oben im Bereich."
     },
     "subcategory": {
-      "title": "Neue Unterkategorie",
-      "create": "Unterkategorie erstellen"
+      "title": "Neues Thema",
+      "create": "Thema erstellen"
     }
   },
   "folder": {
@@ -6413,7 +6415,12 @@
     "discardConfirm": "{count, plural, one {Die # Änderung seit Version {version} wird verworfen, der Entwurf steht danach wieder auf Version {version}. Du kannst ihn 30 Tage lang wiederherstellen.} other {Die # Änderungen seit Version {version} werden verworfen, der Entwurf steht danach wieder auf Version {version}. Du kannst ihn 30 Tage lang wiederherstellen.}}",
     "keepDraft": "Entwurf behalten",
     "backToPage": "Zurück zur Seite",
-    "restoreThis": "Diese Version wiederherstellen"
+    "restoreThis": "Diese Version wiederherstellen",
+    "previousChange": "Vorherige Änderung",
+    "nextChange": "Nächste Änderung",
+    "previousChangeKey": "Vorherige Änderung ([)",
+    "nextChangeKey": "Nächste Änderung (])",
+    "changePosition": "Änderung {current} von {total}"
   },
   "gallery": {
     "title": "In {space} erstellen",
@@ -6453,10 +6460,10 @@
       "untitled": "Artikel ohne Titel",
       "noInput": "Diese Vorlage braucht keine Eingaben. Der Artikel beginnt mit ihren Abschnitten.",
       "noResultsDescription": "Versuche ein anderes Wort.",
-      "category": "Kategorie",
+      "category": "Bereich oder Thema",
       "categoryHint": "Wo der Artikel im Portal erscheint. Du kannst ihn später verschieben.",
-      "noCategory": "Keine Kategorie (oberste Ebene)",
-      "categoriesFailed": "Die Kategorien konnten nicht geladen werden"
+      "noCategory": "Kein Bereich (oberste Ebene)",
+      "categoriesFailed": "Die Bereiche und Themen konnten nicht geladen werden"
     }
   },
   "home": {
@@ -6819,7 +6826,6 @@
     "showDiagram": "Auf der Seite zeigen",
     "upload": "Datei hochladen",
     "uploads": "Laufende Uploads",
-    "empty": "Noch keine Dateien. Lade Dateien hoch oder ziehe sie auf die Seite.",
     "dropToAttach": "Loslassen, um an {title} anzuhängen",
     "uploading": "{loaded} von {total}",
     "progress": "Upload von {name}",
@@ -6899,7 +6905,8 @@
     "storage": {
       "used": "{size} belegt durch {count, plural, one {# gespeicherte Datei} other {# gespeicherte Dateien}}, einschließlich früherer Versionen",
       "loadFailed": "die Speicherbelegung"
-    }
+    },
+    "attach": "Dateien anhängen"
   },
   "sharing": {
     "impact": {
@@ -9076,7 +9083,7 @@
       "description": "Ordner werden zum Seitenbaum; index.md oder README.md wird die Seite ihres Ordners. Front Matter liefert Titel, Labels und Daten, weitere Schlüssel werden Seiteneigenschaften. Links zwischen Dateien werden Seitenlinks, [[Wiki-Links]] eingeschlossen, Bilder und andere Dateien werden Anhänge. Mermaid-Codeblöcke werden Diagramme.",
       "spaceType": "Art des Bereichs",
       "knowledgeBase": "Als Wissensdatenbank importieren",
-      "knowledgeBaseHint": "Ordner werden Kategorien, Dateien werden Artikel. Artikeltypen, Sprachen, Übersetzungen und Abschnitte aus einem Lunedo-Export bleiben erhalten. Nach dem Übernehmen lesen nur die Personen mit einer Rolle mit, bis du in den Einstellungen ein Publikum wählst."
+      "knowledgeBaseHint": "Ordner werden Bereiche und Themen, Dateien werden Artikel. Artikeltypen, Sprachen, Übersetzungen und Abschnitte aus einem Lunedo-Export bleiben erhalten. Nach dem Übernehmen lesen nur die Personen mit einer Rolle mit, bis du in den Einstellungen ein Publikum wählst."
     },
     "documents": {
       "title": "Word-Dokumente",
@@ -9403,7 +9410,7 @@
     },
     "site": {
       "title": "Statische Website",
-      "description": "Lade die Wissensdatenbank als ZIP mit einer statischen Website herunter: alle veröffentlichten Artikel, Start-, Kategorie-, Such- und Kontaktseite, Bilder und Weiterleitungen für alte Adressen. Lade die entpackten Dateien zu Cloudflare Pages, GitHub Pages oder auf einen beliebigen Webserver hoch. Rückmeldungen, Statistiken und Anmeldung fehlen, weil sie Lunedo brauchen.",
+      "description": "Lade die Wissensdatenbank als ZIP mit einer statischen Website herunter: alle veröffentlichten Artikel, Start-, Bereichs-, Such- und Kontaktseite, Bilder und Weiterleitungen für alte Adressen. Lade die entpackten Dateien zu Cloudflare Pages, GitHub Pages oder auf einen beliebigen Webserver hoch. Rückmeldungen, Statistiken und Anmeldung fehlen, weil sie Lunedo brauchen.",
       "address": "Adresse der Website (optional)",
       "addressHint": "Wo die Website erreichbar sein wird. Damit bekommt der Download eine Sitemap und Sprachlinks für Suchmaschinen; die Website selbst funktioniert unter jeder Adresse.",
       "invalidUrl": "Gib eine vollständige Adresse ein, die mit https:// beginnt, zum Beispiel https://hilfe.example.org/, oder lass das Feld leer.",
@@ -9446,7 +9453,8 @@
       "attachment": "Anhang",
       "topic": "Laufendes Thema",
       "decision": "Entscheidung",
-      "whiteboard": "Whiteboard"
+      "whiteboard": "Whiteboard",
+      "article": "Artikel"
     },
     "quick": {
       "label": "Suche",
@@ -10339,11 +10347,11 @@
   },
   "knowledgeBase": {
     "articles": "Artikel",
-    "treeTitle": "Kategorien und Artikel",
+    "treeTitle": "Bereiche, Themen und Artikel",
     "newArticle": "Neuer Artikel",
-    "newCategory": "Neue Kategorie",
-    "newArticleInside": "Neuer Artikel in dieser Kategorie",
-    "newCategoryInside": "Neue Unterkategorie",
+    "newCategory": "Neuer Bereich",
+    "newArticleInside": "Neuer Artikel hier",
+    "newCategoryInside": "Neues Thema",
     "publishOnly": "Artikel stehen immer im Veröffentlichen-Modus: Lesende sehen die zuletzt veröffentlichte Version, während Autorinnen und Autoren an einem Entwurf arbeiten.",
     "articleTypes": {
       "howTo": "Anleitung",
@@ -10367,22 +10375,22 @@
       "noOwner": "Niemand",
       "loadFailed": "Die Artikel konnten nicht geladen werden.",
       "caption": "Artikel in {category}",
-      "emptyCategory": "In dieser Kategorie gibt es noch keine Artikel.",
+      "emptyCategory": "Hier gibt es noch keine Artikel.",
       "more": "Weitere Artikel in {category} zeigen",
-      "description": "Artikel dieser Wissensdatenbank, nach Kategorie gruppiert.",
+      "description": "Artikel dieser Wissensdatenbank, nach Bereich gruppiert.",
       "typeFilter": "Artikelart",
       "allTypes": "Alle",
       "types": {
         "howTo": "Anleitungen",
         "troubleshooting": "Störungen"
       },
-      "categoriesFailed": "Die Kategorien konnten nicht geladen werden.",
-      "noCategoriesTitle": "Noch keine Kategorien",
-      "noCategoriesEditor": "Lege eine Kategorie wie IT oder Personal an und schreib darin Artikel. Artikel können auch außerhalb jeder Kategorie stehen.",
+      "categoriesFailed": "Die Bereiche und Themen konnten nicht geladen werden.",
+      "noCategoriesTitle": "Noch keine Bereiche",
+      "noCategoriesEditor": "Lege einen Bereich wie IT oder Personal an und schreib darin Artikel. Artikel können auch außerhalb jedes Bereichs stehen.",
       "noCategoriesReader": "In dieser Wissensdatenbank ist noch nichts veröffentlicht.",
-      "withoutCategory": "Ohne Kategorie",
-      "total": "{count, plural, one {# Artikel} other {# Artikel}} in Kategorien",
-      "emptyFiltered": "In dieser Kategorie gibt es keine Artikel dieser Art.",
+      "withoutCategory": "Ohne Bereich",
+      "total": "{count, plural, one {# Artikel} other {# Artikel}} in Bereichen",
+      "emptyFiltered": "Hier gibt es keine Artikel dieser Art.",
       "languages": "Übersetzungen",
       "articleCount": "{count, plural, one {{formatted} Artikel} other {{formatted} Artikel}}"
     },
@@ -10391,7 +10399,7 @@
       "standard": "Standard-Space",
       "standardDescription": "Seiten, Ordner, Blogbeiträge, Besprechungen und Whiteboards für ein Team oder Projekt.",
       "knowledgeBase": "Wissensdatenbank",
-      "knowledgeBaseDescription": "Artikel wie Anleitungen und Störungen, nach Kategorien sortiert. Artikel werden immer mit Versionen veröffentlicht.",
+      "knowledgeBaseDescription": "Artikel wie Anleitungen und Störungen, nach Bereichen und Themen sortiert. Artikel werden immer mit Versionen veröffentlicht.",
       "fixed": "Die Art lässt sich nach dem Erstellen nicht mehr ändern.",
       "groupsHint": "Füge unten die Gruppen hinzu, die die Wissensdatenbank lesen dürfen, zum Beispiel mit der Rolle Lesen.",
       "groupsRequired": "Gib unten mindestens einer Gruppe eine Rolle oder wähle eine andere Zielgruppe."
@@ -10401,7 +10409,7 @@
       "description": "Wer die Wissensdatenbank lesen darf.",
       "label": "Wer darf lesen",
       "loadFailed": "Die Einstellungen der Wissensdatenbank konnten nicht geladen werden.",
-      "narrowHint": "Kategorien und Artikel können das Lesen mit Einschränkungen weiter begrenzen, aber nie erweitern. Wer bearbeiten darf, regeln die Berechtigungen des Space.",
+      "narrowHint": "Bereiche, Themen und Artikel können das Lesen mit Einschränkungen weiter begrenzen, aber nie erweitern. Wer bearbeiten darf, regeln die Berechtigungen des Space.",
       "public": {
         "title": "Öffentlich",
         "description": "Alle, auch ohne Anmeldung. Das Portal zeigt die veröffentlichten Artikel, und Suchmaschinen können sie finden."
@@ -10429,7 +10437,7 @@
       "saveFailed": "Die Sichtbarkeit konnte nicht gespeichert werden",
       "adminsOnly": "Nur Space-Admins können die Sichtbarkeit ändern.",
       "confirmTitle": "Mehr Personen {name} lesen lassen?",
-      "confirmDescription": "{count, plural, =0 {Noch ist kein Artikel ohne Einschränkung veröffentlicht. Artikel, die du später veröffentlichst, werden} one {# Artikel wird} other {# Artikel werden}} für {audience} lesbar, sofern Kategorien oder Artikel nichts anderes festlegen. Die Änderung wird im Audit-Log festgehalten.",
+      "confirmDescription": "{count, plural, =0 {Noch ist kein Artikel ohne Einschränkung veröffentlicht. Artikel, die du später veröffentlichst, werden} one {# Artikel wird} other {# Artikel werden}} für {audience} lesbar, sofern Bereiche, Themen oder Artikel nichts anderes festlegen. Die Änderung wird im Audit-Log festgehalten.",
       "confirm": "Lesen erlauben"
     },
     "settings": {
@@ -10444,7 +10452,7 @@
     "contact": {
       "label": "Kontaktadresse",
       "knowledgeBaseTitle": "Kontaktadresse der Wissensdatenbank",
-      "hint": "An diese Adresse schreiben Lesende, wenn ein Artikel nicht geholfen hat. Kategorien ohne eigene Adresse verwenden sie. Lunedo verschickt nichts selbst und legt keine Tickets an.",
+      "hint": "An diese Adresse schreiben Lesende, wenn ein Artikel nicht geholfen hat. Bereiche und Themen ohne eigene Adresse verwenden sie. Lunedo verschickt nichts selbst und legt keine Tickets an.",
       "invalid": "Gib eine E-Mail-Adresse ein, zum Beispiel hilfe@example.org.",
       "setHere": "Hier festgelegt",
       "inherited": "Geerbt von {source}",
@@ -10632,8 +10640,8 @@
       "badge": "{language}: {state}"
     },
     "category": {
-      "empty": "Diese Kategorie hat noch keine Artikel",
-      "emptyDescription": "Artikel und Unterkategorien, die du hier erstellst, erscheinen in dieser Übersicht und, sobald sie veröffentlicht sind, im Portal."
+      "empty": "Hier gibt es noch keine Artikel",
+      "emptyDescription": "Artikel und Themen, die du hier erstellst, erscheinen in dieser Übersicht und, sobald sie veröffentlicht sind, im Portal."
     },
     "folders": {
       "title": "Bereiche und Themen",
@@ -11329,7 +11337,7 @@
     "link": "Link",
     "meeting": "Besprechung",
     "article": "Artikel",
-    "category": "Kategorie",
+    "category": "Bereich oder Thema",
     "space": "Space",
     "chooseSpace": {
       "title": "{kind} erstellen",

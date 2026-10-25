@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { type DocumentJson, editorSchemaVersion } from "@lunedo/editor-schema";
+import { applyDocument } from "@lunedo/editor-schema/yjs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import * as Y from "yjs";
 import { accountPrincipal } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -104,6 +106,37 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
       [page.id],
     );
     expect(left.rows[0]?.draft_note).toBeNull();
+  });
+
+  it("keeps a page without draft changes when the editor only adds an empty paragraph at the end on opening", async () => {
+    const context = await setup();
+    const page = await test.services.tree.create(context.editor, context.space.id, {
+      kind: "page",
+      title: "Tabelle",
+      mode: "publish",
+      placement: { parentId: null },
+    });
+    const table = {
+      type: "table",
+      content: [{ type: "tableRow", content: [{ type: "tableCell", content: [paragraph("Zelle")] }] }],
+    };
+    await test.services.documents.replace(context.editor, page.id, documentWith(paragraph("Oben"), table));
+    await test.services.versions.publish(context.editor, page.id);
+    const before = await test.services.versions.draft(page.id);
+    expect(before.hasChanges).toBe(false);
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, (await test.services.documents.state(page.id)) ?? new Uint8Array());
+    applyDocument(doc, documentWith(paragraph("Oben"), table, { type: "paragraph" }));
+    const revision = await test.services.documents.store(page.id, doc, { actorId: context.editorId });
+    expect(revision).toBe(before.revision);
+    expect(await test.services.versions.draft(page.id)).toMatchObject({ hasChanges: false, changes: 0 });
+    const typed = new Y.Doc();
+    Y.applyUpdate(typed, (await test.services.documents.state(page.id)) ?? new Uint8Array());
+    applyDocument(typed, documentWith(paragraph("Oben"), table, paragraph("Neu")));
+    expect(await test.services.documents.store(page.id, typed, { actorId: context.editorId })).toBe(
+      before.revision + 1,
+    );
+    expect((await test.services.versions.draft(page.id)).hasChanges).toBe(true);
   });
 
   describe("readers never see the draft", () => {

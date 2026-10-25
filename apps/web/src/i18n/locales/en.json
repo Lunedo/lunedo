@@ -1591,11 +1591,11 @@
     "knowledgeBaseConfidential": "A knowledge base cannot be confidential. Create it without the confidential option.",
     "invalidAudience": "Only knowledge bases have an audience. Choose a visibility for this space instead.",
     "knowledgeBaseVisibility": "Who may read a knowledge base is set in its visibility settings.",
-    "knowledgeBaseContent": "A knowledge base holds only articles and categories. Put blog posts, meetings, whiteboards and links in another space.",
+    "knowledgeBaseContent": "A knowledge base holds only articles, areas and topics. Put blog posts, meetings, whiteboards and links in another space.",
     "knowledgeBaseMode": "Articles always use publish mode. Switch the page to publish mode before moving it into the knowledge base.",
-    "knowledgeBasePlacement": "Articles and categories are placed in categories or at the top level, not below other articles. Choose a category instead.",
+    "knowledgeBasePlacement": "Articles, areas and topics are placed in an area, in a topic or at the top level, not below other articles. Choose an area or a topic instead.",
     "notKnowledgeBase": "The space is not a knowledge base.",
-    "notCategory": "Only folders on the first two levels of a knowledge base are categories with their own settings.",
+    "notCategory": "Only areas and topics of a knowledge base have these settings. Open the folder they belong to.",
     "invalidIcon": "Choose an icon from the list.",
     "invalidArticleType": "Only articles of a knowledge base have an article type.",
     "invalidContactEmail": "Enter an e-mail address such as help@example.org.",
@@ -4954,6 +4954,7 @@
       "saving": "Saving…",
       "saved": "Saved",
       "offline": "Offline, changes are kept in this tab",
+      "connecting": "Connecting …",
       "error": "Not saved",
       "savedDraft": "Saved to draft"
     },
@@ -5641,6 +5642,7 @@
     },
     "personal": {
       "label": "Personal space",
+      "mine": "My space",
       "nameOf": "Personal space of {name}",
       "open": "My personal space",
       "opening": "Opening your personal space",
@@ -5671,7 +5673,7 @@
       "personalNameHint": "Leave it empty to show your name.",
       "description": "Description",
       "key": "Key",
-      "keyDescription": "The key appears in the addresses of the space and its pages.",
+      "keyHint": "2 to 10 letters or digits. It appears in the addresses of the space and its pages, for example /spaces/ITOPS.",
       "keyRedirectTitle": "Old links keep working",
       "keyRedirect": "Addresses with {old} lead to the new key until another space takes {old}. Links to pages always keep working.",
       "saveKey": "Change key",
@@ -5893,13 +5895,13 @@
     "createWhiteboard": "Create whiteboard",
     "whiteboardTitle": "New whiteboard",
     "category": {
-      "title": "New category",
-      "create": "Create category",
-      "descriptionHint": "Optional. Readers see it at the top of the category in the portal."
+      "title": "New area",
+      "create": "Create area",
+      "descriptionHint": "Optional. Readers see it at the top of the area in the portal."
     },
     "subcategory": {
-      "title": "New subcategory",
-      "create": "Create subcategory"
+      "title": "New topic",
+      "create": "Create topic"
     }
   },
   "folder": {
@@ -6413,7 +6415,12 @@
     "discardConfirm": "{count, plural, one {The # change since version {version} is discarded and the draft is back at version {version}. You can restore it for 30 days.} other {The # changes since version {version} are discarded and the draft is back at version {version}. You can restore it for 30 days.}}",
     "keepDraft": "Keep the draft",
     "backToPage": "Back to the page",
-    "restoreThis": "Restore this version"
+    "restoreThis": "Restore this version",
+    "previousChange": "Previous change",
+    "nextChange": "Next change",
+    "previousChangeKey": "Previous change ([)",
+    "nextChangeKey": "Next change (])",
+    "changePosition": "Change {current} of {total}"
   },
   "gallery": {
     "title": "Create in {space}",
@@ -6453,10 +6460,10 @@
       "untitled": "Untitled article",
       "noInput": "This template needs no input. The article starts with its sections.",
       "noResultsDescription": "Try another word.",
-      "category": "Category",
+      "category": "Area or topic",
       "categoryHint": "Where the article appears in the portal. You can move it later.",
-      "noCategory": "No category (top level)",
-      "categoriesFailed": "The categories could not be loaded"
+      "noCategory": "No area (top level)",
+      "categoriesFailed": "The areas and topics could not be loaded"
     }
   },
   "home": {
@@ -6819,7 +6826,6 @@
     "showDiagram": "Show in page",
     "upload": "Upload file",
     "uploads": "Uploads in progress",
-    "empty": "No files yet. Upload files or drop them on the page.",
     "dropToAttach": "Drop to attach to {title}",
     "uploading": "{loaded} of {total}",
     "progress": "Upload of {name}",
@@ -6899,7 +6905,8 @@
     "storage": {
       "used": "{size} used by {count, plural, one {# stored file} other {# stored files}}, including earlier versions",
       "loadFailed": "the storage use"
-    }
+    },
+    "attach": "Attach files"
   },
   "sharing": {
     "impact": {
@@ -9076,7 +9083,7 @@
       "description": "Folders become the page tree; index.md or README.md becomes the page of its folder. Front matter gives the title, labels and dates, other keys become page properties. Links between files become page links, [[wiki links]] included, and images and other files become attachments. Mermaid code blocks become diagrams.",
       "spaceType": "Kind of space",
       "knowledgeBase": "Import as a knowledge base",
-      "knowledgeBaseHint": "Folders become categories and files become articles. Article types, languages, translations and sections from a Lunedo export are kept. After accepting, only the people you give a role can read it until you choose an audience in its settings."
+      "knowledgeBaseHint": "Folders become areas and topics, and files become articles. Article types, languages, translations and sections from a Lunedo export are kept. After accepting, only the people you give a role can read it until you choose an audience in its settings."
     },
     "documents": {
       "title": "Word documents",
@@ -9403,7 +9410,7 @@
     },
     "site": {
       "title": "Static website",
-      "description": "Download the knowledge base as a ZIP with a static website: every published article, the start, category, search and contact pages, images and redirects for old addresses. Upload the unpacked files to Cloudflare Pages, GitHub Pages or any web server. Feedback, statistics and sign-in are left out because they need Lunedo.",
+      "description": "Download the knowledge base as a ZIP with a static website: every published article, the start, area, search and contact pages, images and redirects for old addresses. Upload the unpacked files to Cloudflare Pages, GitHub Pages or any web server. Feedback, statistics and sign-in are left out because they need Lunedo.",
       "address": "Address of the website (optional)",
       "addressHint": "Where the website will be reachable. With it, the download gets a sitemap and language links for search engines; the website itself works under any address.",
       "invalidUrl": "Enter a full address that starts with https://, for example https://help.example.org/, or leave the field empty.",
@@ -9446,7 +9453,8 @@
       "attachment": "Attachment",
       "topic": "Running topic",
       "decision": "Decision",
-      "whiteboard": "Whiteboard"
+      "whiteboard": "Whiteboard",
+      "article": "Article"
     },
     "quick": {
       "label": "Search",
@@ -10339,11 +10347,11 @@
   },
   "knowledgeBase": {
     "articles": "Articles",
-    "treeTitle": "Categories and articles",
+    "treeTitle": "Areas, topics and articles",
     "newArticle": "New article",
-    "newCategory": "New category",
-    "newArticleInside": "New article in this category",
-    "newCategoryInside": "New subcategory",
+    "newCategory": "New area",
+    "newArticleInside": "New article here",
+    "newCategoryInside": "New topic",
     "publishOnly": "Articles always use publish mode: readers see the last published version while authors work on a draft.",
     "articleTypes": {
       "howTo": "How-to",
@@ -10367,22 +10375,22 @@
       "noOwner": "Nobody",
       "loadFailed": "The articles could not be loaded.",
       "caption": "Articles in {category}",
-      "emptyCategory": "No articles in this category yet.",
+      "emptyCategory": "No articles here yet.",
       "more": "Show more articles in {category}",
-      "description": "Articles of this knowledge base, grouped by category.",
+      "description": "Articles of this knowledge base, grouped by area.",
       "typeFilter": "Article type",
       "allTypes": "All",
       "types": {
         "howTo": "How-tos",
         "troubleshooting": "Troubleshooting"
       },
-      "categoriesFailed": "The categories could not be loaded.",
-      "noCategoriesTitle": "No categories yet",
-      "noCategoriesEditor": "Create a category such as IT or HR, then write articles in it. Articles can also stay outside every category.",
+      "categoriesFailed": "The areas and topics could not be loaded.",
+      "noCategoriesTitle": "No areas yet",
+      "noCategoriesEditor": "Create an area such as IT or HR, then write articles in it. Articles can also stay outside every area.",
       "noCategoriesReader": "Nothing has been published in this knowledge base yet.",
-      "withoutCategory": "Without category",
-      "total": "{count, plural, one {# article} other {# articles}} in categories",
-      "emptyFiltered": "No articles of this type in this category.",
+      "withoutCategory": "Without area",
+      "total": "{count, plural, one {# article} other {# articles}} in areas",
+      "emptyFiltered": "No articles of this type here.",
       "languages": "Translations",
       "articleCount": "{count, plural, one {{formatted} article} other {{formatted} articles}}"
     },
@@ -10391,7 +10399,7 @@
       "standard": "Standard space",
       "standardDescription": "Pages, folders, blog posts, meetings and whiteboards for a team or project.",
       "knowledgeBase": "Knowledge base",
-      "knowledgeBaseDescription": "Articles such as how-tos and troubleshooting, sorted into categories. Articles are always published with versions.",
+      "knowledgeBaseDescription": "Articles such as how-tos and troubleshooting, sorted into areas and topics. Articles are always published with versions.",
       "fixed": "The type cannot be changed after the space is created.",
       "groupsHint": "Add the groups that may read the knowledge base below, for example with the role Reader.",
       "groupsRequired": "Give at least one group a role below, or choose a different audience."
@@ -10401,7 +10409,7 @@
       "description": "Who may read the knowledge base.",
       "label": "Who may read it",
       "loadFailed": "The settings of the knowledge base could not be loaded.",
-      "narrowHint": "Categories and articles can restrict reading further with view restrictions, never widen it. Who may edit is set in the permissions of the space.",
+      "narrowHint": "Areas, topics and articles can restrict reading further with view restrictions, never widen it. Who may edit is set in the permissions of the space.",
       "public": {
         "title": "Public",
         "description": "Everyone, also without signing in. The portal shows the published articles, and search engines can find them."
@@ -10429,7 +10437,7 @@
       "saveFailed": "The visibility could not be saved",
       "adminsOnly": "Only space admins can change the visibility.",
       "confirmTitle": "Let more people read {name}?",
-      "confirmDescription": "{count, plural, =0 {No article is published without a restriction yet. Articles you publish later} one {# article} other {# articles}} will be readable for {audience}, unless categories or articles restrict them. The change is recorded in the audit log.",
+      "confirmDescription": "{count, plural, =0 {No article is published without a restriction yet. Articles you publish later} one {# article} other {# articles}} will be readable for {audience}, unless areas, topics or articles restrict them. The change is recorded in the audit log.",
       "confirm": "Allow reading"
     },
     "settings": {
@@ -10444,7 +10452,7 @@
     "contact": {
       "label": "Contact address",
       "knowledgeBaseTitle": "Contact address of the knowledge base",
-      "hint": "Readers write to this address when an article did not help. Categories without their own address use it. Lunedo sends nothing itself and creates no tickets.",
+      "hint": "Readers write to this address when an article did not help. Areas and topics without their own address use it. Lunedo sends nothing itself and creates no tickets.",
       "invalid": "Enter an e-mail address such as help@example.org.",
       "setHere": "Set here",
       "inherited": "Inherited from {source}",
@@ -10632,8 +10640,8 @@
       "badge": "{language}: {state}"
     },
     "category": {
-      "empty": "This category has no articles yet",
-      "emptyDescription": "Articles and subcategories you create here appear in this overview and in the portal once they are published."
+      "empty": "No articles here yet",
+      "emptyDescription": "Articles and topics you create here appear in this overview and in the portal once they are published."
     },
     "folders": {
       "title": "Areas and topics",
@@ -11329,7 +11337,7 @@
     "link": "Link",
     "meeting": "Meeting",
     "article": "Article",
-    "category": "Category",
+    "category": "Area or topic",
     "space": "Space",
     "chooseSpace": {
       "title": "Create {kind}",

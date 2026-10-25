@@ -43,7 +43,7 @@ import { ArchiveSection } from "./archive/archive-section.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { Redirect } from "./redirect.js";
 import { SidebarShortcuts } from "./shortcuts/sidebar-shortcuts.js";
-import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
+import { SpaceBadge, useSpaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
 import { type CreatableKind, creatableKinds } from "./space-types.js";
@@ -204,7 +204,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
     },
     [context],
   );
-  const name = spaceDisplayName(t, space);
+  const name = useSpaceDisplayName()(space);
   const kinds = useMemo<CreateKind[]>(
     () =>
       canEdit ? [...creatableKinds(space), ...(knowledgeBase ? [] : (["blogPost", "meeting"] as const))] : [],
@@ -332,7 +332,7 @@ function SpaceNotices({ space }: { space: SpaceWithRole }) {
 function SpaceHeader({ space, collapsed }: { space: SpaceWithRole; collapsed: boolean }) {
   const { t } = useTranslation();
   const shell = useShell();
-  const name = spaceDisplayName(t, space);
+  const name = useSpaceDisplayName()(space);
   const [exporting, setExporting] = useState(false);
   const star = useStar({ spaceId: space.id }, name);
   const watch = useWatchEntries({ type: "space", id: space.id }, name);
@@ -425,7 +425,7 @@ function SpaceNavigation({
   const { t } = useTranslation();
   const location = useLocation();
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
-  const name = spaceDisplayName(t, space);
+  const name = useSpaceDisplayName()(space);
   const path = location.pathname.replace(/\/$/, "");
   const base = `/spaces/${space.key}`;
   const knowledgeBase = isKnowledgeBase(space);

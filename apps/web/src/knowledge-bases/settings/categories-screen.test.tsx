@@ -111,6 +111,9 @@ describe("areas and topics of a knowledge base", () => {
     await userEvent.click(within(tree).getByRole("button", { name: /^Outlook/ }));
     const preview = await screen.findByRole("region", { name: "Preview" });
     expect(within(preview).getByText("browser").tagName).toBe("STRONG");
+    const toolbar = screen.getByRole("toolbar", { name: "Formatting" });
+    const field = screen.getByRole("textbox", { name: "Introduction" });
+    expect(toolbar.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("moves a folder into the folder above from its menu and confirms a change of access", async () => {

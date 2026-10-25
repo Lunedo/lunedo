@@ -228,6 +228,13 @@ const contentReferenceShape = {
 
 export const contentReferenceSchema = z.object(contentReferenceShape).describe("A page or blog post.");
 
+const homeReferenceShape = {
+  ...contentReferenceShape,
+  mySpace: z.boolean().describe("Whether the item lies in the caller's own personal space."),
+};
+
+const homeReferenceSchema = z.object(homeReferenceShape).describe("A page or blog post.");
+
 export const taskEntrySchema = z
   .object({
     id: uuid("ID of the task."),
@@ -463,7 +470,7 @@ export const starredSchema = z
     items: z
       .array(
         z
-          .object({ ...contentReferenceShape, starredAt: timestamp("When it was starred.") })
+          .object({ ...homeReferenceShape, starredAt: timestamp("When it was starred.") })
           .describe("A starred page or post."),
       )
       .describe("Starred pages and blog posts the caller can read, newest first."),
@@ -475,6 +482,7 @@ export const starredSchema = z
             key: z.string().describe("Key of the space."),
             name: z.string().describe("Name of the space. Empty for a personal space without a name."),
             personal: z.boolean().describe("Whether it is a personal space."),
+            mySpace: z.boolean().describe("Whether it is the caller's own personal space."),
             starredAt: timestamp("When it was starred."),
           })
           .describe("A starred space."),
@@ -486,7 +494,7 @@ export const starredSchema = z
 export const recentSchema = z
   .array(
     z
-      .object({ ...contentReferenceShape, viewedAt: timestamp("When the caller last viewed it.") })
+      .object({ ...homeReferenceShape, viewedAt: timestamp("When the caller last viewed it.") })
       .describe("A recently viewed item."),
   )
   .describe("Items the caller viewed in the last 90 days, newest first. Only the caller sees this list.");
@@ -494,7 +502,7 @@ export const recentSchema = z
 export const mentionSchema = z
   .object({
     id: uuid("ID of the mention."),
-    item: contentReferenceSchema,
+    item: homeReferenceSchema,
     commentId: uuid("The comment with the mention, or null for a mention in the content.").nullable(),
     actor: z
       .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })
@@ -516,7 +524,7 @@ export const forYouSchema = z
 
 export const homePageSchema = z
   .object({
-    page: contentReferenceSchema
+    page: homeReferenceSchema
       .nullable()
       .describe("The organization home page, or null when none is set or the caller cannot read it."),
   })

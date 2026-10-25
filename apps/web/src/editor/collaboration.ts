@@ -69,7 +69,7 @@ export class PageCollaboration {
     synced: false,
     loaded: false,
     problem: null,
-    saveState: "offline",
+    saveState: "connecting",
   };
   #reattachAttempts = 0;
   #reattachTimer: ReturnType<typeof setTimeout> | null = null;
@@ -86,7 +86,8 @@ export class PageCollaboration {
       token: "session",
       onStatus: ({ status }) => {
         const connected = status === WebSocketStatus.Connected;
-        this.tracker.connection(connected);
+        if (status === WebSocketStatus.Disconnected) this.tracker.connectionLost();
+        else this.tracker.connection(connected);
         this.#set({ connected });
       },
       onSynced: ({ state }) => {
@@ -103,7 +104,7 @@ export class PageCollaboration {
       },
       onClose: ({ event }) => {
         if (event.reason === "unavailable") {
-          this.tracker.connection(false);
+          this.tracker.connectionLost();
           this.#set({ connected: false, synced: false });
           this.#scheduleReattach();
           return;
@@ -123,7 +124,7 @@ export class PageCollaboration {
   }
 
   #wentOffline = (): void => {
-    this.tracker.connection(false);
+    this.tracker.connectionLost();
     this.#set({ connected: false, synced: false });
     this.provider.disconnect();
   };

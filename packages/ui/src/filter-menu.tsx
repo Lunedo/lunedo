@@ -40,7 +40,7 @@ export interface MultiFilterMenuProps extends FilterMenuCommonProps {
 export type FilterMenuProps = SingleFilterMenuProps | MultiFilterMenuProps;
 
 const CHIP =
-  "inline-flex max-w-full items-center gap-2 rounded-md border bg-control px-3 text-sm whitespace-nowrap hover:bg-hover focus-visible:focus-ring";
+  "inline-flex max-w-full min-w-0 items-center gap-2 rounded-md border bg-control px-3 text-sm whitespace-nowrap hover:bg-hover focus-visible:focus-ring";
 
 export function FilterMenu(props: FilterMenuProps) {
   const { label, options, valueLabel, search, emptyText, size = "field" } = props;

@@ -99,44 +99,50 @@ export function IntroductionEditor({
   return (
     <div className="flex flex-col gap-2">
       <Field label={t("knowledgeBase.categories.intro")} hint={t("knowledgeBase.folders.introHint")}>
-        <Textarea
-          ref={area}
-          rows={4}
-          maxLength={INTRODUCTION_MAX_LENGTH}
-          value={value}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={(event) => onCommit(event.target.value)}
-        />
-      </Field>
-      {disabled ? null : (
-        <div role="toolbar" aria-label={t("knowledgeBase.folders.format")} className="flex flex-wrap gap-1">
-          <IconButton
-            label={t("knowledgeBase.folders.bold")}
-            icon={Bold}
-            size="sm"
-            onClick={() => apply("bold")}
-          />
-          <IconButton
-            label={t("knowledgeBase.folders.italic")}
-            icon={Italic}
-            size="sm"
-            onClick={() => apply("italic")}
-          />
-          <IconButton
-            label={t("knowledgeBase.folders.link")}
-            icon={Link}
-            size="sm"
-            onClick={() => apply("link")}
-          />
-          <IconButton
-            label={t("knowledgeBase.folders.callout")}
-            icon={Info}
-            size="sm"
-            onClick={() => apply("callout")}
+        <div className="flex flex-col gap-1">
+          {disabled ? null : (
+            <div
+              role="toolbar"
+              aria-label={t("knowledgeBase.folders.format")}
+              className="flex flex-wrap gap-1"
+            >
+              <IconButton
+                label={t("knowledgeBase.folders.bold")}
+                icon={Bold}
+                size="sm"
+                onClick={() => apply("bold")}
+              />
+              <IconButton
+                label={t("knowledgeBase.folders.italic")}
+                icon={Italic}
+                size="sm"
+                onClick={() => apply("italic")}
+              />
+              <IconButton
+                label={t("knowledgeBase.folders.link")}
+                icon={Link}
+                size="sm"
+                onClick={() => apply("link")}
+              />
+              <IconButton
+                label={t("knowledgeBase.folders.callout")}
+                icon={Info}
+                size="sm"
+                onClick={() => apply("callout")}
+              />
+            </div>
+          )}
+          <Textarea
+            ref={area}
+            rows={4}
+            maxLength={INTRODUCTION_MAX_LENGTH}
+            value={value}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={(event) => onCommit(event.target.value)}
           />
         </div>
-      )}
+      </Field>
       {status}
       {value.trim() ? (
         <section

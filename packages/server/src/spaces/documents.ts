@@ -50,6 +50,34 @@ export const MERGE_ORIGIN = "lunedo:merge";
 export const API_ORIGIN = "lunedo:api";
 export const NORMALIZE_ORIGIN = "lunedo:normalize";
 
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, entry]) => [key, canonical(entry)]),
+  );
+}
+
+function withoutTrailingEmptyParagraphs(document: DocumentJson): DocumentJson {
+  const content = [...(document.content ?? [])];
+  while (content.length > 1) {
+    const last = content.at(-1);
+    if (last?.type !== "paragraph" || (last.content ?? []).length > 0) break;
+    content.pop();
+  }
+  return { ...document, content };
+}
+
+export function sameContent(before: DocumentJson, after: DocumentJson): boolean {
+  return (
+    JSON.stringify(canonical(withoutTrailingEmptyParagraphs(before))) ===
+    JSON.stringify(canonical(withoutTrailingEmptyParagraphs(after)))
+  );
+}
+
 export class DocumentInvalidError extends Error {
   override name = "DocumentInvalidError";
 
@@ -444,8 +472,11 @@ export class PageDocumentService {
       space_id: string;
       mode: PageMode;
       schema_version: number;
+      snapshot: unknown;
+      revision: number;
     }>(sql`
-      select d.state, t.space_id, t.mode, d.schema_version from page_documents d join tree_items t on t.id = d.item_id
+      select d.state, t.space_id, t.mode, d.schema_version, d.snapshot, d.revision
+      from page_documents d join tree_items t on t.id = d.item_id
       where d.item_id = ${itemId}`);
     const row = locked.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
@@ -458,6 +489,13 @@ export class PageDocumentService {
     if (claimed) {
       applyDocument(doc, claimed, NORMALIZE_ORIGIN);
       document = claimed;
+    }
+    if (sameContent(migrated(row.snapshot, row.schema_version), document)) {
+      await tx.execute(sql`
+        update page_documents set state = ${encodeState(doc)}, snapshot = ${JSON.stringify(document)}::jsonb,
+          schema_version = ${editorSchemaVersion}
+        where item_id = ${itemId}`);
+      return Number(row.revision);
     }
     const revision = await tx.execute<{ revision: number }>(sql`
       update page_documents set state = ${encodeState(doc)}, snapshot = ${JSON.stringify(document)}::jsonb,

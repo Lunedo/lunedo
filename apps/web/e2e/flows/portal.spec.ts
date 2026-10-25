@@ -134,7 +134,7 @@ test("a reader browses areas and topics and searches in the search window", asyn
   await tree.getByRole("link", { name: /Remote access/ }).click();
   await expect(reader.getByRole("heading", { name: "Remote access", level: 1 })).toBeVisible();
   await expect(
-    reader.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "IT" }),
+    reader.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "IT", exact: true }),
   ).toBeVisible();
   await expectAccessible(reader, "portal topic");
   await reader.keyboard.press("Control+k");

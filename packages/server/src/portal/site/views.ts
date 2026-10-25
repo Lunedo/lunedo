@@ -1,4 +1,4 @@
-import { parseIntroduction } from "@lunedo/shared";
+import { formatDate, parseIntroduction } from "@lunedo/shared";
 import type { ArticleSort } from "../../search/adapter.js";
 import { PORTAL_BASE_PLACEHOLDER } from "../articles.js";
 import type { PortalConfig } from "../portals.js";
@@ -115,12 +115,7 @@ export function initialOf(title: string): string {
 }
 
 function longDate(view: PortalView, date: Date): string {
-  return new Intl.DateTimeFormat(view.t.locale, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: view.config.timeZone,
-  }).format(date);
+  return formatDate(date, view.config.dateFormat, view.config.timeZone, view.t.locale);
 }
 
 function changedOn(view: PortalView, article: { updatedAt: Date; reviewedAt: Date | null }): string {
@@ -130,12 +125,7 @@ function changedOn(view: PortalView, article: { updatedAt: Date; reviewedAt: Dat
 }
 
 function shortDate(view: PortalView, date: Date): string {
-  return new Intl.DateTimeFormat(view.t.locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: view.config.timeZone,
-  }).format(date);
+  return formatDate(date, view.config.dateFormat, view.config.timeZone, view.t.locale);
 }
 
 function folderIcon(folder: { title: string; icon: string | null }, size: number): Html {
@@ -206,6 +196,12 @@ export function introduction(source: string): Html {
                 : html`${inline.text}`,
       )}</${raw(block.type === "callout" ? "div" : "p")}>`,
   )}`;
+}
+
+function metaLine(parts: readonly (Html | null)[]): Html {
+  return html`<span class="m"><span class="mi">${parts
+    .filter((part): part is Html => part !== null)
+    .map((part) => html`<span>${part}</span>`)}</span></span>`;
 }
 
 function kindText(view: PortalView, type: PortalArticleSummary["type"]): Html | null {
@@ -384,13 +380,13 @@ ${footer(view)}
 
 function articleRow(view: PortalView, article: PortalArticleSummary, options: { below?: string } = {}): Html {
   const path = pathOf(view, article.folderIds, options.below);
-  return html`<li><a href="${view.links.article(article)}"><span class="doc" aria-hidden="true">${icon("file-text")}</span><span class="g"><span class="t">${article.title}</span>${onlyIn(view, article)}<span class="m">${kindText(view, article.type)}${when(article.type && path, () => html`<span class="dot"></span>`)}${path}${when(article.type || path, () => html`<span class="dot"></span>`)}${view.t.updatedOnShort(shortDate(view, article.updatedAt))}</span></span>${icon("chevron-right", "chev")}</a></li>`;
+  return html`<li><a href="${view.links.article(article)}"><span class="doc" aria-hidden="true">${icon("file-text")}</span><span class="g"><span class="t">${article.title}</span>${onlyIn(view, article)}${metaLine([kindText(view, article.type), path, html`${view.t.updatedOnShort(shortDate(view, article.updatedAt))}`])}</span>${icon("chevron-right", "chev")}</a></li>`;
 }
 
 function areaGrid(view: PortalView): Html {
   return html`<div class="areas">${areasOf(view).map(
     (area) =>
-      html`<a class="area" href="${view.links.category(area.id)}">${folderIcon(area, 40)}<b class="trunc" title="${area.title}">${area.title}</b><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
+      html`<a class="area" href="${view.links.category(area.id)}">${folderIcon(area, 40)}<b class="clamp2" title="${area.title}">${area.title}</b><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
   )}</div>`;
 }
 
@@ -425,7 +421,7 @@ export function startPage(
         () =>
           html`<section class="sec" aria-labelledby="topics-heading"><h2 class="h2" id="topics-heading">${t.topicsHeading}</h2>${areaGrid(view)}</section>`,
       )}
-      <div class="sec cols2">
+      <div class="sec${data.mostRead.length > 0 && data.recent.length > 0 ? " cols2" : ""}">
         ${when(data.mostRead.length > 0, () => html`<section aria-labelledby="top-heading"><h2 class="h3" id="top-heading">${t.mostRead}</h2><ul class="alist">${data.mostRead.map((article) => articleRow(view, article))}</ul></section>`)}
         ${when(data.recent.length > 0, () => html`<section aria-labelledby="recent-heading"><h2 class="h3" id="recent-heading">${t.recentlyUpdated}</h2><ul class="alist">${data.recent.map((article) => articleRow(view, article))}</ul></section>`)}
       </div>`

@@ -12,6 +12,7 @@ import { isApplePlatform } from "../shell/keyboard.js";
 import { useShell } from "../shell/shell.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { itemHref } from "../spaces/item-paths.js";
+import { useSpaceDisplayName } from "../spaces/space-badge.js";
 import { spaceByKeyQuery } from "../spaces/space-queries.js";
 import { useClearRecentSearches } from "./recent-searches.js";
 import {
@@ -71,6 +72,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const router = useRouter();
   const organization = useOrganizationState();
   const space = useCurrentSpace();
+  const spaceName = useSpaceDisplayName();
   const organizationId = space?.organizationId ?? organization.organizationId;
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<"space" | "all">("space");
@@ -234,7 +236,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
       ...commandList,
       {
         heading: inSpace
-          ? t("search.quick.inSpace", { space: space.name || t("spaces.personal.label") })
+          ? t("search.quick.inSpace", { space: spaceName(space) })
           : t("search.quick.pagesAndPosts"),
         items: local.flatMap((hit) => hitItem(hit, true)),
       },
@@ -308,7 +310,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     <p className="flex items-center gap-2 text-sm text-text-muted">
       <SearchX aria-hidden="true" className="size-icon-md shrink-0" />
       {inSpace
-        ? t("search.quick.nothingInSpace", { query: typed, space: space.name || t("spaces.personal.label") })
+        ? t("search.quick.nothingInSpace", { query: typed, space: spaceName(space) })
         : t("search.quick.nothing", { query: typed })}
     </p>
   ) : null;
@@ -334,7 +336,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
           <fieldset className="flex flex-wrap gap-2">
             <legend className="sr-only">{t("search.quick.scope")}</legend>
             <ScopeButton pressed={scope === "space"} icon={Layers} onClick={() => setScope("space")}>
-              {t("search.quick.spaceFirst", { space: space.name || t("spaces.personal.label") })}
+              {t("search.quick.spaceFirst", { space: spaceName(space) })}
             </ScopeButton>
             <ScopeButton pressed={scope === "all"} icon={Globe} onClick={() => setScope("all")}>
               {t("search.quick.allSpaces")}

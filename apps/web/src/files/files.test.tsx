@@ -219,10 +219,12 @@ describe("the attachments of a page", () => {
     expect(screen.queryByRole("heading", { name: /Attachments/ })).toBeNull();
   });
 
-  it("explains how to add files when an editor sees an empty list", async () => {
+  it("shows no section while a page has no files, so that only the page menu offers the upload", async () => {
     list = [];
     await renderSection(true);
-    expect(await screen.findByText("No files yet. Upload files or drop them on the page.")).toBeTruthy();
+    await waitFor(() => expect(requests.some((request) => request.path.endsWith("/attachments"))).toBe(true));
+    expect(screen.queryByRole("region", { name: /^Attachments/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Upload" })).toBeNull();
   });
 
   it("uploads chosen files with real progress and refreshes the list", async () => {

@@ -182,8 +182,22 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(result.facets?.contentTypes).toEqual([{ value: "page", count: 3 }]);
     expect(result.facets?.spaces).toEqual(
       expect.arrayContaining([
-        { value: w.shared.id, count: 2, key: w.shared.key, name: "Shared space", personal: false },
-        { value: w.second.id, count: 1, key: w.second.key, name: "Second space", personal: false },
+        {
+          value: w.shared.id,
+          count: 2,
+          key: w.shared.key,
+          name: "Shared space",
+          personal: false,
+          mine: false,
+        },
+        {
+          value: w.second.id,
+          count: 1,
+          key: w.second.key,
+          name: "Second space",
+          personal: false,
+          mine: false,
+        },
       ]),
     );
     expect(result.facets?.authors.map((facet) => [facet.name, facet.count]).sort()).toEqual([
@@ -542,9 +556,9 @@ describe.skipIf(!baseUrl)("search", () => {
     await drain();
     const own = await find(w.author, w.org.id, `${w.word} personal`);
     expect(own.results.map((hit) => hit.itemId)).toEqual([diary.id]);
-    expect(own.results[0]?.space).toMatchObject({ id: personal.id, personal: true });
+    expect(own.results[0]?.space).toMatchObject({ id: personal.id, personal: true, mine: true });
     expect(own.facets?.spaces).toEqual([
-      { value: personal.id, count: 1, key: personal.key, name: personal.name, personal: true },
+      { value: personal.id, count: 1, key: personal.key, name: personal.name, personal: true, mine: true },
     ]);
     const elsewhere = await organization();
     await join(elsewhere.id, w.authorId);

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { DateFormat } from "@lunedo/shared";
 import {
   type AccentColor,
   accentColors,
@@ -17,6 +18,7 @@ import type { NotificationListener } from "../database/notifications.js";
 import type { ArticleLanguage } from "../knowledge-bases/translations.js";
 import { logoContentType } from "../organizations/organizations.js";
 import { supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
@@ -62,6 +64,7 @@ export interface PortalConfig {
   defaultLanguage: ArticleLanguage;
   languages: ArticleLanguage[];
   timeZone: string;
+  dateFormat: DateFormat;
 }
 
 export function interfaceLanguage(language: string): PortalLanguage {
@@ -189,6 +192,7 @@ export class PortalService {
     if (!row) return null;
     const chain = { organization: row.organization_id };
     const timeZone = await this.#settings.get(timeZoneSetting, chain);
+    const dateFormat = await this.#settings.get(formatSettings.dateFormat, chain);
     return {
       spaceId: row.space_id,
       organizationId: row.organization_id,
@@ -210,6 +214,7 @@ export class PortalService {
       defaultLanguage: row.default_language,
       languages: row.languages,
       timeZone,
+      dateFormat,
     };
   }
 

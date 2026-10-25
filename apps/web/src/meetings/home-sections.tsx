@@ -1,9 +1,9 @@
-import { Button, Section, Skeleton } from "@lunedo/ui";
+import { Button, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HomeEmpty, HomeRow } from "../collaboration/home-rows.js";
+import { HomeEmpty, HomeRow, HomeRowsSkeleton } from "../collaboration/home-rows.js";
 import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -15,10 +15,10 @@ import { oneOnOnesQuery, seriesPath, upcomingQuery } from "./queries.js";
 export function UpcomingMeetings() {
   const { t } = useTranslation();
   const format = useFormat();
-  const upcoming = useQuery({ ...upcomingQuery(), throwOnError: false });
+  const upcoming = useQuery({ ...upcomingQuery(false), throwOnError: false });
   return (
     <Section title={t("meetings.home.upcoming")}>
-      {upcoming.isPending ? <Skeleton className="my-2 h-field w-full" /> : null}
+      {upcoming.isPending ? <HomeRowsSkeleton /> : null}
       {upcoming.isError ? (
         <LoadError
           what={t("meetings.home.upcoming")}
@@ -54,7 +54,7 @@ export function OneOnOnes() {
         </Button>
       }
     >
-      {list.isPending ? <Skeleton className="my-2 h-field w-full" /> : null}
+      {list.isPending ? <HomeRowsSkeleton /> : null}
       {list.isError ? (
         <LoadError what={t("meetings.home.oneOnOnes")} error={list.error} onRetry={() => list.refetch()} />
       ) : null}

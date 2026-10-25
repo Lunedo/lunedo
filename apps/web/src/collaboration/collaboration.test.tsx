@@ -148,7 +148,8 @@ const task = (id: string, text: string, extra: Record<string, unknown> = {}) => 
   ...extra,
 });
 
-type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
+type Reply = { status?: number; body?: unknown };
+type Handler = (request: RecordedRequest) => Reply | Promise<Reply>;
 
 function routes(role: Role, extra: Record<string, Handler> = {}): Record<string, Handler> {
   return {
@@ -669,6 +670,7 @@ describe("For you", () => {
       spaceId: SPACE_ID,
       spaceKey: "ITOPS",
       spaceName: "IT Operations",
+      mySpace: false,
     };
     mockApi(
       routes("reader", {
@@ -699,6 +701,43 @@ describe("For you", () => {
     expect(screen.getByText("No blog posts were published in your spaces in the last 30 days.")).toBeTruthy();
   });
 
+  it("names pages in the own personal space Mein Space and never starts the line with a dot", async () => {
+    const mine = {
+      id: VPN,
+      kind: "page",
+      title: "Private draft",
+      spaceId: SPACE_ID,
+      spaceKey: "P0001",
+      spaceName: "",
+      mySpace: true,
+    };
+    const hidden = { ...mine, id: THREAD, title: "Shared page", spaceName: "", mySpace: false };
+    mockApi(
+      routes("reader", {
+        "GET /api/v1/home": () => ({
+          body: {
+            recent: [
+              { ...mine, viewedAt: new Date(Date.now() - 8 * 60_000).toISOString() },
+              { ...hidden, viewedAt: new Date(Date.now() - 9 * 60_000).toISOString() },
+            ],
+            starred: { items: [], spaces: [] },
+            tasks: [],
+            mentions: [],
+            posts: [],
+          },
+        }),
+        "GET /api/v1/meetings/upcoming": () => ({ body: [] }),
+        "GET /api/v1/one-on-ones": () => ({ body: [] }),
+      }),
+    );
+    await renderAt("/home");
+    const row = await screen.findByRole("link", { name: /Private draft/ });
+    expect(row.textContent).toMatch(/My space · 8 min. ago$/);
+    const shared = screen.getByRole("link", { name: /Shared page/ });
+    expect(shared.textContent).not.toMatch(/Shared pages*·/);
+    expect(shared.textContent).toMatch(/9 min. ago$/);
+  });
+
   it("welcomes people without spaces with a collapsed sidebar and shows the sections once a space exists", async () => {
     const empty = { recent: [], starred: { items: [], spaces: [] }, tasks: [], mentions: [], posts: [] };
     const spaces: unknown[] = [];
@@ -726,6 +765,22 @@ describe("For you", () => {
     expect(screen.getByRole("navigation", { name: "Main navigation" }).hasAttribute("data-collapsed")).toBe(
       false,
     );
+  });
+
+  it("shows each section with its own placeholder rows and leaves one-on-ones to their own section", async () => {
+    const { requests } = mockApi(
+      routes("reader", {
+        "GET /api/v1/home": () => new Promise<Reply>(() => {}),
+        "GET /api/v1/meetings/upcoming": () => ({ body: [] }),
+        "GET /api/v1/one-on-ones": () => ({ body: [] }),
+      }),
+    );
+    await renderAt("/home");
+    expect(await screen.findByRole("heading", { name: "My tasks, due soon" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Mentions" })).toBeTruthy();
+    expect(await screen.findByText("No upcoming meetings.")).toBeTruthy();
+    const upcoming = requests.find((request) => request.path.startsWith("/api/v1/meetings/upcoming"));
+    expect(upcoming?.path).toContain("oneOnOne=false");
   });
 
   it("names an upcoming meeting by its own title when the series stays hidden", async () => {

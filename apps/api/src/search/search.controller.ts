@@ -120,6 +120,8 @@ const spaceRefSchema = z
     key: z.string().describe("Key of the space."),
     name: z.string().describe("Name of the space. Empty for personal spaces, which clients name themselves."),
     personal: z.boolean().describe("Whether this is a personal space."),
+    knowledgeBase: z.boolean().describe("Whether the space is a knowledge base, whose pages are articles."),
+    mine: z.boolean().describe("Whether it is the caller's own personal space."),
   })
   .describe("A space the caller can open.");
 
@@ -228,6 +230,7 @@ const responseSchema = z
                 key: z.string().nullable().describe("Key of the space, or null."),
                 name: z.string().nullable().describe("Name of the space, or null."),
                 personal: z.boolean().describe("Whether this is a personal space."),
+                mine: z.boolean().describe("Whether it is the caller's own personal space."),
                 count: z.number().int().describe("Number of results."),
               })
               .describe("A space."),
@@ -301,6 +304,8 @@ const exampleResponse = {
         key: "ITOPS",
         name: "IT Operations",
         personal: false,
+        knowledgeBase: false,
+        mine: false,
       },
       sharedWithYou: false,
       path: [],
@@ -324,6 +329,7 @@ const exampleResponse = {
         key: "ITOPS",
         name: "IT Operations",
         personal: false,
+        mine: false,
         count: 1,
       },
     ],
@@ -356,6 +362,7 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
             key: facet.key,
             name: facet.name,
             personal: facet.personal,
+            mine: facet.mine,
             count: facet.count,
           })),
           labels: response.facets.labels,

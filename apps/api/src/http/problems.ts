@@ -233,7 +233,7 @@ export const problems = {
   knowledgeBasePlacement: { status: 409, title: "Articles and categories are placed in categories" },
   notKnowledgeBase: { status: 409, title: "The space is not a knowledge base" },
   staticSiteNotPublic: { status: 409, title: "Only public knowledge bases become a static website" },
-  notCategory: { status: 409, title: "The folder is not a category" },
+  notCategory: { status: 409, title: "The item is not an area or a topic" },
   invalidIcon: { status: 400, title: "The icon is not valid" },
   invalidArticleType: { status: 400, title: "Only articles have an article type" },
   invalidContactEmail: { status: 400, title: "The contact address is not valid" },

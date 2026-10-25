@@ -66,6 +66,10 @@ export function hitIcon(hit: Pick<SearchHit, "type">): LucideIcon {
   return FileText;
 }
 
+export function hitTypeLabel(t: TFunction, hit: Pick<SearchHit, "type" | "space">): string {
+  return hit.type === "page" && hit.space?.knowledgeBase ? t("search.types.article") : typeLabel(t, hit.type);
+}
+
 export function typeLabel(t: TFunction, type: string): string {
   if (type === "comment") return t("search.types.comment");
   if (type === "blogPost") return t("search.types.blogPost");
@@ -88,7 +92,9 @@ export function hitTitle(t: TFunction, hit: SearchHit): string {
 }
 
 export function spaceName(t: TFunction, space: NonNullable<SearchHit["space"]>): string {
-  return space.name || (space.personal ? t("spaces.personal.label") : space.key);
+  if (space.name) return space.name;
+  if (space.mine) return t("spaces.personal.mine");
+  return space.personal ? t("spaces.personal.label") : space.key;
 }
 
 export function hitPathEntries(t: TFunction, hit: SearchHit): { id: string; title: string }[] {
@@ -154,7 +160,7 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
         </p>
       ) : null}
       <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-text-muted">
-        <span>{[typeLabel(t, hit.type), hit.author?.name].filter(Boolean).join(" · ")} ·</span>
+        <span>{[hitTypeLabel(t, hit), hit.author?.name].filter(Boolean).join(" · ")} ·</span>
         <time dateTime={hit.updatedAt} title={format.dateTime(hit.updatedAt)}>
           {format.calendarDate(hit.updatedAt)}
         </time>

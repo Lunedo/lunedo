@@ -151,6 +151,17 @@ const SCRIPT = `(() => {
       input.focus();
       input.select();
     };
+    const count = () => {
+      const query = input.value.trim();
+      if (!query) return;
+      fetch(quick.dataset.endpoint + "/count", {
+        method: "POST",
+        keepalive: true,
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ q: query }),
+      }).catch(() => {});
+    };
     const option = (entry, index) => {
       const item = document.createElement("div");
       item.setAttribute("role", "option");
@@ -166,7 +177,7 @@ const SCRIPT = `(() => {
       text.append(title);
       if (detail.textContent) text.append(detail);
       item.append(text);
-      item.addEventListener("click", () => { location.href = entry.href; });
+      item.addEventListener("click", () => { count(); location.href = entry.href; });
       return item;
     };
     const group = (label) => {
@@ -240,6 +251,7 @@ const SCRIPT = `(() => {
         select((active - 1 + options.length) % options.length);
       } else if (event.key === "Enter" && options[active]) {
         event.preventDefault();
+        count();
         location.href = options[active].dataset.href;
       }
     });

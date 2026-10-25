@@ -657,6 +657,49 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(feedback.map((entry) => entry.text)).toEqual(["Schritt fehlt"]);
   });
 
+  it("writes dates in the format of the organization and lays out the start page without gaps", async () => {
+    const kb = await knowledgeBase("public");
+    const area = await folder(kb.id, "Ein Bereich mit einem sehr langen Namen, der umbrechen darf");
+    await article(kb.id, area, "Drucker einrichten", "Drucker im dritten Stock.", { type: "howTo" });
+    await index();
+    await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.dateFormat`, {
+      value: "YYYY-MM-DD",
+    });
+    const start = (await anonymous().get(`${kb.path}/`)).body;
+    const today = new Date().toISOString().slice(0, 10);
+    expect(start).toContain(today);
+    expect(start).not.toContain(`class="sec cols2"`);
+    expect(start).toContain(`<b class="clamp2"`);
+    expect(start).toContain(`<span class="m"><span class="mi"><span>`);
+    expect(start).not.toContain(`<span class="dot"></span>`);
+    await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.dateFormat`, { clear: true });
+  });
+
+  it("counts a search from the quick window when the reader opens a result, so that it can become frequent", async () => {
+    const kb = await knowledgeBase("public");
+    await article(kb.id, null, "Drucker", "Toner im Drucker wechseln.");
+    await index();
+    const reader = anonymous();
+    for (let index = 0; index < 3; index += 1) {
+      await reader.get(`${kb.path}/search/quick?q=toner`);
+      const counted = await reader.post(`${kb.path}/search/quick/count`, { q: " Toner " });
+      expect(counted.statusCode, counted.body).toBe(204);
+    }
+    const searches = await test.runtime.pool.query<{ term: string; results: number }>(
+      "select term, results from portal_searches where space_id = $1",
+      [kb.id],
+    );
+    expect(searches.rows).toEqual([
+      { term: "toner", results: 1 },
+      { term: "toner", results: 1 },
+      { term: "toner", results: 1 },
+    ]);
+    expect((await reader.get(`${kb.path}/`)).body).toContain(">toner</a>");
+    expect((await reader.post(`${kb.path}/search/quick/count`, { q: "  " })).statusCode).toBe(400);
+    const foreign = new TestClient(test.app, { origin: "https://evil.example" });
+    expect((await foreign.post(`${kb.path}/search/quick/count`, { q: "toner" })).statusCode).toBe(403);
+  });
+
   it("shows a frequent search only to readers who find something with it", async () => {
     const kb = await knowledgeBase("public");
     await article(kb.id, null, "Offen", "Allgemeiner Text.");

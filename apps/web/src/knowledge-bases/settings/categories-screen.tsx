@@ -550,6 +550,59 @@ export function CategoriesScreen() {
       description={t("knowledgeBase.folders.description")}
     >
       <div className="flex flex-col gap-6">
+        {categories.isPending ? <Skeleton className="h-field w-full" /> : null}
+        {categories.isError ? (
+          <LoadError
+            what={t("knowledgeBase.list.categoriesFailed")}
+            error={categories.error}
+            onRetry={() => categories.refetch()}
+          />
+        ) : null}
+        {categories.data && all.length === 0 ? (
+          <EmptyState
+            icon={FolderTree}
+            title={t("knowledgeBase.folders.emptyTitle")}
+            description={t("knowledgeBase.folders.emptyEditor")}
+            action={
+              canEdit ? (
+                <Button variant="primary" onClick={() => openCreate("folder", null)}>
+                  {t("knowledgeBase.folders.newArea")}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : null}
+        {all.length > 0 && selected ? (
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <Section
+              title={t("knowledgeBase.folders.tree")}
+              actions={
+                canEdit ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={FolderPlus}
+                    onClick={() => openCreate("folder", null)}
+                  >
+                    {t("knowledgeBase.folders.newArea")}
+                  </Button>
+                ) : undefined
+              }
+            >
+              <FolderTreeView all={all} selectedId={selected.id} onSelect={setChosen} />
+              {canEdit ? (
+                <p className="px-4 pb-3 text-xs text-text-muted">{t("knowledgeBase.folders.treeHint")}</p>
+              ) : null}
+            </Section>
+            <FolderEditor
+              key={selected.id}
+              folder={selected}
+              all={all}
+              fallbackSource={fallbackSource}
+              fallbackContact={settings.data?.contactEmail ?? null}
+            />
+          </div>
+        ) : null}
         <Panel
           title={t("knowledgeBase.contact.knowledgeBaseTitle")}
           description={t("knowledgeBase.contact.hint")}
@@ -582,59 +635,6 @@ export function CategoriesScreen() {
             <Skeleton className="h-field w-full" />
           )}
         </Panel>
-        {categories.isPending ? <Skeleton className="h-field w-full" /> : null}
-        {categories.isError ? (
-          <LoadError
-            what={t("knowledgeBase.list.categoriesFailed")}
-            error={categories.error}
-            onRetry={() => categories.refetch()}
-          />
-        ) : null}
-        {categories.data && all.length === 0 ? (
-          <EmptyState
-            icon={FolderTree}
-            title={t("knowledgeBase.folders.emptyTitle")}
-            description={t("knowledgeBase.folders.emptyEditor")}
-            action={
-              canEdit ? (
-                <Button variant="primary" onClick={() => openCreate("folder", null)}>
-                  {t("knowledgeBase.folders.newArea")}
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : null}
-        {all.length > 0 && selected ? (
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-            <Section
-              title={t("knowledgeBase.folders.tree")}
-              actions={
-                canEdit ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={FolderPlus}
-                    onClick={() => openCreate("folder", null)}
-                  >
-                    {t("knowledgeBase.folders.newArea")}
-                  </Button>
-                ) : undefined
-              }
-            >
-              <FolderTreeView all={all} selectedId={selected.id} onSelect={setChosen} />
-              {canEdit ? (
-                <p className="px-4 pb-3 text-xs text-text-muted">{t("knowledgeBase.folders.treeHint")}</p>
-              ) : null}
-            </Section>
-            <FolderEditor
-              key={selected.id}
-              folder={selected}
-              all={all}
-              fallbackSource={fallbackSource}
-              fallbackContact={settings.data?.contactEmail ?? null}
-            />
-          </div>
-        ) : null}
       </div>
     </SpaceSettingsPage>
   );

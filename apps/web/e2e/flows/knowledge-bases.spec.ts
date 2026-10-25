@@ -65,6 +65,6 @@ test("creates a knowledge base and publishes a how-to only once its required sec
 
   await page.goto(`/spaces/${spaceKey}`);
   await expect(
-    page.getByRole("region", { name: "Without category" }).getByRole("link", { name: "How-to" }),
+    page.getByRole("region", { name: "Without area" }).getByRole("link", { name: "How-to" }),
   ).toBeVisible();
 });

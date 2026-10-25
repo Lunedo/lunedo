@@ -707,6 +707,12 @@ details.ld-expand > summary {
   background-color: var(--content-background, var(--ld-content-yellow-background));
 }
 
+.ld-diff-current {
+  outline: 2px solid var(--ld-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .ld-diff-added {
   @apply rounded-sm bg-success-soft underline decoration-success decoration-2 underline-offset-2;
 }

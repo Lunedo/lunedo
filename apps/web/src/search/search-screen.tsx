@@ -182,9 +182,11 @@ export function SearchScreen() {
         <SavedSearchChips organizationId={organizationId} />
       </search>
       <section aria-label={t("search.results")} className="flex min-w-0 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchFilterChips facets={facets} filters={filters} onChange={(next) => show(query, next)} />
-          <span className="ml-auto">
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <SearchFilterChips facets={facets} filters={filters} onChange={(next) => show(query, next)} />
+          </div>
+          <span className="shrink-0">
             <SegmentedControl
               label={t("search.sort.label")}
               value={filters.sort}
