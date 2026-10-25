@@ -23,6 +23,11 @@ import {
 } from "./common.js";
 import { defaultPageMode, insertPage } from "./items.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "./keys.js";
+import {
+  listOrganizationSpaces,
+  type OrganizationSpaceFilter,
+  type OrganizationSpaceRow,
+} from "./organization-overview.js";
 import type { PeopleService } from "./people.js";
 import type { KnowledgeBaseAudience, SpaceRole, SpaceType, SpaceVisibility } from "./schema.js";
 import {
@@ -569,6 +574,15 @@ export class SpaceService {
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
       return this.require(spaceId, tx);
     });
+  }
+
+  organizationOverview(
+    actor: Principal,
+    organizationId: string,
+    page: PageRequest = FIRST_PAGE,
+    filter: OrganizationSpaceFilter = {},
+  ): Promise<Page<OrganizationSpaceRow>> {
+    return listOrganizationSpaces(this.#database, this.#authorization, actor, organizationId, page, filter);
   }
 
   async withoutAdministrator(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Space>> {

@@ -140,6 +140,11 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     nextMonth: "Next month",
     today: "Today",
     chooseDate: "Choose a date",
+    rowsPerPage: "Rows per page",
+    previous: "Previous",
+    next: "Next",
+    selectAll: "Select all on this page",
+    selection: "Selection",
   },
   de: {
     close: "Schließen",
@@ -190,6 +195,11 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     nextMonth: "Nächster Monat",
     today: "Heute",
     chooseDate: "Datum wählen",
+    rowsPerPage: "Einträge pro Seite",
+    previous: "Zurück",
+    next: "Weiter",
+    selectAll: "Alle auf dieser Seite auswählen",
+    selection: "Auswahl",
   },
 };
 

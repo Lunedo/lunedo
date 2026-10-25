@@ -130,6 +130,16 @@ export const folderViewSetting = defineSetting({
   lockable: false,
 });
 
+export const tablePageSizes = [25, 50, 100] as const;
+
+export const tablePageSizeSetting = defineSetting({
+  key: "appearance.tablePageSize",
+  schema: z.union([z.literal(25), z.literal(50), z.literal(100)]),
+  default: 25,
+  levels: ["user"],
+  lockable: false,
+});
+
 export const accentColorSetting = defineSetting<AccentColor>({
   key: "branding.accentColor",
   schema: z.enum(accentColors),
@@ -172,5 +182,6 @@ export const preferenceSettings = [
   sidebarCollapsedWhileEditingSetting,
   editorToolbarSetting,
   folderViewSetting,
+  tablePageSizeSetting,
   accentColorSetting,
 ];

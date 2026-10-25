@@ -1,5 +1,16 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { preferenceKeys, type TablePageSize, useUpdatePreference } from "../preferences/preferences.js";
+import { usePreferences } from "../preferences/preferences-provider.js";
+
+export function usePageSize(): { pageSize: TablePageSize; setPageSize: (size: number) => void } {
+  const preferences = usePreferences();
+  const update = useUpdatePreference();
+  return {
+    pageSize: preferences.tablePageSize,
+    setPageSize: (size) => update.mutate({ key: preferenceKeys.tablePageSize, value: size }),
+  };
+}
 
 export interface SortState {
   key: string;
@@ -26,22 +37,30 @@ export function useSorted<T>(
   return { rows: sorted, sort, setSort };
 }
 
-export function usePaged<T>(rows: readonly T[], size: number) {
+export function usePaged<T>(rows: readonly T[], fixedSize?: number) {
+  const { pageSize, setPageSize } = usePageSize();
+  const size = fixedSize ?? pageSize;
   const [page, setPage] = useState(0);
   const pages = Math.max(1, Math.ceil(rows.length / size));
   const current = Math.min(page, pages - 1);
   return {
     rows: rows.slice(current * size, current * size + size),
     reset: () => setPage(0),
-    pagination:
-      rows.length > size
+    pagination: {
+      hasPrevious: current > 0,
+      hasNext: current < pages - 1,
+      onPrevious: () => setPage(current - 1),
+      onNext: () => setPage(current + 1),
+      ...(fixedSize === undefined
         ? {
-            hasPrevious: current > 0,
-            hasNext: current < pages - 1,
-            onPrevious: () => setPage(current - 1),
-            onNext: () => setPage(current + 1),
+            pageSize: size,
+            onPageSizeChange: (next: number) => {
+              setPage(0);
+              setPageSize(next);
+            },
           }
-        : undefined,
+        : {}),
+    },
   };
 }
 
@@ -61,15 +80,16 @@ export function useDebounced<T>(value: T, delay = 250): T {
 
 export function useServerTable<T>(
   key: readonly unknown[],
-  fetchPage: (search: string, cursor: string | null) => Promise<ServerPage<T>>,
+  fetchPage: (search: string, cursor: string | null, limit: number) => Promise<ServerPage<T>>,
 ) {
+  const { pageSize, setPageSize } = usePageSize();
   const [search, setSearchValue] = useState("");
   const query = useDebounced(search.trim());
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const cursor = cursors.at(-1) ?? null;
   const result = useQuery({
-    queryKey: [...key, "page", query, cursor],
-    queryFn: () => fetchPage(query, cursor),
+    queryKey: [...key, "page", query, cursor, pageSize],
+    queryFn: () => fetchPage(query, cursor, pageSize),
     placeholderData: keepPreviousData,
     throwOnError: false,
   });
@@ -82,16 +102,19 @@ export function useServerTable<T>(
     rows: result.data?.items ?? [],
     query: result,
     search: { value: search, onChange: setSearch },
-    pagination:
-      cursors.length > 1 || nextCursor
-        ? {
-            hasPrevious: cursors.length > 1,
-            hasNext: nextCursor !== null,
-            onPrevious: () => setCursors((current) => current.slice(0, -1)),
-            onNext: () => {
-              if (nextCursor) setCursors((current) => [...current, nextCursor]);
-            },
-          }
-        : undefined,
+    pagination: {
+      hasPrevious: cursors.length > 1,
+      hasNext: nextCursor !== null,
+      onPrevious: () => setCursors((current) => current.slice(0, -1)),
+      onNext: () => {
+        if (nextCursor) setCursors((current) => [...current, nextCursor]);
+      },
+      pageSize,
+      onPageSizeChange: (next: number) => {
+        setCursors([null]);
+        setPageSize(next);
+      },
+    },
+    reset: () => setCursors([null]),
   };
 }

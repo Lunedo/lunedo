@@ -10,6 +10,7 @@ export {
   type IconButtonProps,
   type IconButtonVariant,
 } from "./button.js";
+export { type FilterChipOption, FilterChips } from "./chips.js";
 export { ChoiceTable, type ChoiceTableProps, type ChoiceTableRow } from "./choice-table.js";
 export { classNames } from "./class-names.js";
 export { type ColorModePreference, resolveColorMode, useColorMode } from "./color-mode.js";
@@ -195,12 +196,16 @@ export {
 } from "./status.js";
 export { Stepper, type StepperProps } from "./stepper.js";
 export {
+  PAGE_SIZES,
   type SortDirection,
   Table,
   type TableColumn,
   type TableGroup,
+  TablePageArrows,
+  TablePager,
   type TablePagination,
   type TableProps,
+  type TableSelection,
   type TableSort,
   TableToolbar,
   type TableToolbarProps,

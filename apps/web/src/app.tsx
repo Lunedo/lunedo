@@ -59,6 +59,11 @@ function TranslatedUi({ children }: { children: ReactNode }) {
       nextMonth: t("ui.nextMonth"),
       today: t("ui.today"),
       chooseDate: t("ui.chooseDate"),
+      rowsPerPage: t("ui.rowsPerPage"),
+      previous: t("ui.previous"),
+      next: t("ui.next"),
+      selectAll: t("ui.selectAll"),
+      selection: t("ui.selection"),
     }),
     [t],
   );

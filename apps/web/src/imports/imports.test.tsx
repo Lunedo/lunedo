@@ -168,7 +168,7 @@ describe("imports list", () => {
       ["organization.imports.manage"],
     );
     await open(`/settings/organizations/${ORGANIZATION.id}/imports`);
-    const list = await screen.findByRole("list", { name: "Imports" });
+    const list = await screen.findByRole("table", { name: "Imports" });
     expect(within(list).getByText("IT Operations")).toBeTruthy();
     expect(within(list).getByText("In review")).toBeTruthy();
     expect(within(list).getByRole("button", { name: "Open report" })).toBeTruthy();

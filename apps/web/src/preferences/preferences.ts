@@ -42,6 +42,7 @@ export interface PreferenceValues {
   sidebarCollapsedWhileEditing: boolean;
   editorToolbar: boolean;
   folderView: "list" | "tiles";
+  tablePageSize: TablePageSize;
   startPage: "forYou" | "organizationHome";
 }
 
@@ -61,8 +62,12 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   sidebarCollapsedWhileEditing: "appearance.sidebarCollapsedWhileEditing",
   editorToolbar: "appearance.editorToolbar",
   folderView: "appearance.folderView",
+  tablePageSize: "appearance.tablePageSize",
   startPage: "appearance.startPage",
 };
+
+export const TABLE_PAGE_SIZES = [25, 50, 100] as const;
+export type TablePageSize = (typeof TABLE_PAGE_SIZES)[number];
 
 const STORAGE_KEY = "lunedo.appearance";
 
@@ -84,6 +89,7 @@ export function defaultPreferences(language: Language): PreferenceValues {
     sidebarCollapsedWhileEditing: true,
     editorToolbar: true,
     folderView: "list",
+    tablePageSize: 25,
     startPage: "forYou",
   };
 }
@@ -112,6 +118,7 @@ export function toPreferenceValues(
     sidebarCollapsedWhileEditing: value("sidebarCollapsedWhileEditing") !== false,
     editorToolbar: value("editorToolbar") !== false,
     folderView: value("folderView") === "tiles" ? "tiles" : "list",
+    tablePageSize: oneOf(TABLE_PAGE_SIZES, value("tablePageSize"), fallback.tablePageSize),
     startPage: value("startPage") === "organizationHome" ? "organizationHome" : "forYou",
   };
 }

@@ -50,6 +50,11 @@ export interface UiLabels {
   nextMonth: string;
   today: string;
   chooseDate: string;
+  rowsPerPage: string;
+  previous: string;
+  next: string;
+  selectAll: string;
+  selection: string;
 }
 
 const LabelsContext = createContext<UiLabels | null>(null);

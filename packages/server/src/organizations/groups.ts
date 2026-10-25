@@ -29,6 +29,7 @@ export interface Group {
   description: string;
   managedBy?: { providerId: string; providerName: string } | null;
   formerlySynchronizedFrom?: string | null;
+  memberCount?: number;
 }
 
 export interface GroupDetails extends Group {
@@ -106,6 +107,11 @@ export class GroupService {
         formerlySynchronizedFrom: groups.formerProvider,
         managedProviderId: managedGroups.providerId,
         managedProviderName: identityProviders.name,
+        memberCount: sql<number>`(
+          select count(*)::int from ${groupMembers} gm
+          join ${accounts} a on a.id = gm.account_id
+          where gm.group_id = ${groups.id} and a.state = 'active'
+            and (gm.expires_at is null or gm.expires_at > now()))`,
         sortName,
       })
       .from(groups)
@@ -124,8 +130,9 @@ export class GroupService {
       rows,
       page,
       (row) => [row.sortName, row.id],
-      ({ sortName: _sortName, managedProviderId, managedProviderName, ...row }) => ({
+      ({ sortName: _sortName, managedProviderId, managedProviderName, memberCount, ...row }) => ({
         ...row,
+        memberCount: Number(memberCount),
         managedBy: managedBy(managedProviderId, managedProviderName),
       }),
     );

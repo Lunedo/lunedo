@@ -8916,6 +8916,14 @@
                             "type": "string",
                             "description": "Name of the space."
                           },
+                          "spaceType": {
+                            "type": "string",
+                            "description": "Type of the space. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "standard",
+                              "knowledgeBase"
+                            ]
+                          },
                           "updatedAt": {
                             "type": "string",
                             "format": "date-time",
@@ -8932,6 +8940,7 @@
                           "spaceId",
                           "spaceKey",
                           "spaceName",
+                          "spaceType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -9021,6 +9030,227 @@
                       "title": "This endpoint needs a signed-in session",
                       "status": 403,
                       "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "accountWatches.changeMany",
+        "summary": "Change several watch states at once",
+        "description": "Applies all changes together. Items and spaces the caller can no longer read are skipped and not counted.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Watching"
+        ],
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "changes": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "item",
+                                "space"
+                              ],
+                              "description": "Kind of target."
+                            },
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the item or space."
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "id"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The item or space."
+                        },
+                        "state": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The new state, or null to remove the own state so the item follows its space again."
+                        },
+                        "keepActionable": {
+                          "description": "For `muted`: still deliver mentions, assigned tasks, shares and access requests.",
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "state"
+                      ],
+                      "additionalProperties": false,
+                      "description": "One change."
+                    },
+                    "description": "The changes, applied together."
+                  }
+                },
+                "required": [
+                  "changes"
+                ],
+                "additionalProperties": false,
+                "description": "Several watch changes at once."
+              },
+              "example": {
+                "changes": [
+                  {
+                    "target": {
+                      "type": "item",
+                      "id": "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f"
+                    },
+                    "state": "muted"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "How many changes were applied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "changed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of changes applied."
+                    }
+                  },
+                  "required": [
+                    "changed"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The result."
+                },
+                "example": {
+                  "changed": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
                     }
                   }
                 }
@@ -33886,6 +34116,12 @@
                         "null"
                       ]
                     },
+                    "memberCount": {
+                      "description": "Number of active accounts in the group. Only in lists of groups.",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "managers": {
                       "type": "array",
                       "items": {
@@ -34173,6 +34409,12 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "memberCount": {
+                      "description": "Number of active accounts in the group. Only in lists of groups.",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -170515,6 +170757,12 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "memberCount": {
+                            "description": "Number of active accounts in the group. Only in lists of groups.",
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -170798,6 +171046,12 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "memberCount": {
+                      "description": "Number of active accounts in the group. Only in lists of groups.",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -178042,6 +178296,46 @@
                               "description": "A role assigned directly to the account."
                             },
                             "description": "Roles assigned directly to the account in this organization."
+                          },
+                          "groups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the group."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Name of the group."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A group of the organization the account belongs to."
+                            },
+                            "description": "Groups of this organization the account belongs to, ordered by name."
+                          },
+                          "twoFactorActive": {
+                            "type": "boolean",
+                            "description": "Whether the account has a confirmed authenticator app or a passkey."
+                          },
+                          "lastActiveAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the account was last active in Lunedo, or null. ISO 8601 timestamp in UTC."
                           }
                         },
                         "required": [
@@ -178054,7 +178348,10 @@
                           "kind",
                           "expiresAt",
                           "responsibleAccountId",
-                          "roles"
+                          "roles",
+                          "groups",
+                          "twoFactorActive",
+                          "lastActiveAt"
                         ],
                         "additionalProperties": false,
                         "description": "A member of an organization."
@@ -178095,7 +178392,15 @@
                           "customRoleId": null,
                           "expiresAt": null
                         }
-                      ]
+                      ],
+                      "groups": [
+                        {
+                          "id": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f",
+                          "name": "Engineering"
+                        }
+                      ],
+                      "twoFactorActive": true,
+                      "lastActiveAt": "2026-10-24T08:15:00.000Z"
                     }
                   ],
                   "nextCursor": null
@@ -188352,6 +188657,387 @@
       }
     },
     "/api/v1/organizations/{organizationId}/spaces": {
+      "get": {
+        "operationId": "organizationSpaces.organizationSpaces",
+        "summary": "List the spaces of an organization",
+        "description": "Lists every space of the organization except personal spaces and one-on-one spaces, with its space admins, size and last activity. Confidential spaces appear with their key only.\n\nRequires the permission `organization.spaces.view` on the organization in `organizationId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.spaces.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Only items that contain this text, ignoring case: in the name and e-mail address of accounts and members, the name and short name of organizations, and the name and description of groups.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Only spaces of this type.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "standard",
+                "knowledgeBase"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "Only active or only archived spaces.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "archived"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Spaces of the organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the space."
+                          },
+                          "key": {
+                            "type": "string",
+                            "description": "Key of the space."
+                          },
+                          "name": {
+                            "description": "Name of the space, or null for a confidential space, whose name administrators do not see.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "`standard` or `knowledgeBase`."
+                          },
+                          "visibility": {
+                            "type": "string",
+                            "enum": [
+                              "private",
+                              "organization",
+                              "instance"
+                            ],
+                            "description": "Who can read the space besides its holders: `private` (only holders), `organization` (every member of the organization) or `instance` (every internal user of the instance)."
+                          },
+                          "confidential": {
+                            "type": "boolean",
+                            "description": "Whether the space is confidential."
+                          },
+                          "archived": {
+                            "type": "boolean",
+                            "description": "Whether the space is archived."
+                          },
+                          "administrators": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "account",
+                                    "group"
+                                  ],
+                                  "description": "Whether a person or a group holds the role."
+                                },
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account or group."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Name of the account or group."
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A holder of the space admin role."
+                            },
+                            "description": "Space admins, ordered by name. Empty for confidential spaces."
+                          },
+                          "pages": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Pages and blog posts in the space, without the trash."
+                          },
+                          "storageBytes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Size of all files attached in the space, in bytes."
+                          },
+                          "lastActivityAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When content in the space last changed. ISO 8601 timestamp in UTC."
+                          },
+                          "canManage": {
+                            "type": "boolean",
+                            "description": "Whether the caller may change the settings of the space and archive it."
+                          },
+                          "canDelete": {
+                            "type": "boolean",
+                            "description": "Whether the caller may delete the space."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "key",
+                          "name",
+                          "type",
+                          "visibility",
+                          "confidential",
+                          "archived",
+                          "administrators",
+                          "pages",
+                          "storageBytes",
+                          "lastActivityAt",
+                          "canManage",
+                          "canDelete"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A space of the organization as administrators see it."
+                      },
+                      "description": "Spaces, ordered by name."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page. Pass it as `cursor`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "One page of results."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                      "key": "ITOPS",
+                      "name": "IT Operations",
+                      "type": "standard",
+                      "visibility": "organization",
+                      "confidential": false,
+                      "archived": false,
+                      "administrators": [
+                        {
+                          "kind": "account",
+                          "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                          "name": "Ada Lovelace"
+                        }
+                      ],
+                      "pages": 42,
+                      "storageBytes": 1048576,
+                      "lastActivityAt": "2026-10-24T08:15:00.000Z",
+                      "canManage": true,
+                      "canDelete": true
+                    }
+                  ],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "organizationSpaces.create",
         "summary": "Create a space",

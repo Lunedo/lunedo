@@ -18,7 +18,7 @@ test("watching and notification settings pass the accessibility check in every a
   });
   await sweepAppearances(page, "watched-items", async () => {
     await page.goto("/settings/notifications/watching");
-    await expect(page.getByRole("list").first()).toBeVisible();
+    await expect(page.getByRole("table").first()).toBeVisible();
   });
   await sweepAppearances(page, "organization-notification-defaults", async () => {
     await page.goto(`/settings/organizations/${organization.id}/notifications`);

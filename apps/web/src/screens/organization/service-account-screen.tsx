@@ -16,7 +16,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { KeyRound, Plus, PowerOff, UserRound } from "lucide-react";
+import { Plus, PowerOff, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -34,7 +34,8 @@ import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
 import { memberLoader } from "../../components/pickers.js";
 import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
-import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
+import { CreateTokenDialog, RevokeTokenDialog } from "../../components/token-dialogs.js";
+import { TokenTable } from "../../components/token-table.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -51,7 +52,7 @@ export function ServiceAccountScreen() {
   const { t } = useTranslation();
   const { organizationId, serviceAccountId } = route.useParams();
   const state = useOrganizationState();
-  const format = useFormat();
+  const _format = useFormat();
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const account = useQuery({ ...serviceAccountQuery(serviceAccountId), throwOnError: false });
@@ -209,39 +210,17 @@ export function ServiceAccountScreen() {
           ) : null
         }
       >
-        {tokens.data?.length === 0 ? <p className="py-3 text-text-muted">{t("tokens.none")}</p> : null}
-        <List>
-          {tokens.data?.map((token) => (
-            <ListRow
-              key={token.id}
-              icon={KeyRound}
-              title={token.name}
-              description={[
-                scopeSummary(t, token, knowledgeBaseNames),
-                token.expiresAt
-                  ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
-                  : t("tokens.noExpiry"),
-                token.lastUsedAt
-                  ? t("tokens.lastUsed", { when: format.relative(token.lastUsedAt) })
-                  : t("tokens.neverUsed"),
-              ].join(" · ")}
-              actions={
-                manage ? (
-                  <>
-                    {token.scopes.organization?.spaces ? (
-                      <Button variant="secondary" size="sm" onClick={() => setChanging(token)}>
-                        {t("tokens.content.change")}
-                      </Button>
-                    ) : null}
-                    <Button variant="danger" size="sm" onClick={() => setRevoking(token)}>
-                      {t("tokens.revoke")}
-                    </Button>
-                  </>
-                ) : null
-              }
-            />
-          ))}
-        </List>
+        <div className="pt-3">
+          <TokenTable
+            caption={t("serviceAccounts.tokens")}
+            tokens={tokens.data ?? []}
+            loading={tokens.isPending}
+            knowledgeBaseNames={knowledgeBaseNames}
+            canManage={manage}
+            onChangeContent={setChanging}
+            onRevoke={setRevoking}
+          />
+        </div>
       </Section>
       {data && manage && active ? (
         <DangerZone title={t("common.dangerZone")}>

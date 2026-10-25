@@ -46,6 +46,9 @@ export interface Member {
   expiresAt: Date | null;
   responsibleAccountId: string | null;
   roles: { assignmentId: string; role: string; customRoleId: string | null; expiresAt: Date | null }[];
+  groups: { id: string; name: string }[];
+  twoFactorActive: boolean;
+  lastActiveAt: Date | null;
 }
 
 type Event = AuditEventInput<AuditEventName>;
@@ -146,6 +149,10 @@ export class MembershipService {
         kind: memberships.kind,
         expiresAt: memberships.expiresAt,
         responsibleAccountId: memberships.responsibleAccountId,
+        lastActiveAt: accounts.lastActiveAt,
+        twoFactorActive: sql<boolean>`(
+          exists (select 1 from totp_credentials t where t.account_id = ${accounts.id} and t.confirmed_at is not null)
+          or exists (select 1 from webauthn_credentials w where w.account_id = ${accounts.id}))`,
       })
       .from(memberships)
       .innerJoin(accounts, eq(accounts.id, memberships.accountId))
@@ -188,10 +195,26 @@ export class MembershipService {
         ),
       )
       .orderBy(roleAssignments.id);
+    const groupRows = await this.#database
+      .select({ accountId: groupMembers.accountId, id: groups.id, name: groups.name })
+      .from(groupMembers)
+      .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+      .where(
+        and(
+          eq(groups.organizationId, organizationId),
+          inArray(groupMembers.accountId, accountIds),
+          or(isNull(groupMembers.expiresAt), sql`${groupMembers.expiresAt} > now()`),
+        ),
+      )
+      .orderBy(sql`lower(${groups.name})`, groups.id);
     return {
       next: result.next,
       items: result.items.map((row) => ({
         ...row,
+        twoFactorActive: row.twoFactorActive === true,
+        groups: groupRows
+          .filter((group) => group.accountId === row.accountId)
+          .map((group) => ({ id: group.id, name: group.name })),
         roles: assignments
           .filter((assignment) => assignment.accountId === row.accountId)
           .map((assignment) => ({

@@ -330,8 +330,8 @@ describe("the web client", () => {
     expect(await screen.findByText("Entra ID")).toBeTruthy();
   });
 
-  it("lists watched and muted items in two sections with their counts", async () => {
-    api({
+  it("lists watched and muted items in two tabs and changes several at once", async () => {
+    const { requests } = api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
       "GET /api/v1/account/watches": () => ({
         body: {
@@ -376,15 +376,45 @@ describe("the web client", () => {
           counts: { watchedItems: 1, watchedSpaces: 1, mutedItems: 1, mutedSpaces: 0 },
         },
       }),
+      "PUT /api/v1/account/watches": () => ({ body: { changed: 2 } }),
     });
     await renderApp("/settings/notifications/watching");
-    const watched = await screen.findByRole("region", { name: "Watching 2" });
-    expect(within(watched).getByRole("link", { name: "VPN access" })).toBeTruthy();
-    expect(within(watched).getByRole("link", { name: "Operations" })).toBeTruthy();
-    expect(within(watched).getAllByRole("button", { name: "Stop watching" })).toHaveLength(2);
-    const muted = screen.getByRole("region", { name: "Muted 1" });
-    expect(within(muted).getByRole("link", { name: "Old notes" })).toBeTruthy();
-    expect(within(muted).getByRole("button", { name: "Unmute" })).toBeTruthy();
+    expect(await screen.findByRole("tab", { name: /^Watching.*2/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^Muted.*1/ })).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Watching" });
+    expect(within(table).getByRole("link", { name: "VPN access" })).toBeTruthy();
+    expect(within(table).getByRole("link", { name: "Operations" })).toBeTruthy();
+    expect(within(table).queryByText("Old notes")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Spaces" }));
+    expect(within(screen.getByRole("table", { name: "Watching" })).queryByText("VPN access")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    const bulk = screen.getByRole("region", { name: "Selection" });
+    expect(within(bulk).getByText("2 selected")).toBeTruthy();
+    await userEvent.click(within(bulk).getByRole("button", { name: "Mute" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/account/watches" && request.method === "PUT")
+          ?.body,
+      ).toEqual({
+        changes: [
+          {
+            target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d1" },
+            state: "muted",
+            keepActionable: true,
+          },
+          {
+            target: { type: "space", id: "01929b1e-0000-7000-8000-0000000000d0" },
+            state: "muted",
+            keepActionable: true,
+          },
+        ],
+      }),
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /Muted/ }));
+    expect(
+      within(await screen.findByRole("table", { name: "Muted" })).getByRole("link", { name: "Old notes" }),
+    ).toBeTruthy();
   });
 
   it("searches the settings of every area it shows and offers to clear an empty result", async () => {

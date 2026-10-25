@@ -36,7 +36,14 @@ export interface WatchedEntry {
   spaceId: string;
   spaceKey: string;
   spaceName: string;
+  spaceType: string;
   updatedAt: Date;
+}
+
+export interface WatchChange {
+  target: WatchTarget;
+  state: WatchState | null;
+  keepActionable?: boolean | undefined;
 }
 
 const LIST_LIMIT = 500;
@@ -147,27 +154,43 @@ export class WatchService {
     target: WatchTarget,
     input: { state: WatchState | null; keepActionable?: boolean | undefined },
   ): Promise<WatchStatus> {
-    await this.#database.transaction(async (tx) => {
-      if (input.state === null) {
-        await tx.execute(
-          sql`delete from watches where account_id = ${accountId} and ${targetCondition(target)}`,
-        );
-        return;
-      }
-      const columns = targetColumns(target);
-      const keepActionable = input.keepActionable ?? true;
-      const conflict =
-        target.type === "space"
-          ? sql`(account_id, space_id) where item_id is null`
-          : sql`(account_id, item_id) where item_id is not null`;
-      await tx.execute(sql`
-        insert into watches (id, account_id, space_id, item_id, state, keep_actionable, automatic)
-        values (gen_random_uuid(), ${accountId}, ${columns.spaceId}, ${columns.itemId}, ${input.state},
-          ${keepActionable}, false)
-        on conflict ${conflict} do update set state = excluded.state, keep_actionable = excluded.keep_actionable,
-          automatic = false, updated_at = now()`);
-    });
+    await this.#database.transaction((tx) => this.#write(tx, accountId, { target, ...input }));
     return this.status(accountId, target);
+  }
+
+  async setMany(accountId: string, changes: readonly WatchChange[]): Promise<number> {
+    const principal = accountPrincipal(accountId);
+    const allowed: WatchChange[] = [];
+    for (const change of changes) {
+      const action = change.target.type === "item" ? "item.view" : "space.view";
+      if ((await this.#authorization.explain(principal, action, change.target)).allowed) allowed.push(change);
+    }
+    await this.#database.transaction(async (tx) => {
+      for (const change of allowed) await this.#write(tx, accountId, change);
+    });
+    return allowed.length;
+  }
+
+  async #write(tx: Transaction, accountId: string, change: WatchChange): Promise<void> {
+    const { target } = change;
+    if (change.state === null) {
+      await tx.execute(
+        sql`delete from watches where account_id = ${accountId} and ${targetCondition(target)}`,
+      );
+      return;
+    }
+    const columns = targetColumns(target);
+    const keepActionable = change.keepActionable ?? true;
+    const conflict =
+      target.type === "space"
+        ? sql`(account_id, space_id) where item_id is null`
+        : sql`(account_id, item_id) where item_id is not null`;
+    await tx.execute(sql`
+      insert into watches (id, account_id, space_id, item_id, state, keep_actionable, automatic)
+      values (gen_random_uuid(), ${accountId}, ${columns.spaceId}, ${columns.itemId}, ${change.state},
+        ${keepActionable}, false)
+      on conflict ${conflict} do update set state = excluded.state, keep_actionable = excluded.keep_actionable,
+        automatic = false, updated_at = now()`);
   }
 
   async watchAutomatically(
@@ -243,11 +266,12 @@ export class WatchService {
       target_space_id: string;
       key: string;
       name: string;
+      space_type: string;
       updated_at: Date;
     }>(sql`
       select w.space_id, w.item_id, w.state, w.keep_actionable, w.automatic, w.updated_at,
         coalesce(t.title, s.name) as title, coalesce(t.kind::text, 'space') as kind, s.id as target_space_id,
-        s.key, s.name
+        s.key, s.name, s.type::text as space_type
       from watches w
       left join tree_items t on t.id = w.item_id
       join spaces s on s.id = coalesce(t.space_id, w.space_id)
@@ -273,6 +297,7 @@ export class WatchService {
         spaceId: row.target_space_id,
         spaceKey: row.key,
         spaceName: row.name,
+        spaceType: row.space_type,
         updatedAt: new Date(row.updated_at),
       });
     }

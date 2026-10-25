@@ -47,10 +47,10 @@ const createForm = z.object({
   ownerAccountId: z.string(),
 });
 
-function fetchOrganizations(search: string, cursor: string | null) {
+function fetchOrganizations(search: string, cursor: string | null, limit: number) {
   return request(() =>
     api.GET("/api/v1/instance/organizations", {
-      params: { query: { limit: 25, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) } },
+      params: { query: { limit, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) } },
     }),
   );
 }
@@ -82,6 +82,7 @@ export function InstanceOrganizationsScreen() {
 
   return (
     <SettingsPage
+      wide
       title={t("instance.organizations.title")}
       description={t("instance.organizations.description")}
       actions={
@@ -98,6 +99,7 @@ export function InstanceOrganizationsScreen() {
           label: t("instance.organizations.search"),
           placeholder: t("instance.organizations.search"),
         }}
+        pagination={table.pagination}
       />
       {table.query.isError ? (
         <LoadError
@@ -111,7 +113,7 @@ export function InstanceOrganizationsScreen() {
         rowKey={(organization) => organization.id}
         rows={table.rows}
         loading={table.query.isPending}
-        {...(table.pagination ? { pagination: table.pagination } : {})}
+        pagination={table.pagination}
         onRowClick={(organization) => {
           if (memberOf.has(organization.id)) open(organization.id);
         }}

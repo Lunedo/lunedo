@@ -40,6 +40,7 @@ export const spaceKeys = {
   defaults: (organizationId: string) => ["organization", organizationId, "spaceDefaults"] as const,
   withoutAdministrator: (organizationId: string) =>
     ["organization", organizationId, "spacesWithoutAdministrator"] as const,
+  organizationSpaces: (organizationId: string) => ["organization", organizationId, "spaces"] as const,
   personalReview: ["instance", "personalSpaces"] as const,
 };
 

@@ -255,6 +255,7 @@
     "cardWidthWide": "40rem",
     "columnWidth": "35rem",
     "pageWidth": "56rem",
+    "pageWidthWide": "67.5rem",
     "panelWidth": "22.5rem",
     "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem" },
     "qrCodeSize": "7.5rem",

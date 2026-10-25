@@ -59,12 +59,12 @@ const STATE_FILTERS = ["active", "deactivated", "placeholder", "anonymized"] as 
 
 type AccountFilter = "all" | "withoutOrganization" | (typeof STATE_FILTERS)[number];
 
-function fetchAccounts(search: string, cursor: string | null, filter: AccountFilter = "all") {
+function fetchAccounts(search: string, cursor: string | null, filter: AccountFilter = "all", limit = 25) {
   return request(() =>
     api.GET("/api/v1/instance/accounts", {
       params: {
         query: {
-          limit: 25,
+          limit,
           ...(search ? { q: search } : {}),
           ...(cursor ? { cursor } : {}),
           ...(filter === "withoutOrganization" ? { withoutOrganization: "true" as const } : {}),
@@ -87,8 +87,8 @@ export function InstanceAccountsScreen() {
   const { t } = useTranslation();
   const format = useFormat();
   const [filter, setFilter] = useState<AccountFilter>("all");
-  const table = useServerTable([...instanceKeys.accounts, filter], (search, cursor) =>
-    fetchAccounts(search, cursor, filter),
+  const table = useServerTable([...instanceKeys.accounts, filter], (search, cursor, limit) =>
+    fetchAccounts(search, cursor, filter, limit),
   );
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
@@ -96,9 +96,10 @@ export function InstanceAccountsScreen() {
   const manage = useOrganizationState().can("instance.accounts.manage");
 
   return (
-    <SettingsPage title={t("instance.accounts.title")} description={t("instance.accounts.description")}>
+    <SettingsPage wide title={t("instance.accounts.title")} description={t("instance.accounts.description")}>
       <TableToolbar
         search={{ ...table.search, label: t("members.search"), placeholder: t("members.search") }}
+        pagination={table.pagination}
         filters={
           <div className="w-field max-w-full">
             <Select
@@ -149,7 +150,7 @@ export function InstanceAccountsScreen() {
           rowKey={(account) => account.id}
           rows={table.rows}
           loading={table.query.isPending}
-          {...(table.pagination ? { pagination: table.pagination } : {})}
+          pagination={table.pagination}
           onRowClick={(account) =>
             void navigate({ to: "/settings/instance/accounts/$accountId", params: { accountId: account.id } })
           }

@@ -132,6 +132,10 @@ export function Field({ label, hint, error, required = false, id, labelAction, c
   );
 }
 
+export function controlWidth(className: string | undefined): string {
+  return className && /(^|s)w-/.test(className) ? controlClassName.replace("w-full ", "") : controlClassName;
+}
+
 export const controlClassName =
   "w-full min-w-0 rounded-md border border-control-border bg-control px-3 text-base text-text placeholder:text-text-muted focus-visible:border-accent focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken disabled:text-text-muted aria-invalid:border-danger";
 
@@ -145,7 +149,7 @@ export function Input({ invalid, className, ...props }: InputProps) {
     <input
       {...field}
       {...(invalid ? { "aria-invalid": true } : {})}
-      className={classNames(controlClassName, "h-control-field", className)}
+      className={classNames(controlWidth(className), "h-control-field", className)}
       {...props}
     />
   );

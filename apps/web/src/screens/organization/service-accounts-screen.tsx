@@ -50,6 +50,7 @@ export function ServiceAccountsScreen() {
 
   return (
     <SettingsPage
+      wide
       title={t("serviceAccounts.title")}
       description={t("serviceAccounts.description")}
       actions={

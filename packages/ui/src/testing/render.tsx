@@ -53,6 +53,11 @@ export const testLabels: UiLabels = {
   nextMonth: "Next month",
   today: "Today",
   chooseDate: "Choose a date",
+  rowsPerPage: "Rows per page",
+  previous: "Previous",
+  next: "Next",
+  selectAll: "Select all on this page",
+  selection: "Selection",
 };
 
 export function renderUi(element: ReactElement): RenderResult {

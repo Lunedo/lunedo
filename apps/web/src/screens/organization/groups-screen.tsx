@@ -25,6 +25,7 @@ import { useServerTable } from "../../components/table-state.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
+import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
@@ -37,22 +38,24 @@ export function GroupsScreen() {
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   const navigate = useNavigate();
-  const table = useServerTable([...organizationKeys.groups(organizationId)], (search, cursor) =>
+  const table = useServerTable([...organizationKeys.groups(organizationId)], (search, cursor, limit) =>
     request(() =>
       api.GET("/api/v1/organizations/{organizationId}/groups", {
         params: {
           path: { organizationId },
-          query: { limit: 25, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) },
+          query: { limit, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) },
         },
       }),
     ),
   );
   const [creating, setCreating] = useState(false);
+  const format = useFormat();
   const canCreate = state.can("organization.groups.create");
   const empty = table.query.isSuccess && table.rows.length === 0 && !table.search.value;
 
   return (
     <SettingsPage
+      wide
       title={t("groups.title")}
       description={t("groups.description")}
       actions={
@@ -82,6 +85,7 @@ export function GroupsScreen() {
         <>
           <TableToolbar
             search={{ ...table.search, label: t("groups.search"), placeholder: t("groups.search") }}
+            pagination={table.pagination}
           />
           {table.query.isError ? (
             <LoadError
@@ -95,7 +99,7 @@ export function GroupsScreen() {
             rowKey={(group) => group.id}
             rows={table.rows}
             loading={table.query.isPending}
-            {...(table.pagination ? { pagination: table.pagination } : {})}
+            pagination={table.pagination}
             onRowClick={(group) =>
               void navigate({
                 to: "/settings/organizations/$organizationId/groups/$groupId",
@@ -109,6 +113,14 @@ export function GroupsScreen() {
                 key: "name",
                 header: t("groups.name"),
                 cell: (group) => <span className="font-medium">{group.name}</span>,
+              },
+              {
+                key: "members",
+                header: t("groups.memberCount"),
+                align: "end",
+                cell: (group) => (
+                  <span className="tabular-nums">{format.number(group.memberCount ?? 0)}</span>
+                ),
               },
               {
                 key: "description",

@@ -9,7 +9,7 @@ import {
 } from "radix-ui";
 import { type ReactNode, type RefObject, useId, useLayoutEffect, useRef, useState } from "react";
 import { classNames } from "./class-names.js";
-import { controlClassName, useFieldControl } from "./field.js";
+import { controlWidth, useFieldControl } from "./field.js";
 import { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { Tooltip } from "./tooltip.js";
@@ -68,7 +68,7 @@ export function Select({
       {...(muted ? { "data-muted": "" } : {})}
       {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
       className={classNames(
-        controlClassName,
+        controlWidth(className),
         WIDE_HIT_AREA,
         "inline-flex h-control-field items-center justify-between gap-2 text-left",
         muted && "text-text-muted",

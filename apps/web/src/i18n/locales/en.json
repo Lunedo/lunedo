@@ -992,7 +992,12 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "today": "Today",
-    "chooseDate": "Choose a date"
+    "chooseDate": "Choose a date",
+    "rowsPerPage": "Rows per page",
+    "previous": "Previous",
+    "next": "Next",
+    "selectAll": "Select all on this page",
+    "selection": "Selection"
   },
   "emergencyRecipients": {
     "title": "Emergency sign-in of the owner",
@@ -2675,6 +2680,10 @@
       "operations_updateCheck": {
         "label": "Check for updates",
         "description": "Downloads the public version file once a day and tells instance administrators about new versions. Off: Lunedo makes no request for it."
+      },
+      "appearance_tablePageSize": {
+        "label": "Rows per page",
+        "description": "How many rows lists and tables show at once."
       }
     },
     "disabled": {
@@ -2853,7 +2862,15 @@
     "appliesToAll": "All my organizations",
     "spacesUnderContent": "Access to spaces and their pages is set above under Content.",
     "instanceNeedsAll": "Instance rights belong to no single organization. Choose “All my organizations” above to give them.",
-    "noExpiryWarning": "A token without expiry works until someone revokes it. If it leaks, it stays usable. Choose an expiry where you can."
+    "noExpiryWarning": "A token without expiry works until someone revokes it. If it leaks, it stays usable. Choose an expiry where you can.",
+    "noRights": "No rights",
+    "right": "{area}: {level}",
+    "moreRights": "{count, plural, one {# more right} other {# more rights}}",
+    "showRights": "Show rights",
+    "search": "Search tokens",
+    "showRightsFor": "Show the rights of {name}",
+    "noMatch": "No token matches the search.",
+    "actionsFor": "Actions for {name}"
   },
   "notifications": {
     "title": "Notifications",
@@ -3116,7 +3133,45 @@
       "cancel": "Cancel",
       "menuWatched": "Watching options for {name}: watched",
       "menuMuted": "Watching options for {name}: muted",
-      "menuNotWatched": "Watching options for {name}: not watched"
+      "menuNotWatched": "Watching options for {name}: not watched",
+      "search": "Name or space",
+      "typeFilter": "Type",
+      "types": {
+        "all": "All",
+        "space": "Spaces",
+        "page": "Pages",
+        "article": "Articles",
+        "meeting": "Meetings"
+      },
+      "typeNames": {
+        "space": "Space",
+        "page": "Page",
+        "article": "Article",
+        "meeting": "Meeting"
+      },
+      "spaceFilter": "Space",
+      "allSpaces": "All spaces",
+      "noMatch": "Nothing matches the search and filters.",
+      "select": "Select {name}",
+      "selected": "{count} selected",
+      "muteAction": "Mute",
+      "clearSelection": "Clear selection",
+      "name": "Name",
+      "type": "Type",
+      "space": "Space",
+      "why": "Why",
+      "since": "Since",
+      "reasons": {
+        "automatic": "Automatic",
+        "chosen": "Watched by you",
+        "muted": "Muted by you"
+      },
+      "bulk": {
+        "remove": "{count, plural, one {# item is} other {# items are}} no longer watched.",
+        "removeOne": "You no longer watch {name}.",
+        "mute": "{count, plural, one {# item is} other {# items are}} muted.",
+        "muteOne": "{name} is muted."
+      }
     },
     "push": {
       "title": "Browser push",
@@ -3578,7 +3633,23 @@
     "allowed": "Allowed",
     "why": "Why",
     "emailsRequired": "Enter at least one e-mail address.",
-    "chooseDate": "Choose the date the membership ends, or select “no expiry”."
+    "chooseDate": "Choose the date the membership ends, or select “no expiry”.",
+    "groups": "Groups",
+    "role": "Role",
+    "twoFactor": "Second factor",
+    "lastActive": "Last active",
+    "never": "Never",
+    "noGroups": "None",
+    "until": "until {date}",
+    "filters": {
+      "group": "Group",
+      "allGroups": "All groups",
+      "role": "Role",
+      "allRoles": "All roles",
+      "anyTwoFactor": "Second factor: all",
+      "twoFactorOn": "Set up",
+      "twoFactorOff": "Not set up"
+    }
   },
   "roles": {
     "transferOwnership": "Transfer ownership",
@@ -3756,7 +3827,8 @@
     "removeManager": "Remove as manager",
     "memberRemovedName": "{name} was removed from the group.",
     "managerRemovedName": "{name} no longer manages the group.",
-    "deleteSummary": "Removes the group and its role assignments for good. Members lose the access the group gave them."
+    "deleteSummary": "Removes the group and its role assignments for good. Members lose the access the group gave them.",
+    "memberCount": "Members"
   },
   "serviceAccounts": {
     "open": "Open service account {name}",
@@ -4500,7 +4572,16 @@
     },
     "formerUser": "Former user {id}",
     "serviceAccountActor": "{name} (service account)",
-    "tokenActor": "{actor} · token “{token}”"
+    "tokenActor": "{actor} · token “{token}”",
+    "period": "Period",
+    "address": "Address",
+    "periods": {
+      "all": "Any time",
+      "day": "Last 24 hours",
+      "week": "Last 7 days",
+      "month": "Last 30 days",
+      "custom": "Custom period …"
+    }
   },
   "actions": {
     "instance_organizations_view": "View organizations",
@@ -5744,7 +5825,7 @@
     },
     "organization": {
       "title": "Spaces",
-      "description": "Who can create spaces, which permissions new spaces get, and spaces without a space admin.",
+      "description": "All spaces of {name} and the defaults for new spaces.",
       "creating": "Creating spaces",
       "defaults": "Default permissions for new spaces",
       "defaultsDescription": "The creator sees these settings first and can change them. Existing spaces do not change.",
@@ -5755,7 +5836,6 @@
       "withoutAdminDescription": "Spaces where no active person holds the space admin role, for example after the last space admin was deactivated.",
       "withoutAdminFailed": "The spaces without a space admin could not be loaded",
       "allHaveAdmins": "Every space has a space admin",
-      "allHaveAdminsDescription": "Spaces appear here when their last space admin is deactivated.",
       "appoint": "Appoint space admin",
       "appointTitle": "Appoint a space admin for {space}",
       "person": "Person",
@@ -5765,7 +5845,50 @@
       "appointEffect": "The person can read and edit everything in {space} and manage its permissions. The appointment is recorded in the audit log.",
       "appointSubmit": "Appoint space admin",
       "appointed": "{person} is now space admin of {space}",
-      "appointFailed": "The space admin could not be appointed"
+      "appointFailed": "The space admin could not be appointed",
+      "allSpaces": "All spaces",
+      "defaultsTab": "Defaults for new spaces",
+      "confidentialName": "Confidential space",
+      "archived": "{name} is archived.",
+      "restored": "{name} is active again.",
+      "archiveFailed": "{name} could not be changed",
+      "open": "Open",
+      "settings": "Settings",
+      "changeAdmins": "Change space admins …",
+      "archive": "Archive",
+      "restore": "Restore",
+      "delete": "Delete …",
+      "search": "Name or key",
+      "typeFilter": "Type",
+      "types": {
+        "all": "All types",
+        "standard": "Space",
+        "knowledgeBase": "Knowledge base"
+      },
+      "stateFilter": "Status",
+      "states": {
+        "all": "Active and archived",
+        "active": "Active only",
+        "archived": "Archived only"
+      },
+      "listFailed": "The spaces could not be loaded",
+      "noSpaces": "No space matches the search and filters.",
+      "name": "Name",
+      "type": "Type",
+      "admins": "Space admins",
+      "hidden": "Hidden",
+      "noAdmin": "No space admin",
+      "pages": "Pages",
+      "storage": "Storage",
+      "lastActivity": "Last activity",
+      "statusColumn": "Status",
+      "status": {
+        "archived": "Archived",
+        "confidential": "Confidential",
+        "private": "Private",
+        "shared": "Shared"
+      },
+      "actionsFor": "Actions for {name}"
     },
     "instance": {
       "title": "Personal spaces",
@@ -7951,7 +8074,9 @@
       "reimportApplied": "{source} · all changes applied {when}",
       "superseded": "{source} · replaced by a newer re-import {when}",
       "reviewChanges": "Review changes",
-      "reimportTitle": "Re-import into {space}"
+      "reimportTitle": "Re-import into {space}",
+      "name": "Import",
+      "state": "Status"
     },
     "wizard": {
       "title": "New import",

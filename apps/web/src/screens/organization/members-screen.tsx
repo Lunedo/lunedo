@@ -9,15 +9,18 @@ import {
   focusFirstInvalidSoon,
   IconButton,
   Menu,
+  Select,
   Table,
   TableToolbar,
   Tabs,
+  TruncatedText,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
   CalendarClock,
+  Check,
   Info,
   MoreHorizontal,
   Plus,
@@ -78,6 +81,9 @@ export function MembersScreen() {
   const invitations = useQuery({ ...invitationsQuery(organizationId), enabled: manage });
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [factorFilter, setFactorFilter] = useState<"all" | "on" | "off">("all");
   const [inviting, setInviting] = useState(false);
   const [action, setAction] = useState<Action | null>(null);
   const organizationName = organization.data?.name ?? "";
@@ -91,21 +97,33 @@ export function MembersScreen() {
     invitations: invitations.data?.length ?? 0,
   };
   const needle = search.trim().toLowerCase();
+  const roleName = (role: Member["roles"][number]) =>
+    role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`);
+  const groupOptions = [
+    ...new Map(people.flatMap((member) => member.groups).map((group) => [group.id, group])),
+  ]
+    .map(([, group]) => group)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const roleOptions = [...new Set(people.flatMap((member) => member.roles.map(roleName)))].sort();
   const filtered = people.filter(
     (member) =>
       (tab === "all" || member.kind === tab) &&
+      (groupFilter === "all" || member.groups.some((group) => group.id === groupFilter)) &&
+      (roleFilter === "all" || member.roles.some((role) => roleName(role) === roleFilter)) &&
+      (factorFilter === "all" || member.twoFactorActive === (factorFilter === "on")) &&
       (!needle ||
         member.name.toLowerCase().includes(needle) ||
         (member.email ?? "").toLowerCase().includes(needle)),
   );
   const sorted = useSorted(filtered, { key: "name", direction: "asc" }, (member, key) =>
-    key === "expires"
-      ? (member.expiresAt ?? "9999")
+    key === "lastActive"
+      ? (member.lastActiveAt ?? "")
       : key === "kind"
         ? member.kind
         : member.name.toLowerCase(),
   );
-  const paged = usePaged(sorted.rows, 25);
+  const paged = usePaged(sorted.rows);
+  const filtersActive = groupFilter !== "all" || roleFilter !== "all" || factorFilter !== "all";
   const queryClient = useQueryClient();
   const unassign = useUnassignWithUndo({ organizationId }, async () => {
     await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
@@ -191,6 +209,7 @@ export function MembersScreen() {
 
   return (
     <SettingsPage
+      wide
       title={t("members.title")}
       description={t("members.description", { name: organizationName })}
       actions={
@@ -232,6 +251,60 @@ export function MembersScreen() {
                 label: t("members.search"),
                 placeholder: t("members.search"),
               }}
+              filters={
+                <>
+                  {groupOptions.length > 0 ? (
+                    <Select
+                      aria-label={t("members.filters.group")}
+                      className="w-auto max-w-field"
+                      value={groupFilter}
+                      onValueChange={(value) => {
+                        setGroupFilter(value);
+                        paged.reset();
+                      }}
+                      options={[
+                        { value: "all", label: t("members.filters.allGroups") },
+                        ...groupOptions.map((group) => ({ value: group.id, label: group.name })),
+                      ]}
+                    />
+                  ) : null}
+                  <Select
+                    aria-label={t("members.filters.role")}
+                    className="w-auto max-w-field"
+                    value={roleFilter}
+                    onValueChange={(value) => {
+                      setRoleFilter(value);
+                      paged.reset();
+                    }}
+                    options={[
+                      { value: "all", label: t("members.filters.allRoles") },
+                      ...roleOptions.map((role) => ({ value: role, label: role })),
+                    ]}
+                  />
+                  <Select
+                    aria-label={t("members.twoFactor")}
+                    className="w-auto max-w-field"
+                    value={factorFilter}
+                    onValueChange={(value) => {
+                      setFactorFilter(value as "all" | "on" | "off");
+                      paged.reset();
+                    }}
+                    options={[
+                      { value: "all", label: t("members.filters.anyTwoFactor") },
+                      { value: "on", label: t("members.filters.twoFactorOn") },
+                      { value: "off", label: t("members.filters.twoFactorOff") },
+                    ]}
+                  />
+                </>
+              }
+              filtersActive={filtersActive}
+              onResetFilters={() => {
+                setGroupFilter("all");
+                setRoleFilter("all");
+                setFactorFilter("all");
+                paged.reset();
+              }}
+              pagination={paged.pagination}
             />
             <Table
               caption={t("members.title")}
@@ -259,54 +332,85 @@ export function MembersScreen() {
                         pictureRef={member.pictureRef}
                         size="sm"
                       />
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate font-medium" title={member.name}>
-                          {member.name}
+                      <div className="flex min-w-0 flex-col leading-tight">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate font-medium" title={member.name}>
+                            {member.name}
+                          </span>
+                          {member.kind === "member" ? null : (
+                            <Badge variant={KIND_BADGES[member.kind]}>
+                              {t(`members.kinds.${member.kind}`)}
+                            </Badge>
+                          )}
                         </span>
-                        <span
-                          className="truncate text-sm text-text-muted"
-                          title={[member.jobTitle, member.email].filter(Boolean).join(" · ")}
-                        >
-                          {[member.jobTitle, member.email].filter(Boolean).join(" · ")}
+                        <span className="truncate text-xs text-text-muted" title={member.email ?? ""}>
+                          {member.email}
                         </span>
                       </div>
                     </div>
                   ),
                 },
                 {
-                  key: "kind",
-                  header: t("members.kind"),
-                  sortable: true,
-                  cell: (member) => (
-                    <Badge variant={KIND_BADGES[member.kind]}>{t(`members.kinds.${member.kind}`)}</Badge>
-                  ),
+                  key: "groups",
+                  header: t("members.groups"),
+                  hideBelow: "md",
+                  cell: (member) => {
+                    const names = member.groups.map((group) => group.name).join(", ");
+                    return names ? (
+                      <TruncatedText text={names} className="max-w-field" />
+                    ) : (
+                      <span className="text-text-muted">{t("members.noGroups")}</span>
+                    );
+                  },
                 },
                 {
                   key: "roles",
-                  header: t("members.roles"),
+                  header: t("members.role"),
+                  hideBelow: "sm",
+                  cell: (member) => {
+                    const roles = member.roles.map(roleName).join(", ");
+                    const expiry = member.expiresAt
+                      ? t("members.until", { date: format.date(member.expiresAt) })
+                      : null;
+                    return (
+                      <span className={roles ? undefined : "text-text-muted"}>
+                        {[
+                          roles || t(`members.kinds.${member.kind}`),
+                          expiry,
+                          member.responsibleAccountId
+                            ? t("members.responsibleIs", {
+                                name: nameOf.get(member.responsibleAccountId) ?? "",
+                              })
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "twoFactor",
+                  header: t("members.twoFactor"),
                   hideBelow: "md",
                   cell: (member) =>
-                    member.roles.length === 0 ? (
-                      <span className="text-text-muted">{t(`members.kinds.${member.kind}`)}</span>
+                    member.twoFactorActive ? (
+                      <span className="inline-flex items-center gap-1 text-success">
+                        <Check aria-hidden="true" className="size-icon-sm" />
+                        {t("common.yes")}
+                      </span>
                     ) : (
-                      member.roles
-                        .map((role) =>
-                          role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
-                        )
-                        .join(", ")
+                      <Badge variant="warning">{t("common.no")}</Badge>
                     ),
                 },
                 {
-                  key: "expires",
-                  header: t("members.expires"),
+                  key: "lastActive",
+                  header: t("members.lastActive"),
                   sortable: true,
                   hideBelow: "md",
                   cell: (member) => (
-                    <span className="text-text-muted">
-                      {member.expiresAt ? format.date(member.expiresAt) : t("members.noExpiry")}
-                      {member.responsibleAccountId
-                        ? ` · ${t("members.responsibleIs", { name: nameOf.get(member.responsibleAccountId) ?? "" })}`
-                        : ""}
+                    <span className="whitespace-nowrap text-text-muted">
+                      {member.lastActiveAt ? format.relative(member.lastActiveAt) : t("members.never")}
                     </span>
                   ),
                 },

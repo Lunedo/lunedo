@@ -21,7 +21,6 @@ import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import type { ApiToken } from "../api/account-queries.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { translateKey } from "../i18n/translate.js";
@@ -32,7 +31,6 @@ import {
   ContentAccessFields,
   type ContentLevel,
   contentRequest,
-  contentSummary,
   NO_CONTENT_ACCESS,
 } from "./token-content-access.js";
 
@@ -84,29 +82,6 @@ const CONTENT_AREA = "spaces";
 function pickAreas(values: Record<string, string>): Areas | undefined {
   const entries = Object.entries(values).filter(([, level]) => level !== NONE) as [string, AccessLevel][];
   return entries.length > 0 ? (Object.fromEntries(entries) as Areas) : undefined;
-}
-
-export function scopeSummary(
-  t: Parameters<typeof translateKey>[0],
-  token: Pick<ApiToken, "scopes" | "contentLevel" | "knowledgeBaseIds">,
-  names?: ReadonlyMap<string, string>,
-): string {
-  const { scopes } = token;
-  const content = contentSummary(t, token, names);
-  const parts = [
-    ...Object.entries(scopes.instance ?? {}).map(
-      ([area, level]) =>
-        `${translateKey(t, `areas.instance.${area}`)} (${translateKey(t, `areas.levels.${String(level)}`)})`,
-    ),
-    ...Object.entries(scopes.organization ?? {})
-      .filter(([area]) => area !== CONTENT_AREA)
-      .map(
-        ([area, level]) =>
-          `${translateKey(t, `areas.organization.${area}`)} (${translateKey(t, `areas.levels.${String(level)}`)})`,
-      ),
-    ...(content ? [`${t("tokens.content.title")}: ${content}`] : []),
-  ];
-  return parts.join(", ");
 }
 
 export function CreateTokenDialog({

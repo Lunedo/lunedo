@@ -4,7 +4,7 @@ import { type KeyboardEvent, type Ref, useEffect, useMemo, useRef, useState } fr
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { Combobox } from "./combobox.js";
-import { controlClassName, useFieldControl } from "./field.js";
+import { controlWidth, useFieldControl } from "./field.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -153,7 +153,7 @@ export function DatePicker({
           {...(invalid ? { "aria-invalid": true } : {})}
           {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
           className={classNames(
-            controlClassName,
+            controlWidth(className),
             "inline-flex h-control-field items-center justify-between gap-2 text-left",
             className,
           )}

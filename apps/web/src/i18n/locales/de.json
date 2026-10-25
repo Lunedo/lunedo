@@ -992,7 +992,12 @@
     "previousMonth": "Vorheriger Monat",
     "nextMonth": "Nächster Monat",
     "today": "Heute",
-    "chooseDate": "Datum wählen"
+    "chooseDate": "Datum wählen",
+    "rowsPerPage": "Einträge pro Seite",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "selectAll": "Alle auf dieser Seite auswählen",
+    "selection": "Auswahl"
   },
   "emergencyRecipients": {
     "title": "Notfall-Anmeldung des Owners",
@@ -2675,6 +2680,10 @@
       "operations_updateCheck": {
         "label": "Nach Updates suchen",
         "description": "Lädt einmal am Tag die öffentliche Versionsdatei und informiert Instanz-Administratoren über neue Versionen. Aus: Lunedo stellt dafür keine Anfrage."
+      },
+      "appearance_tablePageSize": {
+        "label": "Einträge pro Seite",
+        "description": "Wie viele Zeilen Listen und Tabellen auf einmal zeigen."
       }
     },
     "disabled": {
@@ -2853,7 +2862,15 @@
     "appliesToAll": "Alle meine Organisationen",
     "spacesUnderContent": "Den Zugriff auf Spaces und ihre Seiten stellst du oben unter „Inhalte“ ein.",
     "instanceNeedsAll": "Instanzrechte gehören zu keiner einzelnen Organisation. Wähle oben „Alle meine Organisationen“, um sie zu vergeben.",
-    "noExpiryWarning": "Ein Token ohne Ablauf gilt, bis jemand es widerruft. Gerät es in falsche Hände, bleibt es gültig. Wähle wenn möglich ein Ablaufdatum."
+    "noExpiryWarning": "Ein Token ohne Ablauf gilt, bis jemand es widerruft. Gerät es in falsche Hände, bleibt es gültig. Wähle wenn möglich ein Ablaufdatum.",
+    "noRights": "Keine Rechte",
+    "right": "{area}: {level}",
+    "moreRights": "{count, plural, one {# weiteres Recht} other {# weitere Rechte}}",
+    "showRights": "Rechte ansehen",
+    "search": "Tokens suchen",
+    "showRightsFor": "Rechte von {name} ansehen",
+    "noMatch": "Kein Token passt zur Suche.",
+    "actionsFor": "Aktionen für {name}"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -3116,7 +3133,45 @@
       "cancel": "Abbrechen",
       "menuWatched": "Beobachtungsoptionen für {name}: beobachtet",
       "menuMuted": "Beobachtungsoptionen für {name}: stummgeschaltet",
-      "menuNotWatched": "Beobachtungsoptionen für {name}: nicht beobachtet"
+      "menuNotWatched": "Beobachtungsoptionen für {name}: nicht beobachtet",
+      "search": "Name oder Space",
+      "typeFilter": "Art",
+      "types": {
+        "all": "Alle",
+        "space": "Spaces",
+        "page": "Seiten",
+        "article": "Artikel",
+        "meeting": "Besprechungen"
+      },
+      "typeNames": {
+        "space": "Space",
+        "page": "Seite",
+        "article": "Artikel",
+        "meeting": "Besprechung"
+      },
+      "spaceFilter": "Space",
+      "allSpaces": "Alle Spaces",
+      "noMatch": "Nichts passt zu Suche und Filter.",
+      "select": "{name} auswählen",
+      "selected": "{count} ausgewählt",
+      "muteAction": "Stummschalten",
+      "clearSelection": "Auswahl aufheben",
+      "name": "Name",
+      "type": "Art",
+      "space": "Space",
+      "why": "Warum",
+      "since": "Seit",
+      "reasons": {
+        "automatic": "Automatisch",
+        "chosen": "Von dir beobachtet",
+        "muted": "Von dir stummgeschaltet"
+      },
+      "bulk": {
+        "remove": "{count, plural, one {# Eintrag wird} other {# Einträge werden}} nicht mehr beobachtet.",
+        "removeOne": "{name} wird nicht mehr beobachtet.",
+        "mute": "{count, plural, one {# Eintrag ist} other {# Einträge sind}} stummgeschaltet.",
+        "muteOne": "{name} ist stummgeschaltet."
+      }
     },
     "push": {
       "title": "Browser-Push",
@@ -3578,7 +3633,23 @@
     "allowed": "Erlaubt",
     "why": "Warum",
     "emailsRequired": "Gib mindestens eine E-Mail-Adresse ein.",
-    "chooseDate": "Wähle das Datum, an dem die Mitgliedschaft endet, oder wähle „kein Ablauf“."
+    "chooseDate": "Wähle das Datum, an dem die Mitgliedschaft endet, oder wähle „kein Ablauf“.",
+    "groups": "Gruppen",
+    "role": "Rolle",
+    "twoFactor": "Zweiter Faktor",
+    "lastActive": "Zuletzt aktiv",
+    "never": "Nie",
+    "noGroups": "Keine",
+    "until": "bis {date}",
+    "filters": {
+      "group": "Gruppe",
+      "allGroups": "Alle Gruppen",
+      "role": "Rolle",
+      "allRoles": "Alle Rollen",
+      "anyTwoFactor": "Zweiter Faktor: alle",
+      "twoFactorOn": "Eingerichtet",
+      "twoFactorOff": "Nicht eingerichtet"
+    }
   },
   "roles": {
     "transferOwnership": "Owner-Rolle übertragen",
@@ -3756,7 +3827,8 @@
     "removeManager": "Als Gruppenverwalter entfernen",
     "memberRemovedName": "{name} wurde aus der Gruppe entfernt.",
     "managerRemovedName": "{name} verwaltet die Gruppe nicht mehr.",
-    "deleteSummary": "Entfernt die Gruppe und ihre Rollenzuweisungen endgültig. Mitglieder verlieren den Zugriff, den sie über die Gruppe hatten."
+    "deleteSummary": "Entfernt die Gruppe und ihre Rollenzuweisungen endgültig. Mitglieder verlieren den Zugriff, den sie über die Gruppe hatten.",
+    "memberCount": "Mitglieder"
   },
   "serviceAccounts": {
     "open": "Dienstkonto {name} öffnen",
@@ -4500,7 +4572,16 @@
     },
     "formerUser": "Ehemalige Person {id}",
     "serviceAccountActor": "{name} (Dienstkonto)",
-    "tokenActor": "{actor} · Token „{token}“"
+    "tokenActor": "{actor} · Token „{token}“",
+    "period": "Zeitraum",
+    "address": "Adresse",
+    "periods": {
+      "all": "Gesamter Zeitraum",
+      "day": "Letzte 24 Stunden",
+      "week": "Letzte 7 Tage",
+      "month": "Letzte 30 Tage",
+      "custom": "Eigener Zeitraum …"
+    }
   },
   "actions": {
     "instance_organizations_view": "Organisationen ansehen",
@@ -5744,7 +5825,7 @@
     },
     "organization": {
       "title": "Spaces",
-      "description": "Wer Spaces erstellen darf, welche Berechtigungen neue Spaces bekommen und Spaces ohne Space-Admin.",
+      "description": "Alle Spaces von {name} und die Standards für neue Spaces.",
       "creating": "Spaces erstellen",
       "defaults": "Standardrechte für neue Spaces",
       "defaultsDescription": "Wer einen Space erstellt, sieht diese Einstellungen zuerst und kann sie ändern. Bestehende Spaces ändern sich nicht.",
@@ -5755,7 +5836,6 @@
       "withoutAdminDescription": "Spaces, in denen keine aktive Person die Rolle Space-Admin hat, zum Beispiel nachdem der letzte Space-Admin deaktiviert wurde.",
       "withoutAdminFailed": "Die Spaces ohne Space-Admin konnten nicht geladen werden",
       "allHaveAdmins": "Jeder Space hat einen Space-Admin",
-      "allHaveAdminsDescription": "Spaces erscheinen hier, wenn ihr letzter Space-Admin deaktiviert wird.",
       "appoint": "Space-Admin ernennen",
       "appointTitle": "Space-Admin für {space} ernennen",
       "person": "Person",
@@ -5765,7 +5845,50 @@
       "appointEffect": "Die Person kann alles in {space} lesen und bearbeiten und seine Berechtigungen verwalten. Die Ernennung wird im Audit-Log festgehalten.",
       "appointSubmit": "Space-Admin ernennen",
       "appointed": "{person} ist jetzt Space-Admin von {space}",
-      "appointFailed": "Der Space-Admin konnte nicht ernannt werden"
+      "appointFailed": "Der Space-Admin konnte nicht ernannt werden",
+      "allSpaces": "Alle Spaces",
+      "defaultsTab": "Standards für neue Spaces",
+      "confidentialName": "Vertraulicher Space",
+      "archived": "{name} ist archiviert.",
+      "restored": "{name} ist wieder aktiv.",
+      "archiveFailed": "{name} konnte nicht geändert werden",
+      "open": "Öffnen",
+      "settings": "Einstellungen",
+      "changeAdmins": "Space-Admins ändern …",
+      "archive": "Archivieren",
+      "restore": "Wiederherstellen",
+      "delete": "Löschen …",
+      "search": "Name oder Schlüssel",
+      "typeFilter": "Art",
+      "types": {
+        "all": "Alle Arten",
+        "standard": "Space",
+        "knowledgeBase": "Wissensdatenbank"
+      },
+      "stateFilter": "Status",
+      "states": {
+        "all": "Aktiv und archiviert",
+        "active": "Nur aktiv",
+        "archived": "Nur archiviert"
+      },
+      "listFailed": "Die Spaces konnten nicht geladen werden",
+      "noSpaces": "Kein Space passt zu Suche und Filter.",
+      "name": "Name",
+      "type": "Art",
+      "admins": "Space-Admins",
+      "hidden": "Verborgen",
+      "noAdmin": "Kein Space-Admin",
+      "pages": "Seiten",
+      "storage": "Speicher",
+      "lastActivity": "Zuletzt aktiv",
+      "statusColumn": "Status",
+      "status": {
+        "archived": "Archiviert",
+        "confidential": "Vertraulich",
+        "private": "Privat",
+        "shared": "Geteilt"
+      },
+      "actionsFor": "Aktionen für {name}"
     },
     "instance": {
       "title": "Persönliche Spaces",
@@ -7951,7 +8074,9 @@
       "reimportApplied": "{source} · alle Änderungen angewendet {when}",
       "superseded": "{source} · ersetzt durch einen neueren erneuten Import {when}",
       "reviewChanges": "Änderungen prüfen",
-      "reimportTitle": "Erneuter Import in {space}"
+      "reimportTitle": "Erneuter Import in {space}",
+      "name": "Import",
+      "state": "Status"
     },
     "wizard": {
       "title": "Neuer Import",

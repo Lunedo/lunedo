@@ -112,6 +112,17 @@ export const memberSchema = z
           .describe("A role assigned directly to the account."),
       )
       .describe("Roles assigned directly to the account in this organization."),
+    groups: z
+      .array(
+        z
+          .object({ id: uuid("ID of the group."), name: z.string().describe("Name of the group.") })
+          .describe("A group of the organization the account belongs to."),
+      )
+      .describe("Groups of this organization the account belongs to, ordered by name."),
+    twoFactorActive: z
+      .boolean()
+      .describe("Whether the account has a confirmed authenticator app or a passkey."),
+    lastActiveAt: timestamp("When the account was last active in Lunedo, or null.").nullable(),
   })
   .describe("A member of an organization.");
 
@@ -133,6 +144,9 @@ export const exampleMember = {
       expiresAt: null,
     },
   ],
+  groups: [{ id: "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f", name: "Engineering" }],
+  twoFactorActive: true,
+  lastActiveAt: "2026-10-24T08:15:00.000Z",
 };
 
 export const groupSchema = z
@@ -158,6 +172,11 @@ export const groupSchema = z
       .describe(
         "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
       ),
+    memberCount: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of active accounts in the group. Only in lists of groups."),
   })
   .describe("A group of accounts.");
 

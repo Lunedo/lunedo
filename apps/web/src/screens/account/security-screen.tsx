@@ -18,7 +18,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fingerprint, KeyRound, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
+import { Fingerprint, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -36,7 +36,8 @@ import { request } from "../../api/request.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
 import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
-import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
+import { CreateTokenDialog, RevokeTokenDialog } from "../../components/token-dialogs.js";
+import { TokenTable } from "../../components/token-table.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -515,7 +516,7 @@ export function SessionsSection() {
 
 function TokensSection() {
   const { t } = useTranslation();
-  const format = useFormat();
+  const _format = useFormat();
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const organization = useOrganizationState();
@@ -551,38 +552,17 @@ function TokensSection() {
         </Button>
       }
     >
-      {tokens.isPending ? <Skeleton className="h-12 w-full" /> : null}
-      {tokens.data?.length === 0 ? <p className="py-3 text-text-muted">{t("tokens.none")}</p> : null}
-      <List>
-        {tokens.data?.map((token) => (
-          <ListRow
-            key={token.id}
-            icon={KeyRound}
-            title={token.name}
-            description={[
-              scopeSummary(t, token, knowledgeBaseNames),
-              token.expiresAt
-                ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
-                : t("tokens.noExpiry"),
-              token.lastUsedAt
-                ? t("tokens.lastUsed", { when: format.relative(token.lastUsedAt) })
-                : t("tokens.neverUsed"),
-            ].join(" · ")}
-            actions={
-              <>
-                {token.scopes.organization?.spaces ? (
-                  <Button variant="secondary" onClick={() => setChanging(token)}>
-                    {t("tokens.content.change")}
-                  </Button>
-                ) : null}
-                <Button variant="danger" onClick={() => setRevoking(token)}>
-                  {t("tokens.revoke")}
-                </Button>
-              </>
-            }
-          />
-        ))}
-      </List>
+      <div className="pt-3">
+        <TokenTable
+          caption={t("tokens.personal")}
+          tokens={tokens.data ?? []}
+          loading={tokens.isPending}
+          knowledgeBaseNames={knowledgeBaseNames}
+          canManage
+          onChangeContent={setChanging}
+          onRevoke={setRevoking}
+        />
+      </div>
       <ContentAccessDialog
         token={changing}
         organizationId={changing?.organizationId ?? null}

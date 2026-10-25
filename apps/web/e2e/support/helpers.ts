@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type BrowserContext, expect, type Page } from "@playwright/test";
+import { type BrowserContext, expect, type Locator, type Page } from "@playwright/test";
 import { Secret, TOTP } from "otpauth";
 import { MAILPIT_URL, readState, writeState } from "./environment.js";
 
@@ -167,4 +167,18 @@ export async function openSettingsArea(
     );
   }
   await expect(page.getByRole("navigation", { name: "Settings", exact: true })).toBeVisible();
+}
+
+export async function chooseDate(page: Page, trigger: Locator, isoDate: string): Promise<void> {
+  await trigger.click();
+  const day = page.locator(`[data-date="${isoDate}"]`);
+  for (let step = 0; step < 240 && (await day.count()) === 0; step += 1) {
+    await page.getByRole("button", { name: /^(Next month|Nächster Monat)$/ }).click();
+  }
+  await day.click();
+}
+
+export async function chooseTime(page: Page, combobox: Locator, time: string): Promise<void> {
+  await combobox.fill(time);
+  await page.getByRole("option", { name: time, exact: true }).click();
 }

@@ -97,9 +97,43 @@ const watchedSchema = z
     spaceId: uuid("The space."),
     spaceKey: z.string().describe("Key of the space."),
     spaceName: z.string().describe("Name of the space."),
+    spaceType: extensibleEnum(["standard", "knowledgeBase"], "Type of the space."),
     updatedAt: timestamp("When the state was last set."),
   })
   .describe("A watched or muted item or space.");
+
+const watchChangesSchema = z
+  .object({
+    changes: z
+      .array(
+        z
+          .object({
+            target: z
+              .object({
+                type: z.enum(["item", "space"]).describe("Kind of target."),
+                id: uuid("ID of the item or space."),
+              })
+              .strict()
+              .describe("The item or space."),
+            state: stateSchema
+              .nullable()
+              .describe(
+                "The new state, or null to remove the own state so the item follows its space again.",
+              ),
+            keepActionable: z
+              .boolean()
+              .optional()
+              .describe("For `muted`: still deliver mentions, assigned tasks, shares and access requests."),
+          })
+          .strict()
+          .describe("One change."),
+      )
+      .min(1)
+      .max(500)
+      .describe("The changes, applied together."),
+  })
+  .strict()
+  .describe("Several watch changes at once.");
 
 const watchedListSchema = z
   .object({
@@ -271,6 +305,33 @@ export class AccountWatchesController {
         mutedSpaces: count("space", "muted"),
       },
     };
+  }
+
+  @Put("watches")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Change several watch states at once",
+    description:
+      "Applies all changes together. Items and spaces the caller can no longer read are skipped and not counted.",
+    tags: [TAG],
+    body: watchChangesSchema,
+    bodyExample: {
+      changes: [{ target: { type: "item", id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f" }, state: "muted" }],
+    },
+    response: {
+      description: "How many changes were applied.",
+      schema: z
+        .object({ changed: z.number().int().describe("Number of changes applied.") })
+        .describe("The result."),
+      example: { changed: 1 },
+    },
+  })
+  async changeMany(@Body() body: z.output<typeof watchChangesSchema>, @Req() request: FastifyRequest) {
+    const changed = await servicesOf(this.context).watches.setMany(
+      sessionOf(request).accountId,
+      body.changes,
+    );
+    return { changed };
   }
 
   @Get("notification-delivery")

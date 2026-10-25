@@ -11,7 +11,7 @@ export function OrganizationAuditScreen() {
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   return (
-    <SettingsPage title={t("audit.title")} description={t("audit.organizationDescription")}>
+    <SettingsPage wide title={t("audit.title")} description={t("audit.organizationDescription")}>
       <AuditLog
         scope="organization"
         organizationId={organizationId}

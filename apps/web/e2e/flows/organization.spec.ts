@@ -117,7 +117,7 @@ test("creates a personal API token and revokes it", async ({ page, organization 
     (await page.getByRole("dialog", { name: "Your new token" }).locator("code").textContent()) ?? "";
   expect(secret).toMatch(/^ld_/);
   await page.getByRole("button", { name: "Done" }).click();
-  const row = page.getByRole("listitem").filter({ hasText: tokenName });
+  const row = page.getByRole("row").filter({ hasText: tokenName });
   await expect(row).toBeVisible();
 
   const allowed = await page.request.fetch(`/api/v1/organizations/${organization.id}/members`, {
@@ -125,7 +125,8 @@ test("creates a personal API token and revokes it", async ({ page, organization 
   });
   expect(allowed.status()).toBe(200);
 
-  await row.getByRole("button", { name: "Revoke" }).click();
+  await row.getByRole("button", { name: `Actions for ${tokenName}` }).click();
+  await page.getByRole("menuitem", { name: "Revoke" }).click();
   const confirm = page.getByRole("alertdialog").or(page.getByRole("dialog", { name: /Revoke/ }));
   await expect(confirm.getByText("Who loses access")).toBeVisible();
   await confirm.getByRole("button", { name: "Revoke" }).click();

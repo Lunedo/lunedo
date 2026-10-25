@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
-import { AuditLog } from "./audit-log.js";
+import { AuditLog, periodStart } from "./audit-log.js";
 import type { AuditItem } from "./audit-presentation.js";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
@@ -224,10 +224,11 @@ describe("the audit log", () => {
       "GET /api/v1/instance/audit-events": () => ({ body: { items: [rule, signIn], nextCursor: null } }),
     });
     const table = await renderLog();
-    expect(screen.getByText("From", { selector: "label" })).toBeTruthy();
-    expect(screen.getByText("To", { selector: "label" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "From" })).toBeNull();
+    await userEvent.click(screen.getByRole("combobox", { name: "Period" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Custom period …" }));
     expect(document.querySelector('input[type="date"]')).toBeNull();
-    expect(screen.getByRole("button", { name: "From" }).textContent).toContain("Choose a date");
+    expect(screen.getByRole("button", { name: "From" }).textContent).toContain("From");
     expect(screen.getByRole("button", { name: "To" })).toBeTruthy();
     expect(await within(table).findByText("Mapping rule")).toBeTruthy();
     expect(within(table).queryByText("mappingRule")).toBeNull();
@@ -342,5 +343,16 @@ describe("who acted", () => {
     });
     const table = await renderLog();
     expect(await within(table).findByText("Sync bot (service account) · token “Publishing”")).toBeTruthy();
+  });
+});
+
+describe("audit periods", () => {
+  it("start the period the chosen number of days before now and leave any time and custom open", () => {
+    const now = new Date("2026-10-25T12:00:00.000Z");
+    expect(periodStart("day", now)).toBe("2026-10-24T12:00:00.000Z");
+    expect(periodStart("week", now)).toBe("2026-10-18T12:00:00.000Z");
+    expect(periodStart("month", now)).toBe("2026-09-25T12:00:00.000Z");
+    expect(periodStart("all", now)).toBeUndefined();
+    expect(periodStart("custom", now)).toBeUndefined();
   });
 });

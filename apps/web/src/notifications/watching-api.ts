@@ -73,6 +73,15 @@ export function useChangeWatch() {
   });
 }
 
+export function useChangeWatches() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (changes: { target: WatchTarget; state: WatchChange["state"]; keepActionable?: boolean }[]) =>
+      request(() => api.PUT("/api/v1/account/watches", { body: { changes } })),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: watchKeys.all }),
+  });
+}
+
 export function useWatchedList() {
   return useQuery({
     queryKey: watchKeys.list,

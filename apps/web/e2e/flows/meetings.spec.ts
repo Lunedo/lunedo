@@ -1,5 +1,5 @@
 import { expect, test } from "../support/fixtures.js";
-import { callApi } from "../support/helpers.js";
+import { callApi, chooseDate, chooseTime } from "../support/helpers.js";
 import { type Series, series, teamSpace } from "../support/meetings.js";
 
 test("a team holds a quarterly and a biweekly series with attendance, topics, tasks and decisions", async ({
@@ -17,8 +17,8 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
   await dialog.getByRole("combobox", { name: "Rhythm" }).click();
   await page.getByRole("option", { name: "Every few weeks" }).click();
   await dialog.getByLabel("Every how many weeks").fill("2");
-  await dialog.getByLabel("First meeting").fill("2030-03-14");
-  await dialog.getByLabel("Start time").fill("14:00");
+  await chooseDate(page, dialog.getByLabel("First meeting"), "2030-03-14");
+  await chooseTime(page, dialog.getByLabel("Start time"), "14:00");
   await dialog.getByRole("button", { name: "Create series" }).click();
   await expect(page.getByRole("heading", { name: "Jour fixe IT", level: 1 })).toBeVisible();
   await expect(page.getByText("Every 2 weeks on Thursday", { exact: false })).toBeVisible();
@@ -114,7 +114,7 @@ test("two people hold a one-on-one that administrators cannot read, with private
     const dialog = first.page.getByRole("dialog", { name: "Start a one-on-one" });
     await dialog.getByRole("combobox", { name: "With" }).fill(ben.name.split(" ")[0] ?? "");
     await first.page.getByRole("option", { name: new RegExp(ben.name) }).click();
-    await dialog.getByLabel("First meeting").fill("2030-10-17");
+    await chooseDate(first.page, dialog.getByLabel("First meeting"), "2030-10-17");
     await dialog.getByRole("button", { name: "Start one-on-one" }).click();
     await expect(first.page.getByRole("heading", { level: 1 })).toContainText(anna.name.split(" ")[0] ?? "");
     const seriesUrl = first.page.url();

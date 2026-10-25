@@ -1033,6 +1033,11 @@ export {
   trashRetentionJob,
 } from "./spaces/jobs.js";
 export { isValidSpaceKey, normalizeSpaceKey, SPACE_KEY_PATTERN, suggestSpaceKey } from "./spaces/keys.js";
+export type {
+  OrganizationSpaceAdministrator,
+  OrganizationSpaceFilter,
+  OrganizationSpaceRow,
+} from "./spaces/organization-overview.js";
 export {
   MAX_OWNER_CANDIDATES,
   MAX_UNOWNED_PAGE,

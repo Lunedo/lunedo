@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
-import { CreateTokenDialog, expiryChoices, scopeSummary, type TokenRequest } from "./token-dialogs.js";
+import { CreateTokenDialog, expiryChoices, type TokenRequest } from "./token-dialogs.js";
+import { shortRights, tokenRights } from "./token-table.js";
 
 beforeEach(() => {
   mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
@@ -132,10 +133,25 @@ describe("token summary", () => {
   it("names the knowledge bases a token is limited to", async () => {
     const { i18n } = await renderWithProviders(<span />);
     const t = i18n.getFixedT("en");
-    expect(scopeSummary(t, token, new Map([["01929b1e-0000-7000-8000-0000000000a1", "Help Center"]]))).toBe(
-      "Content: Write drafts in Help Center",
-    );
-    expect(scopeSummary(t, token)).toBe("Content: Write drafts in 1 knowledge base");
+    const named = tokenRights(t, token, new Map([["01929b1e-0000-7000-8000-0000000000a1", "Help Center"]]));
+    expect(shortRights(t, named)).toBe("Content: Write drafts in Help Center");
+    expect(shortRights(t, tokenRights(t, token))).toBe("Content: Write drafts in 1 knowledge base");
+  });
+
+  it("names two rights and counts the rest", async () => {
+    const { i18n } = await renderWithProviders(<span />);
+    const t = i18n.getFixedT("en");
+    const rights = tokenRights(t, {
+      scopes: {
+        organization: { spaces: "manage", membersAndGroups: "manage", settings: "view" },
+        instance: { accounts: "view" },
+      },
+      contentLevel: "publish",
+      knowledgeBaseIds: null,
+    });
+    expect(rights).toHaveLength(4);
+    expect(shortRights(t, rights)).toMatch(/^Content: .+ · .+ · 2 more rights$/);
+    expect(shortRights(t, [])).toBe("No rights");
   });
 });
 

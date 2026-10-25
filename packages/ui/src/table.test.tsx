@@ -48,7 +48,7 @@ describe("Table", () => {
     const table = screen.getByRole("table", { name: "Members" });
     expect(within(table).getAllByRole("row")).toHaveLength(3);
     expect(within(table).getByRole("columnheader", { name: "Role" }).className).toContain(
-      "hidden @lg:table-cell",
+      "hidden @card:table-cell",
     );
   });
 
@@ -69,11 +69,12 @@ describe("Table", () => {
     expect(within(table).getByRole("cell", { name: "Admin" }).className).not.toContain("max-w-0");
   });
 
-  it("keeps hidden sort labels inside its scroll area", () => {
+  it("keeps the header in view and scrolls sideways only on narrow screens", () => {
     renderTable({ sort: { key: "name", direction: "asc" }, onSortChange: () => {} });
-    const scroller = screen.getByRole("table", { name: "Members" }).parentElement as HTMLElement;
-    expect(scroller.className).toContain("relative");
-    expect(scroller.className).toContain("overflow-x-auto");
+    const frame = screen.getByRole("table", { name: "Members" }).parentElement as HTMLElement;
+    expect(frame.className).toContain("max-sm:overflow-x-auto");
+    expect(frame.className).toContain("sm:overflow-x-clip");
+    expect(screen.getByRole("columnheader", { name: /Name/ }).className).toContain("sticky top-0");
   });
 
   it("opens a row when it is clicked", async () => {
@@ -96,11 +97,49 @@ describe("Table", () => {
   it("pages forward and backward", async () => {
     const onNext = vi.fn();
     const onPrevious = vi.fn();
-    renderTable({ pagination: { hasPrevious: false, hasNext: true, onNext, onPrevious } });
+    const onPageSizeChange = vi.fn();
+    renderTable({
+      pagination: { hasPrevious: false, hasNext: true, onNext, onPrevious, pageSize: 25, onPageSizeChange },
+    });
     const pages = screen.getByRole("navigation", { name: "Pages" });
-    expect(within(pages).queryByRole("button", { name: "Previous page" })).toBeNull();
-    await userEvent.click(within(pages).getByRole("button", { name: "Next page" }));
+    expect((within(pages).getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await userEvent.click(within(pages).getByRole("button", { name: "Next" }));
     expect(onNext).toHaveBeenCalledOnce();
+    await userEvent.click(within(pages).getByRole("combobox", { name: "Rows per page" }));
+    await userEvent.click(await screen.findByRole("option", { name: "50" }));
+    expect(onPageSizeChange).toHaveBeenCalledWith(50);
+  });
+
+  it("selects rows one by one or all at once and shows the bulk bar", async () => {
+    const onChange = vi.fn();
+    const { unmount } = renderTable({
+      selection: {
+        selected: new Set(),
+        onChange,
+        rowLabel: (row) => `Select ${row.name}`,
+        bulkBar: (selected) => `${selected.size} selected`,
+      },
+    });
+    expect(screen.queryByText(/selected$/)).toBeNull();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Tomas Kern" }));
+    expect([...((onChange.mock.lastCall ?? [])[0] as Set<string>)]).toEqual([people[1]?.id]);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    expect(((onChange.mock.lastCall ?? [])[0] as Set<string>).size).toBe(people.length);
+    unmount();
+    renderTable({
+      selection: {
+        selected: new Set([people[0]?.id ?? ""]),
+        onChange,
+        rowLabel: (row) => `Select ${row.name}`,
+        bulkBar: (selected) => `${selected.size} selected`,
+      },
+    });
+    expect(screen.getByRole("region", { name: "Selection" }).textContent).toBe("1 selected");
+    expect(
+      screen.getByRole("checkbox", { name: "Select all on this page" }).getAttribute("aria-checked"),
+    ).toBe("mixed");
   });
 
   it("shows the empty state and the loading state", () => {
@@ -147,7 +186,7 @@ describe("Table", () => {
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
-  it("draws without a frame, with a small header row and lines only between rows", () => {
+  it("draws a frame with a small header row and lines only between rows", () => {
     renderUi(
       <Table
         caption="Articles"
@@ -157,9 +196,11 @@ describe("Table", () => {
       />,
     );
     const table = screen.getByRole("table", { name: "Articles" });
-    expect(table.closest(".rounded-md")).toBeNull();
-    expect(table.closest(".border")).toBeNull();
-    expect(screen.getAllByRole("row").at(-1)?.className).toContain("last:border-b-0");
+    expect(table.closest("[data-table-frame]")?.className).toContain("rounded-lg border");
+    const cells = screen.getAllByRole("cell");
+    expect(cells.at(0)?.className).toContain("border-b");
+    expect(cells.at(-1)?.className).not.toContain("border-b");
+    expect(cells.at(0)?.className).toContain("h-control-lg");
     expect(screen.getByRole("columnheader", { name: "Title" }).className).toContain("text-xs");
   });
 });

@@ -281,7 +281,7 @@ describe("spaces", () => {
     await renderAt("/spaces");
     const table = await screen.findByRole("table", { name: "Spaces" });
     expect(within(table).getByRole("columnheader", { name: "Who can read" }).className).toContain(
-      "hidden @2xl:table-cell",
+      "hidden @column:table-cell",
     );
     expect(within(table).getByRole("columnheader", { name: "Key" }).className).not.toContain("hidden");
     cleanup();

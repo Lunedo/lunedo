@@ -53,6 +53,7 @@ function sizeDeclarations(tokens: DesignTokens, namespace: string): Declarations
     [`--${namespace}-card-wide`, layout.cardWidthWide],
     [`--${namespace}-column`, layout.columnWidth],
     [`--${namespace}-page`, layout.pageWidth],
+    [`--${namespace}-page-wide`, layout.pageWidthWide],
     [`--${namespace}-panel`, layout.panelWidth],
     [`--${namespace}-content`, layout.contentWidth],
     ...Object.entries(layout.dialogWidth).map(([key, value]): [string, string] => [

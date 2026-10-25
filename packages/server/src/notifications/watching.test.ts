@@ -589,5 +589,31 @@ describe.skipIf(!baseUrl)("watching", () => {
         page.id,
       ]);
     });
+
+    it("changes several states at once and skips what the person cannot read", async () => {
+      const context = await setup();
+      const page = await publishedPage(context);
+      const other = await publishedPage(context);
+      const hidden = await space(context.org.id, context.adminId, { visibility: "private" });
+      await test.services.watches.set(context.readerId, { type: "item", id: page.id }, { state: "watching" });
+      expect(
+        (await test.services.watches.list(context.readerId)).find((entry) => entry.target.id === page.id)
+          ?.spaceType,
+      ).toBe("standard");
+      const changed = await test.services.watches.setMany(context.readerId, [
+        { target: { type: "item", id: page.id }, state: null },
+        { target: { type: "item", id: other.id }, state: "muted", keepActionable: false },
+        { target: { type: "space", id: hidden.id }, state: "watching" },
+      ]);
+      expect(changed).toBe(2);
+      const entries = await test.services.watches.list(context.readerId);
+      expect(entries.map((entry) => [entry.target.id, entry.state, entry.keepActionable])).toEqual([
+        [other.id, "muted", false],
+      ]);
+      const stored = await test.database.execute<{ id: string }>(
+        sql`select id from watches where account_id = ${context.readerId} and space_id = ${hidden.id}`,
+      );
+      expect(stored.rows).toHaveLength(0);
+    });
   });
 });
