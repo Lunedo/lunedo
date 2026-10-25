@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../support/fixtures.js";
-import { callApi, openSettingsArea } from "../support/helpers.js";
+import { callApi, openSettingsArea, setAppearance } from "../support/helpers.js";
+import { forwardFrom } from "../support/people.js";
 import { place } from "../support/places.js";
 
 interface Problem {
@@ -79,4 +80,29 @@ test("keeps the top bar, the sidebar and the content area in every frame while m
   await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
 
   expect(await problems(page)).toEqual([]);
+});
+
+test("paints the remembered dark appearance and the shell outline before the application runs", async ({
+  page,
+  browser,
+}) => {
+  await page.goto("/home");
+  await setAppearance(page, { colorMode: "dark" });
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
+  const darkBackground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const storage = await page.context().storageState();
+
+  const context = await forwardFrom(
+    await browser.newContext({ storageState: storage, colorScheme: "light" }),
+  );
+  const first = await context.newPage();
+  await first.route(/\/assets\/main-[^/]+\.js$/, (route) => route.abort());
+  await first.goto("/home");
+  await expect(first.locator("#boot-shell")).toBeVisible();
+  expect(await first.locator("html").getAttribute("data-theme")).toBe("dark");
+  expect(await first.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(darkBackground);
+  expect(await first.locator("#root").innerHTML()).toBe("");
+  await context.close();
 });

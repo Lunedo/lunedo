@@ -116,7 +116,10 @@ export function toPreferenceValues(
   };
 }
 
-type Appearance = Pick<PreferenceValues, "colorMode" | "highContrast" | "textSize" | "density" | "font">;
+type Appearance = Pick<
+  PreferenceValues,
+  "colorMode" | "highContrast" | "textSize" | "density" | "font" | "sidebarCollapsed"
+>;
 
 export function storedAppearance(): Partial<Appearance> {
   try {
@@ -129,6 +132,7 @@ export function storedAppearance(): Partial<Appearance> {
       textSize: oneOf(textSizes, parsed.textSize, 1),
       density: oneOf(densities, parsed.density, "default"),
       font: oneOf(fonts, parsed.font, "default"),
+      sidebarCollapsed: parsed.sidebarCollapsed === true,
     };
   } catch {
     return {};
@@ -142,6 +146,7 @@ export function rememberAppearance(values: PreferenceValues): void {
     textSize: values.textSize,
     density: values.density,
     font: values.font,
+    sidebarCollapsed: values.sidebarCollapsed,
   };
   try {
     globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(appearance));

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
@@ -55,8 +57,35 @@ export const DRAWIO_CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'self'",
 ].join("; ");
 
-export function applicationContentSecurityPolicy(frameSources: readonly string[]): string {
-  return `frame-src ${["'self'", ...frameSources].join(" ")}`;
+const INLINE_SCRIPT = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
+const COMPRESSED_COPY = /\.(?:br|gz)$/;
+
+export function inlineScriptHashes(html: string): string[] {
+  return [...html.matchAll(INLINE_SCRIPT)].map(
+    (match) =>
+      `'sha256-${createHash("sha256")
+        .update(match[1] ?? "")
+        .digest("base64")}'`,
+  );
+}
+
+export function applicationContentSecurityPolicy(
+  frameSources: readonly string[],
+  scriptHashes: readonly string[] = [],
+): string {
+  return [
+    `script-src ${["'self'", "'wasm-unsafe-eval'", ...scriptHashes].join(" ")}`,
+    "worker-src 'self' blob: data:",
+    `frame-src ${["'self'", ...frameSources].join(" ")}`,
+  ].join("; ");
+}
+
+async function readScriptHashes(root: string): Promise<string[]> {
+  try {
+    return inlineScriptHashes(await readFile(path.join(root, "index.html"), "utf8"));
+  } catch {
+    return [];
+  }
 }
 
 function isDrawioFile(root: string, filePath: string): boolean {
@@ -72,13 +101,14 @@ export async function registerWebClient(
   root: string,
   frameSources: () => Promise<readonly string[]>,
 ): Promise<void> {
-  let policy = applicationContentSecurityPolicy([]);
+  const scriptHashes = await readScriptHashes(path.resolve(root));
+  let policy = applicationContentSecurityPolicy([], scriptHashes);
   const currentPolicy = async () => {
     try {
-      policy = applicationContentSecurityPolicy(await frameSources());
+      policy = applicationContentSecurityPolicy(await frameSources(), scriptHashes);
     } catch (error) {
       fastify.log.warn({ err: error }, "The embed allowlist could not be read for the frame policy");
-      policy = applicationContentSecurityPolicy([]);
+      policy = applicationContentSecurityPolicy([], scriptHashes);
     }
     return policy;
   };
@@ -88,7 +118,9 @@ export async function registerWebClient(
     index: false,
     immutable: true,
     maxAge: "1y",
-    setHeaders: (response, filePath) => {
+    preCompressed: true,
+    setHeaders: (response, servedPath) => {
+      const filePath = servedPath.replace(COMPRESSED_COPY, "");
       if (isDrawioFile(path.resolve(root), filePath)) {
         response.header("access-control-allow-origin", "*");
         response.header("x-content-type-options", "nosniff");

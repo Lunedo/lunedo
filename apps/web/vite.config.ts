@@ -4,6 +4,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
+import { type BundledChunk, precompress, withLocaleChunks } from "./src/dev/build-assets.js";
 import { drawioContentType, drawioFile, ensureDrawio } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
 import { isPreviewFrameAsset } from "./src/dev/preview-frame-assets.js";
@@ -104,11 +105,44 @@ function drawioAssets(): Plugin {
   };
 }
 
+function localeChunks(): Plugin {
+  return {
+    name: "lunedo-locale-chunks",
+    transformIndexHtml: {
+      order: "post",
+      handler: (html, context) =>
+        withLocaleChunks(html, context.bundle as Record<string, BundledChunk> | undefined),
+    },
+  };
+}
+
+function compressedAssets(): Plugin {
+  let outDir = "";
+  return {
+    name: "lunedo-compressed-assets",
+    apply: "build",
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      await precompress(outDir);
+    },
+  };
+}
+
 const polling = process.env.LUNEDO_DEV_POLLING === "true";
 const instance = publicAddress(process.env.LUNEDO_INSTANCE_URL);
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), previewFrameAssets(), excalidrawAssets(), drawioAssets()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    previewFrameAssets(),
+    excalidrawAssets(),
+    drawioAssets(),
+    localeChunks(),
+    compressedAssets(),
+  ],
   resolve: {
     conditions: ["@lunedo/source", ...defaultClientConditions],
   },
