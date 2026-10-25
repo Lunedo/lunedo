@@ -2,6 +2,7 @@ import { Button, Checkbox, Field, Input, Popover } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { insertBlock, tableContent } from "./insert-block.js";
 
 export const GRID_COLUMNS = 8;
 export const GRID_ROWS = 6;
@@ -14,11 +15,12 @@ export interface TableSize {
 }
 
 export function insertTable(editor: Editor, size: TableSize): boolean {
-  return editor
-    .chain()
-    .focus()
-    .insertTable({ cols: size.columns, rows: size.rows, withHeaderRow: size.header })
-    .run();
+  const position = editor.state.selection.from;
+  return insertBlock(
+    editor,
+    { from: position, to: position },
+    tableContent(size.rows, size.columns, size.header),
+  );
 }
 
 function clamp(value: number): number {

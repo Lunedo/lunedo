@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { translateKey } from "../i18n/translate.js";
 import type { EditorActions } from "./actions.js";
+import { insertBlock } from "./insert-block.js";
 import { type SlashCommandDefinition, slashCommands } from "./slash-items.js";
 
 export interface ToolbarAction {
@@ -445,16 +446,14 @@ export function toolbarItems(editor: Editor, t: TFunction, actions: EditorAction
         label: translateKey(t, `editor.toolbar.columnLayouts.${choice.id}`),
         icon: choice.icon,
         run: () =>
-          chain()
-            .insertContent({
-              type: "columns",
-              content: choice.widths.map((width) => ({
-                type: "column",
-                attrs: { width },
-                content: [{ type: "paragraph" }],
-              })),
-            })
-            .run(),
+          insertBlock(editor, here(), {
+            type: "columns",
+            content: choice.widths.map((width) => ({
+              type: "column",
+              attrs: { width },
+              content: [{ type: "paragraph" }],
+            })),
+          }),
       })),
     },
     {

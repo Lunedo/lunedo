@@ -55,6 +55,7 @@ import { editorActions } from "./actions.js";
 import { pageScopeOf } from "./extensions/page-scope.js";
 import type { SuggestionItem } from "./extensions/suggestions.js";
 import { insertAndFocus } from "./focus-inserted.js";
+import { insertBlock, tableContent } from "./insert-block.js";
 import { COLUMN_LAYOUTS } from "./nodes/block-views.js";
 import { DIAGRAM_STARTERS, openDiagramWhenInserted } from "./nodes/diagram-views.js";
 import { openDrawingWhenInserted } from "./nodes/drawing-view.js";
@@ -155,7 +156,8 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.blockquoteDescription",
     keywords: ["quote", "zitat"],
     hint: ">",
-    run: (editor, range) => editor.chain().focus().deleteRange(range).setBlockquote().run(),
+    run: (editor, range) =>
+      insertBlock(editor, range, { type: "blockquote", content: [{ type: "paragraph" }] }),
   },
   {
     id: "codeBlock",
@@ -165,7 +167,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.codeBlockDescription",
     keywords: ["code", "snippet", "programm"],
     hint: "```",
-    run: (editor, range) => editor.chain().focus().deleteRange(range).setCodeBlock().run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "codeBlock" }),
   },
   ...(["info", "tip", "note", "warning", "error"] as const).map(
     (variant): SlashCommandDefinition => ({
@@ -175,7 +177,8 @@ export const slashCommands: SlashCommandDefinition[] = [
       labelKey: `editor.blocks.callout.${variant}`,
       descriptionKey: "editor.blocks.calloutDescription",
       keywords: ["callout", "panel", "hinweis", variant],
-      run: (editor, range) => editor.chain().focus().deleteRange(range).wrapIn("callout", { variant }).run(),
+      run: (editor, range) =>
+        insertBlock(editor, range, { type: "callout", attrs: { variant }, content: [{ type: "paragraph" }] }),
     }),
   ),
   {
@@ -185,7 +188,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.expand",
     descriptionKey: "editor.blocks.expandDescription",
     keywords: ["expand", "toggle", "details", "aufklappen"],
-    run: (editor, range) => editor.chain().focus().deleteRange(range).wrapIn("expand").run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "expand", content: [{ type: "paragraph" }] }),
   },
   ...(
     [
@@ -201,7 +204,7 @@ export const slashCommands: SlashCommandDefinition[] = [
       labelKey: `editor.blocks.columns${count}`,
       descriptionKey: "editor.blocks.columnsDescription",
       keywords: ["columns", "layout", "spalten"],
-      run: (editor, range) => editor.chain().focus().deleteRange(range).insertContent(columns(count)).run(),
+      run: (editor, range) => insertBlock(editor, range, columns(count)),
     }),
   ),
   {
@@ -212,7 +215,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.horizontalRuleDescription",
     keywords: ["divider", "line", "rule", "trennlinie"],
     hint: "---",
-    run: (editor, range) => editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "horizontalRule" }),
   },
   {
     id: "table",
@@ -228,7 +231,7 @@ export const slashCommands: SlashCommandDefinition[] = [
         picker();
         return;
       }
-      editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+      insertBlock(editor, range, tableContent(3, 3, true));
     },
   },
   {
@@ -239,12 +242,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.taskReportDescription",
     keywords: ["tasks", "report", "aufgaben", "bericht"],
     run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "taskReport", attrs: { spaceId: pageScopeOf(editor) } })
-        .run(),
+      insertBlock(editor, range, { type: "taskReport", attrs: { spaceId: pageScopeOf(editor) } }),
   },
   {
     id: "pageReport",
@@ -262,12 +260,7 @@ export const slashCommands: SlashCommandDefinition[] = [
       "zuletzt geändert",
     ],
     run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "pageReport", attrs: { spaceId: pageScopeOf(editor) } })
-        .run(),
+      insertBlock(editor, range, { type: "pageReport", attrs: { spaceId: pageScopeOf(editor) } }),
   },
   {
     id: "decisionReport",
@@ -277,12 +270,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.decisionReportDescription",
     keywords: ["decisions", "report", "entscheidungen", "bericht"],
     run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "decisionReport", attrs: { spaceId: pageScopeOf(editor) } })
-        .run(),
+      insertBlock(editor, range, { type: "decisionReport", attrs: { spaceId: pageScopeOf(editor) } }),
   },
   {
     id: "pageProperties",
@@ -299,15 +287,10 @@ export const slashCommands: SlashCommandDefinition[] = [
       "eigenschaften",
     ],
     run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({
-          type: "pageProperties",
-          content: [emptyProperty(), emptyProperty()],
-        })
-        .run(),
+      insertBlock(editor, range, {
+        type: "pageProperties",
+        content: [emptyProperty(), emptyProperty()],
+      }),
   },
   {
     id: "propertiesReport",
@@ -346,8 +329,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.relatedLabels",
     descriptionKey: "editor.blocks.relatedLabelsDescription",
     keywords: ["related labels", "labels", "verwandte labels"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent({ type: "relatedLabels" }).run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "relatedLabels" }),
   },
   {
     id: "excerpt",
@@ -356,13 +338,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.excerpt",
     descriptionKey: "editor.blocks.excerptDescription",
     keywords: ["excerpt", "summary", "reuse", "auszug", "zusammenfassung"],
-    run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "excerpt", content: [{ type: "paragraph" }] })
-        .run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "excerpt", content: [{ type: "paragraph" }] }),
   },
   {
     id: "includeExcerpt",
@@ -390,12 +366,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.templateButtonDescription",
     keywords: ["template", "button", "create", "vorlage", "knopf", "schaltfläche"],
     run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "templateButton", attrs: { templateId: "builtin:meeting-notes" } })
-        .run(),
+      insertBlock(editor, range, { type: "templateButton", attrs: { templateId: "builtin:meeting-notes" } }),
   },
   {
     id: "childPages",
@@ -404,13 +375,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.childPages",
     descriptionKey: "editor.blocks.childPagesDescription",
     keywords: ["children", "child pages", "subpages", "unterseiten"],
-    run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "childPages", attrs: { depth: 1 } })
-        .run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "childPages", attrs: { depth: 1 } }),
   },
   {
     id: "attachmentList",
@@ -419,8 +384,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.attachmentList",
     descriptionKey: "editor.blocks.attachmentListDescription",
     keywords: ["attachments", "files", "anhänge", "dateien"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent({ type: "attachmentList" }).run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "attachmentList" }),
   },
   {
     id: "decision",
@@ -430,16 +394,11 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.decisionDescription",
     keywords: ["decision", "decided", "entscheidung", "beschluss"],
     run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({
-          type: "decision",
-          attrs: { id: uuidv7(), topicId: null },
-          content: [{ type: "paragraph" }],
-        })
-        .run(),
+      insertBlock(editor, range, {
+        type: "decision",
+        attrs: { id: uuidv7(), topicId: null },
+        content: [{ type: "paragraph" }],
+      }),
   },
   {
     id: "tableOfContents",
@@ -448,8 +407,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.tableOfContents",
     descriptionKey: "editor.blocks.tableOfContentsDescription",
     keywords: ["toc", "contents", "inhaltsverzeichnis"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent({ type: "tableOfContents" }).run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "tableOfContents" }),
   },
   {
     id: "blockMath",
@@ -459,13 +417,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.blockMathDescription",
     keywords: ["math", "formula", "latex", "formel", "katex"],
     hint: "$$",
-    run: (editor, range) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "blockMath", attrs: { latex: "" } })
-        .run(),
+    run: (editor, range) => insertBlock(editor, range, { type: "blockMath", attrs: { latex: "" } }),
   },
   {
     id: "inlineMath",
@@ -480,7 +432,7 @@ export const slashCommands: SlashCommandDefinition[] = [
         .chain()
         .focus()
         .deleteRange(range)
-        .insertContent({ type: "inlineMath", attrs: { latex: "" } })
+        .insertContentAt(range.from, { type: "inlineMath", attrs: { latex: "" } })
         .run(),
   },
   {
@@ -495,7 +447,10 @@ export const slashCommands: SlashCommandDefinition[] = [
         .chain()
         .focus()
         .deleteRange(range)
-        .insertContent({ type: "status", attrs: { text: t("editor.status.default"), color: "gray" } })
+        .insertContentAt(range.from, {
+          type: "status",
+          attrs: { text: t("editor.status.default"), color: "gray" },
+        })
         .run(),
   },
   {
@@ -510,7 +465,7 @@ export const slashCommands: SlashCommandDefinition[] = [
         .chain()
         .focus()
         .deleteRange(range)
-        .insertContent({ type: "date", attrs: { date: todayIso() } })
+        .insertContentAt(range.from, { type: "date", attrs: { date: todayIso() } })
         .run(),
   },
   {
@@ -521,7 +476,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.mentionDescription",
     keywords: ["mention", "person", "erwähnen"],
     hint: "@",
-    run: (editor, range) => editor.chain().focus().deleteRange(range).insertContent("@").run(),
+    run: (editor, range) => editor.chain().focus().deleteRange(range).insertContentAt(range.from, "@").run(),
   },
   {
     id: "pageLink",
@@ -531,7 +486,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.pageLinkDescription",
     keywords: ["link", "page", "seite", "verknüpfen"],
     hint: "[[",
-    run: (editor, range) => editor.chain().focus().deleteRange(range).insertContent("[[").run(),
+    run: (editor, range) => editor.chain().focus().deleteRange(range).insertContentAt(range.from, "[[").run(),
   },
   {
     id: "file",
@@ -587,19 +542,14 @@ export const slashCommands: SlashCommandDefinition[] = [
     descriptionKey: "editor.blocks.tabsDescription",
     keywords: ["tabs", "tab", "panel", "reiter", "registerkarten"],
     run: (editor, range, t) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({
-          type: "tabs",
-          content: [1, 2].map((number) => ({
-            type: "tab",
-            attrs: { title: t("editor.tabs.newTab", { number }) },
-            content: [{ type: "paragraph" }],
-          })),
-        })
-        .run(),
+      insertBlock(editor, range, {
+        type: "tabs",
+        content: [1, 2].map((number) => ({
+          type: "tab",
+          attrs: { title: t("editor.tabs.newTab", { number }) },
+          content: [{ type: "paragraph" }],
+        })),
+      }),
   },
   {
     id: "drawing",
@@ -611,7 +561,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     run: (editor, range) => {
       const id = crypto.randomUUID();
       openDrawingWhenInserted(id);
-      editor.chain().focus().deleteRange(range).insertContent({ type: "drawing", attrs: { id } }).run();
+      insertBlock(editor, range, { type: "drawing", attrs: { id } });
     },
   },
   {
@@ -634,7 +584,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     run: (editor, range) => {
       const id = crypto.randomUUID();
       openDiagramWhenInserted(id);
-      editor.chain().focus().deleteRange(range).insertContent({ type: "drawio", attrs: { id } }).run();
+      insertBlock(editor, range, { type: "drawio", attrs: { id } });
     },
   },
   ...(["mermaid", "plantuml"] as const).map(
@@ -648,12 +598,7 @@ export const slashCommands: SlashCommandDefinition[] = [
       run: (editor, range) => {
         const id = crypto.randomUUID();
         openDiagramWhenInserted(id);
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .insertContent({ type, attrs: { id, source: DIAGRAM_STARTERS[type] } })
-          .run();
+        insertBlock(editor, range, { type, attrs: { id, source: DIAGRAM_STARTERS[type] } });
       },
     }),
   ),
@@ -799,12 +744,7 @@ export function slashSuggestionItems(query: string, t: TFunction): SuggestionIte
         icon: Table,
         run: (editor, range) => {
           rememberSlashCommand("table");
-          editor
-            .chain()
-            .focus()
-            .deleteRange(range)
-            .insertTable({ rows: size.rows, cols: size.columns, withHeaderRow: true })
-            .run();
+          insertBlock(editor, range, tableContent(size.rows, size.columns, true));
         },
       },
     ];
