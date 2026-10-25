@@ -11204,7 +11204,9 @@
         "active": "Laufend",
         "deferred": "Geplant",
         "failed": "Fehlgeschlagen",
-        "empty": "Keine Jobs warten, laufen oder sind fehlgeschlagen."
+        "empty": "Keine Jobs warten, laufen oder sind fehlgeschlagen.",
+        "oldest": "Ältester Job",
+        "description": "Nur Warteschlangen mit wartenden, laufenden, geplanten oder fehlgeschlagenen Jobs."
       },
       "errors": {
         "title": "Letzte Fehler",
@@ -11338,7 +11340,19 @@
             "onSignInPaused": "Ein seit {startedAt}: Die Instanz ist nur lesend und nur Instanz-Administratoren können sich anmelden. Schalte ihn aus, wenn die Wartung erledigt ist."
           }
         }
-      }
+      },
+      "tiles": {
+        "attention": "Brauchen Aufmerksamkeit",
+        "ok": "In Ordnung",
+        "jobs": "Jobs in Warteschlangen",
+        "errors": "Fehler in 24 Stunden"
+      },
+      "attention": "Braucht Aufmerksamkeit",
+      "healthy": "In Ordnung",
+      "checksCount": "{count, plural, one {# Prüfung} other {# Prüfungen}}",
+      "check": "Prüfung",
+      "result": "Ergebnis",
+      "statusColumn": "Status"
     }
   },
   "maintenance": {

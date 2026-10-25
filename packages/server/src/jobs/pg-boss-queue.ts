@@ -335,10 +335,24 @@ export class PgBossQueue implements JobQueue {
   async counts(): Promise<Record<string, QueueCounts>> {
     await this.start();
     const queues = await this.#boss.getQueues();
+    const oldest = await this.#boss
+      .getDb()
+      .executeSql(
+        `select name, min(created_on) as oldest from ${SCHEMA}.job where state in ('created', 'retry') and start_after <= now() group by name`,
+      );
+    const oldestByQueue = new Map(
+      (oldest.rows as { name: string; oldest: Date | string }[]).map((row) => [
+        row.name,
+        new Date(row.oldest),
+      ]),
+    );
     return Object.fromEntries(
       queues
         .filter((queue) => !queue.name.startsWith("__pgboss__"))
-        .map((queue) => [queue.name, queueCounts(queue)]),
+        .map((queue) => [
+          queue.name,
+          { ...queueCounts(queue), oldestQueuedAt: oldestByQueue.get(queue.name) ?? null },
+        ]),
     );
   }
 

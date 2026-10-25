@@ -11204,7 +11204,9 @@
         "active": "Running",
         "deferred": "Scheduled",
         "failed": "Failed",
-        "empty": "No jobs are waiting, running or failed."
+        "empty": "No jobs are waiting, running or failed.",
+        "oldest": "Oldest job",
+        "description": "Only queues with waiting, running, scheduled or failed jobs."
       },
       "errors": {
         "title": "Recent errors",
@@ -11338,7 +11340,19 @@
             "onSignInPaused": "On since {startedAt}: the instance is read-only and only instance administrators can sign in. Switch it off when the maintenance is done."
           }
         }
-      }
+      },
+      "tiles": {
+        "attention": "Need attention",
+        "ok": "In order",
+        "jobs": "Jobs in queues",
+        "errors": "Errors in 24 hours"
+      },
+      "attention": "Needs attention",
+      "healthy": "In order",
+      "checksCount": "{count, plural, one {# check} other {# checks}}",
+      "check": "Check",
+      "result": "Result",
+      "statusColumn": "Status"
     }
   },
   "maintenance": {

@@ -125474,6 +125474,18 @@
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991,
                             "description": "Jobs that failed after all attempts and are still kept."
+                          },
+                          "oldestQueuedAt": {
+                            "description": "When the oldest waiting job was queued, or null when none waits.",
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -125579,7 +125591,8 @@
                       "queued": 2,
                       "active": 1,
                       "deferred": 0,
-                      "failed": 0
+                      "failed": 0,
+                      "oldestQueuedAt": "2026-10-24T08:14:00.000Z"
                     }
                   ],
                   "recentErrors": [

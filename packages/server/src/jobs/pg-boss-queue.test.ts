@@ -226,8 +226,25 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
     const job = define("counts");
     await producer.register(job);
     const counts = await producer.counts();
-    expect(Object.keys(counts[job.name] ?? {}).sort()).toEqual(["active", "deferred", "failed", "queued"]);
+    expect(Object.keys(counts[job.name] ?? {}).sort()).toEqual([
+      "active",
+      "deferred",
+      "failed",
+      "oldestQueuedAt",
+      "queued",
+    ]);
+    expect(counts[job.name]?.oldestQueuedAt).toBeNull();
     expect(Object.keys(counts).filter((name) => name.startsWith("__pgboss__"))).toEqual([]);
+  });
+
+  it("names when the oldest waiting job of a queue was queued", async () => {
+    const job = define("oldest");
+    await producer.register(job);
+    const before = Date.now();
+    await producer.enqueue(job, { value: 1 });
+    const oldest = (await producer.counts())[job.name]?.oldestQueuedAt;
+    expect(oldest).toBeInstanceOf(Date);
+    expect(Math.abs((oldest?.getTime() ?? 0) - before)).toBeLessThan(60_000);
   });
 });
 

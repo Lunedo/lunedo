@@ -209,7 +209,9 @@ export class Metrics {
       async collect() {
         this.reset();
         for (const [name, counts] of Object.entries(await queue.counts())) {
-          for (const [state, count] of Object.entries(counts)) this.set({ queue: name, state }, count);
+          for (const state of ["queued", "active", "deferred", "failed"] as const) {
+            this.set({ queue: name, state }, counts[state]);
+          }
         }
       },
     });

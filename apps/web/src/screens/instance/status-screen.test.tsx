@@ -102,8 +102,16 @@ describe("the system status", () => {
     });
     await renderScreen();
     expect(await screen.findByRole("heading", { name: "System status" })).toBeTruthy();
-    expect(await screen.findByText("Some checks failed")).toBeTruthy();
-    expect(screen.getByText("2 errors and 2 warnings. Each check below says what to do.")).toBeTruthy();
+    const attention = await screen.findByRole("region", { name: "Needs attention" });
+    expect(attention.querySelectorAll("[data-problem]")).toHaveLength(4);
+    expect(attention.querySelector("[data-problem]")?.className).toContain("border-l-danger");
+    const tiles = [...document.querySelectorAll("[data-status-tile]")].map((tile) => tile.textContent);
+    expect(tiles).toEqual([
+      "4Need attention",
+      expect.stringMatching(/In order$/),
+      "0Jobs in queues",
+      "3Errors in 24 hours",
+    ]);
     expect(screen.getByText("Lunedo 1.4.2")).toBeTruthy();
     expect(
       screen.getByText(
