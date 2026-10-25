@@ -20,13 +20,16 @@ import {
   ListTree,
   type LucideIcon,
   StickyNote,
+  Trash2,
   TriangleAlert,
+  Ungroup,
 } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { translateKey } from "../../i18n/translate.js";
 import { NamedIcon } from "../../knowledge-bases/icons.js";
 import { useEditable } from "../context.js";
+import { dissolveLayout, removeLayoutColumn } from "../layout-commands.js";
 
 const headingIcons: LucideIcon[] = [Heading1, Heading2, Heading3, Heading4, Heading5, Heading6];
 
@@ -242,9 +245,27 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
       })
       .run();
   };
+  const removeColumn = (index: number) => {
+    const position = getPos();
+    if (typeof position !== "number") return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => removeLayoutColumn(tr, position, node, index))
+      .run();
+  };
+  const dissolve = () => {
+    const position = getPos();
+    if (typeof position !== "number") return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => dissolveLayout(tr, position, node))
+      .run();
+  };
   return (
     <NodeViewWrapper className="ld-columns" data-count={count}>
-      {editable && layouts.length > 1 ? (
+      {editable ? (
         <div contentEditable={false} className="ld-columns-control">
           <Menu
             align="start"
@@ -253,11 +274,26 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
                 <Columns2 aria-hidden="true" className="size-icon-sm" />
               </button>
             }
-            items={layouts.map((widths) => ({
-              label: widths.map((width) => `${width} %`).join(" · "),
-              icon: count === 3 ? Columns3 : Columns2,
-              onSelect: () => apply(widths),
-            }))}
+            items={[
+              ...(layouts.length > 1
+                ? [
+                    { type: "label" as const, label: t("editor.columns.widths") },
+                    ...layouts.map((widths) => ({
+                      label: widths.map((width) => `${width} %`).join(" · "),
+                      icon: count === 3 ? Columns3 : Columns2,
+                      onSelect: () => apply(widths),
+                    })),
+                    { type: "separator" as const },
+                  ]
+                : []),
+              ...Array.from({ length: count }, (_, index) => ({
+                label: t("editor.columns.removeColumn", { number: index + 1 }),
+                icon: Trash2,
+                onSelect: () => removeColumn(index),
+              })),
+              { type: "separator" as const },
+              { label: t("editor.columns.dissolve"), icon: Ungroup, onSelect: dissolve },
+            ]}
           />
         </div>
       ) : null}

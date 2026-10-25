@@ -5,13 +5,10 @@ import { CellSelection } from "@tiptap/pm/tables";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
-  ArrowDownToLine,
-  ArrowLeftToLine,
-  ArrowRightToLine,
-  ArrowUpToLine,
   Ban,
+  BetweenHorizontalEnd,
+  BetweenVerticalEnd,
   Bold,
-  Columns3,
   Combine,
   Highlighter,
   Italic,
@@ -20,16 +17,16 @@ import {
   type LucideIcon,
   MessageSquarePlus,
   PaintBucket,
-  PanelLeft,
   PanelTop,
-  Rows3,
-  Split,
+  TableColumnsSplit,
+  TableRowsSplit,
   Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { translateKey } from "../i18n/translate.js";
 import { displayKey } from "../shell/keyboard.js";
 import type { EditorActions } from "./actions.js";
+import { activeTable } from "./table-commands.js";
 
 const BUTTON =
   "inline-flex h-control-sm min-w-control-sm items-center justify-center gap-1 rounded-sm px-1 text-text hover:bg-hover aria-pressed:bg-selected aria-pressed:text-selected-text";
@@ -142,121 +139,95 @@ export function SelectionMenu({ editor, actions }: { editor: Editor; actions: Ed
 
 export function TableMenu({ editor }: { editor: Editor }) {
   const { t } = useTranslation();
-  const inTable = useEditorState({ editor, selector: ({ editor: current }) => current.isActive("table") });
-  if (!inTable) return null;
+  const state = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const table = current.isActive("table") ? activeTable(current) : null;
+      let header = false;
+      if (table?.node.firstChild) {
+        header = true;
+        table.node.firstChild.forEach((cell) => {
+          if (cell.type.spec.tableRole !== "header_cell") header = false;
+        });
+      }
+      return { inTable: table !== null, header };
+    },
+  });
+  if (!state.inTable) return null;
   const chain = () => editor.chain().focus();
-  const run = (action: () => boolean) => () => {
-    action();
-  };
   return (
     <div
       role="toolbar"
       aria-label={t("editor.table.label")}
       className="ld-table-menu flex flex-wrap items-center gap-1 border-t border-border pt-1"
     >
-      <Menu
-        align="start"
-        trigger={
-          <button type="button" className={BUTTON} onMouseDown={(event) => event.preventDefault()}>
-            <Rows3 aria-hidden="true" className="size-icon-md" />
-            <span className="text-sm">{t("editor.table.rows")}</span>
-          </button>
-        }
-        items={[
-          {
-            label: t("editor.table.addRowBefore"),
-            icon: ArrowUpToLine,
-            onSelect: run(() => chain().addRowBefore().run()),
-          },
-          {
-            label: t("editor.table.addRowAfter"),
-            icon: ArrowDownToLine,
-            onSelect: run(() => chain().addRowAfter().run()),
-          },
-          {
-            label: t("editor.table.deleteRow"),
-            icon: Trash2,
-            danger: true,
-            onSelect: run(() => chain().deleteRow().run()),
-          },
-        ]}
-      />
-      <Menu
-        align="start"
-        trigger={
-          <button type="button" className={BUTTON} onMouseDown={(event) => event.preventDefault()}>
-            <Columns3 aria-hidden="true" className="size-icon-md" />
-            <span className="text-sm">{t("editor.table.columns")}</span>
-          </button>
-        }
-        items={[
-          {
-            label: t("editor.table.addColumnBefore"),
-            icon: ArrowLeftToLine,
-            onSelect: run(() => chain().addColumnBefore().run()),
-          },
-          {
-            label: t("editor.table.addColumnAfter"),
-            icon: ArrowRightToLine,
-            onSelect: run(() => chain().addColumnAfter().run()),
-          },
-          {
-            label: t("editor.table.deleteColumn"),
-            icon: Trash2,
-            danger: true,
-            onSelect: run(() => chain().deleteColumn().run()),
-          },
-        ]}
+      <MenuButton
+        label={t("editor.table.addRowAfter")}
+        icon={BetweenHorizontalEnd}
+        onClick={() => chain().addRowAfter().run()}
       />
       <MenuButton
-        label={t("editor.table.mergeCells")}
+        label={t("editor.table.deleteRow")}
+        icon={TableRowsSplit}
+        onClick={() => chain().deleteRow().run()}
+      />
+      <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />
+      <MenuButton
+        label={t("editor.table.addColumnAfter")}
+        icon={BetweenVerticalEnd}
+        onClick={() => chain().addColumnAfter().run()}
+      />
+      <MenuButton
+        label={t("editor.table.deleteColumn")}
+        icon={TableColumnsSplit}
+        onClick={() => chain().deleteColumn().run()}
+      />
+      <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />
+      <MenuButton
+        label={t("editor.table.mergeOrSplit")}
         icon={Combine}
-        onClick={run(() => chain().mergeCells().run())}
-      />
-      <MenuButton
-        label={t("editor.table.splitCell")}
-        icon={Split}
-        onClick={run(() => chain().splitCell().run())}
+        onClick={() => chain().mergeOrSplit().run()}
       />
       <MenuButton
         label={t("editor.table.headerRow")}
         icon={PanelTop}
-        onClick={run(() => chain().toggleHeaderRow().run())}
+        active={state.header}
+        onClick={() => chain().toggleHeaderRow().run()}
       />
-      <MenuButton
-        label={t("editor.table.headerColumn")}
-        icon={PanelLeft}
-        onClick={run(() => chain().toggleHeaderColumn().run())}
-      />
-      <Menu
-        align="start"
-        trigger={
-          <button
-            type="button"
-            className={BUTTON}
-            aria-label={t("editor.table.background")}
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            <PaintBucket aria-hidden="true" className="size-icon-md" />
-          </button>
-        }
-        items={[
-          {
-            label: t("editor.colors.none"),
-            icon: Ban,
-            onSelect: run(() => chain().setCellAttribute("background", null).run()),
-          },
-          ...contentColors.map((color) => ({
-            label: translateKey(t, `editor.colors.${color}`),
-            icon: PaintBucket,
-            onSelect: run(() => chain().setCellAttribute("background", color).run()),
-          })),
-        ]}
-      />
+      <Tooltip content={t("editor.table.background")}>
+        <span className="inline-flex">
+          <Menu
+            align="start"
+            trigger={
+              <button
+                type="button"
+                className={BUTTON}
+                aria-label={t("editor.table.background")}
+                onMouseDown={(event) => event.preventDefault()}
+              >
+                <PaintBucket aria-hidden="true" className="size-icon-md" />
+              </button>
+            }
+            items={[
+              {
+                label: t("editor.colors.none"),
+                icon: Ban,
+                onSelect: () => chain().setCellAttribute("background", null).run(),
+              },
+              ...contentColors.map((color) => ({
+                label: translateKey(t, `editor.colors.${color}`),
+                icon: PaintBucket,
+                onSelect: () => chain().setCellAttribute("background", color).run(),
+              })),
+            ]}
+          />
+        </span>
+      </Tooltip>
+      <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />
       <MenuButton
         label={t("editor.table.deleteTable")}
         icon={Trash2}
-        onClick={run(() => chain().deleteTable().run())}
+        onClick={() => chain().deleteTable().run()}
       />
     </div>
   );

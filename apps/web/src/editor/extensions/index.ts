@@ -47,6 +47,7 @@ import { DecisionReportView, PageReportView } from "../reports.js";
 import { RoadmapView } from "../roadmap-view.js";
 import { schemaExtensions } from "../schema/extensions.js";
 import { slashMenuOpen, slashSuggestionItems } from "../slash-items.js";
+import { deleteSelectedTablePart } from "../table-commands.js";
 import { TemplateButtonView } from "../template-button.js";
 import { BlockFormatting } from "./block-formatting.js";
 import { DocumentEdges } from "./document-edges.js";
@@ -247,6 +248,16 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     }),
     FindReplace.configure({ onOpen: options.onOpenFind ?? (() => undefined) }),
     DocumentEdges,
+    Extension.create({
+      name: "tablePartDeletion",
+      priority: 1000,
+      addKeyboardShortcuts() {
+        return {
+          Backspace: () => deleteSelectedTablePart(this.editor),
+          Delete: () => deleteSelectedTablePart(this.editor),
+        };
+      },
+    }),
     Extension.create({
       name: "editorShortcuts",
       addKeyboardShortcuts() {

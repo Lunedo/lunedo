@@ -1337,3 +1337,19 @@ details.ld-expand > summary {
 .ld-section-required {
   @apply rounded-sm bg-warning-soft px-2 py-1 text-sm text-text;
 }
+
+.ld-table-grip {
+  @apply absolute z-10 flex;
+}
+
+.ld-table-grip[data-axis="row"] {
+  @apply -translate-x-full -translate-y-1/2 pr-1;
+}
+
+.ld-table-grip[data-axis="column"] {
+  @apply -translate-x-1/2 -translate-y-1/2;
+}
+
+.ld-table-grip-button {
+  @apply inline-flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-accent hover:text-on-accent focus-visible:focus-ring aria-expanded:bg-accent aria-expanded:text-on-accent;
+}

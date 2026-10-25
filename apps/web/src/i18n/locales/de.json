@@ -5148,7 +5148,10 @@
       "titlePlaceholder": "Titel"
     },
     "columns": {
-      "layout": "Spaltenbreiten ändern"
+      "layout": "Spalten-Layout",
+      "removeColumn": "Spalte {number} entfernen",
+      "dissolve": "Layout auflösen",
+      "widths": "Breiten"
     },
     "code": {
       "plain": "Reiner Text",
@@ -5244,23 +5247,30 @@
     },
     "table": {
       "label": "Tabelle",
-      "rows": "Zeilen",
-      "columns": "Spalten",
-      "addRowBefore": "Zeile oberhalb einfügen",
       "addRowAfter": "Zeile unterhalb einfügen",
       "deleteRow": "Zeile löschen",
-      "addColumnBefore": "Spalte links einfügen",
       "addColumnAfter": "Spalte rechts einfügen",
       "deleteColumn": "Spalte löschen",
-      "mergeCells": "Zellen verbinden",
-      "splitCell": "Zelle teilen",
       "headerRow": "Kopfzeile ein oder aus",
-      "headerColumn": "Kopfspalte ein oder aus",
       "background": "Zellenhintergrund",
       "deleteTable": "Tabelle löschen",
       "addColumnHere": "Spalte hier einfügen",
       "addRowHere": "Zeile hier einfügen",
-      "addRowBelow": "Zeile"
+      "addRowBelow": "Zeile",
+      "mergeOrSplit": "Zellen verbinden oder teilen",
+      "notWithMerged": "nicht bei verbundenen Zellen",
+      "insertRowAbove": "Zeile darüber einfügen",
+      "insertRowBelow": "Zeile darunter einfügen",
+      "insertColumnLeft": "Spalte links einfügen",
+      "insertColumnRight": "Spalte rechts einfügen",
+      "moveRowUp": "Zeile nach oben",
+      "moveRowDown": "Zeile nach unten",
+      "moveColumnLeft": "Spalte nach links",
+      "moveColumnRight": "Spalte nach rechts",
+      "sortAscending": "Sortieren A bis Z",
+      "sortDescending": "Sortieren Z bis A",
+      "rowActions": "Zeile {number}",
+      "columnActions": "Spalte {number}"
     },
     "find": {
       "label": "Suchen und ersetzen",

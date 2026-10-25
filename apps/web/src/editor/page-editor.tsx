@@ -40,6 +40,7 @@ import {
 import type { SaveState } from "./save-state.js";
 import { TableControls } from "./table-controls.js";
 import { TableSizePicker } from "./table-size-picker.js";
+import { TableGrips } from "./table-tools.js";
 import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
 import { sameToolbarItems, toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
@@ -402,6 +403,7 @@ function CollaborativeEditor({
               <EditorContent editor={editor} />
               <RemoteCarets editor={editor} provider={collaboration.provider} container={surface} />
               {editable ? <TableControls editor={editor} container={surface} /> : null}
+              {editable ? <TableGrips editor={editor} container={surface} /> : null}
               {onThreadClick && openThreads.length > 0 ? (
                 <ThreadCounters openThreads={openThreads} onOpen={onThreadClick} />
               ) : null}

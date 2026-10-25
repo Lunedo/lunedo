@@ -5148,7 +5148,10 @@
       "titlePlaceholder": "Title"
     },
     "columns": {
-      "layout": "Change column widths"
+      "layout": "Column layout",
+      "removeColumn": "Remove column {number}",
+      "dissolve": "Dissolve layout",
+      "widths": "Widths"
     },
     "code": {
       "plain": "Plain text",
@@ -5244,23 +5247,30 @@
     },
     "table": {
       "label": "Table",
-      "rows": "Rows",
-      "columns": "Columns",
-      "addRowBefore": "Add row above",
       "addRowAfter": "Add row below",
       "deleteRow": "Delete row",
-      "addColumnBefore": "Add column to the left",
       "addColumnAfter": "Add column to the right",
       "deleteColumn": "Delete column",
-      "mergeCells": "Merge cells",
-      "splitCell": "Split cell",
       "headerRow": "Header row on or off",
-      "headerColumn": "Header column on or off",
       "background": "Cell background",
       "deleteTable": "Delete table",
       "addColumnHere": "Insert a column here",
       "addRowHere": "Insert a row here",
-      "addRowBelow": "Row"
+      "addRowBelow": "Row",
+      "mergeOrSplit": "Merge or split cells",
+      "notWithMerged": "not with merged cells",
+      "insertRowAbove": "Insert row above",
+      "insertRowBelow": "Insert row below",
+      "insertColumnLeft": "Insert column to the left",
+      "insertColumnRight": "Insert column to the right",
+      "moveRowUp": "Move row up",
+      "moveRowDown": "Move row down",
+      "moveColumnLeft": "Move column left",
+      "moveColumnRight": "Move column right",
+      "sortAscending": "Sort A to Z",
+      "sortDescending": "Sort Z to A",
+      "rowActions": "Row {number}",
+      "columnActions": "Column {number}"
     },
     "find": {
       "label": "Find and replace",
