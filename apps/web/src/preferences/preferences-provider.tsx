@@ -1,4 +1,4 @@
-import type { AccentColor } from "@lunedo/shared";
+import { type AccentColor, proposeFormats } from "@lunedo/shared";
 import { useAppearance } from "@lunedo/ui";
 import {
   createContext,
@@ -64,7 +64,12 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     () =>
       list.data
         ? toPreferenceValues(list.data, fallback)
-        : { ...fallback, colorMode: signedOutColorMode, language: currentLanguage(i18n.language) },
+        : {
+            ...fallback,
+            ...proposeFormats(currentLanguage(i18n.language), fallback.timeZone),
+            colorMode: signedOutColorMode,
+            language: currentLanguage(i18n.language),
+          },
     [list.data, fallback, i18n.language, signedOutColorMode],
   );
   const accentColor = useAccentColor();

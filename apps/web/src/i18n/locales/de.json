@@ -1917,14 +1917,15 @@
       "systemCheck": "Systemprüfung",
       "instance": "Instanz",
       "owner": "Owner-Konto",
-      "keyBackup": "Schlüssel",
+      "keyBackup": "Notfall-Kit",
       "organization": "Organisation",
       "welcome": "Willkommen",
       "summary": "Zusammenfassung"
     },
     "code": {
       "label": "Setup-Code",
-      "where": "Steht in der Datei .env (LUNEDO_SETUP_CODE), wenn du das Setup-Skript verwendet hast, sonst im Log des Containers:"
+      "where": "Steht in der Datei .env (LUNEDO_SETUP_CODE), wenn du das Setup-Skript verwendet hast, sonst im Log des Containers:",
+      "copyCommand": "Befehl kopieren"
     },
     "language": "Sprache der Einrichtung",
     "systemCheck": {
@@ -1940,17 +1941,15 @@
       },
       "status": {
         "ok": "OK",
-        "warning": "Prüfen",
-        "error": "Muss behoben werden"
+        "warning": "Warnung",
+        "error": "Muss behoben werden",
+        "info": "Info"
       },
       "databaseOk": "PostgreSQL {version}, Migrationen ausgeführt",
       "storageFree": "Beschreibbar, {free} frei",
       "clockOk": "Stimmt mit der Datenbank überein",
       "httpsOk": "Aktiv",
-      "failedTitle": "{check}: Prüfung nicht bestanden",
       "checkAgain": "Erneut prüfen",
-      "checking": "Wird geprüft …",
-      "checkAllAgain": "Alles erneut prüfen",
       "acknowledgeFailed": "Die Systemprüfung konnte nicht bestätigt werden",
       "unknownId": "unbekannt",
       "causes": {
@@ -2005,7 +2004,7 @@
           },
           "unreachable": {
             "cause": "Der Server hat unter {url} keine Antwort bekommen, zum Beispiel weil der Name nicht aufgelöst wird, eine Firewall die Verbindung blockiert oder das Zertifikat nicht gültig ist.",
-            "action": "Prüfe DNS, Reverse Proxy und Zertifikat, oder ob dieser Server sich selbst über die Adresse erreichen darf. Personen außerhalb sind davon unter Umständen nicht betroffen."
+            "action": "Prüfe DNS, Reverse Proxy und Zertifikat. Manche Netze lassen einen Server sich selbst nicht über seine öffentliche Adresse erreichen; für Personen kann die Adresse trotzdem funktionieren. Öffne sie in diesem Fall in einem Browser, um sie zu prüfen."
           },
           "otherServer": {
             "cause": "Unter {url} hat ein anderer Server geantwortet als diese Instanz.",
@@ -2014,13 +2013,17 @@
         }
       },
       "reachabilityOk": "{url} ist erreichbar",
-      "httpsGuide": "So richtest du HTTPS ein"
+      "reachabilityLocal": "Lokale Adresse, von außen nicht prüfbar",
+      "httpsGuide": "So richtest du HTTPS ein",
+      "copyCommand": "Befehl kopieren",
+      "docs": "Zur Dokumentation"
     },
     "instance": {
       "title": "Deine Instanz",
       "description": "Die Adresse und der Name, die alle sehen.",
       "url": "Adresse",
       "urlHint": "Aus der aktuellen Adresse übernommen. Wird in Links, E-Mails und für Passkeys verwendet.",
+      "locked": "Gesperrt:",
       "name": "Name der Instanz"
     },
     "owner": {
@@ -2030,21 +2033,30 @@
       "twoFactorDescription": "Scanne den Code mit einer Authenticator-App und gib dann den sechsstelligen Code ein.",
       "ready": "Das Owner-Konto ist bereit",
       "summary": "{name} ({email}), mit Authenticator-App",
-      "change": "Owner ändern",
-      "recoveryCodesFailed": "Die Wiederherstellungscodes konnten nicht erstellt werden",
-      "acknowledgeFailed": "Der Schritt „Owner-Konto“ konnte nicht abgeschlossen werden"
+      "change": "Owner ändern"
     },
     "keyBackup": {
-      "title": "Schlüssel sichern",
-      "description": "Lunedo verschlüsselt Geheimnisse und Backups mit diesen Schlüsseln. Ohne sie lassen sich verschlüsselte Daten und Backups nicht wiederherstellen.",
-      "download": "Schlüssel herunterladen",
+      "title": "Notfall-Kit sichern",
+      "description": "Das Notfall-Kit enthält die Wiederherstellungscodes des Owners und die Schlüssel, mit denen Lunedo Geheimnisse und Sicherungen verschlüsselt. Ohne sie lässt sich keine Sicherung wiederherstellen.",
+      "download": "Notfall-Kit herunterladen",
       "saveAgain": "Erneut speichern",
-      "copied": "Die Schlüssel wurden kopiert.",
-      "keys": "Master-Schlüssel und Backup-Schlüssel",
-      "alreadyDownloaded": "Die Schlüssel wurden bereits heruntergeladen. Aus Sicherheitsgründen geht das nur einmal.",
-      "stored": "Ich habe beide Schlüssel an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager.",
-      "downloadFirst": "Lade zuerst die Schlüssel herunter. Ohne sie lässt sich eine Sicherung nicht wiederherstellen.",
-      "confirmStored": "Bestätige, dass du die Schlüssel außerhalb dieses Servers aufbewahrst."
+      "alreadyDownloaded": "Das Notfall-Kit wurde bereits heruntergeladen. Aus Sicherheitsgründen geht das nur einmal.",
+      "stored": "Ich habe das Notfall-Kit an einem sicheren Ort außerhalb dieses Servers abgelegt, zum Beispiel in einem Passwortmanager.",
+      "downloadFirst": "Lade zuerst das Notfall-Kit herunter. Ohne seine Schlüssel lässt sich keine Sicherung wiederherstellen.",
+      "confirmStored": "Bestätige, dass du das Notfall-Kit außerhalb dieses Servers aufbewahrst.",
+      "copy": "Notfall-Kit kopieren",
+      "fileName": "lunedo-notfall-kit-{host}.txt",
+      "kit": {
+        "heading": "Lunedo-Notfall-Kit",
+        "created": "Erstellt am {date}",
+        "keepSafe": "Bewahre diese Datei außerhalb des Servers auf, zum Beispiel in einem Passwortmanager. Wer sie hat, kann sich als Owner anmelden und Sicherungen entschlüsseln.",
+        "instanceUrl": "Adresse der Instanz",
+        "instanceUrlPurpose": "Unter dieser Adresse meldest du dich an. Sie zeigt, zu welcher Instanz dieses Kit gehört.",
+        "recoveryCodes": "Wiederherstellungscodes des Owners",
+        "recoveryCodesPurpose": "Jeder Code meldet den Owner einmal anstelle der Authenticator-App an, zum Beispiel wenn das Telefon verloren ist.",
+        "masterKeysPurpose": "Verschlüsselt gespeicherte Geheimnisse wie Passwörter von Mailservern und Identitätsanbietern. Nötig, wenn du Lunedo aus einer Sicherung auf einem neuen Server wiederherstellst.",
+        "backupKeyPurpose": "Verschlüsselt die Sicherungen. Nötig, um eine Sicherung wiederherzustellen."
+      }
     },
     "organization": {
       "title": "Erste Organisation",
@@ -2082,6 +2094,7 @@
       "result": "Ergebnis",
       "checksOk": "{count} OK",
       "checksWarning": "{count, plural, one {# Warnung} other {# Warnungen}} ({names})",
+      "checksInfo": "{count, plural, one {# Hinweis} other {# Hinweise}} ({names})",
       "name": "Name",
       "email": "E-Mail-Adresse",
       "secondFactor": "Zweiter Faktor",
@@ -2090,17 +2103,19 @@
       "keysConfirmed": "Ja, bestätigt",
       "missing": "Noch nicht erledigt",
       "languageAndTimeZone": "Sprache, Zeitzone",
+      "formats": "Formate",
       "change": "Ändern",
       "changeSection": "{section} ändern"
     },
     "ready": {
       "title": "Lunedo ist bereit",
-      "description": "Drei Schritte, die sich als Nächstes lohnen. Alles geht auch später in den Einstellungen.",
+      "description": "Was sich als Nächstes lohnt. Alles geht auch später in den Einstellungen.",
       "forYou": "Zu Für dich",
       "invite": {
         "title": "Personen einladen",
         "description": "Per E-Mail oder über eine erlaubte Domain.",
-        "action": "Einladen"
+        "action": "Einladen",
+        "needsMail": "Einladungen gehen per E-Mail raus, richte deshalb zuerst E-Mail ein."
       },
       "space": {
         "title": "Ersten Space erstellen",
@@ -2111,6 +2126,11 @@
         "title": "Identitätsanbieter verbinden",
         "description": "Anmeldung über Microsoft Entra ID, Keycloak, SAML oder LDAP.",
         "action": "Verbinden"
+      },
+      "mail": {
+        "title": "E-Mail einrichten",
+        "description": "Einladungen, Passwort-Zurücksetzen und Benachrichtigungen brauchen einen Mailserver.",
+        "action": "E-Mail einrichten"
       }
     },
     "restore": {
@@ -2174,11 +2194,11 @@
         "title": "Schlüssel",
         "description": "Die Sicherung ist mit dem Backup-Schlüssel verschlüsselt. Die Master-Schlüssel braucht Lunedo, um gespeicherte Geheimnisse wieder zu lesen.",
         "backupKey": "Backup-Schlüssel",
-        "backupKeyHint": "Aus der Datei, die du beim ersten Setup heruntergeladen hast (LUNEDO_BACKUP_KEY).",
+        "backupKeyHint": "Aus dem Notfall-Kit des ersten Setups (LUNEDO_BACKUP_KEY).",
         "backupKeyMissing": "Gib den Backup-Schlüssel ein.",
         "masterKeys": "Master-Schlüssel",
         "chooseFile": "Schlüsseldatei auswählen",
-        "masterKeysHint": "Die Datei lunedo-keys.env aus dem ersten Setup oder die Datei master-keys aus dem Secrets-Ordner des alten Servers. Lunedo übernimmt die Schlüssel in diese Instanz und speichert die Datei selbst nicht.",
+        "masterKeysHint": "Das Notfall-Kit aus dem ersten Setup (lunedo-keys.env bei älteren Versionen) oder die Datei master-keys aus dem Secrets-Ordner des alten Servers. Lunedo übernimmt die Schlüssel in diese Instanz und speichert die Datei selbst nicht.",
         "masterKeysMissing": "Wähle die Datei mit den Master-Schlüsseln aus.",
         "warning": "Das Wiederherstellen füllt diese leere Instanz mit allen Daten der Sicherung. Danach meldest du dich mit einem Konto aus der Sicherung an.",
         "start": "Wiederherstellen",
@@ -2270,8 +2290,6 @@
     "timeFormat": "Zeitformat",
     "numberFormat": "Zahlenformat",
     "firstDayOfWeek": "Erster Tag der Woche",
-    "time24": "24-Stunden-Format (14:30)",
-    "time12": "12-Stunden-Format (2:30 PM)",
     "weekdays": {
       "monday": "Montag",
       "sunday": "Sonntag",
@@ -2814,7 +2832,9 @@
     "appliesTo": "Gilt für",
     "appliesToOrganization": "Nur {organization}",
     "appliesToAll": "Alle meine Organisationen",
-    "instanceAppliesToAll": "Instanz-Bereiche gehören zu keiner einzelnen Organisation, deshalb gilt das Token für alle deine Organisationen."
+    "spacesUnderContent": "Den Zugriff auf Spaces und ihre Seiten stellst du oben unter „Inhalte“ ein.",
+    "instanceNeedsAll": "Instanzrechte gehören zu keiner einzelnen Organisation. Wähle oben „Alle meine Organisationen“, um sie zu vergeben.",
+    "noExpiryWarning": "Ein Token ohne Ablauf gilt, bis jemand es widerruft. Gerät es in falsche Hände, bleibt es gültig. Wähle wenn möglich ein Ablaufdatum."
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -9917,10 +9937,11 @@
     "key": {
       "title": "Backup-Schlüssel",
       "warningTitle": "Ohne diesen Schlüssel lässt sich kein Backup wiederherstellen",
-      "warning": "Backups sind mit dem Backup-Schlüssel verschlüsselt (LUNEDO_BACKUP_KEY oder backup-keys im Verzeichnis für Geheimnisse). Bewahre eine Kopie des Backup-Schlüssels und der Hauptschlüssel außerhalb dieses Servers auf, zum Beispiel in einem Passwortmanager. Backups enthalten die Schlüssel nie.",
-      "confirm": "Der Backup-Schlüssel ist außerhalb von Lunedo aufbewahrt",
+      "warning": "Backups sind mit dem Backup-Schlüssel verschlüsselt (LUNEDO_BACKUP_KEY oder backup-keys im Verzeichnis für Geheimnisse). Bewahre eine Kopie des Backup-Schlüssels und der Master-Schlüssel außerhalb dieses Servers auf, zum Beispiel in einem Passwortmanager. Backups enthalten die Schlüssel nie.",
+      "confirm": "Der Backup-Schlüssel ist außerhalb von Lunedo gesichert",
       "confirmedBy": "Bestätigt am {date} von {name}.",
       "confirmedAt": "Bestätigt am {date}.",
+      "confirmedInSetup": "Im Setup bestätigt am {date}.",
       "notConfirmed": "Noch nicht bestätigt."
     },
     "target": {
@@ -11307,6 +11328,79 @@
       "required": "Wähle einen Space aus.",
       "cancel": "Abbrechen",
       "continue": "Weiter"
+    }
+  },
+  "timeZones": {
+    "names": {
+      "Africa": "Afrika",
+      "America": "Amerika",
+      "Antarctica": "Antarktis",
+      "Arctic": "Arktis",
+      "Asia": "Asien",
+      "Atlantic": "Atlantik",
+      "Australia": "Australien",
+      "Europe": "Europa",
+      "Indian": "Indischer Ozean",
+      "Pacific": "Pazifik",
+      "Argentina": "Argentinien",
+      "Indiana": "Indiana",
+      "Kentucky": "Kentucky",
+      "North_Dakota": "North Dakota",
+      "Vienna": "Wien",
+      "Zurich": "Zürich",
+      "Prague": "Prag",
+      "Warsaw": "Warschau",
+      "Rome": "Rom",
+      "Copenhagen": "Kopenhagen",
+      "Brussels": "Brüssel",
+      "Lisbon": "Lissabon",
+      "Moscow": "Moskau",
+      "Athens": "Athen",
+      "Belgrade": "Belgrad",
+      "Bucharest": "Bukarest",
+      "Kyiv": "Kiew",
+      "Kiev": "Kiew",
+      "Luxembourg": "Luxemburg",
+      "Nicosia": "Nikosia",
+      "Vatican": "Vatikan",
+      "Canary": "Kanaren",
+      "Azores": "Azoren",
+      "Faroe": "Färöer",
+      "Mexico_City": "Mexiko-Stadt",
+      "Havana": "Havanna",
+      "Sao_Paulo": "São Paulo",
+      "Bogota": "Bogotá",
+      "Cairo": "Kairo",
+      "Algiers": "Algier",
+      "Tehran": "Teheran",
+      "Riyadh": "Riad",
+      "Singapore": "Singapur",
+      "Damascus": "Damaskus",
+      "Baghdad": "Bagdad",
+      "Tokyo": "Tokio",
+      "Hong_Kong": "Hongkong",
+      "Kolkata": "Kalkutta",
+      "Calcutta": "Kalkutta",
+      "Jerusalem": "Jerusalem",
+      "Kuwait": "Kuwait",
+      "Qatar": "Katar",
+      "Dubai": "Dubai",
+      "Tashkent": "Taschkent",
+      "Tbilisi": "Tiflis",
+      "Yerevan": "Eriwan",
+      "Baku": "Baku",
+      "Taipei": "Taipeh",
+      "Seoul": "Seoul",
+      "Shanghai": "Shanghai",
+      "Bangkok": "Bangkok",
+      "Jakarta": "Jakarta",
+      "Manila": "Manila",
+      "Karachi": "Karatschi",
+      "Kabul": "Kabul",
+      "Beirut": "Beirut",
+      "Amman": "Amman",
+      "Istanbul": "Istanbul",
+      "Reykjavik": "Reykjavík"
     }
   }
 }

@@ -96,25 +96,22 @@ describe("the system check", () => {
         />
       </PreferencesProvider>,
     );
-    expect(screen.getByText("File storage did not pass the check")).toBeTruthy();
     expect(
       screen.getByText(
         "/var/lib/lunedo/files is not writable by the user Lunedo runs as (UID 1000). The directory belongs to UID 0.",
       ),
     ).toBeTruthy();
     expect(screen.getByText("chown -R 1000:1000 /var/lib/lunedo/files")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy command" })).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Read the documentation/ })[0]?.getAttribute("href")).toBe(
       "https://github.com/lunedo/lunedo/blob/main/docs/setup.md#file-storage",
     );
-    expect(screen.getByText("Address did not pass the check")).toBeTruthy();
     expect(screen.getByText(/^The server got no answer at https:\/\/wiki\.example\.org,/)).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Check again" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Check again" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(true);
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Check again" })[0] as HTMLElement);
-    await userEvent.click(screen.getByRole("button", { name: "Run all checks again" }));
-    expect(refresh).toHaveBeenCalledTimes(2);
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("confirms the address and shows HTTPS as a warning with the guide to a reverse proxy", async () => {
@@ -152,7 +149,7 @@ describe("the system check", () => {
       </PreferencesProvider>,
     );
     expect(screen.getByText("https://wiki.example.org can be reached")).toBeTruthy();
-    expect(screen.getByText("HTTPS did not pass the check")).toBeTruthy();
+    expect(screen.getByText(/does not start with https:\/\//)).toBeTruthy();
     expect(screen.getByRole("link", { name: /How to set up HTTPS/ }).getAttribute("href")).toBe(
       "https://github.com/lunedo/lunedo/blob/main/docs/reverse-proxy.md#tls-and-the-instance-address",
     );

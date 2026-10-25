@@ -287,8 +287,8 @@ export class SetupService {
     }
   }
 
-  async finish(): Promise<void> {
-    await this.locked(async (tx) => {
+  async finish<T>(afterComplete: (tx: Transaction) => Promise<T>): Promise<T> {
+    return this.locked(async (tx) => {
       if (await this.#completedIn(tx)) throw new SetupNotFoundError();
       const completed = new Set(
         (
@@ -299,6 +299,7 @@ export class SetupService {
         throw new SetupStepError("setupNotReady", "Required setup steps are not completed");
       }
       await this.markComplete(tx, "assistant");
+      return afterComplete(tx);
     });
   }
 

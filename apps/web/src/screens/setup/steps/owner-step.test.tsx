@@ -42,12 +42,15 @@ describe("the owner step", () => {
     );
   });
 
-  it("shows new recovery codes when the page was reloaded after the authenticator was confirmed", async () => {
+  it("completes the step with the authenticator and leaves the recovery codes to the emergency kit", async () => {
     const { requests } = mockApi({
-      "POST /api/v1/setup/steps/owner/renewRecoveryCodes": () => ({
-        body: { recoveryCodes: ["AAAA-1111", "BBBB-2222"] },
+      "POST /api/v1/setup/steps/owner/beginTotp": () => ({
+        body: {
+          secret: "JBSWY3DPEHPK3PXP",
+          uri: "otpauth://totp/Lunedo:olivia%40example.org?secret=JBSWY3DPEHPK3PXP",
+        },
       }),
-      "POST /api/v1/setup/steps/owner/acknowledgeRecoveryCodes": () => ({ body: {} }),
+      "POST /api/v1/setup/steps/owner/confirmTotp": () => ({ body: {} }),
     });
     let done = false;
     await renderWithProviders(
@@ -65,17 +68,17 @@ describe("the owner step", () => {
         refresh={async () => undefined}
       />,
     );
-    expect(await screen.findByText("AAAA-1111")).toBeTruthy();
-    expect(done).toBe(false);
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.type(await screen.findByLabelText("Code from your authenticator app"), "123456");
+    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(done).toBe(true));
     expect(requests.map((request) => request.path)).toEqual([
-      "/api/v1/setup/steps/owner/renewRecoveryCodes",
-      "/api/v1/setup/steps/owner/acknowledgeRecoveryCodes",
+      "/api/v1/setup/steps/owner/beginTotp",
+      "/api/v1/setup/steps/owner/confirmTotp",
     ]);
+    expect(screen.queryByText(/recovery code/i)).toBeNull();
   });
 
-  it("does not renew the codes once the step is complete", async () => {
+  it("shows the ready owner once the step is complete", async () => {
     const { requests } = mockApi({});
     await renderWithProviders(
       <OwnerStep

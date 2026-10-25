@@ -212,9 +212,11 @@ function KeySection({ data, canManage }: { data: BackupOverview; canManage: bool
           label={t("backups.key.confirm")}
           description={
             confirmed
-              ? confirmed.by
-                ? t("backups.key.confirmedBy", { date: format.date(confirmed.at), name: confirmed.by.name })
-                : t("backups.key.confirmedAt", { date: format.date(confirmed.at) })
+              ? confirmed.inSetup
+                ? t("backups.key.confirmedInSetup", { date: format.date(confirmed.at) })
+                : confirmed.by
+                  ? t("backups.key.confirmedBy", { date: format.date(confirmed.at), name: confirmed.by.name })
+                  : t("backups.key.confirmedAt", { date: format.date(confirmed.at) })
               : t("backups.key.notConfirmed")
           }
         />

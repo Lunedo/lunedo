@@ -1,5 +1,6 @@
 import { instanceNameSchema, instanceUrlSchema } from "@lunedo/shared";
-import { Button, Field, Input, Notice } from "@lunedo/ui";
+import { Button, Field, Icon, Input, Notice } from "@lunedo/ui";
+import { Lock } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -41,22 +42,17 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
           {error}
         </Notice>
       ) : null}
-      <Field
-        label={t("setup.instance.url")}
-        hint={
-          details.urlFromEnvironment
-            ? t("instance.general.addressFromEnvironment")
-            : t("setup.instance.urlHint")
-        }
-        error={form.formState.errors.url?.message}
-      >
-        <Input
-          type="url"
-          autoComplete="url"
-          readOnly={details.urlFromEnvironment}
-          {...form.register("url")}
-        />
-      </Field>
+      {details.urlFromEnvironment ? (
+        <LockedAddress url={details.suggestedUrl ?? details.url} />
+      ) : (
+        <Field
+          label={t("setup.instance.url")}
+          hint={t("setup.instance.urlHint")}
+          error={form.formState.errors.url?.message}
+        >
+          <Input type="url" autoComplete="url" {...form.register("url")} />
+        </Field>
+      )}
       <Field label={t("setup.instance.name")} error={form.formState.errors.name?.message}>
         <Input autoComplete="off" {...form.register("name")} />
       </Field>
@@ -67,5 +63,20 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
         </Button>
       </div>
     </form>
+  );
+}
+
+export function LockedAddress({ url }: { url: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-medium text-sm">{t("setup.instance.url")}</span>
+      <p className="flex min-w-0 items-center gap-2">
+        <Icon icon={Lock} size="sm" className="text-text-muted" />
+        <span className="sr-only">{t("setup.instance.locked")}</span>
+        <span className="min-w-0 break-all">{url}</span>
+      </p>
+      <p className="text-sm text-text-muted">{t("instance.general.addressFromEnvironment")}</p>
+    </div>
   );
 }

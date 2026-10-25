@@ -1,7 +1,7 @@
 import type { SetupStepDetails } from "@lunedo/shared";
-import { Badge, Button, ErrorState, List, ListRow, Notice } from "@lunedo/ui";
+import { Badge, Button, CodeBlock, Icon, List, Notice } from "@lunedo/ui";
 import type { TFunction } from "i18next";
-import { CircleAlert, CircleCheck, CircleX, RotateCcw } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleX, ExternalLink, Info, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { docsUrl } from "../../../docs/docs-url.js";
@@ -12,12 +12,12 @@ import { useFormat } from "../../../preferences/preferences-provider.js";
 import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
-type Status = "ok" | "warning" | "error";
+type Status = "ok" | "warning" | "error" | "info";
 type Checks = SetupStepDetails<"systemCheck">["checks"];
 type CheckKey = keyof Checks;
 
-const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX } as const;
-const BADGES = { ok: "success", warning: "warning", error: "danger" } as const;
+const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX, info: Info } as const;
+const BADGES = { ok: "success", warning: "warning", error: "danger", info: "info" } as const;
 const CHECK_ORDER = ["database", "fileStorage", "clock", "reachability", "https"] as const;
 type ShownCheck = (typeof CHECK_ORDER)[number];
 
@@ -34,7 +34,9 @@ function passedDescription(t: TFunction, format: Formatter, checks: Checks, key:
     case "clock":
       return t("setup.systemCheck.clockOk");
     case "reachability":
-      return t("setup.systemCheck.reachabilityOk", { url: checks.reachability.url ?? "" });
+      return checks.reachability.cause === "loopback"
+        ? t("setup.systemCheck.reachabilityLocal")
+        : t("setup.systemCheck.reachabilityOk", { url: checks.reachability.url ?? "" });
     case "https":
       return t("setup.systemCheck.httpsOk");
   }
@@ -47,7 +49,7 @@ export function checkExplanation(
   key: CheckKey,
 ): { cause: string; action: string } | null {
   const check = checks[key];
-  if (check.status === "ok" || check.cause === null) return null;
+  if (check.status === "ok" || check.status === "info" || check.cause === null) return null;
   const storage = checks.fileStorage;
   const values: Record<string, string | number> = {
     path: storage.path,
@@ -66,21 +68,51 @@ export function checkExplanation(
   };
 }
 
+function CheckDetails({
+  explanation,
+  command,
+  docs,
+  https,
+}: {
+  explanation: { cause: string; action: string };
+  command: string | null;
+  docs: string;
+  https: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-1 flex flex-col gap-2">
+      <p>{explanation.cause}</p>
+      <p>{explanation.action}</p>
+      {command ? <CodeBlock value={command} copyLabel={t("setup.systemCheck.copyCommand")} /> : null}
+      <a
+        href={docsUrl(docs)}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex w-fit items-center gap-1 rounded-sm text-accent underline-offset-2 hover:underline focus-visible:focus-ring"
+      >
+        {https ? t("setup.systemCheck.httpsGuide") : t("setup.systemCheck.docs")}
+        <Icon icon={ExternalLink} size="sm" />
+      </a>
+    </div>
+  );
+}
+
 export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"systemCheck">) {
   const { t } = useTranslation();
   const format = useFormat();
   const [failure, setFailure] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState<CheckKey | "all" | null>(null);
+  const [checking, setChecking] = useState(false);
   const { checks } = details;
   const blocked = CHECK_ORDER.some((key) => checks[key].status === "error");
 
-  const checkAgain = async (key: CheckKey | "all") => {
-    setChecking(key);
+  const checkAgain = async () => {
+    setChecking(true);
     try {
       await refresh();
     } finally {
-      setChecking(null);
+      setChecking(false);
     }
   };
 
@@ -99,47 +131,41 @@ export function SystemCheckStep({ details, back, onDone, refresh }: StepProps<"s
 
   return (
     <div className="flex flex-col gap-4">
-      <List>
+      <List label={t("setup.systemCheck.title")}>
         {CHECK_ORDER.map((key) => {
           const check = checks[key];
           const status: Status = check.status;
-          const title = translateKey(t, `setup.systemCheck.checks.${key}`);
           const explanation = checkExplanation(t, format, checks, key);
           return (
-            <ListRow
-              key={key}
-              icon={ICONS[status]}
-              title={title}
-              description={explanation ? null : passedDescription(t, format, checks, key)}
-              actions={<Badge variant={BADGES[status]}>{t(`setup.systemCheck.status.${status}`)}</Badge>}
-            >
-              {explanation ? (
-                <ErrorState
-                  variant={status === "error" ? "danger" : "warning"}
-                  title={t("setup.systemCheck.failedTitle", { check: title })}
-                  cause={explanation.cause}
-                  action={explanation.action}
-                  {...(check.fixCommand ? { command: check.fixCommand } : {})}
-                  documentationUrl={docsUrl(check.docs)}
-                  {...(key === "https" ? { documentationLabel: t("setup.systemCheck.httpsGuide") } : {})}
-                  onRetry={() => void checkAgain(key)}
-                  retryLabel={
-                    checking === key ? t("setup.systemCheck.checking") : t("setup.systemCheck.checkAgain")
-                  }
-                />
-              ) : null}
-            </ListRow>
+            <li key={key} className="flex items-start gap-3 py-3">
+              <span className="flex h-6 items-center">
+                <Icon icon={ICONS[status]} className="text-text-muted" />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="font-medium text-text">
+                  {translateKey(t, `setup.systemCheck.checks.${key}`)}
+                </span>
+                <div className="text-sm text-text-muted">
+                  {explanation ? (
+                    <CheckDetails
+                      explanation={explanation}
+                      command={check.fixCommand}
+                      docs={check.docs}
+                      https={key === "https"}
+                    />
+                  ) : (
+                    passedDescription(t, format, checks, key)
+                  )}
+                </div>
+              </div>
+              <Badge variant={BADGES[status]}>{t(`setup.systemCheck.status.${status}`)}</Badge>
+            </li>
           );
         })}
       </List>
       <div>
-        <Button
-          variant="outline"
-          icon={RotateCcw}
-          loading={checking === "all"}
-          onClick={() => void checkAgain("all")}
-        >
-          {t("setup.systemCheck.checkAllAgain")}
+        <Button variant="outline" icon={RotateCcw} loading={checking} onClick={() => void checkAgain()}>
+          {t("setup.systemCheck.checkAgain")}
         </Button>
       </div>
       {blocked ? <Notice variant="danger">{t("setup.systemCheck.blocked")}</Notice> : null}

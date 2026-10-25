@@ -19,7 +19,6 @@ export type SetupStep =
   | "instance"
   | "owner account"
   | "second factor"
-  | "recovery codes"
   | "owner ready"
   | "key backup"
   | "organization"
@@ -79,18 +78,6 @@ const STAGES: SetupStage[] = [
     },
   },
   {
-    name: "recovery codes",
-    shown: (page) => page.getByRole("list", { name: "Recovery codes" }),
-    run: async (page) => {
-      const codes = await page
-        .getByRole("list", { name: "Recovery codes" })
-        .getByRole("listitem")
-        .allTextContents();
-      expect(codes.length).toBeGreaterThanOrEqual(8);
-      await page.getByRole("button", { name: "Continue" }).click();
-    },
-  },
-  {
     name: "owner ready",
     shown: (page) => page.getByText("The owner account is ready"),
     run: async (page) => {
@@ -99,15 +86,15 @@ const STAGES: SetupStage[] = [
   },
   {
     name: "key backup",
-    shown: (page) => page.getByRole("heading", { name: "Back up your keys", level: 1 }),
+    shown: (page) => page.getByRole("heading", { name: "Save the emergency kit", level: 1 }),
     run: async (page) => {
       const download = page.waitForEvent("download");
-      await page.getByRole("button", { name: "Download keys" }).click();
-      expect((await download).suggestedFilename()).toBe("lunedo-keys.env");
-      await expect(page.getByRole("figure", { name: "Master key and backup key" })).toContainText(
-        "LUNEDO_MASTER_KEYS=",
-      );
-      await page.getByRole("checkbox", { name: /I stored both keys/ }).check();
+      await page.getByRole("button", { name: "Download emergency kit" }).click();
+      expect((await download).suggestedFilename()).toMatch(/^lunedo-emergency-kit-[\w.-]+\.txt$/);
+      const kit = page.getByRole("figure", { name: "Lunedo emergency kit" });
+      await expect(kit).toContainText("LUNEDO_MASTER_KEYS");
+      await expect(kit).toContainText("LUNEDO_BACKUP_KEY");
+      await page.getByRole("checkbox", { name: /I stored the emergency kit/ }).check();
       await page.getByRole("button", { name: "Continue" }).click();
     },
   },
@@ -179,12 +166,12 @@ export async function runSetupSteps(
   shown: StepShown = ignore,
   ownerName: string = OWNER.name,
 ): Promise<void> {
-  const signIn = page.getByRole("heading", { name: "Sign in", exact: true });
+  const forYou = page.getByRole("heading", { name: "For you", level: 1 });
   const done: string[] = [];
-  while (!(await signIn.isVisible())) {
-    const any = STAGES.reduce((found, stage) => found.or(stage.shown(page)), signIn);
+  while (!(await forYou.isVisible())) {
+    const any = STAGES.reduce((found, stage) => found.or(stage.shown(page)), forYou);
     await expect(any.first()).toBeVisible();
-    if (await signIn.isVisible()) break;
+    if (await forYou.isVisible()) break;
     let stage: SetupStage | undefined;
     for (const candidate of STAGES) {
       if (!stage && (await candidate.shown(page).isVisible())) stage = candidate;

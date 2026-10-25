@@ -1,19 +1,24 @@
+import { generateToken } from "@lunedo/server";
 import { setupCodeSchema, setupStepStateSchema } from "@lunedo/shared";
 import { Body, Controller, Get, Inject, Param, Post, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, SetupCodeRoute, SetupSessionRoute } from "../access/route-access.js";
-import { servicesOf } from "../auth/auth.controller.js";
+import { servicesOf, setSessionCookie } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { COOKIES, clearCookie, readCookie, setCookie } from "../http/cookies.js";
+import { COOKIES, clearCookie, ensureDeviceCookie, readCookie, setCookie } from "../http/cookies.js";
 import { ProblemException } from "../http/problems.js";
+import { clientOf } from "../http/request.js";
 
 const SETUP_COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
 const codeSchema = z.object({ code: setupCodeSchema }).strict();
 const identifier = z.string().regex(/^[a-z][a-zA-Z]{0,63}$/);
 const actionParams = z.object({ step: identifier, action: identifier }).strict();
 const probeParams = z.object({ challenge: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/) }).strict();
+const completedSchema = z.object({
+  mailConfigured: z.boolean().describe("Whether a mail server is set up, which invitations need."),
+});
 const stepsSchema = z.object({
   steps: z.array(setupStepStateSchema),
   ready: z.boolean(),
@@ -130,9 +135,22 @@ export class SetupController {
 
   @Post("complete")
   @SetupSessionRoute()
-  @ApiRoute({ summary: "Complete the setup", tags: ["Setup"], errors: ["setupNotReady"] })
-  async complete(@Res({ passthrough: true }) reply: FastifyReply) {
-    await this.#setup.finish();
+  @ApiRoute({
+    summary: "Complete the setup and sign the owner in",
+    tags: ["Setup"],
+    status: 200,
+    response: { description: "What the owner may want to set up next.", schema: completedSchema },
+    errors: ["setupNotReady"],
+  })
+  async complete(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    const services = servicesOf(this.context);
+    const device = ensureDeviceCookie(request, reply, generateToken);
+    const signedIn = await services.signIn.signInOwnerAfterSetup(
+      (start) => this.#setup.finish(start),
+      clientOf(request, device),
+    );
     clearCookie(reply, COOKIES.setup);
+    await setSessionCookie(this.context, reply, signedIn.token);
+    return { mailConfigured: (await services.mail.configuredMethod()) !== null };
   }
 }

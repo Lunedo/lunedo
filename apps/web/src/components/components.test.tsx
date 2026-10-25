@@ -405,14 +405,14 @@ describe("SettingsList", () => {
       onChange,
     );
     const select = screen.getByRole("combobox", { name: "Time format" });
-    expect(select.textContent).toContain("24-hour");
+    expect(select.textContent).toContain("14:30");
     expect(select.hasAttribute("data-muted")).toBe(true);
     await userEvent.click(select);
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "24-hour (14:30)Default",
-      "12-hour (2:30 PM)",
+      "14:30Default",
+      "2:30 PM",
     ]);
-    await userEvent.click(screen.getByRole("option", { name: /^12-hour/ }));
+    await userEvent.click(screen.getByRole("option", { name: /^2:30 PM/ }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { value: "12h" }));
   });
 
@@ -434,7 +434,7 @@ describe("SettingsList", () => {
       onChange,
     );
     await userEvent.click(screen.getByRole("combobox", { name: "Time format" }));
-    await userEvent.click(screen.getByRole("option", { name: /^24-hour/ }));
+    await userEvent.click(screen.getByRole("option", { name: /^14:30/ }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { clear: true }));
     onChange.mockClear();
     await userEvent.click(screen.getByRole("button", { name: "More options for Time format" }));

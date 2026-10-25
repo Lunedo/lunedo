@@ -168,6 +168,8 @@ export {
 export { Sidebar, SidebarGroup, SidebarHeader, SidebarItem, type SidebarItemProps } from "./sidebar.js";
 export {
   COPIED_VISIBLE_MS,
+  CodeBlock,
+  type CodeBlockProps,
   CopyButton,
   type CopyButtonProps,
   ErrorState,
@@ -190,6 +192,7 @@ export {
   type TableToolbarProps,
 } from "./table.js";
 export {
+  shortTimeZoneOffset,
   supportedTimeZones,
   TimeZoneCombobox,
   type TimeZoneComboboxProps,

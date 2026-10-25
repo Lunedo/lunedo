@@ -1,32 +1,98 @@
-import { Button, ButtonGroup, Checkbox, Icon, Notice, useToast } from "@lunedo/ui";
-import { CircleAlert, Copy, Download } from "lucide-react";
+import type { SetupActionResult } from "@lunedo/shared";
+import { Button, Checkbox, CodeBlock, Icon, Notice } from "@lunedo/ui";
+import type { TFunction } from "i18next";
+import { CircleAlert, Download } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { downloadText } from "../../../components/download.js";
 import { problemMessage } from "../../../errors/problem-message.js";
+import type { Formatter } from "../../../format/format.js";
+import { useFormat } from "../../../preferences/preferences-provider.js";
 import { runSetupAction } from "../setup-api.js";
 import type { StepProps } from "./step-props.js";
 
-const KEY_FILE = "lunedo-keys.env";
+export type EmergencyKit = SetupActionResult<"keyBackup", "download">;
+
+export function emergencyKitFileName(t: TFunction, kit: EmergencyKit): string {
+  const host = URL.canParse(kit.instanceUrl)
+    ? new URL(kit.instanceUrl).host.replace(/[^A-Za-z0-9.-]+/g, "-")
+    : "lunedo";
+  return t("setup.keyBackup.fileName", { host });
+}
+
+export function emergencyKitText(t: TFunction, format: Formatter, kit: EmergencyKit): string {
+  const section = (title: string, purpose: string, lines: readonly string[]) =>
+    [`== ${title} ==`, purpose, "", ...lines].join("\n");
+  return `${[
+    t("setup.keyBackup.kit.heading"),
+    t("setup.keyBackup.kit.created", { date: format.dateTime(kit.createdAt) }),
+    t("setup.keyBackup.kit.keepSafe"),
+    section(t("setup.keyBackup.kit.instanceUrl"), t("setup.keyBackup.kit.instanceUrlPurpose"), [
+      kit.instanceUrl,
+    ]),
+    section(
+      t("setup.keyBackup.kit.recoveryCodes"),
+      t("setup.keyBackup.kit.recoveryCodesPurpose"),
+      kit.recoveryCodes,
+    ),
+    section("LUNEDO_MASTER_KEYS", t("setup.keyBackup.kit.masterKeysPurpose"), [
+      `LUNEDO_MASTER_KEYS=${kit.masterKeys}`,
+    ]),
+    section("LUNEDO_BACKUP_KEY", t("setup.keyBackup.kit.backupKeyPurpose"), [
+      `LUNEDO_BACKUP_KEY=${kit.backupKey}`,
+    ]),
+  ].join("\n\n")}\n`;
+}
+
+function KeyValue({ name, value }: { name: string; value: string }) {
+  return (
+    <span className="block">
+      <span className="block text-text-muted">{name}</span>
+      <span className="block">
+        {value.slice(0, -4)}
+        <span className="whitespace-nowrap">{value.slice(-4)}</span>
+      </span>
+    </span>
+  );
+}
+
+function KitBox({ kit, text }: { kit: EmergencyKit; text: string }) {
+  const { t } = useTranslation();
+  return (
+    <CodeBlock value={text} copyLabel={t("setup.keyBackup.copy")} label={t("setup.keyBackup.kit.heading")}>
+      <span className="block text-text-muted">{t("setup.keyBackup.kit.recoveryCodes")}</span>
+      <span className="mb-3 grid grid-cols-2 gap-x-4">
+        {kit.recoveryCodes.map((code) => (
+          <span key={code}>{code}</span>
+        ))}
+      </span>
+      <span className="flex flex-col gap-3">
+        <KeyValue name="LUNEDO_MASTER_KEYS" value={kit.masterKeys} />
+        <KeyValue name="LUNEDO_BACKUP_KEY" value={kit.backupKey} />
+      </span>
+    </CodeBlock>
+  );
+}
 
 export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"keyBackup">) {
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const [content, setContent] = useState<string | null>(null);
+  const format = useFormat();
+  const [kit, setKit] = useState<EmergencyKit | null>(null);
   const [stored, setStored] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<"download" | "stored" | null>(null);
   const downloadRef = useRef<HTMLButtonElement>(null);
   const storedRef = useRef<HTMLDivElement>(null);
+  const text = kit ? emergencyKitText(t, format, kit) : null;
 
   const download = async () => {
     setError(null);
     setBusy(true);
     try {
-      const text = await runSetupAction("keyBackup", "download", {});
-      setContent(text);
-      downloadText(KEY_FILE, text);
+      const result = await runSetupAction("keyBackup", "download", {});
+      setKit(result);
+      downloadText(emergencyKitFileName(t, result), emergencyKitText(t, format, result));
       await refresh();
     } catch (failure) {
       setError(problemMessage(t, failure));
@@ -59,11 +125,6 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
     }
   };
 
-  const keys = content
-    ?.split("\n")
-    .filter((line) => line.startsWith("LUNEDO_"))
-    .join("\n");
-
   return (
     <div className="flex flex-col gap-4">
       {error ? (
@@ -71,18 +132,25 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
           {error}
         </Notice>
       ) : null}
-      {details.downloaded && !content ? (
+      {details.downloaded && !kit ? (
         <Notice variant="info">{t("setup.keyBackup.alreadyDownloaded")}</Notice>
       ) : null}
-      {keys ? (
-        <figure aria-label={t("setup.keyBackup.keys")}>
-          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md border border-border bg-surface-sunken p-3 font-mono text-sm">
-            {keys}
-          </pre>
-        </figure>
+      {kit && text ? (
+        <>
+          <KitBox kit={kit} text={text} />
+          <div>
+            <Button
+              variant="outline"
+              icon={Download}
+              onClick={() => downloadText(emergencyKitFileName(t, kit), text)}
+            >
+              {t("setup.keyBackup.saveAgain")}
+            </Button>
+          </div>
+        </>
       ) : null}
-      <ButtonGroup label={t("setup.keyBackup.keys")}>
-        {!details.downloaded ? (
+      {!details.downloaded ? (
+        <div>
           <Button
             ref={downloadRef}
             variant="outline"
@@ -93,27 +161,8 @@ export function KeyBackupStep({ details, back, onDone, refresh }: StepProps<"key
           >
             {t("setup.keyBackup.download")}
           </Button>
-        ) : null}
-        {content ? (
-          <>
-            <Button variant="outline" icon={Download} onClick={() => downloadText(KEY_FILE, content)}>
-              {t("setup.keyBackup.saveAgain")}
-            </Button>
-            <Button
-              variant="outline"
-              icon={Copy}
-              onClick={() => {
-                navigator.clipboard.writeText(content).then(
-                  () => toast({ title: t("setup.keyBackup.copied"), variant: "success" }),
-                  () => toast({ title: t("common.copyFailed"), variant: "error" }),
-                );
-              }}
-            >
-              {t("common.copy")}
-            </Button>
-          </>
-        ) : null}
-      </ButtonGroup>
+        </div>
+      ) : null}
       {problem === "download" && !details.downloaded ? (
         <p id="key-download-problem" className="text-sm text-danger">
           <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />

@@ -2,26 +2,36 @@ import { Button } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { queryKeys } from "../../../api/queries.js";
 import { SetupFrame } from "../setup-frame.js";
 
-type Target = { href: string };
+type NextStep = "mail" | "invite" | "space" | "provider";
 
-export function ReadyScreen({ organizationId }: { organizationId: string | null }) {
+export function ReadyScreen({
+  organizationId,
+  mailConfigured,
+}: {
+  organizationId: string | null;
+  mailConfigured: boolean;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const open = async ({ href }: Target) => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.instanceInfo });
+  const open = async (href: string) => {
+    await queryClient.invalidateQueries();
     await navigate({ href });
   };
-  const next: { key: "invite" | "space" | "provider"; href: string }[] = [
+  const next: { key: NextStep; href: string }[] = [
+    ...(mailConfigured ? [] : [{ key: "mail" as const, href: "/settings/instance/mail" }]),
     ...(organizationId
       ? [{ key: "invite" as const, href: `/settings/organizations/${organizationId}/members` }]
       : []),
     { key: "space", href: "/spaces" },
     { key: "provider", href: "/settings/instance/sign-in-providers" },
   ];
+  const description = (key: NextStep) =>
+    key === "invite" && !mailConfigured
+      ? t("setup.ready.invite.needsMail")
+      : t(`setup.ready.${key}.description`);
   return (
     <SetupFrame title={t("setup.ready.title")} description={t("setup.ready.description")}>
       <ol className="flex flex-col">
@@ -35,16 +45,16 @@ export function ReadyScreen({ organizationId }: { organizationId: string | null 
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="font-semibold">{t(`setup.ready.${item.key}.title`)}</span>
-              <span className="text-sm text-text-muted">{t(`setup.ready.${item.key}.description`)}</span>
+              <span className="text-sm text-text-muted">{description(item.key)}</span>
             </div>
-            <Button variant="outline" onClick={() => void open(item)}>
+            <Button variant="outline" onClick={() => void open(item.href)}>
               {t(`setup.ready.${item.key}.action`)}
             </Button>
           </li>
         ))}
       </ol>
       <div>
-        <Button variant="primary" size="lg" onClick={() => void open({ href: "/" })}>
+        <Button variant="primary" size="lg" onClick={() => void open("/")}>
           {t("setup.ready.forYou")}
         </Button>
       </div>

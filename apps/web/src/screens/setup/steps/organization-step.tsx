@@ -10,14 +10,14 @@ import {
 import { Button, Combobox, Field, Input, Notice, Select, TimeZoneCombobox } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { languageItems } from "../../../components/pickers.js";
 import { problemMessage } from "../../../errors/problem-message.js";
 import { createFormatter } from "../../../format/format.js";
-import { browserTimeZone } from "../../../format/time-zones.js";
+import { browserTimeZone, timeZoneName } from "../../../format/time-zones.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../../forms/use-schema-form.js";
 import { isLanguage } from "../../../i18n/index.js";
 import { translateKey } from "../../../i18n/translate.js";
@@ -60,6 +60,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
   const { t, i18n } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [formatsOpen, setFormatsOpen] = useState(false);
+  const zoneLabel = useCallback((zone: string, now: Date) => timeZoneName(t, zone, now), [t]);
   const existing = details.organization;
   const language = existing?.language ?? (isLanguage(i18n.language) ? i18n.language : "en");
   const timeZone = existing?.timeZone ?? browserTimeZone();
@@ -117,6 +118,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
                 aria-label={t("setup.organization.timeZone")}
                 value={field.value}
                 locale={i18n.language}
+                zoneLabel={zoneLabel}
                 onValueChange={(value) => {
                   if (value) field.onChange(value);
                 }}

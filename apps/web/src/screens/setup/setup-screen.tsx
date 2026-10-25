@@ -1,5 +1,5 @@
 import { type SetupStepId, setupCodeSchema } from "@lunedo/shared";
-import { Button, Field, Input, Notice } from "@lunedo/ui";
+import { Button, CodeBlock, Field, Input, Notice } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -41,28 +41,26 @@ const STEP_ORDER: SetupStepId[] = ["instance", "systemCheck", "owner", "keyBacku
 
 const route = getRouteApi("/setup");
 
+type Finished = { organizationId: string | null; mailConfigured: boolean };
+
 export function SetupScreen() {
   const router = useRouter();
   const state = useQuery(setupStateQuery);
   const [linkedCode] = useState(() => codeFromFragment(window.location.hash));
-  const [finished, setFinished] = useState<{ organizationId: string | null } | null>(null);
+  const [finished, setFinished] = useState<Finished | null>(null);
   useEffect(() => {
     if (window.location.hash) router.history.replace(`${window.location.pathname}${window.location.search}`);
   }, [router]);
-  if (finished) return <ReadyScreen organizationId={finished.organizationId} />;
+  if (finished) return <ReadyScreen {...finished} />;
   if (state.isPending) return <SetupFrame title="" loading />;
   return (
     <RestoreDraftProvider>
-      {state.data?.session ? (
-        <WithSession onFinished={(organizationId) => setFinished({ organizationId })} />
-      ) : (
-        <Welcome linkedCode={linkedCode} />
-      )}
+      {state.data?.session ? <WithSession onFinished={setFinished} /> : <Welcome linkedCode={linkedCode} />}
     </RestoreDraftProvider>
   );
 }
 
-function WithSession({ onFinished }: { onFinished: (organizationId: string | null) => void }) {
+function WithSession({ onFinished }: { onFinished: (finished: Finished) => void }) {
   const navigate = useNavigate();
   const search = route.useSearch();
   if (search.restore) {
@@ -153,12 +151,7 @@ function Welcome({ linkedCode }: { linkedCode: string }) {
         ) : null}
         <Field
           label={t("setup.code.label")}
-          hint={
-            <>
-              {t("setup.code.where")}{" "}
-              <code className="break-all font-mono text-text">{SETUP_CODE_COMMAND}</code>
-            </>
-          }
+          hint={t("setup.code.where")}
           error={form.formState.errors.code?.message}
         >
           <Input
@@ -168,6 +161,7 @@ function Welcome({ linkedCode }: { linkedCode: string }) {
             {...form.register("code")}
           />
         </Field>
+        <CodeBlock value={SETUP_CODE_COMMAND} copyLabel={t("setup.code.copyCommand")} />
         <div>
           <Button type="submit" variant="primary" size="lg" loading={form.formState.isSubmitting}>
             {t("setup.welcome.newInstance")}
@@ -179,7 +173,7 @@ function Welcome({ linkedCode }: { linkedCode: string }) {
   );
 }
 
-function SetupSteps({ onFinished }: { onFinished: (organizationId: string | null) => void }) {
+function SetupSteps({ onFinished }: { onFinished: (finished: Finished) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const search = route.useSearch();
@@ -260,7 +254,7 @@ function SetupSteps({ onFinished }: { onFinished: (organizationId: string | null
         description={t("setup.summary.description")}
         progress={progress}
       >
-        <SummaryStep steps={list} back={back} onChange={goTo} onFinished={onFinished} />
+        <SummaryStep steps={list} back={back} onChange={goTo} onRecheck={refresh} onFinished={onFinished} />
       </SetupFrame>
     );
   }

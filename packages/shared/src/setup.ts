@@ -99,9 +99,11 @@ export const setupStepSchemas = {
           source: z.enum(["configuration", "setting"]).nullable(),
         }),
         reachability: z.object({
-          status: checkStatus,
+          status: z
+            .enum(["ok", "warning", "info", "error"])
+            .describe("Info when the address is a loopback address that only this server can reach."),
           ...checkHelp,
-          cause: z.enum(["notSet", "unreachable", "otherServer"]).nullable(),
+          cause: z.enum(["notSet", "unreachable", "otherServer", "loopback"]).nullable(),
           url: z.string().nullable().describe("The address the server tried to reach itself at."),
         }),
         https: z.object({
@@ -147,17 +149,24 @@ export const setupStepSchemas = {
         result: empty,
       },
       beginTotp: { input: empty, result: z.object({ secret: z.string(), uri: z.string() }) },
-      confirmTotp: {
-        input: z.object({ code: totpCodeSchema }).strict(),
-        result: z.object({ recoveryCodes: z.array(z.string()) }),
-      },
-      renewRecoveryCodes: { input: empty, result: z.object({ recoveryCodes: z.array(z.string()) }) },
-      acknowledgeRecoveryCodes: { input: empty, result: empty },
+      confirmTotp: { input: z.object({ code: totpCodeSchema }).strict(), result: empty },
     },
   },
   keyBackup: {
     details: z.object({ downloaded: z.boolean(), provider: z.string() }),
-    actions: { download: { input: empty, result: z.string() }, confirm: { input: empty, result: empty } },
+    actions: {
+      download: {
+        input: empty,
+        result: z.object({
+          instanceUrl: z.string(),
+          createdAt: z.string(),
+          recoveryCodes: z.array(z.string()),
+          masterKeys: z.string(),
+          backupKey: z.string(),
+        }),
+      },
+      confirm: { input: empty, result: empty },
+    },
   },
   organization: {
     details: z.object({

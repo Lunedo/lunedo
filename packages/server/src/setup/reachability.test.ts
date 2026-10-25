@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import { checkReachability, PROBE_PATH, probeAnswer } from "./reachability.js";
+import { checkReachability, isLoopbackUrl, PROBE_PATH, probeAnswer } from "./reachability.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -33,11 +33,22 @@ describe.skipIf(!baseUrl)("the reachability check", () => {
   });
 
   it("reaches this instance through the address with a plain request", async () => {
-    expect(await checkReachability(test.database, origin)).toMatchObject({
-      status: "ok",
-      cause: null,
-      url: origin,
-    });
+    const address = `http://wiki.example:${(server.address() as AddressInfo).port}`;
+    expect(
+      await checkReachability(test.database, address, { resolve: async () => ["127.0.0.1"] }),
+    ).toMatchObject({ status: "ok", cause: null, url: address });
+  });
+
+  it("reports a loopback address as local without probing it", async () => {
+    hits.length = 0;
+    for (const address of [origin, "http://localhost:8080", "http://[::1]:8080", "http://127.8.0.1"]) {
+      expect(await checkReachability(test.database, address)).toMatchObject({
+        status: "info",
+        cause: "loopback",
+        url: address,
+      });
+    }
+    expect(hits).toEqual([]);
   });
 
   it("connects to the address the lookup allowed and never to a link-local one", async () => {
@@ -60,5 +71,19 @@ describe.skipIf(!baseUrl)("the reachability check", () => {
     });
     expect(hits).toEqual([]);
     expect(lookups).toBe(2);
+  });
+});
+
+describe("loopback addresses", () => {
+  it("cover localhost, 127.0.0.0/8 and ::1 only", () => {
+    expect(isLoopbackUrl("http://localhost:8080")).toBe(true);
+    expect(isLoopbackUrl("http://wiki.localhost")).toBe(true);
+    expect(isLoopbackUrl("http://127.0.0.1")).toBe(true);
+    expect(isLoopbackUrl("http://127.255.0.9:3000")).toBe(true);
+    expect(isLoopbackUrl("http://[::1]:8080")).toBe(true);
+    expect(isLoopbackUrl("https://wiki.example")).toBe(false);
+    expect(isLoopbackUrl("http://128.0.0.1")).toBe(false);
+    expect(isLoopbackUrl("http://10.0.0.1")).toBe(false);
+    expect(isLoopbackUrl("not a url")).toBe(false);
   });
 });

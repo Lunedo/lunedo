@@ -2,7 +2,7 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UiProvider } from "./labels.js";
-import { ErrorState, SAVED_VISIBLE_MS, SaveStatus } from "./status.js";
+import { CodeBlock, ErrorState, SAVED_VISIBLE_MS, SaveStatus } from "./status.js";
 import { renderUi, testLabels } from "./testing/render.js";
 
 afterEach(() => {
@@ -74,5 +74,16 @@ describe("ErrorState", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+});
+
+describe("CodeBlock", () => {
+  it("shows the text and copies it with a named button", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderUi(<CodeBlock value='docker compose logs lunedo | grep "Setup link"' copyLabel="Copy command" />);
+    expect(screen.getByText('docker compose logs lunedo | grep "Setup link"')).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Copy command" }));
+    expect(writeText).toHaveBeenCalledWith('docker compose logs lunedo | grep "Setup link"');
   });
 });

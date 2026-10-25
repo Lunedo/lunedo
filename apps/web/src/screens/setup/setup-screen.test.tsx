@@ -148,7 +148,9 @@ describe("the setup steps", () => {
     expect(screen.getByRole("progressbar", { name: "Step 4 of 7 · Owner account" })).toBeTruthy();
     await userEvent.click(menu);
     expect(screen.getByRole("menuitem", { name: "Instance" }).getAttribute("aria-disabled")).toBeNull();
-    expect(screen.getByRole("menuitem", { name: "Keys" }).getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByRole("menuitem", { name: "Emergency kit" }).getAttribute("aria-disabled")).toBe(
+      "true",
+    );
     await userEvent.click(screen.getByRole("menuitem", { name: "System check" }));
     expect(await screen.findByRole("heading", { name: "System check" })).toBeTruthy();
     expect(screen.getByText("https://wiki.example.org can be reached")).toBeTruthy();
@@ -158,7 +160,7 @@ describe("the setup steps", () => {
 
   it("sums up every step, jumps back to change one and finishes with the next steps", async () => {
     const { requests } = stepsApi([INSTANCE, SYSTEM_CHECK, OWNER, KEYS, ORGANIZATION], {
-      "POST /api/v1/setup/complete": () => ({ status: 204 }),
+      "POST /api/v1/setup/complete": () => ({ body: { mailConfigured: false } }),
     });
     await renderSetup("/setup");
     expect(await screen.findByRole("heading", { name: "Summary" })).toBeTruthy();
@@ -169,8 +171,17 @@ describe("the setup steps", () => {
       "4 OK, 1 warning (HTTPS)",
     );
     expect(screen.getByRole("region", { name: "Owner account" }).textContent).toContain("Authenticator app");
-    expect(screen.getByRole("region", { name: "Keys" }).textContent).toContain("Yes, confirmed");
-    expect(screen.getByRole("region", { name: "Organization" }).textContent).toContain("Platform Team");
+    expect(screen.getByRole("region", { name: "Emergency kit" }).textContent).toContain("Yes, confirmed");
+    const organization = screen.getByRole("region", { name: "Organization" }).textContent ?? "";
+    expect(organization).toContain("Platform Team");
+    expect(organization).toMatch(/English, Europe\/Vienna \(UTC\+[12]\)/);
+    expect(organization).toMatch(/Formats\d{1,2} \w{3} \d{4} · 14:30 · 1,234\.56 · Monday/);
+    expect(screen.queryByRole("button", { name: "Change System check" })).toBeNull();
+    const checks = requests.filter((request) => request.path === "/api/v1/setup/steps").length;
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await waitFor(() =>
+      expect(requests.filter((request) => request.path === "/api/v1/setup/steps").length).toBe(checks + 1),
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Change Instance" }));
     expect(await screen.findByLabelText("Instance name")).toBeTruthy();
@@ -178,10 +189,30 @@ describe("the setup steps", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Finish setup" }));
     expect(await screen.findByRole("heading", { name: "Lunedo is ready" })).toBeTruthy();
     expect(requests.some((request) => request.path === "/api/v1/setup/complete")).toBe(true);
+    const next = screen.getAllByRole("listitem").map((item) => item.textContent ?? "");
+    expect(next[0]).toContain("Set up e-mail");
+    expect(next[1]).toContain("Invitations are sent by e-mail, so set up e-mail first.");
     expect(screen.getByRole("button", { name: "Invite" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Create space" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Go to For you" })).toBeTruthy();
+  });
+});
+
+describe("an address from the environment", () => {
+  it("shows it locked in the summary, without a way to change it", async () => {
+    stepsApi([
+      { ...INSTANCE, details: { ...INSTANCE.details, urlFromEnvironment: true } },
+      SYSTEM_CHECK,
+      OWNER,
+      KEYS,
+      ORGANIZATION,
+    ]);
+    await renderSetup("/setup");
+    const instance = await screen.findByRole("region", { name: "Instance" });
+    expect(instance.textContent).toContain("Locked:");
+    expect(screen.queryByRole("button", { name: "Change Instance" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Change Organization" })).toBeTruthy();
   });
 });
 

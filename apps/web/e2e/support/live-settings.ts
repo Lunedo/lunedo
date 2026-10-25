@@ -156,8 +156,8 @@ const FORMATS: { key: string; field: string; choices: [string, RegExp][] }[] = [
     key: "locale.timeFormat",
     field: "Time format",
     choices: [
-      ["24h", /24-hour/],
-      ["12h", /12-hour/],
+      ["24h", /^14:30$/],
+      ["12h", /2:30\s?PM/],
     ],
   },
   {

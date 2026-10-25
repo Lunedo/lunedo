@@ -511,6 +511,24 @@ export class SignInService {
     );
   }
 
+  async signInOwnerAfterSetup(
+    complete: (start: (tx: Transaction) => Promise<SignedIn>) => Promise<SignedIn>,
+    client: ClientInfo,
+  ): Promise<SignedIn> {
+    const started = await this.#databaseNow();
+    const mailIds: string[] = [];
+    const result = await complete(async (tx) => {
+      const ownerId = await this.#accounts.ownerId(tx);
+      const account = ownerId ? await this.#accounts.get(ownerId) : null;
+      if (!canSignIn(account) || !hasSecondFactor(await secondFactorsOf(tx, account.id))) {
+        throw new ChallengeExpiredError();
+      }
+      return this.#createSession(tx, account, ["password", "totp"], "full", client, mailIds, started);
+    });
+    await this.#notifications.dispatch(mailIds);
+    return result;
+  }
+
   async #pending(pendingToken: string) {
     const pending = await this.#challenges.findByToken(pendingToken, "secondFactor");
     const account = pending?.accountId ? await this.#accounts.get(pending.accountId) : null;

@@ -34,18 +34,26 @@ describe("the organization step", () => {
       name: /^Adjust the formats \(proposed: \d{1,2} \w{3} \d{4} · 14:30 · 1,234\.56 · Monday\)$/,
     });
     expect(formats.getAttribute("aria-expanded")).toBe("false");
+    expect((screen.getByRole("combobox", { name: "Default time zone" }) as HTMLInputElement).value).toMatch(
+      /^Europe\/Vienna \(UTC\+[12]\)$/,
+    );
     await userEvent.click(formats);
-    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("D MMM YYYY");
+    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toMatch(
+      /^\d{1,2} \w{3} \d{4}$/,
+    );
+    expect(screen.getByRole("combobox", { name: "Time format" }).textContent).toBe("14:30");
 
     await userEvent.click(screen.getByRole("combobox", { name: "Default language" }));
     await userEvent.click(await screen.findByRole("option", { name: "Deutsch" }));
-    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("D MMM YYYY");
+    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toMatch(
+      /^\d{1,2} \w{3} \d{4}$/,
+    );
 
     await userEvent.click(screen.getByRole("combobox", { name: "Date format" }));
-    await userEvent.click(await screen.findByRole("option", { name: /^YYYY-MM-DD/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /^\d{4}-\d{2}-\d{2}$/ }));
     await userEvent.click(screen.getByRole("combobox", { name: "Default language" }));
     await userEvent.click(await screen.findByRole("option", { name: "English" }));
-    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("YYYY-MM-DD");
+    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     await userEvent.type(screen.getByLabelText("Name"), "Platform Team");
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));

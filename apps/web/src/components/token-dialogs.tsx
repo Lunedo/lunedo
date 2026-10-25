@@ -41,6 +41,11 @@ const DAY_MS = 86_400_000;
 
 type ExpiryOption = (typeof EXPIRY_OPTIONS)[number];
 
+export function defaultExpiry(maxLifetimeDays: number | null): ExpiryOption {
+  const choices = expiryChoices(maxLifetimeDays);
+  return choices.includes("90") ? "90" : (choices[0] ?? "custom");
+}
+
 export function expiryChoices(maxLifetimeDays: number | null): ExpiryOption[] {
   return EXPIRY_OPTIONS.filter((option) => {
     if (maxLifetimeDays === null) return true;
@@ -134,7 +139,7 @@ export function CreateTokenDialog({
   const form = useSchemaForm(tokenForm, {
     defaultValues: {
       name: "",
-      expiry: expiryChoices(maxLifetimeDays)[0] ?? "custom",
+      expiry: defaultExpiry(maxLifetimeDays),
       customDate: dateInDays(Math.min(30, maxLifetimeDays ?? 30)),
       appliesTo: "organization",
       instance: Object.fromEntries(instanceAreas.map((area) => [area, NONE])),
@@ -144,14 +149,13 @@ export function CreateTokenDialog({
 
   const choices = expiryChoices(maxLifetimeDays);
   const choosesOrganizations = allowOrganization && organizationName !== null;
-  const instanceChosen =
-    allowInstance && Object.values(form.watch("instance")).some((level) => level !== NONE);
-  const appliesTo = instanceChosen ? "all" : form.watch("appliesTo");
+  const appliesTo = form.watch("appliesTo");
+  const instanceLocked = choosesOrganizations && appliesTo === "organization";
   const latestDate = maxLifetimeDays === null ? undefined : dateInDays(maxLifetimeDays);
 
   useEffect(() => {
     const allowed = expiryChoices(maxLifetimeDays);
-    if (!allowed.includes(form.getValues("expiry"))) form.setValue("expiry", allowed[0] ?? "custom");
+    if (!allowed.includes(form.getValues("expiry"))) form.setValue("expiry", defaultExpiry(maxLifetimeDays));
   }, [maxLifetimeDays, form]);
 
   const close = (next: boolean) => {
@@ -169,7 +173,10 @@ export function CreateTokenDialog({
     setError(null);
     setContentError(undefined);
     const access = allowOrganization ? contentRequest(content) : { spaces: null };
-    const instance = allowInstance ? pickAreas(values.instance) : undefined;
+    const instance =
+      allowInstance && !(choosesOrganizations && values.appliesTo === "organization")
+        ? pickAreas(values.instance)
+        : undefined;
     const picked = allowOrganization ? pickAreas(values.organization) : undefined;
     const organization =
       access.spaces === null ? picked : ({ ...(picked ?? {}), [CONTENT_AREA]: access.spaces } as Areas);
@@ -209,7 +216,7 @@ export function CreateTokenDialog({
         expiresAt,
         ...(access.contentLevel ? { contentLevel: access.contentLevel } : {}),
         ...(access.knowledgeBaseIds ? { knowledgeBaseIds: access.knowledgeBaseIds } : {}),
-        limitedToOrganization: choosesOrganizations && !instance && values.appliesTo === "organization",
+        limitedToOrganization: choosesOrganizations && values.appliesTo === "organization",
       });
       setSecret(created.token);
     } catch (failure) {
@@ -286,16 +293,12 @@ export function CreateTokenDialog({
                         {
                           value: "organization",
                           label: t("tokens.appliesToOrganization", { organization: organizationName }),
-                          ...(instanceChosen ? { disabled: true } : {}),
                         },
                         { value: "all", label: t("tokens.appliesToAll") },
                       ]}
                     />
                   )}
                 />
-                {instanceChosen ? (
-                  <p className="text-sm text-text-muted">{t("tokens.instanceAppliesToAll")}</p>
-                ) : null}
               </fieldset>
             ) : null}
             {allowOrganization ? (
@@ -309,6 +312,7 @@ export function CreateTokenDialog({
             {allowOrganization ? (
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-1 font-medium">{t("tokens.organizationAccess")}</legend>
+                <p className="text-sm text-text-muted">{t("tokens.spacesUnderContent")}</p>
                 {organizationAreas
                   .filter((area) => area !== CONTENT_AREA)
                   .map((area) => (
@@ -332,6 +336,11 @@ export function CreateTokenDialog({
             {allowInstance ? (
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-1 font-medium">{t("tokens.instanceAccess")}</legend>
+                {instanceLocked ? (
+                  <p className="text-sm text-text-muted">
+                    {t("tokens.instanceNeedsAll", { organization: organizationName })}
+                  </p>
+                ) : null}
                 {instanceAreas.map((area) => (
                   <AreaRow key={area} label={translateKey(t, `areas.instance.${area}`)}>
                     <Controller
@@ -340,9 +349,10 @@ export function CreateTokenDialog({
                       render={({ field }) => (
                         <SegmentedControl
                           label={translateKey(t, `areas.instance.${area}`)}
-                          value={field.value}
+                          value={instanceLocked ? NONE : field.value}
                           onValueChange={field.onChange}
                           options={levelOptions}
+                          disabled={instanceLocked}
                         />
                       )}
                     />
@@ -373,6 +383,9 @@ export function CreateTokenDialog({
                   />
                 )}
               />
+              {form.watch("expiry") === "never" ? (
+                <Notice variant="warning">{t("tokens.noExpiryWarning")}</Notice>
+              ) : null}
               {form.watch("expiry") === "custom" ? (
                 <Field label={t("tokens.customDate")} error={form.formState.errors.customDate?.message}>
                   <Input

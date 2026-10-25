@@ -19,8 +19,8 @@ test("sets up a fresh instance", async ({ page }) => {
 
   await runSetupSteps(page);
 
-  await expect(page).toHaveURL(/\/sign-in/);
-  await expect(page.getByText("Example Wiki")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   expect(await setupFinished(page)).toBe(true);
 });
 

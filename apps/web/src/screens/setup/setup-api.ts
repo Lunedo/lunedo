@@ -63,7 +63,6 @@ export async function runSetupAction<S extends SetupStepId, A extends SetupActio
       api.POST("/api/v1/setup/steps/{step}/{action}", {
         params: { path: { step, action } },
         body: input as never,
-        parseAs: step === "keyBackup" && action === "download" ? "text" : "json",
       }),
     { sessionHandling: false },
   );

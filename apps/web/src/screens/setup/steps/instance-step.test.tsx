@@ -26,7 +26,7 @@ describe("the instance step", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("shows an address from the server environment as read-only", async () => {
+  it("shows an address from the server environment as locked text, not as a field", async () => {
     await renderWithProviders(
       <InstanceStep
         completed={false}
@@ -41,9 +41,10 @@ describe("the instance step", () => {
         refresh={async () => undefined}
       />,
     );
-    const address = screen.getByLabelText("Address") as HTMLInputElement;
-    expect(address.value).toBe("https://wiki.example.org");
-    expect(address.readOnly).toBe(true);
+    expect(screen.queryByLabelText("Address")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: /address/i })).toBeNull();
+    expect(screen.getByText("https://wiki.example.org")).toBeTruthy();
+    expect(screen.getByText("Locked:")).toBeTruthy();
     expect(screen.getByText(/Set by LUNEDO_INSTANCE_URL/)).toBeTruthy();
   });
 });

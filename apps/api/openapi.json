@@ -63627,11 +63627,16 @@
                                 }
                               ],
                               "description": "Who confirmed it."
+                            },
+                            "inSetup": {
+                              "type": "boolean",
+                              "description": "Whether it was confirmed in the setup, when the keys were downloaded."
                             }
                           },
                           "required": [
                             "at",
-                            "by"
+                            "by",
+                            "inSetup"
                           ],
                           "additionalProperties": false
                         },
@@ -64032,7 +64037,8 @@
                     "by": {
                       "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03",
                       "name": "Olivia Owner"
-                    }
+                    },
+                    "inSetup": false
                   },
                   "running": false,
                   "testRestoreRunning": false,
@@ -65410,11 +65416,16 @@
                                 }
                               ],
                               "description": "Who confirmed it."
+                            },
+                            "inSetup": {
+                              "type": "boolean",
+                              "description": "Whether it was confirmed in the setup, when the keys were downloaded."
                             }
                           },
                           "required": [
                             "at",
-                            "by"
+                            "by",
+                            "inSetup"
                           ],
                           "additionalProperties": false
                         },
@@ -65815,7 +65826,8 @@
                     "by": {
                       "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03",
                       "name": "Olivia Owner"
-                    }
+                    },
+                    "inSetup": false
                   },
                   "running": false,
                   "testRestoreRunning": false,
@@ -66577,11 +66589,16 @@
                                 }
                               ],
                               "description": "Who confirmed it."
+                            },
+                            "inSetup": {
+                              "type": "boolean",
+                              "description": "Whether it was confirmed in the setup, when the keys were downloaded."
                             }
                           },
                           "required": [
                             "at",
-                            "by"
+                            "by",
+                            "inSetup"
                           ],
                           "additionalProperties": false
                         },
@@ -66982,7 +66999,8 @@
                     "by": {
                       "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03",
                       "name": "Olivia Owner"
-                    }
+                    },
+                    "inSetup": false
                   },
                   "running": false,
                   "testRestoreRunning": false,
@@ -67883,11 +67901,16 @@
                                 }
                               ],
                               "description": "Who confirmed it."
+                            },
+                            "inSetup": {
+                              "type": "boolean",
+                              "description": "Whether it was confirmed in the setup, when the keys were downloaded."
                             }
                           },
                           "required": [
                             "at",
-                            "by"
+                            "by",
+                            "inSetup"
                           ],
                           "additionalProperties": false
                         },
@@ -68288,7 +68311,8 @@
                     "by": {
                       "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03",
                       "name": "Olivia Owner"
-                    }
+                    },
+                    "inSetup": false
                   },
                   "running": false,
                   "testRestoreRunning": false,
@@ -68777,11 +68801,16 @@
                                 }
                               ],
                               "description": "Who confirmed it."
+                            },
+                            "inSetup": {
+                              "type": "boolean",
+                              "description": "Whether it was confirmed in the setup, when the keys were downloaded."
                             }
                           },
                           "required": [
                             "at",
-                            "by"
+                            "by",
+                            "inSetup"
                           ],
                           "additionalProperties": false
                         },
@@ -69182,7 +69211,8 @@
                     "by": {
                       "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03",
                       "name": "Olivia Owner"
-                    }
+                    },
+                    "inSetup": false
                   },
                   "running": false,
                   "testRestoreRunning": false,
@@ -220700,7 +220730,7 @@
     "/api/v1/setup/complete": {
       "post": {
         "operationId": "setup.complete",
-        "summary": "Complete the setup",
+        "summary": "Complete the setup and sign the owner in",
         "tags": [
           "Setup"
         ],
@@ -220708,8 +220738,25 @@
         "x-stability-level": "alpha",
         "security": [],
         "responses": {
-          "204": {
-            "description": "Done. The response has no body."
+          "200": {
+            "description": "What the owner may want to set up next.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mailConfigured": {
+                      "type": "boolean",
+                      "description": "Whether a mail server is set up, which invitations need."
+                    }
+                  },
+                  "required": [
+                    "mailConfigured"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           "401": {
             "description": "`setupSessionRequired`: Enter the setup code first.",
@@ -223058,8 +223105,10 @@
                                             "enum": [
                                               "ok",
                                               "warning",
+                                              "info",
                                               "error"
-                                            ]
+                                            ],
+                                            "description": "Info when the address is a loopback address that only this server can reach."
                                           },
                                           "cause": {
                                             "anyOf": [
@@ -223068,7 +223117,8 @@
                                                 "enum": [
                                                   "notSet",
                                                   "unreachable",
-                                                  "otherServer"
+                                                  "otherServer",
+                                                  "loopback"
                                                 ]
                                               },
                                               {

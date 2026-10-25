@@ -1917,14 +1917,15 @@
       "systemCheck": "System check",
       "instance": "Instance",
       "owner": "Owner account",
-      "keyBackup": "Keys",
+      "keyBackup": "Emergency kit",
       "organization": "Organization",
       "welcome": "Welcome",
       "summary": "Summary"
     },
     "code": {
       "label": "Setup code",
-      "where": "It is in the .env file (LUNEDO_SETUP_CODE) if you used the setup script, otherwise in the log of the container:"
+      "where": "It is in the .env file (LUNEDO_SETUP_CODE) if you used the setup script, otherwise in the log of the container:",
+      "copyCommand": "Copy command"
     },
     "language": "Language of the setup",
     "systemCheck": {
@@ -1940,17 +1941,15 @@
       },
       "status": {
         "ok": "OK",
-        "warning": "Check",
-        "error": "Must be fixed"
+        "warning": "Warning",
+        "error": "Must be fixed",
+        "info": "Info"
       },
       "databaseOk": "PostgreSQL {version}, migrations applied",
       "storageFree": "Writable, {free} free",
       "clockOk": "In sync with the database",
       "httpsOk": "Enabled",
-      "failedTitle": "{check} did not pass the check",
       "checkAgain": "Check again",
-      "checking": "Checking …",
-      "checkAllAgain": "Run all checks again",
       "acknowledgeFailed": "The system check could not be confirmed",
       "unknownId": "unknown",
       "causes": {
@@ -2005,7 +2004,7 @@
           },
           "unreachable": {
             "cause": "The server got no answer at {url}, for example because the name does not resolve, a firewall blocks the connection or the certificate is not valid.",
-            "action": "Check DNS, the reverse proxy and the certificate, or whether this server may reach itself through the address. People outside may not be affected."
+            "action": "Check DNS, the reverse proxy and the certificate. Some networks do not let a server reach itself through its public address; the address can still work for people. In that case, open it in a browser to check it."
           },
           "otherServer": {
             "cause": "A server other than this instance answered at {url}.",
@@ -2014,13 +2013,17 @@
         }
       },
       "reachabilityOk": "{url} can be reached",
-      "httpsGuide": "How to set up HTTPS"
+      "reachabilityLocal": "Local address, cannot be checked from outside",
+      "httpsGuide": "How to set up HTTPS",
+      "copyCommand": "Copy command",
+      "docs": "Read the documentation"
     },
     "instance": {
       "title": "Your instance",
       "description": "The address and name people see.",
       "url": "Address",
       "urlHint": "Taken from the current address. Used in links, e-mails and for passkeys.",
+      "locked": "Locked:",
       "name": "Instance name"
     },
     "owner": {
@@ -2030,21 +2033,30 @@
       "twoFactorDescription": "Scan the code with an authenticator app, then enter the 6-digit code.",
       "ready": "The owner account is ready",
       "summary": "{name} ({email}), with an authenticator app",
-      "change": "Change owner",
-      "recoveryCodesFailed": "The recovery codes could not be created",
-      "acknowledgeFailed": "The owner step could not be completed"
+      "change": "Change owner"
     },
     "keyBackup": {
-      "title": "Back up your keys",
-      "description": "Lunedo encrypts secrets and backups with these keys. Without them, encrypted data and backups cannot be restored.",
-      "download": "Download keys",
+      "title": "Save the emergency kit",
+      "description": "The emergency kit holds the recovery codes of the owner and the keys Lunedo encrypts secrets and backups with. Without them, no backup can be restored.",
+      "download": "Download emergency kit",
       "saveAgain": "Save again",
-      "copied": "The keys were copied.",
-      "keys": "Master key and backup key",
-      "alreadyDownloaded": "The keys were already downloaded. For security, they can be downloaded only once.",
-      "stored": "I stored both keys in a safe place outside this server, for example in a password manager.",
-      "downloadFirst": "Download the keys first. Without them, a backup cannot be restored.",
-      "confirmStored": "Confirm that you stored the keys outside this server."
+      "alreadyDownloaded": "The emergency kit was already downloaded. For security, it can be downloaded only once.",
+      "stored": "I stored the emergency kit in a safe place outside this server, for example in a password manager.",
+      "downloadFirst": "Download the emergency kit first. Without its keys, a backup cannot be restored.",
+      "confirmStored": "Confirm that you stored the emergency kit outside this server.",
+      "copy": "Copy emergency kit",
+      "fileName": "lunedo-emergency-kit-{host}.txt",
+      "kit": {
+        "heading": "Lunedo emergency kit",
+        "created": "Created on {date}",
+        "keepSafe": "Keep this file outside the server, for example in a password manager. Whoever has it can sign in as the owner and decrypt backups.",
+        "instanceUrl": "Address of the instance",
+        "instanceUrlPurpose": "The address you sign in at. It shows which instance this kit belongs to.",
+        "recoveryCodes": "Recovery codes of the owner",
+        "recoveryCodesPurpose": "Each code signs the owner in once instead of the authenticator app, for example when the phone is lost.",
+        "masterKeysPurpose": "Encrypts stored secrets such as the passwords of mail servers and identity providers. Needed when you restore Lunedo from a backup on a new server.",
+        "backupKeyPurpose": "Encrypts the backups. Needed to restore any backup."
+      }
     },
     "organization": {
       "title": "First organization",
@@ -2082,6 +2094,7 @@
       "result": "Result",
       "checksOk": "{count} OK",
       "checksWarning": "{count, plural, one {# warning} other {# warnings}} ({names})",
+      "checksInfo": "{count, plural, one {# note} other {# notes}} ({names})",
       "name": "Name",
       "email": "E-mail address",
       "secondFactor": "Second factor",
@@ -2090,17 +2103,19 @@
       "keysConfirmed": "Yes, confirmed",
       "missing": "Not done yet",
       "languageAndTimeZone": "Language, time zone",
+      "formats": "Formats",
       "change": "Change",
       "changeSection": "Change {section}"
     },
     "ready": {
       "title": "Lunedo is ready",
-      "description": "Three steps worth doing next. Everything can also be done later in the settings.",
+      "description": "What is worth doing next. Everything can also be done later in the settings.",
       "forYou": "Go to For you",
       "invite": {
         "title": "Invite people",
         "description": "By e-mail or through an allowed domain.",
-        "action": "Invite"
+        "action": "Invite",
+        "needsMail": "Invitations are sent by e-mail, so set up e-mail first."
       },
       "space": {
         "title": "Create the first space",
@@ -2111,6 +2126,11 @@
         "title": "Connect an identity provider",
         "description": "Sign-in through Microsoft Entra ID, Keycloak, SAML or LDAP.",
         "action": "Connect"
+      },
+      "mail": {
+        "title": "Set up e-mail",
+        "description": "Invitations, password resets and notifications need a mail server.",
+        "action": "Set up e-mail"
       }
     },
     "restore": {
@@ -2174,11 +2194,11 @@
         "title": "Keys",
         "description": "The backup is encrypted with the backup key. Lunedo needs the master keys to read stored secrets again.",
         "backupKey": "Backup key",
-        "backupKeyHint": "From the file you downloaded during the first setup (LUNEDO_BACKUP_KEY).",
+        "backupKeyHint": "From the emergency kit of the first setup (LUNEDO_BACKUP_KEY).",
         "backupKeyMissing": "Enter the backup key.",
         "masterKeys": "Master keys",
         "chooseFile": "Choose the key file",
-        "masterKeysHint": "The file lunedo-keys.env from the first setup, or the file master-keys from the secrets directory of the earlier server. Lunedo takes the keys over into this instance and does not keep the file itself.",
+        "masterKeysHint": "The emergency kit from the first setup (lunedo-keys.env in older versions), or the file master-keys from the secrets directory of the earlier server. Lunedo takes the keys over into this instance and does not keep the file itself.",
         "masterKeysMissing": "Choose the file with the master keys.",
         "warning": "The restore fills this empty instance with all data of the backup. Afterwards you sign in with an account from the backup.",
         "start": "Restore",
@@ -2270,8 +2290,6 @@
     "timeFormat": "Time format",
     "numberFormat": "Number format",
     "firstDayOfWeek": "First day of the week",
-    "time24": "24-hour (14:30)",
-    "time12": "12-hour (2:30 PM)",
     "weekdays": {
       "monday": "Monday",
       "sunday": "Sunday",
@@ -2814,7 +2832,9 @@
     "appliesTo": "Applies to",
     "appliesToOrganization": "Only {organization}",
     "appliesToAll": "All my organizations",
-    "instanceAppliesToAll": "Instance areas belong to no single organization, so the token applies to all your organizations."
+    "spacesUnderContent": "Access to spaces and their pages is set above under Content.",
+    "instanceNeedsAll": "Instance rights belong to no single organization. Choose “All my organizations” above to give them.",
+    "noExpiryWarning": "A token without expiry works until someone revokes it. If it leaks, it stays usable. Choose an expiry where you can."
   },
   "notifications": {
     "title": "Notifications",
@@ -9921,6 +9941,7 @@
       "confirm": "The backup key is stored outside Lunedo",
       "confirmedBy": "Confirmed on {date} by {name}.",
       "confirmedAt": "Confirmed on {date}.",
+      "confirmedInSetup": "Confirmed in the setup on {date}.",
       "notConfirmed": "Not confirmed yet."
     },
     "target": {
@@ -11307,6 +11328,79 @@
       "required": "Choose a space.",
       "cancel": "Cancel",
       "continue": "Continue"
+    }
+  },
+  "timeZones": {
+    "names": {
+      "Africa": "Africa",
+      "America": "America",
+      "Antarctica": "Antarctica",
+      "Arctic": "Arctic",
+      "Asia": "Asia",
+      "Atlantic": "Atlantic",
+      "Australia": "Australia",
+      "Europe": "Europe",
+      "Indian": "Indian",
+      "Pacific": "Pacific",
+      "Argentina": "Argentina",
+      "Indiana": "Indiana",
+      "Kentucky": "Kentucky",
+      "North_Dakota": "North Dakota",
+      "Vienna": "Vienna",
+      "Zurich": "Zurich",
+      "Prague": "Prague",
+      "Warsaw": "Warsaw",
+      "Rome": "Rome",
+      "Copenhagen": "Copenhagen",
+      "Brussels": "Brussels",
+      "Lisbon": "Lisbon",
+      "Moscow": "Moscow",
+      "Athens": "Athens",
+      "Belgrade": "Belgrade",
+      "Bucharest": "Bucharest",
+      "Kyiv": "Kyiv",
+      "Kiev": "Kiev",
+      "Luxembourg": "Luxembourg",
+      "Nicosia": "Nicosia",
+      "Vatican": "Vatican",
+      "Canary": "Canary",
+      "Azores": "Azores",
+      "Faroe": "Faroe",
+      "Mexico_City": "Mexico City",
+      "Havana": "Havana",
+      "Sao_Paulo": "Sao Paulo",
+      "Bogota": "Bogota",
+      "Cairo": "Cairo",
+      "Algiers": "Algiers",
+      "Tehran": "Tehran",
+      "Riyadh": "Riyadh",
+      "Singapore": "Singapore",
+      "Damascus": "Damascus",
+      "Baghdad": "Baghdad",
+      "Tokyo": "Tokyo",
+      "Hong_Kong": "Hong Kong",
+      "Kolkata": "Kolkata",
+      "Calcutta": "Calcutta",
+      "Jerusalem": "Jerusalem",
+      "Kuwait": "Kuwait",
+      "Qatar": "Qatar",
+      "Dubai": "Dubai",
+      "Tashkent": "Tashkent",
+      "Tbilisi": "Tbilisi",
+      "Yerevan": "Yerevan",
+      "Baku": "Baku",
+      "Taipei": "Taipei",
+      "Seoul": "Seoul",
+      "Shanghai": "Shanghai",
+      "Bangkok": "Bangkok",
+      "Jakarta": "Jakarta",
+      "Manila": "Manila",
+      "Karachi": "Karachi",
+      "Kabul": "Kabul",
+      "Beirut": "Beirut",
+      "Amman": "Amman",
+      "Istanbul": "Istanbul",
+      "Reykjavik": "Reykjavik"
     }
   }
 }

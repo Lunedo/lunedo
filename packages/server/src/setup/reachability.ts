@@ -14,16 +14,20 @@ const PROBE_TIMEOUT_MS = 4_000;
 const MAX_ANSWER_BYTES = 1024;
 const MAX_REDIRECTS = 3;
 
+const LOOPBACK = new BlockList();
+LOOPBACK.addSubnet("127.0.0.0", 8, "ipv4");
+LOOPBACK.addAddress("::1", "ipv6");
+
 const LINK_LOCAL = new BlockList();
 LINK_LOCAL.addSubnet("169.254.0.0", 16, "ipv4");
 LINK_LOCAL.addSubnet("fe80::", 10, "ipv6");
 
 export const PROBE_PATH = "/api/v1/setup/probe/";
 
-export type ReachabilityCause = "notSet" | "unreachable" | "otherServer";
+export type ReachabilityCause = "notSet" | "unreachable" | "otherServer" | "loopback";
 
 export interface ReachabilityResult {
-  status: "ok" | "warning";
+  status: "ok" | "warning" | "info";
   cause: ReachabilityCause | null;
   fixCommand: null;
   docs: string;
@@ -47,12 +51,24 @@ const systemResolve: ProbeResolve = async (hostname) =>
 
 function result(url: string | null, cause: ReachabilityCause | null) {
   return {
-    status: cause === null ? "ok" : "warning",
+    status: cause === null ? "ok" : cause === "loopback" ? "info" : "warning",
     cause,
     fixCommand: null,
     docs: "setup.md#address-reachable",
     url,
   } satisfies ReachabilityResult;
+}
+
+export function isLoopbackUrl(url: string): boolean {
+  let host: string;
+  try {
+    host = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  } catch {
+    return false;
+  }
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  const family = isIP(host);
+  return family !== 0 && LOOPBACK.check(host, family === 6 ? "ipv6" : "ipv4");
 }
 
 function isLinkLocal(address: string): boolean {
@@ -213,6 +229,7 @@ export async function checkReachability(
   options: ProbeOptions = {},
 ): Promise<ReachabilityResult> {
   if (!url) return result(null, "notSet");
+  if (isLoopbackUrl(url)) return result(url, "loopback");
   const challenge = randomBytes(32).toString("base64url");
   const answer = randomBytes(32).toString("base64url");
   await storeProbe(database, challenge, answer);

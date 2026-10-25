@@ -12,6 +12,7 @@ export interface TimeZoneComboboxProps {
   disabled?: boolean;
   invalid?: boolean;
   muted?: boolean;
+  zoneLabel?: (timeZone: string, now: Date) => string;
   "aria-label"?: string;
 }
 
@@ -58,15 +59,35 @@ function regionOf(timeZone: string): string {
   return parts.length > 1 ? parts.slice(0, -1).join("/").replaceAll("_", " ") : "";
 }
 
-export function timeZoneItem(timeZone: string, now: Date, locale?: string): ComboboxItem {
+export function shortTimeZoneOffset(timeZone: string, now: Date): string {
+  const match = /^UTC([+-])(\d{2}):(\d{2})$/.exec(timeZoneOffset(timeZone, now));
+  if (!match) return "UTC";
+  const [, sign, hours, minutes] = match;
+  return `UTC${sign}${Number(hours)}${minutes === "00" ? "" : `:${minutes}`}`;
+}
+
+export function timeZoneItem(
+  timeZone: string,
+  now: Date,
+  locale?: string,
+  zoneLabel?: (timeZone: string, now: Date) => string,
+): ComboboxItem {
   const offset = timeZoneOffset(timeZone, now);
   const time = new Intl.DateTimeFormat(locale, { timeZone, hour: "2-digit", minute: "2-digit" }).format(now);
   const region = regionOf(timeZone);
+  const keywords = [
+    timeZone,
+    region,
+    cityOf(timeZone),
+    ...(RENAMED_ZONES[timeZone] ?? []),
+    ...offsetKeywords(offset),
+  ];
+  if (zoneLabel) return { value: timeZone, label: zoneLabel(timeZone, now), description: time, keywords };
   return {
     value: timeZone,
     label: cityOf(timeZone),
     description: [region, offset, time].filter(Boolean).join(" · "),
-    keywords: [timeZone, region, ...(RENAMED_ZONES[timeZone] ?? []), ...offsetKeywords(offset)],
+    keywords,
   };
 }
 
@@ -79,6 +100,7 @@ export function timeZoneItems(options: {
   allLabel: string;
   browserMarker: string;
   defaultMarker: string;
+  zoneLabel?: (timeZone: string, now: Date) => string;
 }): ComboboxItem[] {
   const zones = supportedTimeZones();
   const pinned = [options.inheritedTimeZone, options.browserTimeZone].filter(
@@ -91,14 +113,17 @@ export function timeZoneItems(options: {
       zone === options.browserTimeZone ? options.browserMarker : null,
     ].filter((marker): marker is string => marker !== null);
     return {
-      ...timeZoneItem(zone, options.now, options.locale),
+      ...timeZoneItem(zone, options.now, options.locale, options.zoneLabel),
       group: options.suggestedLabel,
       marker: markers.join(" · "),
     };
   });
   const rest = zones
     .filter((zone) => !pinned.includes(zone))
-    .map((zone) => ({ ...timeZoneItem(zone, options.now, options.locale), group: options.allLabel }));
+    .map((zone) => ({
+      ...timeZoneItem(zone, options.now, options.locale, options.zoneLabel),
+      group: options.allLabel,
+    }));
   return [...suggested, ...rest];
 }
 
@@ -112,6 +137,7 @@ export function TimeZoneCombobox({
   disabled,
   invalid,
   muted,
+  zoneLabel,
   ...props
 }: TimeZoneComboboxProps) {
   const labels = useUiLabels();
@@ -127,8 +153,9 @@ export function TimeZoneCombobox({
         allLabel: labels.allTimeZones,
         browserMarker: labels.browserTimeZone,
         defaultMarker: labels.defaultMarker,
+        ...(zoneLabel ? { zoneLabel } : {}),
       }),
-    [minute, locale, browserTimeZone, inheritedTimeZone, labels],
+    [minute, locale, browserTimeZone, inheritedTimeZone, labels, zoneLabel],
   );
   return (
     <Combobox

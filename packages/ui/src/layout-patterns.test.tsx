@@ -8,7 +8,13 @@ import { Select } from "./controls.js";
 import { PageContainer, SettingRow } from "./layout.js";
 import { Table, TableToolbar } from "./table.js";
 import { renderUi } from "./testing/render.js";
-import { TimeZoneCombobox, timeZoneItem, timeZoneItems, timeZoneOffset } from "./time-zone-combobox.js";
+import {
+  shortTimeZoneOffset,
+  TimeZoneCombobox,
+  timeZoneItem,
+  timeZoneItems,
+  timeZoneOffset,
+} from "./time-zone-combobox.js";
 
 const NOW = new Date("2026-01-15T12:00:00Z");
 
@@ -21,6 +27,22 @@ describe("time zones", () => {
     expect(vienna.description).toBe("Europe · UTC+01:00 · 13:00");
     expect(vienna.keywords).toEqual(expect.arrayContaining(["Europe/Vienna", "UTC+1", "+1", "GMT+1"]));
     expect(timeZoneItem("America/Argentina/Buenos_Aires", NOW).label).toBe("Buenos Aires");
+  });
+
+  it("takes a label from the caller and keeps the zone, city and offset searchable", () => {
+    expect(shortTimeZoneOffset("Europe/Vienna", new Date("2026-07-01T12:00:00Z"))).toBe("UTC+2");
+    expect(shortTimeZoneOffset("Asia/Kolkata", NOW)).toBe("UTC+5:30");
+    expect(shortTimeZoneOffset("America/New_York", NOW)).toBe("UTC-5");
+    expect(shortTimeZoneOffset("UTC", NOW)).toBe("UTC+0");
+    const vienna = timeZoneItem(
+      "Europe/Vienna",
+      NOW,
+      "de",
+      (zone, now) => `Europa/Wien (${shortTimeZoneOffset(zone, now)})`,
+    );
+    expect(vienna.label).toBe("Europa/Wien (UTC+1)");
+    expect(vienna.description).toBe("13:00");
+    expect(vienna.keywords).toEqual(expect.arrayContaining(["Europe/Vienna", "Vienna", "UTC+1"]));
   });
 
   it("lists the inherited and the browser's time zone first", () => {

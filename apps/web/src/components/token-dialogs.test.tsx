@@ -31,12 +31,13 @@ describe("token expiry", () => {
     expect(expiryChoices(7)).toEqual(["custom"]);
   });
 
-  it("preselects no expiry when no maximum applies", async () => {
+  it("preselects 90 days and warns when no expiry is chosen", async () => {
     const onCreate = await renderDialog(null);
     const expiry = screen.getByRole("radiogroup", { name: "Expires" });
-    expect(within(expiry).getByRole("radio", { name: "No expiry" }).getAttribute("aria-checked")).toBe(
-      "true",
-    );
+    expect(within(expiry).getByRole("radio", { name: "90 days" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByText(/A token without expiry works until someone revokes it/)).toBeNull();
+    await userEvent.click(within(expiry).getByRole("radio", { name: "No expiry" }));
+    expect(screen.getByText(/A token without expiry works until someone revokes it/)).toBeTruthy();
     await userEvent.type(screen.getByLabelText("Name"), "Deploy");
     await userEvent.click(
       within(screen.getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
@@ -132,5 +133,39 @@ describe("token summary", () => {
       "Content: Write drafts in Help Center",
     );
     expect(scopeSummary(t, token)).toBe("Content: Write drafts in 1 knowledge base");
+  });
+});
+
+describe("instance rights", () => {
+  it("stay disabled while the token is limited to one organization", async () => {
+    const onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ld_secret" }));
+    await renderWithProviders(
+      <CreateTokenDialog
+        open
+        onOpenChange={() => {}}
+        allowInstance
+        allowOrganization
+        organizationId="0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e01"
+        organizationName="Northwind"
+        maxLifetimeDays={null}
+        onCreate={onCreate}
+      />,
+    );
+    expect(screen.getByText(/Choose “All my organizations” above/)).toBeTruthy();
+    expect(screen.getByText("Access to spaces and their pages is set above under Content.")).toBeTruthy();
+    const users = screen.getByRole("radiogroup", { name: "Accounts" });
+    for (const radio of within(users).getAllByRole("radio"))
+      expect(radio.hasAttribute("disabled")).toBe(true);
+
+    await userEvent.click(screen.getByRole("radio", { name: "All my organizations" }));
+    expect(screen.queryByText(/Choose “All my organizations” above/)).toBeNull();
+    await userEvent.click(within(users).getByRole("radio", { name: "View" }));
+    await userEvent.type(screen.getByLabelText("Name"), "Automation");
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    expect(onCreate.mock.calls[0]?.[0]).toMatchObject({
+      scopes: { instance: { accounts: "view" } },
+      limitedToOrganization: false,
+    });
   });
 });

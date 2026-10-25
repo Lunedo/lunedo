@@ -544,6 +544,16 @@ describe("the web client", () => {
         name: "View",
       }),
     );
+    const instanceSettings = within(
+      within(dialog).getByRole("group", { name: "Access to the instance" }),
+    ).getByRole("radiogroup", { name: "Settings" });
+    expect(within(instanceSettings).getByRole("radio", { name: "View" }).hasAttribute("disabled")).toBe(true);
+    expect(within(dialog).getByText(/Instance rights belong to no single organization/)).toBeTruthy();
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Applies to" })).getByRole("radio", {
+        name: "All my organizations",
+      }),
+    );
     await userEvent.click(
       within(
         within(within(dialog).getByRole("group", { name: "Access to the instance" })).getByRole(
@@ -556,16 +566,6 @@ describe("the web client", () => {
         name: "View",
       }),
     );
-    const forced = within(dialog).getByRole("radiogroup", { name: "Applies to" });
-    expect(
-      within(forced).getByRole("radio", { name: "All my organizations" }).getAttribute("aria-checked"),
-    ).toBe("true");
-    expect(
-      within(forced)
-        .getByRole("radio", { name: `Only ${ORGANIZATION.name}` })
-        .hasAttribute("disabled"),
-    ).toBe(true);
-    expect(within(dialog).getByText(/Instance areas belong to no single organization/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
     await waitFor(() => expect(tokenBodies()).toHaveLength(2));
     expect(tokenBodies()[1]).not.toHaveProperty("organizationId");
