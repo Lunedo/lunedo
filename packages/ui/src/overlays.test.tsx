@@ -28,7 +28,8 @@ describe("Menu", () => {
     screen.getByRole("button", { name: "Actions for Lena" }).focus();
     await userEvent.keyboard("{Enter}");
     const menu = await screen.findByRole("menu");
-    expect(menu).toBeDefined();
+    expect(menu.className).toContain("overflow-y-auto");
+    expect(menu.style.maxHeight).toBe("var(--radix-dropdown-menu-content-available-height)");
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
     await waitFor(() => expect(remove).toHaveBeenCalledOnce());
     expect(edit).not.toHaveBeenCalled();

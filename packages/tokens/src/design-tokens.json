@@ -246,7 +246,7 @@
   "layout": {
     "railWidth": "3.75rem",
     "sidebarWidth": "16.5rem",
-    "toolbarHeight": "3.25rem",
+    "toolbarHeight": "3.5rem",
     "contentWidth": "47.5rem",
     "rowHeight": { "default": "1.875rem", "compact": "1.75rem" },
     "control": { "sm": "1.75rem", "md": "2rem", "lg": "2.5rem", "field": "2.25rem" },

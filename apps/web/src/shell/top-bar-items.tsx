@@ -42,6 +42,7 @@ export function NotificationsButton() {
           <IconButton
             label={count > 0 ? t("rail.notificationsUnread", { count }) : t("rail.notifications")}
             icon={Bell}
+            size="field"
           />
         }
       />
@@ -72,7 +73,9 @@ export function HelpMenu() {
     { label: t("help.shortcuts"), icon: Keyboard, shortcut: "?", onSelect: shell.openShortcuts },
     { label: t("help.apiReference"), icon: Code, onSelect: () => open("/api/docs") },
   ];
-  return <Menu trigger={<IconButton label={t("rail.help")} icon={CircleHelp} />} items={items} />;
+  return (
+    <Menu trigger={<IconButton label={t("rail.help")} icon={CircleHelp} size="field" />} items={items} />
+  );
 }
 
 const ADMIN_AREAS = [
@@ -108,6 +111,7 @@ export function SettingsGear() {
       <IconButton
         label={t("rail.settings")}
         icon={Settings}
+        size="field"
         aria-current={current ? "page" : undefined}
         onClick={() => open(only.to)}
       />
@@ -116,7 +120,12 @@ export function SettingsGear() {
   return (
     <Menu
       trigger={
-        <IconButton label={t("rail.settings")} icon={Settings} aria-current={current ? "page" : undefined} />
+        <IconButton
+          label={t("rail.settings")}
+          icon={Settings}
+          size="field"
+          aria-current={current ? "page" : undefined}
+        />
       }
       items={areas.map((area) => ({
         label: t(area.labelKey),
@@ -140,7 +149,7 @@ export function AccountMenu() {
         <button
           type="button"
           aria-label={t("rail.account")}
-          className="flex size-control-md items-center justify-center rounded-full focus-visible:focus-ring"
+          className="flex size-control-field items-center justify-center rounded-full focus-visible:focus-ring"
         >
           <PersonAvatar
             id={session.account?.id}

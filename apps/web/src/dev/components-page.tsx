@@ -211,7 +211,7 @@ function useText(): (english: string, german: string) => string {
 }
 
 const BUTTON_VARIANTS: ButtonVariant[] = ["primary", "secondary", "outline", "danger", "dangerPrimary"];
-const BUTTON_SIZES: ButtonSize[] = ["sm", "md", "lg"];
+const BUTTON_SIZES: ButtonSize[] = ["sm", "md", "field", "lg"];
 const NOTICE_VARIANTS: NoticeVariant[] = ["info", "success", "warning", "danger"];
 const TEXT_SIZES = [0.875, 0.9375, 1, 1.125, 1.25];
 

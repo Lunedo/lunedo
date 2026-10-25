@@ -77,7 +77,7 @@ function OrganizationSwitcher() {
         <button
           type="button"
           aria-label={t("topBar.switchOrganization", { name: current.name })}
-          className="flex h-control-md min-w-0 items-center gap-2 rounded-md px-2 text-sm hover:bg-hover focus-visible:focus-ring"
+          className="flex h-control-field min-w-0 items-center gap-2 rounded-md px-2 text-sm hover:bg-hover focus-visible:focus-ring"
         >
           <OrganizationInitial name={current.name} />
           <span className="hidden max-w-field truncate sm:inline" title={current.name}>
@@ -101,14 +101,14 @@ function SearchTrigger() {
         type="button"
         onClick={shell.openSearch}
         aria-keyshortcuts="Control+K /"
-        className="hidden h-control-md w-full max-w-dialog-sm items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 text-sm text-text-muted hover:bg-hover focus-visible:focus-ring md:flex"
+        className="hidden h-control-field w-full max-w-dialog-sm items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 text-sm text-text-muted hover:bg-hover focus-visible:focus-ring md:flex"
       >
         <Search aria-hidden="true" className="size-icon-md shrink-0" />
         <span className="flex-1 text-left">{t("topBar.search")}</span>
         <kbd className="rounded-sm border border-border bg-surface px-1 font-sans text-2xs">{shortcut}</kbd>
       </button>
       <span className="md:hidden">
-        <IconButton label={t("topBar.search")} icon={Search} onClick={shell.openSearch} />
+        <IconButton label={t("topBar.search")} icon={Search} size="field" onClick={shell.openSearch} />
       </span>
     </>
   );
@@ -142,6 +142,7 @@ function SidebarToggle() {
     <IconButton
       label={label}
       icon={PanelLeft}
+      size="field"
       aria-keyshortcuts="["
       aria-expanded={expanded}
       onClick={shell.toggleSidebar}
@@ -162,10 +163,10 @@ export function TopBar() {
         <Link
           to="/"
           aria-label={t("rail.home")}
-          className="flex h-control-md shrink-0 items-center gap-2 rounded-md px-1 font-semibold text-text focus-visible:focus-ring"
+          className="flex h-control-field shrink-0 items-center gap-2 rounded-md px-1 font-semibold text-text focus-visible:focus-ring"
         >
-          <LunedoMark className="size-6 text-accent" />
-          <span className="hidden lg:inline">{t("brand.name")}</span>
+          <LunedoMark className="size-control-sm text-accent" />
+          <span className="hidden text-content tracking-heading lg:inline">{t("brand.name")}</span>
         </Link>
         <OrganizationSwitcher />
       </div>

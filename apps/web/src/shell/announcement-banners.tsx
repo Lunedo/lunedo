@@ -94,13 +94,13 @@ export function AnnouncementBanner({
           : t("announcements.organizationRegion")
       }
       className={classNames(
-        "flex items-center gap-3 border-b border-border px-4 py-2",
-        warning ? "bg-warning-soft" : "bg-info-soft",
+        "flex min-h-8 items-center gap-2 border-b border-l-2 border-border bg-bg py-1 pr-2 pl-4",
+        warning ? "border-l-warning" : "border-l-accent",
       )}
     >
       <Glyph
         aria-hidden
-        className={classNames("size-icon-md shrink-0", warning ? "text-warning" : "text-info")}
+        className={classNames("size-icon-sm shrink-0", warning ? "text-warning" : "text-accent")}
       />
       <p className="min-w-0 flex-1 text-sm wrap-anywhere text-text">
         {warning ? <span className="sr-only">{t("announcements.warningLabel")} </span> : null}

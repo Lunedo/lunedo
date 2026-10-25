@@ -117,7 +117,8 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
           side={side}
           sideOffset={4}
           collisionPadding={8}
-          className={classNames(SURFACE, "min-w-field p-1")}
+          style={{ maxHeight: "var(--radix-dropdown-menu-content-available-height)" }}
+          className={classNames(SURFACE, "min-w-field overflow-y-auto p-1")}
         >
           {items.map((item, index) => {
             if (item.type === "separator") {

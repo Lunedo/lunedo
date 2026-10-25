@@ -31,6 +31,17 @@ describe("Button", () => {
     expect(className).toContain("text-text-muted");
   });
 
+  it("offers the field height for text and icon buttons", () => {
+    renderUi(
+      <>
+        <Button size="field">Create</Button>
+        <IconButton label="Help" icon={MoreHorizontal} size="field" />
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Create" }).className).toContain("h-control-field");
+    expect(screen.getByRole("button", { name: "Help" }).className).toContain("size-control-field");
+  });
+
   it("is a non-submitting button unless asked otherwise", () => {
     renderUi(<Button>Plain</Button>);
     expect(screen.getByRole("button").getAttribute("type")).toBe("button");

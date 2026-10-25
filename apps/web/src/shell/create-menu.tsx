@@ -175,7 +175,7 @@ export function CreateMenu() {
       <Menu
         align="end"
         trigger={
-          <Button variant="primary" icon={Plus} aria-label={t("create.button")}>
+          <Button variant="primary" size="field" icon={Plus} aria-label={t("create.button")}>
             <span className="hidden sm:inline">{t("create.button")}</span>
           </Button>
         }

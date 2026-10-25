@@ -711,8 +711,9 @@ describe("the shell while it loads", () => {
     expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
     expect(screen.queryByText("Planned update tonight")).toBeNull();
     release();
-    expect(await screen.findByRole("button", { name: "Create" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy();
+    const create = await screen.findByRole("button", { name: "Create" });
+    expect(create.className).toContain("h-control-field");
+    expect(screen.getByRole("button", { name: "Settings" }).className).toContain("size-control-field");
     expect(screen.getByText("Planned update tonight")).toBeTruthy();
   });
 });
