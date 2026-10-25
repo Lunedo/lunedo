@@ -6332,7 +6332,8 @@
     "copyLink": "Copy link",
     "linkCopied": "Link copied",
     "linkCopyFailed": "The link could not be copied",
-    "copyManually": "The browser did not allow access to the clipboard. Copy the link yourself: {url}"
+    "copyManually": "The browser did not allow access to the clipboard. Copy the link yourself: {url}",
+    "onThisPage": "On this page"
   },
   "pageTitle": {
     "edit": "Rename {title}",

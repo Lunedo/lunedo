@@ -77,6 +77,7 @@ import { draftQuery } from "./content-queries.js";
 import { EditorBar } from "./editor-bar.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
+import { OnThisPage } from "./on-this-page.js";
 import { EditInfo, PageBar } from "./page-bar.js";
 import { PageEditors } from "./page-editors.js";
 import { usePageMeta } from "./page-meta.js";
@@ -180,6 +181,7 @@ function PageArticle({
   const { space, canEdit, openMove, openCopy, openCreate } = useSpace();
   const uploads = useUploads();
   const attachInput = useRef<HTMLInputElement>(null);
+  const articleRef = useRef<HTMLElement>(null);
   const search = route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -487,6 +489,7 @@ function PageArticle({
       )}
       <div className="flex flex-1">
         <article
+          ref={articleRef}
           className={`mx-auto flex w-full min-w-0 flex-col gap-4 px-4 pt-6 pb-12 md:px-8 ${width === "full" ? "max-w-none" : "max-w-content"}`}
         >
           <PageHeader
@@ -710,6 +713,7 @@ function PageArticle({
             <ContentLanguageDialog page={page} open={choosingLanguage} onOpenChange={setChoosingLanguage} />
           ) : null}
         </article>
+        {editing || meeting ? null : <OnThisPage content={articleRef} />}
         {notesOpen ? (
           <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
             <PrivateNotesPanel

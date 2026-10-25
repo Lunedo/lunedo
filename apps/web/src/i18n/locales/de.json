@@ -6332,7 +6332,8 @@
     "copyLink": "Link kopieren",
     "linkCopied": "Link kopiert",
     "linkCopyFailed": "Der Link konnte nicht kopiert werden",
-    "copyManually": "Der Browser hat den Zugriff auf die Zwischenablage nicht erlaubt. Kopiere den Link selbst: {url}"
+    "copyManually": "Der Browser hat den Zugriff auf die Zwischenablage nicht erlaubt. Kopiere den Link selbst: {url}",
+    "onThisPage": "Auf dieser Seite"
   },
   "pageTitle": {
     "edit": "{title} umbenennen",
