@@ -1303,7 +1303,11 @@ export const auditCatalog = {
   "page.published": event({
     actor: ["account", "system"],
     target: "page",
-    fields: pageFields.extend({ version: z.number().int().positive(), note: z.string() }),
+    fields: pageFields.extend({
+      version: z.number().int().positive(),
+      note: z.string(),
+      credentialId: z.uuid().optional(),
+    }),
     visibility: "organization",
   }),
   "page.publishedWithToken": event({

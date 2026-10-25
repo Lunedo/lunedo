@@ -16,10 +16,11 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { Eye, Megaphone, Save, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { AppDatePicker, AppTimePicker } from "../../components/date-fields.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { instantToZoned, zonedToInstant } from "../../format/zoned.js";
@@ -134,11 +135,13 @@ export function AnnouncementSettings({
   organizationId,
   organizationName,
   editable,
+  beforeDangerZone,
 }: {
   level: "instance" | "organization";
   organizationId?: string | undefined;
   organizationName?: string | undefined;
   editable: boolean;
+  beforeDangerZone?: ReactNode;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -179,6 +182,7 @@ export function AnnouncementSettings({
       queryKey={queryKey}
       editable={editable}
       timeZone={timeZone}
+      beforeDangerZone={beforeDangerZone}
     />
   );
 }
@@ -191,6 +195,7 @@ function AnnouncementForm({
   queryKey,
   editable,
   timeZone,
+  beforeDangerZone,
 }: {
   level: "instance" | "organization";
   organizationId?: string | undefined;
@@ -198,6 +203,7 @@ function AnnouncementForm({
   saved: Saved | null;
   queryKey: readonly unknown[];
   editable: boolean;
+  beforeDangerZone?: ReactNode;
   timeZone: string;
 }) {
   const { t } = useTranslation();
@@ -438,20 +444,23 @@ function AnnouncementForm({
               error={errors.start}
             >
               <div className="flex flex-wrap gap-2">
-                <Input
-                  type="date"
-                  aria-label={t("announcements.startDate")}
-                  value={draft.startDate}
-                  readOnly={!editable}
-                  onChange={(event) => update({ startDate: event.target.value })}
-                />
-                <Input
-                  type="time"
-                  aria-label={t("announcements.startTime")}
-                  value={draft.startTime}
-                  readOnly={!editable}
-                  onChange={(event) => update({ startTime: event.target.value })}
-                />
+                <span className="min-w-0 flex-1">
+                  <AppDatePicker
+                    aria-label={t("announcements.startDate")}
+                    value={draft.startDate}
+                    disabled={!editable}
+                    clearable
+                    onValueChange={(value) => update({ startDate: value })}
+                  />
+                </span>
+                <span className="w-number-field">
+                  <AppTimePicker
+                    aria-label={t("announcements.startTime")}
+                    value={draft.startTime}
+                    disabled={!editable}
+                    onValueChange={(value) => update({ startTime: value })}
+                  />
+                </span>
               </div>
             </Field>
             <Field
@@ -461,20 +470,22 @@ function AnnouncementForm({
               required
             >
               <div className="flex flex-wrap gap-2">
-                <Input
-                  type="date"
-                  aria-label={t("announcements.endDate")}
-                  value={draft.endDate}
-                  readOnly={!editable}
-                  onChange={(event) => update({ endDate: event.target.value })}
-                />
-                <Input
-                  type="time"
-                  aria-label={t("announcements.endTime")}
-                  value={draft.endTime}
-                  readOnly={!editable}
-                  onChange={(event) => update({ endTime: event.target.value })}
-                />
+                <span className="min-w-0 flex-1">
+                  <AppDatePicker
+                    aria-label={t("announcements.endDate")}
+                    value={draft.endDate}
+                    disabled={!editable}
+                    onValueChange={(value) => update({ endDate: value })}
+                  />
+                </span>
+                <span className="w-number-field">
+                  <AppTimePicker
+                    aria-label={t("announcements.endTime")}
+                    value={draft.endTime}
+                    disabled={!editable}
+                    onValueChange={(value) => update({ endTime: value })}
+                  />
+                </span>
               </div>
             </Field>
           </div>
@@ -526,6 +537,7 @@ function AnnouncementForm({
           )}
         </form>
       </Section>
+      {beforeDangerZone}
       {editable && saved ? (
         <DangerZone title={t("common.dangerZone")}>
           <DangerAction

@@ -12,10 +12,13 @@ describe("the allowlist of the instance", () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async () => undefined);
     await renderWithProviders(<InstanceEmbedAllowlist services={[youtube]} canManage onSave={onSave} />);
+    expect(screen.queryByLabelText("Name of the service")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Add service" }));
     await user.type(screen.getByLabelText("Name of the service"), "Company videos");
     await user.type(screen.getByLabelText("Address pattern"), "https://videos.example.org/{{*}");
     await user.click(screen.getByRole("button", { name: "Add service" }));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByLabelText("Name of the service")).toBeNull());
     expect(onSave).toHaveBeenCalledWith([
       youtube,
       {
@@ -36,6 +39,7 @@ describe("the allowlist of the instance", () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async () => undefined);
     await renderWithProviders(<InstanceEmbedAllowlist services={[]} canManage onSave={onSave} />);
+    await user.click(screen.getByRole("button", { name: "Add service" }));
     await user.type(screen.getByLabelText("Name of the service"), "Company videos");
     await user.type(screen.getByLabelText("Address pattern"), "https://videos.example.org/{{*}");
     await user.click(screen.getByRole("combobox", { name: "Address sent to the service" }));
@@ -60,6 +64,7 @@ describe("the allowlist of the instance", () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async () => undefined);
     await renderWithProviders(<InstanceEmbedAllowlist services={[youtube]} canManage onSave={onSave} />);
+    await user.click(screen.getByRole("button", { name: "Add service" }));
     await user.type(screen.getByLabelText("Name of the service"), "Frames");
     await user.type(screen.getByLabelText("Address pattern"), '<iframe src="https://x.example.org">');
     await user.click(screen.getByRole("button", { name: "Add service" }));

@@ -11044,13 +11044,26 @@
                               "former": {
                                 "type": "boolean",
                                 "description": "Whether the account was anonymized; its name and other personal data are gone."
+                              },
+                              "serviceAccount": {
+                                "type": "boolean",
+                                "description": "Whether the account is a service account."
+                              },
+                              "token": {
+                                "description": "Name of the API token the account acted with, or null when it acted without one.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "id",
                               "name",
-                              "former"
+                              "former",
+                              "serviceAccount",
+                              "token"
                             ],
                             "additionalProperties": false,
                             "description": "Who acted."
@@ -11247,7 +11260,9 @@
                         "type": "account",
                         "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
                         "name": "Olivia Owner",
-                        "former": false
+                        "former": false,
+                        "serviceAccount": false,
+                        "token": null
                       },
                       "target": {
                         "type": "roleAssignment",
@@ -62784,13 +62799,26 @@
                               "former": {
                                 "type": "boolean",
                                 "description": "Whether the account was anonymized; its name and other personal data are gone."
+                              },
+                              "serviceAccount": {
+                                "type": "boolean",
+                                "description": "Whether the account is a service account."
+                              },
+                              "token": {
+                                "description": "Name of the API token the account acted with, or null when it acted without one.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "id",
                               "name",
-                              "former"
+                              "former",
+                              "serviceAccount",
+                              "token"
                             ],
                             "additionalProperties": false,
                             "description": "Who acted."
@@ -62987,7 +63015,9 @@
                         "type": "account",
                         "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
                         "name": "Olivia Owner",
-                        "former": false
+                        "former": false,
+                        "serviceAccount": false,
+                        "token": null
                       },
                       "target": {
                         "type": "roleAssignment",
@@ -128330,6 +128360,13 @@
                             }
                           ],
                           "description": "Longest time the container spends on one document."
+                        },
+                        "image": {
+                          "description": "Image of the render container that matches the version of this instance, or null when this instance does not run a release.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
@@ -128343,7 +128380,8 @@
                         "running",
                         "waiting",
                         "maxBytes",
-                        "timeoutSeconds"
+                        "timeoutSeconds",
+                        "image"
                       ],
                       "additionalProperties": false,
                       "description": "The optional render container that creates PDF files on the server."
@@ -128382,7 +128420,8 @@
                     "running": 0,
                     "waiting": 0,
                     "maxBytes": 209715200,
-                    "timeoutSeconds": 300
+                    "timeoutSeconds": 300,
+                    "image": "ghcr.io/lunedo/render:1.4.2"
                   },
                   "word": {
                     "available": true
@@ -163793,13 +163832,26 @@
                               "former": {
                                 "type": "boolean",
                                 "description": "Whether the account was anonymized; its name and other personal data are gone."
+                              },
+                              "serviceAccount": {
+                                "type": "boolean",
+                                "description": "Whether the account is a service account."
+                              },
+                              "token": {
+                                "description": "Name of the API token the account acted with, or null when it acted without one.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "id",
                               "name",
-                              "former"
+                              "former",
+                              "serviceAccount",
+                              "token"
                             ],
                             "additionalProperties": false,
                             "description": "Who acted."
@@ -163996,7 +164048,9 @@
                         "type": "account",
                         "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
                         "name": "Olivia Owner",
-                        "former": false
+                        "former": false,
+                        "serviceAccount": false,
+                        "token": null
                       },
                       "target": {
                         "type": "roleAssignment",

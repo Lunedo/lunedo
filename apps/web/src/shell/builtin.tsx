@@ -529,6 +529,7 @@ spaceSettingsItems.register(
     groupKey: "navigationGroups.publishing",
     to: "/spaces/$spaceKey/settings/portal-accounts",
     visible: isKnowledgeBase,
+    notApplicable: (space) => (space.audience === "portal" ? undefined : "portalAccounts.notApplicable"),
   },
   {
     id: "space.permissions",

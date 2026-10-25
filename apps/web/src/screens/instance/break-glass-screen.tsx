@@ -1,5 +1,6 @@
 import { Badge, Button, Combobox, Field, Notice, Section, Table } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -50,6 +51,12 @@ export function BreakGlassScreen() {
 
   return (
     <SettingsPage title={t("breakGlass.title")} description={t("breakGlass.description")}>
+      <p className="text-sm text-text-muted">
+        {t("breakGlass.otherEmergency")}{" "}
+        <Link to="/settings/instance/sign-in-providers" className="font-medium text-accent hover:underline">
+          {t("emergencyRecipients.title")}
+        </Link>
+      </p>
       {canRequest ? (
         <Section title={t("breakGlass.request")}>
           <div className="flex flex-wrap items-end gap-3 p-4">

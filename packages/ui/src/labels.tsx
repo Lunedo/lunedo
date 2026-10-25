@@ -46,6 +46,10 @@ export interface UiLabels {
   browserTimeZone: string;
   undo: string;
   secondsLeft: string;
+  previousMonth: string;
+  nextMonth: string;
+  today: string;
+  chooseDate: string;
 }
 
 const LabelsContext = createContext<UiLabels | null>(null);

@@ -474,6 +474,11 @@ export const auditEntrySchema = z
         former: z
           .boolean()
           .describe("Whether the account was anonymized; its name and other personal data are gone."),
+        serviceAccount: z.boolean().describe("Whether the account is a service account."),
+        token: z
+          .string()
+          .nullable()
+          .describe("Name of the API token the account acted with, or null when it acted without one."),
       })
       .describe("Who acted."),
     target: z
@@ -542,7 +547,14 @@ export const exampleAuditEntry = {
   userAgent: "curl/8.9.1",
   labelKey: "audit.events.role.assigned",
   changeKind: "fields",
-  actor: { type: "account", id: exampleMember.accountId, name: "Olivia Owner", former: false },
+  actor: {
+    type: "account",
+    id: exampleMember.accountId,
+    name: "Olivia Owner",
+    former: false,
+    serviceAccount: false,
+    token: null,
+  },
   target: { type: "roleAssignment", id: exampleRoleAssignment.id, name: null, former: false },
   scope: { type: "organization", id: exampleOrganization.id, name: "Platform Team" },
   changes: [

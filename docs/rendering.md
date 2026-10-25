@@ -17,12 +17,12 @@ The print view is tested in Chromium. Chrome and Edge take the paper size and or
 
 ## Setting up the render container
 
-The image `lunedo-render` (built from `docker/render.Dockerfile`) runs headless Chromium from Debian and a small service on port 3000. Add it next to Lunedo and give both the same token of at least 32 characters, for example from `openssl rand -hex 32`. Put the container only on an internal network that it shares with Lunedo: it then reaches neither the database nor the internet, and nothing but Lunedo reaches it.
+The image `lunedo-render` (built from `docker/render.Dockerfile`) runs headless Chromium from Debian and a small service on port 3000. Use the same version as Lunedo; **Settings > Instance > Rendering** shows the image that matches the running release. Add it next to Lunedo and give both the same token of at least 32 characters, for example from `openssl rand -hex 32`. Put the container only on an internal network that it shares with Lunedo: it then reaches neither the database nor the internet, and nothing but Lunedo reaches it.
 
 ```yaml
 services:
   lunedo-render:
-    image: ghcr.io/lunedo/render:latest
+    image: ghcr.io/lunedo/render:1.4.2
     restart: unless-stopped
     environment:
       RENDER_TOKEN: ${LUNEDO_RENDER_TOKEN}

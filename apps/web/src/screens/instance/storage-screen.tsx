@@ -13,6 +13,7 @@ import {
   Textarea,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -346,7 +347,13 @@ function parseAddresses(text: string): string[] {
 
 const ADDRESS = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function ContactsSection({ status, canManage }: { status: StorageStatus; canManage: boolean }) {
+export function OperationsContactsSection({
+  status,
+  canManage,
+}: {
+  status: StorageStatus;
+  canManage: boolean;
+}) {
   const { t } = useTranslation();
   const save = useStorageSave();
   const tracker = useSaveState();
@@ -582,7 +589,14 @@ export function InstanceStorageScreen() {
           <Section title={t("storage.reminder.title")}>
             <SettingsList {...editor} keys={["storage.reminder"]} level="instance" />
           </Section>
-          <ContactsSection status={data} canManage={canManage} />
+          <Section title={t("storage.contacts.title")}>
+            <p className="pt-3 text-sm text-text-muted">
+              {t("storage.contacts.moved")}{" "}
+              <Link to="/settings/instance/notifications" className="font-medium text-accent hover:underline">
+                {t("storage.contacts.open")}
+              </Link>
+            </p>
+          </Section>
         </>
       ) : null}
     </SettingsPage>

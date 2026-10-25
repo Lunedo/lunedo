@@ -26,7 +26,7 @@ function signIn(id: string, occurredAt: string, name = "auth.signedIn"): AuditIt
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
     labelKey: `audit.events.${name}`,
     changeKind: "fields",
-    actor: { type: "account", id: ME, name: "Olivia", former: false },
+    actor: { type: "account", id: ME, name: "Olivia", former: false, serviceAccount: false, token: null },
     target: { type: "account", id: ME, name: "Olivia", former: false },
     scope: { type: "account", id: ME, name: "Olivia" },
     changes: [],

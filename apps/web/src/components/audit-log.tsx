@@ -5,7 +5,6 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
-  Input,
   Table,
   TableToolbar,
   TruncatedText,
@@ -33,6 +32,7 @@ import {
   targetLabel,
   targetTypeLabel,
 } from "./audit-presentation.js";
+import { AppDatePicker } from "./date-fields.js";
 import { downloadBlob } from "./download.js";
 import { accountLoader, memberLoader } from "./pickers.js";
 import { useSettingValueFormatter } from "./settings-list.js";
@@ -179,19 +179,19 @@ export function AuditLog({
         filters={
           <>
             <Field label={t("audit.from")}>
-              <Input
-                type="date"
-                className="w-auto"
+              <AppDatePicker
                 value={filters.from}
-                onChange={(event) => update({ from: event.target.value })}
+                clearable
+                {...(filters.to ? { max: filters.to } : {})}
+                onValueChange={(value) => update({ from: value })}
               />
             </Field>
             <Field label={t("audit.to")}>
-              <Input
-                type="date"
-                className="w-auto"
+              <AppDatePicker
                 value={filters.to}
-                onChange={(event) => update({ to: event.target.value })}
+                clearable
+                {...(filters.from ? { min: filters.from } : {})}
+                onValueChange={(value) => update({ to: value })}
               />
             </Field>
             <div className="w-field max-w-full">

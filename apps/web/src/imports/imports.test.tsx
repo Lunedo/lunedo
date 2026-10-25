@@ -186,6 +186,15 @@ describe("imports list", () => {
     expect(await screen.findByText("No imports yet")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New import" })).toBeNull();
   });
+
+  it("offers a new import only once while the list is empty", async () => {
+    setup({ [`GET /api/v1/organizations/${ORGANIZATION.id}/imports`]: () => ({ body: [] }) }, [
+      "organization.imports.manage",
+    ]);
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports`);
+    expect(await screen.findByText("No imports yet")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "New import" })).toHaveLength(1);
+  });
 });
 
 describe("import wizard", () => {

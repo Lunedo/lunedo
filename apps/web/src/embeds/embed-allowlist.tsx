@@ -20,7 +20,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { Globe, Plus, RotateCcw, X } from "lucide-react";
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SaveIndicator, useSaveState } from "../components/auto-save.js";
 
@@ -57,12 +57,17 @@ function serviceId(name: string, taken: readonly EmbedService[]): string {
 function AddServiceForm({
   services,
   onAdd,
+  onClose,
 }: {
   services: readonly EmbedService[];
   onAdd: (service: EmbedService) => Promise<boolean>;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
   const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    form.current?.querySelector("input")?.focus();
+  }, []);
   const [name, setName] = useState("");
   const [pattern, setPattern] = useState("");
   const [embed, setEmbed] = useState("");
@@ -88,12 +93,7 @@ function AddServiceForm({
       name: name.trim().slice(0, 100),
       rules: [rule],
     });
-    if (added) {
-      setName("");
-      setPattern("");
-      setEmbed("");
-      setReferrerPolicy(DEFAULT_EMBED_REFERRER_POLICY);
-    }
+    if (added) onClose();
   };
 
   return (
@@ -148,10 +148,11 @@ function AddServiceForm({
           />
         </Field>
       </div>
-      <div>
-        <Button type="submit" variant="secondary" icon={Plus}>
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
+        <Button type="submit" variant="primary" icon={Plus}>
           {t("embeds.allowlist.add")}
         </Button>
+        <Button onClick={onClose}>{t("common.cancel")}</Button>
       </div>
     </form>
   );
@@ -170,6 +171,7 @@ export function InstanceEmbedAllowlist({
   const { toast } = useToast();
   const tracker = useSaveState();
   const [restore, setRestore] = useState("");
+  const [adding, setAdding] = useState(false);
   const missing = defaultEmbedServices.filter(
     (service) => !services.some((entry) => entry.id === service.id),
   );
@@ -252,7 +254,19 @@ export function InstanceEmbedAllowlist({
               </Button>
             </div>
           ) : null}
-          <AddServiceForm services={services} onAdd={(service) => save([...services, service])} />
+          {adding ? (
+            <AddServiceForm
+              services={services}
+              onAdd={(service) => save([...services, service])}
+              onClose={() => setAdding(false)}
+            />
+          ) : (
+            <div>
+              <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
+                {t("embeds.allowlist.add")}
+              </Button>
+            </div>
+          )}
         </>
       ) : null}
     </div>

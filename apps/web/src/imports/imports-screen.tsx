@@ -138,7 +138,7 @@ export function ImportsScreen() {
       title={t("imports.title")}
       description={t("imports.description")}
       actions={
-        canImport ? (
+        canImport && (imports.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} loading={creating} onClick={() => void start()}>
             {t("imports.list.new")}
           </Button>

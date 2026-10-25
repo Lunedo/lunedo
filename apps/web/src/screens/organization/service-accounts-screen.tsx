@@ -53,7 +53,7 @@ export function ServiceAccountsScreen() {
       title={t("serviceAccounts.title")}
       description={t("serviceAccounts.description")}
       actions={
-        manage ? (
+        manage && (accounts.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
             {t("serviceAccounts.create")}
           </Button>
@@ -65,6 +65,15 @@ export function ServiceAccountsScreen() {
           icon={Bot}
           title={t("serviceAccounts.none")}
           description={t("serviceAccounts.noneDescription")}
+          {...(manage
+            ? {
+                action: (
+                  <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                    {t("serviceAccounts.create")}
+                  </Button>
+                ),
+              }
+            : {})}
         />
       ) : (
         <>

@@ -115,7 +115,7 @@ export function SpacesScreen() {
               <Button variant="secondary" icon={Users} onClick={() => setCreatingOneOnOne(true)}>
                 {t("meetings.oneOnOne.new")}
               </Button>
-              {canCreate ? (
+              {canCreate && (items.length > 0 || filtered) ? (
                 <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
                   {t("spaces.create.action")}
                 </Button>

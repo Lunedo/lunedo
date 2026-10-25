@@ -17,10 +17,6 @@ function inRouter(ui: ReactNode) {
   return <RouterProvider router={router} />;
 }
 
-function day(offset: number): string {
-  return new Date(Date.now() + offset * DAY).toISOString().slice(0, 10);
-}
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -106,9 +102,9 @@ describe("the announcement settings", () => {
     expect(within(preview).getByText(/· Northwind/)).toBeTruthy();
     expect(screen.getByText("People cannot dismiss this banner. It disappears at its end.")).toBeTruthy();
 
-    const endDate = screen.getByLabelText("End date");
-    await userEvent.clear(endDate);
-    await userEvent.type(endDate, day(2));
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "End date" }));
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Show banner" }));
     await waitFor(() => expect(requests.some((request) => request.method === "PUT")).toBe(true));
     expect(requests.find((request) => request.method === "PUT")?.body).toMatchObject({
@@ -148,7 +144,13 @@ describe("the announcement settings", () => {
         return { body: previous };
       },
     });
-    await renderWithProviders(inRouter(<AnnouncementSettings level="instance" editable />));
+    await renderWithProviders(
+      inRouter(<AnnouncementSettings level="instance" editable beforeDangerZone={<p>Chat channels</p>} />),
+    );
+    const danger = await screen.findByRole("region", { name: "Danger zone" });
+    expect(
+      screen.getByText("Chat channels").compareDocumentPosition(danger) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     const zone = await screen.findByRole("region", { name: "Danger zone" });
     await userEvent.click(within(zone).getByRole("button", { name: "Remove banner" }));
     expect(await screen.findByText("Banner removed.")).toBeTruthy();

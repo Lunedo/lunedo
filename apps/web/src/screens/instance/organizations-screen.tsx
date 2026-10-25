@@ -12,10 +12,11 @@ import {
   Table,
   TableToolbar,
   TimeZoneCombobox,
+  useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Globe, MoreHorizontal, Plus, ShieldAlert } from "lucide-react";
+import { Copy, Globe, MoreHorizontal, Plus, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -59,7 +60,20 @@ export function InstanceOrganizationsScreen() {
   const state = useOrganizationState();
   const format = useFormat();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const table = useServerTable([...instanceKeys.organizations], fetchOrganizations);
+  const copyId = async (organization: { id: string }) => {
+    try {
+      await navigator.clipboard.writeText(organization.id);
+      toast({ title: t("instance.organizations.idCopied") });
+    } catch {
+      toast({
+        variant: "error",
+        title: t("instance.organizations.idCopyFailed"),
+        description: t("common.copyFailed"),
+      });
+    }
+  };
   const [creating, setCreating] = useState(false);
   const [breakGlass, setBreakGlass] = useState<{ id: string; name: string } | null>(null);
   const memberOf = new Set(state.organizations.map((entry) => entry.id));
@@ -107,12 +121,7 @@ export function InstanceOrganizationsScreen() {
           {
             key: "name",
             header: t("instance.organizations.name"),
-            cell: (organization) => (
-              <div className="flex min-w-0 flex-col">
-                <span className="font-medium">{organization.name}</span>
-                <span className="font-mono text-sm text-text-muted">{organization.slug}</span>
-              </div>
-            ),
+            cell: (organization) => <span className="font-medium">{organization.name}</span>,
           },
           {
             key: "owners",
@@ -178,6 +187,11 @@ export function InstanceOrganizationsScreen() {
                         to: "/settings/organizations/$organizationId/domains-and-guests",
                         params: { organizationId: organization.id },
                       }),
+                  },
+                  {
+                    label: t("instance.organizations.copyId"),
+                    icon: Copy,
+                    onSelect: () => void copyId(organization),
                   },
                 ]}
               />

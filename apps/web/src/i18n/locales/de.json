@@ -988,10 +988,14 @@
     "allTimeZones": "Alle Zeitzonen",
     "browserTimeZone": "Dieser Browser",
     "undo": "Rückgängig",
-    "secondsLeft": "{seconds} s"
+    "secondsLeft": "{seconds} s",
+    "previousMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "today": "Heute",
+    "chooseDate": "Datum wählen"
   },
   "emergencyRecipients": {
-    "title": "Notfall-Anmeldung",
+    "title": "Notfall-Anmeldung des Owners",
     "description": "Wenn du dich bei ausgeschalteter Passwort-Anmeldung mit deinem Passwort anmeldest, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
     "ownerOnly": "Nur der Instanz-Owner kann ändern, wer über eine Notfall-Anmeldung informiert wird.",
     "administrators": "Instanz-Administration informieren",
@@ -1001,7 +1005,8 @@
     "choosePeople": "Personen auswählen",
     "addresses": "Weitere E-Mail-Adressen",
     "addressesHint": "Adressen außerhalb von Lunedo, zum Beispiel ein Security-Team, durch Kommas getrennt. Höchstens 20.",
-    "addressesInvalid": "Gib bis zu 20 gültige E-Mail-Adressen ein, durch Kommas getrennt."
+    "addressesInvalid": "Gib bis zu 20 gültige E-Mail-Adressen ein, durch Kommas getrennt.",
+    "otherEmergency": "So meldet sich der Instanz-Owner an, wenn die Anbieter ausfallen. Den Zugriff von Administratoren auf Organisationen im Notfall regelst du an anderer Stelle:"
   },
   "shell": {
     "documentTitle": "{title} · Lunedo",
@@ -1065,7 +1070,7 @@
     "organizations": "Organisationen",
     "accounts": "Konten",
     "mail": "E-Mail",
-    "breakGlass": "Notfallzugriff",
+    "breakGlass": "Zugriff auf Organisationen im Notfall",
     "spaces": "Spaces",
     "personalSpaces": "Persönliche Spaces",
     "pagesAndTrash": "Seiten und Papierkorb",
@@ -3775,7 +3780,7 @@
     "choosePersonFirst": "Wähle die Person aus, die du hinzufügen möchtest, und wähle dann erneut „Verantwortliche Person hinzufügen“."
   },
   "breakGlass": {
-    "title": "Notfallzugriff",
+    "title": "Zugriff auf Organisationen im Notfall",
     "description": "Befristeter Administratorzugriff auf Organisationen, denen du nicht angehörst, für Notfälle.",
     "request": "Notfallzugriff anfordern",
     "requestFor": "Notfallzugriff auf {name}",
@@ -3798,7 +3803,8 @@
       "ended": "Beendet",
       "expired": "Abgelaufen"
     },
-    "end": "Zugriff beenden"
+    "end": "Zugriff beenden",
+    "otherEmergency": "Damit erhalten Administratoren Zugriff auf Organisationen, denen sie nicht angehören. Wie sich der Instanz-Owner anmeldet, wenn die Anbieter ausfallen, regelst du an anderer Stelle:"
   },
   "instance": {
     "general": {
@@ -3845,7 +3851,10 @@
       "slugHint": "Optional. Wird aus dem Namen abgeleitet, wenn leer.",
       "open": "Einstellungen öffnen",
       "domains": "Domains",
-      "actionsFor": "Aktionen für {name}"
+      "actionsFor": "Aktionen für {name}",
+      "copyId": "ID kopieren",
+      "idCopied": "ID kopiert",
+      "idCopyFailed": "Die ID konnte nicht kopiert werden"
     },
     "accounts": {
       "account": "Konto",
@@ -4476,7 +4485,9 @@
       "items": "Seiten",
       "space": "Space"
     },
-    "formerUser": "Ehemalige Person {id}"
+    "formerUser": "Ehemalige Person {id}",
+    "serviceAccountActor": "{name} (Dienstkonto)",
+    "tokenActor": "{actor} · Token „{token}“"
   },
   "actions": {
     "instance_organizations_view": "Organisationen ansehen",
@@ -4688,8 +4699,8 @@
   },
   "lifecycle": {
     "placeholder": {
-      "add": "Platzhalter anlegen",
-      "title": "Platzhalter anlegen",
+      "add": "Person ohne Konto anlegen",
+      "title": "Platzhalter für eine Person ohne Konto",
       "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel den Autor importierter Inhalte. Er kann sich nicht anmelden.",
       "name": "Name",
       "email": "E-Mail-Adresse",
@@ -7756,10 +7767,10 @@
       "byText": "Nach Aufgabe",
       "period": "Zeitraum",
       "periods": {
-        "any": "Alle",
         "30": "Letzte 30 Tage",
         "90": "Letzte 90 Tage",
-        "365": "Letztes Jahr"
+        "365": "Letztes Jahr",
+        "any": "Alle"
       },
       "newest": "Neueste zuerst",
       "oldest": "Älteste zuerst",
@@ -9820,7 +9831,7 @@
   },
   "storage": {
     "title": "Speicher",
-    "description": "Sieh, wie voll der Dateispeicher ist, und lege fest, wer informiert wird, bevor er aufgebraucht ist.",
+    "description": "Sieh, wie voll der Dateispeicher ist, und lege fest, ab welcher Belegung gewarnt wird, bevor er aufgebraucht ist.",
     "loadFailed": "Der Speicherstatus konnte nicht geladen werden",
     "banner": {
       "1": {
@@ -9884,7 +9895,7 @@
     },
     "contacts": {
       "title": "Betriebskontakte",
-      "description": "Neben allen Instanzadministratoren erhalten diese Kontakte eine E-Mail und optional einen Teams-Beitrag, wenn eine Stufe aktiv wird, steigt, als Erinnerung und wenn die Belegung sinkt.",
+      "description": "Neben allen Instanzadministratoren erhalten diese Kontakte Warnungen des Betriebs per E-Mail und optional als Teams-Beitrag, zum Beispiel wenn der Speicher voll wird oder Sicherungen fehlen.",
       "addresses": "E-Mail-Adressen",
       "addressesHint": "Eine Adresse pro Zeile, zum Beispiel eine Ticket-Adresse der IT. Bis zu 20.",
       "addressesInvalid": "Prüfe die Adressen: Jede Zeile braucht genau eine gültige E-Mail-Adresse, insgesamt bis zu 20.",
@@ -9908,7 +9919,10 @@
         "invalidTeamsWebhook": "Diese Webhook-Adresse lässt sich nicht verwenden. Kopiere die vollständige Adresse aus dem Teams-Workflow und versuche es erneut.",
         "invalidThresholds": "Die Stufen müssen ganze Prozentzahlen sein und steigen: erst Warnung, dann große Schreibvorgänge, dann kritisch.",
         "invalidS3Limit": "Das Limit muss eine positive Größe sein."
-      }
+      },
+      "moved": "Die Betriebskontakte, die Speicherwarnungen erhalten, legst du unter Benachrichtigungen fest.",
+      "open": "Betriebskontakte öffnen",
+      "loadFailed": "Die Betriebskontakte konnten nicht geladen werden"
     }
   },
   "backups": {
@@ -10063,7 +10077,7 @@
       "missingDaysHint": "Instanzadministration und Betriebskontakte werden einmal informiert.",
       "autoTestRestore": "Neuestes Backup jeden Monat testweise wiederherstellen",
       "autoTestRestoreHint": "Nach dem ersten geplanten Backup eines Monats stellt Lunedo es in eine temporäre Datenbank wieder her und prüft es.",
-      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus den Speichereinstellungen, mit derselben Erinnerung."
+      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus den Benachrichtigungseinstellungen, mit derselben Erinnerung."
     },
     "test": {
       "title": "Test-Wiederherstellung",
@@ -10234,7 +10248,10 @@
       "notConfigured": "Personen drucken PDF-Dateien über ihren eigenen Browser. Der Container wird nur für PDF über die API und für PDF vieler Seiten im Hintergrund gebraucht. Er führt Chromium ohne Oberfläche aus und ist optional.",
       "setup": "Füge den Render-Container deiner Docker-Compose-Datei hinzu, setze dasselbe Token für Lunedo und starte Lunedo neu:",
       "docs": "So richtest du den Render-Container ein",
-      "loadFailed": "Der Zustand des Renderings konnte nicht geladen werden"
+      "loadFailed": "Der Zustand des Renderings konnte nicht geladen werden",
+      "snippet": "Docker-Compose-Einträge für den Render-Container",
+      "copySnippet": "Docker-Compose-Einträge kopieren",
+      "notRelease": "Diese Instanz läuft ohne Release, deshalb nennt das Beispiel das neueste Release des Render-Containers. Mit einem Release steht hier die passende Version."
     },
     "other": {
       "title": "Weitere Formate",
@@ -10937,8 +10954,6 @@
     "tab": "Portalkonten",
     "title": "Portalkonten",
     "description": "Lesende ohne Firmenkonto, die nur die Portale sehen, zu denen sie eingeladen wurden, nie das Wiki.",
-    "notForPortalTitle": "Diese Wissensdatenbank ist nicht für Portalkonten",
-    "notForPortal": "Portalkonten lesen nur Wissensdatenbanken mit der Zielgruppe Portalkonten. Ändere die Zielgruppe, um hier Lesende einzuladen.",
     "toVisibility": "Sichtbarkeit öffnen",
     "managersOnly": "Nur wer die Mitglieder der Organisation verwaltet, lädt Portalkonten ein und verwaltet sie. Frag die Administration der Organisation.",
     "loadFailed": "Die Portalkonten konnten nicht geladen werden",
@@ -10990,7 +11005,8 @@
       "loadFailed": "Die Portale konnten nicht geladen werden",
       "emptyTitle": "Kein Portal zum Lesen",
       "emptyDescription": "Dein Zugang ist vielleicht abgelaufen. Frag die Personen, die dich eingeladen haben."
-    }
+    },
+    "notApplicable": "Gilt hier nicht: Portalkonten lesen nur Wissensdatenbanken mit der Zielgruppe Portalkonten."
   },
   "operations": {
     "status": {

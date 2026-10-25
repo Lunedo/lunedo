@@ -84,6 +84,7 @@ function api(
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
     "GET /api/v1/instance/storage": () => ({ body: status() }),
     "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }),
+    "GET /api/v1/account/notification-delivery": () => ({ body: { emailMethod: null, browserPush: false } }),
     "GET /api/v1/instance/mail": () => ({
       body: {
         smtp: null,
@@ -106,18 +107,18 @@ async function renderAt(path: string) {
 }
 
 describe("the storage settings", () => {
-  it("shows the usage, the active level and the stored contacts", async () => {
+  it("shows the usage and the active level and links to the operations contacts", async () => {
     api();
     await renderAt("/settings/instance/storage");
     expect(await screen.findByText("412 GB of 500 GB used (82.4%)")).toBeTruthy();
     expect(screen.getByRole("progressbar", { name: "Used share of the file store" })).toBeTruthy();
     expect(screen.getByText("Warning", { selector: "span" })).toBeTruthy();
     expect(screen.getByText("Local volume")).toBeTruthy();
-    expect((screen.getByLabelText("E-mail addresses") as HTMLTextAreaElement).value).toBe(
-      "tickets@example.org",
-    );
-    expect(screen.getByText("Webhook set on prod-12.logic.azure.com")).toBeTruthy();
     expect(screen.queryByLabelText("Limit for stored files")).toBeNull();
+    expect(screen.queryByLabelText("E-mail addresses")).toBeNull();
+    expect(screen.getByRole("link", { name: "Open the operations contacts" }).getAttribute("href")).toBe(
+      "/settings/instance/notifications",
+    );
   });
 
   it("says why S3 storage without a limit has no warning and offers the limit", async () => {
@@ -192,13 +193,32 @@ describe("the storage settings", () => {
     expect(critical.value).toBe("95");
   });
 
+  it("hides the controls from people who may only view", async () => {
+    api({}, ["instance.settings.view"]);
+    await renderAt("/settings/instance/storage");
+    await screen.findByText("412 GB of 500 GB used (82.4%)");
+    expect(screen.queryByRole("button", { name: "Send test message" })).toBeNull();
+    expect((screen.getByLabelText("Warning") as HTMLInputElement).disabled).toBe(true);
+  });
+});
+
+describe("the operations contacts", () => {
+  it("are set with the notifications", async () => {
+    api();
+    await renderAt("/settings/instance/notifications");
+    expect(((await screen.findByLabelText("E-mail addresses")) as HTMLTextAreaElement).value).toBe(
+      "tickets@example.org",
+    );
+    expect(screen.getByText("Webhook set on prod-12.logic.azure.com")).toBeTruthy();
+  });
+
   it("marks an invalid address, keeps the entry and saves a corrected list", async () => {
     const { requests } = api({
       "PUT /api/v1/instance/storage": (request) => ({
         body: status({ operationsEmails: (request.body as { operationsEmails: string[] }).operationsEmails }),
       }),
     });
-    await renderAt("/settings/instance/storage");
+    await renderAt("/settings/instance/notifications");
     const addresses = (await screen.findByLabelText("E-mail addresses")) as HTMLTextAreaElement;
     await userEvent.clear(addresses);
     await userEvent.type(addresses, "not an address");
@@ -225,7 +245,7 @@ describe("the storage settings", () => {
         body: status({ teamsWebhook: { configured: false, host: null } }),
       }),
     });
-    await renderAt("/settings/instance/storage");
+    await renderAt("/settings/instance/notifications");
     await userEvent.click(await screen.findByRole("button", { name: "Remove webhook" }));
     expect(screen.getByText("The webhook is removed when you save.")).toBeTruthy();
     expect(requests.some((request) => request.method === "PUT")).toBe(false);
@@ -249,7 +269,7 @@ describe("the storage settings", () => {
           problem: "invalidTeamsWebhook",
         }),
     });
-    await renderAt("/settings/instance/storage");
+    await renderAt("/settings/instance/notifications");
     await userEvent.type(await screen.findByLabelText("Teams webhook"), "https://example.invalid/x");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText(/This webhook address cannot be used/)).toBeTruthy();
@@ -261,7 +281,7 @@ describe("the storage settings", () => {
         body: { addresses: 1, teams: { delivered: false, reason: "unauthorized", status: 401 } },
       }),
     });
-    await renderAt("/settings/instance/storage");
+    await renderAt("/settings/instance/notifications");
     await userEvent.click(await screen.findByRole("button", { name: "Send test message" }));
     expect(await screen.findByText(/Test message sent to 1 address\./)).toBeTruthy();
     expect(screen.getByText(/Teams did not accept the test message \(unauthorized\)/)).toBeTruthy();
@@ -273,17 +293,9 @@ describe("the storage settings", () => {
         body: status({ operationsEmails: [], teamsWebhook: { configured: false, host: null } }),
       }),
     });
-    await renderAt("/settings/instance/storage");
+    await renderAt("/settings/instance/notifications");
     await userEvent.click(await screen.findByRole("button", { name: "Send test message" }));
     expect(await screen.findByText(/Save an e-mail address or a Teams webhook first/)).toBeTruthy();
-  });
-
-  it("hides the controls from people who may only view", async () => {
-    api({}, ["instance.settings.view"]);
-    await renderAt("/settings/instance/storage");
-    await screen.findByText("412 GB of 500 GB used (82.4%)");
-    expect(screen.queryByRole("button", { name: "Send test message" })).toBeNull();
-    expect((screen.getByLabelText("Warning") as HTMLInputElement).disabled).toBe(true);
   });
 });
 

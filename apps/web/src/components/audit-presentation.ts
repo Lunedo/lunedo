@@ -42,6 +42,12 @@ export function formerUser(t: TFunction, id: string): string {
 }
 
 export function actorLabel(t: TFunction, item: AuditItem): string {
+  const base = actorName(t, item);
+  const kind = item.actor.serviceAccount ? t("audit.serviceAccountActor", { name: base }) : base;
+  return item.actor.token ? t("audit.tokenActor", { actor: kind, token: item.actor.token }) : kind;
+}
+
+function actorName(t: TFunction, item: AuditItem): string {
   if (item.actor.name) return item.actor.name;
   if (item.peopleHidden && item.actor.type === "account") return t("audit.hiddenActor");
   if (item.actor.former && item.actor.id) return formerUser(t, item.actor.id);

@@ -48,6 +48,15 @@ export {
   type SwitchProps,
 } from "./controls.js";
 export {
+  DatePicker,
+  type DatePickerProps,
+  isoDate,
+  monthGrid,
+  parseIsoDate,
+  TimePicker,
+  timeOptions,
+} from "./date-picker.js";
+export {
   ConfirmDialog,
   type ConfirmDialogProps,
   Dialog,

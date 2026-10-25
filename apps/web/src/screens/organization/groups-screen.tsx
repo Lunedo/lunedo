@@ -49,21 +49,35 @@ export function GroupsScreen() {
   );
   const [creating, setCreating] = useState(false);
   const canCreate = state.can("organization.groups.create");
+  const empty = table.query.isSuccess && table.rows.length === 0 && !table.search.value;
 
   return (
     <SettingsPage
       title={t("groups.title")}
       description={t("groups.description")}
       actions={
-        canCreate ? (
+        canCreate && !empty ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
             {t("groups.create")}
           </Button>
         ) : null
       }
     >
-      {table.query.isSuccess && table.rows.length === 0 && !table.search.value ? (
-        <EmptyState icon={UsersRound} title={t("groups.none")} description={t("groups.noneDescription")} />
+      {empty ? (
+        <EmptyState
+          icon={UsersRound}
+          title={t("groups.none")}
+          description={t("groups.noneDescription")}
+          {...(canCreate
+            ? {
+                action: (
+                  <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                    {t("groups.create")}
+                  </Button>
+                ),
+              }
+            : {})}
+        />
       ) : (
         <>
           <TableToolbar

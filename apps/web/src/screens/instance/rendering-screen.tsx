@@ -1,4 +1,13 @@
-import { Badge, type BadgeVariant, Button, Notice, Section, SettingRow, Skeleton } from "@lunedo/ui";
+import {
+  Badge,
+  type BadgeVariant,
+  Button,
+  CodeBlock,
+  Notice,
+  Section,
+  SettingRow,
+  Skeleton,
+} from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -16,8 +25,10 @@ const STATE_BADGES: Record<string, BadgeVariant> = {
   unreachable: "danger",
 };
 
-const COMPOSE_SNIPPET = `  lunedo-render:
-    image: ghcr.io/lunedo/render:latest
+const LATEST_RENDER_IMAGE = "ghcr.io/lunedo/render:latest";
+
+const composeSnippet = (image: string) => `  lunedo-render:
+    image: ${image}
     restart: unless-stopped
     environment:
       RENDER_TOKEN: \${LUNEDO_RENDER_TOKEN}
@@ -110,9 +121,12 @@ function PdfSection({
             {t("rendering.pdf.notConfigured")}
           </Notice>
           <p className="text-sm">{t("rendering.pdf.setup")}</p>
-          <pre className="overflow-x-auto rounded-md border border-border bg-surface-sunken p-3 font-mono text-sm">
-            {COMPOSE_SNIPPET}
-          </pre>
+          <CodeBlock
+            value={composeSnippet(pdf.image ?? LATEST_RENDER_IMAGE)}
+            label={t("rendering.pdf.snippet")}
+            copyLabel={t("rendering.pdf.copySnippet")}
+          />
+          {pdf.image ? null : <p className="text-sm text-text-muted">{t("rendering.pdf.notRelease")}</p>}
           <a
             href={docsUrl("rendering.md")}
             target="_blank"

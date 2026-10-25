@@ -55,6 +55,10 @@ function TranslatedUi({ children }: { children: ReactNode }) {
       browserTimeZone: t("ui.browserTimeZone"),
       undo: t("ui.undo"),
       secondsLeft: t("ui.secondsLeft", { seconds: "{seconds}" }),
+      previousMonth: t("ui.previousMonth"),
+      nextMonth: t("ui.nextMonth"),
+      today: t("ui.today"),
+      chooseDate: t("ui.chooseDate"),
     }),
     [t],
   );

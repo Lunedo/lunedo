@@ -219,7 +219,7 @@ export function SpaceBlogScreen() {
         ]}
       >
         {space.role ? <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} /> : null}
-        {canEdit ? (
+        {canEdit && items.length > 0 ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
             {t("blog.write")}
           </Button>

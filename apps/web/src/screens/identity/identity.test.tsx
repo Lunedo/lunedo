@@ -899,6 +899,17 @@ describe("the sign-in settings of the instance", () => {
     expect(screen.getAllByRole("button", { name: "Add provider" })).toHaveLength(1);
   });
 
+  it("names the owner's emergency sign-in and links to the emergency access to organizations", async () => {
+    adminApi({ "GET /api/v1/instance/identity-providers": () => ({ body: [] }) });
+    await renderPath("/settings/instance/sign-in-providers");
+    const section = await screen.findByRole("region", { name: "Emergency sign-in of the owner" });
+    expect(
+      within(section)
+        .getByRole("link", { name: "Access to organizations in an emergency" })
+        .getAttribute("href"),
+    ).toBe("/settings/instance/break-glass");
+  });
+
   it("warns sign-in administrators when identity providers are not checked strictly", async () => {
     adminApi({
       "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),

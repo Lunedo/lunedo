@@ -13,7 +13,7 @@ import {
   TruncatedText,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Eye, KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -485,6 +485,12 @@ export function InstanceProvidersScreen() {
         <SettingsList {...editor} keys={["auth.passwordSignIn"]} level="instance" />
       </Section>
       <Section title={t("emergencyRecipients.title")}>
+        <p className="pt-3 text-sm text-text-muted">
+          {t("emergencyRecipients.otherEmergency")}{" "}
+          <Link to="/settings/instance/break-glass" className="font-medium text-accent hover:underline">
+            {t("breakGlass.title")}
+          </Link>
+        </p>
         <EmergencyRecipients />
       </Section>
     </SettingsPage>

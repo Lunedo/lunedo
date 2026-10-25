@@ -89,6 +89,7 @@ export interface SidebarItemProps extends Omit<ComponentProps<"a">, "children"> 
   icon?: LucideIcon;
   label: ReactNode;
   current?: boolean;
+  muted?: boolean;
   badge?: ReactNode;
   asChild?: boolean;
   children?: ReactNode;
@@ -98,6 +99,7 @@ export function SidebarItem({
   icon,
   label,
   current = false,
+  muted = false,
   badge,
   asChild = false,
   children,
@@ -106,7 +108,11 @@ export function SidebarItem({
 }: SidebarItemProps) {
   const classes = classNames(
     "flex h-row items-center gap-2 rounded-sm px-2 transition-colors focus-visible:focus-ring motion-reduce:transition-none",
-    current ? "bg-accent font-semibold text-on-accent" : "text-text hover:bg-hover",
+    current
+      ? "bg-accent font-semibold text-on-accent"
+      : muted
+        ? "text-text-muted hover:bg-hover"
+        : "text-text hover:bg-hover",
     className,
   );
   const glyph = icon && <Icon icon={icon} className={current ? "text-on-accent" : "text-text-muted"} />;

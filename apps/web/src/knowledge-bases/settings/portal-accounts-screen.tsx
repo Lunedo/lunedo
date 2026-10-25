@@ -173,12 +173,12 @@ export function PortalAccountsScreen() {
     <SpaceSettingsPage title={t("portalAccounts.title")} description={t("portalAccounts.description")}>
       <div className="flex flex-col gap-6">
         {forPortal ? null : (
-          <Notice variant="info" title={t("portalAccounts.notForPortalTitle")}>
-            <p>{t("portalAccounts.notForPortal")}</p>
+          <Notice variant="info">
+            {t("portalAccounts.notApplicable")}{" "}
             <Link
               to="/spaces/$spaceKey/settings/visibility"
               params={{ spaceKey: space.key }}
-              className="mt-2 inline-flex min-h-hit items-center text-accent hover:underline focus-visible:focus-ring"
+              className="text-accent hover:underline focus-visible:focus-ring"
             >
               {t("portalAccounts.toVisibility")}
             </Link>

@@ -22,13 +22,15 @@ export function OrganizationAnnouncementsScreen() {
         organizationId={organizationId}
         organizationName={organization.data?.name}
         editable={state.can("organization.settings.manage")}
-      />
-      <ChatChannelsPanel
-        owner={{ kind: "organization", organizationId }}
-        events={organizationChatEvents}
-        title={t("chatChannels.announcementsTitle")}
-        canManage={state.can("organization.integrations.manage")}
-        secondaryAction
+        beforeDangerZone={
+          <ChatChannelsPanel
+            owner={{ kind: "organization", organizationId }}
+            events={organizationChatEvents}
+            title={t("chatChannels.announcementsTitle")}
+            canManage={state.can("organization.integrations.manage")}
+            secondaryAction
+          />
+        }
       />
     </SettingsPage>
   );

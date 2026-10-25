@@ -7,7 +7,7 @@ import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import { defineJob, type JobDefinition, type JobFinishedEvent } from "./job-queue.js";
-import { PgBossQueue } from "./pg-boss-queue.js";
+import { PgBossQueue, queueCounts } from "./pg-boss-queue.js";
 
 const databaseUrl = inject("databaseUrl");
 const logger = createLogger({ service: "test", level: "silent" });
@@ -301,5 +301,13 @@ describe.skipIf(!databaseUrl)("graceful shutdown", () => {
     expect(aborted).toBe(true);
     expect(info?.state).toBe("retry");
     await check.stop({ timeoutSeconds: 1 });
+  });
+});
+
+describe("queue counts", () => {
+  it("counts jobs planned for later as planned, not as waiting", () => {
+    expect(
+      queueCounts({ readyCount: 2, blockedCount: 1, activeCount: 1, deferredCount: 518, failedCount: 0 }),
+    ).toEqual({ queued: 3, active: 1, deferred: 518, failed: 0 });
   });
 });

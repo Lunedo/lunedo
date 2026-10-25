@@ -255,10 +255,19 @@ describe.skipIf(!databaseBaseUrl)("knowledge base articles for programs", () => 
     expect(created.statusCode, created.body).toBe(201);
     const article = created.json() as ArticleBody;
     expect(article.portalUrl).toMatch(new RegExp(`/${article.number}-passwort-aendern$`));
-    const audit = await auditFields("page.publishedWithToken", article.id);
+    const audit = await auditFields("page.published", article.id);
     expect(audit).toEqual([
       expect.objectContaining({ credentialId: publishing.apiToken.id, note: "Vom Assistenten übernommen" }),
     ]);
+    expect(await auditFields("page.publishedWithToken", article.id)).toEqual([]);
+    const labels = await test.runtime.pool.query<{ labels: Record<string, unknown> }>(
+      "select labels from audit_events where name = 'page.published' and target_id = $1",
+      [article.id],
+    );
+    expect(labels.rows[0]?.labels).toMatchObject({
+      actorKind: "serviceAccount",
+      actorToken: expect.any(String),
+    });
     const hidden = await published(kb, "Intern", "Nur für IT");
     const restricted = await owner.post(`/api/v1/pages/${hidden.id}/access`, {
       changes: [{ action: "restrict", kind: "view" }],

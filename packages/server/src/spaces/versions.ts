@@ -375,18 +375,15 @@ export class VersionService {
         name: "page.published",
         actor,
         targetId: itemId,
-        fields: { spaceId: page.spaceId, title: page.title, version, note },
+        fields: {
+          spaceId: page.spaceId,
+          title: page.title,
+          version,
+          note,
+          ...(actor.type === "account" && actor.token ? { credentialId: actor.token.id } : {}),
+        },
         scope: auditScopeOf(page),
       });
-      if (actor.type === "account" && actor.token) {
-        await this.#audit.record(tx, {
-          name: "page.publishedWithToken",
-          actor,
-          targetId: itemId,
-          fields: { spaceId: page.spaceId, title: page.title, version, note, credentialId: actor.token.id },
-          scope: auditScopeOf(page),
-        });
-      }
       if (input.reviewed) await this.#reviews?.reviewedOnPublish(tx, actor, itemId);
       return { version, created: true };
     });

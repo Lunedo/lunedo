@@ -324,6 +324,7 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
         waiting: null,
         maxBytes: null,
         timeoutSeconds: null,
+        image: null,
       },
       word: { available: true },
     });

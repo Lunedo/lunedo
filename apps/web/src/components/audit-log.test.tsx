@@ -49,7 +49,7 @@ const ROLE_ASSIGNED = event({
   targetId: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
   labelKey: "audit.events.role.assigned",
   changeKind: "fields",
-  actor: { type: "account", id: GONE, name: null, former: false },
+  actor: { type: "account", id: GONE, name: null, former: false, serviceAccount: false, token: null },
   target: { type: "roleAssignment", id: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d", name: null, former: false },
   scope: { type: "organization", id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f", name: "Platform Team" },
   changes: [
@@ -226,6 +226,9 @@ describe("the audit log", () => {
     const table = await renderLog();
     expect(screen.getByText("From", { selector: "label" })).toBeTruthy();
     expect(screen.getByText("To", { selector: "label" })).toBeTruthy();
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+    expect(screen.getByRole("button", { name: "From" }).textContent).toContain("Choose a date");
+    expect(screen.getByRole("button", { name: "To" })).toBeTruthy();
     expect(await within(table).findByText("Mapping rule")).toBeTruthy();
     expect(within(table).queryByText("mappingRule")).toBeNull();
     await userEvent.click(within(table).getAllByText("Olivia Owner").at(-1) as HTMLElement);
@@ -310,5 +313,34 @@ describe("audit presentation of personal and notification settings", () => {
     expect(within(notification as HTMLElement).getByText(/^Notifications · /)).toBeTruthy();
     expect(within(notification as HTMLElement).getByText("Immediately → In the daily digest")).toBeTruthy();
     expect(table.textContent).not.toMatch(/appearance\.|notifications\.guest|\{/);
+  });
+});
+
+describe("who acted", () => {
+  it("names the service account and the token in the actor column", async () => {
+    const published = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e9",
+      name: "page.published",
+      targetType: "page",
+      targetId: OLIVIA,
+      labelKey: "audit.events.page.published",
+      changeKind: "fields",
+      actor: {
+        type: "account",
+        id: OLIVIA,
+        name: "Sync bot",
+        former: false,
+        serviceAccount: true,
+        token: "Publishing",
+      },
+      target: { type: "page", id: OLIVIA, name: "Guide", former: false },
+      changes: [],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [published], nextCursor: null } }),
+    });
+    const table = await renderLog();
+    expect(await within(table).findByText("Sync bot (service account) · token “Publishing”")).toBeTruthy();
   });
 });

@@ -122,9 +122,11 @@ export function TemplatesManager({
     <div className="flex flex-col gap-4">
       {canManage ? (
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" icon={Plus} onClick={() => setEditing("new")}>
-            {t("templates.create")}
-          </Button>
+          {rows.length > 0 ? (
+            <Button variant="primary" icon={Plus} onClick={() => setEditing("new")}>
+              {t("templates.create")}
+            </Button>
+          ) : null}
           <Button variant="secondary" icon={FileUp} onClick={() => setImporting(true)}>
             {t("templates.import")}
           </Button>
@@ -160,7 +162,7 @@ export function TemplatesManager({
             {...(canManage
               ? {
                   action: (
-                    <Button variant="secondary" icon={Plus} onClick={() => setEditing("new")}>
+                    <Button variant="primary" icon={Plus} onClick={() => setEditing("new")}>
                       {t("templates.create")}
                     </Button>
                   ),

@@ -136,6 +136,10 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     browserTimeZone: "This browser",
     undo: "Undo",
     secondsLeft: "{seconds} s",
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    today: "Today",
+    chooseDate: "Choose a date",
   },
   de: {
     close: "Schließen",
@@ -182,6 +186,10 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     browserTimeZone: "Dieser Browser",
     undo: "Rückgängig",
     secondsLeft: "{seconds} s",
+    previousMonth: "Vorheriger Monat",
+    nextMonth: "Nächster Monat",
+    today: "Heute",
+    chooseDate: "Datum wählen",
   },
 };
 

@@ -98,7 +98,7 @@ describe("portal accounts of a knowledge base", () => {
       [`GET /api/v1/spaces/${SPACE_ID}/portal-accounts`]: () => ({ body: { accounts: [], invitations: [] } }),
     });
     await renderWithProviders(inSpace(<PortalAccountsScreen />, "signedIn"));
-    expect(await screen.findByText("This knowledge base is not for portal accounts")).toBeTruthy();
+    expect(await screen.findByText(/Does not apply: portal accounts read only knowledge bases/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Invite reader" })).toBeNull();
     await waitFor(() => expect(api.requests.length).toBeGreaterThan(0));
     expect(screen.queryByText("No portal accounts yet")).toBeNull();

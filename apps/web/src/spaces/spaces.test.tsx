@@ -557,6 +557,10 @@ describe("spaces", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toEqual(["Address", "Appearance and start page", "Visibility", "Languages", "Portal accounts"]);
+    const portalAccounts = within(publishing).getByRole("link", { name: "Portal accounts" });
+    expect(portalAccounts.getAttribute("title")).toMatch(/^Does not apply: portal accounts read only/);
+    expect(portalAccounts.className).toContain("text-text-muted");
+    expect(within(publishing).getByRole("link", { name: "Visibility" }).getAttribute("title")).toBeNull();
     const content = within(navigation).getByRole("list", { name: "Content" });
     expect(
       within(content)

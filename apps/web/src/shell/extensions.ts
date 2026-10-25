@@ -43,6 +43,7 @@ export interface SpaceSettingsItem {
   groupKey?: string;
   to: string;
   visible?: (space: SpaceWithRole) => boolean;
+  notApplicable?: (space: SpaceWithRole) => string | undefined;
 }
 
 export interface Command {

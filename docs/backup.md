@@ -178,7 +178,7 @@ If the worker is killed during a test restore, the temporary database and direct
 
 ## Warnings
 
-Warnings go to the instance administrators (notification center, e-mail and push by their preferences) and to the operations contacts of the storage settings (e-mail and Teams), with the same rules as the storage warnings:
+Warnings go to the instance administrators (notification center, e-mail and push by their preferences) and to the operations contacts set under Settings > Instance > Notifications (e-mail and Teams), with the same rules as the storage warnings:
 
 | Warning | When | Repeated |
 |---|---|---|

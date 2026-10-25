@@ -13,6 +13,7 @@ export interface SettingsEntry {
   label: string;
   href: string;
   group?: string;
+  notApplicable?: string;
 }
 
 export interface SettingsEntryGroup {
@@ -141,8 +142,17 @@ export function SettingsShell({
           {...(group.label ? { label: group.label, variant: "divided" as const } : {})}
         >
           {group.entries.map((entry) => (
-            <SidebarItem key={entry.id} label={entry.label} current={entry.id === current?.id} asChild>
-              <Link to={entry.href as never} />
+            <SidebarItem
+              key={entry.id}
+              label={entry.label}
+              current={entry.id === current?.id}
+              muted={entry.notApplicable !== undefined}
+              asChild
+            >
+              <Link
+                to={entry.href as never}
+                {...(entry.notApplicable ? { title: entry.notApplicable } : {})}
+              />
             </SidebarItem>
           ))}
         </SidebarGroup>

@@ -368,8 +368,8 @@ describe("the accounts page", () => {
   it("adds a placeholder with a name and an e-mail address", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 0 } }));
     await renderAccounts();
-    await userEvent.click(await screen.findByRole("button", { name: "Add placeholder" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add placeholder" });
+    await userEvent.click(await screen.findByRole("button", { name: "Add a person without an account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Placeholder for a person without an account" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Create placeholder" }));
     expect(requests.some((request) => request.path.endsWith("/placeholders"))).toBe(false);
     await userEvent.type(within(dialog).getByLabelText("Name"), "Imported Author");

@@ -14,12 +14,16 @@ export function SpaceSettingsLayout() {
   const name = spaceDisplayName(t, space);
   const entries: SettingsEntry[] = items
     .filter((item) => (item.visible ? item.visible(space) : true))
-    .map((item) => ({
-      id: item.id,
-      label: translateKey(t, item.labelKey),
-      href: item.to.replace("$spaceKey", space.key),
-      ...(item.groupKey ? { group: translateKey(t, item.groupKey) } : {}),
-    }));
+    .map((item) => {
+      const reason = item.notApplicable?.(space);
+      return {
+        id: item.id,
+        label: translateKey(t, item.labelKey),
+        href: item.to.replace("$spaceKey", space.key),
+        ...(item.groupKey ? { group: translateKey(t, item.groupKey) } : {}),
+        ...(reason ? { notApplicable: translateKey(t, reason) } : {}),
+      };
+    });
   return (
     <SettingsShell
       label={t("spaces.settings.title")}

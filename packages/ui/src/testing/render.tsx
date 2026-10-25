@@ -49,6 +49,10 @@ export const testLabels: UiLabels = {
   browserTimeZone: "This browser",
   undo: "Undo",
   secondsLeft: "{seconds} s",
+  previousMonth: "Previous month",
+  nextMonth: "Next month",
+  today: "Today",
+  chooseDate: "Choose a date",
 };
 
 export function renderUi(element: ReactElement): RenderResult {

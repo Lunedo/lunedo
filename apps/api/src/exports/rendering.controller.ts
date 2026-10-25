@@ -1,4 +1,4 @@
-import type { RenderStatus } from "@lunedo/server";
+import { lunedoVersion, parseReleaseVersion, type RenderStatus } from "@lunedo/server";
 import { Controller, Get, Inject } from "@nestjs/common";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
@@ -43,6 +43,12 @@ const renderingSchema = z
           .int()
           .nullable()
           .describe("Longest time the container spends on one document."),
+        image: z
+          .string()
+          .nullable()
+          .describe(
+            "Image of the render container that matches the version of this instance, or null when this instance does not run a release.",
+          ),
       })
       .describe("The optional render container that creates PDF files on the server."),
     word: z
@@ -66,9 +72,15 @@ const exampleRendering = {
     waiting: 0,
     maxBytes: 209_715_200,
     timeoutSeconds: 300,
+    image: "ghcr.io/lunedo/render:1.4.2",
   },
   word: { available: true },
 };
+
+export function renderImage(version: string): string | null {
+  const release = parseReleaseVersion(version);
+  return release ? `ghcr.io/lunedo/render:${release.major}.${release.minor}.${release.patch}` : null;
+}
 
 function present(status: RenderStatus) {
   const healthy = status.state === "healthy" ? status : null;
@@ -85,6 +97,7 @@ function present(status: RenderStatus) {
       waiting: healthy?.waiting ?? null,
       maxBytes: healthy?.maxBytes ?? null,
       timeoutSeconds: healthy?.timeoutSeconds ?? null,
+      image: renderImage(lunedoVersion()),
     },
     word: { available: true },
   };

@@ -20,6 +20,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import {
+  type InstanceAccount,
   instanceAccountsQuery,
   instanceAssignmentsQuery,
   instanceKeys,
@@ -40,6 +41,31 @@ import { RoleEditorDialog } from "../organization/roles-screen.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 type Assignment = Awaited<ReturnType<NonNullable<(typeof instanceAssignmentsQuery)["queryFn"]>>>[number];
+
+export function withOwner(
+  assignments: readonly Assignment[],
+  accounts: readonly InstanceAccount[],
+): Assignment[] {
+  if (assignments.some((assignment) => assignment.builtInRole === "owner")) return [...assignments];
+  const owner = accounts.find((account) =>
+    account.instanceRoles.some((role) => role.builtInRole === "owner"),
+  );
+  if (!owner) return [...assignments];
+  return [
+    {
+      id: `owner:${owner.id}`,
+      scope: "instance",
+      organizationId: null,
+      role: "owner",
+      builtInRole: "owner",
+      customRoleId: null,
+      principalKind: "account",
+      principalId: owner.id,
+      expiresAt: null,
+    },
+    ...assignments,
+  ];
+}
 type CustomRole = Awaited<ReturnType<NonNullable<(typeof instanceRolesQuery)["queryFn"]>>>[number];
 
 export function InstanceRolesScreen() {
@@ -157,7 +183,7 @@ export function InstanceRolesScreen() {
         <Table
           caption={t("roles.assignmentsTitle")}
           rowKey={(assignment) => assignment.id}
-          rows={[...(assignments.data ?? [])].sort(
+          rows={withOwner(assignments.data ?? [], accounts.data ?? []).sort(
             (left, right) => Number(right.builtInRole === "owner") - Number(left.builtInRole === "owner"),
           )}
           loading={assignments.isPending}

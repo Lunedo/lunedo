@@ -5,6 +5,8 @@ import type { AuditTargetType } from "./catalog.js";
 
 export interface AuditLabels {
   actor?: string;
+  actorKind?: "serviceAccount";
+  actorToken?: string;
   target?: string;
   scope?: string;
   references?: Record<string, string>;
@@ -56,8 +58,19 @@ export async function resolveAuditLabels(
   const labels: AuditLabels = {};
   const accountReferences: string[] = [];
   if (event.actor.type === "account") {
-    const actor = await nameOf(executor, sql`select name from accounts where id = ${event.actor.id}`);
-    if (actor) labels.actor = actor;
+    const result = await executor.execute<{ name: string | null; type: string }>(
+      sql`select name, type from accounts where id = ${event.actor.id}`,
+    );
+    const account = result.rows[0];
+    if (account?.name) labels.actor = account.name;
+    if (account?.type === "service") labels.actorKind = "serviceAccount";
+    if (event.actor.token) {
+      const token = await nameOf(
+        executor,
+        sql`select name from api_tokens where id = ${event.actor.token.id}`,
+      );
+      if (token) labels.actorToken = token;
+    }
   }
   const targetQuery = TARGET_NAMES[event.targetType];
   if (targetQuery && event.targetId && UUID.test(event.targetId)) {
