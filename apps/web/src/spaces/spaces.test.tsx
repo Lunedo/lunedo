@@ -1720,6 +1720,45 @@ describe("app shell", () => {
       expect(document.activeElement).toBe(entry);
     });
 
+    it("opens another space from a page in the current space instead of staying there", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("min-width"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      mockApi(
+        panelRoutes({
+          "GET /api/v1/space-keys/MKT": () => ({
+            body: {
+              space: {
+                ...space("reader"),
+                id: MARKETING_ID,
+                key: "MKT",
+                name: "Marketing",
+                overviewItemId: null,
+              },
+              redirected: false,
+            },
+          }),
+          [`GET /api/v1/spaces/${MARKETING_ID}/items`]: () => ({ body: { items: [], nextCursor: null } }),
+          [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
+          [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+          [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+          [`GET /api/v1/pages/${OVERVIEW}/tasks`]: () => ({ body: [] }),
+        }),
+      );
+      await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+      await screen.findByRole("heading", { name: "IT Operations", level: 1 });
+      await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      const recent = within(panel).getByRole("region", { name: "Recently visited" });
+      await userEvent.click(within(recent).getByRole("link", { name: /Marketing/ }));
+      expect(await screen.findByText("This space has no overview page")).toBeTruthy();
+      expect(window.location.pathname).toBe("/spaces/MKT");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(window.location.pathname).toBe("/spaces/MKT");
+    });
+
     it("searches all spaces, stars one and closes when clicking outside", async () => {
       vi.stubGlobal("matchMedia", (query: string) => ({
         matches: query.includes("min-width"),
