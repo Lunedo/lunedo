@@ -113,6 +113,32 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0 });
   });
 
+  it("marks notifications unread and several read at once, only the caller's own", async () => {
+    await owner.post("/api/v1/notifications/read-all", {});
+    await notice([ownerId]);
+    await notice([ownerId]);
+    const ids = (await owner.get("/api/v1/notifications"))
+      .json()
+      .items.slice(0, 2)
+      .map((item: { id: string }) => item.id);
+    expect((await owner.post("/api/v1/notifications/read", { ids })).json()).toEqual({ marked: 2 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0 });
+    expect((await owner.post(`/api/v1/notifications/${ids[0]}/unread`)).statusCode).toBe(204);
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1 });
+    expect((await owner.get("/api/v1/notifications/unread-count?kind=mentions")).json()).toEqual({
+      count: 0,
+    });
+
+    const other = await createAccount(test, "other.marker@example.org");
+    const client = await signedInClient(test, other.email, other.password);
+    expect((await client.post(`/api/v1/notifications/${ids[1]}/unread`)).statusCode).toBe(404);
+    expect((await client.post("/api/v1/notifications/read", { ids: [ids[0]] })).json()).toEqual({
+      marked: 0,
+    });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1 });
+    await owner.post("/api/v1/notifications/read-all", {});
+  });
+
   it("returns one own notification and answers like an unknown one for others", async () => {
     await notice([ownerId]);
     const [item] = (await owner.get("/api/v1/notifications")).json().items;

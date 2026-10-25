@@ -13,13 +13,12 @@ import {
 } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { TFunction } from "i18next";
 import { BellOff, CheckCheck, Settings } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounced } from "../components/table-state.js";
 import { LoadError } from "../errors/failure.js";
-import type { Formatter } from "../format/format.js";
+import type { Weekday } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { spacesQuery } from "../search/search-api.js";
@@ -31,48 +30,39 @@ import {
   type NotificationKind,
   useMarkAllRead,
   useNotificationList,
+  useUnreadCount,
+  useUnreadCountOf,
 } from "./notifications-api.js";
 
 type Kind = "all" | NotificationKind;
 
-function dayKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+type DayBucket = "today" | "yesterday" | "thisWeek" | "older";
+
+const WEEKDAY_INDEX: Record<Weekday, number> = { sunday: 0, monday: 1, saturday: 6 };
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 export function groupByDay(
   items: readonly NotificationItem[],
   now = new Date(),
-): { key: string; label: "today" | "yesterday" | "date"; date: Date; items: NotificationItem[] }[] {
-  const today = dayKey(now);
-  const yesterday = dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
-  const groups: {
-    key: string;
-    label: "today" | "yesterday" | "date";
-    date: Date;
-    items: NotificationItem[];
-  }[] = [];
+  weekStart: Weekday = "monday",
+): { key: DayBucket; items: NotificationItem[] }[] {
+  const today = startOfDay(now);
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  const offset = (today.getDay() - WEEKDAY_INDEX[weekStart] + 7) % 7;
+  const week = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
+  const groups: { key: DayBucket; items: NotificationItem[] }[] = [];
   for (const item of items) {
     const date = new Date(item.updatedAt);
-    const key = dayKey(date);
-    const last = groups.at(-1);
-    if (last && last.key === key) {
-      last.items.push(item);
-      continue;
-    }
-    groups.push({
-      key,
-      label: key === today ? "today" : key === yesterday ? "yesterday" : "date",
-      date,
-      items: [item],
-    });
+    const key: DayBucket =
+      date >= today ? "today" : date >= yesterday ? "yesterday" : date >= week ? "thisWeek" : "older";
+    const existing = groups.find((group) => group.key === key);
+    if (existing) existing.items.push(item);
+    else groups.push({ key, items: [item] });
   }
   return groups;
-}
-
-function dayHeading(t: TFunction, format: Formatter, group: ReturnType<typeof groupByDay>[number]): string {
-  if (group.label === "today") return t("notifications.groups.today");
-  if (group.label === "yesterday") return t("notifications.groups.yesterday");
-  return format.calendarDate(group.date);
 }
 
 export function NotificationPopover({
@@ -159,12 +149,25 @@ function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; o
     unreadOnly,
     ...(kind === "all" ? {} : { kind }),
     ...(page && spaceId ? { spaceId } : {}),
+    grouped: true,
+  };
+  const unreadAll = useUnreadCount().data;
+  const unreadMentions = useUnreadCountOf("mentions").data;
+  const unreadWatched = useUnreadCountOf("watched").data;
+  const unreadRequests = useUnreadCountOf("requests", page).data;
+  const counts: Record<Kind, number | undefined> = {
+    all: unreadAll,
+    mentions: unreadMentions,
+    watched: unreadWatched,
+    requests: unreadRequests,
   };
   const list = useNotificationList(filter);
   const markAll = useMarkAllRead();
   const body = useRef<HTMLDivElement>(null);
   const items = list.data?.pages.flatMap((entry) => entry.items) ?? [];
-  const hasUnread = items.some((item) => item.readAt === null);
+  const hasUnread = items.some(
+    (item) => item.readAt === null || (item.group?.members.some((member) => member.readAt === null) ?? false),
+  );
   const kinds: Kind[] = page ? ["all", "mentions", "watched", "requests"] : ["all", "mentions", "watched"];
 
   const loadMore = async () => {
@@ -246,17 +249,23 @@ function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; o
           />
         )
       ) : null}
-      {groupByDay(items).map((group) => (
+      {groupByDay(items, new Date(), format.firstDayOfWeek).map((group) => (
         <section key={group.key} aria-labelledby={`notifications-${variant}-${group.key}`} className="pt-2">
           <h3
             id={`notifications-${variant}-${group.key}`}
             className="border-b border-border px-2 pb-1 font-semibold text-text-muted text-xs uppercase tracking-label"
           >
-            {dayHeading(t, format, group)}
+            {t(`notifications.groups.${group.key}`)}
           </h3>
           <ul className="flex flex-col divide-y divide-border">
             {group.items.map((item) => (
-              <NotificationEntry key={item.id} item={item} format={format} onNavigate={onClose} />
+              <NotificationEntry
+                key={item.id}
+                item={item}
+                format={format}
+                onNavigate={onClose}
+                compact={!page}
+              />
             ))}
           </ul>
         </section>
@@ -306,7 +315,10 @@ function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; o
           label={t("notifications.filter")}
           value={kind}
           onValueChange={(value) => setKind(value as Kind)}
-          tabs={kinds.map((value) => ({ value, label: t(`notifications.kinds.${value}`) }))}
+          tabs={kinds.map((value) => {
+            const count = counts[value];
+            return { value, label: t(`notifications.kinds.${value}`), ...(count ? { count } : {}) };
+          })}
           fill={!page}
         >
           {page ? (

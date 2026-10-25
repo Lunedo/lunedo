@@ -22,7 +22,20 @@ export const notificationKeys = {
   all: ["notifications"] as const,
   unread: ["notifications", "unread"] as const,
   list: (filter: NotificationFilter) => ["notifications", "list", filter] as const,
+  unreadOf: (kind: NotificationKind) => ["notifications", "unread", kind] as const,
 };
+
+export function useUnreadCountOf(kind: NotificationKind, enabled = true) {
+  return useQuery({
+    queryKey: notificationKeys.unreadOf(kind),
+    queryFn: async () =>
+      (await request(() => api.GET("/api/v1/notifications/unread-count", { params: { query: { kind } } })))
+        .count,
+    staleTime: 60_000,
+    enabled,
+    throwOnError: false,
+  });
+}
 
 export function useUnreadCount() {
   return useQuery({
@@ -39,6 +52,7 @@ export interface NotificationFilter {
   unreadOnly: boolean;
   kind?: NotificationKind;
   spaceId?: string;
+  grouped?: boolean;
 }
 
 export function notificationListQuery(filter: NotificationFilter) {
@@ -55,6 +69,7 @@ export function notificationListQuery(filter: NotificationFilter) {
               ...(filter.unreadOnly ? { unread: "true" as const } : {}),
               ...(filter.kind ? { kind: filter.kind } : {}),
               ...(filter.spaceId ? { spaceId: filter.spaceId } : {}),
+              ...(filter.grouped ? { grouped: "true" as const } : {}),
             },
           },
         }),
@@ -78,6 +93,27 @@ export function useMarkRead() {
       request(() =>
         api.POST("/api/v1/notifications/{notificationId}/read", { params: { path: { notificationId: id } } }),
       ),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+  });
+}
+
+export function useMarkUnread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      request(() =>
+        api.POST("/api/v1/notifications/{notificationId}/unread", {
+          params: { path: { notificationId: id } },
+        }),
+      ),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+  });
+}
+
+export function useMarkManyRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => request(() => api.POST("/api/v1/notifications/read", { body: { ids } })),
     onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
   });
 }

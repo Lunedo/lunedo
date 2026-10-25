@@ -277,15 +277,18 @@ function Decision({ entry, onDecided }: { entry: AccessRequest; onDecided: (next
 export function AccessRequestActions({
   entry,
   onDecided,
+  variant = "menu",
 }: {
   entry: AccessRequest;
   onDecided?: (next: AccessRequest) => void;
+  variant?: "menu" | "inline";
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<"approve" | "decline" | null>(null);
   const roles = entry.itemId ? PAGE_ROLES : SPACE_ROLES;
+  const [role, setRole] = useState<(typeof SPACE_ROLES)[number]>("reader");
   const name = entry.requester.name ?? t("spaces.holders.unknownPerson");
   const decide = async (approve: boolean, role: (typeof SPACE_ROLES)[number] = "reader") => {
     setBusy(approve ? "approve" : "decline");
@@ -316,6 +319,30 @@ export function AccessRequestActions({
       setBusy(null);
     }
   };
+  if (variant === "inline") {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          aria-label={t("sharing.requests.role")}
+          value={role}
+          className="w-auto"
+          onValueChange={(value) => setRole(value as (typeof SPACE_ROLES)[number])}
+          options={roles.map((option) => ({ value: option, label: accessRoleLabel(t, option) }))}
+        />
+        <Button
+          size="sm"
+          variant="primary"
+          loading={busy === "approve"}
+          onClick={() => void decide(true, role)}
+        >
+          {t("sharing.requests.approveShort")}
+        </Button>
+        <Button size="sm" variant="secondary" loading={busy === "decline"} onClick={() => void decide(false)}>
+          {t("sharing.requests.decline")}
+        </Button>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Menu

@@ -92,6 +92,12 @@ const listQuery = z
     spaceId: idSchema
       .optional()
       .describe("Only notifications about content or access requests of this space."),
+    grouped: z
+      .enum(["true", "false"])
+      .optional()
+      .describe(
+        "`true` combines changes to several items of one space on one day into one entry with its members.",
+      ),
   })
   .strict();
 
@@ -110,7 +116,42 @@ const notificationSchema = z.object({
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   readAt: z.iso.datetime().nullable(),
+  preview: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("One line of the comment, task or request text, when the caller may still read it."),
+  group: z
+    .object({
+      spaceId: idSchema,
+      spaceKey: z.string(),
+      spaceName: z.string(),
+      day: z.string().describe("The day in the time zone of the caller, as YYYY-MM-DD."),
+      actors: z
+        .array(z.object({ id: idSchema, name: z.string() }))
+        .describe("Up to three people who made changes."),
+      actorCount: z.number().int().describe("Number of different people who made changes."),
+      members: z
+        .array(
+          z.object({
+            id: idSchema,
+            itemId: z.string().nullable(),
+            itemTitle: z.string(),
+            actor: z.object({ id: idSchema.nullable(), name: z.string().nullable() }).nullable(),
+            updatedAt: z.iso.datetime(),
+            readAt: z.iso.datetime().nullable(),
+          }),
+        )
+        .describe("The combined notifications, most recent first."),
+    })
+    .nullable()
+    .optional()
+    .describe("For a combined entry: the space, the day and the notifications it combines."),
 });
+
+const readManySchema = z
+  .object({ ids: z.array(idSchema).min(1).max(100).describe("Notifications to mark as read.") })
+  .strict();
 
 const idParams = z.object({ notificationId: idSchema }).strict();
 const unsubscribeParams = z
@@ -147,6 +188,11 @@ function unsubscribeView(state: UnsubscribeState) {
 }
 const readAllSchema = z.object({ before: z.iso.datetime().optional() }).strict();
 const countSchema = z.object({ count: z.number().int() });
+const countQuery = z
+  .object({
+    kind: z.enum(notificationKinds).optional().describe("Count only notifications of this kind."),
+  })
+  .strict();
 const markedSchema = z.object({ marked: z.number().int() });
 
 @Controller("api/v1/notifications")
@@ -179,6 +225,7 @@ export class NotificationsController {
       unreadOnly: query.unread === "true",
       kind: query.kind,
       spaceId: query.spaceId,
+      grouped: query.grouped === "true",
     });
     return { items: page.items, nextCursor: page.next ? encodeCursor(page.next) : null };
   }
@@ -188,10 +235,11 @@ export class NotificationsController {
   @ApiRoute({
     summary: "Count unread notifications",
     tags: [TAG],
+    query: countQuery,
     response: { description: "Unread notifications the caller may still see.", schema: countSchema },
   })
-  async unreadCount(@Req() request: FastifyRequest) {
-    return { count: await this.#notifications.unreadCount(sessionOf(request).accountId) };
+  async unreadCount(@Req() request: FastifyRequest, @Query() query: z.output<typeof countQuery>) {
+    return { count: await this.#notifications.unreadCount(sessionOf(request).accountId, query.kind) };
   }
 
   @Post("read-all")
@@ -206,6 +254,23 @@ export class NotificationsController {
   async readAll(@Req() request: FastifyRequest, @Body() body: z.output<typeof readAllSchema>) {
     const before = body.before ? new Date(body.before) : undefined;
     return { marked: await this.#notifications.markAllRead(sessionOf(request).accountId, before) };
+  }
+
+  @Post("read")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Mark several notifications as read",
+    description: "Notifications that do not exist or that the caller may no longer see are skipped.",
+    tags: [TAG],
+    status: 200,
+    body: readManySchema,
+    response: { description: "Number of notifications marked as read.", schema: markedSchema },
+  })
+  async readMany(@Req() request: FastifyRequest, @Body() body: z.output<typeof readManySchema>) {
+    const accountId = sessionOf(request).accountId;
+    let marked = 0;
+    for (const id of body.ids) if (await this.#notifications.markRead(accountId, id)) marked += 1;
+    return { marked };
   }
 
   @Get("unsubscribe/:token")
@@ -269,6 +334,13 @@ export class NotificationsController {
   @ApiRoute({ summary: "Mark a notification as read", tags: [TAG], params: idParams })
   async read(@Param("notificationId") id: string, @Req() request: FastifyRequest) {
     if (!(await this.#notifications.markRead(sessionOf(request).accountId, id))) throw notFound();
+  }
+
+  @Post(":notificationId/unread")
+  @SessionRoute()
+  @ApiRoute({ summary: "Mark a notification as unread", tags: [TAG], params: idParams })
+  async unread(@Param("notificationId") id: string, @Req() request: FastifyRequest) {
+    if (!(await this.#notifications.markUnread(sessionOf(request).accountId, id))) throw notFound();
   }
 
   @Get("stream")

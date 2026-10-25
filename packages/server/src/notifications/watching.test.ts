@@ -302,6 +302,70 @@ describe.skipIf(!baseUrl)("watching", () => {
       expect(await notificationsOf(context.editorId, "content.mentioned")).toHaveLength(1);
     });
 
+    it("combine changes in one space on one day into one entry that stays whole across pages", async () => {
+      const context = await setup();
+      await test.services.watches.set(
+        context.readerId,
+        { type: "space", id: context.space.id },
+        { state: "watching" },
+      );
+      const first = await publishedPage(context);
+      const second = await publishedPage(context);
+      const third = await publishedPage(context);
+      await edit(context.secondEditor, first.id, "One");
+      await edit(context.editor, second.id, "Two");
+      await edit(context.secondEditor, third.id, "Three");
+      await test.services.comments.create(context.secondEditor, first.id, {
+        body: doc(paragraph("Looks good")),
+      });
+      await test.services.watches.set(
+        context.readerId,
+        { type: "item", id: first.id },
+        { state: "watching" },
+      );
+      const great = await test.services.comments.create(context.secondEditor, first.id, {
+        body: doc(paragraph("Looks great")),
+      });
+
+      const plain = (await test.services.notifications.list(context.readerId, { limit: 100 })).items;
+      expect(plain.filter((item) => item.type === "content.changed")).toHaveLength(3);
+
+      const grouped = (
+        await test.services.notifications.list(context.readerId, { limit: 100, grouped: true })
+      ).items;
+      const groups = grouped.filter((item) => item.group);
+      expect(groups).toHaveLength(1);
+      expect(groups[0]?.group?.members.map((member) => member.itemId).sort()).toEqual(
+        [first.id, second.id, third.id].sort(),
+      );
+      expect(groups[0]?.group?.actorCount).toBe(2);
+      expect(grouped.filter((item) => item.type === "content.changed")).toHaveLength(1);
+      const comment = grouped.find((item) => item.type === "comment.created");
+      expect(comment?.preview).toBe("Looks great");
+      await test.services.comments.delete(context.secondEditor, great);
+      const afterDelete = (
+        await test.services.notifications.list(context.readerId, { limit: 100, grouped: true })
+      ).items;
+      expect(afterDelete.find((item) => item.type === "comment.created")?.preview ?? null).toBeNull();
+
+      const seen: string[] = [];
+      let after:
+        | NonNullable<Awaited<ReturnType<typeof test.services.notifications.list>>["next"]>
+        | undefined;
+      do {
+        const page = await test.services.notifications.list(context.readerId, {
+          limit: 1,
+          grouped: true,
+          after,
+        });
+        for (const item of page.items)
+          seen.push(...(item.group?.members.map((member) => member.id) ?? [item.id]));
+        after = page.next ?? undefined;
+      } while (after);
+      expect(new Set(seen).size).toBe(seen.length);
+      expect(seen.length).toBe(plain.length);
+    });
+
     it("never come from imports", async () => {
       const context = await setup();
       const page = await publishedPage(context);

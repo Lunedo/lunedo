@@ -2898,7 +2898,9 @@
     "times": "{count, plural, one {once} other {# times}}",
     "groups": {
       "today": "Today",
-      "yesterday": "Yesterday"
+      "yesterday": "Yesterday",
+      "thisWeek": "This week",
+      "older": "Older"
     },
     "preferencesTitle": "Notifications",
     "preferencesDescription": "Choose how you learn about each kind of event.",
@@ -3090,7 +3092,6 @@
         "created": "{count, plural, one {# comment} other {# comments}}"
       }
     },
-    "stopWatching": "Stop watching",
     "stoppedWatching": "You no longer watch {name}.",
     "watching": {
       "title": "Watching",
@@ -3241,9 +3242,6 @@
     },
     "allRead": "You have read everything.",
     "showAll": "Show all",
-    "notWatched": "Not watched",
-    "watchAgain": "Watch again",
-    "watchingAgain": "You watch {name} again.",
     "resetChannel": "Reset {channel} for {event} to the inherited value",
     "unreadOnly": "Unread only",
     "showAllPage": "Show all",
@@ -3272,7 +3270,34 @@
       "page.statusChanged": "Watched",
       "task.assigned": "Task"
     },
-    "quoted": "“{text}”"
+    "quoted": "“{text}”",
+    "group": {
+      "title": "{count, plural, one {# page changed} other {# pages changed}} in {space}",
+      "by": "by {names}",
+      "byMore": "by {names} and {count, plural, one {# other} other {# others}}",
+      "showAll": "Show all {count}",
+      "showLess": "Show less"
+    },
+    "actions": {
+      "reply": "Reply",
+      "open": "Open",
+      "markUnread": "Mark as unread",
+      "stopWatchingSpace": "Stop watching the space",
+      "stopWatchingPage": "Stop watching the page",
+      "more": "More actions"
+    },
+    "reply": {
+      "label": "Reply",
+      "placeholder": "Write a reply",
+      "empty": "The reply is empty. Write some text or cancel.",
+      "send": "Send reply",
+      "sent": "Reply sent",
+      "failed": "The reply was not sent"
+    },
+    "task": {
+      "done": "Done",
+      "doneNamed": "Mark the task {task} as done"
+    }
   },
   "mail": {
     "title": "Delivery",
@@ -7334,7 +7359,8 @@
       "give": "Give access",
       "approvedAs": "{name} can now access it as {role}",
       "toForYou": "Go to For you",
-      "allMine": "Show all your requests"
+      "allMine": "Show all your requests",
+      "approveShort": "Approve"
     },
     "give": {
       "open": "Give access",

@@ -2898,7 +2898,9 @@
     "times": "{count, plural, one {einmal} other {# Mal}}",
     "groups": {
       "today": "Heute",
-      "yesterday": "Gestern"
+      "yesterday": "Gestern",
+      "thisWeek": "Diese Woche",
+      "older": "Älter"
     },
     "preferencesTitle": "Benachrichtigungen",
     "preferencesDescription": "Wähle, wie du von jeder Art von Ereignis erfährst.",
@@ -3090,7 +3092,6 @@
         "created": "{count, plural, one {# Kommentar} other {# Kommentare}}"
       }
     },
-    "stopWatching": "Nicht mehr beobachten",
     "stoppedWatching": "Du beobachtest {name} nicht mehr.",
     "watching": {
       "title": "Beobachten",
@@ -3241,9 +3242,6 @@
     },
     "allRead": "Du hast alles gelesen.",
     "showAll": "Alle anzeigen",
-    "notWatched": "Nicht beobachtet",
-    "watchAgain": "Wieder beobachten",
-    "watchingAgain": "Du beobachtest {name} wieder.",
     "resetChannel": "{channel} für {event} auf den geerbten Wert zurücksetzen",
     "unreadOnly": "Nur ungelesene",
     "showAllPage": "Alle anzeigen",
@@ -3272,7 +3270,34 @@
       "page.statusChanged": "Beobachtet",
       "task.assigned": "Aufgabe"
     },
-    "quoted": "„{text}“"
+    "quoted": "„{text}“",
+    "group": {
+      "title": "{count, plural, one {# Seite geändert} other {# Seiten geändert}} in {space}",
+      "by": "von {names}",
+      "byMore": "von {names} und {count, plural, one {# weiteren Person} other {# weiteren Personen}}",
+      "showAll": "Alle {count} anzeigen",
+      "showLess": "Weniger anzeigen"
+    },
+    "actions": {
+      "reply": "Antworten",
+      "open": "Öffnen",
+      "markUnread": "Als ungelesen markieren",
+      "stopWatchingSpace": "Space nicht mehr beobachten",
+      "stopWatchingPage": "Seite nicht mehr beobachten",
+      "more": "Weitere Aktionen"
+    },
+    "reply": {
+      "label": "Antwort",
+      "placeholder": "Antwort schreiben",
+      "empty": "Die Antwort ist leer. Schreib einen Text oder brich ab.",
+      "send": "Antwort senden",
+      "sent": "Antwort gesendet",
+      "failed": "Die Antwort wurde nicht gesendet"
+    },
+    "task": {
+      "done": "Erledigt",
+      "doneNamed": "Aufgabe {task} als erledigt markieren"
+    }
   },
   "mail": {
     "title": "Zustellung",
@@ -7334,7 +7359,8 @@
       "give": "Zugriff geben",
       "approvedAs": "{name} hat jetzt Zugriff als {role}",
       "toForYou": "Zu Für dich",
-      "allMine": "Alle deine Anfragen anzeigen"
+      "allMine": "Alle deine Anfragen anzeigen",
+      "approveShort": "Genehmigen"
     },
     "give": {
       "open": "Zugriff geben",

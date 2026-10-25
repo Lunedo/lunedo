@@ -1,3 +1,4 @@
+import { commentText, type DocumentJson } from "@lunedo/editor-schema";
 import { type NotificationEvent, notificationEventOf } from "@lunedo/shared";
 import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
@@ -7,6 +8,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import { hasPushDevice, queuePush } from "../push/outbox.js";
+import { timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
@@ -54,6 +56,27 @@ export interface NotificationItem {
   createdAt: Date;
   updatedAt: Date;
   readAt: Date | null;
+  preview?: string | null;
+  group?: NotificationGroup | null;
+}
+
+export interface NotificationGroupMember {
+  id: string;
+  itemId: string | null;
+  itemTitle: string;
+  actor: { id: string | null; name: string | null } | null;
+  updatedAt: Date;
+  readAt: Date | null;
+}
+
+export interface NotificationGroup {
+  spaceId: string;
+  spaceKey: string;
+  spaceName: string;
+  day: string;
+  actors: { id: string; name: string }[];
+  actorCount: number;
+  members: NotificationGroupMember[];
 }
 
 export interface VisibilityEntry {
@@ -87,6 +110,24 @@ const listColumns = {
   updatedAtText: sql<string>`${notifications.updatedAt}::text`,
   readAt: notifications.readAt,
 };
+
+export const GROUPED_TYPE = "content.changed";
+const GROUP_LIMIT = 100;
+const PREVIEW_LENGTH = 160;
+
+function localDay(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function shortText(value: string): string {
+  const flat = value.replace(/\s+/g, " ").trim();
+  return flat.length > PREVIEW_LENGTH ? `${flat.slice(0, PREVIEW_LENGTH - 1).trimEnd()}…` : flat;
+}
 
 export const notificationKinds = ["mentions", "watched", "requests"] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
@@ -409,10 +450,13 @@ export class NotificationService {
       unreadOnly?: boolean;
       kind?: NotificationKind | undefined;
       spaceId?: string | undefined;
+      grouped?: boolean | undefined;
     },
   ): Promise<NotificationPage> {
     const visible = this.visibility(recipientId);
     const items: NotificationItem[] = [];
+    const timeZone = request.grouped ? await this.#timeZone(recipientId) : null;
+    const groups = new Map<string, { representative: string | null; group: NotificationGroup | null }>();
     let cursor = request.after;
     let scanned = 0;
     for (;;) {
@@ -439,13 +483,130 @@ export class NotificationService {
       for (const row of rows) {
         cursor = [row.updatedAtText, row.id];
         if (!(await visible(row))) continue;
-        items.push(toItem(row));
+        if (timeZone && row.type === GROUPED_TYPE && row.targetType === "item" && row.targetId) {
+          const grouping = await this.#groupOf(
+            recipientId,
+            row,
+            timeZone,
+            request.unreadOnly ?? false,
+            visible,
+            groups,
+          );
+          if (grouping.representative !== null && grouping.representative !== row.id) continue;
+          if (grouping.group) {
+            items.push({ ...toItem(row), preview: null, group: grouping.group });
+            if (items.length === request.limit) return { items, next: cursor };
+            continue;
+          }
+        }
+        items.push({ ...toItem(row), preview: await this.#preview(recipientId, row), group: null });
         if (items.length === request.limit) return { items, next: cursor };
       }
       scanned += rows.length;
       if (rows.length < SCAN_BATCH) return { items, next: null };
       if (scanned >= SCAN_LIMIT) return { items, next: cursor ?? null };
     }
+  }
+
+  async #timeZone(recipientId: string): Promise<string> {
+    return this.#settings.get(timeZoneSetting, {
+      ...(await accountScopeChain(this.#database, recipientId)),
+      user: recipientId,
+    });
+  }
+
+  async #groupOf(
+    recipientId: string,
+    row: ListRow,
+    timeZone: string,
+    unreadOnly: boolean,
+    visible: (row: ListRow) => Promise<boolean>,
+    cache: Map<string, { representative: string | null; group: NotificationGroup | null }>,
+  ): Promise<{ representative: string | null; group: NotificationGroup | null }> {
+    const space = await this.#database.execute<{ id: string; key: string; name: string }>(sql`
+      select s.id, s.key, s.name from tree_items t join spaces s on s.id = t.space_id
+      where t.id::text = ${row.targetId}`);
+    const target = space.rows[0];
+    if (!target) return { representative: null, group: null };
+    const day = localDay(row.updatedAt, timeZone);
+    const key = `${target.id}:${day}`;
+    const known = cache.get(key);
+    if (known) return known;
+    const rows: ListRow[] = await this.#select()
+      .where(
+        and(
+          eq(notifications.recipientId, recipientId),
+          eq(notifications.inApp, true),
+          eq(notifications.type, GROUPED_TYPE),
+          eq(notifications.targetType, "item"),
+          unreadOnly ? isNull(notifications.readAt) : undefined,
+          sql`(${notifications.updatedAt} at time zone ${timeZone})::date = ${day}::date`,
+          sql`exists (select 1 from tree_items t where t.id::text = ${notifications.targetId}
+            and t.space_id = ${target.id})`,
+        ),
+      )
+      .orderBy(desc(notifications.updatedAt), desc(notifications.id))
+      .limit(GROUP_LIMIT);
+    const members: ListRow[] = [];
+    for (const candidate of rows) if (await visible(candidate)) members.push(candidate);
+    const first = members[0];
+    if (!first || members.length < 2) {
+      const single = { representative: null, group: null };
+      cache.set(key, single);
+      return single;
+    }
+    const actors = new Map<string, string>();
+    for (const member of members) {
+      if (member.actorId && member.actorName && !actors.has(member.actorId)) {
+        actors.set(member.actorId, member.actorName);
+      }
+    }
+    const result = {
+      representative: first.id,
+      group: {
+        spaceId: target.id,
+        spaceKey: target.key,
+        spaceName: target.name,
+        day,
+        actors: [...actors].slice(0, 3).map(([id, name]) => ({ id, name })),
+        actorCount: actors.size,
+        members: members.map((member) => ({
+          id: member.id,
+          itemId: member.targetId,
+          itemTitle: String((member.params as Record<string, unknown> | null)?.itemTitle ?? ""),
+          actor: member.actorId || member.actorName ? { id: member.actorId, name: member.actorName } : null,
+          updatedAt: member.updatedAt,
+          readAt: member.readAt,
+        })),
+      },
+    };
+    cache.set(key, result);
+    return result;
+  }
+
+  async #preview(recipientId: string, row: ListRow): Promise<string | null> {
+    const params = (row.params ?? {}) as Record<string, unknown>;
+    if (row.type === "task.assigned" && typeof params.taskText === "string")
+      return shortText(params.taskText);
+    if (row.type === "access.requested" && typeof params.message === "string" && params.message.trim()) {
+      return shortText(params.message);
+    }
+    const commentId = typeof params.commentId === "string" ? params.commentId : null;
+    if (!commentId || (row.type !== "comment.created" && row.type !== "content.mentioned")) return null;
+    const allowed = await this.#authorization.explain(
+      accountPrincipal(recipientId),
+      "comment.view",
+      { type: "comment", id: commentId },
+      { fresh: true },
+    );
+    if (!allowed.allowed) return null;
+    const comment = await this.#database.execute<{ body: DocumentJson | null }>(
+      sql`select body from comments where id = ${commentId} and deleted_at is null`,
+    );
+    const body = comment.rows[0]?.body;
+    if (!body) return null;
+    const plain = commentText(body);
+    return plain.trim() ? shortText(plain) : null;
   }
 
   async get(recipientId: string, id: string): Promise<NotificationItem | null> {
@@ -460,7 +621,7 @@ export class NotificationService {
     return toItem(row);
   }
 
-  async unreadCount(recipientId: string): Promise<number> {
+  async unreadCount(recipientId: string, kind?: NotificationKind): Promise<number> {
     const visible = this.visibility(recipientId);
     const rows: ListRow[] = await this.#select()
       .where(
@@ -468,6 +629,7 @@ export class NotificationService {
           eq(notifications.recipientId, recipientId),
           eq(notifications.inApp, true),
           isNull(notifications.readAt),
+          kind ? inArray(notifications.type, [...notificationKindTypes[kind]]) : undefined,
         ),
       )
       .orderBy(desc(notifications.updatedAt))
@@ -486,6 +648,21 @@ export class NotificationService {
         .update(notifications)
         .set({ readAt: sql`now()` })
         .where(and(eq(notifications.id, id), isNull(notifications.readAt)))
+        .returning({ id: notifications.id });
+      if (updated.length > 0) await this.#announce(tx, recipientId);
+    });
+    return true;
+  }
+
+  async markUnread(recipientId: string, id: string): Promise<boolean> {
+    const item = await this.get(recipientId, id);
+    if (!item) return false;
+    if (!item.readAt) return true;
+    await this.#database.transaction(async (tx) => {
+      const updated = await tx
+        .update(notifications)
+        .set({ readAt: null })
+        .where(and(eq(notifications.id, id), eq(notifications.recipientId, recipientId)))
         .returning({ id: notifications.id });
       if (updated.length > 0) await this.#announce(tx, recipientId);
     });
