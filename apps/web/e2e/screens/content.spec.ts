@@ -452,7 +452,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   });
 
   const monday = new Date();
-  monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
   const series = (await callApi(page, "POST", `/api/v1/spaces/${it.id}/meeting-series`, {
     name: "Jour fixe IT-Betrieb",
     members: [people.lena.id, people.jonas.id, people.mateo.id],
