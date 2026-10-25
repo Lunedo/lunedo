@@ -159,12 +159,12 @@ describe("CollapsibleSection", () => {
 });
 
 describe("SettingRow", () => {
-  it("shows the label in its own column and the hint and source under the control", () => {
+  it("shows the label with one line of hint on the left and the control, marks and menu on the right", () => {
     renderUi(
       <SettingRow
         label="Retention"
         description="Older versions are deleted."
-        meta="Instance default: 90 days"
+        meta="Own value"
         control={<Button>Change</Button>}
         menu={<Button>More</Button>}
         status={<span>Saved</span>}
@@ -173,18 +173,31 @@ describe("SettingRow", () => {
     const row = document.querySelector("[data-setting-row]");
     expect(row?.className).toContain("sm:grid-cols-setting-row");
     expect(row?.className).toContain("grid-cols-1");
-    const label = row?.querySelector("[data-setting-label]");
-    expect(label?.textContent).toBe("Retention");
-    expect(label?.className).toContain("text-text-muted");
-    const column = row?.querySelector("[data-setting-line]")?.parentElement;
-    const hint = screen.getByText("Older versions are deleted.");
-    const source = screen.getByText("Instance default: 90 days");
-    expect(hint.parentElement).toBe(column);
-    expect(source.parentElement).toBe(column);
-    expect(hint.className).toContain("text-sm");
-    expect(source.className).toContain("text-xs");
-    expect(within(column as HTMLElement).getByText("Saved")).toBeDefined();
-    expect(within(column as HTMLElement).getByRole("button", { name: "More" })).toBeDefined();
+    const label = row?.querySelector("[data-setting-label]") as HTMLElement;
+    expect(within(label).getByText("Retention").className).toContain("font-medium");
+    const hint = within(label).getByText("Older versions are deleted.");
+    expect(hint.className).toContain("sm:truncate");
+    expect(hint.closest("[data-setting-hint]")?.className).toContain("text-sm");
+    const line = row?.querySelector("[data-setting-line]") as HTMLElement;
+    expect(within(line).getByText("Own value")).toBeDefined();
+    expect(within(line).getByRole("button", { name: "More" })).toBeDefined();
+    expect(within(line.parentElement as HTMLElement).getByText("Saved")).toBeDefined();
+  });
+
+  it("shows an error under the control and a docs link after the hint", () => {
+    renderUi(
+      <SettingRow
+        label="Address"
+        description="Where people reach the instance."
+        more={<a href="/docs">More</a>}
+        control={<input aria-label="Address" />}
+        error={<p>Enter an address.</p>}
+      />,
+    );
+    const hint = document.querySelector("[data-setting-hint]") as HTMLElement;
+    expect(within(hint).getByRole("link", { name: "More" })).toBeDefined();
+    const line = document.querySelector("[data-setting-line]") as HTMLElement;
+    expect(within(line.parentElement as HTMLElement).getByText("Enter an address.")).toBeDefined();
   });
 
   it("leaves no room for a missing menu on narrow screens", () => {

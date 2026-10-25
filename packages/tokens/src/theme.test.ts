@@ -281,9 +281,7 @@ describe("generateThemeCss", () => {
     const theme = ruleBody(css, "@theme inline");
     expect(theme).toContain("--spacing-select-trigger: var(--radix-select-trigger-width);");
     expect(theme).toContain("--spacing-popover-trigger: var(--radix-popover-trigger-width);");
-    expect(css).toContain(
-      "@utility grid-cols-setting-row {\n  grid-template-columns: 13.75rem minmax(0, 1fr);",
-    );
+    expect(css).toContain("@utility grid-cols-setting-row {\n  grid-template-columns: 20rem minmax(0, 1fr);");
   });
 
   it("switches the font for the reading-friendly option", () => {

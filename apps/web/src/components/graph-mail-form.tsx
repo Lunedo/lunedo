@@ -5,6 +5,7 @@ import {
   Dialog,
   ErrorState,
   Field,
+  FieldGrid,
   focusFirstInvalidSoon,
   Input,
   List,
@@ -28,6 +29,7 @@ import { problemMessage } from "../errors/problem-message.js";
 import { isLanguage } from "../i18n/index.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { AppDatePicker } from "./date-fields.js";
 import { downloadText } from "./download.js";
 
 export interface GraphMailSettings {
@@ -184,7 +186,7 @@ export function GraphMailForm({
           {error}
         </Notice>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <FieldGrid>
         <Field
           label={t("identityProviders.fields.tenantId")}
           {...(errors.tenantId ? { error: errors.tenantId } : {})}
@@ -219,7 +221,7 @@ export function GraphMailForm({
         <Field label={t("mail.graph.senderName")} hint={t("mail.graph.senderNameHint")}>
           <Input value={values.senderName} onChange={(event) => set({ senderName: event.target.value })} />
         </Field>
-      </div>
+      </FieldGrid>
       <p className="text-sm text-text-muted">{t("mail.graph.sentItems")}</p>
       <div className="flex flex-col gap-2">
         <span className="font-medium">{t("mail.graph.credentials")}</span>
@@ -428,7 +430,7 @@ function AddCredentialDialog({
           </Notice>
         ) : null}
         {mode === "clientSecret" ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <FieldGrid>
             <Field label={t("identityProviders.credentials.secret")}>
               <PasswordInput
                 autoComplete="off"
@@ -437,9 +439,9 @@ function AddCredentialDialog({
               />
             </Field>
             <Field label={t("identityProviders.credentials.expiresOn")} hint={t("mail.graph.expiresHint")}>
-              <Input type="date" value={expiresOn} onChange={(event) => setExpiresOn(event.target.value)} />
+              <AppDatePicker value={expiresOn} clearable onValueChange={setExpiresOn} />
             </Field>
-          </div>
+          </FieldGrid>
         ) : (
           <Field label={t("mail.graph.validity")} hint={t("mail.graph.certificateHint")}>
             <Select

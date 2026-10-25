@@ -2694,7 +2694,19 @@
     "searchClear": "Suche leeren",
     "searchWhere": "{page} › {section}",
     "lockForSpaces": "Für Spaces sperren",
-    "aboveMaximum": "Gib eine ganze Zahl von {minimum} bis {maximum} ein. Die Instanz erlaubt höchstens {maximum}."
+    "aboveMaximum": "Gib eine ganze Zahl von {minimum} bis {maximum} ein. Die Instanz erlaubt höchstens {maximum}.",
+    "savedNamed": "„{name}“ gespeichert",
+    "undone": "„{name}“ zurückgesetzt",
+    "undoFailed": "„{name}“ konnte nicht zurückgesetzt werden",
+    "ownValue": "Eigener Wert",
+    "resetNamed": "{name} auf den geerbten Wert zurücksetzen",
+    "formats": {
+      "label": "Formate",
+      "hint": "Datum, Uhrzeit, Zahlen und Wochenbeginn.",
+      "customize": "Anpassen",
+      "close": "Schließen",
+      "weekStartExample": "ab {day}"
+    }
   },
   "security": {
     "activity": {

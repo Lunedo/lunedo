@@ -3,7 +3,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { type ReactNode, useRef, useState } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
-import { Field, Input } from "./field.js";
+import { Field, FieldLayoutProvider, Input } from "./field.js";
 import { focusInitial } from "./initial-focus.js";
 import { useUiLabels } from "./labels.js";
 import { useReturnFocus } from "./return-focus.js";
@@ -77,7 +77,7 @@ export function Dialog({
                 <IconButton label={labels.close} icon={X} tooltip={false} />
               </DialogPrimitive.Close>
             </div>
-            {children}
+            <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
             {footer && <div className="flex flex-wrap justify-end gap-2">{footer}</div>}
           </DialogPrimitive.Content>
         </DialogPrimitive.Overlay>
@@ -257,7 +257,9 @@ export function Drawer({
               <IconButton label={labels.close} icon={X} tooltip={false} />
             </DialogPrimitive.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

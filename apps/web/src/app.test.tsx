@@ -325,7 +325,7 @@ describe("the web client", () => {
     expect(links[1]?.getAttribute("aria-current")).toBe("page");
     expect(screen.queryByRole("navigation", { name: "Main navigation" })).toBeNull();
     expect(((await screen.findByLabelText("Display name")) as HTMLInputElement).value).toBe("Olivia Owner");
-    expect(screen.getByText("olivia@example.org", { selector: "[data-setting-hint]" })).toBeTruthy();
+    expect(screen.getByText("olivia@example.org", { selector: "[data-setting-hint] *" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Change e-mail address" })).toBeTruthy();
     expect(await screen.findByText("Entra ID")).toBeTruthy();
   });

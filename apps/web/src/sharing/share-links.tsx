@@ -3,7 +3,6 @@ import {
   CopyButton,
   Field,
   IconButton,
-  Input,
   Menu,
   Notice,
   PasswordInput,
@@ -18,6 +17,7 @@ import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { AppDatePicker } from "../components/date-fields.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
@@ -227,16 +227,16 @@ function CreateLink({
         error={errors.expiry ?? null}
         required={scope === "anyone"}
       >
-        <Input
-          type="date"
+        <AppDatePicker
           value={expiry}
           className="w-auto"
           min={dateInput(new Date())}
           {...(scope === "anyone"
             ? { max: dateInput(new Date(Date.now() + options.anyoneMaxDays * DAY)) }
             : {})}
+          clearable={scope !== "anyone"}
           invalid={Boolean(errors.expiry)}
-          onChange={(event) => setExpiry(event.target.value)}
+          onValueChange={setExpiry}
         />
       </Field>
       <Field label={t("sharing.links.password")} hint={t("sharing.links.passwordHint")}>
@@ -306,12 +306,12 @@ function EditLink({ page, link, onDone }: { page: SharedPage; link: ShareLink; o
   return (
     <form onSubmit={(event) => void submit(event)} noValidate className="flex flex-col gap-3 pt-2">
       <Field label={t("sharing.links.expiry")} error={error} required={link.scope === "anyone"}>
-        <Input
-          type="date"
+        <AppDatePicker
           value={expiry}
           min={dateInput(new Date())}
+          clearable={link.scope !== "anyone"}
           invalid={error !== null}
-          onChange={(event) => setExpiry(event.target.value)}
+          onValueChange={setExpiry}
         />
       </Field>
       {link.hasPassword && !removePassword ? (

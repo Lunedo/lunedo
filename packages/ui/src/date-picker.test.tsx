@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DatePicker, monthGrid, parseIsoDate, timeOptions } from "./date-picker.js";
+import { Field } from "./field.js";
 import { renderUi } from "./testing/render.js";
 
 const format = (date: Date) => date.toISOString().slice(0, 10).split("-").reverse().join(".");
@@ -32,6 +33,16 @@ describe("DatePicker", () => {
     expect(document.activeElement?.getAttribute("data-date")).toBe("2026-10-14");
     await userEvent.keyboard("{ArrowRight}{ArrowDown}{Enter}");
     expect(change).toHaveBeenCalledWith("2026-10-22");
+  });
+
+  it("keeps the field label on the button without attributes a button may not carry", () => {
+    renderUi(
+      <Field label="Publish on" required>
+        <DatePicker value="" onValueChange={() => {}} formatDate={format} locale="en" />
+      </Field>,
+    );
+    const trigger = screen.getByRole("button", { name: /Publish on/ });
+    expect(trigger.hasAttribute("aria-required")).toBe(false);
   });
 
   it("moves between months and keeps days outside the allowed range unavailable", async () => {

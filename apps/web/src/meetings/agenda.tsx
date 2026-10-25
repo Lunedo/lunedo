@@ -35,6 +35,7 @@ import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { peopleLoader } from "../collaboration/people.js";
 import { useSetTaskStatus } from "../collaboration/task-actions.js";
+import { AppDatePicker } from "../components/date-fields.js";
 import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
@@ -727,12 +728,12 @@ function TaskForm({
           onValueChange={(_value, item) => setPerson(item)}
         />
       </div>
-      <Input
-        type="date"
+      <AppDatePicker
         value={due}
+        clearable
         className="w-auto"
         aria-label={t("meetings.agenda.taskDue")}
-        onChange={(event) => setDue(event.target.value)}
+        onValueChange={setDue}
       />
       <Button type="submit" size="sm" variant="primary" loading={saving}>
         {t("meetings.agenda.createTask")}

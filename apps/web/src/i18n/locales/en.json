@@ -2694,7 +2694,19 @@
     "searchClear": "Clear search",
     "searchWhere": "{page} › {section}",
     "lockForSpaces": "Lock for spaces",
-    "aboveMaximum": "Enter a whole number from {minimum} to {maximum}. The instance allows at most {maximum}."
+    "aboveMaximum": "Enter a whole number from {minimum} to {maximum}. The instance allows at most {maximum}.",
+    "savedNamed": "Saved “{name}”",
+    "undone": "Restored “{name}”",
+    "undoFailed": "Could not restore “{name}”",
+    "ownValue": "Own value",
+    "resetNamed": "Reset {name} to the inherited value",
+    "formats": {
+      "label": "Formats",
+      "hint": "Date, time, numbers and first day of the week.",
+      "customize": "Customize",
+      "close": "Close",
+      "weekStartExample": "from {day}"
+    }
   },
   "security": {
     "activity": {

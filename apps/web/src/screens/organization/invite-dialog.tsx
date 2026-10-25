@@ -5,7 +5,6 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
-  Input,
   Notice,
   SegmentedControl,
   Textarea,
@@ -18,6 +17,7 @@ import { api } from "../../api/client.js";
 import { organizationKeys, rolesQuery } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { memberLoader } from "../../components/pickers.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -173,7 +173,7 @@ export function InviteDialog({
             </Field>
           ) : (
             <Field label={t("members.expires")} hint={t("members.expiresHint")}>
-              <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+              <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
             </Field>
           )}
         </div>

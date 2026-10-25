@@ -10,6 +10,7 @@ import {
   Button,
   ConfirmDialog,
   Field,
+  FieldGrid,
   Input,
   Notice,
   Section,
@@ -156,7 +157,7 @@ export function LdapConnectionFields({
         }
         status={<SaveIndicator tracker={tracker("startTls")} />}
       />
-      <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
+      <FieldGrid className="py-3">
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.bindDn")}
           hint={t(serviceAccount.hint)}
@@ -193,7 +194,7 @@ export function LdapConnectionFields({
             onSave={(value) => checked((current) => ({ ...current, [field]: value }))}
           />
         ))}
-      </div>
+      </FieldGrid>
     </>
   );
 }
@@ -422,7 +423,7 @@ export function LdapAttributeFields({
               }
             />
           ))}
-          <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
+          <FieldGrid className="py-3">
             <AutoSaveTextField
               label={t("identityProviders.ldap.attributes.groupName")}
               value={config.attributes.groupName}
@@ -438,7 +439,7 @@ export function LdapAttributeFields({
                 )
               }
             />
-          </div>
+          </FieldGrid>
           <SettingRow
             label={t("identityProviders.ldap.groupMembership")}
             description={t("identityProviders.ldap.groupMembershipHint")}
@@ -666,7 +667,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
   const save = (next: { attribute: string; values: string[] } | null) =>
     update((current) => (current.preset === "generic" ? { ...current, disabled: next } : current));
   return (
-    <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
+    <FieldGrid className="py-3">
       <AutoSaveTextField
         label={t("identityProviders.ldap.disabledAttribute")}
         hint={t("identityProviders.ldap.disabledAttributeHint")}
@@ -697,7 +698,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
           }
         />
       ) : null}
-    </div>
+    </FieldGrid>
   );
 }
 

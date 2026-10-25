@@ -8,7 +8,6 @@ import {
   Field,
   focusFirstInvalidSoon,
   IconButton,
-  Input,
   Menu,
   Table,
   TableToolbar,
@@ -41,6 +40,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { useUnassignWithUndo } from "../../components/role-undo.js";
@@ -507,7 +507,7 @@ function MemberActionDialogs({
             hint={t("members.expiryHint")}
             {...(expiryMissing && !expiry ? { error: t("members.chooseDate") } : {})}
           >
-            <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+            <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
           </Field>
           {expiry ? (
             <AccessImpact

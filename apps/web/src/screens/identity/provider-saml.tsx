@@ -1,5 +1,15 @@
 import { ADFS_GROUP_CLAIMS, type SamlGroupValues, samlGroupValues } from "@lunedo/shared";
-import { Badge, Button, buttonClassName, Notice, Section, Select, SettingRow, Switch } from "@lunedo/ui";
+import {
+  Badge,
+  Button,
+  buttonClassName,
+  FieldGrid,
+  Notice,
+  Section,
+  Select,
+  SettingRow,
+  Switch,
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, FileUp, Lock, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -417,7 +427,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           />
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
+        <FieldGrid className="py-3">
           <AutoSaveTextField
             label={t("identityProviders.attributes.saml.identifier")}
             hint={
@@ -468,7 +478,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
               }
             />
           ))}
-        </div>
+        </FieldGrid>
       )}
       {config.preset !== "entraId" ? (
         <SettingRow

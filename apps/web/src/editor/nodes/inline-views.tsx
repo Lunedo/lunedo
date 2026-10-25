@@ -1,8 +1,9 @@
 import { contentColors, isIsoDate } from "@lunedo/editor-schema";
 import { Button, Field, Input, Popover, useToast } from "@lunedo/ui";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useEditable, useOpenPath, usePageContext } from "../context.js";
@@ -174,23 +175,17 @@ export function DateView({ node, updateAttributes, editor, selected }: NodeViewP
       <time dateTime={value}>{label}</time>
     </button>
   );
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      setOpen(false);
-    }
-  };
   return (
     <NodeViewWrapper as="span" className={selected ? "ld-node-selected" : undefined}>
       {editable ? (
         <Popover trigger={chip} open={open} onOpenChange={setOpen} label={t("editor.date.title")}>
           <Field label={t("editor.date.label")}>
-            <Input
-              type="date"
+            <AppDatePicker
               value={value}
-              onKeyDown={onKeyDown}
-              onChange={(event) => {
-                if (isIsoDate(event.target.value)) updateAttributes({ date: event.target.value });
+              onValueChange={(next) => {
+                if (!isIsoDate(next)) return;
+                updateAttributes({ date: next });
+                setOpen(false);
               }}
             />
           </Field>

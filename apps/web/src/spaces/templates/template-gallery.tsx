@@ -18,6 +18,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { readViewContext } from "../../editor/read-view.js";
 import { searchPeople } from "../../editor/references.js";
 import { LoadError } from "../../errors/failure.js";
@@ -464,11 +465,11 @@ export function FieldInput({
     case "date":
       return (
         <Field label={field.label} hint={hint} error={error} required={field.required}>
-          <Input
-            type="date"
+          <AppDatePicker
             value={value}
-            aria-invalid={error ? true : undefined}
-            onChange={(event) => onChange(event.target.value)}
+            clearable={!field.required}
+            invalid={Boolean(error)}
+            onValueChange={onChange}
           />
         </Field>
       );

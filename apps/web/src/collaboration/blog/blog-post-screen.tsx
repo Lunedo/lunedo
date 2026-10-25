@@ -4,7 +4,6 @@ import {
   Field,
   type SaveState as FieldSaveState,
   IconButton,
-  Input,
   Menu,
   type MenuItem,
   Notice,
@@ -32,6 +31,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { AppDatePicker, AppTimePicker } from "../../components/date-fields.js";
 import { PageEditor } from "../../editor/page-editor.js";
 import { CollaborationProblemNotice } from "../../editor/save-indicator.js";
 import type { SaveState } from "../../editor/save-state.js";
@@ -135,7 +135,7 @@ function ScheduleDialog({
   const [time, setTime] = useState(post.scheduledAt ? initial.time : "08:00");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const dateInput = useRef<HTMLInputElement>(null);
+  const dateInput = useRef<HTMLButtonElement>(null);
 
   const save = async () => {
     const at = zonedToInstant(date, time, timeZone);
@@ -186,22 +186,20 @@ function ScheduleDialog({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t("blog.scheduleDate")} error={error}>
-          <Input
+          <AppDatePicker
             ref={dateInput}
-            type="date"
             value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
+            onValueChange={(next) => {
+              setDate(next);
               setError(null);
             }}
           />
         </Field>
         <Field label={t("blog.scheduleTime")}>
-          <Input
-            type="time"
+          <AppTimePicker
             value={time}
-            onChange={(event) => {
-              setTime(event.target.value);
+            onValueChange={(next) => {
+              setTime(next);
               setError(null);
             }}
           />

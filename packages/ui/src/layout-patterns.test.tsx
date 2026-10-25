@@ -181,8 +181,10 @@ describe("layout patterns", () => {
       const menu = row.querySelector("[data-setting-menu]");
       expect(control?.className).toContain("sm:w-field");
       expect(menu?.className).toContain("w-control-md");
-      expect(control?.parentElement).toBe(menu?.parentElement);
-      expect(control?.parentElement?.className).toContain("items-center");
+      const line = row.querySelector("[data-setting-line]");
+      expect(line?.contains(control as Node)).toBe(true);
+      expect(menu?.parentElement).toBe(line);
+      expect(line?.className).toContain("items-center");
     }
   });
 

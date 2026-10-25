@@ -9,6 +9,7 @@ import {
   SaveStatus,
   SettingRow,
   Textarea,
+  useToast,
 } from "@lunedo/ui";
 import { useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,7 +30,7 @@ export interface SaveTracker {
   state: SaveState;
   error: string | null;
   retryable: boolean;
-  run: (action: () => Promise<unknown>) => Promise<boolean>;
+  run: (action: () => Promise<unknown>, onSaved?: () => void) => Promise<boolean>;
   retry: () => void;
 }
 
@@ -38,15 +39,16 @@ export function useSaveState(): SaveTracker {
   const [state, setState] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(false);
-  const last = useRef<(() => Promise<unknown>) | null>(null);
+  const last = useRef<{ action: () => Promise<unknown>; onSaved: (() => void) | undefined } | null>(null);
   const run = useCallback(
-    async (action: () => Promise<unknown>) => {
-      last.current = action;
+    async (action: () => Promise<unknown>, onSaved?: () => void) => {
+      last.current = { action, onSaved };
       setState("saving");
       setError(null);
       try {
         await action();
-        setState("saved");
+        setState(onSaved ? "idle" : "saved");
+        onSaved?.();
         return true;
       } catch (failure) {
         setError(failureMessage(t, failure));
@@ -58,7 +60,7 @@ export function useSaveState(): SaveTracker {
     [t],
   );
   const retry = useCallback(() => {
-    if (last.current) void run(last.current);
+    if (last.current) void run(last.current.action, last.current.onSaved);
   }, [run]);
   return { state, error, retryable, run, retry };
 }
@@ -74,15 +76,18 @@ const IDLE: SaveSnapshot = { state: "idle", error: null, retryable: false };
 export function useSaveStates(): (key: string) => SaveTracker {
   const { t } = useTranslation();
   const [states, setStates] = useState<Record<string, SaveSnapshot>>({});
-  const actions = useRef<Record<string, () => Promise<unknown>>>({});
+  const actions = useRef<Record<string, { action: () => Promise<unknown>; onSaved: (() => void) | undefined }>>(
+    {},
+  );
   const set = (key: string, snapshot: SaveSnapshot) =>
     setStates((current) => ({ ...current, [key]: snapshot }));
-  const run = async (key: string, action: () => Promise<unknown>) => {
-    actions.current[key] = action;
+  const run = async (key: string, action: () => Promise<unknown>, onSaved?: () => void) => {
+    actions.current[key] = { action, onSaved };
     set(key, { state: "saving", error: null, retryable: false });
     try {
       await action();
-      set(key, { state: "saved", error: null, retryable: false });
+      set(key, { state: onSaved ? "idle" : "saved", error: null, retryable: false });
+      onSaved?.();
       return true;
     } catch (failure) {
       set(key, { state: "error", error: problemMessage(t, failure), retryable: isRetryable(failure) });
@@ -91,12 +96,38 @@ export function useSaveStates(): (key: string) => SaveTracker {
   };
   return (key) => ({
     ...(states[key] ?? IDLE),
-    run: (action) => run(key, action),
+    run: (action, onSaved) => run(key, action, onSaved),
     retry: () => {
-      const action = actions.current[key];
-      if (action) void run(key, action);
+      const last = actions.current[key];
+      if (last) void run(key, last.action, last.onSaved);
     },
   });
+}
+
+export function useUndoToast() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  return useCallback(
+    (label: string, revert: () => Promise<unknown>) => {
+      toast({
+        title: t("settings.savedNamed", { name: label }),
+        undo: {
+          onUndo: () => {
+            revert().then(
+              () => toast({ title: t("settings.undone", { name: label }) }),
+              (failure: unknown) =>
+                toast({
+                  variant: "error",
+                  title: t("settings.undoFailed", { name: label }),
+                  description: problemMessage(t, failure),
+                }),
+            );
+          },
+        },
+      });
+    },
+    [t, toast],
+  );
 }
 
 export function SaveIndicator({ tracker }: { tracker: SaveTracker }) {
@@ -110,6 +141,7 @@ export function SaveIndicator({ tracker }: { tracker: SaveTracker }) {
 }
 
 function useAutoSaveText({
+  label,
   value,
   schema,
   onSave,
@@ -121,9 +153,11 @@ function useAutoSaveText({
   onSave: (value: string) => Promise<unknown>;
   multiline: boolean;
   invalidMessage: string | undefined;
+  label: string;
 }) {
   const { t } = useTranslation();
   const tracker = useSaveState();
+  const undoToast = useUndoToast();
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(value);
   const [invalid, setInvalid] = useState<string | null>(null);
@@ -147,8 +181,18 @@ function useAutoSaveText({
       }
     }
     setInvalid(null);
-    const ok = await tracker.run(() => onSave(next));
-    if (ok) setSaved(next);
+    const previous = saved;
+    await tracker.run(
+      () => onSave(next),
+      () => {
+        setSaved(next);
+        undoToast(label, async () => {
+          await onSave(previous);
+          setSaved(previous);
+          setDraft(previous);
+        });
+      },
+    );
   };
 
   const fieldError =
@@ -178,6 +222,7 @@ export function AutoSaveTextField({
   className?: string;
 }) {
   const { tracker, draft, setDraft, commit, fieldError } = useAutoSaveText({
+    label,
     value,
     schema,
     onSave,
@@ -243,6 +288,7 @@ export function AutoSaveTextRow({
 }) {
   const id = useId();
   const { tracker, draft, setDraft, commit, fieldError } = useAutoSaveText({
+    label,
     value,
     schema,
     onSave,
@@ -273,14 +319,8 @@ export function AutoSaveTextRow({
           }}
         />
       }
-      description={
-        fieldError || hint ? (
-          <>
-            {fieldError ? <FieldError id={errorId}>{fieldError}</FieldError> : null}
-            {hint ? <span id={hintId}>{hint}</span> : null}
-          </>
-        ) : undefined
-      }
+      {...(hint ? { description: <span id={hintId}>{hint}</span> } : {})}
+      {...(fieldError ? { error: <FieldError id={errorId}>{fieldError}</FieldError> } : {})}
       status={
         tracker.state === "error" && !tracker.retryable ? undefined : <SaveIndicator tracker={tracker} />
       }

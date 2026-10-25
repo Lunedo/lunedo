@@ -14,6 +14,7 @@ test("switches the whole interface at once when the own language changes", async
   const { context, page } = await preferences(browser, organization.adminState);
   const settings = page.getByRole("navigation", { name: "Settings" });
   await expect(settings.getByRole("link", { name: "Sign-in and security" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Customize" }).click();
   const englishDate = await page.getByRole("combobox", { name: "Date format", exact: true }).textContent();
   await expect(page.getByRole("group", { name: "Text size" })).toContainText("100%");
 
@@ -28,8 +29,9 @@ test("switches the whole interface at once when the own language changes", async
       .first(),
   ).toBeVisible();
   await expect(page.getByRole("group", { name: "Textgröße" })).toContainText(/100\s%/);
-  const sample = /\d{2}[./-]\d{2}[./-]\d{4}/.exec(englishDate ?? "")?.[0] ?? "missing";
-  await expect(page.getByRole("combobox", { name: "Datumsformat", exact: true })).toContainText(sample);
+  const germanDate = page.getByRole("combobox", { name: "Datumsformat", exact: true });
+  await expect(germanDate).toContainText(String(new Date().getFullYear()));
+  await expect(germanDate).not.toHaveText(englishDate ?? "");
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
   await page.getByRole("combobox", { name: "Sprache", exact: true }).click();

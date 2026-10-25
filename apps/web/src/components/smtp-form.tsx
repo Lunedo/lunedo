@@ -15,6 +15,8 @@ import {
   CollapsibleSection,
   ErrorState,
   Field,
+  FieldGrid,
+  FieldGridItem,
   Input,
   Notice,
   PasswordInput,
@@ -305,16 +307,16 @@ export function SmtpForm({
           ]}
         />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="sm:col-span-2">
+      <FieldGrid columns={3}>
+        <FieldGridItem span={2}>
           <Field label={t("mail.host")} {...fieldError("host")}>
             <Input autoComplete="off" {...form.register("host")} />
           </Field>
-        </div>
+        </FieldGridItem>
         <Field label={t("mail.port")} {...fieldError("port")}>
           <Input inputMode="numeric" autoComplete="off" {...form.register("port")} />
         </Field>
-      </div>
+      </FieldGrid>
       <Field label={t("mail.security")} hint={t("mail.securityHint")} {...fieldError("security")}>
         <Controller
           control={form.control}
@@ -382,14 +384,14 @@ export function SmtpForm({
           </Field>
           {provider === "microsoft365" ? (
             <>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <FieldGrid>
                 <Field label={t("mail.oauth2.tenantId")} {...fieldError("tenantId")}>
                   <Input className="font-mono" autoComplete="off" {...form.register("tenantId")} />
                 </Field>
                 <Field label={t("mail.oauth2.clientId")} {...fieldError("clientId")}>
                   <Input className="font-mono" autoComplete="off" {...form.register("clientId")} />
                 </Field>
-              </div>
+              </FieldGrid>
               <CollapsibleSection
                 title={t("mail.oauth2.advanced")}
                 level={3}
@@ -421,14 +423,14 @@ export function SmtpForm({
               <Field label={t("mail.oauth2.tokenUrl")} {...fieldError("tokenUrl")}>
                 <Input type="url" autoComplete="off" {...form.register("tokenUrl")} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <FieldGrid>
                 <Field label={t("mail.oauth2.genericClientId")} {...fieldError("genericClientId")}>
                   <Input autoComplete="off" {...form.register("genericClientId")} />
                 </Field>
                 <Field label={t("mail.oauth2.scope")} {...fieldError("scope")}>
                   <Input autoComplete="off" {...form.register("scope")} />
                 </Field>
-              </div>
+              </FieldGrid>
             </>
           ) : null}
           {provider === "google" ? (
@@ -486,7 +488,7 @@ export function SmtpForm({
           )}
         </>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FieldGrid>
           <Field
             label={t("mail.username")}
             hint={t("mail.usernameHint")}
@@ -501,7 +503,7 @@ export function SmtpForm({
           >
             <PasswordInput autoComplete="new-password" {...form.register("password")} />
           </Field>
-        </div>
+        </FieldGrid>
       )}
       <Field label={t("mail.from")} {...fieldError("from")}>
         <Input type="email" autoComplete="off" {...form.register("from")} />

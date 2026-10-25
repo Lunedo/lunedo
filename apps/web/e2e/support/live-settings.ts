@@ -58,6 +58,7 @@ async function memberPreferences(organization: Organization): Promise<Session> {
   await session.page.goto("/settings/preferences");
   await expect(session.page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
   await connected;
+  await session.page.getByRole("button", { name: "Customize" }).click();
   return session;
 }
 

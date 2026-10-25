@@ -2,6 +2,7 @@ import { Check, type LucideIcon } from "lucide-react";
 import { DropdownMenu, Popover as PopoverPrimitive, Tabs as TabsPrimitive } from "radix-ui";
 import { type ReactNode, useRef } from "react";
 import { classNames } from "./class-names.js";
+import { FieldLayoutProvider } from "./field.js";
 import { WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { rememberMenuOpener } from "./return-focus.js";
@@ -74,7 +75,7 @@ export function Popover({
               : "max-w-dialog-sm p-3",
           )}
         >
-          {children}
+          <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>

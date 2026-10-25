@@ -10,7 +10,6 @@ import {
   Dialog,
   Field,
   focusFirstInvalidSoon,
-  Input,
   List,
   ListRow,
   Notice,
@@ -33,6 +32,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -435,7 +435,7 @@ function AddPersonDialog({
         </Field>
         {manager ? null : (
           <Field label={t("groups.expires")} hint={t("roles.expiresHint")}>
-            <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+            <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
           </Field>
         )}
         {name && !manager ? (

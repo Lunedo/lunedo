@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { peopleLoader } from "../collaboration/people.js";
+import { AppDatePicker, AppTimePicker } from "../components/date-fields.js";
 import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
@@ -220,26 +221,19 @@ function DateTimeFields({
   time: string;
   onDate: (value: string) => void;
   onTime: (value: string) => void;
-  dateInput: React.RefObject<HTMLInputElement | null>;
+  dateInput: React.RefObject<HTMLButtonElement | null>;
 }) {
   const { t } = useTranslation();
   return (
     <>
-      <Input
+      <AppDatePicker
         ref={dateInput}
-        type="date"
         value={date}
         className="w-auto"
         aria-label={t("meetings.schedule.date")}
-        onChange={(event) => onDate(event.target.value)}
+        onValueChange={onDate}
       />
-      <Input
-        type="time"
-        value={time}
-        className="w-auto"
-        aria-label={t("meetings.schedule.time")}
-        onChange={(event) => onTime(event.target.value)}
-      />
+      <AppTimePicker value={time} aria-label={t("meetings.schedule.time")} onValueChange={onTime} />
     </>
   );
 }
@@ -260,7 +254,7 @@ function MoveForm({
   const [date, setDate] = useState(localDateInZone(start, target.timeZone));
   const [time, setTime] = useState(localTimeInZone(start, target.timeZone));
   const [problem, setProblem] = useState<string | null>(null);
-  const dateInput = useRef<HTMLInputElement>(null);
+  const dateInput = useRef<HTMLButtonElement>(null);
   const submit = async () => {
     if (!date || !time) {
       setProblem(t("meetings.move.missing"));
@@ -329,7 +323,7 @@ export function ExtraMeetingForm({
   const [date, setDate] = useState(localDateInZone(tomorrow, timeZone));
   const [time, setTime] = useState("09:00");
   const [problem, setProblem] = useState<string | null>(null);
-  const dateInput = useRef<HTMLInputElement>(null);
+  const dateInput = useRef<HTMLButtonElement>(null);
   const submit = async () => {
     if (!date || !time) {
       setProblem(t("meetings.move.missing"));

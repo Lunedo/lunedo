@@ -373,13 +373,13 @@ describe("share links", () => {
     expect(
       await within(dialog).findByText(/Choose an end date. Links for anyone may last at most 7 days/),
     ).toBeTruthy();
-    const date = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
-    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    const input = within(dialog).getByLabelText(/Expires on/);
-    await userEvent.clear(input);
-    await userEvent.type(input, value);
-    await userEvent.click(within(dialog).getByRole("button", { name: "Create link" }));
-    expect(await within(dialog).findByText(/may last at most 7 days. Choose an earlier date/)).toBeTruthy();
+    const latest = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const value = `${latest.getFullYear()}-${String(latest.getMonth() + 1).padStart(2, "0")}-${String(latest.getDate()).padStart(2, "0")}`;
+    expect(
+      within(dialog)
+        .getByLabelText(/Expires on/)
+        .getAttribute("data-max"),
+    ).toBe(value);
     expect(posted(`/api/v1/pages/${PAGE}/share-links`)).toHaveLength(0);
   });
 

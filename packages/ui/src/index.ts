@@ -97,6 +97,10 @@ export {
   Field,
   type FieldControlProps,
   FieldError,
+  FieldGrid,
+  FieldGridItem,
+  type FieldLayout,
+  FieldLayoutProvider,
   type FieldProps,
   Input,
   type InputProps,
@@ -104,6 +108,7 @@ export {
   Textarea,
   type TextareaProps,
   useFieldControl,
+  useFieldLayout,
 } from "./field.js";
 export {
   FilterMenu,

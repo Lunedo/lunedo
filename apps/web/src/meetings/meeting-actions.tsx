@@ -1,9 +1,10 @@
-import { Button, Checkbox, Dialog, Field, Input, useToast } from "@lunedo/ui";
+import { Button, Checkbox, Dialog, Field, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { AppDatePicker, AppTimePicker } from "../components/date-fields.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { instantInZone, localDateInZone, localTimeInZone } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
@@ -115,7 +116,7 @@ export function MeetingDateDialog({
   const [unscheduled, setUnscheduled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const dateInput = useRef<HTMLInputElement>(null);
+  const dateInput = useRef<HTMLButtonElement>(null);
   const needsDate = !meeting.rhythm;
   const allowUnscheduled = !meeting.rhythm;
 
@@ -178,24 +179,18 @@ export function MeetingDateDialog({
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("meetings.schedule.date")} error={error ?? undefined}>
-              <Input
+              <AppDatePicker
                 ref={dateInput}
-                type="date"
                 value={date}
                 disabled={unscheduled}
-                onChange={(event) => {
-                  setDate(event.target.value);
+                onValueChange={(next) => {
+                  setDate(next);
                   setError(null);
                 }}
               />
             </Field>
             <Field label={t("meetings.schedule.time")}>
-              <Input
-                type="time"
-                value={time}
-                disabled={unscheduled}
-                onChange={(event) => setTime(event.target.value)}
-              />
+              <AppTimePicker value={time} disabled={unscheduled} onValueChange={setTime} />
             </Field>
           </div>
           {allowUnscheduled ? (

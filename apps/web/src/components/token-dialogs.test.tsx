@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { CreateTokenDialog, expiryChoices, scopeSummary, type TokenRequest } from "./token-dialogs.js";
 
@@ -13,14 +14,16 @@ function renderDialog(
   onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ld_secret" })),
 ) {
   return renderWithProviders(
-    <CreateTokenDialog
-      open
-      onOpenChange={() => {}}
-      allowInstance={false}
-      allowOrganization
-      maxLifetimeDays={maxLifetimeDays}
-      onCreate={onCreate}
-    />,
+    <PreferencesProvider>
+      <CreateTokenDialog
+        open
+        onOpenChange={() => {}}
+        allowInstance={false}
+        allowOrganization
+        maxLifetimeDays={maxLifetimeDays}
+        onCreate={onCreate}
+      />
+    </PreferencesProvider>,
   ).then(() => onCreate);
 }
 
@@ -58,7 +61,7 @@ describe("token expiry", () => {
     await userEvent.click(within(expiry).getByRole("radio", { name: "Custom date" }));
     const date = screen.getByLabelText("Expires on");
     const latest = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-    expect(date.getAttribute("max")).toBe(latest);
+    expect(date.getAttribute("data-max")).toBe(latest);
   });
 });
 

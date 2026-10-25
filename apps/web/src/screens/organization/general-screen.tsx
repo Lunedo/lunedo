@@ -1,5 +1,14 @@
 import { organizationNameSchema, slugSchema } from "@lunedo/shared";
-import { Button, ConfirmDialog, Notice, Section, SettingRow, Skeleton, useToast } from "@lunedo/ui";
+import {
+  Button,
+  ConfirmDialog,
+  FieldGrid,
+  Notice,
+  Section,
+  SettingRow,
+  Skeleton,
+  useToast,
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ImageUp, LogOut, Trash2 } from "lucide-react";
@@ -101,7 +110,7 @@ function ProfileSection({
   };
   return (
     <Section title={t("organization.general.profile")}>
-      <div className="grid gap-4 p-4 sm:grid-cols-2">
+      <FieldGrid className="p-4">
         <AutoSaveTextField
           label={t("organization.general.name")}
           value={organization.name}
@@ -119,7 +128,7 @@ function ProfileSection({
           className="font-mono"
           onSave={(slug) => save({ slug })}
         />
-      </div>
+      </FieldGrid>
     </Section>
   );
 }

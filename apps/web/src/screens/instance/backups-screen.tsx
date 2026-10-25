@@ -9,6 +9,7 @@ import {
   Dialog,
   EmptyState,
   Field,
+  FieldGrid,
   focusFirstInvalidSoon,
   IconButton,
   Input,
@@ -732,7 +733,7 @@ function RetentionSection({ data, canManage }: { data: BackupOverview; canManage
   return (
     <Section title={t("backups.retention.title")}>
       <p className="pt-3 text-sm text-text-muted">{t("backups.retention.description")}</p>
-      <div className="grid gap-4 p-4 sm:grid-cols-3">
+      <FieldGrid columns={3} className="p-4">
         {counts.map((kind) => (
           <NumberSetting
             key={kind}
@@ -745,7 +746,7 @@ function RetentionSection({ data, canManage }: { data: BackupOverview; canManage
             onSave={(value) => save({ retention: { [kind]: value } })}
           />
         ))}
-      </div>
+      </FieldGrid>
     </Section>
   );
 }

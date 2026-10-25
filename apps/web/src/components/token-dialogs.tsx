@@ -26,6 +26,7 @@ import { problemMessage } from "../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { translateKey } from "../i18n/translate.js";
 import { useInlineReauthentication } from "../session/reauthentication.js";
+import { AppDatePicker } from "./date-fields.js";
 import {
   type ContentAccess,
   ContentAccessFields,
@@ -388,11 +389,18 @@ export function CreateTokenDialog({
               ) : null}
               {form.watch("expiry") === "custom" ? (
                 <Field label={t("tokens.customDate")} error={form.formState.errors.customDate?.message}>
-                  <Input
-                    type="date"
-                    min={dateInDays(1)}
-                    {...(latestDate ? { max: latestDate } : {})}
-                    {...form.register("customDate")}
+                  <Controller
+                    control={form.control}
+                    name="customDate"
+                    render={({ field }) => (
+                      <AppDatePicker
+                        value={field.value ?? ""}
+                        min={dateInDays(1)}
+                        {...(latestDate ? { max: latestDate } : {})}
+                        invalid={Boolean(form.formState.errors.customDate)}
+                        onValueChange={field.onChange}
+                      />
+                    )}
                   />
                 </Field>
               ) : null}

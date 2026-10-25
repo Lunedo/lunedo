@@ -1,6 +1,6 @@
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover as PopoverPrimitive } from "radix-ui";
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, type Ref, useEffect, useMemo, useRef, useState } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { Combobox } from "./combobox.js";
@@ -58,6 +58,8 @@ export interface DatePickerProps {
   clearable?: boolean;
   invalid?: boolean;
   disabled?: boolean;
+  className?: string;
+  ref?: Ref<HTMLButtonElement>;
   "aria-label"?: string;
 }
 
@@ -73,10 +75,12 @@ export function DatePicker({
   clearable = false,
   invalid,
   disabled = false,
+  className,
+  ref,
   ...props
 }: DatePickerProps) {
   const labels = useUiLabels();
-  const field = useFieldControl();
+  const { "aria-required": _required, ...field } = useFieldControl();
   const selected = parseIsoDate(value);
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState<Date>(() => selected ?? parseIsoDate(todayIso()) ?? new Date());
@@ -140,14 +144,18 @@ export function DatePicker({
     >
       <PopoverPrimitive.Trigger asChild>
         <button
+          ref={ref}
           type="button"
           disabled={disabled}
+          {...(min ? { "data-min": min } : {})}
+          {...(max ? { "data-max": max } : {})}
           {...field}
           {...(invalid ? { "aria-invalid": true } : {})}
           {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
           className={classNames(
             controlClassName,
             "inline-flex h-control-field items-center justify-between gap-2 text-left",
+            className,
           )}
         >
           <span className={classNames("min-w-0 flex-1 truncate", !selected && "text-text-muted")}>

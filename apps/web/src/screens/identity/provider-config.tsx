@@ -6,7 +6,7 @@ import {
   secondFactorModes,
   signInNameSources,
 } from "@lunedo/shared";
-import { Badge, CopyButton, Input, Select, SettingRow, Switch } from "@lunedo/ui";
+import { Badge, CopyButton, FieldGrid, Input, Select, SettingRow, Switch } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -372,7 +372,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
         <p className="py-3 text-sm text-text-muted">{t("identityProviders.attributes.googleFixed")}</p>
       ) : null}
       {config.preset === "generic" ? (
-        <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-2">
+        <FieldGrid className="py-3">
           {(["email", "signInName", "displayName", "groups", "groupNames"] as const).map((claim) => (
             <AutoSaveTextField
               key={claim}
@@ -401,7 +401,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
               }
             />
           ))}
-        </div>
+        </FieldGrid>
       ) : null}
     </>
   );

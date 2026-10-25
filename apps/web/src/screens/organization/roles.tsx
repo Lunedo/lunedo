@@ -6,7 +6,6 @@ import {
   Dialog,
   Field,
   focusFirstInvalidSoon,
-  Input,
   Notice,
   useToast,
 } from "@lunedo/ui";
@@ -18,6 +17,7 @@ import { api } from "../../api/client.js";
 import { groupMembersQuery, organizationKeys, rolesQuery } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { ACCOUNT_PREFIX, principalFromValue, principalLoader } from "../../components/pickers.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -183,7 +183,7 @@ export function AssignRoleDialog({
           </Field>
         )}
         <Field label={t("roles.expires")} hint={t("roles.expiresHint")}>
-          <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+          <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
         </Field>
         {principals.length > 0 ? (
           <AccessImpact

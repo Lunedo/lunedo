@@ -8,7 +8,6 @@ import {
   Field,
   focusFirstInvalidSoon,
   IconButton,
-  Input,
   Menu,
   Notice,
   Section,
@@ -28,6 +27,7 @@ import {
 } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { accountLoader } from "../../components/pickers.js";
 import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { TransferOwnershipDialog } from "../../components/transfer-ownership-dialog.js";
@@ -401,7 +401,7 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
           />
         </Field>
         <Field label={t("roles.expires")} hint={t("roles.expiresHint")}>
-          <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+          <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
         </Field>
         <AccessImpact
           change="gains"

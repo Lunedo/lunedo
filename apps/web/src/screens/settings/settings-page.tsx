@@ -1,4 +1,4 @@
-import { BackLink, PageHeader } from "@lunedo/ui";
+import { BackLink, FieldLayoutProvider, PageHeader } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,7 +39,7 @@ export function SettingsPage({
           {...(actions ? { actions } : {})}
         />
       </div>
-      {children}
+      <FieldLayoutProvider layout="row">{children}</FieldLayoutProvider>
     </div>
   );
 }

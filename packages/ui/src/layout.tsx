@@ -1,10 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Slot } from "radix-ui";
-import { type ComponentProps, isValidElement, type ReactNode, useId, useState } from "react";
+import { type ComponentProps, isValidElement, type ReactNode, useId, useRef, useState } from "react";
 import { classNames } from "./class-names.js";
+import { FieldLayoutProvider } from "./field.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
+import { Tooltip } from "./tooltip.js";
+import { useTruncated } from "./truncated-text.js";
 
 export interface Breadcrumb {
   label: ReactNode;
@@ -204,25 +207,74 @@ export function DangerAction({
 export interface SettingRowProps {
   label: ReactNode;
   description?: ReactNode;
+  more?: ReactNode;
   meta?: ReactNode;
   control: ReactNode;
+  wide?: boolean;
   menu?: ReactNode;
+  error?: ReactNode;
   status?: ReactNode;
+  below?: ReactNode;
 }
 
-export function SettingRow({ label, description, meta, control, menu, status }: SettingRowProps) {
+function SettingHint({ children, more }: { children: ReactNode; more?: ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const text = typeof children === "string" ? children : "";
+  const truncated = useTruncated(ref, text);
+  const hint = (
+    <span ref={ref} className="min-w-0 sm:truncate">
+      {children}
+    </span>
+  );
+  return (
+    <div data-setting-hint="" className="flex min-w-0 items-baseline gap-1 text-sm text-text-muted">
+      <Tooltip content={children} disabled={!truncated}>
+        {hint}
+      </Tooltip>
+      {more && <span className="shrink-0">{more}</span>}
+    </div>
+  );
+}
+
+export function SettingRow({
+  label,
+  description,
+  more,
+  meta,
+  control,
+  wide = false,
+  menu,
+  error,
+  status,
+  below,
+}: SettingRowProps) {
   return (
     <div
       data-setting-row=""
-      className="grid grid-cols-1 items-start gap-x-4 gap-y-2 py-3 sm:grid-cols-setting-row"
+      className={classNames(
+        "grid grid-cols-1 gap-x-4 gap-y-2 py-3 sm:grid-cols-setting-row",
+        below ? "items-start" : "items-center",
+      )}
     >
-      <div data-setting-label="" className="flex min-w-0 items-center text-text-muted sm:min-h-control-field">
-        {label}
+      <div data-setting-label="" className="flex min-w-0 flex-col">
+        <div className="font-medium text-text">{label}</div>
+        {(description || more) && <SettingHint more={more}>{description}</SettingHint>}
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <div data-setting-line="" className="flex items-center justify-between gap-3">
-          <div data-setting-control="" className="flex w-full min-w-0 sm:w-field">
-            {control}
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div
+              data-setting-control=""
+              className={classNames("flex w-full min-w-0", wide ? "sm:flex-1" : "sm:w-field")}
+            >
+              <FieldLayoutProvider layout="stacked">{control}</FieldLayoutProvider>
+            </div>
+            {meta && (
+              <div data-setting-source="" className="flex shrink-0 items-center gap-2 text-xs">
+                {meta}
+              </div>
+            )}
+            {status && <div className="flex min-w-0 items-center">{status}</div>}
           </div>
           <div
             data-setting-menu=""
@@ -231,17 +283,8 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
             {menu}
           </div>
         </div>
-        {description && (
-          <div data-setting-hint="" className="text-sm text-text-muted">
-            {description}
-          </div>
-        )}
-        {meta && (
-          <div data-setting-source="" className="text-xs text-text-muted">
-            {meta}
-          </div>
-        )}
-        {status && <div className="flex min-w-0">{status}</div>}
+        {error && <div className="min-w-0">{error}</div>}
+        {below && <div className="min-w-0">{below}</div>}
       </div>
     </div>
   );

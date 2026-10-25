@@ -3,6 +3,7 @@ import {
   DangerAction,
   DangerZone,
   Field,
+  FieldGrid,
   focusFirstInvalidSoon,
   focusWhenShown,
   Input,
@@ -411,7 +412,7 @@ function AnnouncementForm({
               onChange={(event) => update({ text: event.target.value })}
             />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <FieldGrid>
             <Field
               label={t("announcements.linkUrl")}
               hint={t("announcements.linkUrlHint")}
@@ -436,8 +437,8 @@ function AnnouncementForm({
                 onChange={(event) => update({ linkLabel: event.target.value })}
               />
             </Field>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          </FieldGrid>
+          <FieldGrid>
             <Field
               label={t("announcements.start")}
               hint={t("announcements.startHint", { timeZone })}
@@ -488,7 +489,7 @@ function AnnouncementForm({
                 </span>
               </div>
             </Field>
-          </div>
+          </FieldGrid>
           <div className="flex flex-col gap-2">
             <h3 className="flex items-center gap-2 font-medium">
               <Eye aria-hidden className="size-icon-md text-text-muted" />

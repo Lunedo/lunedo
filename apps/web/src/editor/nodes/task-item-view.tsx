@@ -1,4 +1,4 @@
-import { Avatar, Button, Combobox, Field, Input, Popover, useToast } from "@lunedo/ui";
+import { Avatar, Button, Combobox, Field, Popover, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { CalendarDays, UserRound, X } from "lucide-react";
@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { checkMentionAccess, peopleLoader } from "../../collaboration/people.js";
 import { taskStatusesQuery } from "../../collaboration/queries.js";
 import { useSetTaskStatus } from "../../collaboration/task-actions.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useEditable, usePageContext } from "../context.js";
 import { takeTaskStatus } from "../extensions/pasted-tasks.js";
@@ -155,10 +156,9 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
               >
                 <div className="flex w-field max-w-full flex-col gap-2 p-1">
                   <Field label={t("tasks.dueDate")}>
-                    <Input
-                      type="date"
+                    <AppDatePicker
                       value={dueDate ?? ""}
-                      onChange={(event) => updateAttributes({ dueDate: event.target.value || null })}
+                      onValueChange={(next) => updateAttributes({ dueDate: next || null })}
                     />
                   </Field>
                   {dueDate ? (
