@@ -8,12 +8,13 @@ import { focusInitial } from "./initial-focus.js";
 import { useUiLabels } from "./labels.js";
 import { useReturnFocus } from "./return-focus.js";
 
-export type DialogSize = "sm" | "md" | "lg" | "full";
+export type DialogSize = "sm" | "md" | "lg" | "xl" | "full";
 
 const SIZES: Record<DialogSize, string> = {
   sm: "max-w-dialog-sm",
   md: "max-w-dialog-md",
   lg: "max-w-dialog-lg",
+  xl: "max-w-dialog-xl",
   full: "h-full max-w-none",
 };
 

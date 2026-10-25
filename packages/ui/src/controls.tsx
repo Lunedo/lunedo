@@ -264,6 +264,7 @@ export interface ChoiceOption {
   label: ReactNode;
   description?: ReactNode;
   disabled?: boolean;
+  aside?: ReactNode;
 }
 
 export interface RadioGroupProps {
@@ -285,7 +286,7 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
     >
       {options.map((option) => {
         const itemId = `${id}-${option.value}`;
-        return (
+        const choice = (
           <label
             key={option.value}
             htmlFor={itemId}
@@ -314,6 +315,14 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
               {option.description && <span className="text-sm text-text-muted">{option.description}</span>}
             </span>
           </label>
+        );
+        return option.aside ? (
+          <div key={option.value} className="flex items-start gap-1">
+            {choice}
+            {option.aside}
+          </div>
+        ) : (
+          choice
         );
       })}
     </RadioGroupPrimitive.Root>

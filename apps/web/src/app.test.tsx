@@ -568,9 +568,10 @@ describe("the web client", () => {
         .getByRole("radio", { name: `Only ${ORGANIZATION.name}` })
         .getAttribute("aria-checked"),
     ).toBe("true");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Rights in detail/ }));
     await userEvent.click(
       within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
-        name: "View",
+        name: "Read",
       }),
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
@@ -581,15 +582,16 @@ describe("the web client", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create token" }));
     dialog = await screen.findByRole("dialog", { name: "Create API token" });
     await userEvent.type(within(dialog).getByLabelText("Name"), "Ops everywhere");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Rights in detail/ }));
     await userEvent.click(
       within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
-        name: "View",
+        name: "Read",
       }),
     );
     const instanceSettings = within(
       within(dialog).getByRole("group", { name: "Access to the instance" }),
     ).getByRole("radiogroup", { name: "Settings" });
-    expect(within(instanceSettings).getByRole("radio", { name: "View" }).hasAttribute("disabled")).toBe(true);
+    expect(within(instanceSettings).getByRole("radio", { name: "Read" }).hasAttribute("disabled")).toBe(true);
     expect(within(dialog).getByText(/Instance rights belong to no single organization/)).toBeTruthy();
     await userEvent.click(
       within(within(dialog).getByRole("radiogroup", { name: "Applies to" })).getByRole("radio", {
@@ -605,7 +607,7 @@ describe("the web client", () => {
           },
         ),
       ).getByRole("radio", {
-        name: "View",
+        name: "Read",
       }),
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
@@ -659,9 +661,10 @@ describe("the web client", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Create token" }));
     const dialog = await screen.findByRole("dialog", { name: "Create API token" });
     await userEvent.type(within(dialog).getByLabelText("Name"), "Chatbot");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Rights in detail/ }));
     await userEvent.click(
       within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
-        name: "View",
+        name: "Read",
       }),
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));

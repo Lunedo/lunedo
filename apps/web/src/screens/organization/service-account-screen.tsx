@@ -34,8 +34,8 @@ import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
 import { memberLoader } from "../../components/pickers.js";
-import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
-import { CreateTokenDialog, RevokeTokenDialog } from "../../components/token-dialogs.js";
+import { useSpaceNames } from "../../components/token-content-access.js";
+import { CreateTokenDialog, RevokeTokenDialog, TokenRightsDialog } from "../../components/token-dialogs.js";
 import { TokenTable } from "../../components/token-table.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -236,9 +236,10 @@ export function ServiceAccountScreen() {
           />
         </DangerZone>
       ) : null}
-      <ContentAccessDialog
-        token={changing}
-        organizationId={organizationId}
+      <TokenRightsDialog
+        token={changing === null ? null : { ...changing, organizationId }}
+        allowInstance={false}
+        organizationName={state.organization?.name ?? null}
         onOpenChange={(open) => {
           if (!open) setChanging(null);
         }}

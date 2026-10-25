@@ -90,7 +90,7 @@ export function TokenTable({
   const menu = (token: ApiToken): MenuItem[] => [
     { label: t("tokens.showRights"), icon: Info, onSelect: () => setDetails(token) },
     ...(canManage && onChangeContent && token.scopes.organization?.spaces
-      ? [{ label: t("tokens.content.change"), icon: PencilLine, onSelect: () => onChangeContent(token) }]
+      ? [{ label: t("tokens.changeRights"), icon: PencilLine, onSelect: () => onChangeContent(token) }]
       : []),
     ...(canManage
       ? [

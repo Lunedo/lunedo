@@ -108,9 +108,10 @@ test("creates a personal API token and revokes it", async ({ page, organization 
   await page.getByRole("button", { name: "Create token" }).click();
   const dialog = page.getByRole("dialog", { name: "Create API token" });
   await dialog.getByLabel("Name", { exact: true }).fill(tokenName);
+  await dialog.getByRole("button", { name: /^Rights in detail/ }).click();
   await dialog
     .getByRole("radiogroup", { name: "Members and groups" })
-    .getByRole("radio", { name: "View" })
+    .getByRole("radio", { name: "Read" })
     .click();
   await dialog.getByRole("button", { name: "Create token" }).click();
   const secret =

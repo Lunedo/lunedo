@@ -257,7 +257,7 @@
     "pageWidth": "56rem",
     "pageWidthWide": "67.5rem",
     "panelWidth": "22.5rem",
-    "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem" },
+    "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem", "xl": "56.25rem" },
     "qrCodeSize": "7.5rem",
     "fieldWidth": "16rem",
     "settingLabelWidth": "20rem",

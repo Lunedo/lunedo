@@ -35,8 +35,8 @@ import { instanceInfoQuery } from "../../api/queries.js";
 import { request } from "../../api/request.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
-import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
-import { CreateTokenDialog, RevokeTokenDialog } from "../../components/token-dialogs.js";
+import { useSpaceNames } from "../../components/token-content-access.js";
+import { CreateTokenDialog, RevokeTokenDialog, TokenRightsDialog } from "../../components/token-dialogs.js";
 import { TokenTable } from "../../components/token-table.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -563,9 +563,10 @@ function TokensSection() {
           onRevoke={setRevoking}
         />
       </div>
-      <ContentAccessDialog
+      <TokenRightsDialog
         token={changing}
-        organizationId={changing?.organizationId ?? null}
+        allowInstance={instanceAccess}
+        organizationName={organization.organization?.name ?? null}
         onOpenChange={(open) => {
           if (!open) setChanging(null);
         }}

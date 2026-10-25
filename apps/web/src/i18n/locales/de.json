@@ -2818,8 +2818,8 @@
     "expiry": {
       "30": "30 Tage",
       "90": "90 Tage",
-      "365": "365 Tage",
-      "never": "Kein Ablauf",
+      "365": "1 Jahr",
+      "never": "Nie",
       "custom": "Eigenes Datum"
     },
     "shownOnce": "Kopiere das Token jetzt. Es wird nur einmal angezeigt.",
@@ -2854,20 +2854,26 @@
         "draft": "Legt zusätzlich Artikel an und speichert Entwürfe von Artikeln in Wissensdatenbanken. Veröffentlicht werden sie von einer Person in Lunedo.",
         "publish": "Schreibt und veröffentlicht wie das Konto, ohne dass eine Person vorher prüft."
       },
-      "reach": "Reichweite",
+      "reach": "Welche Inhalte",
       "allContent": "Alles, was das Konto nutzen darf",
       "selectedKnowledgeBases": "Nur ausgewählte Wissensdatenbanken",
       "knowledgeBases": "Wissensdatenbanken",
       "searchKnowledgeBases": "Wissensdatenbanken nach Namen suchen",
       "knowledgeBasesRequired": "Wähle mindestens eine Wissensdatenbank, oder lass das Token alle Inhalte erreichen.",
       "summaryLimited": "{level} in {count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}}",
-      "change": "Zugriff auf Inhalte ändern",
-      "changeTitle": "Zugriff von {name} auf Inhalte",
       "changeFailed": "Der Zugriff auf Inhalte konnte nicht geändert werden",
       "readOnlyScope": "Dieses Token wurde mit Lesezugriff auf Spaces angelegt und kann deshalb nur lesen. Lege für Schreibzugriff ein neues Token an.",
       "save": "Zugriff speichern",
       "saved": "Zugriff auf Inhalte geändert",
-      "summaryNamed": "{level} in {names}"
+      "summaryNamed": "{level} in {names}",
+      "areas": "Spaces, Seiten und Artikel",
+      "short": {
+        "none": "Kein",
+        "read": "Lesen",
+        "draft": "Entwürfe",
+        "publish": "Veröffentlichen"
+      },
+      "readOnlyReason": "Dieses Token wurde mit Lesezugriff angelegt. Für Schreibzugriff legst du ein neues Token an."
     },
     "appliesTo": "Gilt für",
     "appliesToOrganization": "Nur {organization}",
@@ -2882,7 +2888,53 @@
     "search": "Tokens suchen",
     "showRightsFor": "Rechte von {name} ansehen",
     "noMatch": "Kein Token passt zur Suche.",
-    "actionsFor": "Aktionen für {name}"
+    "actionsFor": "Aktionen für {name}",
+    "namePlaceholder": "z. B. Import-Skript Vertrieb",
+    "purpose": {
+      "title": "Wofür",
+      "description": "Eine Vorlage setzt die Rechte. Du kannst sie unter „Rechte im Detail“ anpassen.",
+      "read": "Nur lesen",
+      "write": "Inhalte schreiben",
+      "admin": "Administration automatisieren",
+      "custom": "Eigene Auswahl",
+      "explain": "Was „{name}“ erlaubt",
+      "descriptions": {
+        "read": "Liest Spaces, Seiten und Artikel, die du lesen darfst. Ändert nichts.",
+        "write": "Legt Seiten und Artikel an und veröffentlicht sie, zum Beispiel für ein Import- oder Sync-Skript.",
+        "admin": "Verwaltet Mitglieder und Gruppen und liest die Einstellungen der Organisation, zum Beispiel für Provisionierung. Liest Inhalte.",
+        "custom": "Du legst jedes Recht unter „Rechte im Detail“ selbst fest."
+      }
+    },
+    "appliesToHint": "Nötig, wenn das Token auch Instanzrechte hat.",
+    "details": {
+      "title": "Rechte im Detail",
+      "count": "{count, plural, =0 {keine gesetzt} one {# gesetzt} other {# gesetzt}}",
+      "onlyContent": "Ändern lässt sich nur der Zugriff auf Inhalte. Für andere Rechte legst du ein neues Token an.",
+      "organizationNamed": "Organisation {organization}"
+    },
+    "summary": {
+      "title": "Zusammenfassung des Tokens",
+      "can": "Dieses Token kann",
+      "cannot": "Nicht",
+      "nothing": "Noch nichts. Wähle eine Vorlage oder setze Rechte.",
+      "noContent": "Inhalte lesen oder ändern",
+      "contentAll": "Inhalte: {level} (alles, was du lesen darfst)",
+      "contentLimited": "Inhalte: {level} (nur {count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}})",
+      "instanceRight": "Instanz · {area}: {level}",
+      "noInstance": "Instanzrechte",
+      "instanceMissing": "Instanz · {areas}",
+      "neverExpires": "Läuft nie ab",
+      "expiresOn": "Läuft am {date} ab",
+      "expiresCustom": "Läuft am gewählten Datum ab",
+      "expiresIn": "Läuft in {count, plural, one {# Tag} other {# Tagen}} ab"
+    },
+    "rightsTitle": "Rechte von {name}",
+    "changeRights": "Rechte ändern",
+    "levels": {
+      "none": "Kein",
+      "view": "Lesen",
+      "manage": "Verwalten"
+    }
   },
   "notifications": {
     "title": "Benachrichtigungen",
