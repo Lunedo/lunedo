@@ -39,14 +39,16 @@ import {
   Undo2,
   UserPlus,
 } from "lucide-react";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
-import { StarredMark, useContentCollaboration, useStar } from "../collaboration/content-collaboration.js";
+import { useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
+import { StarredMark, useStar } from "../collaboration/star.js";
 import { isEmptyDocument } from "../editor/empty-document.js";
 import type { MissingSection } from "../editor/extensions/required-sections.js";
+import { PageEditor } from "../editor/page-editor.js";
 import type { PresenceUser } from "../editor/presence.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
@@ -102,10 +104,6 @@ import { useConvert } from "./tree/item-actions.js";
 import { DraftChanges } from "./versions/diff-view.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/{-$slug}");
-
-const PageEditor = lazy(() =>
-  import("../editor/page-editor.js").then((module) => ({ default: module.PageEditor })),
-);
 
 export function PageScreen() {
   const { t } = useTranslation();
@@ -590,24 +588,22 @@ function PageArticle({
           <div className={meeting ? "ld-meeting-notes flex flex-col gap-4" : "contents"}>
             {editing ? (
               <div hidden={previewing}>
-                <Suspense fallback={<Skeleton className="h-field w-full" />}>
-                  <PageEditor
-                    pageId={page.id}
-                    spaceId={space.id}
-                    spaceKey={space.key}
-                    draft={publishMode}
-                    numberHeadings={page.numberHeadings}
-                    missingSections={missingSections}
-                    showStatus={false}
-                    toolbarContainer={toolbarHost}
-                    onPresenceChange={setCoEditors}
-                    onSaveStateChange={(state) => {
-                      saveState.current = state;
-                      setShownSaveState(state);
-                    }}
-                    {...collaboration.editor}
-                  />
-                </Suspense>
+                <PageEditor
+                  pageId={page.id}
+                  spaceId={space.id}
+                  spaceKey={space.key}
+                  draft={publishMode}
+                  numberHeadings={page.numberHeadings}
+                  missingSections={missingSections}
+                  showStatus={false}
+                  toolbarContainer={toolbarHost}
+                  onPresenceChange={setCoEditors}
+                  onSaveStateChange={(state) => {
+                    saveState.current = state;
+                    setShownSaveState(state);
+                  }}
+                  {...collaboration.editor}
+                />
               </div>
             ) : writable && publishMode && !page.published ? (
               draft.data?.hasChanges === false ? (

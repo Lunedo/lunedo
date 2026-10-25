@@ -5,28 +5,136 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  type RouteComponent,
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
+import { BlogPostScreen } from "./collaboration/blog/blog-post-screen.js";
+import { OrganizationBlogScreen } from "./collaboration/blog/organization-blog-screen.js";
+import { SpaceBlogScreen } from "./collaboration/blog/space-blog-screen.js";
+import { HomeScreen } from "./collaboration/home-screen.js";
+import { Landing } from "./collaboration/landing.js";
+import { MyTasksScreen } from "./collaboration/my-tasks-screen.js";
 import {
   AppNotFoundScreen,
   NotFoundScreen,
   RouteErrorScreen,
   ScreenErrorScreen,
 } from "./errors/route-error.js";
+import { ExportsScreen } from "./exports/exports-screen.js";
+import { PrintScreen } from "./exports/print-screen.js";
 import { printRouteSearch } from "./exports/print-search.js";
+import { ConfluenceRedirectScreen } from "./imports/confluence-link.js";
+import { ImportsScreen } from "./imports/imports-screen.js";
+import { ReviewScreen } from "./knowledge-bases/reviews/review-screen.js";
 import { reviewSearch } from "./knowledge-bases/reviews/review-search.js";
+import { ReviewSettingsScreen } from "./knowledge-bases/reviews/review-settings-screen.js";
+import { PortalAddressScreen } from "./knowledge-bases/settings/address-screen.js";
+import { PortalAppearanceScreen } from "./knowledge-bases/settings/appearance-screen.js";
+import { CategoriesScreen } from "./knowledge-bases/settings/categories-screen.js";
+import { LanguagesScreen } from "./knowledge-bases/settings/languages-screen.js";
+import { PortalAccountsScreen } from "./knowledge-bases/settings/portal-accounts-screen.js";
+import { KnowledgeBaseVisibilityScreen } from "./knowledge-bases/settings/visibility-screen.js";
+import { StatisticsScreen } from "./knowledge-bases/statistics/statistics-screen.js";
 import { statisticsSearch } from "./knowledge-bases/statistics/statistics-search.js";
+import { SeriesListScreen } from "./meetings/series-list-screen.js";
+import { SeriesScreen } from "./meetings/series-screen.js";
+import { TopicScreen } from "./meetings/topic-screen.js";
+import { NotificationsScreen } from "./notifications/notification-panel.js";
+import { OpenNotificationScreen } from "./notifications/open-notification-screen.js";
+import { UnsubscribeScreen } from "./notifications/unsubscribe-screen.js";
 import { RootLayout } from "./root-layout.js";
+import { NotificationPreferencesScreen } from "./screens/account/notification-preferences-screen.js";
+import { PreferencesScreen } from "./screens/account/preferences-screen.js";
+import { ProfileScreen } from "./screens/account/profile-screen.js";
+import { SecurityScreen } from "./screens/account/security-screen.js";
+import { WatchedItemsScreen } from "./screens/account/watched-items-screen.js";
+import { AcceptInvitationScreen } from "./screens/auth/accept-invitation-screen.js";
+import { AuthLayout } from "./screens/auth/auth-layout.js";
+import { CompleteRegistrationScreen } from "./screens/auth/complete-registration-screen.js";
+import { ConfirmEmailScreen } from "./screens/auth/confirm-email-screen.js";
+import { LinkAccountScreen } from "./screens/auth/link-account-screen.js";
+import { RegisterScreen } from "./screens/auth/register-screen.js";
+import { ResetPasswordScreen } from "./screens/auth/reset-password-screen.js";
+import { SecondFactorScreen } from "./screens/auth/second-factor-screen.js";
+import { SecondFactorSetupScreen } from "./screens/auth/second-factor-setup-screen.js";
+import { SignInRefusedScreen } from "./screens/auth/sign-in-refused-screen.js";
+import { SignInScreen } from "./screens/auth/sign-in-screen.js";
+import { InstanceProviderScreen } from "./screens/identity/provider-screen.js";
+import { InstanceProviderWizardScreen } from "./screens/identity/provider-wizard-screen.js";
+import { InstanceProvidersScreen } from "./screens/identity/providers-screen.js";
+import { InstanceAccountScreen, InstanceAccountsScreen } from "./screens/instance/accounts-screen.js";
+import { InstanceAnnouncementsScreen } from "./screens/instance/announcements-screen.js";
+import { InstanceAuditScreen } from "./screens/instance/audit-screen.js";
+import { InstanceBackupsScreen } from "./screens/instance/backups-screen.js";
+import { BreakGlassScreen } from "./screens/instance/break-glass-screen.js";
+import { InstanceEmbedsScreen } from "./screens/instance/embeds-screen.js";
+import { InstanceGeneralScreen } from "./screens/instance/general-screen.js";
+import { InstanceMailScreen } from "./screens/instance/mail-screen.js";
+import { InstanceMaintenanceScreen } from "./screens/instance/maintenance-screen.js";
+import { InstanceNotificationDefaultsScreen } from "./screens/instance/notification-defaults-screen.js";
+import { InstanceOrganizationsScreen } from "./screens/instance/organizations-screen.js";
+import { InstancePortalsScreen } from "./screens/instance/portals-screen.js";
+import { InstanceRenderingScreen } from "./screens/instance/rendering-screen.js";
+import { InstanceRolesScreen } from "./screens/instance/roles-screen.js";
+import { InstanceSecurityScreen } from "./screens/instance/security-screen.js";
+import { InstanceStatusScreen } from "./screens/instance/status-screen.js";
+import { InstanceStorageScreen } from "./screens/instance/storage-screen.js";
+import { InstanceUpdatesScreen } from "./screens/instance/updates-screen.js";
+import { AccessOverviewScreen } from "./screens/organization/access-overview-screen.js";
+import { OrganizationAnnouncementsScreen } from "./screens/organization/announcements-screen.js";
+import { OrganizationTokensScreen } from "./screens/organization/api-tokens-screen.js";
+import { OrganizationAuditScreen } from "./screens/organization/audit-screen.js";
+import { DomainsScreen } from "./screens/organization/domains-screen.js";
+import { OrganizationGeneralScreen } from "./screens/organization/general-screen.js";
+import { GroupScreen } from "./screens/organization/group-screen.js";
+import { GroupsScreen } from "./screens/organization/groups-screen.js";
+import { MembersScreen } from "./screens/organization/members-screen.js";
+import { OrganizationNotificationDefaultsScreen } from "./screens/organization/notification-defaults-screen.js";
+import { OrganizationRolesScreen } from "./screens/organization/roles-screen.js";
+import { OrganizationSecurityScreen } from "./screens/organization/security-screen.js";
+import { ServiceAccountScreen } from "./screens/organization/service-account-screen.js";
+import { ServiceAccountsScreen } from "./screens/organization/service-accounts-screen.js";
+import { SettingsLayout } from "./screens/settings/settings-layout.js";
+import { SettingsPending } from "./screens/settings/settings-pending.js";
 import { searchPageSearch } from "./search/search-params.js";
+import { SearchScreen } from "./search/search-screen.js";
 import { leavesApp, safeRedirect } from "./session/redirect.js";
+import { AccessRequestScreen, MyAccessRequestsScreen } from "./sharing/access-requests.js";
+import { LinkLandingScreen } from "./sharing/link-landing.js";
+import { SharedPageScreen } from "./sharing/shared-page-screen.js";
+import { AppShell } from "./shell/app-shell.js";
+import { FolderScreen } from "./spaces/folder-screen.js";
+import { LabelScreen } from "./spaces/label-screen.js";
+import { PageScreen } from "./spaces/page-screen.js";
+import { PersonalSpaceScreen } from "./spaces/personal-space-screen.js";
+import { InstanceContentScreen } from "./spaces/settings/instance-content-screen.js";
+import { InstancePersonalSpacesScreen } from "./spaces/settings/instance-personal-spaces-screen.js";
+import { OrganizationContentScreen } from "./spaces/settings/organization-content-screen.js";
+import { OrganizationSpacesScreen } from "./spaces/settings/organization-spaces-screen.js";
+import { SpaceAccessScreen } from "./spaces/settings/space-access-screen.js";
+import { SpaceChatScreen } from "./spaces/settings/space-chat-screen.js";
+import { SpaceContentScreen } from "./spaces/settings/space-content-screen.js";
+import { SpaceExportScreen } from "./spaces/settings/space-export-screen.js";
+import { SpaceGeneralScreen } from "./spaces/settings/space-general-screen.js";
+import { SpacePermissionsScreen } from "./spaces/settings/space-permissions-screen.js";
+import { SpaceSettingsLayout } from "./spaces/settings/space-settings-layout.js";
+import { SpaceShortcutsScreen } from "./spaces/settings/space-shortcuts-screen.js";
+import { SpaceStatusScreen } from "./spaces/settings/space-status-screen.js";
+import { SpaceLayout, SpaceOverviewRedirect } from "./spaces/space-layout.js";
+import { SpacesScreen } from "./spaces/spaces-screen.js";
+import { InstanceTemplatesScreen } from "./spaces/templates/instance-templates-screen.js";
+import { OrganizationTemplatesScreen } from "./spaces/templates/organization-templates-screen.js";
+import { SpaceTemplatesScreen } from "./spaces/templates/space-templates-screen.js";
+import { TrashScreen } from "./spaces/trash/trash-screen.js";
+import { VersionsScreen } from "./spaces/versions/versions-screen.js";
+import { WhiteboardHistoryScreen } from "./whiteboards/whiteboard-history-screen.js";
+import { WhiteboardScreen } from "./whiteboards/whiteboard-screen.js";
 
 export interface RouterContext {
   queryClient: QueryClient;
 }
-
-import { SettingsPending } from "./screens/settings/settings-pending.js";
 
 const redirectSearch = z.object({ redirect: z.string().optional() });
 
@@ -74,14 +182,14 @@ const linkLandingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/s/$token",
   beforeLoad: ({ context }) => requireSetupComplete(context.queryClient),
-  component: lazyRouteComponent(() => import("./sharing/link-landing.js"), "LinkLandingScreen"),
+  component: LinkLandingScreen,
 });
 
 const publicRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "public",
   beforeLoad: ({ context }) => requireSetupComplete(context.queryClient),
-  component: lazyRouteComponent(() => import("./screens/auth/auth-layout.js"), "AuthLayout"),
+  component: AuthLayout,
 });
 
 const signInRoute = createRoute({
@@ -97,7 +205,7 @@ const signInRoute = createRoute({
     const target = safeRedirect(search.redirect);
     if (session?.sessionKind === "full") throw redirect({ href: target, reloadDocument: leavesApp(target) });
   },
-  component: lazyRouteComponent(() => import("./screens/auth/sign-in-screen.js"), "SignInScreen"),
+  component: SignInScreen,
 });
 
 const verifyRoute = createRoute({
@@ -106,13 +214,13 @@ const verifyRoute = createRoute({
   validateSearch: redirectSearch.extend({
     factors: z.array(z.enum(["totp", "passkey", "recoveryCode"])).catch(["totp", "recoveryCode"]),
   }),
-  component: lazyRouteComponent(() => import("./screens/auth/second-factor-screen.js"), "SecondFactorScreen"),
+  component: SecondFactorScreen,
 });
 
 const linkAccountRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/sign-in/link",
-  component: lazyRouteComponent(() => import("./screens/auth/link-account-screen.js"), "LinkAccountScreen"),
+  component: LinkAccountScreen,
 });
 
 const signInRefusedRoute = createRoute({
@@ -123,49 +231,37 @@ const signInRefusedRoute = createRoute({
     reason: z.string().max(100).optional(),
     provider: idSchema.optional().catch(undefined),
   }),
-  component: lazyRouteComponent(
-    () => import("./screens/auth/sign-in-refused-screen.js"),
-    "SignInRefusedScreen",
-  ),
+  component: SignInRefusedScreen,
 });
 
 const resetPasswordRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/reset-password",
-  component: lazyRouteComponent(
-    () => import("./screens/auth/reset-password-screen.js"),
-    "ResetPasswordScreen",
-  ),
+  component: ResetPasswordScreen,
 });
 
 const confirmEmailRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/confirm-email",
-  component: lazyRouteComponent(() => import("./screens/auth/confirm-email-screen.js"), "ConfirmEmailScreen"),
+  component: ConfirmEmailScreen,
 });
 
 const acceptInvitationRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/accept-invitation",
-  component: lazyRouteComponent(
-    () => import("./screens/auth/accept-invitation-screen.js"),
-    "AcceptInvitationScreen",
-  ),
+  component: AcceptInvitationScreen,
 });
 
 const registerRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/register",
-  component: lazyRouteComponent(() => import("./screens/auth/register-screen.js"), "RegisterScreen"),
+  component: RegisterScreen,
 });
 
 const completeRegistrationRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/complete-registration",
-  component: lazyRouteComponent(
-    () => import("./screens/auth/complete-registration-screen.js"),
-    "CompleteRegistrationScreen",
-  ),
+  component: CompleteRegistrationScreen,
 });
 
 const secondFactorSetupRoute = createRoute({
@@ -176,16 +272,13 @@ const secondFactorSetupRoute = createRoute({
     if (!session) throw redirect({ to: "/sign-in", search: { redirect: location.href } });
     if (session.sessionKind === "full") throw redirect({ to: "/" });
   },
-  component: lazyRouteComponent(
-    () => import("./screens/auth/second-factor-setup-screen.js"),
-    "SecondFactorSetupScreen",
-  ),
+  component: SecondFactorSetupScreen,
 });
 
 const unsubscribeRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: "/unsubscribe/$token",
-  component: lazyRouteComponent(() => import("./notifications/unsubscribe-screen.js"), "UnsubscribeScreen"),
+  component: UnsubscribeScreen,
 });
 
 async function requireSession(queryClient: QueryClient, href: string) {
@@ -202,7 +295,7 @@ const appRoute = createRoute({
   beforeLoad: async ({ context, location }) => ({
     session: await requireSession(context.queryClient, location.href),
   }),
-  component: lazyRouteComponent(() => import("./shell/app-shell.js"), "AppShell"),
+  component: AppShell,
 });
 
 const appNotFoundRoute = createRoute({
@@ -218,36 +311,33 @@ const printRoute = createRoute({
   beforeLoad: async ({ context, location }) => ({
     session: await requireSession(context.queryClient, location.href),
   }),
-  component: lazyRouteComponent(() => import("./exports/print-screen.js"), "PrintScreen"),
+  component: PrintScreen,
 });
 
 const homeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
-  component: lazyRouteComponent(() => import("./collaboration/landing.js"), "Landing"),
+  component: Landing,
 });
 
 const forYouRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/home",
-  component: lazyRouteComponent(() => import("./collaboration/home-screen.js"), "HomeScreen"),
+  component: HomeScreen,
 });
 
 const openNotificationRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/notifications/$notificationId",
   params: { parse: (params) => ({ notificationId: idSchema.parse(params.notificationId) }) },
-  component: lazyRouteComponent(
-    () => import("./notifications/open-notification-screen.js"),
-    "OpenNotificationScreen",
-  ),
+  component: OpenNotificationScreen,
 });
 
 const searchRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/search",
   validateSearch: searchPageSearch,
-  component: lazyRouteComponent(() => import("./search/search-screen.js"), "SearchScreen"),
+  component: SearchScreen,
 });
 
 const myTasksRoute = createRoute({
@@ -262,7 +352,7 @@ const myTasksRoute = createRoute({
     sort: z.enum(["due", "text", "item", "assignedBy"]).optional().catch(undefined),
     dir: z.enum(["asc", "desc"]).optional().catch(undefined),
   }),
-  component: lazyRouteComponent(() => import("./collaboration/my-tasks-screen.js"), "MyTasksScreen"),
+  component: MyTasksScreen,
 });
 
 const blogRoute = createRoute({
@@ -272,10 +362,7 @@ const blogRoute = createRoute({
     space: idSchema.optional().catch(undefined),
     label: z.string().max(100).optional().catch(undefined),
   }),
-  component: lazyRouteComponent(
-    () => import("./collaboration/blog/organization-blog-screen.js"),
-    "OrganizationBlogScreen",
-  ),
+  component: OrganizationBlogScreen,
 });
 
 const spacesRoute = createRoute({
@@ -288,38 +375,38 @@ const spacesRoute = createRoute({
     oneOnOnes: z.boolean().optional().catch(undefined),
     deleted: z.boolean().optional().catch(undefined),
   }),
-  component: lazyRouteComponent(() => import("./spaces/spaces-screen.js"), "SpacesScreen"),
+  component: SpacesScreen,
 });
 
 const personalSpaceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/personal-space",
-  component: lazyRouteComponent(() => import("./spaces/personal-space-screen.js"), "PersonalSpaceScreen"),
+  component: PersonalSpaceScreen,
 });
 
 const notificationsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/notifications",
-  component: lazyRouteComponent(() => import("./notifications/notification-panel.js"), "NotificationsScreen"),
+  component: NotificationsScreen,
 });
 
 const myAccessRequestsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/access-requests",
-  component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "MyAccessRequestsScreen"),
+  component: MyAccessRequestsScreen,
 });
 
 const confluenceLinkRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/confluence/$",
-  component: lazyRouteComponent(() => import("./imports/confluence-link.js"), "ConfluenceRedirectScreen"),
+  component: ConfluenceRedirectScreen,
 });
 
 const accessRequestRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/access-requests/$requestId",
   params: { parse: (params) => ({ ...params, requestId: z.uuid().parse(params.requestId) }) },
-  component: lazyRouteComponent(() => import("./sharing/access-requests.js"), "AccessRequestScreen"),
+  component: AccessRequestScreen,
 });
 
 const sharedPageRoute = createRoute({
@@ -330,19 +417,19 @@ const sharedPageRoute = createRoute({
     attachment: z.uuid().optional().catch(undefined),
     edit: z.boolean().optional().catch(undefined),
   }),
-  component: lazyRouteComponent(() => import("./sharing/shared-page-screen.js"), "SharedPageScreen"),
+  component: SharedPageScreen,
 });
 
 const spaceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/spaces/$spaceKey",
-  component: lazyRouteComponent(() => import("./spaces/space-layout.js"), "SpaceLayout"),
+  component: SpaceLayout,
 });
 
 const spaceIndexRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/",
-  component: lazyRouteComponent(() => import("./spaces/space-layout.js"), "SpaceOverviewRedirect"),
+  component: SpaceOverviewRedirect,
 });
 
 const itemSearch = z.object({
@@ -361,13 +448,13 @@ const pageRoute = createRoute({
   path: "/pages/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: itemSearch,
-  component: lazyRouteComponent(() => import("./spaces/page-screen.js"), "PageScreen"),
+  component: PageScreen,
 });
 
 const spaceBlogRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/blog",
-  component: lazyRouteComponent(() => import("./collaboration/blog/space-blog-screen.js"), "SpaceBlogScreen"),
+  component: SpaceBlogScreen,
 });
 
 const blogPostRoute = createRoute({
@@ -375,14 +462,14 @@ const blogPostRoute = createRoute({
   path: "/blog/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: itemSearch,
-  component: lazyRouteComponent(() => import("./collaboration/blog/blog-post-screen.js"), "BlogPostScreen"),
+  component: BlogPostScreen,
 });
 
 const whiteboardRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/whiteboards/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
-  component: lazyRouteComponent(() => import("./whiteboards/whiteboard-screen.js"), "WhiteboardScreen"),
+  component: WhiteboardScreen,
 });
 
 const whiteboardHistoryRoute = createRoute({
@@ -390,10 +477,7 @@ const whiteboardHistoryRoute = createRoute({
   path: "/whiteboards/$itemId/history",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: z.object({ version: z.coerce.number().int().min(1).optional().catch(undefined) }),
-  component: lazyRouteComponent(
-    () => import("./whiteboards/whiteboard-history-screen.js"),
-    "WhiteboardHistoryScreen",
-  ),
+  component: WhiteboardHistoryScreen,
 });
 
 const historyRoute = createRoute({
@@ -413,43 +497,40 @@ const historyRoute = createRoute({
       .catch(undefined),
     view: z.enum(["inline", "sideBySide"]).optional().catch(undefined),
   }),
-  component: lazyRouteComponent(() => import("./spaces/versions/versions-screen.js"), "VersionsScreen"),
+  component: VersionsScreen,
 });
 
 const trashRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/trash",
-  component: lazyRouteComponent(() => import("./spaces/trash/trash-screen.js"), "TrashScreen"),
+  component: TrashScreen,
 });
 
 const reviewsRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/reviews",
   validateSearch: reviewSearch,
-  component: lazyRouteComponent(() => import("./knowledge-bases/reviews/review-screen.js"), "ReviewScreen"),
+  component: ReviewScreen,
 });
 
 const statisticsRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/statistics",
   validateSearch: statisticsSearch,
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/statistics/statistics-screen.js"),
-    "StatisticsScreen",
-  ),
+  component: StatisticsScreen,
 });
 
 const folderRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/folders/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
-  component: lazyRouteComponent(() => import("./spaces/folder-screen.js"), "FolderScreen"),
+  component: FolderScreen,
 });
 
 const meetingsRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/meetings",
-  component: lazyRouteComponent(() => import("./meetings/series-list-screen.js"), "SeriesListScreen"),
+  component: SeriesListScreen,
 });
 
 const seriesRoute = createRoute({
@@ -460,29 +541,26 @@ const seriesRoute = createRoute({
     tab: z.enum(["overview", "topics", "tasks", "decisions", "meetings"]).optional().catch(undefined),
     status: z.enum(["open", "closed", "all"]).optional().catch(undefined),
   }),
-  component: lazyRouteComponent(() => import("./meetings/series-screen.js"), "SeriesScreen"),
+  component: SeriesScreen,
 });
 
 const topicRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/topics/$topicId",
   params: { parse: (params) => ({ ...params, topicId: z.uuid().parse(params.topicId) }) },
-  component: lazyRouteComponent(() => import("./meetings/topic-screen.js"), "TopicScreen"),
+  component: TopicScreen,
 });
 
 const labelRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/labels/$label",
-  component: lazyRouteComponent(() => import("./spaces/label-screen.js"), "LabelScreen"),
+  component: LabelScreen,
 });
 
 const spaceSettingsRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/settings",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-settings-layout.js"),
-    "SpaceSettingsLayout",
-  ),
+  component: SpaceSettingsLayout,
   pendingComponent: SettingsPending,
   pendingMs: 0,
   pendingMinMs: 0,
@@ -499,115 +577,79 @@ const spaceSettingsIndexRoute = createRoute({
 const spaceGeneralRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/general",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-general-screen.js"),
-    "SpaceGeneralScreen",
-  ),
+  component: SpaceGeneralScreen,
 });
 
 const spacePermissionsRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/permissions",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-permissions-screen.js"),
-    "SpacePermissionsScreen",
-  ),
+  component: SpacePermissionsScreen,
 });
 
 const spaceAccessRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/access",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-access-screen.js"),
-    "SpaceAccessScreen",
-  ),
+  component: SpaceAccessScreen,
 });
 
 const spaceContentRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/content",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-content-screen.js"),
-    "SpaceContentScreen",
-  ),
+  component: SpaceContentScreen,
 });
 
 const spaceStatusRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/status",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-status-screen.js"),
-    "SpaceStatusScreen",
-  ),
+  component: SpaceStatusScreen,
 });
 
 const spaceShortcutsRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/shortcuts",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-shortcuts-screen.js"),
-    "SpaceShortcutsScreen",
-  ),
+  component: SpaceShortcutsScreen,
 });
 
 const spaceChatRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/chat",
-  component: lazyRouteComponent(() => import("./spaces/settings/space-chat-screen.js"), "SpaceChatScreen"),
+  component: SpaceChatScreen,
 });
 
 const spaceExportRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/export",
-  component: lazyRouteComponent(
-    () => import("./spaces/settings/space-export-screen.js"),
-    "SpaceExportScreen",
-  ),
+  component: SpaceExportScreen,
 });
 
 const spaceTemplatesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/templates",
-  component: lazyRouteComponent(
-    () => import("./spaces/templates/space-templates-screen.js"),
-    "SpaceTemplatesScreen",
-  ),
+  component: SpaceTemplatesScreen,
 });
 
 const spaceVisibilityRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/visibility",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/visibility-screen.js"),
-    "KnowledgeBaseVisibilityScreen",
-  ),
+  component: KnowledgeBaseVisibilityScreen,
 });
 
 const spaceAddressRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/address",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/address-screen.js"),
-    "PortalAddressScreen",
-  ),
+  component: PortalAddressScreen,
 });
 
 const spaceAppearanceRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/appearance",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/appearance-screen.js"),
-    "PortalAppearanceScreen",
-  ),
+  component: PortalAppearanceScreen,
 });
 
 const spaceCategoriesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/categories",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/categories-screen.js"),
-    "CategoriesScreen",
-  ),
+  component: CategoriesScreen,
 });
 
 const spaceArticleTemplatesRoute = createRoute({
@@ -621,34 +663,25 @@ const spaceArticleTemplatesRoute = createRoute({
 const spacePortalAccountsRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/portal-accounts",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/portal-accounts-screen.js"),
-    "PortalAccountsScreen",
-  ),
+  component: PortalAccountsScreen,
 });
 
 const spaceLanguagesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/languages",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/settings/languages-screen.js"),
-    "LanguagesScreen",
-  ),
+  component: LanguagesScreen,
 });
 
 const spaceReviewSettingsRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/reviews",
-  component: lazyRouteComponent(
-    () => import("./knowledge-bases/reviews/review-settings-screen.js"),
-    "ReviewSettingsScreen",
-  ),
+  component: ReviewSettingsScreen,
 });
 
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings",
-  component: lazyRouteComponent(() => import("./screens/settings/settings-layout.js"), "SettingsLayout"),
+  component: SettingsLayout,
   pendingComponent: SettingsPending,
   pendingMs: 0,
   pendingMinMs: 0,
@@ -665,43 +698,37 @@ const settingsIndexRoute = createRoute({
 const profileRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/profile",
-  component: lazyRouteComponent(() => import("./screens/account/profile-screen.js"), "ProfileScreen"),
+  component: ProfileScreen,
 });
 
 const preferencesRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/preferences",
-  component: lazyRouteComponent(() => import("./screens/account/preferences-screen.js"), "PreferencesScreen"),
+  component: PreferencesScreen,
 });
 
 const securityRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/security",
-  component: lazyRouteComponent(() => import("./screens/account/security-screen.js"), "SecurityScreen"),
+  component: SecurityScreen,
 });
 
 const exportsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/exports",
-  component: lazyRouteComponent(() => import("./exports/exports-screen.js"), "ExportsScreen"),
+  component: ExportsScreen,
 });
 
 const watchedItemsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/notifications/watching",
-  component: lazyRouteComponent(
-    () => import("./screens/account/watched-items-screen.js"),
-    "WatchedItemsScreen",
-  ),
+  component: WatchedItemsScreen,
 });
 
 const notificationSettingsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/notifications",
-  component: lazyRouteComponent(
-    () => import("./screens/account/notification-preferences-screen.js"),
-    "NotificationPreferencesScreen",
-  ),
+  component: NotificationPreferencesScreen,
 });
 
 const organizationRoute = createRoute({
@@ -718,104 +745,35 @@ const organizationIndexRoute = createRoute({
   },
 });
 
-function organizationScreen<TPath extends string>(
-  path: TPath,
-  load: () => Promise<Record<string, unknown>>,
-  name: string,
-) {
+function organizationScreen<TPath extends string>(path: TPath, component: RouteComponent) {
   return createRoute({
     getParentRoute: () => organizationRoute,
     path,
-    component: lazyRouteComponent(load as never, name as never),
+    component,
   });
 }
 
-const organizationGeneralRoute = organizationScreen(
-  "/general",
-  () => import("./screens/organization/general-screen.js"),
-  "OrganizationGeneralScreen",
-);
-const membersRoute = organizationScreen(
-  "/members",
-  () => import("./screens/organization/members-screen.js"),
-  "MembersScreen",
-);
-const groupsRoute = organizationScreen(
-  "/groups",
-  () => import("./screens/organization/groups-screen.js"),
-  "GroupsScreen",
-);
-const groupRoute = organizationScreen(
-  "/groups/$groupId",
-  () => import("./screens/organization/group-screen.js"),
-  "GroupScreen",
-);
-const rolesRoute = organizationScreen(
-  "/roles",
-  () => import("./screens/organization/roles-screen.js"),
-  "OrganizationRolesScreen",
-);
-const serviceAccountsRoute = organizationScreen(
-  "/service-accounts",
-  () => import("./screens/organization/service-accounts-screen.js"),
-  "ServiceAccountsScreen",
-);
-const serviceAccountRoute = organizationScreen(
-  "/service-accounts/$serviceAccountId",
-  () => import("./screens/organization/service-account-screen.js"),
-  "ServiceAccountScreen",
-);
-const organizationTokensRoute = organizationScreen(
-  "/api-tokens",
-  () => import("./screens/organization/api-tokens-screen.js"),
-  "OrganizationTokensScreen",
-);
-const organizationSecurityRoute = organizationScreen(
-  "/security",
-  () => import("./screens/organization/security-screen.js"),
-  "OrganizationSecurityScreen",
-);
-const domainsRoute = organizationScreen(
-  "/domains-and-guests",
-  () => import("./screens/organization/domains-screen.js"),
-  "DomainsScreen",
-);
+const organizationGeneralRoute = organizationScreen("/general", OrganizationGeneralScreen);
+const membersRoute = organizationScreen("/members", MembersScreen);
+const groupsRoute = organizationScreen("/groups", GroupsScreen);
+const groupRoute = organizationScreen("/groups/$groupId", GroupScreen);
+const rolesRoute = organizationScreen("/roles", OrganizationRolesScreen);
+const serviceAccountsRoute = organizationScreen("/service-accounts", ServiceAccountsScreen);
+const serviceAccountRoute = organizationScreen("/service-accounts/$serviceAccountId", ServiceAccountScreen);
+const organizationTokensRoute = organizationScreen("/api-tokens", OrganizationTokensScreen);
+const organizationSecurityRoute = organizationScreen("/security", OrganizationSecurityScreen);
+const domainsRoute = organizationScreen("/domains-and-guests", DomainsScreen);
 const organizationNotificationsRoute = organizationScreen(
   "/notifications",
-  () => import("./screens/organization/notification-defaults-screen.js"),
-  "OrganizationNotificationDefaultsScreen",
+  OrganizationNotificationDefaultsScreen,
 );
-const organizationAnnouncementsRoute = organizationScreen(
-  "/announcements",
-  () => import("./screens/organization/announcements-screen.js"),
-  "OrganizationAnnouncementsScreen",
-);
-const organizationSpacesRoute = organizationScreen(
-  "/spaces",
-  () => import("./spaces/settings/organization-spaces-screen.js"),
-  "OrganizationSpacesScreen",
-);
-const organizationContentRoute = organizationScreen(
-  "/content",
-  () => import("./spaces/settings/organization-content-screen.js"),
-  "OrganizationContentScreen",
-);
-const organizationTemplatesRoute = organizationScreen(
-  "/templates",
-  () => import("./spaces/templates/organization-templates-screen.js"),
-  "OrganizationTemplatesScreen",
-);
-const organizationAccessRoute = organizationScreen(
-  "/access",
-  () => import("./screens/organization/access-overview-screen.js"),
-  "AccessOverviewScreen",
-);
+const organizationAnnouncementsRoute = organizationScreen("/announcements", OrganizationAnnouncementsScreen);
+const organizationSpacesRoute = organizationScreen("/spaces", OrganizationSpacesScreen);
+const organizationContentRoute = organizationScreen("/content", OrganizationContentScreen);
+const organizationTemplatesRoute = organizationScreen("/templates", OrganizationTemplatesScreen);
+const organizationAccessRoute = organizationScreen("/access", AccessOverviewScreen);
 
-const importsRoute = organizationScreen(
-  "/imports",
-  () => import("./imports/imports-screen.js"),
-  "ImportsScreen",
-);
+const importsRoute = organizationScreen("/imports", ImportsScreen);
 const importWizardRoute = createRoute({
   getParentRoute: () => organizationRoute,
   path: "/imports/$importId/setup",
@@ -860,26 +818,18 @@ const reimportComparisonRoute = createRoute({
   component: lazyRouteComponent(() => import("./imports/reimport-comparison.js"), "ReimportComparisonScreen"),
 });
 
-const organizationAuditRoute = organizationScreen(
-  "/audit-log",
-  () => import("./screens/organization/audit-screen.js"),
-  "OrganizationAuditScreen",
-);
+const organizationAuditRoute = organizationScreen("/audit-log", OrganizationAuditScreen);
 
 const instanceRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/instance",
 });
 
-function instanceScreen<TPath extends string>(
-  path: TPath,
-  load: () => Promise<Record<string, unknown>>,
-  name: string,
-) {
+function instanceScreen<TPath extends string>(path: TPath, component: RouteComponent) {
   return createRoute({
     getParentRoute: () => instanceRoute,
     path,
-    component: lazyRouteComponent(load as never, name as never),
+    component,
   });
 }
 
@@ -890,139 +840,41 @@ const instanceIndexRoute = createRoute({
     throw redirect({ to: "/settings/instance/general" });
   },
 });
-const instanceStatusRoute = instanceScreen(
-  "/status",
-  () => import("./screens/instance/status-screen.js"),
-  "InstanceStatusScreen",
-);
-const instanceUpdatesRoute = instanceScreen(
-  "/updates",
-  () => import("./screens/instance/updates-screen.js"),
-  "InstanceUpdatesScreen",
-);
-const instanceMaintenanceRoute = instanceScreen(
-  "/maintenance",
-  () => import("./screens/instance/maintenance-screen.js"),
-  "InstanceMaintenanceScreen",
-);
-const instanceGeneralRoute = instanceScreen(
-  "/general",
-  () => import("./screens/instance/general-screen.js"),
-  "InstanceGeneralScreen",
-);
-const instanceOrganizationsRoute = instanceScreen(
-  "/organizations",
-  () => import("./screens/instance/organizations-screen.js"),
-  "InstanceOrganizationsScreen",
-);
-const instanceAccountsRoute = instanceScreen(
-  "/accounts",
-  () => import("./screens/instance/accounts-screen.js"),
-  "InstanceAccountsScreen",
-);
-const instanceAccountRoute = instanceScreen(
-  "/accounts/$accountId",
-  () => import("./screens/instance/accounts-screen.js"),
-  "InstanceAccountScreen",
-);
-const instanceRolesRoute = instanceScreen(
-  "/roles",
-  () => import("./screens/instance/roles-screen.js"),
-  "InstanceRolesScreen",
-);
-const instanceSecurityRoute = instanceScreen(
-  "/security",
-  () => import("./screens/instance/security-screen.js"),
-  "InstanceSecurityScreen",
-);
-const instanceProvidersRoute = instanceScreen(
-  "/sign-in-providers",
-  () => import("./screens/identity/providers-screen.js"),
-  "InstanceProvidersScreen",
-);
+const instanceStatusRoute = instanceScreen("/status", InstanceStatusScreen);
+const instanceUpdatesRoute = instanceScreen("/updates", InstanceUpdatesScreen);
+const instanceMaintenanceRoute = instanceScreen("/maintenance", InstanceMaintenanceScreen);
+const instanceGeneralRoute = instanceScreen("/general", InstanceGeneralScreen);
+const instanceOrganizationsRoute = instanceScreen("/organizations", InstanceOrganizationsScreen);
+const instanceAccountsRoute = instanceScreen("/accounts", InstanceAccountsScreen);
+const instanceAccountRoute = instanceScreen("/accounts/$accountId", InstanceAccountScreen);
+const instanceRolesRoute = instanceScreen("/roles", InstanceRolesScreen);
+const instanceSecurityRoute = instanceScreen("/security", InstanceSecurityScreen);
+const instanceProvidersRoute = instanceScreen("/sign-in-providers", InstanceProvidersScreen);
 const instanceNewProviderRoute = createRoute({
   getParentRoute: () => instanceRoute,
   path: "/sign-in-providers/new",
   validateSearch: wizardSearch,
-  component: lazyRouteComponent(
-    () => import("./screens/identity/provider-wizard-screen.js"),
-    "InstanceProviderWizardScreen",
-  ),
+  component: InstanceProviderWizardScreen,
 });
 const instanceProviderRoute = createRoute({
   getParentRoute: () => instanceRoute,
   path: "/sign-in-providers/$providerId",
   validateSearch: providerSearch,
-  component: lazyRouteComponent(
-    () => import("./screens/identity/provider-screen.js"),
-    "InstanceProviderScreen",
-  ),
+  component: InstanceProviderScreen,
 });
-const instanceEmbedsRoute = instanceScreen(
-  "/embeds",
-  () => import("./screens/instance/embeds-screen.js"),
-  "InstanceEmbedsScreen",
-);
-const instancePortalsRoute = instanceScreen(
-  "/portals",
-  () => import("./screens/instance/portals-screen.js"),
-  "InstancePortalsScreen",
-);
-const instanceRenderingRoute = instanceScreen(
-  "/rendering",
-  () => import("./screens/instance/rendering-screen.js"),
-  "InstanceRenderingScreen",
-);
-const instanceMailRoute = instanceScreen(
-  "/mail",
-  () => import("./screens/instance/mail-screen.js"),
-  "InstanceMailScreen",
-);
-const instanceStorageRoute = instanceScreen(
-  "/storage",
-  () => import("./screens/instance/storage-screen.js"),
-  "InstanceStorageScreen",
-);
-const instanceBackupsRoute = instanceScreen(
-  "/backups",
-  () => import("./screens/instance/backups-screen.js"),
-  "InstanceBackupsScreen",
-);
-const breakGlassRoute = instanceScreen(
-  "/break-glass",
-  () => import("./screens/instance/break-glass-screen.js"),
-  "BreakGlassScreen",
-);
-const instanceNotificationsRoute = instanceScreen(
-  "/notifications",
-  () => import("./screens/instance/notification-defaults-screen.js"),
-  "InstanceNotificationDefaultsScreen",
-);
-const instanceAnnouncementsRoute = instanceScreen(
-  "/announcements",
-  () => import("./screens/instance/announcements-screen.js"),
-  "InstanceAnnouncementsScreen",
-);
-const instancePersonalSpacesRoute = instanceScreen(
-  "/personal-spaces",
-  () => import("./spaces/settings/instance-personal-spaces-screen.js"),
-  "InstancePersonalSpacesScreen",
-);
-const instanceContentRoute = instanceScreen(
-  "/content",
-  () => import("./spaces/settings/instance-content-screen.js"),
-  "InstanceContentScreen",
-);
-const instanceTemplatesRoute = instanceScreen(
-  "/templates",
-  () => import("./spaces/templates/instance-templates-screen.js"),
-  "InstanceTemplatesScreen",
-);
-const instanceAuditRoute = instanceScreen(
-  "/audit-log",
-  () => import("./screens/instance/audit-screen.js"),
-  "InstanceAuditScreen",
-);
+const instanceEmbedsRoute = instanceScreen("/embeds", InstanceEmbedsScreen);
+const instancePortalsRoute = instanceScreen("/portals", InstancePortalsScreen);
+const instanceRenderingRoute = instanceScreen("/rendering", InstanceRenderingScreen);
+const instanceMailRoute = instanceScreen("/mail", InstanceMailScreen);
+const instanceStorageRoute = instanceScreen("/storage", InstanceStorageScreen);
+const instanceBackupsRoute = instanceScreen("/backups", InstanceBackupsScreen);
+const breakGlassRoute = instanceScreen("/break-glass", BreakGlassScreen);
+const instanceNotificationsRoute = instanceScreen("/notifications", InstanceNotificationDefaultsScreen);
+const instanceAnnouncementsRoute = instanceScreen("/announcements", InstanceAnnouncementsScreen);
+const instancePersonalSpacesRoute = instanceScreen("/personal-spaces", InstancePersonalSpacesScreen);
+const instanceContentRoute = instanceScreen("/content", InstanceContentScreen);
+const instanceTemplatesRoute = instanceScreen("/templates", InstanceTemplatesScreen);
+const instanceAuditRoute = instanceScreen("/audit-log", InstanceAuditScreen);
 
 const devRoutes =
   import.meta.env.DEV || import.meta.env.MODE === "e2e"

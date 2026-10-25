@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
 import { CreatePostDialog } from "../collaboration/blog/space-blog-screen.js";
-import { useStar } from "../collaboration/content-collaboration.js";
+import { useStar } from "../collaboration/star.js";
 import { LoadError } from "../errors/failure.js";
 import { SpaceExportDialog } from "../exports/space-export.js";
 import { KnowledgeBaseScreen } from "../knowledge-bases/knowledge-base-screen.js";
@@ -158,7 +158,6 @@ function SpaceLoading() {
 }
 
 function SpaceFrame({ space }: { space: SpaceWithRole }) {
-  const { t } = useTranslation();
   const shell = useShell();
   const location = useLocation();
   const settingsPath = `/spaces/${space.key}/settings`;

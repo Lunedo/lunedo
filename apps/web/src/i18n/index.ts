@@ -1,17 +1,30 @@
-import i18next, { type i18n } from "i18next";
+import i18next, { type BackendModule, type i18n } from "i18next";
 import ICU from "i18next-icu";
 import { initReactI18next } from "react-i18next";
-import de from "./locales/de.json" with { type: "json" };
-import en from "./locales/en.json" with { type: "json" };
 
-export const resources = {
-  en: { translation: en },
-  de: { translation: de },
-} as const;
+const translations = {
+  en: () => import("./locales/en.json"),
+  de: () => import("./locales/de.json"),
+};
 
-export type Language = keyof typeof resources;
+export type Language = keyof typeof translations;
 
-export const supportedLanguages = Object.keys(resources) as Language[];
+export const supportedLanguages = Object.keys(translations) as Language[];
+
+const lazyTranslations: BackendModule = {
+  type: "backend",
+  init() {},
+  read(language, _namespace, callback) {
+    if (!isLanguage(language)) {
+      callback(null, {});
+      return;
+    }
+    translations[language]().then(
+      (module) => callback(null, module.default),
+      (error: unknown) => callback(error instanceof Error ? error : new Error(String(error)), null),
+    );
+  },
+};
 
 const STORAGE_KEY = "lunedo.language";
 const CHOICE_KEY = "lunedo.chosenLanguage";
@@ -71,12 +84,12 @@ export function initialLanguage(preferred: readonly string[]): Language {
 export async function initI18n(preferred: readonly string[], instance: i18n = i18next.createInstance()) {
   const language = initialLanguage(preferred);
   await instance
+    .use(lazyTranslations)
     .use(ICU)
     .use(initReactI18next)
     .init({
-      resources,
       lng: language,
-      fallbackLng: "en",
+      fallbackLng: false,
       supportedLngs: supportedLanguages,
       interpolation: { escapeValue: false },
       returnNull: false,

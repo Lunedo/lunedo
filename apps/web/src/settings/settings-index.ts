@@ -1,4 +1,4 @@
-import en from "../i18n/locales/en.json" with { type: "json" };
+import { notificationEvents } from "@lunedo/shared";
 import { settingDescriptionKey, settingLabelKey } from "./setting-fields.js";
 
 export interface IndexEntry {
@@ -97,10 +97,8 @@ const LOCALE_PREFERENCES = [
   row("locale.firstDayOfWeek", "preferences.firstDayOfWeek"),
 ];
 
-const notificationEvents = (): IndexEntry[] =>
-  Object.keys(en.notifications.events).map((event) =>
-    row(`notifications.${event}`, `notifications.events.${event}`),
-  );
+const notificationEventRows = (): IndexEntry[] =>
+  notificationEvents.map((event) => row(`notifications.${event.id}`, `notifications.events.${event.id}`));
 
 export const NOTIFICATION_DELIVERY_KEYS = [
   "notifications.digestEnabled",
@@ -183,7 +181,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
   ],
   "account.notifications": [
-    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.eventTypes", notificationEventRows()),
     section("notifications.digest.title", [
       setting("notifications.digestEnabled"),
       setting("notifications.digestTime"),
@@ -217,7 +215,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("organization.domains.guests", GUEST_KEYS.map(setting)),
   ],
   "organization.notifications": [
-    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.eventTypes", notificationEventRows()),
     section("notifications.delivery", NOTIFICATION_DELIVERY_KEYS.map(setting)),
   ],
   "organization.announcements": [
@@ -273,7 +271,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
   ],
   "instance.notifications": [
-    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.eventTypes", notificationEventRows()),
     section("notifications.delivery", [
       setting("notifications.digestEnabled"),
       setting("notifications.digestTime"),

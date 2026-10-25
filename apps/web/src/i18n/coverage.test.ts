@@ -10,7 +10,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { auditEventKey } from "../components/audit-log.js";
 import { knownSettingKeys, settingDescriptionKey, settingLabelKey } from "../settings/setting-fields.js";
-import { resources } from "./index.js";
+import { resources } from "./resources.js";
 
 const sourceRoot = path.resolve("src");
 

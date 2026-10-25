@@ -17,7 +17,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { StarButton } from "../collaboration/content-collaboration.js";
+import { StarButton } from "../collaboration/star.js";
 import { useDebounced } from "../components/table-state.js";
 import { LoadError } from "../errors/failure.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";

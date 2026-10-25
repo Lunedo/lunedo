@@ -28,10 +28,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { lazy, Suspense, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { PageEditor } from "../../editor/page-editor.js";
 import { CollaborationProblemNotice } from "../../editor/save-indicator.js";
 import type { SaveState } from "../../editor/save-state.js";
 import { LoadError } from "../../errors/failure.js";
@@ -55,18 +56,15 @@ import { Redirect } from "../../spaces/redirect.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { blogPostPath, type ItemDetails, itemQuery, spaceKeys } from "../../spaces/space-queries.js";
-import { StarButton, useContentCollaboration } from "../content-collaboration.js";
+import { useContentCollaboration } from "../content-collaboration.js";
 import { type BlogPost, blogPostQuery, collaborationKeys } from "../queries.js";
 import { PageReactions } from "../reaction-bar.js";
+import { StarButton } from "../star.js";
 import { PostBadges, PostMeta } from "./blog-list.js";
 import { FollowBlogButton } from "./follow-blog.js";
 import { HeldNotice } from "./held-notice.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/blog/$itemId/{-$slug}");
-
-const PageEditor = lazy(() =>
-  import("../../editor/page-editor.js").then((module) => ({ default: module.PageEditor })),
-);
 
 const EXCERPT_MAX = 500;
 
@@ -482,18 +480,16 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
         <PageLabels pageId={item.id} />
         {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
         {editing ? (
-          <Suspense fallback={<Skeleton className="h-field w-full" />}>
-            <PageEditor
-              pageId={item.id}
-              spaceId={space.id}
-              spaceKey={space.key}
-              draft
-              onSaveStateChange={(state) => {
-                saveState.current = state;
-              }}
-              {...collaboration.editor}
-            />
-          </Suspense>
+          <PageEditor
+            pageId={item.id}
+            spaceId={space.id}
+            spaceKey={space.key}
+            draft
+            onSaveStateChange={(state) => {
+              saveState.current = state;
+            }}
+            {...collaboration.editor}
+          />
         ) : writable && !post.published ? (
           <Notice variant="info" title={t("blog.notPublishedTitle")}>
             {t("blog.notPublishedDescription")}

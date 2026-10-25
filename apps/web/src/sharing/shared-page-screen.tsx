@@ -2,10 +2,11 @@ import { Badge, Button, PageHeader, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { Check, FileText, Newspaper, Pencil } from "lucide-react";
-import { lazy, Suspense, useRef } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";
 import { useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { PageEditor } from "../editor/page-editor.js";
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
@@ -25,10 +26,6 @@ import { accessRoleLabel } from "./explanation.js";
 import { myAccessQuery, sharedWithMeQuery } from "./sharing-api.js";
 
 const route = getRouteApi("/app/shared/$itemId/{-$slug}");
-
-const PageEditor = lazy(() =>
-  import("../editor/page-editor.js").then((module) => ({ default: module.PageEditor })),
-);
 
 const EDITING = new Set(["editor", "admin"]);
 
@@ -121,18 +118,16 @@ function SharedPage({ page }: { page: ItemDetails }) {
               {editing && publishMode ? <DraftStatusLine draft={draft.data} /> : null}
               {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
               {editing ? (
-                <Suspense fallback={<Skeleton className="h-field w-full" />}>
-                  <PageEditor
-                    pageId={page.id}
-                    spaceId={page.spaceId}
-                    spaceKey=""
-                    draft={publishMode}
-                    onSaveStateChange={(state) => {
-                      saveState.current = state;
-                    }}
-                    {...collaboration.editor}
-                  />
-                </Suspense>
+                <PageEditor
+                  pageId={page.id}
+                  spaceId={page.spaceId}
+                  spaceKey=""
+                  draft={publishMode}
+                  onSaveStateChange={(state) => {
+                    saveState.current = state;
+                  }}
+                  {...collaboration.editor}
+                />
               ) : (
                 <PageContent
                   pageId={page.id}

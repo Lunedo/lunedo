@@ -11,14 +11,14 @@ import {
   Input,
   Menu,
   Select,
-  Skeleton,
   Table,
   Textarea,
   useToast,
 } from "@lunedo/ui";
 import { Download, FileUp, LayoutTemplate, Pencil, Plus, Trash2, X } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TemplateContentEditor } from "../../editor/template-content-editor.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { ARTICLE_TYPES, articleTypeLabel } from "../../knowledge-bases/article-types.js";
@@ -28,12 +28,6 @@ import type { PageTemplate, TemplateField } from "../content-queries.js";
 import { TEMPLATE_CATEGORIES, type TemplateCategory } from "./template-categories.js";
 import { BuiltInExport, ExportDialog, ImportDialog } from "./template-transfer.js";
 import type { TemplateLevelApi } from "./template-transfer-api.js";
-
-const TemplateContentEditor = lazy(() =>
-  import("../../editor/template-content-editor.js").then((module) => ({
-    default: module.TemplateContentEditor,
-  })),
-);
 
 const FIELD_TYPES = ["text", "date", "person", "choice"] as const;
 const KEY_PATTERN = /^[a-z][a-zA-Z0-9]{0,39}$/;
@@ -575,20 +569,18 @@ function TemplateForm({
       <div className="flex flex-col gap-2">
         <span className="font-medium">{t("templates.content")}</span>
         <p className="text-sm text-text-muted">{t("templates.contentHint")}</p>
-        <Suspense fallback={<Skeleton className="h-field w-full" />}>
-          <TemplateContentEditor
-            initial={document}
-            label={t("templates.content")}
-            images={{
-              url: (fileId, _version, size) => (template ? transfer.fileUrl(template.id, fileId, size) : ""),
-              upload: template ? (file) => transfer.uploadImage(template.id, file) : null,
-            }}
-            fields={fields
-              .filter((field) => KEY_PATTERN.test(field.key))
-              .map((field) => ({ key: field.key, label: field.label }))}
-            onChange={setDocument}
-          />
-        </Suspense>
+        <TemplateContentEditor
+          initial={document}
+          label={t("templates.content")}
+          images={{
+            url: (fileId, _version, size) => (template ? transfer.fileUrl(template.id, fileId, size) : ""),
+            upload: template ? (file) => transfer.uploadImage(template.id, file) : null,
+          }}
+          fields={fields
+            .filter((field) => KEY_PATTERN.test(field.key))
+            .map((field) => ({ key: field.key, label: field.label }))}
+          onChange={setDocument}
+        />
       </div>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel}>

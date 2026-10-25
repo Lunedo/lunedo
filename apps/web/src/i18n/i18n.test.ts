@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { detectLanguage, initI18n, resources } from "./index.js";
+import { detectLanguage, initI18n } from "./index.js";
+import { resources } from "./resources.js";
 
 function keys(value: object, prefix = ""): string[] {
   return Object.entries(value).flatMap(([key, child]) =>

@@ -27,7 +27,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { useMaintenance } from "../api/maintenance.js";
 import type { DescribeElement } from "../collaboration/comments-panel.js";
-import { useContentCollaboration, useStar } from "../collaboration/content-collaboration.js";
+import { useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { useStar } from "../collaboration/star.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "../editor/collaboration.js";
 import {
   AvatarStack,
