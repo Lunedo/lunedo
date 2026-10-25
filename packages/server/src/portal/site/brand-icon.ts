@@ -1,28 +1,21 @@
-const MARK =
-  "M600.0 978.1C567.7 969.7 537.4 958.0 486.1 934.4C382.2 886.4 302.3 862.3 222.1 854.8C205.4 853.2 205.3 853.1 207.5 841.6C224.3 753.7 281.8 688.9 362.2 667.0C425.7 649.7 498.4 657.5 592.5 691.7C613.6 699.4 650.1 714.0 690.0 730.8C705.7 737.4 723.9 744.9 730.5 747.5C827.0 785.7 889.8 795.8 943.5 782.0C955.7 778.8 961.0 776.7 961.0 774.8C961.0 774.2 958.8 769.1 956.0 763.6C948.6 748.5 945.8 737.9 945.6 724.5C945.5 714.8 945.8 712.9 947.9 708.6C952.3 699.7 966.5 691.8 986.5 687.3C996.7 684.9 1022.3 684.9 1031.0 687.3C1046.5 691.5 1050.5 695.5 1050.4 706.5C1050.3 721.1 1039.5 740.6 1022.2 757.2C973.4 804.0 894.5 814.5 795.5 787.4C778.3 782.6 749.6 773.3 728.0 765.3C708.2 758.0 698.9 756.0 684.4 756.0C638.0 756.0 595.3 785.3 580.8 827.0C567.7 864.8 578.3 915.7 610.2 968.2C618.7 982.2 618.0 982.8 600.0 978.1ZM876.5 719.9C858.5 718.3 836.5 711.2 813.6 699.8C792.5 689.2 773.7 677.2 733.5 648.5C670.9 603.9 646.8 588.7 608.6 569.9C557.8 544.8 515.1 533.7 469.0 533.6C426.8 533.5 394.5 541.2 355.5 560.5C305.1 585.4 261.5 621.9 219.4 674.6C203.4 694.6 202.1 693.9 209.0 668.8C240.4 554.3 322.6 457.9 423.5 417.3C436.8 411.9 437.9 412.1 442.0 419.9C447.4 430.0 459.0 440.9 459.0 435.8C459.0 435.1 457.9 430.5 456.5 425.5C446.0 387.5 456.6 347.6 484.3 321.3C510.6 296.5 544.9 294.3 571.5 315.7C584.3 326.0 595.6 345.4 601.2 366.6C604.1 377.6 604.4 379.9 604.6 396.9C604.8 413.6 605.0 415.4 606.7 416.4C607.7 417.0 613.7 419.8 620.0 422.6C696.1 456.4 765.9 512.6 817.4 581.5C821.9 587.5 831.8 601.3 839.3 612.0C872.3 658.9 885.5 675.5 907.7 698.1C918.1 708.7 921.9 713.1 921.4 714.3C919.9 718.4 894.6 721.6 876.5 719.9ZM993.2 666.5C971.9 657.8 950.9 642.8 926.6 619.1C904.7 597.6 886.6 575.3 857.0 533.5C818.7 479.4 788.3 447.1 748.5 418.3C715.7 394.6 677.6 375.6 635.6 362.1C626.8 359.2 619.1 356.5 618.5 356.0C617.9 355.5 615.9 351.3 614.1 346.6C612.3 341.9 608.6 334.6 605.9 330.3C603.2 326.1 601.0 321.9 601.0 321.1C601.0 317.2 615.9 306.7 627.8 302.2C633.7 299.9 636.1 299.6 647.0 299.5C659.4 299.5 659.5 299.5 667.4 303.3C686.5 312.4 699.7 334.5 703.3 363.5C704.7 375.0 702.8 372.9 722.5 383.7C775.8 412.9 819.2 453.5 868.5 520.4C908.2 574.1 913.9 581.3 938.1 607.6C956.8 627.9 974.2 643.6 999.8 663.2C1009.8 670.9 1007.1 672.3 993.2 666.5ZM785.4 610.4C788.4 609.2 787.1 604.6 781.2 595.5C768.4 575.8 753.5 566.6 729.2 563.5C720.8 562.4 719.5 564.8 722.6 575.8C727.8 593.7 738.8 605.0 755.3 609.5C760.5 610.9 782.4 611.6 785.4 610.4Z";
+import { readFileSync } from "node:fs";
 
-const VARIANTS = {
-  standard: { background: "#0B6F78", mark: "#FFFFFF" },
-  light: { background: "#FFFFFF", mark: "#0B6F78" },
-  contrast: { background: "#111111", mark: "#FFFFFF" },
+const ICONS = {
+  "favicon.svg": "image/svg+xml",
+  "favicon.ico": "image/x-icon",
 } as const;
 
-export type PortalIconVariant = keyof typeof VARIANTS;
+export type PortalIconName = keyof typeof ICONS;
 
-export const PORTAL_ICONS: Record<PortalIconVariant, string> = {
-  standard: "lunedo-icon.svg",
-  light: "lunedo-icon-light.svg",
-  contrast: "lunedo-icon-contrast.svg",
-};
+export const PORTAL_ICONS = {
+  svg: "favicon.svg",
+  ico: "favicon.ico",
+} as const satisfies Record<string, PortalIconName>;
 
-export function portalIcon(variant: PortalIconVariant): string {
-  const colors = VARIANTS[variant];
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="52.9 73.3 1149.2 1149.2"><rect x="52.9" y="73.3" width="1149.2" height="1149.2" rx="252.8" fill="${colors.background}"/><path fill="${colors.mark}" fill-rule="evenodd" d="${MARK}"/></svg>`;
-}
+const DIRECTORY = new URL("../../../data/portal/", import.meta.url);
 
-export function portalIconByName(name: string): string | null {
-  const variant = (Object.keys(PORTAL_ICONS) as PortalIconVariant[]).find(
-    (key) => PORTAL_ICONS[key] === name,
-  );
-  return variant ? portalIcon(variant) : null;
+export function portalIconByName(name: string): { type: string; data: Buffer } | null {
+  if (!Object.hasOwn(ICONS, name)) return null;
+  const icon = name as PortalIconName;
+  return { type: ICONS[icon], data: readFileSync(new URL(icon, DIRECTORY)) };
 }

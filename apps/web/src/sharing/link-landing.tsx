@@ -337,7 +337,7 @@ function LandingCard({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen items-start justify-center bg-surface-sunken px-4 pt-12 pb-12">
       <div className="flex w-full max-w-dialog-sm flex-col gap-6 rounded-lg border border-border bg-bg p-6">
         <p className="flex items-center gap-2 text-sm">
-          <LunedoMark className="size-6" />
+          <LunedoMark className="h-6" />
           <span className="font-semibold">{t("brand.name")}</span>
           {info.data?.name ? <span className="text-text-muted">· {info.data.name}</span> : null}
         </p>

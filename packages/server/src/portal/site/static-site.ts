@@ -543,7 +543,11 @@ export class StaticSiteBuilder {
     text("_assets/portal.css", portalCss);
     text("_assets/portal.js", portalScript);
     text("_assets/portal-theme.js", portalThemeScript);
-    for (const name of Object.values(PORTAL_ICONS)) text(`_assets/${name}`, portalIconByName(name) ?? "");
+    for (const name of Object.values(PORTAL_ICONS)) {
+      const icon = portalIconByName(name);
+      if (icon)
+        entries.push({ path: `_assets/${name}`, mtime, compress: false, content: async () => icon.data });
+    }
     text("_assets/static-search.js", staticSearchScript);
     text(
       "_assets/minisearch.js",

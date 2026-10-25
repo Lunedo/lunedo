@@ -86,7 +86,7 @@ export function AuthBrand() {
   }
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <LunedoMark className="size-control-md shrink-0" />
+      <LunedoMark className="h-control-md" />
       <span className="font-semibold">{t("brand.name")}</span>
       {name ? (
         <span className="truncate text-text-muted" title={name}>

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { supportedLanguages } from "./i18n/index.js";
@@ -28,6 +28,20 @@ describe("the start page", () => {
     for (const link of document.head.querySelectorAll("link[rel=modulepreload]")) link.remove();
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  it("links the favicon, its fallback and the home screen icon, each shipped with the client", () => {
+    const links = [...html.matchAll(/<link rel="(icon|apple-touch-icon)" href="([^"]+)"/g)].map(
+      ([, rel, href]) => `${rel} ${href}`,
+    );
+    expect(links).toEqual([
+      "icon /favicon.ico",
+      "icon /favicon.svg",
+      "apple-touch-icon /apple-touch-icon.png",
+    ]);
+    for (const file of ["favicon.ico", "favicon.svg", "apple-touch-icon.png", "icon-192.png"])
+      expect(existsSync(path.resolve("public", file))).toBe(true);
+    expect(readFileSync(path.resolve("public", "push-worker.js"), "utf8")).toContain('icon: "/icon-192.png"');
+  });
 
   it("knows the same languages as the application", () => {
     expect(/var languages = (\[[^\]]*\]);/.exec(script)?.[1]).toBe(

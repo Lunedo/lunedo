@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { PortalCategory } from "../reader.js";
 import { portalCss } from "./assets.js";
+import { PORTAL_ICONS, portalIconByName } from "./brand-icon.js";
 import { html, raw } from "./html.js";
 import {
   ancestorsOf,
@@ -133,10 +136,24 @@ describe("the favicon of the portal", () => {
     expect(icon).toBe('<link rel="icon" href="/help/acme/_logo/3">');
   });
 
-  it("uses the Lunedo mark for light, dark and high contrast otherwise", () => {
+  it("uses the Lunedo favicon, which follows light and dark itself, with the icon file as fallback otherwise", () => {
     const icon = favicon({ logoUrl: null, assets }).value;
-    expect(icon).toContain('href="/help/_assets/lunedo-icon.svg"');
-    expect(icon).toContain('href="/help/_assets/lunedo-icon-light.svg" media="(prefers-color-scheme: dark)"');
-    expect(icon).toContain('href="/help/_assets/lunedo-icon-contrast.svg" media="(prefers-contrast: more)"');
+    expect(icon).toBe(
+      '<link rel="icon" href="/help/_assets/favicon.ico" sizes="48x48"><link rel="icon" href="/help/_assets/favicon.svg" type="image/svg+xml">',
+    );
+  });
+
+  it("ships the same favicon files as the web client", () => {
+    for (const name of Object.values(PORTAL_ICONS)) {
+      const shipped = readFileSync(
+        fileURLToPath(new URL(`../../../../../apps/web/public/${name}`, import.meta.url)),
+      );
+      expect(portalIconByName(name)?.data.equals(shipped)).toBe(true);
+    }
+    expect(portalIconByName("favicon.svg")?.type).toBe("image/svg+xml");
+    expect(portalIconByName("favicon.svg")?.data.toString("utf8")).toContain("prefers-color-scheme:dark");
+    expect(portalIconByName("favicon.ico")?.type).toBe("image/x-icon");
+    expect(portalIconByName("../favicon.svg")).toBeNull();
+    expect(portalIconByName("hasOwnProperty")).toBeNull();
   });
 });

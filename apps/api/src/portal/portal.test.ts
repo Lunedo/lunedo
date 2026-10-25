@@ -509,12 +509,16 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(theme.body).toContain("lunedo.portal.theme");
     const home = await reader.get(kb.path);
     expect(home.body).toContain(
-      '<link rel="icon" type="image/svg+xml" href="/help/_assets/lunedo-icon.svg">',
+      '<link rel="icon" href="/help/_assets/favicon.ico" sizes="48x48"><link rel="icon" href="/help/_assets/favicon.svg" type="image/svg+xml">',
     );
-    const icon = await reader.get("/help/_assets/lunedo-icon.svg");
+    const icon = await reader.get("/help/_assets/favicon.svg");
     expect(icon.statusCode).toBe(200);
     expect(icon.headers["content-type"]).toContain("image/svg+xml");
-    expect(icon.body).toContain("<svg");
+    expect(icon.body).toContain("prefers-color-scheme:dark");
+    const fallback = await reader.get("/help/_assets/favicon.ico");
+    expect(fallback.statusCode).toBe(200);
+    expect(fallback.headers["content-type"]).toContain("image/x-icon");
+    expect(fallback.rawPayload.subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
   });
 
   it("shows when an article was last reviewed while reviews apply, and otherwise when it changed", async () => {

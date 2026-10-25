@@ -297,7 +297,7 @@ function serveAsset(reply: FastifyReply, name: string): FastifyReply {
   }
   const brand = portalIconByName(name);
   if (brand) {
-    return reply.header("cache-control", "public, max-age=86400").type("image/svg+xml").send(brand);
+    return reply.header("cache-control", "public, max-age=86400").type(brand.type).send(brand.data);
   }
   const font = name.startsWith("fonts/") ? fontFile(name.slice("fonts/".length)) : null;
   if (font)

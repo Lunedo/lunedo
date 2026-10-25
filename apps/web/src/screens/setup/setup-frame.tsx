@@ -29,7 +29,7 @@ export function SetupFrame({
       <CornerControls languageLabelKey="setup.language" />
       <main className="mx-auto flex w-full max-w-column flex-col px-4 pt-12 pb-12">
         <div className="mb-8 flex items-center gap-2 font-semibold">
-          <LunedoMark className="size-control-md" />
+          <LunedoMark className="h-control-md" />
           <BrandName />
         </div>
         {progress ? <StepMenu progress={progress} /> : null}

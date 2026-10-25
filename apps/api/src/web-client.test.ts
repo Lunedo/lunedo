@@ -24,6 +24,8 @@ beforeAll(async () => {
   writeFileSync(path.join(webRoot, "preview.html"), "<!doctype html><title>Preview</title>");
   writeFileSync(path.join(webRoot, "print.html"), "<!doctype html><title>Print</title>");
   writeFileSync(path.join(webRoot, "diagram.html"), "<!doctype html><title>Diagram</title>");
+  writeFileSync(path.join(webRoot, "favicon.ico"), Buffer.from([0, 0, 1, 0, 1, 0]));
+  writeFileSync(path.join(webRoot, "favicon.svg"), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   mkdirSync(path.join(webRoot, "drawio", "31.4.6", "js"), { recursive: true });
   writeFileSync(
     path.join(webRoot, "drawio", "31.4.6", "index.html"),
@@ -51,6 +53,18 @@ describe("web client", () => {
     const response = await app.inject({ method: "GET", url: "/assets/app-1234.js" });
     expect(response.statusCode).toBe(200);
     expect(response.headers["cache-control"]).toContain("immutable");
+  });
+
+  it("serves the favicons at the root without long caching, also to clients that ask for /favicon.ico unprompted", async () => {
+    const ico = await app.inject({ method: "GET", url: "/favicon.ico" });
+    expect(ico.statusCode).toBe(200);
+    expect(ico.headers["content-type"]).toContain("icon");
+    expect(ico.headers["cache-control"]).toBe("no-cache");
+    expect(ico.rawPayload).toEqual(Buffer.from([0, 0, 1, 0, 1, 0]));
+    const svg = await app.inject({ method: "GET", url: "/favicon.svg" });
+    expect(svg.statusCode).toBe(200);
+    expect(svg.headers["content-type"]).toContain("image/svg+xml");
+    expect(svg.headers["cache-control"]).toBe("no-cache");
   });
 
   it("serves the compressed copy of a hashed asset that the browser accepts, with long caching", async () => {

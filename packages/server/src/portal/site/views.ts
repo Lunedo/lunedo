@@ -220,7 +220,7 @@ function onlyIn(view: PortalView, article: { language: string }): Html | null {
 export function favicon(view: Pick<PortalView, "logoUrl" | "assets">): Html {
   if (view.logoUrl) return html`<link rel="icon" href="${view.logoUrl}">`;
   const base = view.assets.style.replace(/[^/]*$/, "");
-  return html`<link rel="icon" type="image/svg+xml" href="${base}${PORTAL_ICONS.standard}"><link rel="icon" type="image/svg+xml" href="${base}${PORTAL_ICONS.light}" media="(prefers-color-scheme: dark)"><link rel="icon" type="image/svg+xml" href="${base}${PORTAL_ICONS.contrast}" media="(prefers-contrast: more)">`;
+  return html`<link rel="icon" href="${base}${PORTAL_ICONS.ico}" sizes="48x48"><link rel="icon" href="${base}${PORTAL_ICONS.svg}" type="image/svg+xml">`;
 }
 
 function brandMark(view: PortalView): Html {

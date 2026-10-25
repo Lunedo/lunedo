@@ -175,9 +175,10 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const files = await site(owner, spaceId, "https://help.example.org/docs/");
     const pages = [...files.keys()].filter((path) => /^\d+-.+\.html$/.test(path));
     expect(pages.length).toBeGreaterThanOrEqual(articles - 1);
-    expect(files.get("_assets/lunedo-icon.svg")?.toString("utf8")).toContain("<svg");
+    expect(files.get("_assets/favicon.svg")?.toString("utf8")).toContain("prefers-color-scheme:dark");
+    expect(files.get("_assets/favicon.ico")?.subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
     expect(files.get(pages[0] ?? "")?.toString("utf8")).toContain(
-      'rel="icon" type="image/svg+xml" href="./_assets/lunedo-icon.svg"',
+      '<link rel="icon" href="./_assets/favicon.ico" sizes="48x48"><link rel="icon" href="./_assets/favicon.svg" type="image/svg+xml">',
     );
     const numbers = await test.database.execute<{ number: number; item_id: string }>(
       sql`select number, item_id from article_numbers where space_id = ${spaceId}`,

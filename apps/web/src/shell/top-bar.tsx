@@ -165,7 +165,7 @@ export function TopBar() {
           aria-label={t("rail.home")}
           className="flex h-control-field shrink-0 items-center gap-2 rounded-md px-1 font-semibold text-text focus-visible:focus-ring"
         >
-          <LunedoMark className="size-control-sm text-accent" />
+          <LunedoMark className="h-control-sm" />
           <span className="hidden text-content tracking-heading lg:inline">{t("brand.name")}</span>
         </Link>
         <OrganizationSwitcher />
