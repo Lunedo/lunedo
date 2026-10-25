@@ -6714,7 +6714,6 @@
     "publish": "Publish",
     "publishTitle": "Publish the draft",
     "publishVersion": "Publish version {version}",
-    "publishHint": "Readers see version {current} until you publish. Publishing creates version {version}.",
     "publishFirstHint": "Until it is published, only editors see this page.",
     "ancestorUnpublishedTitle": "Readers will not see this page yet",
     "ancestorUnpublished": "It sits below {names}, which {count, plural, one {is} other {are}} not published. Readers see this page once {count, plural, one {that page is} other {those pages are}} published. Publishing here publishes only this page.",
@@ -6759,9 +6758,7 @@
     "publishedMeta": "Published {date} · version {version}",
     "openOriginal": "Open the original {title}",
     "update": "Update",
-    "updateTitle": "Update page",
     "updateVersion": "Update as version {version}",
-    "updated": "Page updated. Readers now see version {version}.",
     "updateFailed": "The page could not be updated",
     "viewLabel": "View",
     "viewPublished": "Published",
@@ -6777,7 +6774,12 @@
     "nextChange": "Next change",
     "previousChangeKey": "Previous change ([)",
     "nextChangeKey": "Next change (])",
-    "changePosition": "Change {current} of {total}"
+    "changePosition": "Change {current} of {total}",
+    "updatedShort": "Updated · version {version}",
+    "updateWithNote": "Update with a change note …",
+    "updateWithNoteTitle": "Update with a change note",
+    "updateReviewed": "Mark as reviewed and update",
+    "moreUpdateOptions": "More ways to update"
   },
   "gallery": {
     "title": "Create in {space}",

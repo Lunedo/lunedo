@@ -6714,7 +6714,6 @@
     "publish": "Veröffentlichen",
     "publishTitle": "Entwurf veröffentlichen",
     "publishVersion": "Version {version} veröffentlichen",
-    "publishHint": "Leser sehen Version {current}, bis du veröffentlichst. Das Veröffentlichen erzeugt Version {version}.",
     "publishFirstHint": "Bis zur Veröffentlichung sehen nur Bearbeiter diese Seite.",
     "ancestorUnpublishedTitle": "Leser sehen diese Seite noch nicht",
     "ancestorUnpublished": "Sie liegt unter {names}, {count, plural, one {die noch nicht veröffentlicht ist} other {die noch nicht veröffentlicht sind}}. Leser sehen diese Seite, sobald {count, plural, one {diese Seite} other {diese Seiten}} veröffentlicht {count, plural, one {ist} other {sind}}. Hier wird nur diese Seite veröffentlicht.",
@@ -6759,9 +6758,7 @@
     "publishedMeta": "Veröffentlicht am {date} · Version {version}",
     "openOriginal": "Original {title} öffnen",
     "update": "Aktualisieren",
-    "updateTitle": "Seite aktualisieren",
     "updateVersion": "Als Version {version} aktualisieren",
-    "updated": "Seite aktualisiert. Leser sehen jetzt Version {version}.",
     "updateFailed": "Die Seite konnte nicht aktualisiert werden",
     "viewLabel": "Ansicht",
     "viewPublished": "Veröffentlicht",
@@ -6777,7 +6774,12 @@
     "nextChange": "Nächste Änderung",
     "previousChangeKey": "Vorherige Änderung ([)",
     "nextChangeKey": "Nächste Änderung (])",
-    "changePosition": "Änderung {current} von {total}"
+    "changePosition": "Änderung {current} von {total}",
+    "updatedShort": "Aktualisiert · Version {version}",
+    "updateWithNote": "Mit Änderungsnotiz aktualisieren …",
+    "updateWithNoteTitle": "Mit Änderungsnotiz aktualisieren",
+    "updateReviewed": "Als geprüft markieren und aktualisieren",
+    "moreUpdateOptions": "Weitere Arten zu aktualisieren"
   },
   "gallery": {
     "title": "In {space} erstellen",

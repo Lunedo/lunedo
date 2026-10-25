@@ -464,6 +464,8 @@ function PageArticle({
                 draft={draft.data}
                 saveState={saveState}
                 onMissingSections={setMissingSections}
+                onPublished={() => setEditing(false)}
+                {...(discardable ? { onDiscard: () => setConfirmingDiscard(true) } : {})}
                 article={knowledgeBase}
               />
             ) : null

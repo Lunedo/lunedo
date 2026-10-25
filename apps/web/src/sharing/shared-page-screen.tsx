@@ -102,7 +102,12 @@ function SharedPage({ page }: { page: ItemDetails }) {
                             {t("page.done")}
                           </Button>
                           {publishMode ? (
-                            <PublishButton page={page} draft={draft.data} saveState={saveState} />
+                            <PublishButton
+                              page={page}
+                              draft={draft.data}
+                              saveState={saveState}
+                              onPublished={() => setEditing(false)}
+                            />
                           ) : null}
                         </>
                       ) : (

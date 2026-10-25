@@ -414,7 +414,12 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
                     <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
                       {t("page.done")}
                     </Button>
-                    <PublishButton page={item} draft={draft.data} saveState={saveState} />
+                    <PublishButton
+                      page={item}
+                      draft={draft.data}
+                      saveState={saveState}
+                      onPublished={() => setEditing(false)}
+                    />
                   </>
                 ) : (
                   <Button

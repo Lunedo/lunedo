@@ -3,7 +3,12 @@ import {
   Button,
   Checkbox,
   ConfirmDialog,
+  Dialog,
   Field,
+  focusFirstInvalidSoon,
+  IconButton,
+  Menu,
+  type MenuItem,
   Notice,
   Popover,
   SegmentedControl,
@@ -11,7 +16,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Send } from "lucide-react";
+import { BadgeCheck, ChevronDown, MessageSquareText, Send, Undo2 } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -21,7 +26,7 @@ import type { SaveState } from "../editor/save-state.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { changeMode, useContentRefresh } from "./content-actions.js";
 import type { Draft } from "./content-queries.js";
-import type { ItemDetails } from "./space-queries.js";
+import { contentQuery, type ItemDetails, spaceKeys } from "./space-queries.js";
 
 const NOTE_MAX = 500;
 const SAVE_WAIT_MS = 10_000;
@@ -41,18 +46,23 @@ export function PublishButton({
   draft,
   saveState,
   onMissingSections,
+  onPublished,
+  onDiscard,
   article = false,
 }: {
   page: ItemDetails;
   draft: Draft | undefined;
   saveState: RefObject<SaveState>;
   onMissingSections?: (sections: MissingSection[]) => void;
+  onPublished?: () => void;
+  onDiscard?: () => void;
   article?: boolean;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const refresh = useContentRefresh();
   const [open, setOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
   const [reviewed, setReviewed] = useState(false);
   const queryClient = useQueryClient();
@@ -63,72 +73,168 @@ export function PublishButton({
   const failedTitle = update ? t("versions.updateFailed") : t("versions.publishFailed");
   const hiddenBy = page.ancestors.filter((ancestor) => !ancestor.published);
   const focusMovesToEditor = useRef(false);
+  const hiddenNames = hiddenBy
+    .map((ancestor) => t("versions.quotedTitle", { title: ancestor.title }))
+    .join(", ");
 
-  const publish = async () => {
-    if (note.trim().length > NOTE_MAX) {
+  const publish = async (options: { note?: string; reviewed?: boolean } = {}): Promise<void> => {
+    const text = options.note?.trim() ?? "";
+    if (text.length > NOTE_MAX) {
       setError(t("versions.noteTooLong", { max: NOTE_MAX }));
+      focusFirstInvalidSoon();
       return;
     }
     setBusy(true);
     try {
       if (!(await settled(saveState))) {
-        toast({
-          title: failedTitle,
-          description: t("versions.notSavedYet"),
-          variant: "error",
-        });
+        toast({ title: failedTitle, description: t("versions.notSavedYet"), variant: "error" });
         return;
       }
       const result = await request(() =>
         api.POST("/api/v1/pages/{pageId}/publish", {
           params: { path: { pageId: page.id } },
           body: {
-            ...(note.trim() ? { note: note.trim() } : {}),
-            ...(article && reviewed ? { reviewed } : {}),
+            ...(text ? { note: text } : {}),
+            ...(article && options.reviewed ? { reviewed: true } : {}),
           },
         }),
       );
       await refresh(page);
-      if (article && reviewed && result.created) {
+      queryClient.removeQueries({ queryKey: spaceKeys.content(page.id), exact: true });
+      await queryClient.prefetchQuery(contentQuery(page.id));
+      if (article && options.reviewed && result.created) {
         await queryClient.invalidateQueries({ queryKey: ["items", page.id] });
         await queryClient.invalidateQueries({ predicate: (query) => query.queryKey.includes("reviews") });
       }
       setOpen(false);
+      setNoteOpen(false);
       setNote("");
       setReviewed(false);
+      setError(null);
       onMissingSections?.([]);
       if (result.created) {
         toast({
           title: update
-            ? t("versions.updated", { version: result.version })
+            ? t("versions.updatedShort", { version: result.version })
             : t("versions.published", { version: result.version }),
+          ...(update && hiddenBy.length > 0
+            ? {
+                description: t("versions.ancestorUnpublished", {
+                  count: hiddenBy.length,
+                  names: hiddenNames,
+                }),
+              }
+            : {}),
           variant: "success",
         });
       } else {
         toast({ title: t("versions.alreadyPublished", { version: result.version }) });
       }
+      onPublished?.();
     } catch (failure) {
       if (failure instanceof ApiError && failure.code === "requiredSectionsEmpty") {
         focusMovesToEditor.current = true;
         setOpen(false);
+        setNoteOpen(false);
         onMissingSections?.(failure.problem.sections ?? []);
       }
       toast({
         title: failedTitle,
         description: problemMessage(t, failure),
         variant: "error",
+        action: { label: t("errors.retry"), onSelect: () => void publish(options) },
       });
     } finally {
       setBusy(false);
     }
   };
 
+  const noteField = (
+    <Field label={t("versions.note")} hint={t("versions.noteHint")} error={error ?? undefined}>
+      <Textarea
+        value={note}
+        rows={2}
+        placeholder={t("versions.notePlaceholder")}
+        onChange={(event) => {
+          setNote(event.target.value);
+          if (error && event.target.value.trim().length <= NOTE_MAX) setError(null);
+        }}
+      />
+    </Field>
+  );
+
+  if (update) {
+    const items: MenuItem[] = [
+      { label: t("versions.updateWithNote"), icon: MessageSquareText, onSelect: () => setNoteOpen(true) },
+      ...(article
+        ? [
+            {
+              label: t("versions.updateReviewed"),
+              icon: BadgeCheck,
+              onSelect: () => void publish({ reviewed: true }),
+            },
+          ]
+        : []),
+      ...(onDiscard
+        ? [
+            { type: "separator" as const },
+            { label: t("versions.discardDraft"), icon: Undo2, danger: true, onSelect: onDiscard },
+          ]
+        : []),
+    ];
+    return (
+      <>
+        <span className="ld-split-button inline-flex">
+          <Button variant="primary" icon={Send} loading={busy} onClick={() => void publish()}>
+            {t("versions.update")}
+          </Button>
+          <Menu
+            align="end"
+            items={items}
+            trigger={
+              <IconButton variant="primary" label={t("versions.moreUpdateOptions")} icon={ChevronDown} />
+            }
+          />
+        </span>
+        <Dialog
+          open={noteOpen}
+          onOpenChange={(value) => {
+            setNoteOpen(value);
+            if (!value) setError(null);
+          }}
+          title={t("versions.updateWithNoteTitle")}
+          size="sm"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setNoteOpen(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button variant="primary" loading={busy} onClick={() => void publish({ note })}>
+                {t("versions.updateVersion", { version: next })}
+              </Button>
+            </>
+          }
+        >
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              void publish({ note });
+            }}
+          >
+            {noteField}
+          </form>
+        </Dialog>
+      </>
+    );
+  }
+
   return (
     <Popover
       open={open}
       onOpenChange={setOpen}
       align="end"
-      label={update ? t("versions.updateTitle") : t("versions.publishTitle")}
+      label={t("versions.publishTitle")}
       onCloseAutoFocus={(event) => {
         if (!focusMovesToEditor.current) return;
         focusMovesToEditor.current = false;
@@ -136,7 +242,7 @@ export function PublishButton({
       }}
       trigger={
         <Button variant="primary" icon={Send}>
-          {update ? t("versions.update") : t("versions.publish")}
+          {t("versions.publish")}
         </Button>
       }
     >
@@ -145,35 +251,16 @@ export function PublishButton({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          void publish();
+          void publish({ note, reviewed });
         }}
       >
-        <p className="text-sm text-text-muted">
-          {draft?.basedOn
-            ? t("versions.publishHint", { version: next, current: draft.basedOn })
-            : t("versions.publishFirstHint")}
-        </p>
+        <p className="text-sm text-text-muted">{t("versions.publishFirstHint")}</p>
         {hiddenBy.length > 0 ? (
           <Notice variant="warning" title={t("versions.ancestorUnpublishedTitle")}>
-            {t("versions.ancestorUnpublished", {
-              count: hiddenBy.length,
-              names: hiddenBy
-                .map((ancestor) => t("versions.quotedTitle", { title: ancestor.title }))
-                .join(", "),
-            })}
+            {t("versions.ancestorUnpublished", { count: hiddenBy.length, names: hiddenNames })}
           </Notice>
         ) : null}
-        <Field label={t("versions.note")} hint={t("versions.noteHint")} error={error ?? undefined}>
-          <Textarea
-            value={note}
-            rows={2}
-            placeholder={t("versions.notePlaceholder")}
-            onChange={(event) => {
-              setNote(event.target.value);
-              if (error && event.target.value.trim().length <= NOTE_MAX) setError(null);
-            }}
-          />
-        </Field>
+        {noteField}
         {article ? (
           <Checkbox
             checked={reviewed}
@@ -184,9 +271,7 @@ export function PublishButton({
         ) : null}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" loading={busy}>
-            {update
-              ? t("versions.updateVersion", { version: next })
-              : t("versions.publishVersion", { version: next })}
+            {t("versions.publishVersion", { version: next })}
           </Button>
         </div>
       </form>

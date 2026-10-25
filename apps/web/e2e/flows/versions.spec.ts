@@ -85,6 +85,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await page.getByRole("textbox", { name: "What changed?" }).fill("First version");
   await page.getByRole("button", { name: "Publish version 1" }).click();
   await expect(page.getByText("Page published. Readers now see it as version 1.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
 
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
@@ -115,8 +116,10 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
   await page.getByRole("button", { name: "Update", exact: true }).click();
-  await page.getByRole("button", { name: "Update as version 2" }).click();
-  await expect(page.getByText("Page updated. Readers now see version 2.").first()).toBeVisible();
+  await expect(page.getByText("Updated · version 2").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await page.goto(`${pagePath}?edit=true`);
+  await expect(editor(page)).toHaveAttribute("contenteditable", "true");
 
   await page.getByRole("button", { name: "More editor actions" }).click();
   await page.getByRole("menuitem", { name: "Versions" }).click();
