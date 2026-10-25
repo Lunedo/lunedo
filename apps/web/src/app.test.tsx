@@ -752,11 +752,7 @@ describe("the search", () => {
     await userEvent.type(await screen.findByRole("combobox"), "notifcations");
     await waitFor(() =>
       expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(
-        expect.arrayContaining([
-          "Notifications · Personal",
-          "Notifications · Organization",
-          "Notifications · Instance",
-        ]),
+        expect.arrayContaining(["Notifications · Personal", "Notifications · Organization"]),
       ),
     );
   });

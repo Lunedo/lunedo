@@ -993,7 +993,13 @@ export class OrganizationsController {
     params: settingParams,
     body: settingUpdateSchema,
     bodyExample: { value: true },
-    errors: ["invalidSetting", "settingLocked", "settingAboveMaximum", "settingManagedElsewhere"],
+    errors: [
+      "invalidSetting",
+      "settingLocked",
+      "settingAboveMaximum",
+      "settingManagedElsewhere",
+      "settingNotAtLevel",
+    ],
   })
   async updateSettings(
     @Param("organizationId") organizationId: string,

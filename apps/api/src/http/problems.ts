@@ -140,6 +140,7 @@ export const problems = {
   sessionRequired: { status: 403, title: "This endpoint needs a signed-in session" },
   passwordSignInDisabled: { status: 403, title: "Sign-in with a password is turned off" },
   notFound: { status: 404, title: "Not found" },
+  settingNotAtLevel: { status: 409, title: "The setting cannot be set at this level" },
   methodNotAllowed: { status: 405, title: "The method is not allowed" },
   roleNotFound: { status: 404, title: "The role does not exist" },
   groupNotFound: { status: 404, title: "The group does not exist" },

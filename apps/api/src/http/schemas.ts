@@ -335,11 +335,21 @@ export const settingSchema = z
       .array(z.string())
       .describe("Lower levels where the setting can be set. A lock at this level applies to them."),
     editable: z.boolean().describe("Whether the setting can be changed through the settings endpoint."),
+    stricterOnly: z
+      .enum(["lower", "higher"])
+      .nullable()
+      .describe(
+        "For a limit: `lower` when lower levels may only choose a lower value, `higher` when only a higher one, null otherwise. The value inherited from above is the bound.",
+      ),
     maximum: z
       .json()
       .describe(
         "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
       ),
+    minimum: z
+      .number()
+      .nullable()
+      .describe("Lowest value allowed, set for the instance, or null when the setting has no minimum."),
     levels: z
       .array(
         z
@@ -360,18 +370,20 @@ export const settingSchema = z
   .describe("A setting with its effective value and where it comes from.");
 
 export const exampleSetting = {
-  key: "organizations.membersCreateGroups",
-  value: false,
-  defaultValue: false,
-  source: "default",
+  key: "auth.passwordMinLength",
+  value: 14,
+  defaultValue: 12,
+  source: "instance",
   lockedBy: null,
   locked: false,
   lockable: true,
   levelsBelow: ["organization"],
   editable: true,
+  stricterOnly: "higher",
   maximum: null,
+  minimum: null,
   levels: [
-    { level: "instance", value: null, locked: false, effective: true },
+    { level: "instance", value: 14, locked: false, effective: true },
     { level: "organization", value: null, locked: false, effective: true },
   ],
 };

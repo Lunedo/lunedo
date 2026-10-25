@@ -4098,9 +4098,31 @@
                         "type": "boolean",
                         "description": "Whether the setting can be changed through the settings endpoint."
                       },
+                      "stricterOnly": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "lower",
+                              "higher"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "For a limit: `lower` when lower levels may only choose a lower value, `higher` when only a higher one, null otherwise. The value inherited from above is the bound."
+                      },
                       "maximum": {
                         "description": "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
                         "$ref": "#/components/schemas/Schema682d67ac39ef"
+                      },
+                      "minimum": {
+                        "description": "Lowest value allowed, set for the instance, or null when the setting has no minimum.",
+                        "type": [
+                          "number",
+                          "null"
+                        ]
                       },
                       "levels": {
                         "type": "array",
@@ -4146,7 +4168,9 @@
                       "lockable",
                       "levelsBelow",
                       "editable",
+                      "stricterOnly",
                       "maximum",
+                      "minimum",
                       "levels"
                     ],
                     "additionalProperties": false,
@@ -4361,7 +4385,7 @@
             }
           },
           "409": {
-            "description": "`settingLocked`: A higher level locked the setting.",
+            "description": "`settingLocked`: A higher level locked the setting. `settingNotAtLevel`: The setting cannot be set at this level.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4374,6 +4398,14 @@
                       "title": "A higher level locked the setting",
                       "status": 409,
                       "code": "settingLocked"
+                    }
+                  },
+                  "settingNotAtLevel": {
+                    "value": {
+                      "type": "urn:lunedo:problem:settingNotAtLevel",
+                      "title": "The setting cannot be set at this level",
+                      "status": 409,
+                      "code": "settingNotAtLevel"
                     }
                   }
                 }
@@ -131356,9 +131388,31 @@
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
                           },
+                          "stricterOnly": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "lower",
+                                  "higher"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "For a limit: `lower` when lower levels may only choose a lower value, `higher` when only a higher one, null otherwise. The value inherited from above is the bound."
+                          },
                           "maximum": {
                             "description": "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
                             "$ref": "#/components/schemas/Schema682d67ac39ef"
+                          },
+                          "minimum": {
+                            "description": "Lowest value allowed, set for the instance, or null when the setting has no minimum.",
+                            "type": [
+                              "number",
+                              "null"
+                            ]
                           },
                           "levels": {
                             "type": "array",
@@ -131404,7 +131458,9 @@
                           "lockable",
                           "levelsBelow",
                           "editable",
+                          "stricterOnly",
                           "maximum",
+                          "minimum",
                           "levels"
                         ],
                         "additionalProperties": false,
@@ -131430,10 +131486,10 @@
                 "example": {
                   "items": [
                     {
-                      "key": "organizations.membersCreateGroups",
-                      "value": false,
-                      "defaultValue": false,
-                      "source": "default",
+                      "key": "auth.passwordMinLength",
+                      "value": 14,
+                      "defaultValue": 12,
+                      "source": "instance",
                       "lockedBy": null,
                       "locked": false,
                       "lockable": true,
@@ -131441,11 +131497,13 @@
                         "organization"
                       ],
                       "editable": true,
+                      "stricterOnly": "higher",
                       "maximum": null,
+                      "minimum": null,
                       "levels": [
                         {
                           "level": "instance",
-                          "value": null,
+                          "value": 14,
                           "locked": false,
                           "effective": true
                         },
@@ -131756,6 +131814,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`settingNotAtLevel`: The setting cannot be set at this level.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "settingNotAtLevel": {
+                    "value": {
+                      "type": "urn:lunedo:problem:settingNotAtLevel",
+                      "title": "The setting cannot be set at this level",
+                      "status": 409,
+                      "code": "settingNotAtLevel"
                     }
                   }
                 }
@@ -187135,9 +187213,31 @@
                             "type": "boolean",
                             "description": "Whether the setting can be changed through the settings endpoint."
                           },
+                          "stricterOnly": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "lower",
+                                  "higher"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "For a limit: `lower` when lower levels may only choose a lower value, `higher` when only a higher one, null otherwise. The value inherited from above is the bound."
+                          },
                           "maximum": {
                             "description": "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
                             "$ref": "#/components/schemas/Schema682d67ac39ef"
+                          },
+                          "minimum": {
+                            "description": "Lowest value allowed, set for the instance, or null when the setting has no minimum.",
+                            "type": [
+                              "number",
+                              "null"
+                            ]
                           },
                           "levels": {
                             "type": "array",
@@ -187183,7 +187283,9 @@
                           "lockable",
                           "levelsBelow",
                           "editable",
+                          "stricterOnly",
                           "maximum",
+                          "minimum",
                           "levels"
                         ],
                         "additionalProperties": false,
@@ -187209,10 +187311,10 @@
                 "example": {
                   "items": [
                     {
-                      "key": "organizations.membersCreateGroups",
-                      "value": false,
-                      "defaultValue": false,
-                      "source": "default",
+                      "key": "auth.passwordMinLength",
+                      "value": 14,
+                      "defaultValue": 12,
+                      "source": "instance",
                       "lockedBy": null,
                       "locked": false,
                       "lockable": true,
@@ -187220,11 +187322,13 @@
                         "organization"
                       ],
                       "editable": true,
+                      "stricterOnly": "higher",
                       "maximum": null,
+                      "minimum": null,
                       "levels": [
                         {
                           "level": "instance",
-                          "value": null,
+                          "value": 14,
                           "locked": false,
                           "effective": true
                         },
@@ -187570,7 +187674,7 @@
             }
           },
           "409": {
-            "description": "`settingLocked`: A higher level locked the setting.",
+            "description": "`settingLocked`: A higher level locked the setting. `settingNotAtLevel`: The setting cannot be set at this level.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -187583,6 +187687,14 @@
                       "title": "A higher level locked the setting",
                       "status": 409,
                       "code": "settingLocked"
+                    }
+                  },
+                  "settingNotAtLevel": {
+                    "value": {
+                      "type": "urn:lunedo:problem:settingNotAtLevel",
+                      "title": "The setting cannot be set at this level",
+                      "status": 409,
+                      "code": "settingNotAtLevel"
                     }
                   }
                 }
@@ -253896,7 +254008,7 @@
             }
           },
           "409": {
-            "description": "`settingLocked`: A higher level locked the setting.",
+            "description": "`settingLocked`: A higher level locked the setting. `settingNotAtLevel`: The setting cannot be set at this level.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -253909,6 +254021,14 @@
                       "title": "A higher level locked the setting",
                       "status": 409,
                       "code": "settingLocked"
+                    }
+                  },
+                  "settingNotAtLevel": {
+                    "value": {
+                      "type": "urn:lunedo:problem:settingNotAtLevel",
+                      "title": "The setting cannot be set at this level",
+                      "status": 409,
+                      "code": "settingNotAtLevel"
                     }
                   }
                 }

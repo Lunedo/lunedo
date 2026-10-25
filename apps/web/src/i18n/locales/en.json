@@ -1075,7 +1075,7 @@
     "organizations": "Organizations",
     "accounts": "Accounts",
     "mail": "E-mail",
-    "breakGlass": "Access to organizations in an emergency",
+    "breakGlass": "Emergency access to organizations",
     "spaces": "Spaces",
     "personalSpaces": "Personal spaces",
     "pagesAndTrash": "Pages and trash",
@@ -1097,7 +1097,9 @@
     "profile": "Profile",
     "backTo": "Back to {name}",
     "loadingSettings": "Loading settings",
-    "loadingScreen": "Loading"
+    "loadingScreen": "Loading",
+    "policies": "Policies",
+    "delivery": "Delivery"
   },
   "navigationGroups": {
     "access": "Access",
@@ -1677,7 +1679,8 @@
     "uploadOffset": "The server stopped at another position. Lunedo continues from there; try again.",
     "notEnoughSpace": "There is not enough space in the backup directory for this file. Free up space on the server and try again.",
     "restoreRunning": "A restore is already running. Wait until it is finished.",
-    "invalidKeys": "A key does not have the expected format. Paste the backup key as it is in the key file, and choose the file with the master keys."
+    "invalidKeys": "A key does not have the expected format. Paste the backup key as it is in the key file, and choose the file with the master keys.",
+    "settingNotAtLevel": "This setting no longer exists at this level. Change it in the settings of the organization."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2684,6 +2687,10 @@
       "appearance_tablePageSize": {
         "label": "Rows per page",
         "description": "How many rows lists and tables show at once."
+      },
+      "identityProviders_syncLogRetentionDays": {
+        "label": "Keep synchronization logs for",
+        "description": "Older synchronization runs with identity providers are deleted."
       }
     },
     "disabled": {
@@ -2715,6 +2722,11 @@
       "customize": "Customize",
       "close": "Close",
       "weekStartExample": "from {day}"
+    },
+    "bound": {
+      "atMost": "At most {value} · set by the instance",
+      "atLeast": "At least {value} · set by the instance",
+      "required": "Set by the instance"
     }
   },
   "security": {
@@ -3263,8 +3275,8 @@
     "quoted": "“{text}”"
   },
   "mail": {
-    "title": "E-mail",
-    "description": "The mail server Lunedo sends notifications, invitations and password resets with.",
+    "title": "Delivery",
+    "description": "How Lunedo delivers messages: e-mail, browser push and operations contacts.",
     "smtp": "Mail server",
     "notConfigured": "No mail server is set up. Notifications stay in the app, and nobody can reset a password by e-mail.",
     "host": "Server",
@@ -3865,7 +3877,7 @@
     "choosePersonFirst": "Choose the person to add, then select Add responsible person again."
   },
   "breakGlass": {
-    "title": "Access to organizations in an emergency",
+    "title": "Emergency access to organizations",
     "description": "Temporary administrator access to organizations you do not belong to, for emergencies.",
     "request": "Request break-glass access",
     "requestFor": "Break-glass access to {name}",
@@ -3889,12 +3901,13 @@
       "expired": "Expired"
     },
     "end": "End access",
-    "otherEmergency": "This gives administrators access to organizations they do not belong to. How the instance owner signs in when providers fail is set elsewhere:"
+    "otherEmergency": "This gives administrators access to organizations they do not belong to. How the instance owner signs in when providers fail is set elsewhere:",
+    "duration": "Duration"
   },
   "instance": {
     "general": {
       "title": "General",
-      "description": "Name, address and defaults of the instance.",
+      "description": "Name, address, accent color and language of the instance.",
       "identity": "Instance",
       "localeDefaults": "Language and region",
       "organizations": "Organizations",
@@ -3915,7 +3928,8 @@
       "movedTitle": "Lunedo has moved",
       "movedDescription": "This page is open under {old}, but Lunedo is now at {url}. Changes made here cannot be saved. Sessions under the old address have ended.",
       "movedAction": "Open {url}",
-      "movedPasskeys": "If you signed in with a passkey, sign in with another method at the new address and add a new passkey there."
+      "movedPasskeys": "If you signed in with a passkey, sign in with another method at the new address and add a new passkey there.",
+      "localeDefaultsHint": "For pages outside an organization: sign-in, setup and e-mails without an organization."
     },
     "organizations": {
       "search": "Search by name or short name",
@@ -4019,7 +4033,8 @@
       "deactivateSummary": "Stops every sign-in, ends all sessions and revokes the API tokens for good.",
       "endSessionsSummary": "Signs {name} out on every device. {name} can sign in again right away.",
       "resetSummary": "Removes the authenticator app, passkeys and recovery codes and ends every session. {name} sets up a new second factor at the next sign-in.",
-      "chooseNewOwner": "Choose who becomes the new owner."
+      "chooseNewOwner": "Choose who becomes the new owner.",
+      "personalSpaceReview": "Personal space waits for review"
     },
     "roles": {
       "title": "Roles",
@@ -4033,6 +4048,19 @@
       "signIn": "Sign-in",
       "protection": "Protection against guessing",
       "apiTokens": "API tokens"
+    },
+    "policies": {
+      "title": "Policies",
+      "description": "Limits for all organizations. Organizations can be stricter, never looser.",
+      "signIn": "Sign-in",
+      "protection": "Protection against attacks",
+      "apiTokens": "API tokens",
+      "sharing": "Sharing",
+      "files": "Files",
+      "trash": "Trash",
+      "imports": "Imports",
+      "organizationsAndSpaces": "Organizations and spaces",
+      "retention": "Retention"
     }
   },
   "audit": {

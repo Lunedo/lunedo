@@ -103,6 +103,7 @@ export {
   type FieldLayout,
   FieldLayoutProvider,
   type FieldProps,
+  InlineField,
   Input,
   type InputProps,
   PasswordInput,

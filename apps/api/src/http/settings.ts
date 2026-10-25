@@ -48,7 +48,10 @@ export function definitionFor(
     throw new ProblemException("notFound", "The setting does not exist");
   }
   if (!definition.levels.includes(level)) {
-    throw new ProblemException("notFound", "The setting does not exist");
+    throw new ProblemException(
+      "settingNotAtLevel",
+      `The setting ${key} is not set at the ${level} level. It applies at: ${definition.levels.join(", ")}.`,
+    );
   }
   return definition;
 }
@@ -74,7 +77,9 @@ export async function listSettings(
         lockable: definition.lockable,
         levelsBelow: definition.levels.slice(definition.levels.indexOf(level) + 1),
         editable: !MANAGED_ELSEWHERE.has(definition.key),
+        stricterOnly: definition.stricterOnly ?? null,
         maximum: definition.maximum ? await settings.get(definition.maximum, chain) : null,
+        minimum: definition.minimum ? await settings.get(definition.minimum, chain) : null,
         levels: explanation.levels
           .filter((state) => state.applies)
           .map((state) => ({

@@ -23,6 +23,8 @@ function entry(
     defaultValue,
     source,
     lockedBy: null,
+    stricterOnly: null,
+    minimum: null,
     locked: false,
     lockable: true,
     levelsBelow: [],

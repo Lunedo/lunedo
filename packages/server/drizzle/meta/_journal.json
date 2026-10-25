@@ -708,6 +708,13 @@
       "when": 1792841224098,
       "tag": "0100_meeting_agenda",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1792945927519,
+      "tag": "0101_settings_cleanup",
+      "breakpoints": true
     }
   ]
 }

@@ -215,7 +215,13 @@ export async function setUpMail(page: Page): Promise<void> {
     await page.getByRole("link", { name: "Set up e-mail" }).click();
     await page.getByLabel("Server", { exact: true }).fill(SMTP_HOST);
     await page.getByLabel("Port").fill(String(SMTP_PORT));
-    await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
+    const security = page.getByRole("radiogroup", { name: "Security" });
+    if (await security.isVisible()) {
+      await security.getByRole("radio", { name: /None/ }).click();
+    } else {
+      await page.getByRole("combobox", { name: "Security" }).click();
+      await page.getByRole("option", { name: /None/ }).click();
+    }
     await page.getByLabel("Sender address").fill("wiki@lunedo.test");
     const recipient = `test.mail.${unique().toLowerCase()}@lunedo.test`;
     await page.getByLabel("Send a test mail to").fill(recipient);

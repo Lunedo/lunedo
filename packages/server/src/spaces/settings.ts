@@ -28,7 +28,7 @@ export const membersCreateSpacesSetting = defineSetting({
   key: "spaces.membersCreateSpaces",
   schema: z.boolean(),
   default: true,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -36,7 +36,7 @@ export const membersCreateConfidentialSpacesSetting = defineSetting({
   key: "spaces.membersCreateConfidentialSpaces",
   schema: z.boolean(),
   default: true,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -71,7 +71,7 @@ export const liveVersionIdleMinutesSetting = defineSetting({
   key: "pages.liveVersionIdleMinutes",
   schema: z.number().int().min(1).max(1440),
   default: 10,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
 });
 
@@ -113,7 +113,7 @@ export const trashFirstStageDaysSetting = defineSetting({
   key: "trash.firstStageDays",
   schema: retentionDays,
   default: 90,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
   minimum: trashFirstStageMinimumSetting,
 });
@@ -122,7 +122,7 @@ export const trashSecondStageDaysSetting = defineSetting({
   key: "trash.secondStageDays",
   schema: retentionDays,
   default: 45,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
   minimum: trashSecondStageMinimumSetting,
 });

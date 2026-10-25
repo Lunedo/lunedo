@@ -16,16 +16,15 @@ import { Users } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { instanceSettingsQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
-import { SettingsList } from "../../components/settings-list.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
-import { SettingsPage } from "../../screens/settings/settings-page.js";
-import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
+import { contentKeys } from "../content-queries.js";
 import { spaceKeys } from "../space-queries.js";
+import { DeletedContent } from "../trash/deleted-content.js";
+import { withParentsQuery } from "../trash/restore-with-parents.js";
 import { Panel } from "./panel.js";
 
 interface ReviewEntry {
@@ -39,12 +38,10 @@ interface ReviewEntry {
   lastChangedAt: string;
 }
 
-export function InstancePersonalSpacesScreen() {
+export function PersonalSpaceReview() {
   const { t } = useTranslation();
   const format = useFormat();
   const state = useOrganizationState();
-  const settings = useQuery(instanceSettingsQuery);
-  const mutation = useInstanceSettingMutation();
   const review = useQuery({
     queryKey: spaceKeys.personalReview,
     queryFn: () =>
@@ -56,18 +53,7 @@ export function InstancePersonalSpacesScreen() {
   const queryClient = useQueryClient();
   const canManage = state.can("instance.personalSpaces.manage");
   return (
-    <SettingsPage title={t("spaces.instance.title")} description={t("spaces.instance.description")}>
-      <Panel title={t("spaces.instance.availability")}>
-        <SettingsList
-          settings={settings.data}
-          keys={["spaces.personalSpaces"]}
-          level="instance"
-          canManage={() => state.can("instance.settings.manage")}
-          onChange={async (key, change) => {
-            await mutation.mutateAsync({ key, change });
-          }}
-        />
-      </Panel>
+    <>
       <Panel title={t("spaces.instance.review")} description={t("spaces.instance.reviewDescription")}>
         {review.isError ? (
           <LoadError
@@ -173,7 +159,49 @@ export function InstancePersonalSpacesScreen() {
           }
         }}
       />
-    </SettingsPage>
+      {canManage ? <DeletedPersonalSpaces /> : null}
+    </>
+  );
+}
+
+function DeletedPersonalSpaces() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const trash = useQuery({
+    queryKey: contentKeys.personalTrash,
+    queryFn: () => request(() => api.GET("/api/v1/instance/personal-spaces/trash")),
+  });
+  const refreshTrash = async () => {
+    await queryClient.invalidateQueries({ queryKey: contentKeys.personalTrash });
+    await queryClient.invalidateQueries({ queryKey: spaceKeys.personalReview });
+  };
+  return (
+    <Panel title={t("trash.deletedPersonal")}>
+      <DeletedContent
+        entries={trash.data}
+        loading={trash.isPending}
+        error={trash.error}
+        onRetry={() => void trash.refetch()}
+        onRestore={async (entry, withParents) => {
+          const result = await request(() =>
+            api.POST("/api/v1/instance/personal-spaces/trash/{entryId}/restore", {
+              params: { path: { entryId: entry.id }, query: withParentsQuery(withParents) },
+            }),
+          );
+          await refreshTrash();
+          return result;
+        }}
+        onDelete={async (entry, reason) => {
+          await request(() =>
+            api.POST("/api/v1/instance/personal-spaces/trash/{entryId}/delete", {
+              params: { path: { entryId: entry.id } },
+              body: { reason },
+            }),
+          );
+          await refreshTrash();
+        }}
+      />
+    </Panel>
   );
 }
 

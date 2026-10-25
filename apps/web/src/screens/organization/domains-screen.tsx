@@ -1,5 +1,5 @@
 import { domainSchema } from "@lunedo/shared";
-import { Button, ConfirmDialog, Field, Input, List, ListRow, Notice, Section } from "@lunedo/ui";
+import { Button, ConfirmDialog, Field, InlineField, Input, List, ListRow, Notice, Section } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Globe, Plus } from "lucide-react";
@@ -89,14 +89,14 @@ export function DomainsScreen() {
         </List>
         {manageDomains ? (
           <form className="flex flex-wrap items-start gap-2 p-4" noValidate onSubmit={submitWith(add)}>
-            <div className="w-field max-w-full">
+            <InlineField>
               <Field
                 label={t("organization.domains.domain")}
                 error={form.formState.errors.domain?.message ?? error ?? undefined}
               >
                 <Input placeholder={t("organization.domains.placeholder")} {...form.register("domain")} />
               </Field>
-            </div>
+            </InlineField>
             <div className="pt-6">
               <Button type="submit" variant="outline" icon={Plus} loading={form.formState.isSubmitting}>
                 {t("organization.domains.add")}

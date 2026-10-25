@@ -138,7 +138,7 @@ function AllowedSitesHint() {
   const { t } = useTranslation();
   const administrator = useOrganizationState().can("instance.settings.manage");
   return administrator ? (
-    <Link to="/settings/instance/content" className="text-sm text-accent underline">
+    <Link to="/settings/instance/security" className="text-sm text-accent underline">
       {t("imports.connection.allowSites")}
     </Link>
   ) : (

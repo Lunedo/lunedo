@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import type { AccentColor } from "@lunedo/shared";
-import { domainSchema, organizationNameSchema, slugSchema, timeZoneSchema } from "@lunedo/shared";
+import {
+  domainSchema,
+  organizationNameSchema,
+  proposeFormats,
+  slugSchema,
+  timeZoneSchema,
+} from "@lunedo/shared";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
@@ -17,7 +23,7 @@ import {
   toPage,
 } from "../database/keyset.js";
 import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
-import { accentColorSetting } from "../settings/preferences.js";
+import { accentColorSetting, applyFormats } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { memberships, roleAssignments } from "./access-schema.js";
 import { organizationDomains, organizationLogos, organizations } from "./schema.js";
@@ -227,6 +233,12 @@ export class OrganizationService {
         audit: false,
       });
     }
+    const language = input.language ?? (await this.#settings.get(languageSetting, {}));
+    const timeZone = input.timeZone ?? (await this.#settings.get(timeZoneSetting, {}));
+    await applyFormats(this.#settings, chain, "organization", proposeFormats(language, timeZone), {
+      tx,
+      audit: false,
+    });
     if (!owner.home) {
       await tx.update(accounts).set({ homeOrganizationId: row.id }).where(eq(accounts.id, owner.id));
     }
@@ -255,8 +267,8 @@ export class OrganizationService {
         fields: {
           name,
           slug,
-          language: input.language ?? (await this.#settings.get(languageSetting, {})),
-          timeZone: input.timeZone ?? (await this.#settings.get(timeZoneSetting, {})),
+          language,
+          timeZone,
         },
         scope,
       },

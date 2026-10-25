@@ -189,12 +189,11 @@ describe.skipIf(!baseUrl)("attachments", () => {
     try {
       await run();
     } finally {
-      await test.settings.clear(keepVersionsSetting, {}, "instance");
       await test.settings.clear(keepVersionsMaximumSetting, {}, "instance");
     }
   }
 
-  it("keeps 50 versions by default, at most 500, and the instance alone can allow unlimited", async () => {
+  it("keeps 50 versions by default, at most 500, and only an unlimited instance maximum allows unlimited", async () => {
     const context = await setup();
     const chain = { organization: context.org.id, space: context.space.id };
     expect(await test.settings.get(keepVersionsSetting, chain)).toBe(50);
@@ -205,12 +204,12 @@ describe.skipIf(!baseUrl)("attachments", () => {
     await expect(test.settings.set(keepVersionsSetting, chain, "space", "unlimited")).rejects.toBeInstanceOf(
       SettingAboveMaximumError,
     );
-    await expect(test.settings.set(keepVersionsSetting, {}, "instance", "unlimited")).rejects.toBeInstanceOf(
-      SettingAboveMaximumError,
-    );
+    await expect(
+      test.settings.set(keepVersionsSetting, chain, "organization", "unlimited"),
+    ).rejects.toBeInstanceOf(SettingAboveMaximumError);
     await withInstanceSettings(async () => {
       await test.settings.set(keepVersionsMaximumSetting, {}, "instance", "unlimited");
-      await test.settings.set(keepVersionsSetting, {}, "instance", "unlimited");
+      await test.settings.set(keepVersionsSetting, chain, "organization", "unlimited");
       expect(await test.settings.get(keepVersionsSetting, chain)).toBe("unlimited");
       const file = await upload(context, "all.txt", "1");
       await upload(context, "all.txt", "2");
@@ -242,7 +241,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
     await withInstanceSettings(async () => {
       await test.settings.set(keepVersionsMaximumSetting, {}, "instance", 100);
       expect(await test.settings.get(keepVersionsSetting, chain)).toBe(50);
-      await test.settings.set(keepVersionsSetting, {}, "instance", 100);
+      await test.settings.set(keepVersionsSetting, chain, "organization", 100);
       await test.settings.set(keepVersionsMaximumSetting, {}, "instance", 20);
       expect(await test.settings.get(keepVersionsSetting, chain)).toBe(20);
       await expect(test.settings.set(keepVersionsSetting, chain, "organization", 21)).rejects.toMatchObject({

@@ -904,9 +904,7 @@ describe("the sign-in settings of the instance", () => {
     await renderPath("/settings/instance/sign-in-providers");
     const section = await screen.findByRole("region", { name: "Emergency sign-in of the owner" });
     expect(
-      within(section)
-        .getByRole("link", { name: "Access to organizations in an emergency" })
-        .getAttribute("href"),
+      within(section).getByRole("link", { name: "Emergency access to organizations" }).getAttribute("href"),
     ).toBe("/settings/instance/break-glass");
   });
 

@@ -231,11 +231,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         )
       ).rows,
     ).toEqual([
-      { key: "locale.dateFormat", value: "YYYY-MM-DD" },
-      { key: "locale.firstDayOfWeek", value: "monday" },
       { key: "locale.language", value: "de" },
-      { key: "locale.numberFormat", value: "de-CH" },
-      { key: "locale.timeFormat", value: "24h" },
       { key: "locale.timeZone", value: "Europe/Vienna" },
     ]);
     expect(

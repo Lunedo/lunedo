@@ -119,6 +119,7 @@ const fields: SettingField[] = [
   { key: "organizations.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },
   { key: "organizations.breakGlassMinutes", type: minutes(5, DAY, [30, HOUR, 4 * HOUR]) },
   { key: "audit.retentionDays", type: days(1, 36_500, [90, 365, 3650]) },
+  { key: "identityProviders.syncLogRetentionDays", type: days(7, 3650, [30, 90, 365]) },
   {
     key: "pages.defaultMode",
     type: { kind: "enum", values: ["publish", "live"], labelPrefix: "settings.values.pageMode" },

@@ -268,13 +268,13 @@ describe.skipIf(!baseUrl)("notifications", () => {
     ]);
   });
 
-  it("sends e-mail only when a mail server is configured, with the organization's logo and color", async () => {
+  it("sends e-mail only when a mail server is configured, with the organization's logo and the instance color", async () => {
     const org = await organization();
     const quiet = await notify(guestNotice(org.id, [org.owner.id]));
     expect(quiet.mailIds).toEqual([]);
 
     await test.settings.set(smtpSetting, {}, "instance", SMTP);
-    await test.settings.set(accentColorSetting, { organization: org.id }, "organization", "violet");
+    await test.settings.set(accentColorSetting, {}, "instance", "violet");
     const updated = await test.services.organizations.setLogo(SYSTEM, org.id, {
       contentType: "image/png",
       data: PNG,
@@ -291,7 +291,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect(mail?.html).toContain("#6B4FB3");
     expect(mail?.html).toContain('href="https://wiki.example.org/settings/notifications"');
     expect(mail?.text).toContain("https://wiki.example.org/settings/notifications");
-    expect(mail?.text).toContain("10/20/2026");
+    expect(mail?.text).toContain("20 Oct 2026");
 
     await test.settings.set(dateFormatSetting, { user: org.owner.id }, "user", "DD.MM.YYYY");
     await notify(guestNotice(org.id, [org.owner.id]));
@@ -299,6 +299,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     const own = test.mail.sent.filter((entry) => entry.to === org.owner.email).at(-1);
     expect(own?.text).toContain("20.10.2026");
     await test.settings.set(smtpSetting, {}, "instance", null);
+    await test.settings.clear(accentColorSetting, {}, "instance");
   });
 
   it("offers a one-click unsubscribe in administration mails and none in security mails", async () => {

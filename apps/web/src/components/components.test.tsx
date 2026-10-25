@@ -232,9 +232,8 @@ describe("SettingsList", () => {
     expect(screen.queryByRole("checkbox", { name: "No limit" })).toBeNull();
     const input = screen.getByRole("textbox", { name: "Versions of a file to keep" });
     await userEvent.type(input, "600{Enter}");
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Enter a whole number from 1 to 500. The instance allows at most 500.",
-    );
+    expect(screen.getByRole("alert").textContent).toBe("Enter a whole number from 1 to 500.");
+    expect(screen.getByText("At most 500 versions · set by the instance")).toBeTruthy();
     expect(onChange).not.toHaveBeenCalled();
     await userEvent.clear(input);
     await userEvent.type(input, "120{Enter}");
@@ -280,6 +279,46 @@ describe("SettingsList", () => {
     await waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith("organizations.membersCreateGroups", { clear: true }),
     );
+  });
+
+  it("shows a limit set by the instance and keeps the control within it", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "auth.passwordMinLength",
+          value: 14,
+          defaultValue: 12,
+          source: "instance",
+          stricterOnly: "higher",
+          levels: [
+            { level: "instance", value: 14, locked: false, effective: true },
+            { level: "organization", value: null, locked: false, effective: true },
+          ],
+        }),
+        entry({
+          key: "auth.twoFactorRequired",
+          value: true,
+          defaultValue: false,
+          source: "instance",
+          stricterOnly: "higher",
+          levels: [
+            { level: "instance", value: true, locked: false, effective: true },
+            { level: "organization", value: null, locked: false, effective: true },
+          ],
+        }),
+      ],
+      onChange,
+    );
+    expect(screen.getByText("At least 14 characters · set by the instance")).toBeTruthy();
+    const input = screen.getByRole("textbox", { name: "Minimum password length" });
+    await userEvent.type(input, "10{Enter}");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("switch", { name: "Require two-factor authentication" }).getAttribute("aria-disabled"),
+    ).toBe("true");
+    expect(screen.getAllByText("Set by the instance").length).toBeGreaterThan(0);
   });
 
   it("names an unset maximum token lifetime", async () => {

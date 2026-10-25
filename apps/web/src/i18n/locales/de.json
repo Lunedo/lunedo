@@ -1075,7 +1075,7 @@
     "organizations": "Organisationen",
     "accounts": "Konten",
     "mail": "E-Mail",
-    "breakGlass": "Zugriff auf Organisationen im Notfall",
+    "breakGlass": "Notfallzugriff auf Organisationen",
     "spaces": "Spaces",
     "personalSpaces": "Persönliche Spaces",
     "pagesAndTrash": "Seiten und Papierkorb",
@@ -1097,7 +1097,9 @@
     "profile": "Profil",
     "backTo": "Zurück zu {name}",
     "loadingSettings": "Einstellungen werden geladen",
-    "loadingScreen": "Wird geladen"
+    "loadingScreen": "Wird geladen",
+    "policies": "Richtlinien",
+    "delivery": "Zustellung"
   },
   "navigationGroups": {
     "access": "Zugriff",
@@ -1677,7 +1679,8 @@
     "uploadOffset": "Der Server hat an einer anderen Stelle aufgehört. Lunedo setzt dort fort; versuche es erneut.",
     "notEnoughSpace": "Im Sicherungsordner ist nicht genug Platz für diese Datei. Schaffe Platz auf dem Server und versuche es erneut.",
     "restoreRunning": "Es läuft schon eine Wiederherstellung. Warte, bis sie fertig ist.",
-    "invalidKeys": "Ein Schlüssel hat nicht das erwartete Format. Füge den Backup-Schlüssel so ein, wie er in der Schlüsseldatei steht, und wähle die Datei mit den Master-Schlüsseln."
+    "invalidKeys": "Ein Schlüssel hat nicht das erwartete Format. Füge den Backup-Schlüssel so ein, wie er in der Schlüsseldatei steht, und wähle die Datei mit den Master-Schlüsseln.",
+    "settingNotAtLevel": "Diese Einstellung gibt es auf dieser Ebene nicht mehr. Ändere sie in den Einstellungen der Organisation."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2684,6 +2687,10 @@
       "appearance_tablePageSize": {
         "label": "Einträge pro Seite",
         "description": "Wie viele Zeilen Listen und Tabellen auf einmal zeigen."
+      },
+      "identityProviders_syncLogRetentionDays": {
+        "label": "Aufbewahrung der Synchronisierungsprotokolle",
+        "description": "Ältere Läufe der Synchronisierung mit Identitätsanbietern werden entfernt."
       }
     },
     "disabled": {
@@ -2715,6 +2722,11 @@
       "customize": "Anpassen",
       "close": "Schließen",
       "weekStartExample": "ab {day}"
+    },
+    "bound": {
+      "atMost": "Höchstens {value} · von der Instanz vorgegeben",
+      "atLeast": "Mindestens {value} · von der Instanz vorgegeben",
+      "required": "Von der Instanz vorgegeben"
     }
   },
   "security": {
@@ -3263,8 +3275,8 @@
     "quoted": "„{text}“"
   },
   "mail": {
-    "title": "E-Mail",
-    "description": "Der Mailserver, über den Lunedo Benachrichtigungen, Einladungen und Passwort-Links versendet.",
+    "title": "Zustellung",
+    "description": "Wie Lunedo Nachrichten zustellt: E-Mail, Browser-Push und Betriebskontakte.",
     "smtp": "Mailserver",
     "notConfigured": "Es ist kein Mailserver eingerichtet. Benachrichtigungen bleiben in der App, und niemand kann sein Passwort per E-Mail zurücksetzen.",
     "host": "Server",
@@ -3865,7 +3877,7 @@
     "choosePersonFirst": "Wähle die Person aus, die du hinzufügen möchtest, und wähle dann erneut „Verantwortliche Person hinzufügen“."
   },
   "breakGlass": {
-    "title": "Zugriff auf Organisationen im Notfall",
+    "title": "Notfallzugriff auf Organisationen",
     "description": "Befristeter Administratorzugriff auf Organisationen, denen du nicht angehörst, für Notfälle.",
     "request": "Notfallzugriff anfordern",
     "requestFor": "Notfallzugriff auf {name}",
@@ -3889,12 +3901,13 @@
       "expired": "Abgelaufen"
     },
     "end": "Zugriff beenden",
-    "otherEmergency": "Damit erhalten Administratoren Zugriff auf Organisationen, denen sie nicht angehören. Wie sich der Instanz-Owner anmeldet, wenn die Anbieter ausfallen, regelst du an anderer Stelle:"
+    "otherEmergency": "Damit erhalten Administratoren Zugriff auf Organisationen, denen sie nicht angehören. Wie sich der Instanz-Owner anmeldet, wenn die Anbieter ausfallen, regelst du an anderer Stelle:",
+    "duration": "Dauer"
   },
   "instance": {
     "general": {
       "title": "Allgemein",
-      "description": "Name, Adresse und Standards der Instanz.",
+      "description": "Name, Adresse, Akzentfarbe und Sprache der Instanz.",
       "identity": "Instanz",
       "localeDefaults": "Sprache und Region",
       "organizations": "Organisationen",
@@ -3915,7 +3928,8 @@
       "movedTitle": "Lunedo ist umgezogen",
       "movedDescription": "Diese Seite ist unter {old} geöffnet, Lunedo ist aber jetzt unter {url} erreichbar. Änderungen hier können nicht gespeichert werden. Sitzungen unter der alten Adresse wurden beendet.",
       "movedAction": "{url} öffnen",
-      "movedPasskeys": "Wenn du dich mit einem Passkey angemeldet hast, melde dich unter der neuen Adresse mit einer anderen Methode an und füge dort einen neuen Passkey hinzu."
+      "movedPasskeys": "Wenn du dich mit einem Passkey angemeldet hast, melde dich unter der neuen Adresse mit einer anderen Methode an und füge dort einen neuen Passkey hinzu.",
+      "localeDefaultsHint": "Für Seiten ohne Organisation: Anmeldung, Setup und E-Mails ohne Organisation."
     },
     "organizations": {
       "search": "Nach Name oder Kurzname suchen",
@@ -4019,7 +4033,8 @@
       "deactivateSummary": "Beendet jede Anmeldung und alle Sitzungen und widerruft die API-Tokens endgültig.",
       "endSessionsSummary": "Meldet {name} auf allen Geräten ab. {name} kann sich sofort wieder anmelden.",
       "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein.",
-      "chooseNewOwner": "Wähle, wer neuer Owner wird."
+      "chooseNewOwner": "Wähle, wer neuer Owner wird.",
+      "personalSpaceReview": "Persönlicher Space wartet auf Prüfung"
     },
     "roles": {
       "title": "Rollen",
@@ -4033,6 +4048,19 @@
       "signIn": "Anmeldung",
       "protection": "Schutz vor Rateversuchen",
       "apiTokens": "API-Tokens"
+    },
+    "policies": {
+      "title": "Richtlinien",
+      "description": "Grenzen für alle Organisationen. Organisationen können strenger sein, nie lockerer.",
+      "signIn": "Anmeldung",
+      "protection": "Schutz vor Angriffen",
+      "apiTokens": "API-Tokens",
+      "sharing": "Teilen",
+      "files": "Dateien",
+      "trash": "Papierkorb",
+      "imports": "Importe",
+      "organizationsAndSpaces": "Organisationen und Spaces",
+      "retention": "Aufbewahrung"
     }
   },
   "audit": {

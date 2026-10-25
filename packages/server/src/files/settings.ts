@@ -26,7 +26,7 @@ export const keepVersionsSetting = defineSetting<Limit>({
   key: "files.keepVersions",
   schema: versionLimit,
   default: 50,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
   maximum: keepVersionsMaximumSetting,
 });

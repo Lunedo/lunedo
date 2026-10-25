@@ -158,7 +158,7 @@ export class AccountController {
     tags: ["Account"],
     params: preferenceParams,
     body: preferenceUpdateSchema,
-    errors: ["invalidSetting", "settingLocked"],
+    errors: ["invalidSetting", "settingLocked", "settingNotAtLevel"],
   })
   async updatePreference(
     @Param("key") key: string,

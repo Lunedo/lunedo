@@ -221,10 +221,7 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
   expect(toolbar?.y).toBeGreaterThanOrEqual(main?.y ?? 0);
   expect(toolbar?.y).toBeLessThan((main?.y ?? 0) + 10);
 
-  await page.goto("/settings/instance/notifications");
+  await page.goto("/settings/instance/mail");
   await expect(page.locator("#main h1")).toBeVisible();
-  await expectOnlyContentScrolls("/settings/instance/notifications", [
-    "header",
-    "nav[aria-label='Settings']",
-  ]);
+  await expectOnlyContentScrolls("/settings/instance/mail", ["header", "nav[aria-label='Settings']"]);
 });

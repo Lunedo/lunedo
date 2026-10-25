@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import { Lock, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
+import type { SettingField } from "../settings/setting-fields.js";
 
 export type SettingLevel = "instance" | "organization" | "space" | "user";
 
@@ -117,5 +118,61 @@ export function SettingMarks({
         </Badge>
       ) : null}
     </>
+  );
+}
+
+export interface InstanceBound {
+  direction: "lower" | "higher";
+  value: unknown;
+}
+
+export function instanceBound(entry: SettingEntry, level: SettingLevel): InstanceBound | null {
+  if (level === "instance") return null;
+  if (typeof entry.maximum === "number") return { direction: "lower", value: entry.maximum };
+  if (typeof entry.minimum === "number") return { direction: "higher", value: entry.minimum };
+  if (!entry.stricterOnly) return null;
+  const instanceState = entry.levels.find((state) => state.level === "instance");
+  if (!instanceState || instanceState.value === null || instanceState.value === undefined) return null;
+  return { direction: entry.stricterOnly, value: instanceState.value };
+}
+
+export function boundedField(field: SettingField, bound: InstanceBound | null): SettingField {
+  if (!bound || typeof bound.value !== "number") return field;
+  const type = field.type;
+  if (type.kind !== "number" && type.kind !== "duration") return field;
+  const limit = bound.value;
+  const narrowed =
+    bound.direction === "lower"
+      ? { ...type, max: Math.min(type.max, limit) }
+      : { ...type, min: Math.max(type.min, limit) };
+  if (narrowed.kind === "duration" && bound.direction === "lower") {
+    const { nullable: _nullable, ...withoutNoLimit } = narrowed;
+    return { ...field, type: withoutNoLimit };
+  }
+  if (narrowed.kind === "number" && bound.direction === "lower") {
+    const { unlimited: _unlimited, ...withoutUnlimited } = narrowed;
+    return { ...field, type: withoutUnlimited };
+  }
+  return { ...field, type: narrowed };
+}
+
+export function BoundMark({
+  bound,
+  formatValue,
+}: {
+  bound: InstanceBound;
+  formatValue: (value: unknown) => string;
+}) {
+  const { t } = useTranslation();
+  const text =
+    typeof bound.value === "boolean"
+      ? t("settings.bound.required")
+      : t(bound.direction === "lower" ? "settings.bound.atMost" : "settings.bound.atLeast", {
+          value: formatValue(bound.value),
+        });
+  return (
+    <span data-instance-bound="" className="text-text-muted text-xs whitespace-nowrap">
+      {text}
+    </span>
   );
 }

@@ -117,7 +117,7 @@ describe("the storage settings", () => {
     expect(screen.queryByLabelText("Limit for stored files")).toBeNull();
     expect(screen.queryByLabelText("E-mail addresses")).toBeNull();
     expect(screen.getByRole("link", { name: "Open the operations contacts" }).getAttribute("href")).toBe(
-      "/settings/instance/notifications",
+      "/settings/instance/mail",
     );
   });
 
@@ -205,7 +205,7 @@ describe("the storage settings", () => {
 describe("the operations contacts", () => {
   it("are set with the notifications", async () => {
     api();
-    await renderAt("/settings/instance/notifications");
+    await renderAt("/settings/instance/mail");
     expect(((await screen.findByLabelText("E-mail addresses")) as HTMLTextAreaElement).value).toBe(
       "tickets@example.org",
     );
@@ -218,11 +218,15 @@ describe("the operations contacts", () => {
         body: status({ operationsEmails: (request.body as { operationsEmails: string[] }).operationsEmails }),
       }),
     });
-    await renderAt("/settings/instance/notifications");
+    await renderAt("/settings/instance/mail");
     const addresses = (await screen.findByLabelText("E-mail addresses")) as HTMLTextAreaElement;
     await userEvent.clear(addresses);
     await userEvent.type(addresses, "not an address");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(
+      within(screen.getByRole("region", { name: "Operations contacts" })).getByRole("button", {
+        name: "Save",
+      }),
+    );
     expect(
       await screen.findByText(/Check the addresses: each line needs one valid e-mail address/),
     ).toBeTruthy();
@@ -231,7 +235,11 @@ describe("the operations contacts", () => {
 
     await userEvent.clear(addresses);
     await userEvent.type(addresses, "ops@example.org, it@example.org");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(
+      within(screen.getByRole("region", { name: "Operations contacts" })).getByRole("button", {
+        name: "Save",
+      }),
+    );
     await waitFor(() =>
       expect(requests.find((request) => request.method === "PUT")?.body).toEqual({
         operationsEmails: ["ops@example.org", "it@example.org"],
@@ -245,11 +253,15 @@ describe("the operations contacts", () => {
         body: status({ teamsWebhook: { configured: false, host: null } }),
       }),
     });
-    await renderAt("/settings/instance/notifications");
+    await renderAt("/settings/instance/mail");
     await userEvent.click(await screen.findByRole("button", { name: "Remove webhook" }));
     expect(screen.getByText("The webhook is removed when you save.")).toBeTruthy();
     expect(requests.some((request) => request.method === "PUT")).toBe(false);
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(
+      within(screen.getByRole("region", { name: "Operations contacts" })).getByRole("button", {
+        name: "Save",
+      }),
+    );
     await waitFor(() =>
       expect(requests.find((request) => request.method === "PUT")?.body).toEqual({
         operationsEmails: ["tickets@example.org"],
@@ -269,9 +281,13 @@ describe("the operations contacts", () => {
           problem: "invalidTeamsWebhook",
         }),
     });
-    await renderAt("/settings/instance/notifications");
+    await renderAt("/settings/instance/mail");
     await userEvent.type(await screen.findByLabelText("Teams webhook"), "https://example.invalid/x");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(
+      within(screen.getByRole("region", { name: "Operations contacts" })).getByRole("button", {
+        name: "Save",
+      }),
+    );
     expect(await screen.findByText(/This webhook address cannot be used/)).toBeTruthy();
   });
 
@@ -281,7 +297,7 @@ describe("the operations contacts", () => {
         body: { addresses: 1, teams: { delivered: false, reason: "unauthorized", status: 401 } },
       }),
     });
-    await renderAt("/settings/instance/notifications");
+    await renderAt("/settings/instance/mail");
     await userEvent.click(await screen.findByRole("button", { name: "Send test message" }));
     expect(await screen.findByText(/Test message sent to 1 address\./)).toBeTruthy();
     expect(screen.getByText(/Teams did not accept the test message \(unauthorized\)/)).toBeTruthy();
@@ -293,7 +309,7 @@ describe("the operations contacts", () => {
         body: status({ operationsEmails: [], teamsWebhook: { configured: false, host: null } }),
       }),
     });
-    await renderAt("/settings/instance/notifications");
+    await renderAt("/settings/instance/mail");
     await userEvent.click(await screen.findByRole("button", { name: "Send test message" }));
     expect(await screen.findByText(/Save an e-mail address or a Teams webhook first/)).toBeTruthy();
   });
@@ -328,7 +344,7 @@ describe("the storage banner", () => {
   it("stays away when the usage is normal", async () => {
     const { requests } = api({ "GET /api/v1/instance/storage": () => ({ body: status({ level: 0 }) }) });
     await renderAt("/settings/instance/mail");
-    await screen.findByText("E-mail", { selector: "h1" });
+    await screen.findByText("Delivery", { selector: "h1" });
     await waitFor(() =>
       expect(requests.some((request) => request.path === "/api/v1/instance/storage")).toBe(true),
     );

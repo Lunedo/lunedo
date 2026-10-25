@@ -218,3 +218,13 @@ export function FieldGridItem({ span, children }: { span: 2; children: ReactNode
   if (layout === "row") return <>{children}</>;
   return <div className={span === 2 ? "sm:col-span-2" : undefined}>{children}</div>;
 }
+
+export function InlineField({ children }: { children: ReactNode }) {
+  return (
+    <FieldLayoutProvider layout="stacked">
+      <div data-inline-field="" className="w-field max-w-full">
+        {children}
+      </div>
+    </FieldLayoutProvider>
+  );
+}

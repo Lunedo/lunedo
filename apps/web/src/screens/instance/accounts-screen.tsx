@@ -35,6 +35,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
+import { PersonalSpaceReview } from "../../spaces/settings/personal-space-review.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import {
   AnonymizeDialog,
@@ -57,9 +58,14 @@ type Account = AccountPage["items"][number];
 
 const STATE_FILTERS = ["active", "deactivated", "placeholder", "anonymized"] as const;
 
-type AccountFilter = "all" | "withoutOrganization" | (typeof STATE_FILTERS)[number];
+type AccountFilter = "all" | "withoutOrganization" | "personalSpaceReview" | (typeof STATE_FILTERS)[number];
 
-function fetchAccounts(search: string, cursor: string | null, filter: AccountFilter = "all", limit = 25) {
+function fetchAccounts(
+  search: string,
+  cursor: string | null,
+  filter: Exclude<AccountFilter, "personalSpaceReview"> = "all",
+  limit = 25,
+) {
   return request(() =>
     api.GET("/api/v1/instance/accounts", {
       params: {
@@ -88,12 +94,14 @@ export function InstanceAccountsScreen() {
   const format = useFormat();
   const [filter, setFilter] = useState<AccountFilter>("all");
   const table = useServerTable([...instanceKeys.accounts, filter], (search, cursor, limit) =>
-    fetchAccounts(search, cursor, filter, limit),
+    fetchAccounts(search, cursor, filter === "personalSpaceReview" ? "all" : filter, limit),
   );
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const queryClient = useQueryClient();
-  const manage = useOrganizationState().can("instance.accounts.manage");
+  const state = useOrganizationState();
+  const manage = state.can("instance.accounts.manage");
+  const reviewing = filter === "personalSpaceReview";
 
   return (
     <SettingsPage wide title={t("instance.accounts.title")} description={t("instance.accounts.description")}>
@@ -109,10 +117,13 @@ export function InstanceAccountsScreen() {
               options={[
                 { value: "all", label: t("instance.accounts.filterAll") },
                 { value: "withoutOrganization", label: t("instance.accounts.withoutOrganization") },
-                ...STATE_FILTERS.map((state) => ({
-                  value: state,
-                  label: t(`instance.accounts.states.${state}`),
+                ...STATE_FILTERS.map((accountState) => ({
+                  value: accountState,
+                  label: t(`instance.accounts.states.${accountState}`),
                 })),
+                ...(state.can("instance.personalSpaces.view")
+                  ? [{ value: "personalSpaceReview", label: t("instance.accounts.personalSpaceReview") }]
+                  : []),
               ]}
             />
           </div>
@@ -138,7 +149,9 @@ export function InstanceAccountsScreen() {
           }}
         />
       ) : null}
-      {table.query.isError ? (
+      {reviewing ? (
+        <PersonalSpaceReview />
+      ) : table.query.isError ? (
         <LoadError
           what={t("failures.loadAccounts")}
           error={table.query.error}

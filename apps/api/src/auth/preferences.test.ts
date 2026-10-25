@@ -105,7 +105,7 @@ describe.skipIf(!databaseBaseUrl)("own preferences and permissions", () => {
 
     const inherited = (await preferences(client)).find((entry) => entry.key === "locale.dateFormat");
     expect(inherited).toMatchObject({ value: "DD.MM.YYYY", source: "organization" });
-    expect(inherited?.levels.map((level) => level.level)).toEqual(["instance", "organization", "user"]);
+    expect(inherited?.levels.map((level) => level.level)).toEqual(["organization", "user"]);
 
     expect(
       (await client.put("/api/v1/account/preferences/locale.dateFormat", { value: "YYYY-MM-DD" })).statusCode,
@@ -128,9 +128,9 @@ describe.skipIf(!databaseBaseUrl)("own preferences and permissions", () => {
     const invalid = await owner.put("/api/v1/account/preferences/appearance.textSize", { value: 3 });
     expect(invalid.json()).toMatchObject({ code: "invalidSetting" });
     expect((await owner.put("/api/v1/account/preferences/unknown.key", { value: 1 })).statusCode).toBe(404);
-    expect(
-      (await owner.put("/api/v1/account/preferences/branding.accentColor", { value: "red" })).statusCode,
-    ).toBe(404);
+    const otherLevel = await owner.put("/api/v1/account/preferences/branding.accentColor", { value: "red" });
+    expect(otherLevel.statusCode).toBe(409);
+    expect(otherLevel.json()).toMatchObject({ code: "settingNotAtLevel" });
     expect(
       (await owner.put("/api/v1/account/preferences/appearance.density", { value: "compact", locked: true }))
         .statusCode,

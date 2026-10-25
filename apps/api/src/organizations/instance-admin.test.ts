@@ -48,19 +48,14 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
   });
 
   it("tells anonymous visitors the instance name and the only organization", async () => {
-    await test.runtime.settings.set(
-      accentColorSetting,
-      { organization: organizationId },
-      "organization",
-      "violet",
-    );
+    await test.runtime.settings.set(accentColorSetting, {}, "instance", "violet");
     const info = (await new TestClient(test.app).get("/api/v1/instance/info")).json();
     expect(info).toEqual({
       url: TEST_ORIGIN,
       name: "Test wiki",
       setupComplete: true,
       language: "en",
-      accentColor: "petrol",
+      accentColor: "violet",
       passwordMinLength: 12,
       selfRegistration: false,
       organization: { id: organizationId, name: "Test organization", logoRef: null, accentColor: "violet" },
@@ -239,24 +234,25 @@ describe.skipIf(!databaseBaseUrl)("instance administration for the interface", (
   it("shows where each organization setting comes from", async () => {
     const settings = (await owner.get(`/api/v1/organizations/${organizationId}/settings?limit=200`)).json()
       .items;
-    const accent = settings.find((entry: { key: string }) => entry.key === "branding.accentColor");
-    expect(accent).toMatchObject({
-      value: "violet",
-      source: "organization",
-      defaultValue: "petrol",
-      levelsBelow: [],
-    });
+    expect(settings.find((entry: { key: string }) => entry.key === "branding.accentColor")).toBeUndefined();
     const language = settings.find((entry: { key: string }) => entry.key === "locale.language");
     expect(language).toMatchObject({ defaultValue: "en", lockable: true, levelsBelow: ["user"] });
     const instanceSettings = (await owner.get("/api/v1/instance/settings?limit=200")).json().items;
     const twoFactor = instanceSettings.find(
       (entry: { key: string }) => entry.key === "auth.twoFactorRequired",
     );
-    expect(twoFactor).toMatchObject({ defaultValue: false, levelsBelow: ["organization"] });
-    expect(accent.levels).toEqual([
-      { level: "instance", value: null, locked: false, effective: true },
-      { level: "organization", value: "violet", locked: false, effective: true },
-    ]);
+    expect(twoFactor).toMatchObject({
+      defaultValue: false,
+      levelsBelow: ["organization"],
+      stricterOnly: "higher",
+    });
+    const accent = instanceSettings.find((entry: { key: string }) => entry.key === "branding.accentColor");
+    expect(accent).toMatchObject({
+      value: "violet",
+      source: "instance",
+      levelsBelow: [],
+      stricterOnly: null,
+    });
   });
   it("shows the logo only to members once the instance has several organizations", async () => {
     const url = `/api/v1/organizations/${organizationId}/logo`;

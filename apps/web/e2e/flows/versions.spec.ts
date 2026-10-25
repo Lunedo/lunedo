@@ -178,8 +178,9 @@ test("passes the accessibility check on the new settings screens", async ({ page
   await expectAccessible(page, "organization pages and trash");
   await page.goto(`/settings/organizations/${organization.id}/templates`);
   await expectAccessible(page, "organization templates");
-  await page.goto("/settings/instance/content");
-  await expectAccessible(page, "instance pages and trash");
+  await page.goto("/settings/instance/security");
+  await expect(page.getByRole("heading", { name: "Policies", level: 1 })).toBeVisible();
+  await expectAccessible(page, "instance policies");
   await page.goto("/settings/instance/templates");
   await expectAccessible(page, "instance templates");
 });

@@ -18,7 +18,7 @@ export interface EventSettings {
   push: SettingDefinition<boolean>;
 }
 
-const PREFERENCE_LEVELS = ["instance", "organization", "user"] as const;
+const PREFERENCE_LEVELS = ["organization", "user"] as const;
 
 export const notificationEventSettings = new Map<string, EventSettings>(
   notificationEvents.map((event) => [

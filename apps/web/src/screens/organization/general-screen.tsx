@@ -58,16 +58,6 @@ export function OrganizationGeneralScreen() {
       ) : null}
       <Section title={t("organization.general.branding")}>
         {organization.data ? <LogoRow organization={organization.data} editable={canUpdate} /> : null}
-        <SettingsList
-          settings={settings.data}
-          keys={["branding.accentColor"]}
-          level="organization"
-          {...(organization.data ? { organizationName: organization.data.name } : {})}
-          canManage={() => canManageSettings}
-          onChange={async (key, change) => {
-            await mutation.mutateAsync({ key, change });
-          }}
-        />
       </Section>
       <Section title={t("organization.general.localeDefaults")}>
         <SettingsList

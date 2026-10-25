@@ -333,6 +333,11 @@ test("loads the organization settings for Spaces from the organization settings 
   await page.goto(`/settings/organizations/${organization.id}/spaces`);
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);
+  const defaultsTab = page.getByRole("tab", { name: "Defaults for new spaces" });
+  if ((await defaultsTab.count()) > 0) {
+    await expect(page.getByRole("table", { name: "All spaces" })).toBeVisible();
+    await defaultsTab.click();
+  }
   await expect(page.getByRole("heading", { name: "Default permissions for new spaces" })).toBeVisible();
   const navigation = page.getByRole("navigation", { name: "Settings", exact: true });
   await expect(navigation.getByRole("link", { name: "Spaces", exact: true })).toHaveAttribute(
@@ -358,7 +363,10 @@ test("passes the accessibility check on the space settings", async ({ page, orga
   await page.goto(`/settings/organizations/${organization.id}/spaces`);
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expectAccessible(page, "organization spaces settings");
-  await page.goto("/settings/instance/personal-spaces");
-  await expect(page.getByRole("heading", { name: "Personal spaces", level: 1 })).toBeVisible();
+  await page.goto("/settings/instance/accounts");
+  await expect(page.getByRole("heading", { name: "Accounts", level: 1 })).toBeVisible();
+  await page.getByRole("combobox", { name: "Filter accounts" }).click();
+  await page.getByRole("option", { name: "Personal space waits for review" }).click();
+  await expect(page.getByRole("heading", { name: "Personal spaces to review" })).toBeVisible();
   await expectAccessible(page, "personal spaces review");
 });

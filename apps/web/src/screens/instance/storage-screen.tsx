@@ -592,7 +592,7 @@ export function InstanceStorageScreen() {
           <Section title={t("storage.contacts.title")}>
             <p className="pt-3 text-sm text-text-muted">
               {t("storage.contacts.moved")}{" "}
-              <Link to="/settings/instance/notifications" className="font-medium text-accent hover:underline">
+              <Link to="/settings/instance/mail" className="font-medium text-accent hover:underline">
                 {t("storage.contacts.open")}
               </Link>
             </p>

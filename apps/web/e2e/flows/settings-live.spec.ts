@@ -52,11 +52,8 @@ test("applies a locked organization language and time zone to people with their 
   await appliesLockedValues(browser, organization, "organization");
 });
 
-test("applies organization formats, time zone and accent color to open sessions", async ({
-  browser,
-  organization,
-}) => {
-  await appliesFormats(browser, organization, "organization");
+test("applies organization formats to open sessions", async ({ browser, organization }) => {
+  await appliesFormats(browser, organization);
 });
 
 test("applies appearance changes to the other open sessions of the same person", async ({

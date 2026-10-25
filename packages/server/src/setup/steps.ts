@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { type Formats, type Language, proposeFormats, setupStepSchemas } from "@lunedo/shared";
+import { type Language, proposeFormats, setupStepSchemas } from "@lunedo/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -453,18 +453,11 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
 async function applyInstanceDefaults(
   deps: SetupStepDependencies,
   context: SetupActionContext,
-  input: { language: Language; timeZone: string; formats?: Formats | undefined },
+  input: { language: Language; timeZone: string },
 ): Promise<void> {
   const options = { tx: context.tx };
   await deps.settings.set(languageSetting, {}, "instance", input.language, options);
   await deps.settings.set(timeZoneSetting, {}, "instance", input.timeZone, options);
-  await applyFormats(
-    deps.settings,
-    {},
-    "instance",
-    input.formats ?? proposeFormats(input.language, input.timeZone),
-    options,
-  );
 }
 
 export function organizationStep(deps: SetupStepDependencies): SetupStep {

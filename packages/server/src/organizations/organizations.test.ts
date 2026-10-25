@@ -1,16 +1,22 @@
 import { randomUUID } from "node:crypto";
+import { proposeFormats } from "@lunedo/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { InvalidTokenError } from "../auth/errors.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { languageSetting } from "../settings/builtin.js";
+import { formatSettings } from "../settings/preferences.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { deliverPendingMail, testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { LastOwnerError } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
-import { guestInactivityDaysSetting, selfRegistrationSetting } from "./settings.js";
+import {
+  guestInactivityDaysSetting,
+  organizationSettingsChain,
+  selfRegistrationSetting,
+} from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -91,6 +97,34 @@ describe.skipIf(!baseUrl)("organizations", () => {
     ).rejects.toMatchObject({ code: "slugTaken" });
     const account = await test.services.accounts.get(owner);
     expect(account?.homeOrganizationId).toBe(first.id);
+  });
+
+  it("gives a new organization the formats that fit its language and time zone", async () => {
+    const owner = await standard(null);
+    const vienna = await test.services.organizations.createAsActor(SYSTEM, {
+      name: "Formats Vienna",
+      language: "de",
+      timeZone: "Europe/Vienna",
+      ownerAccountId: owner,
+    });
+    const zurich = await test.services.organizations.createAsActor(SYSTEM, {
+      name: "Formats Zurich",
+      language: "de",
+      timeZone: "Europe/Zurich",
+      ownerAccountId: owner,
+    });
+    const formatsOf = async (organizationId: string) =>
+      Object.fromEntries(
+        await Promise.all(
+          Object.entries(formatSettings).map(async ([name, setting]) => [
+            name,
+            await test.settings.get(setting, organizationSettingsChain(organizationId)),
+          ]),
+        ),
+      );
+    expect(await formatsOf(vienna.id)).toEqual(proposeFormats("de", "Europe/Vienna"));
+    expect(await formatsOf(zurich.id)).toEqual(proposeFormats("de", "Europe/Zurich"));
+    expect((await formatsOf(vienna.id)).timeFormat).toBe("24h");
   });
 
   it("writes mails in the language of the home organization unless the account chose one", async () => {

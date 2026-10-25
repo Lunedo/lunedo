@@ -3,15 +3,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { instanceKeys, mailQuery } from "../../api/instance-queries.js";
+import { instanceKeys, instanceSettingsQuery, mailQuery, storageQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { GraphMailForm } from "../../components/graph-mail-form.js";
 import { mailFailure } from "../../components/mail-failure.js";
 import { SmtpForm } from "../../components/smtp-form.js";
 import { LoadError } from "../../errors/failure.js";
+import { BrowserPushSetting } from "../../notifications/browser-push-setting.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { OperationsContactsSection } from "./storage-screen.js";
 
 type Method = "smtp" | "graph";
 
@@ -23,6 +25,8 @@ export function InstanceMailScreen() {
   const session = useSession();
   const state = useOrganizationState();
   const mail = useQuery({ ...mailQuery, throwOnError: false });
+  const settings = useQuery({ ...instanceSettingsQuery, throwOnError: false });
+  const storage = useQuery({ ...storageQuery, throwOnError: false });
   const manage = state.can("instance.settings.manage");
   const [shown, setShown] = useState<Method | null>(null);
   const data = mail.data;
@@ -138,6 +142,16 @@ export function InstanceMailScreen() {
           />
         </Section>
       ) : null}
+      <BrowserPushSetting settings={settings.data} editable={manage} />
+      {storage.isPending ? <Skeleton className="h-32 w-full" /> : null}
+      {storage.isError ? (
+        <LoadError
+          what={t("storage.contacts.loadFailed")}
+          error={storage.error}
+          onRetry={() => storage.refetch()}
+        />
+      ) : null}
+      {storage.data ? <OperationsContactsSection status={storage.data} canManage={manage} /> : null}
     </SettingsPage>
   );
 }

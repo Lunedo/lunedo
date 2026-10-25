@@ -29,7 +29,15 @@ import type { SettingChange } from "../settings/setting-mutations.js";
 import { SaveIndicator, useSaveState, useUndoToast } from "./auto-save.js";
 import { FORMAT_KEYS, FormatCell, FormatsRow, formatsExample } from "./formats-row.js";
 import { SettingControl } from "./setting-control.js";
-import { disabledReason, inheritedValue, SettingMarks, sameValue } from "./setting-source.js";
+import {
+  BoundMark,
+  boundedField,
+  disabledReason,
+  inheritedValue,
+  instanceBound,
+  SettingMarks,
+  sameValue,
+} from "./setting-source.js";
 
 type Level = "instance" | "organization" | "space" | "user";
 
@@ -147,7 +155,10 @@ function SettingItem({
   onChange: (change: SettingChange) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const field = settingField(entry.key);
+  const bound = instanceBound(entry, level);
+  const baseField = settingField(entry.key);
+  const field = baseField ? boundedField(baseField, bound) : undefined;
+  const requiredByInstance = bound?.value === true && bound.direction === "higher";
   const [explaining, setExplaining] = useState(false);
   const [confirmingLock, setConfirmingLock] = useState(false);
   const tracker = useSaveState();
@@ -164,7 +175,7 @@ function SettingItem({
     );
   };
   const canLock = entry.lockable && entry.levelsBelow.length > 0;
-  const writable = editable && !lockedAbove;
+  const writable = editable && !lockedAbove && !requiredByInstance;
 
   const inherited = inheritedValue(entry, level);
   const control = field ? (
@@ -178,7 +189,13 @@ function SettingItem({
       inheritedLabel={formatValue(inherited)}
       maximum={entry.maximum}
       disabled={!writable}
-      disabledReason={writable ? undefined : disabledReason(t, entry, level, editable, organizationName)}
+      disabledReason={
+        writable
+          ? undefined
+          : requiredByInstance
+            ? t("settings.bound.required")
+            : disabledReason(t, entry, level, editable, organizationName)
+      }
       onSave={async (value) => {
         await apply({ value });
       }}
@@ -224,16 +241,19 @@ function SettingItem({
   ];
 
   const marks = (
-    <SettingMarks
-      entry={entry}
-      level={level}
-      own={own}
-      differs={own && !sameValue(entry.value, inherited)}
-      writable={writable}
-      label={label}
-      {...(organizationName ? { organizationName } : {})}
-      onReset={() => void apply({ clear: true })}
-    />
+    <>
+      {bound && !lockedAbove ? <BoundMark bound={bound} formatValue={formatValue} /> : null}
+      <SettingMarks
+        entry={entry}
+        level={level}
+        own={own}
+        differs={own && !sameValue(entry.value, inherited)}
+        writable={writable}
+        label={label}
+        {...(organizationName ? { organizationName } : {})}
+        onReset={() => void apply({ clear: true })}
+      />
+    </>
   );
   const menu = (
     <Menu

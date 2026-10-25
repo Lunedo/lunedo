@@ -98,7 +98,6 @@ import { InstanceEmbedsScreen } from "./screens/instance/embeds-screen.js";
 import { InstanceGeneralScreen } from "./screens/instance/general-screen.js";
 import { InstanceMailScreen } from "./screens/instance/mail-screen.js";
 import { InstanceMaintenanceScreen } from "./screens/instance/maintenance-screen.js";
-import { InstanceNotificationDefaultsScreen } from "./screens/instance/notification-defaults-screen.js";
 import { InstanceOrganizationsScreen } from "./screens/instance/organizations-screen.js";
 import { InstancePortalsScreen } from "./screens/instance/portals-screen.js";
 import { InstanceRenderingScreen } from "./screens/instance/rendering-screen.js";
@@ -139,8 +138,6 @@ import { itemHref } from "./spaces/item-paths.js";
 import { LabelScreen } from "./spaces/label-screen.js";
 import { PageScreen } from "./spaces/page-screen.js";
 import { PersonalSpaceScreen } from "./spaces/personal-space-screen.js";
-import { InstanceContentScreen } from "./spaces/settings/instance-content-screen.js";
-import { InstancePersonalSpacesScreen } from "./spaces/settings/instance-personal-spaces-screen.js";
 import { OrganizationContentScreen } from "./spaces/settings/organization-content-screen.js";
 import { OrganizationSpacesScreen } from "./spaces/settings/organization-spaces-screen.js";
 import { SpaceAccessScreen } from "./spaces/settings/space-access-screen.js";
@@ -1055,18 +1052,20 @@ const breakGlassRoute = instanceScreen("/break-glass", BreakGlassScreen, (queryC
   queryClient.ensureQueryData(breakGlassQuery),
   queryClient.ensureQueryData(instanceOrganizationsQuery),
 ]);
-const instanceNotificationsRoute = instanceScreen(
-  "/notifications",
-  InstanceNotificationDefaultsScreen,
-  withInstanceSettings,
-);
+function movedInstanceScreen(path: string, to: string) {
+  return createRoute({
+    getParentRoute: () => instanceRoute,
+    path,
+    beforeLoad: () => {
+      throw redirect({ to: to as never });
+    },
+  });
+}
+
+const instanceNotificationsRoute = movedInstanceScreen("/notifications", "/settings/instance/mail");
 const instanceAnnouncementsRoute = instanceScreen("/announcements", InstanceAnnouncementsScreen);
-const instancePersonalSpacesRoute = instanceScreen(
-  "/personal-spaces",
-  InstancePersonalSpacesScreen,
-  withInstanceSettings,
-);
-const instanceContentRoute = instanceScreen("/content", InstanceContentScreen, withInstanceSettings);
+const instancePersonalSpacesRoute = movedInstanceScreen("/personal-spaces", "/settings/instance/accounts");
+const instanceContentRoute = movedInstanceScreen("/content", "/settings/instance/security");
 const instanceTemplatesRoute = instanceScreen("/templates", InstanceTemplatesScreen);
 const instanceAuditRoute = instanceScreen("/audit-log", InstanceAuditScreen);
 

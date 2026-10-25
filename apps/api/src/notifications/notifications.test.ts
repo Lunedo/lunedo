@@ -762,11 +762,11 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       });
       await expect.poll(() => connected, { timeout: 5000 }).toBe(true);
 
-      const instanceUrl = "/api/v1/instance/settings/locale.firstDayOfWeek";
-      expect((await owner.put(instanceUrl, { value: "sunday" })).statusCode).toBe(204);
+      const instanceAccent = "/api/v1/instance/settings/branding.accentColor";
+      expect((await owner.put(instanceAccent, { value: "blue" })).statusCode).toBe(204);
       await expect
         .poll(() => settings, { timeout: 5000 })
-        .toEqual([{ key: "locale.firstDayOfWeek", level: "instance", organizationId: null }]);
+        .toEqual([{ key: "branding.accentColor", level: "instance", organizationId: null }]);
 
       const ownPreference = "/api/v1/account/preferences/locale.firstDayOfWeek";
       expect((await otherClient.put(ownPreference, { value: "monday" })).statusCode).toBe(204);
@@ -774,16 +774,16 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await expect.poll(() => settings.length, { timeout: 5000 }).toBe(2);
       expect(settings[1]).toEqual({ key: "locale.firstDayOfWeek", level: "user", organizationId: null });
 
-      expect((await owner.put(instanceUrl, { value: "monday" })).statusCode).toBe(204);
+      expect((await owner.put(organizationValue, { value: "monday" })).statusCode).toBe(204);
       expect(
         (
-          await owner.put(`/api/v1/organizations/${organizationId}/settings/branding.accentColor`, {
-            value: "violet",
+          await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.numberFormat`, {
+            value: "fr-FR",
           })
         ).statusCode,
       ).toBe(204);
       await expect.poll(() => settings.length, { timeout: 5000 }).toBe(3);
-      expect(settings[2]).toEqual({ key: "branding.accentColor", level: "organization", organizationId });
+      expect(settings[2]).toEqual({ key: "locale.numberFormat", level: "organization", organizationId });
 
       const language = "/api/v1/instance/settings/locale.language";
       expect(
@@ -805,7 +805,13 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await owner.put("/api/v1/instance/settings/locale.language", { clear: true });
       await owner.put("/api/v1/account/preferences/locale.language", { clear: true });
       await owner.put("/api/v1/account/preferences/locale.firstDayOfWeek", { clear: true });
-      await owner.put("/api/v1/instance/settings/locale.firstDayOfWeek", { clear: true });
+      await owner.put("/api/v1/instance/settings/branding.accentColor", { clear: true });
+      await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.firstDayOfWeek`, {
+        clear: true,
+      });
+      await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.numberFormat`, {
+        clear: true,
+      });
       response?.destroy();
       await second?.close();
       await secondRuntime.close();

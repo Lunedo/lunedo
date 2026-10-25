@@ -7,6 +7,7 @@ import {
   DangerAction,
   DangerZone,
   Field,
+  InlineField,
   List,
   ListRow,
   Notice,
@@ -162,7 +163,7 @@ export function ServiceAccountScreen() {
           </List>
           {manage && active ? (
             <div className="flex flex-wrap items-end gap-2 p-4">
-              <div className="w-field max-w-full">
+              <InlineField>
                 <Field
                   label={t("serviceAccounts.responsiblePerson")}
                   id="responsible-person"
@@ -179,7 +180,7 @@ export function ServiceAccountScreen() {
                     }}
                   />
                 </Field>
-              </div>
+              </InlineField>
               <Button
                 variant="outline"
                 icon={Plus}
