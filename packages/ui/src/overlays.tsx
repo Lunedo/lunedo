@@ -102,10 +102,17 @@ export interface MenuProps {
   items: MenuItem[];
   align?: Align;
   side?: Side;
+  runAfterClose?: boolean;
 }
 
-export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuProps) {
+export function Menu({ trigger, items, align = "end", side = "bottom", runAfterClose = false }: MenuProps) {
   const opener = useRef<HTMLButtonElement>(null);
+  const pending = useRef<(() => void) | null>(null);
+  const select = (action: () => void) => {
+    rememberMenuOpener(opener.current);
+    if (runAfterClose) pending.current = action;
+    else action();
+  };
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild ref={opener}>
@@ -117,6 +124,13 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
           side={side}
           sideOffset={4}
           collisionPadding={8}
+          onCloseAutoFocus={(event) => {
+            const action = pending.current;
+            if (!action) return;
+            pending.current = null;
+            event.preventDefault();
+            action();
+          }}
           style={{ maxHeight: "var(--radix-dropdown-menu-content-available-height)" }}
           className={classNames(SURFACE, "min-w-field overflow-y-auto p-1")}
         >
@@ -154,10 +168,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
                 <DropdownMenu.CheckboxItem
                   key={item.label}
                   checked={item.checked}
-                  onSelect={() => {
-                    rememberMenuOpener(opener.current);
-                    item.onSelect();
-                  }}
+                  onSelect={() => select(item.onSelect)}
                   {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
                   className="flex h-row cursor-default items-center gap-2 rounded-sm px-2 text-text outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover"
                 >
@@ -172,10 +183,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
             return (
               <DropdownMenu.Item
                 key={item.label}
-                onSelect={() => {
-                  rememberMenuOpener(opener.current);
-                  item.onSelect();
-                }}
+                onSelect={() => select(item.onSelect)}
                 {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
                 className={classNames(
                   "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover",

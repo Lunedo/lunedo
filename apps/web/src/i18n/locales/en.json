@@ -5181,7 +5181,7 @@
     },
     "toolbar": {
       "label": "Formatting",
-      "more": "More formatting",
+      "more": "More tools",
       "hide": "Hide toolbar",
       "show": "Show toolbar",
       "undo": "Undo",
@@ -5211,9 +5211,20 @@
       "table": "Insert table",
       "mention": "Mention someone",
       "emoji": "Emoji",
-      "date": "Insert today's date",
       "insert": "Insert",
-      "find": "Find and replace"
+      "find": "Find and replace",
+      "moreFormatting": "More formatting",
+      "colors": "Text color and highlight",
+      "file": "Image or file",
+      "columns": "Column layout",
+      "callout": "Callout",
+      "columnLayouts": {
+        "two": "2 columns",
+        "three": "3 columns",
+        "four": "4 columns",
+        "sidebarLeft": "Sidebar on the left",
+        "sidebarRight": "Sidebar on the right"
+      }
     },
     "selectionMenu": {
       "label": "Format selection",

@@ -696,15 +696,18 @@ export function filterSlashCommands(
       if (!words.every((word) => haystack.includes(word))) return null;
       const phrase = words.join(" ");
       const first = words[0] ?? "";
-      const score = label.startsWith(phrase)
-        ? 0
-        : label.includes(phrase)
-          ? 1
-          : label.startsWith(first)
-            ? 2
-            : label.includes(first)
-              ? 3
-              : 4;
+      const score =
+        label === phrase
+          ? -1
+          : label.startsWith(phrase)
+            ? 0
+            : label.includes(phrase)
+              ? 1
+              : label.startsWith(first)
+                ? 2
+                : label.includes(first)
+                  ? 3
+                  : 4;
       return { command, score };
     })
     .filter((entry): entry is { command: SlashCommandDefinition; score: number } => entry !== null);

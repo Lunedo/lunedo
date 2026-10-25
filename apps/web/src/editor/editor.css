@@ -660,6 +660,14 @@ details.ld-expand > summary {
   --content-background: var(--ld-content-pink-background);
 }
 
+.ld-palette-swatch .ld-swatch-text[data-color] {
+  color: var(--content-text);
+}
+
+.ld-palette-swatch .ld-swatch-highlight[data-color] {
+  background-color: var(--content-background);
+}
+
 .ld-content .ld-text-color[data-color],
 .ld-content span[data-text-color] {
   color: var(--content-text);

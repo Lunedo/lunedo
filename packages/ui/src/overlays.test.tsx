@@ -388,3 +388,26 @@ describe("SegmentedControl that does not fit", () => {
     }
   });
 });
+
+describe("Menu that runs its action after closing", () => {
+  it("runs the action once the menu is closed and leaves the focus to it", async () => {
+    const events: string[] = [];
+    renderUi(
+      <Menu
+        runAfterClose
+        trigger={<button type="button">Tools</button>}
+        items={[
+          {
+            label: "Insert table",
+            icon: Pencil,
+            onSelect: () => events.push(document.querySelector('[role="menu"]') ? "open" : "closed"),
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Tools" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Insert table" }));
+    await waitFor(() => expect(events).toEqual(["closed"]));
+    expect(document.activeElement).not.toBe(screen.getByRole("button", { name: "Tools" }));
+  });
+});

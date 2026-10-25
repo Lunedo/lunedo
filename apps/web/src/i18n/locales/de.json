@@ -5181,7 +5181,7 @@
     },
     "toolbar": {
       "label": "Formatierung",
-      "more": "Weitere Formatierung",
+      "more": "Weitere Werkzeuge",
       "hide": "Werkzeugleiste ausblenden",
       "show": "Werkzeugleiste einblenden",
       "undo": "Rückgängig",
@@ -5211,9 +5211,20 @@
       "table": "Tabelle einfügen",
       "mention": "Jemanden erwähnen",
       "emoji": "Emoji",
-      "date": "Heutiges Datum einfügen",
       "insert": "Einfügen",
-      "find": "Suchen und ersetzen"
+      "find": "Suchen und ersetzen",
+      "moreFormatting": "Weitere Formatierung",
+      "colors": "Textfarbe und Hervorheben",
+      "file": "Bild oder Datei",
+      "columns": "Spalten-Layout",
+      "callout": "Hinweisblock",
+      "columnLayouts": {
+        "two": "2 Spalten",
+        "three": "3 Spalten",
+        "four": "4 Spalten",
+        "sidebarLeft": "Seitenleiste links",
+        "sidebarRight": "Seitenleiste rechts"
+      }
     },
     "selectionMenu": {
       "label": "Auswahl formatieren",

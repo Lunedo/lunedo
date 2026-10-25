@@ -336,7 +336,7 @@ function CollaborativeEditor({
                   }
                 >
                   <div
-                    className={`flex min-w-0 items-center gap-2${docked ? " mx-auto w-full max-w-content" : ""}`}
+                    className={`flex min-w-0 items-center gap-2${docked ? " w-full" : ""}`}
                   >
                     <div className="min-w-0 flex-1">
                       {preferences.editorToolbar && editable ? (
