@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
 import pg from "pg";
+import {
+  PG_DUMP_MISSING,
+  PG_DUMP_REQUIRED,
+  pgDumpFound,
+  SKIP_WITHOUT_PG_DUMP,
+} from "../support/backup-tools.js";
 import { DATABASE_BASE_URL, E2E_PORT, OWNER, readState, STATE_DIR } from "../support/environment.js";
 import { freshTotp, signInWithPassword } from "../support/helpers.js";
 
@@ -46,6 +52,10 @@ async function ready(): Promise<void> {
     )
     .toBe(true);
 }
+
+const pgDump = pgDumpFound();
+test.skip(!pgDump && SKIP_WITHOUT_PG_DUMP, PG_DUMP_MISSING);
+test.beforeAll(() => expect(pgDump, PG_DUMP_REQUIRED).toBe(true));
 
 test("restores a backup of this instance from the server folder into a new, empty instance", async ({
   page,
