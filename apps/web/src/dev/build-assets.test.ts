@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { brotliDecompressSync, gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
-import { encodingsFor, precompress, withLocaleChunks } from "./build-assets.js";
+import { encodingsFor, ICON_MODULES, precompress, withLocaleChunks } from "./build-assets.js";
 
 describe("precompressed build files", () => {
   let directory = "";
@@ -45,6 +45,21 @@ describe("precompressed build files", () => {
       script,
     );
     expect(existsSync(path.join(directory, "drawio", "js", "app.min.js.br"))).toBe(false);
+  });
+});
+
+describe("the icon chunk", () => {
+  it("takes every icon module, on Windows and Unix paths, and nothing else", () => {
+    expect(
+      ICON_MODULES.test(
+        "/repo/node_modules/.pnpm/lucide-react@1.0.0_react@19/node_modules/lucide-react/dist/esm/icons/x.js",
+      ),
+    ).toBe(true);
+    expect(ICON_MODULES.test("C:\\repo\\node_modules\\lucide-react\\dist\\esm\\icons\\monitor.js")).toBe(
+      true,
+    );
+    expect(ICON_MODULES.test("/repo/node_modules/lucide/dist/esm/icons/x.js")).toBe(false);
+    expect(ICON_MODULES.test("/repo/apps/web/src/shell/lucide-react-icons.ts")).toBe(false);
   });
 });
 

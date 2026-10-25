@@ -11,6 +11,9 @@ const MIN_BYTES = 1024;
 const LOCALE_CHUNKS_PLACEHOLDER = '"__LUNEDO_LOCALE_CHUNKS__"';
 const GZIP_ONLY = /^drawio\//;
 
+export const ICON_MODULES =
+  /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?lucide-react[\\/]/;
+
 export type Encoding = "br" | "gz";
 
 export function encodingsFor(file: string, size: number): Encoding[] {

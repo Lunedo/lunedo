@@ -4,7 +4,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
-import { type BundledChunk, precompress, withLocaleChunks } from "./src/dev/build-assets.js";
+import { type BundledChunk, ICON_MODULES, precompress, withLocaleChunks } from "./src/dev/build-assets.js";
 import { drawioContentType, drawioFile, ensureDrawio, isServedDrawioFile } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
 import { isPreviewFrameAsset } from "./src/dev/preview-frame-assets.js";
@@ -186,6 +186,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: { main: "index.html", preview: "preview.html", print: "print.html", diagram: "diagram.html" },
+      output: { codeSplitting: { groups: [{ name: "icons", test: ICON_MODULES }] } },
     },
   },
   preview: {
