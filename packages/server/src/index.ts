@@ -841,6 +841,7 @@ export type { RenderedHeading } from "./portal/schema.js";
 export { HANDOFF_SECONDS, PortalSessionService } from "./portal/sessions.js";
 export { helpKnowledgeBaseSetting, portalAppLinkNameSetting } from "./portal/settings.js";
 export { fontFile, PORTAL_ASSETS, portalCss, portalScript, portalThemeScript } from "./portal/site/assets.js";
+export { PORTAL_ICONS, portalIcon, portalIconByName } from "./portal/site/brand-icon.js";
 export { escapeHtml, type Html, html, raw, when } from "./portal/site/html.js";
 export { hasIcon, icon } from "./portal/site/icons.js";
 export { languageName, messagesFor, type PortalMessages } from "./portal/site/messages.js";

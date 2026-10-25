@@ -6,6 +6,7 @@ import {
   ancestorsOf,
   brandStyle,
   decorateArticleHtml,
+  favicon,
   folderTrail,
   initialOf,
   introduction,
@@ -121,5 +122,21 @@ describe("the language choice of the portal", () => {
     expect(portalCss).toContain(".dd summary::-webkit-details-marker{display:none}");
     expect(portalCss).toContain(".dd summary{list-style:none;");
     expect(portalCss).toContain('.dd.lang .menu a[aria-current="true"]{font-weight:600}');
+  });
+});
+
+describe("the favicon of the portal", () => {
+  const assets = { style: "/help/_assets/portal-1.css", script: "/help/_assets/portal-1.js", theme: "" };
+
+  it("uses the logo of the knowledge base when one is set", () => {
+    const icon = favicon({ logoUrl: "/help/acme/_logo/3", assets }).value;
+    expect(icon).toBe('<link rel="icon" href="/help/acme/_logo/3">');
+  });
+
+  it("uses the Lunedo mark for light, dark and high contrast otherwise", () => {
+    const icon = favicon({ logoUrl: null, assets }).value;
+    expect(icon).toContain('href="/help/_assets/lunedo-icon.svg"');
+    expect(icon).toContain('href="/help/_assets/lunedo-icon-light.svg" media="(prefers-color-scheme: dark)"');
+    expect(icon).toContain('href="/help/_assets/lunedo-icon-contrast.svg" media="(prefers-contrast: more)"');
   });
 });

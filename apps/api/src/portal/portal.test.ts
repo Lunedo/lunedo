@@ -507,6 +507,14 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const theme = await reader.get(`/help/_assets/${PORTAL_ASSETS.theme}`);
     expect(theme.statusCode).toBe(200);
     expect(theme.body).toContain("lunedo.portal.theme");
+    const home = await reader.get(kb.path);
+    expect(home.body).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/help/_assets/lunedo-icon.svg">',
+    );
+    const icon = await reader.get("/help/_assets/lunedo-icon.svg");
+    expect(icon.statusCode).toBe(200);
+    expect(icon.headers["content-type"]).toContain("image/svg+xml");
+    expect(icon.body).toContain("<svg");
   });
 
   it("shows when an article was last reviewed while reviews apply, and otherwise when it changed", async () => {

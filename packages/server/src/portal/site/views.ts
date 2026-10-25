@@ -10,6 +10,7 @@ import type {
   PortalCategory,
   PortalSearchResult,
 } from "../reader.js";
+import { PORTAL_ICONS } from "./brand-icon.js";
 import { type Html, html, raw, when } from "./html.js";
 import { hasIcon, icon } from "./icons.js";
 import { languageName, type PortalMessages } from "./messages.js";
@@ -216,6 +217,12 @@ function onlyIn(view: PortalView, article: { language: string }): Html | null {
     : null;
 }
 
+export function favicon(view: Pick<PortalView, "logoUrl" | "assets">): Html {
+  if (view.logoUrl) return html`<link rel="icon" href="${view.logoUrl}">`;
+  const base = view.assets.style.replace(/[^/]*$/, "");
+  return html`<link rel="icon" type="image/svg+xml" href="${base}${PORTAL_ICONS.standard}"><link rel="icon" type="image/svg+xml" href="${base}${PORTAL_ICONS.light}" media="(prefers-color-scheme: dark)"><link rel="icon" type="image/svg+xml" href="${base}${PORTAL_ICONS.contrast}" media="(prefers-contrast: more)">`;
+}
+
 function brandMark(view: PortalView): Html {
   return view.logoUrl
     ? html`<img src="${view.logoUrl}" alt="">`
@@ -364,6 +371,7 @@ export function layout(
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark"><meta name="robots" content="${robots}">
 <title>${title}</title>
+${favicon(view)}
 ${view.alternates.map((alternate) => html`<link rel="alternate" hreflang="${alternate.hreflang}" href="${alternate.href}">`)}
 <script src="${view.assets.theme}"></script>
 <link rel="stylesheet" href="${view.assets.style}">

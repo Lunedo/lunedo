@@ -24,6 +24,7 @@ import {
   portalThemeScript,
   staticSearchScript,
 } from "./assets.js";
+import { PORTAL_ICONS, portalIconByName } from "./brand-icon.js";
 import { escapeHtml } from "./html.js";
 import { languageName, messagesFor } from "./messages.js";
 import {
@@ -542,6 +543,7 @@ export class StaticSiteBuilder {
     text("_assets/portal.css", portalCss);
     text("_assets/portal.js", portalScript);
     text("_assets/portal-theme.js", portalThemeScript);
+    for (const name of Object.values(PORTAL_ICONS)) text(`_assets/${name}`, portalIconByName(name) ?? "");
     text("_assets/static-search.js", staticSearchScript);
     text(
       "_assets/minisearch.js",
