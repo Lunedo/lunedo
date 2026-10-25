@@ -7265,7 +7265,18 @@
       "used": "{size} used by {count, plural, one {# stored file} other {# stored files}}, including earlier versions",
       "loadFailed": "the storage use"
     },
-    "attach": "Attach files"
+    "attach": "Attach files",
+    "lightbox": {
+      "details": "{type} · {size} · uploaded by {name} on {date}",
+      "previous": "Previous",
+      "next": "Next",
+      "position": "{number} of {count} images and files on this page · arrow keys move through them",
+      "zoom": "Zoom in",
+      "fit": "Fit to the window",
+      "newTab": "Open in a new tab",
+      "open": "Open {name} large",
+      "more": "More for {name}"
+    }
   },
   "sharing": {
     "impact": {

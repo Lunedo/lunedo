@@ -1,15 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
-import { api } from "../api/client.js";
-import { request } from "../api/request.js";
-import { FilePreviewDrawer } from "./file-preview.js";
+import { AttachmentLightbox } from "./attachment-lightbox.js";
 
 interface PreviewHost {
-  open: (attachmentId: string) => void;
+  open: (attachmentId: string, siblings?: readonly string[]) => void;
 }
 
 const PreviewHostContext = createContext<PreviewHost | null>(null);
+
+interface Shown {
+  ids: readonly string[];
+  index: number;
+}
 
 export function AttachmentPreviewProvider({
   canEdit,
@@ -21,9 +23,9 @@ export function AttachmentPreviewProvider({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
-  const [attachmentId, setAttachmentId] = useState<string | null>(requested ?? null);
+  const [shown, setShown] = useState<Shown | null>(requested ? { ids: [requested], index: 0 } : null);
   const close = () => {
-    setAttachmentId(null);
+    setShown(null);
     if (requested) {
       void navigate({
         to: ".",
@@ -32,29 +34,27 @@ export function AttachmentPreviewProvider({
       });
     }
   };
-  const attachment = useQuery({
-    queryKey: ["attachments", attachmentId],
-    queryFn: () =>
-      request(() =>
-        api.GET("/api/v1/attachments/{attachmentId}", {
-          params: { path: { attachmentId: attachmentId ?? "" } },
-        }),
-      ),
-    enabled: attachmentId !== null,
-    throwOnError: false,
-  });
-  const value = useMemo<PreviewHost>(() => ({ open: setAttachmentId }), []);
+  const value = useMemo<PreviewHost>(
+    () => ({
+      open: (attachmentId, siblings = []) => {
+        const ids = siblings.includes(attachmentId) ? [...siblings] : [attachmentId];
+        setShown({ ids, index: ids.indexOf(attachmentId) });
+      },
+    }),
+    [],
+  );
   return (
     <PreviewHostContext.Provider value={value}>
       {children}
-      <FilePreviewDrawer
-        open={attachmentId !== null}
-        attachment={attachmentId && attachment.data?.id === attachmentId ? attachment.data : null}
-        error={attachment.isError ? attachment.error : null}
-        onRetry={() => void attachment.refetch()}
-        canEdit={canEdit}
-        onClose={close}
-      />
+      {shown ? (
+        <AttachmentLightbox
+          ids={shown.ids}
+          index={shown.index}
+          canEdit={canEdit}
+          onIndexChange={(index) => setShown((current) => (current ? { ...current, index } : current))}
+          onClose={close}
+        />
+      ) : null}
     </PreviewHostContext.Provider>
   );
 }

@@ -70,6 +70,7 @@ import {
 } from "./tabs-behavior.js";
 import { TemplateButton, templateButtonFromAttrs } from "./template-button.js";
 import "./editor.css";
+import { MEDIA, mediaOf } from "./media.js";
 
 export const FOLLOW_PATH = "/follow-link";
 
@@ -212,7 +213,7 @@ export function applyWidths(root: HTMLElement): void {
 
 export interface ReadViewAttachments {
   url?: AttachmentUrl;
-  onOpen?: (id: string) => void;
+  onOpen?: (id: string, siblings?: readonly string[]) => void;
 }
 
 export interface ReadViewCollaboration {
@@ -290,6 +291,25 @@ export function PageReadView({
   useLayoutEffect(() => {
     rememberReferences(references);
   }, [references]);
+
+  const canOpen = Boolean(openAttachment);
+  useLayoutEffect(() => {
+    const root = container.current;
+    if (!root || html === null || !canOpen) return;
+    for (const figure of Array.from(root.querySelectorAll<HTMLElement>(".ld-image[data-attachment-id]"))) {
+      const image = figure.querySelector("img");
+      const label = t("files.lightbox.open", { name: image?.alt || t("editor.readView.image") });
+      const link = figure.querySelector<HTMLAnchorElement>(":scope > .ld-image-full");
+      if (link) {
+        link.setAttribute("aria-label", label);
+        link.removeAttribute("title");
+      } else if (image && image.parentElement === figure) {
+        image.tabIndex = 0;
+        image.setAttribute("role", "button");
+        image.setAttribute("aria-label", label);
+      }
+    }
+  }, [html, canOpen, t]);
 
   useLayoutEffect(() => {
     const root = container.current;
@@ -377,10 +397,11 @@ export function PageReadView({
     }
     if (handleTabsClick(target)) return;
     if (target.closest(".ld-file-preview-slot")) return;
-    const file = target.closest<HTMLElement>(".ld-file[data-attachment-id]");
-    if (file && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+    const media = target.closest<HTMLElement>(MEDIA);
+    if (media && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
-      openAttachment(file.dataset.attachmentId ?? "");
+      const root = container.current;
+      openAttachment(media.dataset.attachmentId ?? "", root ? mediaOf(root) : []);
       return;
     }
     const thread = target.closest<HTMLElement>("[data-thread-id]")?.dataset.threadId;
@@ -492,7 +513,18 @@ export function PageReadView({
         className="ld-content ld-read-view"
         data-comment-scope={scope}
         onClick={(event) => void onClick(event)}
-        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => handleTabsKey(event)}
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+          const image = (event.target as HTMLElement).closest<HTMLElement>(
+            ".ld-image[data-attachment-id] > img",
+          );
+          if (image && openAttachment && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            const root = container.current;
+            openAttachment(image.parentElement?.dataset.attachmentId ?? "", root ? mediaOf(root) : []);
+            return;
+          }
+          handleTabsKey(event);
+        }}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
         dangerouslySetInnerHTML={{ __html: html }}
       />

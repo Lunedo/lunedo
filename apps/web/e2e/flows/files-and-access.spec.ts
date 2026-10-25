@@ -374,10 +374,12 @@ test("shows a large photo as its display version and opens the original in full 
   const image = page.getByRole("img", { name: "Site survey" });
   await expect(image).toHaveAttribute("src", `/api/v1/attachments/${file.id}/content?size=display`);
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(2048);
-  const full = page.getByRole("link", { name: "Site survey" });
-  await expect(full).toHaveAttribute("title", "Open full size");
+  await page.getByRole("link", { name: "Open Site survey large" }).click();
+  const lightbox = page.getByRole("dialog");
+  await expect(lightbox.getByRole("img")).toHaveAttribute("src", `/api/v1/attachments/${file.id}/content?version=1`);
+  await expectAccessible(page, "image lightbox");
   const opened = page.waitForEvent("popup");
-  await full.click();
+  await lightbox.getByRole("link", { name: "Open in a new tab" }).click();
   const tab = await opened;
   await tab.waitForLoadState();
   expect(new URL(tab.url()).pathname + new URL(tab.url()).search).toBe(
@@ -387,5 +389,7 @@ test("shows a large photo as its display version and opens the original in full 
   expect(shown.headers()["content-type"]).toBe("image/png");
   expect((await shown.body()).equals(original)).toBe(true);
   await tab.close();
+  await page.keyboard.press("Escape");
+  await expect(lightbox).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`${pagePath}$`));
 });

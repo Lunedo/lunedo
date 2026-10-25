@@ -148,6 +148,7 @@ export {
   SettingRow,
   type SettingRowProps,
 } from "./layout.js";
+export { LIGHTBOX_BUTTON, Lightbox, LightboxButton, type LightboxProps } from "./lightbox.js";
 export { cleanCode, OneTimeCodeInput, type OneTimeCodeInputProps } from "./one-time-code.js";
 export {
   Menu,

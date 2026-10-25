@@ -7265,7 +7265,18 @@
       "used": "{size} belegt durch {count, plural, one {# gespeicherte Datei} other {# gespeicherte Dateien}}, einschließlich früherer Versionen",
       "loadFailed": "die Speicherbelegung"
     },
-    "attach": "Dateien anhängen"
+    "attach": "Dateien anhängen",
+    "lightbox": {
+      "details": "{type} · {size} · hochgeladen von {name} am {date}",
+      "previous": "Vorheriges",
+      "next": "Nächstes",
+      "position": "{number} von {count} Bildern und Dateien auf dieser Seite · Pfeiltasten blättern",
+      "zoom": "Vergrößern",
+      "fit": "An das Fenster anpassen",
+      "newTab": "In neuem Tab öffnen",
+      "open": "{name} groß öffnen",
+      "more": "Mehr zu {name}"
+    }
   },
   "sharing": {
     "impact": {

@@ -1353,3 +1353,8 @@ details.ld-expand > summary {
 .ld-table-grip-button {
   @apply inline-flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-accent hover:text-on-accent focus-visible:focus-ring aria-expanded:bg-accent aria-expanded:text-on-accent;
 }
+
+.ld-read-view .ld-image[data-attachment-id] > img,
+.ld-read-view .ld-image[data-attachment-id] > .ld-image-full {
+  @apply cursor-zoom-in rounded-sm focus-visible:focus-ring;
+}

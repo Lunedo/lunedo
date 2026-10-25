@@ -29,7 +29,9 @@
       "infoSoft": "#E6EEFB",
       "badge": "#C2410C",
       "presence": "#1F9D5B",
-      "overlay": "rgba(15, 17, 20, 0.36)"
+      "overlay": "rgba(15, 17, 20, 0.36)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "dark": {
       "bg": "#151617",
@@ -59,7 +61,9 @@
       "infoSoft": "#1B2333",
       "badge": "#F08A4B",
       "presence": "#3DBE78",
-      "overlay": "rgba(0, 0, 0, 0.55)"
+      "overlay": "rgba(0, 0, 0, 0.55)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "highContrastLight": {
       "bg": "#FFFFFF",
@@ -89,7 +93,9 @@
       "infoSoft": "#E0E9FA",
       "badge": "#9A3100",
       "presence": "#0E6B3A",
-      "overlay": "rgba(0, 0, 0, 0.6)"
+      "overlay": "rgba(0, 0, 0, 0.6)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "highContrastDark": {
       "bg": "#000000",
@@ -119,7 +125,9 @@
       "infoSoft": "#0F1A30",
       "badge": "#FFA36B",
       "presence": "#5EE095",
-      "overlay": "rgba(0, 0, 0, 0.75)"
+      "overlay": "rgba(0, 0, 0, 0.75)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "palette": {
       "light": {
