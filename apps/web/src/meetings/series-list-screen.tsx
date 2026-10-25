@@ -74,7 +74,7 @@ export function SeriesListScreen() {
                   <span className="flex items-center gap-1 text-sm text-text-muted">
                     <CalendarClock aria-hidden className="size-icon-md" />
                     {entry.upcomingAt
-                      ? t("meetings.list.next", { date: format.dateTime(entry.upcomingAt) })
+                      ? t("meetings.list.next", { date: format.weekdayDateTime(entry.upcomingAt) })
                       : t("meetings.notScheduled")}
                   </span>
                 ) : null}

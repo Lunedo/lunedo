@@ -49,6 +49,26 @@ function agenda(topics: Agenda["topics"]): Agenda {
 }
 
 describe("the agenda of a meeting", () => {
+  it("shows the text of the last update that is not empty, or that there is none", async () => {
+    mockApi({
+      [`GET /api/v1/meetings/${MEETING}/agenda`]: () => ({
+        body: agenda([
+          topic(FIREWALL, "Firewall", {
+            previous: [
+              { meetingId: SPACE, meetingTitle: "26 Oct", startsAt: null, text: "" },
+              { meetingId: SERIES, meetingTitle: "19 Oct", startsAt: null, text: "Rules\nreviewed" },
+            ],
+          }),
+          topic(PRINTERS, "Printers"),
+        ]),
+      }),
+    });
+    await renderWithProviders(inRouter(<AgendaSection meetingId={MEETING} spaceKey="ITOPS" writable />));
+    expect(await screen.findByText(/last: Rules reviewed$/)).toBeTruthy();
+    expect(screen.getByText(/no update yet$/)).toBeTruthy();
+    expect(screen.queryByText(/last: $/)).toBeNull();
+  });
+
   it("lists all open topics in order and moves one with the arrow buttons", async () => {
     const api = mockApi({
       [`GET /api/v1/meetings/${MEETING}/agenda`]: () => ({
@@ -126,6 +146,7 @@ const meeting: Meeting = {
   seriesTitle: "Jour fixe IT",
   title: "Jour fixe IT · 2 Nov 2026",
   state: "upcoming",
+  next: true,
   current: true,
   startsAt: "2026-11-02T08:30:00.000Z",
   recurrenceId: "2026-11-02T08:30:00.000Z",
@@ -152,6 +173,32 @@ const meeting: Meeting = {
 };
 
 describe("the head of a meeting", () => {
+  it("names the next meeting with its weekday and closes it only from its day on", async () => {
+    const future = new Date(Date.now() + 8 * 86_400_000).toISOString();
+    mockApi({
+      [`GET /api/v1/meetings/${MEETING}`]: () => ({ body: { ...meeting, startsAt: future } }),
+    });
+    await renderWithProviders(inRouter(<MeetingHeader meetingId={MEETING} spaceKey="ITOPS" writable />));
+    const close = await screen.findByRole("button", { name: "Close meeting" });
+    expect(close.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/^Can be closed from \w+day, /)).toBeTruthy();
+    expect(screen.getByText("Next")).toBeTruthy();
+    const region = screen.getByRole("region", { name: "Meeting details" });
+    expect(region.textContent).toMatch(/\w+day, /);
+  });
+
+  it("calls a later upcoming meeting planned, not next", async () => {
+    mockApi({
+      [`GET /api/v1/meetings/${MEETING}`]: () => ({
+        body: { ...meeting, next: false, startsAt: "2020-11-02T08:30:00.000Z" },
+      }),
+    });
+    await renderWithProviders(inRouter(<MeetingHeader meetingId={MEETING} spaceKey="ITOPS" writable />));
+    expect(await screen.findByText("Planned")).toBeTruthy();
+    expect(screen.queryByText("Next")).toBeNull();
+    expect(screen.getByRole("button", { name: "Close meeting" }).hasAttribute("disabled")).toBe(false);
+  });
+
   it("records attendance with a select and adds a guest without an account", async () => {
     const api = mockApi({
       [`GET /api/v1/meetings/${MEETING}`]: () => ({ body: meeting }),

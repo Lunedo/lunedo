@@ -72,10 +72,29 @@ describe("topic update blocks", () => {
 
 describe.skipIf(!baseUrl)("meeting agenda", () => {
   let test: TestServices;
+
+  let meetingNow: Date | null = null;
+
+  async function meetingStart(meetingId: string): Promise<Date | null> {
+    const result = await test.pool.query<{ starts_at: Date | null }>(
+      "select starts_at from meetings where item_id = $1",
+      [meetingId],
+    );
+    return result.rows[0]?.starts_at ?? null;
+  }
+
+  async function closeMeeting(...args: Parameters<TestServices["services"]["meetings"]["close"]>) {
+    meetingNow = await meetingStart(args[1]);
+    try {
+      return await test.services.meetings.close(...args);
+    } finally {
+      meetingNow = null;
+    }
+  }
   const { organization, member, space } = spaceFixtures(() => test);
 
   beforeAll(async () => {
-    test = await createTestServices(baseUrl ?? "");
+    test = await createTestServices(baseUrl ?? "", { meetingClock: () => meetingNow ?? new Date() });
     await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
   });
 
@@ -151,7 +170,7 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     ).rejects.toMatchObject({ code: "topicNotFound" });
     await test.services.topics.close(context.lead, second ?? "", { outcome: "resolved" });
     expect(await titles()).toEqual(["Holidays", "Firewall"]);
-    await test.services.meetings.close(context.lead, context.meetingId);
+    await closeMeeting(context.lead, context.meetingId);
     const next = (await test.services.meetings.details(context.lead, context.seriesId)).upcoming;
     const nextAgenda = await test.services.agenda.agenda(context.lead, next?.id ?? "");
     expect(nextAgenda.topics.map((topic) => topic.title)).toEqual(["Holidays", "Firewall"]);
@@ -179,7 +198,7 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     const mine = await test.services.tasks.list(context.editor, { assignee: "me" });
     expect(mine.items.map((task) => task.id)).toEqual([taskId]);
 
-    await test.services.meetings.close(context.lead, context.meetingId);
+    await closeMeeting(context.lead, context.meetingId);
     const next = (await test.services.meetings.details(context.lead, context.seriesId)).upcoming;
     const later = await test.services.agenda.agenda(context.lead, next?.id ?? "");
     expect(later.topics[0]?.update).toEqual({ text: "", formatted: false });
@@ -265,7 +284,7 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     const extra = await test.services.agenda.agenda(context.lead, extraId);
     expect(extra.topics.map((topic) => topic.id)).toEqual([running]);
     expect((await test.services.meetings.details(context.lead, context.seriesId)).openTopics).toBe(1);
-    await test.services.meetings.close(context.lead, context.meetingId);
+    await closeMeeting(context.lead, context.meetingId);
     const topic = await test.services.topics.get(context.lead, oneOff);
     expect(topic).toMatchObject({ status: "closed", outcome: "resolved", oneOff: true });
     await test.services.meetings.undoClose(context.lead, context.meetingId);
@@ -286,7 +305,7 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
       status: "open",
       raisedIn: { id: nextMeetingId },
     });
-    await test.services.meetings.close(context.lead, nextMeetingId);
+    await closeMeeting(context.lead, nextMeetingId);
     expect(await test.services.topics.get(context.lead, oneOff)).toMatchObject({ status: "closed" });
   });
 
@@ -309,9 +328,50 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     await expect(test.services.meetings.skip(context.lead, extraId)).rejects.toMatchObject({
       code: "extraMeetingNotSkippable",
     });
-    expect(await test.services.meetings.close(context.lead, extraId)).toEqual({ nextMeetingId: null });
+    expect(await closeMeeting(context.lead, extraId)).toEqual({ nextMeetingId: null });
     const after = await test.services.meetings.details(context.lead, context.seriesId);
     expect(after.upcoming?.id).toBe(context.meetingId);
+  });
+
+  it("treats an additional meeting before the regular one as the next meeting everywhere", async () => {
+    const context = await setup();
+    const extraId = await test.services.meetings.addExtra(
+      context.lead,
+      context.seriesId,
+      new Date("2030-03-14T10:00:00Z"),
+    );
+    const details = await test.services.meetings.details(context.lead, context.seriesId);
+    expect(details.upcoming?.id).toBe(extraId);
+    const listed = await test.services.meetings.meetings(context.lead, context.seriesId);
+    expect(listed.items.filter((meeting) => meeting.next).map((meeting) => meeting.id)).toEqual([extraId]);
+    expect((await test.services.meetings.meeting(context.lead, extraId)).next).toBe(true);
+    expect((await test.services.meetings.meeting(context.lead, context.meetingId)).next).toBe(false);
+    expect(await test.services.meetings.currentMeeting(test.database, context.seriesId)).toBe(extraId);
+    const spaceId =
+      (
+        await test.pool.query<{ space_id: string }>("select space_id from tree_items where id = $1", [
+          context.seriesId,
+        ])
+      ).rows[0]?.space_id ?? "";
+    const series = await test.services.meetings.listSeries(context.lead, spaceId);
+    expect(series.find((entry) => entry.id === context.seriesId)?.upcomingAt?.toISOString()).toBe(
+      "2030-03-14T10:00:00.000Z",
+    );
+  });
+
+  it("refuses to mark a meeting as held before its day", async () => {
+    const context = await setup();
+    await expect(test.services.meetings.close(context.lead, context.meetingId)).rejects.toMatchObject({
+      code: "meetingInFuture",
+    });
+    expect((await test.services.meetings.meeting(context.lead, context.meetingId)).state).toBe("upcoming");
+    meetingNow = new Date("2030-03-18T05:00:00Z");
+    try {
+      await test.services.meetings.close(context.lead, context.meetingId);
+    } finally {
+      meetingNow = null;
+    }
+    expect((await test.services.meetings.meeting(context.lead, context.meetingId)).state).toBe("closed");
   });
 
   it("records guests without an account in the attendance, never as people with access", async () => {
@@ -409,7 +469,7 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     const context = await setup();
     await test.services.meetings.setAttendance(context.lead, context.meetingId, context.leadId, "present");
     await test.services.meetings.setAttendance(context.lead, context.meetingId, context.editorId, "excused");
-    await test.services.meetings.close(context.lead, context.meetingId);
+    await closeMeeting(context.lead, context.meetingId);
     const rates = await test.services.meetings.attendance(context.reader, context.seriesId);
     expect(rates.map(({ id, present, meetings }) => ({ id, present, meetings }))).toEqual([
       { id: context.leadId, present: 1, meetings: 1 },

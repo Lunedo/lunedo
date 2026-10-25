@@ -11,7 +11,7 @@ import { positionBetween } from "../spaces/fractional-index.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
-import { addDecision } from "./meeting-document.js";
+import { addDecision, addTopicUpdates } from "./meeting-document.js";
 import type { MeetingService } from "./meetings.js";
 import type { TopicOutcome, TopicStatus } from "./schema.js";
 
@@ -32,6 +32,7 @@ export interface TopicSummary {
   updates: number;
   openTasks: number;
   lastUpdateAt: Date | null;
+  lastUpdateText: string | null;
   createdAt: Date;
   closedAt: Date | null;
   decisionId: string | null;
@@ -78,6 +79,7 @@ type TopicRow = {
   updates: string;
   open_tasks: string;
   last_update_at: Date | string | null;
+  last_update_text: string | null;
   created_at: Date | string;
   closed_at: Date | string | null;
   decision_id: string | null;
@@ -153,6 +155,11 @@ export class TopicService {
           join tasks k on k.id::text = found.id #>> '{}' and k.published and not k.done
           where u.topic_id = mt.item_id and um.state <> 'skipped'
             and ${visibleItem(this.#authorization, viewer, sql`ut`, sql`s`)}) as open_tasks,
+        (select u.text from meeting_topic_updates u join meetings um on um.item_id = u.item_id
+          join tree_items ut on ut.id = u.item_id
+          where u.topic_id = mt.item_id and um.state <> 'skipped' and btrim(u.text) <> ''
+            and ${visibleItem(this.#authorization, viewer, sql`ut`, sql`s`)}
+          order by coalesce(um.starts_at, u.updated_at) desc, u.updated_at desc limit 1) as last_update_text,
         mt.last_update_at, t.created_at, mt.closed_at, mt.decision_id, t.space_id
       from meeting_topics mt join tree_items t on t.id = mt.item_id join spaces s on s.id = t.space_id
       left join accounts o on o.id = t.owner_id
@@ -180,6 +187,7 @@ export class TopicService {
       updates: Number(row.updates),
       openTasks: Number(row.open_tasks),
       lastUpdateAt: toDate(row.last_update_at),
+      lastUpdateText: row.last_update_text?.replace(/\s+/g, " ").trim() || null,
       createdAt: new Date(row.created_at),
       closedAt: toDate(row.closed_at),
       decisionId: row.decision_id,
@@ -465,10 +473,12 @@ export class TopicService {
       await tx.execute(
         sql`insert into decisions (id, item_id, topic_id) values (${decisionId}, ${meetingId}, ${topicId})`,
       );
+      const titles = await this.#meetings.sectionTitles(actor);
       await this.#documents.editLocked(
         tx,
         meetingId,
-        (document) => addDecision(document, { id: decisionId, topicId, statement }),
+        (document) =>
+          addDecision(addTopicUpdates(document, [topicId], titles), { id: decisionId, topicId, statement }),
         actorIdOf(actor),
       );
       await tx.execute(sql`

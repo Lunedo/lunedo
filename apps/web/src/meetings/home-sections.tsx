@@ -33,7 +33,7 @@ export function UpcomingMeetings() {
           to={pagePath(meeting.spaceKey, meeting.id, itemSlug(meeting.title))}
           leading={<CalendarDays aria-hidden="true" className="size-icon-md" />}
           title={meeting.seriesTitle ?? meeting.title}
-          meta={meeting.startsAt ? format.shortDateTime(meeting.startsAt) : t("meetings.notScheduled")}
+          meta={meeting.startsAt ? format.weekdayDateTime(meeting.startsAt) : t("meetings.notScheduled")}
         />
       ))}
     </Section>
@@ -80,7 +80,7 @@ export function OneOnOnes() {
             title={name}
             meta={
               entry.nextMeeting?.startsAt
-                ? t("meetings.home.next", { date: format.shortDateTime(entry.nextMeeting.startsAt) })
+                ? t("meetings.home.next", { date: format.weekdayDateTime(entry.nextMeeting.startsAt) })
                 : t("meetings.notScheduled")
             }
           />

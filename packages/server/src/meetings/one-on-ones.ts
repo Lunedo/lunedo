@@ -159,7 +159,8 @@ export class OneOnOneService {
       left join lateral (select ms.item_id from meeting_series ms join tree_items t on t.id = ms.item_id
         where t.space_id = s.id and t.trash_entry_id is null and t.archived_root_id is null
         order by t.created_at limit 1) ms on true
-      left join meetings m on m.series_id = ms.item_id and m.state = 'upcoming' and not m.extra
+      left join lateral (select m.item_id, m.starts_at from meetings m where m.series_id = ms.item_id
+        and m.state = 'upcoming' order by coalesce(m.starts_at, 'infinity'::timestamptz), m.item_id limit 1) m on true
       where s.one_on_one and s.deleted_at is null and s.archived_at is null
         and ${organizationMembership(sql`s.organization_id`, sql`${accountId}::uuid`)}
       order by m.starts_at nulls last, s.key

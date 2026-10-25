@@ -25,6 +25,7 @@ import { pagePath } from "../spaces/space-queries.js";
 import {
   decisionsQuery,
   type MeetingSummary,
+  meetingStateLabel,
   type Series,
   type Topic,
   topicPath,
@@ -538,7 +539,7 @@ export function MeetingsTab({ series, spaceKey }: { series: Series; spaceKey: st
                 className="truncate hover:underline focus-visible:focus-ring"
                 title={meeting.title}
               >
-                {meeting.startsAt ? format.dateTime(meeting.startsAt) : t("meetings.notScheduled")}
+                {meeting.startsAt ? format.weekdayDateTime(meeting.startsAt) : t("meetings.notScheduled")}
               </Link>
               <span className="truncate text-sm text-text-muted">
                 {meeting.state === "upcoming"
@@ -549,9 +550,7 @@ export function MeetingsTab({ series, spaceKey }: { series: Series; spaceKey: st
               </span>
             </span>
             {meeting.extra ? <Badge variant="neutral">{t("meetings.meeting.extra")}</Badge> : null}
-            <Badge variant={meeting.state === "upcoming" ? "accent" : "neutral"}>
-              {translateKey(t, `meetings.state.${meeting.state}`)}
-            </Badge>
+            <Badge variant={meeting.next ? "accent" : "neutral"}>{meetingStateLabel(t, meeting)}</Badge>
           </li>
         ))}
       </ul>

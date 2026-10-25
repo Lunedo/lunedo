@@ -189,6 +189,11 @@ export const meetingSummarySchema = z
     attendees: z.number().int().describe("Number of attendees."),
     present: z.number().int().describe("Number of attendees marked present."),
     extra: z.boolean().describe("True for an additional meeting outside the rhythm."),
+    next: z
+      .boolean()
+      .describe(
+        "True for the next meeting of the series: the earliest one that is neither held nor skipped.",
+      ),
   })
   .describe("A meeting of a series.");
 
@@ -202,6 +207,7 @@ export const exampleMeetingSummary = {
   attendees: 5,
   present: 0,
   extra: false,
+  next: true,
 };
 
 const overviewModuleSchema = extensibleEnum(overviewModules, "A module of the series overview.");
@@ -375,6 +381,11 @@ export const meetingSchema = z
       .describe("Name of the series, or null when the caller cannot read it."),
     title: z.string().describe("Title of the meeting page."),
     state: meetingStateSchema,
+    next: z
+      .boolean()
+      .describe(
+        "True for the next meeting of the series: the earliest one that is neither held nor skipped.",
+      ),
     current: z.boolean().describe("Whether the meeting is open: upcoming or reopened."),
     startsAt: timestamp("Start, or null when not scheduled yet.").nullable(),
     recurrenceId: timestamp("Original start in the rhythm, or null.").nullable(),
@@ -444,6 +455,7 @@ export const exampleMeeting = {
   seriesTitle: exampleSeries.title,
   title: exampleMeetingSummary.title,
   state: "upcoming",
+  next: true,
   current: true,
   startsAt: exampleMeetingSummary.startsAt,
   recurrenceId: exampleMeetingSummary.recurrenceId,
@@ -672,6 +684,10 @@ export const topicSchema = z
     updates: z.number().int().describe("Number of updates the caller can read."),
     openTasks: z.number().int().describe("Open tasks written in those updates."),
     lastUpdateAt: timestamp("When the last update was written.").nullable(),
+    lastUpdateText: z
+      .string()
+      .nullable()
+      .describe("Text of the last update that is not empty, in one line, or null when there is none."),
     createdAt: timestamp("When the topic was raised."),
     closedAt: timestamp("When the topic was closed.").nullable(),
     decisionId: uuid("The decision that closed the topic.").nullable(),
@@ -695,6 +711,7 @@ export const exampleTopic = {
   updates: 3,
   openTasks: 1,
   lastUpdateAt: "2026-10-05T08:30:00.000Z",
+  lastUpdateText: "Positions stay in AD; the sync runs nightly.",
   createdAt: "2026-09-21T08:00:00.000Z",
   closedAt: null,
   decisionId: null,

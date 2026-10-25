@@ -397,6 +397,7 @@ export function createAccountServices(options: {
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   insecureIdentityProviders?: boolean;
+  meetingClock?: () => Date;
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
@@ -1013,6 +1014,7 @@ export function createAccountServices(options: {
     people,
     notifications,
     activity,
+    ...(options.meetingClock ? { clock: options.meetingClock } : {}),
   });
   const meetingReminders = new MeetingReminders({ database, authorization, notifications });
   const topics = new TopicService({ database, authorization, people, documents, meetings, activity });

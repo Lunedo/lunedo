@@ -148472,6 +148472,10 @@
                             "extra": {
                               "type": "boolean",
                               "description": "True for an additional meeting outside the rhythm."
+                            },
+                            "next": {
+                              "type": "boolean",
+                              "description": "True for the next meeting of the series: the earliest one that is neither held nor skipped."
                             }
                           },
                           "required": [
@@ -148483,7 +148487,8 @@
                             "durationMinutes",
                             "attendees",
                             "present",
-                            "extra"
+                            "extra",
+                            "next"
                           ],
                           "additionalProperties": false,
                           "description": "A meeting of a series."
@@ -148656,7 +148661,8 @@
                     "durationMinutes": 45,
                     "attendees": 5,
                     "present": 0,
-                    "extra": false
+                    "extra": false,
+                    "next": true
                   },
                   "openTopics": 3,
                   "overview": {
@@ -149289,6 +149295,10 @@
                             "extra": {
                               "type": "boolean",
                               "description": "True for an additional meeting outside the rhythm."
+                            },
+                            "next": {
+                              "type": "boolean",
+                              "description": "True for the next meeting of the series: the earliest one that is neither held nor skipped."
                             }
                           },
                           "required": [
@@ -149300,7 +149310,8 @@
                             "durationMinutes",
                             "attendees",
                             "present",
-                            "extra"
+                            "extra",
+                            "next"
                           ],
                           "additionalProperties": false,
                           "description": "A meeting of a series."
@@ -149473,7 +149484,8 @@
                     "durationMinutes": 45,
                     "attendees": 5,
                     "present": 0,
-                    "extra": false
+                    "extra": false,
+                    "next": true
                   },
                   "openTopics": 3,
                   "overview": {
@@ -150619,6 +150631,10 @@
                           "extra": {
                             "type": "boolean",
                             "description": "True for an additional meeting outside the rhythm."
+                          },
+                          "next": {
+                            "type": "boolean",
+                            "description": "True for the next meeting of the series: the earliest one that is neither held nor skipped."
                           }
                         },
                         "required": [
@@ -150630,7 +150646,8 @@
                           "durationMinutes",
                           "attendees",
                           "present",
-                          "extra"
+                          "extra",
+                          "next"
                         ],
                         "additionalProperties": false,
                         "description": "A meeting of a series."
@@ -150663,7 +150680,8 @@
                       "durationMinutes": 45,
                       "attendees": 5,
                       "present": 0,
-                      "extra": false
+                      "extra": false,
+                      "next": true
                     }
                   ],
                   "nextCursor": null
@@ -150891,6 +150909,10 @@
                         "reopened",
                         "skipped"
                       ]
+                    },
+                    "next": {
+                      "type": "boolean",
+                      "description": "True for the next meeting of the series: the earliest one that is neither held nor skipped."
                     },
                     "current": {
                       "type": "boolean",
@@ -151131,6 +151153,7 @@
                     "seriesTitle",
                     "title",
                     "state",
+                    "next",
                     "current",
                     "startsAt",
                     "recurrenceId",
@@ -151154,6 +151177,7 @@
                   "seriesTitle": "Jour fixe IT",
                   "title": "Jour fixe IT · 12 Oct 2026",
                   "state": "upcoming",
+                  "next": true,
                   "current": true,
                   "startsAt": "2026-10-12T07:30:00.000Z",
                   "recurrenceId": null,
@@ -152404,6 +152428,13 @@
                         ],
                         "description": "When the last update was written. ISO 8601 timestamp in UTC."
                       },
+                      "lastUpdateText": {
+                        "description": "Text of the last update that is not empty, in one line, or null when there is none.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -152447,6 +152478,7 @@
                       "updates",
                       "openTasks",
                       "lastUpdateAt",
+                      "lastUpdateText",
                       "createdAt",
                       "closedAt",
                       "decisionId"
@@ -152479,6 +152511,7 @@
                     "updates": 3,
                     "openTasks": 1,
                     "lastUpdateAt": "2026-10-05T08:30:00.000Z",
+                    "lastUpdateText": "Positions stay in AD; the sync runs nightly.",
                     "createdAt": "2026-09-21T08:00:00.000Z",
                     "closedAt": null,
                     "decisionId": null
@@ -152846,6 +152879,13 @@
                       ],
                       "description": "When the last update was written. ISO 8601 timestamp in UTC."
                     },
+                    "lastUpdateText": {
+                      "description": "Text of the last update that is not empty, in one line, or null when there is none.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -152995,6 +153035,7 @@
                     "updates",
                     "openTasks",
                     "lastUpdateAt",
+                    "lastUpdateText",
                     "createdAt",
                     "closedAt",
                     "decisionId",
@@ -153028,6 +153069,7 @@
                   "updates": 3,
                   "openTasks": 1,
                   "lastUpdateAt": "2026-10-05T08:30:00.000Z",
+                  "lastUpdateText": "Positions stay in AD; the sync runs nightly.",
                   "createdAt": "2026-09-21T08:00:00.000Z",
                   "closedAt": null,
                   "decisionId": null,
@@ -153317,6 +153359,10 @@
                         "skipped"
                       ]
                     },
+                    "next": {
+                      "type": "boolean",
+                      "description": "True for the next meeting of the series: the earliest one that is neither held nor skipped."
+                    },
                     "current": {
                       "type": "boolean",
                       "description": "Whether the meeting is open: upcoming or reopened."
@@ -153556,6 +153602,7 @@
                     "seriesTitle",
                     "title",
                     "state",
+                    "next",
                     "current",
                     "startsAt",
                     "recurrenceId",
@@ -153579,6 +153626,7 @@
                   "seriesTitle": "Jour fixe IT",
                   "title": "Jour fixe IT · 12 Oct 2026",
                   "state": "upcoming",
+                  "next": true,
                   "current": true,
                   "startsAt": "2026-10-12T07:30:00.000Z",
                   "recurrenceId": "2026-10-12T07:30:00.000Z",
@@ -154974,7 +155022,7 @@
       "post": {
         "operationId": "meetings.close",
         "summary": "Close a meeting",
-        "description": "Closes the meeting and notifies the attendees that the notes are available. Closing the upcoming meeting creates the next one: the next occurrence of the rhythm after now, or, without a fixed rhythm, at `nextStartsAt`. When two people close at the same moment, one succeeds and the other gets `meetingClosed`.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
+        "description": "Closes the meeting and notifies the attendees that the notes are available. Closing the upcoming meeting creates the next one: the next occurrence of the rhythm after now, or, without a fixed rhythm, at `nextStartsAt`. When two people close at the same moment, one succeeds and the other gets `meetingClosed`. A meeting can be closed from its day on, in the time zone of the series; before that the answer is `meetingInFuture`.\n\nRequires the permission `item.edit` on the item in `meetingId`.",
         "tags": [
           "Meetings"
         ],
@@ -155177,7 +155225,7 @@
             }
           },
           "409": {
-            "description": "`meetingClosed`: The meeting is closed already. `seriesEnded`: The meeting series has ended.",
+            "description": "`meetingClosed`: The meeting is closed already. `meetingInFuture`: The meeting has not taken place yet. `seriesEnded`: The meeting series has ended.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -155190,6 +155238,14 @@
                       "title": "The meeting is closed already",
                       "status": 409,
                       "code": "meetingClosed"
+                    }
+                  },
+                  "meetingInFuture": {
+                    "value": {
+                      "type": "urn:lunedo:problem:meetingInFuture",
+                      "title": "The meeting has not taken place yet",
+                      "status": 409,
+                      "code": "meetingInFuture"
                     }
                   },
                   "seriesEnded": {
@@ -194576,6 +194632,450 @@
                       "title": "The image is too large for a smaller version",
                       "status": 409,
                       "code": "imageTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/templates/built-in": {
+      "get": {
+        "operationId": "templates.builtInTemplates",
+        "summary": "List the built-in templates",
+        "description": "Lists the templates that ship with Lunedo, in the language of the caller. They cannot be changed; duplicate one to adapt it.\n\nRequires the permission `organization.templates.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Templates"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.templates.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Built-in templates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "ID of the template. Built-in templates have IDs starting with `builtin:`."
+                      },
+                      "level": {
+                        "type": "string",
+                        "enum": [
+                          "builtIn",
+                          "instance",
+                          "organization",
+                          "space"
+                        ],
+                        "description": "Where the template comes from: built in, or from the instance, the organization or the space."
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Organization of an organization template, or null."
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Space of a space template, or null."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Name."
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Short description."
+                      },
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "meetings",
+                          "decisions",
+                          "projects",
+                          "engineering",
+                          "operations",
+                          "knowledge",
+                          "teams"
+                        ],
+                        "description": "Category in the gallery: meetings, decisions, projects, engineering, operations, knowledge or teams."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of new pages; `{key}` inserts the value of an input field."
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "maxLength": 40,
+                              "description": "Key of the field, used as `{key}` in the title and by template field nodes in the content."
+                            },
+                            "label": {
+                              "type": "string",
+                              "maxLength": 100,
+                              "description": "Label shown when the page is created."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "text",
+                                "date",
+                                "person",
+                                "choice"
+                              ],
+                              "description": "`text`, `date` (filled with today by default), `person` (inserted as a mention) or `choice`."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "Whether a value is required."
+                            },
+                            "options": {
+                              "description": "Options of a choice field.",
+                              "maxItems": 30,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 100
+                              }
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "type",
+                            "required"
+                          ],
+                          "additionalProperties": false,
+                          "description": "An input field asked for when a page is created from the template."
+                        },
+                        "description": "Input fields."
+                      },
+                      "document": {
+                        "description": "Page content as ProseMirror JSON, as defined by the editor schema: an object with `type: \"doc\"` and `content`.",
+                        "$ref": "#/components/schemas/Schema113ae44d8375"
+                      },
+                      "series": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "rhythm": {
+                                "type": "object",
+                                "properties": {
+                                  "frequency": {
+                                    "type": "string",
+                                    "description": "How often. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "none",
+                                      "daily",
+                                      "weekly",
+                                      "monthly",
+                                      "yearly"
+                                    ]
+                                  },
+                                  "interval": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Every how many units."
+                                  },
+                                  "weekdays": {
+                                    "description": "Weekdays.",
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "monthDay": {
+                                    "description": "Day of the month.",
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "weekOfMonth": {
+                                    "description": "Week of the month.",
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "weekday": {
+                                    "description": "Weekday.",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "frequency",
+                                  "interval"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Default rhythm."
+                              },
+                              "durationMinutes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Default duration in minutes."
+                              }
+                            },
+                            "required": [
+                              "rhythm",
+                              "durationMinutes"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Defaults of a series template."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
+                      },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
+                      "updatedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the template last changed, or null for built-in templates. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "level",
+                      "organizationId",
+                      "spaceId",
+                      "name",
+                      "description",
+                      "category",
+                      "title",
+                      "fields",
+                      "document",
+                      "series",
+                      "articleType",
+                      "updatedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A page template."
+                  },
+                  "description": "Templates."
+                },
+                "example": [
+                  {
+                    "id": "builtin:team-meeting",
+                    "level": "builtIn",
+                    "organizationId": null,
+                    "spaceId": null,
+                    "name": "Change request",
+                    "description": "Planned change with risk and rollback",
+                    "category": "meetings",
+                    "title": "Change {name}",
+                    "fields": [
+                      {
+                        "key": "name",
+                        "label": "Name of the change",
+                        "type": "text",
+                        "required": true
+                      }
+                    ],
+                    "document": {
+                      "type": "doc",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Connect through WireGuard."
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "series": null,
+                    "articleType": null,
+                    "updatedAt": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -246246,6 +246746,10 @@
                             "extra": {
                               "type": "boolean",
                               "description": "True for an additional meeting outside the rhythm."
+                            },
+                            "next": {
+                              "type": "boolean",
+                              "description": "True for the next meeting of the series: the earliest one that is neither held nor skipped."
                             }
                           },
                           "required": [
@@ -246257,7 +246761,8 @@
                             "durationMinutes",
                             "attendees",
                             "present",
-                            "extra"
+                            "extra",
+                            "next"
                           ],
                           "additionalProperties": false,
                           "description": "A meeting of a series."
@@ -246430,7 +246935,8 @@
                     "durationMinutes": 45,
                     "attendees": 5,
                     "present": 0,
-                    "extra": false
+                    "extra": false,
+                    "next": true
                   },
                   "openTopics": 3,
                   "overview": {
@@ -267327,6 +267833,13 @@
                       ],
                       "description": "When the last update was written. ISO 8601 timestamp in UTC."
                     },
+                    "lastUpdateText": {
+                      "description": "Text of the last update that is not empty, in one line, or null when there is none.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -267476,6 +267989,7 @@
                     "updates",
                     "openTasks",
                     "lastUpdateAt",
+                    "lastUpdateText",
                     "createdAt",
                     "closedAt",
                     "decisionId",
@@ -267509,6 +268023,7 @@
                   "updates": 3,
                   "openTasks": 1,
                   "lastUpdateAt": "2026-10-05T08:30:00.000Z",
+                  "lastUpdateText": "Positions stay in AD; the sync runs nightly.",
                   "createdAt": "2026-09-21T08:00:00.000Z",
                   "closedAt": null,
                   "decisionId": null,
@@ -267864,6 +268379,13 @@
                       ],
                       "description": "When the last update was written. ISO 8601 timestamp in UTC."
                     },
+                    "lastUpdateText": {
+                      "description": "Text of the last update that is not empty, in one line, or null when there is none.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -268013,6 +268535,7 @@
                     "updates",
                     "openTasks",
                     "lastUpdateAt",
+                    "lastUpdateText",
                     "createdAt",
                     "closedAt",
                     "decisionId",
@@ -268046,6 +268569,7 @@
                   "updates": 3,
                   "openTasks": 1,
                   "lastUpdateAt": "2026-10-05T08:30:00.000Z",
+                  "lastUpdateText": "Positions stay in AD; the sync runs nightly.",
                   "createdAt": "2026-09-21T08:00:00.000Z",
                   "closedAt": null,
                   "decisionId": null,

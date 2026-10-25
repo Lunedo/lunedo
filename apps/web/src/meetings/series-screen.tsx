@@ -255,7 +255,7 @@ function SeriesView({ series }: { series: Series }) {
             <div className="flex min-w-0 flex-1 basis-field flex-col">
               <span className="text-sm text-text-muted">{t("meetings.series.next")}</span>
               <h2 id="next-meeting" className="text-lg font-semibold">
-                {upcoming.startsAt ? format.dateTime(upcoming.startsAt) : t("meetings.notScheduled")}
+                {upcoming.startsAt ? format.weekdayDateTime(upcoming.startsAt) : t("meetings.notScheduled")}
               </h2>
               <span className="text-sm text-text-muted">
                 {[

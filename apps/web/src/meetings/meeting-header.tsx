@@ -36,7 +36,7 @@ import {
   useMeetingRefresh,
   useReopenMeeting,
 } from "./meeting-actions.js";
-import { type Meeting, meetingKeys, meetingQuery } from "./queries.js";
+import { type Meeting, meetingKeys, meetingQuery, meetingStateLabel } from "./queries.js";
 
 const ATTENDANCE = ["unset", "present", "excused", "absent"] as const;
 type AttendanceChoice = (typeof ATTENDANCE)[number];
@@ -92,24 +92,36 @@ export function MeetingHeader({
     ? new Date(new Date(data.startsAt).getTime() + data.durationMinutes * 60_000)
     : null;
   const missingAccess = peopleWithoutAccess(data.attendees);
+  const notYet =
+    data.startsAt !== null &&
+    localDateInZone(new Date(data.startsAt), target.timeZone) > localDateInZone(new Date(), target.timeZone);
   const planning = writable && data.state === "upcoming";
   return (
     <section aria-label={t("meetings.meeting.label")} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge variant={STATE_BADGE[data.state as keyof typeof STATE_BADGE] ?? "neutral"}>
-          {translateKey(t, `meetings.state.${data.state}`)}
+        <Badge
+          variant={
+            data.state === "upcoming" && !data.next
+              ? "neutral"
+              : (STATE_BADGE[data.state as keyof typeof STATE_BADGE] ?? "neutral")
+          }
+        >
+          {meetingStateLabel(t, data)}
         </Badge>
         {data.extra ? <Badge variant="neutral">{t("meetings.meeting.extra")}</Badge> : null}
         <span className="text-text-muted">
           {data.startsAt && end
-            ? t("meetings.meeting.when", { start: format.dateTime(data.startsAt), end: format.time(end) })
+            ? t("meetings.meeting.when", {
+                start: format.weekdayDateTime(data.startsAt),
+                end: format.time(end),
+              })
             : t("meetings.notScheduled")}
         </span>
         {planning ? (
           <Menu
             align="start"
             trigger={
-              <Button size="sm" variant="secondary" icon={CalendarClock}>
+              <Button variant="secondary" icon={CalendarClock}>
                 {t("meetings.meeting.date")}
                 <ChevronDown aria-hidden="true" className="size-icon-sm" />
               </Button>
@@ -133,13 +145,18 @@ export function MeetingHeader({
         ) : null}
         <span className="ml-auto flex flex-wrap gap-2">
           {writable && data.state === "closed" ? (
-            <Button size="sm" variant="secondary" icon={RotateCcw} onClick={() => void reopen(target)}>
+            <Button variant="secondary" icon={RotateCcw} onClick={() => void reopen(target)}>
               {t("meetings.reopen.action")}
             </Button>
           ) : null}
+          {writable && data.current && notYet && data.startsAt ? (
+            <span className="flex min-h-control-md items-center text-sm text-text-muted">
+              {t("meetings.close.fromDay", { date: format.weekdayDate(data.startsAt) })}
+            </span>
+          ) : null}
           {writable && data.current ? (
             <Button
-              size="sm"
+              disabled={notYet}
               variant="secondary"
               icon={Check}
               onClick={() =>
@@ -376,8 +393,7 @@ function AttendanceSelect({
   return (
     <Select
       value={current}
-      muted
-      className="h-control-sm w-auto border-transparent bg-transparent"
+      className="h-control-md w-auto"
       aria-label={t("meetings.attendance.of", { name })}
       onValueChange={(next) => onChange(next === "unset" ? null : next)}
       options={ATTENDANCE.map((choice) => ({
@@ -450,10 +466,10 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
       await refresh();
     }
   };
-  const chip = "flex items-center gap-1 rounded-full border border-border py-1 pr-1 pl-1 text-sm";
+  const chip = "flex items-center gap-2 text-sm";
   return (
     <div className="flex flex-col gap-2">
-      <ul aria-label={t("meetings.attendance.title")} className="flex flex-wrap items-center gap-2">
+      <ul aria-label={t("meetings.attendance.title")} className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {meeting.attendees.map((attendee) => {
           const name = attendee.name ?? t("meetings.unknownPerson");
           return (
@@ -465,7 +481,7 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
                 size="sm"
                 decorative
               />
-              <span className="shrink-0 pl-1 whitespace-nowrap" title={name}>
+              <span className="shrink-0 whitespace-nowrap" title={name}>
                 {name}
               </span>
               {attendee.active ? null : <Badge variant="neutral">{t("meetings.inactive")}</Badge>}
@@ -481,7 +497,7 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
         {meeting.guests.map((guest) => (
           <li key={guest.id} className={chip} title={guest.note ?? undefined}>
             <PersonAvatar id={guest.id} name={guest.name} size="sm" decorative />
-            <span className="shrink-0 pl-1 whitespace-nowrap">{guest.name}</span>
+            <span className="shrink-0 whitespace-nowrap">{guest.name}</span>
             <Badge variant="neutral">{t("meetings.guests.badge")}</Badge>
             <AttendanceSelect
               name={guest.name}
@@ -491,7 +507,6 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
             />
             {writable ? (
               <IconButton
-                size="sm"
                 variant="ghost"
                 icon={X}
                 label={t("meetings.guests.remove", { name: guest.name })}
@@ -502,7 +517,7 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
         ))}
         {writable && !adding ? (
           <li>
-            <Button size="sm" variant="ghost" icon={Plus} onClick={() => setAdding(true)}>
+            <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
               {t("meetings.attendance.person")}
             </Button>
           </li>

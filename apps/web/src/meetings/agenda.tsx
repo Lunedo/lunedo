@@ -163,11 +163,11 @@ export function AgendaSection({
                 })),
               ]}
               onValueChange={setOwner}
+              size="button"
             />
           ) : null}
           {shown.length > 0 ? (
             <Button
-              size="sm"
               variant="secondary"
               onClick={() => setOpen(allOpen ? new Set() : new Set(shown.map((topic) => topic.id)))}
             >
@@ -175,7 +175,7 @@ export function AgendaSection({
             </Button>
           ) : null}
           {editable ? (
-            <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
+            <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
               {t("meetings.agenda.topic")}
             </Button>
           ) : null}
@@ -286,7 +286,7 @@ function TopicRow({
   const { t } = useTranslation();
   const format = useFormat();
   const sortable = useSortableItem(topic.id, !reorderable);
-  const latest = topic.previous[0];
+  const latest = topic.previous.find((update) => update.text.trim().length > 0);
   const openTasks = topic.tasks.filter((task) => !task.done).length;
   const owner = topic.owner?.name ?? t("meetings.topics.noOwner");
   const bodyId = `topic-body-${topic.id}`;
@@ -316,7 +316,9 @@ function TopicRow({
               topic.oneOff
                 ? t("meetings.agenda.forThisMeeting")
                 : t("meetings.agenda.runningSince", { date: format.calendarDate(topic.createdAt) }),
-              latest ? t("meetings.agenda.lastUpdate", { text: latest.text }) : t("meetings.agenda.noUpdate"),
+              latest
+                ? t("meetings.agenda.lastUpdate", { text: latest.text.replace(/\s+/g, " ").trim() })
+                : t("meetings.agenda.noUpdate"),
             ].join(" · ")}
           </span>
         </button>

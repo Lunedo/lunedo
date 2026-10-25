@@ -1497,6 +1497,7 @@
     "confidentialScope": "In a confidential space, a link can only be shared with specific people. Choose them under “Who can open it”.",
     "seriesEnded": "Bring the series back from the archive to plan meetings or add topics.",
     "meetingClosed": "Someone closed this meeting in the meantime. Reload the page.",
+    "meetingInFuture": "This meeting has not taken place yet. Close it on its day or later, or move it to an earlier date.",
     "meetingNotClosed": "Someone reopened this meeting in the meantime. Reload the page.",
     "meetingNotUpcoming": "Only the upcoming meeting can be moved or skipped. Reload the page to see the current state.",
     "meetingNotEditable": "You cannot edit the notes of this meeting. Ask someone who can edit them.",
@@ -6279,7 +6280,17 @@
     "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel.",
     "articleType": "Article type",
     "articleTypeHint": "Articles created from this template get this type. Readers filter by it in the portal.",
-    "ownTemplates": "Own templates"
+    "ownTemplates": "Own templates",
+    "builtIn": {
+      "title": "Built-in templates",
+      "description": "Templates that ship with Lunedo. They cannot be changed; duplicate one to adapt it for the organization.",
+      "duplicate": "Duplicate",
+      "duplicateNamed": "Duplicate {name}",
+      "copyName": "{name} (copy)",
+      "duplicated": "{name} was duplicated. The copy is in the list above.",
+      "duplicateFailed": "{name} could not be duplicated",
+      "loadFailed": "The built-in templates could not be loaded"
+    }
   },
   "versions": {
     "history": "Versions",
@@ -7233,6 +7244,7 @@
     },
     "state": {
       "upcoming": "Next",
+      "planned": "Planned",
       "closed": "Held",
       "reopened": "Reopened",
       "skipped": "Skipped"
@@ -7389,7 +7401,8 @@
       "done": "{title} closed",
       "doneDescription": "Attendees were told that the notes are available. The next meeting is ready.",
       "failed": "The meeting could not be closed",
-      "undoFailed": "Closing could not be undone"
+      "undoFailed": "Closing could not be undone",
+      "fromDay": "Can be closed from {date}"
     },
     "reopen": {
       "action": "Reopen meeting",
@@ -7679,7 +7692,6 @@
       "customize": "Customize overview",
       "done": "Done",
       "all": "All",
-      "updated": "updated {date}",
       "drag": "Move {name}",
       "left": "Move {name} to the left column",
       "right": "Move {name} to the right column",

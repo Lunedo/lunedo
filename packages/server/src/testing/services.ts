@@ -56,6 +56,7 @@ export async function createTestServices(
     jobs?: JobQueue;
     fileStore?: FileStore;
     backup?: (url: string) => NonNullable<Parameters<typeof createAccountServices>[0]["backup"]>;
+    meetingClock?: () => Date;
   } = {},
 ): Promise<TestServices> {
   const temporary: TemporaryDatabase = options.beforeMigrations
@@ -102,6 +103,7 @@ export async function createTestServices(
       ...(options.pushPolicy ? { pushPolicy: options.pushPolicy } : {}),
       ...(options.render ? { render: options.render } : {}),
       ...(options.renderFetch ? { renderFetch: options.renderFetch } : {}),
+      ...(options.meetingClock ? { meetingClock: options.meetingClock } : {}),
       mailTransport: () => mail,
     });
   const services = build();

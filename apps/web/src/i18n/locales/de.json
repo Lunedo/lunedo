@@ -1497,6 +1497,7 @@
     "confidentialScope": "In einem vertraulichen Space kann ein Link nur mit bestimmten Personen geteilt werden. Wähle sie unter „Wer ihn öffnen kann“.",
     "seriesEnded": "Hole die Serie aus dem Archiv zurück, um Besprechungen zu planen oder Themen hinzuzufügen.",
     "meetingClosed": "Jemand hat diese Besprechung inzwischen abgeschlossen. Lade die Seite neu.",
+    "meetingInFuture": "Diese Besprechung hat noch nicht stattgefunden. Schließ sie an ihrem Tag oder später, oder verschieb sie auf einen früheren Termin.",
     "meetingNotClosed": "Jemand hat diese Besprechung inzwischen wieder geöffnet. Lade die Seite neu.",
     "meetingNotUpcoming": "Nur die anstehende Besprechung kann verschoben oder übersprungen werden. Lade die Seite neu, um den aktuellen Stand zu sehen.",
     "meetingNotEditable": "Du kannst die Notizen dieser Besprechung nicht bearbeiten. Bitte jemanden, der sie bearbeiten kann.",
@@ -6279,7 +6280,17 @@
     "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab.",
     "articleType": "Artikelart",
     "articleTypeHint": "Artikel aus dieser Vorlage bekommen diese Art. Lesende filtern im Portal danach.",
-    "ownTemplates": "Eigene Vorlagen"
+    "ownTemplates": "Eigene Vorlagen",
+    "builtIn": {
+      "title": "Eingebaute Vorlagen",
+      "description": "Vorlagen, die Lunedo mitbringt. Sie lassen sich nicht ändern; dupliziere eine, um sie für die Organisation anzupassen.",
+      "duplicate": "Duplizieren",
+      "duplicateNamed": "{name} duplizieren",
+      "copyName": "{name} (Kopie)",
+      "duplicated": "{name} wurde dupliziert. Die Kopie steht in der Liste oben.",
+      "duplicateFailed": "{name} konnte nicht dupliziert werden",
+      "loadFailed": "Die eingebauten Vorlagen konnten nicht geladen werden"
+    }
   },
   "versions": {
     "history": "Versionen",
@@ -7233,6 +7244,7 @@
     },
     "state": {
       "upcoming": "Nächste",
+      "planned": "Geplant",
       "closed": "Abgehalten",
       "reopened": "Wieder geöffnet",
       "skipped": "Ausgelassen"
@@ -7389,7 +7401,8 @@
       "done": "{title} geschlossen",
       "doneDescription": "Die Teilnehmenden wissen, dass die Notizen verfügbar sind. Die nächste Besprechung ist bereit.",
       "failed": "Die Besprechung konnte nicht geschlossen werden",
-      "undoFailed": "Das Schließen konnte nicht rückgängig gemacht werden"
+      "undoFailed": "Das Schließen konnte nicht rückgängig gemacht werden",
+      "fromDay": "Kann ab {date} geschlossen werden"
     },
     "reopen": {
       "action": "Besprechung wieder öffnen",
@@ -7679,7 +7692,6 @@
       "customize": "Übersicht anpassen",
       "done": "Fertig",
       "all": "Alle",
-      "updated": "aktualisiert {date}",
       "drag": "{name} verschieben",
       "left": "{name} in die linke Spalte",
       "right": "{name} in die rechte Spalte",

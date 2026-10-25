@@ -214,6 +214,12 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
     expect(decided.statusCode, decided.body).toBe(200);
     const log = await colleague.client.get(`/api/v1/meeting-series/${details.id}/decisions?text=AD`);
     expect(log.json().map((entry: { text: string }) => entry.text)).toEqual(["Positions stay in AD."]);
+    const early = await lead.client.post(`/api/v1/meetings/${meetingId}/close`, {});
+    expect(early.json()).toMatchObject({ code: "meetingInFuture" });
+    const moved = await lead.client.put(`/api/v1/meetings/${meetingId}/start`, {
+      startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    });
+    expect(moved.statusCode, moved.body).toBe(204);
     const closed = await lead.client.post(`/api/v1/meetings/${meetingId}/close`, {});
     expect(closed.statusCode, closed.body).toBe(200);
     const next = await lead.client.get(`/api/v1/meetings/${closed.json().nextMeetingId}`);

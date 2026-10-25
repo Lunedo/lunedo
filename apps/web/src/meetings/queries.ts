@@ -1,7 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { api } from "../api/client.js";
 import type { paths } from "../api/generated/schema.js";
 import { request } from "../api/request.js";
+import { translateKey } from "../i18n/translate.js";
 
 type Json<T> = T extends { content: { "application/json": infer Body } } ? Body : never;
 type Ok<Path extends keyof paths, Method extends "get" | "post" | "put" | "patch" | "delete"> = Json<
@@ -140,6 +142,12 @@ export function seriesNotesQuery(seriesId: string) {
         api.GET("/api/v1/meeting-series/{seriesId}/private-notes", { params: { path: { seriesId } } }),
       ),
   });
+}
+
+export function meetingStateLabel(t: TFunction, meeting: { state: string; next: boolean }): string {
+  return meeting.state === "upcoming" && !meeting.next
+    ? t("meetings.state.planned")
+    : translateKey(t, `meetings.state.${meeting.state}`);
 }
 
 export function upcomingQuery(oneOnOne?: boolean) {

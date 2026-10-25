@@ -290,6 +290,7 @@ export const problems = {
   },
   seriesEnded: { status: 409, title: "The meeting series has ended" },
   meetingClosed: { status: 409, title: "The meeting is closed already" },
+  meetingInFuture: { status: 409, title: "The meeting has not taken place yet" },
   meetingNotClosed: { status: 409, title: "The meeting is not closed" },
   meetingNotUpcoming: { status: 409, title: "Only the upcoming meeting can change this way" },
   meetingNotEditable: { status: 403, title: "The meeting notes cannot be edited" },

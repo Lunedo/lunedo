@@ -32,8 +32,8 @@ import { pagePath } from "../spaces/space-queries.js";
 import {
   attendanceQuery,
   decisionsQuery,
-  type MeetingSummary,
   meetingKeys,
+  meetingStateLabel,
   type Series,
   topicPath,
   topicsQuery,
@@ -102,10 +102,6 @@ export function ModuleRow({
   );
 }
 
-function meetingState(t: ReturnType<typeof useTranslation>["t"], meeting: MeetingSummary): string {
-  return translateKey(t, `meetings.state.${meeting.state}`);
-}
-
 function useModule(id: string, series: Series, spaceKey: string) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -155,8 +151,8 @@ function useModule(id: string, series: Series, spaceKey: string) {
               }
               title={topic.title}
               meta={
-                topic.lastUpdateAt
-                  ? t("meetings.overview.updated", { date: format.calendarDate(topic.lastUpdateAt) })
+                topic.lastUpdateText
+                  ? t("meetings.agenda.lastUpdate", { text: topic.lastUpdateText })
                   : t("meetings.agenda.noUpdate")
               }
               {...(topic.openTasks > 0
@@ -216,7 +212,7 @@ function useModule(id: string, series: Series, spaceKey: string) {
                 key={meeting.id}
                 to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
                 lead={<CalendarDays aria-hidden="true" className="size-icon-md" />}
-                title={meeting.startsAt ? format.date(meeting.startsAt) : t("meetings.notScheduled")}
+                title={meeting.startsAt ? format.weekdayDate(meeting.startsAt) : t("meetings.notScheduled")}
                 meta={
                   meeting.state === "upcoming"
                     ? t("meetings.series.openTopics", { count: series.openTopics })
@@ -225,9 +221,7 @@ function useModule(id: string, series: Series, spaceKey: string) {
                       : t("meetings.series.attended", { count: meeting.present, total: meeting.attendees })
                 }
                 value={
-                  <Badge variant={meeting.state === "upcoming" ? "accent" : "neutral"}>
-                    {meetingState(t, meeting)}
-                  </Badge>
+                  <Badge variant={meeting.next ? "accent" : "neutral"}>{meetingStateLabel(t, meeting)}</Badge>
                 }
               />
             )),

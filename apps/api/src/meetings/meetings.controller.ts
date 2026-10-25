@@ -294,7 +294,7 @@ export class MeetingsController {
   @ApiRoute({
     summary: "Close a meeting",
     description:
-      "Closes the meeting and notifies the attendees that the notes are available. Closing the upcoming meeting creates the next one: the next occurrence of the rhythm after now, or, without a fixed rhythm, at `nextStartsAt`. When two people close at the same moment, one succeeds and the other gets `meetingClosed`.",
+      "Closes the meeting and notifies the attendees that the notes are available. Closing the upcoming meeting creates the next one: the next occurrence of the rhythm after now, or, without a fixed rhythm, at `nextStartsAt`. When two people close at the same moment, one succeeds and the other gets `meetingClosed`. A meeting can be closed from its day on, in the time zone of the series; before that the answer is `meetingInFuture`.",
     tags: [TAG],
     status: 200,
     params: meetingParams,
@@ -309,7 +309,7 @@ export class MeetingsController {
         .describe("The result."),
       example: { nextMeetingId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a11" },
     },
-    errors: ["meetingClosed", "nextDateRequired", "seriesEnded"],
+    errors: ["meetingClosed", "meetingInFuture", "nextDateRequired", "seriesEnded"],
   })
   async close(
     @Param("meetingId") meetingId: string,

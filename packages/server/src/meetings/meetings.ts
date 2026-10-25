@@ -79,8 +79,8 @@ export const DEFAULT_TEMPLATE_ID = "builtin:team-meeting";
 export const ONE_ON_ONE_TEMPLATE_ID = "builtin:one-on-one";
 
 const SECTION_TITLES: Record<TemplateLanguage, SectionTitles & { notScheduled: string }> = {
-  en: { runningTopics: "Running topics", openTasks: "Open tasks", notScheduled: "not scheduled yet" },
-  de: { runningTopics: "Laufende Themen", openTasks: "Offene Aufgaben", notScheduled: "noch nicht geplant" },
+  en: { runningTopics: "Running topics", notScheduled: "not scheduled yet" },
+  de: { runningTopics: "Laufende Themen", notScheduled: "noch nicht geplant" },
 };
 
 export interface SeriesScheduleInput {
@@ -122,6 +122,7 @@ export interface MeetingSummary {
   attendees: number;
   present: number;
   extra: boolean;
+  next: boolean;
 }
 
 export interface OverviewLink {
@@ -188,6 +189,7 @@ export interface MeetingDetails {
   seriesTitle: string | null;
   title: string;
   state: MeetingState;
+  next: boolean;
   current: boolean;
   startsAt: Date | null;
   recurrenceId: Date | null;
@@ -476,7 +478,7 @@ export class MeetingService {
       });
     }
     document = addTopicUpdates(document, await this.#openTopicIds(tx, series.item_id), labels);
-    document = withSeriesTaskReport(document, series.item_id, labels);
+    document = withSeriesTaskReport(document, series.item_id);
     await insertInitialDocument(tx, id, actorId, document);
     await tx.execute(sql`
       insert into meetings (item_id, series_id, recurrence_id, starts_at, duration_minutes, state, extra)
@@ -594,8 +596,7 @@ export class MeetingService {
     const template = await this.#templates.get(series.template_id, await this.#templates.language(viewer));
     const upcoming = series.archived
       ? null
-      : ((await this.meetings(viewer, seriesId, { upcoming: true })).items.find((item) => !item.extra) ??
-        null);
+      : ((await this.meetings(viewer, seriesId, { upcoming: true })).items.find((item) => item.next) ?? null);
     const layout = overviewLayoutOf(row.overview_layout);
     return {
       id: series.item_id,
@@ -936,11 +937,13 @@ export class MeetingService {
       limit ${limit + 1}`);
     const rows = result.rows.slice(0, limit);
     const last = rows.at(-1);
+    const nextId = await this.nextMeeting(this.#database, seriesId);
     return {
       items: rows.map((row) => ({
         id: row.item_id,
         title: row.title,
         state: row.state,
+        next: row.item_id === nextId,
         startsAt: toDate(row.starts_at),
         recurrenceId: toDate(row.recurrence_id),
         durationMinutes: row.duration_minutes,
@@ -1006,6 +1009,9 @@ export class MeetingService {
       seriesTitle: seriesVisible ? series.title : null,
       title: meeting.title,
       state: meeting.state,
+      next:
+        meeting.state === "upcoming" &&
+        (await this.nextMeeting(this.#database, meeting.series_id)) === meeting.item_id,
       current:
         (!seriesVisible || !series.archived) &&
         (meeting.state === "upcoming" || meeting.state === "reopened"),
@@ -1066,6 +1072,10 @@ export class MeetingService {
       const meeting = await this.#meeting(tx, meetingId, true);
       if (meeting.state === "closed" || meeting.state === "skipped") {
         throw new SpaceError("meetingClosed", "Someone closed this meeting already");
+      }
+      const startsAt = toDate(meeting.starts_at);
+      if (startsAt && localDate(startsAt, series.time_zone) > localDate(this.#clock(), series.time_zone)) {
+        throw new SpaceError("meetingInFuture", "A meeting can be closed from its day on, not before");
       }
       const next =
         meeting.state === "upcoming" && !meeting.extra
@@ -1426,7 +1436,14 @@ export class MeetingService {
   async currentMeeting(executor: Executor, seriesId: string): Promise<string | null> {
     const result = await executor.execute<{ item_id: string }>(sql`
       select item_id from meetings where series_id = ${seriesId} and state in ('upcoming', 'reopened')
-      order by (state = 'reopened') desc, extra, coalesce(starts_at, 'infinity'::timestamptz) limit 1`);
+      order by (state = 'reopened') desc, coalesce(starts_at, 'infinity'::timestamptz), item_id limit 1`);
+    return result.rows[0]?.item_id ?? null;
+  }
+
+  async nextMeeting(executor: Executor, seriesId: string): Promise<string | null> {
+    const result = await executor.execute<{ item_id: string }>(sql`
+      select item_id from meetings where series_id = ${seriesId} and state = 'upcoming'
+      order by coalesce(starts_at, 'infinity'::timestamptz), item_id limit 1`);
     return result.rows[0]?.item_id ?? null;
   }
 
@@ -1481,7 +1498,7 @@ export class MeetingService {
       upcoming_at: Date | string | null;
     }>(sql`
       select ms.item_id, t.title, t.archived_root_id is not null as archived,
-        (select m.starts_at from meetings m where m.series_id = ms.item_id and m.state = 'upcoming' and not m.extra)
+        (select min(m.starts_at) from meetings m where m.series_id = ms.item_id and m.state = 'upcoming')
           as upcoming_at
       from meeting_series ms join tree_items t on t.id = ms.item_id join spaces s on s.id = t.space_id
       where t.space_id = ${spaceId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}

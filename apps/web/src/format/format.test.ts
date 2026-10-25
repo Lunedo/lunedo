@@ -86,6 +86,9 @@ describe("createFormatter", () => {
     expect(formatter.shortDateTime("2026-10-23T14:00:00Z", now)).toBe("heute, 16:00");
     expect(formatter.calendarDate("2026-10-23T14:00:00Z", now)).toBe("23. Okt.");
     expect(formatter.calendarDateTime("2025-10-23T14:00:00Z", now)).toBe("23. Okt. 2025, 16:00");
+    expect(formatter.weekdayDate("2026-11-02T08:00:00Z", now)).toBe("Montag, 2. Nov.");
+    expect(formatter.weekdayDate("2027-01-04T08:00:00Z", now)).toBe("Montag, 4. Jan. 2027");
+    expect(formatter.weekdayDateTime("2026-11-02T08:00:00Z", now)).toBe("Montag, 2. Nov., 09:00");
   });
 
   it("names byte sizes", () => {

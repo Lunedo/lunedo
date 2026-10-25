@@ -86,6 +86,12 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
   await expect(page.getByText("Positions are kept in AD and synchronized nightly.")).toBeVisible();
 
   await page.goto(meetingUrl);
+  await expect(page.getByText(/Can be closed from/)).toBeVisible();
+  const meetingId = new URL(meetingUrl).pathname.split("/")[4] ?? "";
+  await callApi(page, "PUT", `/api/v1/meetings/${meetingId}/start`, {
+    startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  });
+  await page.reload();
   await page.getByRole("button", { name: "Close meeting" }).click();
   await expect(page.getByText(/closed/).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();

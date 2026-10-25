@@ -31,6 +31,8 @@ export interface Formatter {
   calendarDate(value: Date | string, now?: Date): string;
   calendarDateTime(value: Date | string, now?: Date): string;
   shortDateTime(value: Date | string, now?: Date): string;
+  weekdayDate(value: Date | string, now?: Date): string;
+  weekdayDateTime(value: Date | string, now?: Date): string;
   number(value: number): string;
   percent(value: number): string;
   bytes(value: number): string;
@@ -69,6 +71,19 @@ export function createFormatter(settings: FormatSettings): Formatter {
     month: "short",
     year: "numeric",
   });
+  const weekdayDayMonth = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  });
+  const weekdayDayMonthYear = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
   const calendarDay = new Intl.DateTimeFormat("en-CA", {
     timeZone: settings.timeZone,
     year: "numeric",
@@ -84,6 +99,12 @@ export function createFormatter(settings: FormatSettings): Formatter {
     return calendarDay.format(moment).slice(0, 4) === calendarDay.format(now).slice(0, 4)
       ? dayMonth.format(moment)
       : dayMonthYear.format(moment);
+  };
+  const weekdayDate = (value: Date | string, now = new Date()) => {
+    const moment = toDate(value);
+    return calendarDay.format(moment).slice(0, 4) === calendarDay.format(now).slice(0, 4)
+      ? weekdayDayMonth.format(moment)
+      : weekdayDayMonthYear.format(moment);
   };
   const day = (value: Date | string, now = new Date()) => {
     const moment = toDate(value);
@@ -123,6 +144,8 @@ export function createFormatter(settings: FormatSettings): Formatter {
     calendarDate,
     calendarDateTime: (value, now = new Date()) => `${calendarDate(value, now)}, ${time(value)}`,
     shortDateTime: (value, now = new Date()) => `${day(value, now)}, ${time(value)}`,
+    weekdayDate,
+    weekdayDateTime: (value, now = new Date()) => `${weekdayDate(value, now)}, ${time(value)}`,
     number: (value) => numbers.format(value),
     percent: (value) => percent.format(value),
     bytes(value) {

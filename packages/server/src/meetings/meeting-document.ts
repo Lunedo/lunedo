@@ -1,11 +1,9 @@
 import type { DocumentJson, NodeJson } from "@lunedo/editor-schema";
 
 export const RUNNING_TOPICS_SECTION = "runningTopics";
-export const OPEN_TASKS_SECTION = "openTasks";
 
 export interface SectionTitles {
   runningTopics: string;
-  openTasks: string;
 }
 
 function emptyParagraph(): NodeJson {
@@ -103,29 +101,14 @@ export function removeEmptyTopicUpdate(document: DocumentJson, topicId: string):
   return removed ? result : null;
 }
 
-export function withSeriesTaskReport(
-  document: DocumentJson,
-  seriesId: string,
-  titles: SectionTitles,
-): DocumentJson {
-  let reports = 0;
+export function withSeriesTaskReport(document: DocumentJson, seriesId: string): DocumentJson {
   const visit = (node: NodeJson): NodeJson => {
     if (node.type === "taskReport") {
-      reports += 1;
       return { ...node, attrs: { ...node.attrs, seriesId, spaceId: null, status: "open" } };
     }
     return node.content ? { ...node, content: node.content.map(visit) } : node;
   };
-  const updated = visit(document) as DocumentJson;
-  if (reports > 0) return updated;
-  const report: NodeJson = { type: "taskReport", attrs: { seriesId, status: "open" } };
-  const placed = mapSection(updated, OPEN_TASKS_SECTION, (section) => ({
-    ...section,
-    content: [...(section.content ?? []).filter((node) => !isPlaceholderOnly(node)), report],
-  }));
-  return placed.found
-    ? placed.document
-    : appendSection(updated, OPEN_TASKS_SECTION, titles.openTasks, [report]);
+  return visit(document) as DocumentJson;
 }
 
 export function addDecision(

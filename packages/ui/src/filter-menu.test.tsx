@@ -24,6 +24,17 @@ describe("FilterMenu", () => {
     ).toBe(true);
   });
 
+  it("takes the height of a button when it sits in a row of buttons", () => {
+    renderUi(
+      <>
+        <FilterMenu label="Space" value="" options={options} onValueChange={() => {}} />
+        <FilterMenu label="Person" value="" options={options} onValueChange={() => {}} size="button" />
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Space: All" }).className).toContain("h-control-field");
+    expect(screen.getByRole("button", { name: "Person: All" }).className).toContain("h-control-md");
+  });
+
   it("lists the options with their counts and picks one by keyboard", async () => {
     const user = userEvent.setup();
     const change = vi.fn();
