@@ -399,7 +399,24 @@ export class NotificationService {
 
   visibility(recipientId: string, executor: Executor = this.#database) {
     const cache = new Map<string, Promise<boolean>>();
+    const decisions = new Map<string, Promise<boolean>>();
     const principal = accountPrincipal(recipientId);
+    const can = (action: string, resource: { type: string; id?: string }): Promise<boolean> => {
+      const key = JSON.stringify([action, resource]);
+      let decision = decisions.get(key);
+      if (!decision) {
+        decision = this.#authorization
+          .explain(
+            principal,
+            action,
+            resource,
+            executor === this.#database ? undefined : { executor, fresh: true },
+          )
+          .then((explained) => explained.allowed);
+        decisions.set(key, decision);
+      }
+      return decision;
+    };
     return (row: VisibilityEntry): Promise<boolean> => {
       const key = JSON.stringify([row.type, row.organizationId, row.targetId, row.params]);
       let decision = cache.get(key);
@@ -414,15 +431,7 @@ export class NotificationService {
                 targetId: row.targetId,
                 params: parsed.data,
                 executor,
-                can: async (action, resource) =>
-                  (
-                    await this.#authorization.explain(
-                      principal,
-                      action,
-                      resource,
-                      executor === this.#database ? undefined : { executor, fresh: true },
-                    )
-                  ).allowed,
+                can,
               })
             : Promise.resolve(false);
         cache.set(key, decision);
@@ -623,7 +632,15 @@ export class NotificationService {
 
   async unreadCount(recipientId: string, kind?: NotificationKind): Promise<number> {
     const visible = this.visibility(recipientId);
-    const rows: ListRow[] = await this.#select()
+    const groups = await this.#database
+      .select({
+        type: notifications.type,
+        organizationId: notifications.organizationId,
+        targetId: notifications.targetId,
+        params: notifications.params,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(notifications)
       .where(
         and(
           eq(notifications.recipientId, recipientId),
@@ -632,10 +649,11 @@ export class NotificationService {
           kind ? inArray(notifications.type, [...notificationKindTypes[kind]]) : undefined,
         ),
       )
-      .orderBy(desc(notifications.updatedAt))
+      .groupBy(notifications.type, notifications.organizationId, notifications.targetId, notifications.params)
+      .orderBy(sql`max(${notifications.updatedAt}) desc`)
       .limit(UNREAD_LIMIT);
     let count = 0;
-    for (const row of rows) if (await visible(row)) count += 1;
+    for (const group of groups) if (await visible(group)) count += group.count;
     return count;
   }
 

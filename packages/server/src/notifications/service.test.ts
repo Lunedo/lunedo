@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { NotificationListener } from "../database/notifications.js";
@@ -367,6 +367,73 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(0);
     const unread = await test.services.notifications.list(org.owner.id, { limit: 10, unreadOnly: true });
     expect(unread.items).toEqual([]);
+  });
+
+  it("counts unread notifications the recipient may see, without read, in-app disabled, hidden or deleted ones", async () => {
+    const org = await organization();
+    const other = await organization();
+    for (let index = 0; index < 4; index += 1) await notify(guestNotice(org.id, [org.owner.id]));
+    await notify(guestNotice(other.id, [org.owner.id]));
+    const [newest, second, third] = (await test.services.notifications.list(org.owner.id, { limit: 10 }))
+      .items;
+    await test.services.notifications.markRead(org.owner.id, newest?.id ?? "");
+    await test.pool.query("update notifications set in_app = false where id = $1", [second?.id]);
+    await test.pool.query("delete from notifications where id = $1", [third?.id]);
+
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
+    expect(await test.services.notifications.unreadCount(org.owner.id, "requests")).toBe(0);
+    expect(await test.services.notifications.unreadCount(other.owner.id)).toBe(0);
+  });
+
+  it("counts a notification that combines several events once", async () => {
+    const org = await organization();
+    const target = randomUUID();
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    await notify(guestNotice(org.id, [org.owner.id]));
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(2);
+  });
+
+  it("checks at most the newest 1,000 groups, so a large backlog costs a bounded amount of work", async () => {
+    const org = await organization();
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key,
+         in_app, email_status, count, created_at, updated_at)
+       select gen_random_uuid(), recipient_id, organization_id, type, target_type, gen_random_uuid()::text, params,
+         group_key || n, in_app, email_status, count, created_at, updated_at - make_interval(secs => n)
+       from notifications, generate_series(1, 1000) as n where recipient_id = $1`,
+      [org.owner.id],
+    );
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1000);
+  });
+
+  it("asks the authorization service once per decision, however many notifications share it", async () => {
+    const org = await organization();
+    const administrator = await standard(org.id);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    for (let index = 0; index < 12; index += 1) {
+      await notify({
+        ...guestNotice(org.id, [administrator.id]),
+        params: {
+          organizationName: "Org",
+          guestName: `Guest ${index}`,
+          expiresAt: "2026-10-20T10:00:00.000Z",
+        },
+      });
+    }
+    const explain = vi.spyOn(test.services.authorization, "explain");
+    try {
+      expect(await test.services.notifications.unreadCount(administrator.id)).toBe(12);
+      expect(explain).toHaveBeenCalledTimes(1);
+    } finally {
+      explain.mockRestore();
+    }
   });
 
   it("removes notifications older than the retention period", async () => {
