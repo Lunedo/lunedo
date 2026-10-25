@@ -87,6 +87,10 @@ const en: Texts = {
     title: "A confidential space has no space admin",
     body: text(params.spaceKey),
   }),
+  "space.administratorAppointed": ({ params }) => ({
+    title: "You are now space admin",
+    body: text(params.spaceName),
+  }),
   "article.reviewDue": ({ params }) => ({
     title: "An article is due for review",
     body: text(params.itemTitle),
@@ -130,6 +134,10 @@ const en: Texts = {
   "breakGlass.started": ({ params }) => ({
     title: "Break-glass access started",
     body: text(params.requesterName),
+  }),
+  "space.administratorTaken": ({ params }) => ({
+    title: "An administrator became space admin",
+    body: `${text(params.actorName)} · ${text(params.spaceName)}`,
   }),
   "auth.emergencySignIn": ({ params }) => ({
     title: "Emergency sign-in used",
@@ -249,6 +257,10 @@ const de: Texts = {
     title: "Ein vertraulicher Space hat keinen Space-Admin",
     body: text(params.spaceKey),
   }),
+  "space.administratorAppointed": ({ params }) => ({
+    title: "Du bist jetzt Space-Admin",
+    body: text(params.spaceName),
+  }),
   "article.reviewDue": ({ params }) => ({
     title: "Ein Artikel ist zur Überprüfung fällig",
     body: text(params.itemTitle),
@@ -298,6 +310,10 @@ const de: Texts = {
   "breakGlass.started": ({ params }) => ({
     title: "Notfallzugriff begonnen",
     body: text(params.requesterName),
+  }),
+  "space.administratorTaken": ({ params }) => ({
+    title: "Ein Administrator ist Space-Admin geworden",
+    body: `${text(params.actorName)} · ${text(params.spaceName)}`,
   }),
   "auth.emergencySignIn": ({ params }) => ({
     title: "Notfall-Anmeldung verwendet",

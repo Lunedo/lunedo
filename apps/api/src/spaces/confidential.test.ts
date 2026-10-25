@@ -480,32 +480,6 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
     }
   });
 
-  it("can be deleted by an organization administrator with a reason once no active member remains", async () => {
-    const admin = await person();
-    const space = await confidentialSpace(admin);
-    const path = `/api/v1/organizations/${organizationId}/confidential-spaces/${space.id}/delete`;
-    const early = await owner.post(path, { confirmation: space.key, reason: "Left the company" });
-    expect(early.json().code).toBe("spaceHasMembers");
-    await owner.post(`/api/v1/accounts/${admin.id}/deactivate`);
-    expect((await owner.post(path, { confirmation: "WRONG", reason: "Left" })).json().code).toBe(
-      "confirmationMismatch",
-    );
-    expect((await owner.post(path, { confirmation: space.key, reason: " " })).json().code).toBe(
-      "reasonRequired",
-    );
-    const deleted = await owner.post(path, {
-      confirmation: space.key.toLowerCase(),
-      reason: "Left the company",
-    });
-    expect(deleted.statusCode, deleted.body).toBe(204);
-    const list = await owner.get(`/api/v1/organizations/${organizationId}/confidential-spaces`);
-    expect(list.body).not.toContain(space.id);
-    const audit = await owner.get(`/api/v1/organizations/${organizationId}/audit-events?limit=200`);
-    expect(audit.body).toContain("space.confidentialDeleted");
-    expect(audit.body).toContain("Left the company");
-    expectHidden(audit.body, space, "audit");
-  });
-
   it("can be created by members only while the organization allows it, and always by its administrators", async () => {
     const memberPerson = await person();
     await test.runtime.settings.set(

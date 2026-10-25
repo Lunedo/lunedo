@@ -1,7 +1,6 @@
 import {
   Badge,
   Button,
-  ConfirmDialog,
   Dialog,
   EmptyState,
   Field,
@@ -9,7 +8,6 @@ import {
   Notice,
   RadioGroup,
   Skeleton,
-  Textarea,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,8 +21,6 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { Panel } from "./panel.js";
 
-const REASON_MAX = 500;
-
 interface Summary {
   id: string;
   key: string;
@@ -34,7 +30,6 @@ interface Summary {
   pages: number;
   lastChangedAt: string;
   needsAdministrator: boolean;
-  deletable: boolean;
 }
 
 const keys = {
@@ -53,7 +48,6 @@ export function ConfidentialSpaces({
   const { t } = useTranslation();
   const format = useFormat();
   const [appointing, setAppointing] = useState<Summary | null>(null);
-  const [deleting, setDeleting] = useState<Summary | null>(null);
   const spaces = useQuery({
     queryKey: keys.list(organizationId),
     queryFn: () =>
@@ -94,9 +88,6 @@ export function ConfidentialSpaces({
                   {space.needsAdministrator ? (
                     <Badge variant="warning">{t("confidential.organization.noAdmin")}</Badge>
                   ) : null}
-                  {space.deletable ? (
-                    <Badge variant="danger">{t("confidential.organization.noMembers")}</Badge>
-                  ) : null}
                 </span>
                 <span className="text-sm text-text-muted">
                   {[
@@ -112,11 +103,6 @@ export function ConfidentialSpaces({
                   {t("confidential.organization.appoint")}
                 </Button>
               ) : null}
-              {canManage && space.deletable ? (
-                <Button variant="danger" onClick={() => setDeleting(space)}>
-                  {t("confidential.organization.delete")}
-                </Button>
-              ) : null}
             </li>
           ))}
         </ul>
@@ -127,9 +113,6 @@ export function ConfidentialSpaces({
           space={appointing}
           onClose={() => setAppointing(null)}
         />
-      ) : null}
-      {deleting ? (
-        <DeleteDialog organizationId={organizationId} space={deleting} onClose={() => setDeleting(null)} />
       ) : null}
     </Panel>
   );
@@ -247,72 +230,6 @@ function AppointDialog({
         </Notice>
       </form>
     </Dialog>
-  );
-}
-
-function DeleteDialog({
-  organizationId,
-  space,
-  onClose,
-}: {
-  organizationId: string;
-  space: Summary;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <ConfirmDialog
-      open
-      onOpenChange={(open) => !open && onClose()}
-      title={t("confidential.organization.deleteTitle", { key: space.key })}
-      description={t("confidential.organization.deleteDescription", { count: space.pages })}
-      confirmLabel={t("confidential.organization.deleteConfirm")}
-      cancelLabel={t("common.cancel")}
-      destructive
-      typedConfirmation={{
-        value: space.key,
-        label: t("confidential.organization.typeKey", { key: space.key }),
-        mismatch: t("confidential.organization.keyMismatch"),
-      }}
-      onConfirm={async () => {
-        const value = reason.trim();
-        if (value.length === 0 || value.length > REASON_MAX) {
-          setError(t("confidential.organization.reasonRequired", { max: REASON_MAX }));
-          focusFirstInvalidSoon();
-          throw new Error("reason");
-        }
-        try {
-          await request(() =>
-            api.POST("/api/v1/organizations/{organizationId}/confidential-spaces/{spaceId}/delete", {
-              params: { path: { organizationId, spaceId: space.id } },
-              body: { confirmation: space.key, reason: value },
-            }),
-          );
-          await queryClient.invalidateQueries({ queryKey: keys.list(organizationId) });
-          toast({ variant: "success", title: t("confidential.organization.deleted", { key: space.key }) });
-          onClose();
-        } catch (problem) {
-          toast({
-            variant: "error",
-            title: t("confidential.organization.deleteFailed"),
-            description: problemMessage(t, problem),
-          });
-          throw problem;
-        }
-      }}
-    >
-      <Field
-        label={t("confidential.organization.reason")}
-        hint={t("confidential.organization.reasonHint")}
-        error={error ?? undefined}
-      >
-        <Textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} />
-      </Field>
-    </ConfirmDialog>
   );
 }
 

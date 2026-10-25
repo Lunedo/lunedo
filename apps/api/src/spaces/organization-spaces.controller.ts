@@ -1,5 +1,6 @@
 import {
   defaultSpacePermissionsSchema,
+  ERASURE_REASON_MAX_LENGTH,
   isValidSpaceKey,
   normalizeSpaceKey,
   SpaceError,
@@ -119,6 +120,18 @@ const defaultsBodySchema = z
   })
   .strict()
   .describe("Default permissions for new spaces.");
+
+const becomeAdministratorSchema = z
+  .object({
+    reason: z
+      .string()
+      .max(ERASURE_REASON_MAX_LENGTH * 2)
+      .describe(
+        `Why the caller needs the role, 1 to ${ERASURE_REASON_MAX_LENGTH} characters; it goes into the audit log and to the space admins.`,
+      ),
+  })
+  .strict()
+  .describe("The reason.");
 
 const appointSchema = z
   .object({ accountId: uuid("Person of the organization who becomes space admin.") })
@@ -380,7 +393,7 @@ export class OrganizationSpacesController {
   @ApiRoute({
     summary: "Appoint a space admin",
     description:
-      "Makes a person of the organization space admin of a space that has none. Administrators cannot appoint themselves. The appointment is audited.",
+      "Makes a person of the organization space admin of a space that has none. Administrators cannot appoint themselves. The appointment is audited and the person is notified.",
     tags: [TAG],
     params: appointParams,
     body: appointSchema,
@@ -397,5 +410,26 @@ export class OrganizationSpacesController {
     if (!space || space.organizationId !== organizationId)
       throw new SpaceError("spaceNotFound", "The space does not exist");
     await this.#services.spaces.appointAdministrator(actorOf(request), spaceId, body.accountId);
+  }
+
+  @Post(":organizationId/spaces/:spaceId/self-appointment")
+  @Permission("organization.spaces.manage", organization, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Become space admin of a space",
+    description:
+      "Gives the caller the space admin role in a space of the organization that is not personal, one-on-one or confidential. Requires a reason, which goes into the audit log; the current space admins get a notification and an e-mail with who, when and why. The role is a normal space admin role: visible in the permissions of the space and removable there. Needs a signed-in session; API tokens are refused.",
+    tags: [TAG],
+    params: appointParams,
+    body: becomeAdministratorSchema,
+    bodyExample: { reason: "The team left; the space needs a new owner for its pages" },
+    errors: ["alreadyAdministrator", "invalidHolder", "reasonRequired"],
+  })
+  async becomeAdministrator(
+    @Param("organizationId") organizationId: string,
+    @Param("spaceId") spaceId: string,
+    @Body() body: z.output<typeof becomeAdministratorSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.spaces.becomeAdministrator(actorOf(request), organizationId, spaceId, body.reason);
   }
 }

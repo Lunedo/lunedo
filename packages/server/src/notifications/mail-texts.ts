@@ -103,6 +103,8 @@ const english: Record<ContentNotificationType, Line> = {
   },
   "space.confidentialWithoutAdministrator": (p) =>
     `The confidential space ${text(p.spaceKey)} has no space admin anymore. You can appoint one of its remaining members.`,
+  "space.administratorAppointed": (p, c) =>
+    `${c.actor ?? "An administrator"} made you space admin of ${text(p.spaceName)}. You now manage its permissions and settings.`,
   "blogPost.published": (p) => `New post in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
   "article.reviewDue": (p, c) =>
     `The article ${text(p.itemTitle)} is due for review on ${c.date(text(p.dueAt))}. Check that it is still correct and mark it as reviewed.`,
@@ -197,6 +199,8 @@ const german: Record<ContentNotificationType, Line> = {
   },
   "space.confidentialWithoutAdministrator": (p) =>
     `Der vertrauliche Space ${text(p.spaceKey)} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.`,
+  "space.administratorAppointed": (p, c) =>
+    `${c.actor ?? "Die Administration"} hat dich zum Space-Admin von ${text(p.spaceName)} ernannt. Du verwaltest jetzt seine Berechtigungen und Einstellungen.`,
   "blogPost.published": (p) => `Neuer Beitrag in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
   "article.reviewDue": (p, c) =>
     `Der Artikel ${text(p.itemTitle)} ist am ${c.date(text(p.dueAt))} zur Überprüfung fällig. Prüfe, ob er noch stimmt, und markiere ihn als geprüft.`,

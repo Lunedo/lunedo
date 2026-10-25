@@ -52,6 +52,7 @@ import { PersonalSpacesController } from "../spaces/personal-spaces.controller.j
 import { PortalAccountsController } from "../spaces/portal-accounts.controller.js";
 import { ReviewsController } from "../spaces/reviews.controller.js";
 import { ShortcutsController } from "../spaces/shortcuts.controller.js";
+import { SpaceCleanupController } from "../spaces/space-cleanup.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
 import { StatisticsController } from "../spaces/statistics.controller.js";
 import { TemplateFilesController } from "../spaces/template-files.controller.js";
@@ -88,6 +89,7 @@ export const apiControllers = (): Type[] => [
   SpacesController,
   OrganizationSpacesController,
   ConfidentialSpacesController,
+  SpaceCleanupController,
   ItemsController,
   KnowledgeBasesController,
   ArticleApiController,

@@ -7,11 +7,13 @@ import {
   type AccessImpact,
   accessImpact,
   activeAdministratorCondition,
+  spaceRoleConditionFor,
   storedGrants,
 } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { insertKnowledgeBase } from "../knowledge-bases/rules.js";
+import type { NotificationService } from "../notifications/service.js";
 import type { SettingsService } from "../settings/service.js";
 import {
   actorIdOf,
@@ -38,6 +40,7 @@ import {
 } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
 import { insertDefaultPageStatuses } from "./status.js";
+import { ERASURE_REASON_MAX_LENGTH } from "./trash.js";
 
 export const SPACE_NAME_MAX_LENGTH = 100;
 export const SPACE_DESCRIPTION_MAX_LENGTH = 1000;
@@ -193,6 +196,7 @@ export class SpaceService {
   readonly #authorization: AuthorizationService;
   readonly #settings: SettingsService;
   readonly #people: PeopleService;
+  readonly #notifications: NotificationService;
 
   constructor(options: {
     database: Database;
@@ -200,12 +204,14 @@ export class SpaceService {
     authorization: AuthorizationService;
     settings: SettingsService;
     people: PeopleService;
+    notifications: NotificationService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#authorization = options.authorization;
     this.#settings = options.settings;
     this.#people = options.people;
+    this.#notifications = options.notifications;
   }
 
   async #find(executor: Executor, condition: SQL): Promise<Space | null> {
@@ -669,6 +675,125 @@ export class SpaceService {
           targetId: spaceId,
           fields,
           scope: auditScopeOf(space),
+        });
+      }
+      await this.#notifications.notify(tx, {
+        type: "space.administratorAppointed",
+        recipients: [accountId],
+        organizationId: space.organizationId,
+        targetId: spaceId,
+        actor,
+        params: { spaceName: space.name, spaceKey: space.key },
+      });
+      await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
+    });
+  }
+
+  async becomeAdministrator(
+    actor: Principal,
+    organizationId: string,
+    spaceId: string,
+    reason: string,
+  ): Promise<void> {
+    if (actor.type !== "account") {
+      throw new SpaceError("invalidHolder", "Only a person can become space admin");
+    }
+    const cleaned = reason.replace(/\s+/g, " ").trim();
+    if (cleaned.length === 0 || cleaned.length > ERASURE_REASON_MAX_LENGTH) {
+      throw new SpaceError(
+        "reasonRequired",
+        `Name the reason for becoming space admin in 1 to ${ERASURE_REASON_MAX_LENGTH} characters`,
+      );
+    }
+    await this.#database.transaction(async (tx) => {
+      const space = await this.lock(tx, spaceId);
+      if (
+        space.organizationId !== organizationId ||
+        space.personal ||
+        space.confidential ||
+        space.quarantined
+      ) {
+        throw new SpaceError("spaceNotFound", "The space does not exist");
+      }
+      const self = await tx.execute<{ member: boolean; administrator: boolean; name: string }>(sql`
+        select a.name,
+          exists (select 1 from memberships m where m.account_id = a.id and m.organization_id = ${organizationId}
+            and m.kind = 'member' and (m.expires_at is null or m.expires_at > now())) as member,
+          ${spaceRoleConditionFor(sql`a.id`, sql`s`, "admin")} as administrator
+        from accounts a join spaces s on s.id = ${spaceId}
+        where a.id = ${actor.id} and a.state = 'active'`);
+      const me = self.rows[0];
+      if (!me?.member) {
+        throw new SpaceError(
+          "invalidHolder",
+          "Only active members of the organization can become space admin",
+        );
+      }
+      if (me.administrator) {
+        throw new SpaceError("alreadyAdministrator", "You are already space admin of this space");
+      }
+      const administrators = await tx.execute<{ id: string }>(sql`
+        select a.id from accounts a join spaces s on s.id = ${spaceId}
+        where a.id <> ${actor.id} and a.id in (
+          select sp.principal_id from space_permissions sp
+          where sp.space_id = ${spaceId} and sp.principal_kind = 'account' and sp.role = 'admin'
+          union
+          select gm.account_id from space_permissions sp join group_members gm on gm.group_id = sp.principal_id
+          where sp.space_id = ${spaceId} and sp.principal_kind = 'group' and sp.role = 'admin')
+          and ${spaceRoleConditionFor(sql`a.id`, sql`s`, "admin")}`);
+      const previous = await tx.execute<{ role: SpaceRole }>(sql`
+        select role from space_permissions
+        where space_id = ${spaceId} and principal_kind = 'account' and principal_id = ${actor.id}`);
+      await tx.execute(sql`
+        insert into space_permissions (id, space_id, principal_kind, principal_id, role, created_by)
+        values (${uuidv7()}, ${spaceId}, 'account', ${actor.id}, 'admin', ${actor.id})
+        on conflict on constraint space_permissions_holder_unique
+        do update set role = 'admin', updated_at = now()`);
+      const scope = auditScopeOf(space);
+      await this.#audit.record(tx, {
+        name: "space.administratorTaken",
+        actor,
+        targetId: spaceId,
+        fields: { name: space.name, key: space.key, reason: cleaned },
+        scope,
+      });
+      const fields = {
+        name: space.name,
+        principalKind: "account" as const,
+        principalId: actor.id,
+        role: "admin" as const,
+      };
+      const before = previous.rows[0]?.role;
+      await this.#audit.record(
+        tx,
+        before
+          ? {
+              name: "space.permissionChanged",
+              actor,
+              targetId: spaceId,
+              fields: { ...fields, previousRole: before },
+              scope,
+            }
+          : { name: "space.permissionGranted", actor, targetId: spaceId, fields, scope },
+      );
+      if (administrators.rows.length > 0) {
+        const organization = await tx.execute<{ name: string }>(
+          sql`select name from organizations where id = ${organizationId}`,
+        );
+        await this.#notifications.notify(tx, {
+          type: "space.administratorTaken",
+          recipients: administrators.rows.map((row) => row.id),
+          organizationId,
+          targetId: spaceId,
+          actor,
+          params: {
+            organizationName: organization.rows[0]?.name ?? "",
+            spaceName: space.name,
+            spaceKey: space.key,
+            actorName: me.name,
+            reason: cleaned,
+            takenAt: new Date().toISOString(),
+          },
         });
       }
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });

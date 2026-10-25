@@ -28,6 +28,7 @@ import {
   Plus,
   Settings,
   ShieldCheck,
+  ShieldPlus,
   Trash2,
   UserCog,
   X,
@@ -55,8 +56,10 @@ import {
   RoleSelect,
 } from "../access/holders.js";
 import { type SpaceRole, type SpaceVisibility, spaceDefaultsQuery, spaceKeys } from "../space-queries.js";
+import { BecomeAdministratorDialog, type BecomeAdministratorTarget } from "./become-administrator-dialog.js";
 import { ConfidentialSpaces } from "./confidential-spaces.js";
 import { Panel } from "./panel.js";
+import { SpaceCleanup } from "./space-cleanup.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/spaces");
 const VISIBILITIES: SpaceVisibility[] = ["private", "organization", "instance"];
@@ -105,18 +108,35 @@ export function OrganizationSpacesScreen() {
           onValueChange={setTab}
           tabs={[
             { value: "all", label: t("spaces.organization.allSpaces") },
+            ...(state.can("organization.spaces.manage")
+              ? [{ value: "cleanup", label: t("spaces.cleanup.tab") }]
+              : []),
             { value: "defaults", label: t("spaces.organization.defaultsTab") },
           ]}
         >
           {tab === "all" ? (
             <div className="flex flex-col gap-6">
               <WithoutAdministrator organizationId={organizationId} />
-              <AllSpaces organizationId={organizationId} />
+              <AllSpaces
+                organizationId={organizationId}
+                canManageSpaces={state.can("organization.spaces.manage")}
+              />
               <ConfidentialSpaces
                 organizationId={organizationId}
                 canManage={state.can("organization.spaces.manage")}
               />
             </div>
+          ) : tab === "cleanup" ? (
+            <SpaceCleanup
+              organizationId={organizationId}
+              organizationName={organization.data?.name}
+              canManage={state.can("organization.spaces.manage")}
+              canChangeSetting={canManage}
+              settings={settings.data}
+              onSettingChange={async (key, change) => {
+                await mutation.mutateAsync({ key, change });
+              }}
+            />
           ) : (
             defaults
           )}
@@ -172,7 +192,13 @@ function SpaceStatus({ space }: { space: OrganizationSpace }) {
   );
 }
 
-function AllSpaces({ organizationId }: { organizationId: string }) {
+function AllSpaces({
+  organizationId,
+  canManageSpaces,
+}: {
+  organizationId: string;
+  canManageSpaces: boolean;
+}) {
   const { t } = useTranslation();
   const format = useFormat();
   const navigate = useNavigate();
@@ -182,6 +208,7 @@ function AllSpaces({ organizationId }: { organizationId: string }) {
   const [type, setType] = useState<SpaceTypeFilter>("all");
   const [stateFilter, setStateFilter] = useState<SpaceStateFilter>("all");
   const [appointing, setAppointing] = useState<{ id: string; name: string } | null>(null);
+  const [becoming, setBecoming] = useState<BecomeAdministratorTarget | null>(null);
   const table = useServerTable(
     [...spaceKeys.organizationSpaces(organizationId), type, stateFilter],
     (search, cursor, limit) =>
@@ -250,6 +277,15 @@ function AllSpaces({ organizationId }: { organizationId: string }) {
             },
           ]
         : []),
+    ...(!space.canManage && !space.confidential && canManageSpaces
+      ? [
+          {
+            label: t("spaces.become.action"),
+            icon: ShieldPlus,
+            onSelect: () => setBecoming({ id: space.id, key: space.key, name: label(space) }),
+          },
+        ]
+      : []),
     ...(space.canManage
       ? [
           { type: "separator" as const },
@@ -439,6 +475,13 @@ function AllSpaces({ organizationId }: { organizationId: string }) {
         space={appointing}
         onOpenChange={(open) => !open && setAppointing(null)}
       />
+      {becoming ? (
+        <BecomeAdministratorDialog
+          organizationId={organizationId}
+          space={becoming}
+          onClose={() => setBecoming(null)}
+        />
+      ) : null}
     </section>
   );
 }

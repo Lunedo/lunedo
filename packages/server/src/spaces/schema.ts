@@ -115,6 +115,7 @@ export const spaces = pgTable(
     archivedAt: timestampColumn(),
     archivedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     deletedAt: timestampColumn(),
+    orphanedAt: timestampColumn(),
     ...timestamps(),
   },
   (table) => [

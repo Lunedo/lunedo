@@ -45,6 +45,14 @@ export interface MailTemplates {
     reason: string;
     minutes: number;
   };
+  spaceAdministratorTaken: {
+    instanceName: string;
+    organizationName: string;
+    spaceName: string;
+    actorName: string;
+    reason: string;
+    takenAt: string;
+  };
   guestExpiring: { instanceName: string; organizationName: string; guestName: string; date: string };
   guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
@@ -242,6 +250,14 @@ const catalogs: Record<Language, Catalog> = {
         `${requesterName} started emergency access to ${organizationName} with administrator rights for ${minutes} minutes.`,
         `Reason: ${reason}`,
         "Every action during the access is recorded in the audit log.",
+      ],
+    }),
+    spaceAdministratorTaken: ({ instanceName, organizationName, spaceName, actorName, reason, takenAt }) => ({
+      subject: `${actorName} became space admin of ${spaceName} on ${instanceName}`,
+      paragraphs: [
+        `${actorName} used the administration of ${organizationName} on ${takenAt} to become space admin of ${spaceName}. You receive this because you are a space admin there.`,
+        `Reason: ${reason}`,
+        "The role gives full access to the content of the space. If you did not expect this, remove it in the permissions of the space and talk to the administrators of the organization. The step is recorded in the audit log.",
       ],
     }),
     guestExpiring: ({ instanceName, organizationName, guestName, date }) => ({
@@ -446,6 +462,14 @@ const catalogs: Record<Language, Catalog> = {
         `${requesterName} hat einen Notfallzugriff auf ${organizationName} mit Administrationsrechten für ${minutes} Minuten gestartet.`,
         `Begründung: ${reason}`,
         "Jede Aktion während des Zugriffs wird im Audit-Log festgehalten.",
+      ],
+    }),
+    spaceAdministratorTaken: ({ instanceName, organizationName, spaceName, actorName, reason, takenAt }) => ({
+      subject: `${actorName} ist Space-Admin von ${spaceName} auf ${instanceName} geworden`,
+      paragraphs: [
+        `${actorName} hat sich am ${takenAt} über die Verwaltung von ${organizationName} zum Space-Admin von ${spaceName} gemacht. Du bekommst diese Nachricht, weil du dort Space-Admin bist.`,
+        `Begründung: ${reason}`,
+        "Die Rolle gibt vollen Zugriff auf die Inhalte des Space. Wenn du das nicht erwartet hast, entferne sie in den Berechtigungen des Space und sprich mit der Administration der Organisation. Der Schritt steht im Audit-Log.",
       ],
     }),
     guestExpiring: ({ instanceName, organizationName, guestName, date }) => ({

@@ -11,7 +11,6 @@ import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } 
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import { signalSpaceChange } from "./signals.js";
-import { ERASURE_REASON_MAX_LENGTH } from "./trash.js";
 
 export interface ConfidentialSpaceSummary {
   id: string;
@@ -22,7 +21,6 @@ export interface ConfidentialSpaceSummary {
   pages: number;
   lastChangedAt: Date;
   needsAdministrator: boolean;
-  deletable: boolean;
 }
 
 type SummaryRow = {
@@ -56,19 +54,7 @@ function toSummary(row: SummaryRow): ConfidentialSpaceSummary {
     pages: Number(row.pages),
     lastChangedAt: new Date(row.last_changed_at),
     needsAdministrator: !row.has_administrator && activeMembers > 0,
-    deletable: activeMembers === 0,
   };
-}
-
-function cleanReason(reason: string): string {
-  const value = reason.replace(/\s+/g, " ").trim();
-  if (value.length === 0 || value.length > ERASURE_REASON_MAX_LENGTH) {
-    throw new SpaceError(
-      "reasonRequired",
-      `Name the reason for deleting the space in 1 to ${ERASURE_REASON_MAX_LENGTH} characters`,
-    );
-  }
-  return value;
 }
 
 export class ConfidentialSpaceService {
@@ -201,39 +187,16 @@ export class ConfidentialSpaceService {
           scope,
         });
       }
-      await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
-    });
-  }
-
-  async delete(
-    actor: Principal,
-    organizationId: string,
-    spaceId: string,
-    input: { confirmation: string; reason: string },
-  ): Promise<void> {
-    const reason = cleanReason(input.reason);
-    await this.#database.transaction(async (tx) => {
-      const summary = await this.#summary(tx, organizationId, spaceId);
-      if (!summary.deletable) {
-        throw new SpaceError(
-          "spaceHasMembers",
-          "Active members remain; only they can decide about the space",
-        );
-      }
-      if (input.confirmation.trim().toUpperCase() !== summary.key) {
-        throw new SpaceError("confirmationMismatch", "Type the key of the space exactly to delete it");
-      }
-      await this.#audit.record(tx, {
-        name: "space.confidentialDeleted",
-        actor,
+      const named = await tx.execute<{ name: string }>(sql`select name from spaces where id = ${spaceId}`);
+      await this.#notifications.notify(tx, {
+        type: "space.administratorAppointed",
+        recipients: [accountId],
+        organizationId,
         targetId: spaceId,
-        fields: { key: summary.key, reason },
-        scope: auditScopeOf({ organizationId }),
+        actor,
+        params: { spaceName: named.rows[0]?.name ?? "", spaceKey: summary.key },
       });
-      await signalSpaceChange(tx, { spaceId, kind: "space", itemId: null });
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
-      await tx.execute(sql`delete from setting_values where level = 'space' and scope_id = ${spaceId}`);
-      await tx.execute(sql`delete from spaces where id = ${spaceId}`);
     });
   }
 

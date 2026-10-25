@@ -57,6 +57,7 @@ export class AccountAdministrationService {
   readonly #mapping: GroupMappingService;
   readonly #settings: SettingsService;
   readonly #memberships: MembershipService;
+  readonly #reactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
 
   constructor(options: {
     database: Database;
@@ -349,6 +350,10 @@ export class AccountAdministrationService {
     });
   }
 
+  onReactivated(listener: (tx: Transaction, accountId: string) => Promise<void>): void {
+    this.#reactivationListeners.push(listener);
+  }
+
   async reactivate(
     actor: Principal,
     accountId: string,
@@ -393,6 +398,7 @@ export class AccountAdministrationService {
         .set({ state: "active", updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
       await this.#checkRank(tx, actor, target, REACTIVATE_ACTION);
+      for (const listener of this.#reactivationListeners) await listener(tx, accountId);
       await this.#audit.record(tx, {
         name: "account.reactivated",
         actor,

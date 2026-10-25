@@ -40,6 +40,16 @@ export const membersCreateConfidentialSpacesSetting = defineSetting({
   lockable: true,
 });
 
+export const CLEANUP_GRACE_MINIMUM_DAYS = 7;
+
+export const cleanupGraceDaysSetting = defineSetting({
+  key: "spaces.cleanupGraceDays",
+  schema: z.number().int().min(CLEANUP_GRACE_MINIMUM_DAYS).max(3650),
+  default: 30,
+  levels: ["organization"],
+  lockable: false,
+});
+
 export const defaultSpacePermissionsSetting = defineSetting<DefaultSpacePermissions>({
   key: "spaces.defaultPermissions",
   schema: defaultSpacePermissionsSchema,
@@ -130,6 +140,7 @@ export const trashSecondStageDaysSetting = defineSetting({
 export const spaceSettings = [
   membersCreateSpacesSetting,
   membersCreateConfidentialSpacesSetting,
+  cleanupGraceDaysSetting,
   defaultSpacePermissionsSetting,
   personalSpacesSetting,
   defaultPageModeSetting,

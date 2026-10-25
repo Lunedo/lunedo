@@ -150,6 +150,8 @@ export const auditEventNames = [
   "space.administratorAppointed",
   "space.confidentialAdministratorAppointed",
   "space.confidentialDeleted",
+  "space.administratorTaken",
+  "space.cleanupDeleted",
   "space.personalTransferred",
   "space.deleted",
   "space.restored",

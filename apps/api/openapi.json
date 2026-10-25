@@ -169209,10 +169209,6 @@
                           "needsAdministrator": {
                             "type": "boolean",
                             "description": "True when no active space admin remains but other members do; one of them can be appointed."
-                          },
-                          "deletable": {
-                            "type": "boolean",
-                            "description": "True when no active member remains; then the space can be deleted."
                           }
                         },
                         "required": [
@@ -169223,8 +169219,7 @@
                           "activeMembers",
                           "pages",
                           "lastChangedAt",
-                          "needsAdministrator",
-                          "deletable"
+                          "needsAdministrator"
                         ],
                         "additionalProperties": false,
                         "description": "A confidential space as organization administrators see it: no name, members or content."
@@ -169256,8 +169251,7 @@
                       "activeMembers": 1,
                       "pages": 12,
                       "lastChangedAt": "2026-10-08T15:00:00.000Z",
-                      "needsAdministrator": true,
-                      "deletable": false
+                      "needsAdministrator": true
                     }
                   ],
                   "nextCursor": null
@@ -169388,7 +169382,7 @@
       "post": {
         "operationId": "confidentialSpaces.appoint",
         "summary": "Appoint a space admin of a confidential space",
-        "description": "Makes a remaining member space admin of a confidential space that has none. Never the caller and never someone who is not a member. The appointment is audited.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`. Needs a signed-in session; API tokens are refused.",
+        "description": "Makes a remaining member space admin of a confidential space that has none. Never the caller and never someone who is not a member. The appointment is audited and the member is notified.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Spaces"
         ],
@@ -169587,245 +169581,6 @@
                       "title": "The space has a space admin",
                       "status": 409,
                       "code": "spaceHasAdministrator"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`maintenanceMode`: The instance is in maintenance mode.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "maintenanceMode": {
-                    "value": {
-                      "type": "urn:lunedo:problem:maintenanceMode",
-                      "title": "The instance is in maintenance mode",
-                      "status": 503,
-                      "code": "maintenanceMode"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/organizations/{organizationId}/confidential-spaces/{spaceId}/delete": {
-      "post": {
-        "operationId": "confidentialSpaces.delete",
-        "summary": "Delete a confidential space without members",
-        "description": "Deletes a confidential space in which no active member remains, permanently and without reading it. Requires typing the key and a reason, which goes into the audit log. This cannot be undone.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`. Needs a signed-in session; API tokens are refused.",
-        "tags": [
-          "Spaces"
-        ],
-        "x-lunedo-permission": {
-          "action": "organization.spaces.manage",
-          "resource": "organization",
-          "parameter": "organizationId"
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "organizationId",
-            "in": "path",
-            "required": true,
-            "description": "ID of the organization.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "description": "ID of the confidential space.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "confirmation": {
-                    "type": "string",
-                    "maxLength": 40,
-                    "description": "The key of the space, typed exactly."
-                  },
-                  "reason": {
-                    "type": "string",
-                    "maxLength": 1000,
-                    "description": "Why the space is deleted, 1 to 500 characters; it goes into the audit log."
-                  }
-                },
-                "required": [
-                  "confirmation",
-                  "reason"
-                ],
-                "additionalProperties": false,
-                "description": "Confirmation and reason."
-              },
-              "example": {
-                "confirmation": "MSAB",
-                "reason": "Both people left the company"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Done. The response has no body."
-          },
-          "400": {
-            "description": "`confirmationMismatch`: The confirmation does not match. `invalidInput`: The request is not valid. `reasonRequired`: A reason is required.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "confirmationMismatch": {
-                    "value": {
-                      "type": "urn:lunedo:problem:confirmationMismatch",
-                      "title": "The confirmation does not match",
-                      "status": 400,
-                      "code": "confirmationMismatch"
-                    }
-                  },
-                  "invalidInput": {
-                    "value": {
-                      "type": "urn:lunedo:problem:invalidInput",
-                      "title": "The request is not valid",
-                      "status": 400,
-                      "code": "invalidInput"
-                    }
-                  },
-                  "reasonRequired": {
-                    "value": {
-                      "type": "urn:lunedo:problem:reasonRequired",
-                      "title": "A reason is required",
-                      "status": 400,
-                      "code": "reasonRequired"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "`notSignedIn`: Sign in or send an API token.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "notSignedIn": {
-                    "value": {
-                      "type": "urn:lunedo:problem:notSignedIn",
-                      "title": "Sign in or send an API token",
-                      "status": 401,
-                      "code": "notSignedIn"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "csrfRejected": {
-                    "value": {
-                      "type": "urn:lunedo:problem:csrfRejected",
-                      "title": "The request failed the cross-site request check",
-                      "status": 403,
-                      "code": "csrfRejected"
-                    }
-                  },
-                  "forbidden": {
-                    "value": {
-                      "type": "urn:lunedo:problem:forbidden",
-                      "title": "Not allowed",
-                      "status": 403,
-                      "code": "forbidden"
-                    }
-                  },
-                  "reauthenticationRequired": {
-                    "value": {
-                      "type": "urn:lunedo:problem:reauthenticationRequired",
-                      "title": "Confirm your identity first",
-                      "status": 403,
-                      "code": "reauthenticationRequired"
-                    }
-                  },
-                  "sessionRequired": {
-                    "value": {
-                      "type": "urn:lunedo:problem:sessionRequired",
-                      "title": "This endpoint needs a signed-in session",
-                      "status": 403,
-                      "code": "sessionRequired"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`notFound`: Not found.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "notFound": {
-                    "value": {
-                      "type": "urn:lunedo:problem:notFound",
-                      "title": "Not found",
-                      "status": 404,
-                      "code": "notFound"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`spaceHasMembers`: The space still has active members.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "spaceHasMembers": {
-                    "value": {
-                      "type": "urn:lunedo:problem:spaceHasMembers",
-                      "title": "The space still has active members",
-                      "status": 409,
-                      "code": "spaceHasMembers"
                     }
                   }
                 }
@@ -188402,6 +188157,557 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/space-cleanup": {
+      "get": {
+        "operationId": "spaceCleanup.list",
+        "summary": "List protected spaces to clean up",
+        "description": "Lists personal, one-on-one and confidential spaces of the organization in which no active member remains and that have stayed so for the waiting period of the organization (at least 7 days). Shows key, kind, size, pages, last activity and former members; names, titles and content stay hidden. Personal spaces count for the home organization of their owner.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.spaces.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Spaces to clean up and the waiting period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the space."
+                          },
+                          "key": {
+                            "type": "string",
+                            "description": "Key of the space."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "personal",
+                              "oneOnOne",
+                              "confidential"
+                            ],
+                            "description": "`personal` for a personal space of someone whose home organization this is, `oneOnOne` or `confidential`."
+                          },
+                          "storageBytes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Size of all files attached in the space, in bytes."
+                          },
+                          "pages": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Pages and blog posts in the space, without the trash."
+                          },
+                          "lastActivityAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When content in the space last changed. ISO 8601 timestamp in UTC."
+                          },
+                          "orphanedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the last active member left the space. ISO 8601 timestamp in UTC."
+                          },
+                          "formerMembers": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Name of the person."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A former member."
+                            },
+                            "description": "People who held a role in the space, ordered by name. None of them is active anymore."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "key",
+                          "kind",
+                          "storageBytes",
+                          "pages",
+                          "lastActivityAt",
+                          "orphanedAt",
+                          "formerMembers"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A protected space without active members, as organization administrators see it: no name or content."
+                      },
+                      "description": "Spaces to clean up, ordered by key."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page. Pass it as `cursor`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "graceDays": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Days a space stays without active members before it appears here."
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor",
+                    "graceDays"
+                  ],
+                  "additionalProperties": false
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b00",
+                      "key": "MSAB",
+                      "kind": "confidential",
+                      "storageBytes": 1048576,
+                      "pages": 12,
+                      "lastActivityAt": "2026-08-01T15:00:00.000Z",
+                      "orphanedAt": "2026-09-01T08:00:00.000Z",
+                      "formerMembers": [
+                        {
+                          "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                          "name": "Anna Berger"
+                        }
+                      ]
+                    }
+                  ],
+                  "nextCursor": null,
+                  "graceDays": 30
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/space-cleanup/{spaceId}/delete": {
+      "post": {
+        "operationId": "spaceCleanup.delete",
+        "summary": "Delete a protected space without members",
+        "description": "Deletes a space from the clean-up list without reading it. It goes to the second stage of the trash and is deleted permanently when its retention period ends; until then the people who were its space admins, and for personal spaces the instance administrators, can restore it. Requires typing the key and a reason, which goes into the audit log. Needs a signed-in session; API tokens are refused.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.spaces.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirmation": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "description": "The key of the space, typed exactly."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "Why the space is deleted, 1 to 500 characters; it goes into the audit log."
+                  }
+                },
+                "required": [
+                  "confirmation",
+                  "reason"
+                ],
+                "additionalProperties": false,
+                "description": "Confirmation and reason."
+              },
+              "example": {
+                "confirmation": "MSAB",
+                "reason": "Both people left the company"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`confirmationMismatch`: The confirmation does not match. `invalidInput`: The request is not valid. `reasonRequired`: A reason is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "confirmationMismatch": {
+                    "value": {
+                      "type": "urn:lunedo:problem:confirmationMismatch",
+                      "title": "The confirmation does not match",
+                      "status": 400,
+                      "code": "confirmationMismatch"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "reasonRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:reasonRequired",
+                      "title": "A reason is required",
+                      "status": 400,
+                      "code": "reasonRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notInCleanup`: The space is not up for clean-up.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notInCleanup": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notInCleanup",
+                      "title": "The space is not up for clean-up",
+                      "status": 409,
+                      "code": "notInCleanup"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{organizationId}/space-defaults": {
       "get": {
         "operationId": "organizationSpaces.defaults",
@@ -190815,7 +191121,7 @@
       "post": {
         "operationId": "organizationSpaces.appoint",
         "summary": "Appoint a space admin",
-        "description": "Makes a person of the organization space admin of a space that has none. Administrators cannot appoint themselves. The appointment is audited.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`.",
+        "description": "Makes a person of the organization space admin of a space that has none. Administrators cannot appoint themselves. The appointment is audited and the person is notified.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`.",
         "tags": [
           "Spaces"
         ],
@@ -191037,6 +191343,238 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/spaces/{spaceId}/self-appointment": {
+      "post": {
+        "operationId": "organizationSpaces.becomeAdministrator",
+        "summary": "Become space admin of a space",
+        "description": "Gives the caller the space admin role in a space of the organization that is not personal, one-on-one or confidential. Requires a reason, which goes into the audit log; the current space admins get a notification and an e-mail with who, when and why. The role is a normal space admin role: visible in the permissions of the space and removable there. Needs a signed-in session; API tokens are refused.\n\nRequires the permission `organization.spaces.manage` on the organization in `organizationId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.spaces.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "Why the caller needs the role, 1 to 500 characters; it goes into the audit log and to the space admins."
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false,
+                "description": "The reason."
+              },
+              "example": {
+                "reason": "The team left; the space needs a new owner for its pages"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `reasonRequired`: A reason is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidHolder": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidHolder",
+                      "title": "The holder cannot get a role in this space",
+                      "status": 400,
+                      "code": "invalidHolder"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "reasonRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:reasonRequired",
+                      "title": "A reason is required",
+                      "status": 400,
+                      "code": "reasonRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`alreadyAdministrator`: You are already space admin of this space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "alreadyAdministrator": {
+                    "value": {
+                      "type": "urn:lunedo:problem:alreadyAdministrator",
+                      "title": "You are already space admin of this space",
+                      "status": 409,
+                      "code": "alreadyAdministrator"
                     }
                   }
                 }

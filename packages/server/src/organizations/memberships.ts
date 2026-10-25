@@ -114,6 +114,8 @@ export class MembershipService {
   readonly #deactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
   readonly #endListeners: ((tx: Transaction, organizationId: string, accountId: string) => Promise<void>)[] =
     [];
+  readonly #addListeners: ((tx: Transaction, organizationId: string, accountId: string) => Promise<void>)[] =
+    [];
 
   constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
     this.#database = options.database;
@@ -129,6 +131,12 @@ export class MembershipService {
     listener: (tx: Transaction, organizationId: string, accountId: string) => Promise<void>,
   ): void {
     this.#endListeners.push(listener);
+  }
+
+  onMembershipAdded(
+    listener: (tx: Transaction, organizationId: string, accountId: string) => Promise<void>,
+  ): void {
+    this.#addListeners.push(listener);
   }
 
   async #ended(tx: Transaction, organizationId: string, accountId: string): Promise<void> {
@@ -280,6 +288,7 @@ export class MembershipService {
     }
     if (options.collect) options.collect.push(...events);
     else await this.#audit.recordMany(tx, events);
+    for (const listener of this.#addListeners) await listener(tx, input.organizationId, input.accountId);
   }
 
   async #checkRank(

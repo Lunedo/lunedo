@@ -113,6 +113,14 @@ export const notificationParamSchemas = {
     deactivations: z.number().int(),
     accounts: z.number().int(),
   }),
+  "space.administratorTaken": z.object({
+    organizationName: z.string(),
+    spaceName: z.string(),
+    spaceKey: z.string(),
+    actorName: z.string(),
+    reason: z.string(),
+    takenAt: instant,
+  }),
   "signIn.newBrowser": z.object({
     browser: z.string().nullable(),
     operatingSystem: z.string().nullable(),
@@ -163,6 +171,7 @@ export const securityNotificationTypes: ReadonlySet<NotificationType> = new Set<
   "apiToken.expiring",
   "mail.credentialExpiring",
   "identityProvider.credentialExpiring",
+  "space.administratorTaken",
 ]);
 
 export const operationsNotificationTypes: ReadonlySet<NotificationType> = new Set<NotificationType>([
@@ -214,6 +223,7 @@ export const notificationEvents: readonly NotificationEvent[] = [
     [
       "restriction.orphaned",
       "space.confidentialWithoutAdministrator",
+      "space.administratorAppointed",
       "blogPost.scheduleHeld",
       "chatChannel.failing",
     ],
@@ -341,6 +351,7 @@ export const contentNotificationParamSchemas = {
     items: z.number().int().positive(),
   }),
   "space.confidentialWithoutAdministrator": z.object({ spaceKey: z.string() }),
+  "space.administratorAppointed": z.object({ spaceName: z.string(), spaceKey: z.string() }),
   "blogPost.published": z.object({
     itemTitle: z.string(),
     itemKind: contentKind,

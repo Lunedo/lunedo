@@ -1294,6 +1294,22 @@ export const auditCatalog = {
     fields: z.object({ key: z.string(), reason: z.string() }),
     visibility: "organization",
   }),
+  "space.administratorTaken": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), reason: z.string() }),
+    visibility: "organization",
+  }),
+  "space.cleanupDeleted": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({
+      key: z.string(),
+      kind: z.enum(["personal", "oneOnOne", "confidential"]),
+      reason: z.string(),
+    }),
+    visibility: "organization",
+  }),
   "space.personalTransferred": event({
     actor: ["account"],
     target: "space",

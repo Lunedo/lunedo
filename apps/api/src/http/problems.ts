@@ -224,6 +224,8 @@ export const problems = {
   selfExtension: { status: 403, title: "Nobody can extend their own permissions" },
   spaceHasAdministrator: { status: 409, title: "The space has a space admin" },
   spaceHasMembers: { status: 409, title: "The space still has active members" },
+  alreadyAdministrator: { status: 409, title: "You are already space admin of this space" },
+  notInCleanup: { status: 409, title: "The space is not up for clean-up" },
   confidentialVisibility: { status: 400, title: "A confidential space stays private" },
   invalidVisibility: { status: 400, title: "The space needs a visibility" },
   knowledgeBaseConfidential: { status: 400, title: "A knowledge base cannot be confidential" },

@@ -221,6 +221,7 @@ import { PageAccessService } from "./sharing/page-access.js";
 import { AccessRequestService } from "./sharing/requests.js";
 import { ValueSigner } from "./sharing/signer.js";
 import { ArchiveService } from "./spaces/archive.js";
+import { SpaceCleanupService } from "./spaces/cleanup.js";
 import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { IncludeService } from "./spaces/includes.js";
@@ -360,6 +361,7 @@ export interface AccountServices {
   attachments: AttachmentService;
   guestShares: GuestShareService;
   confidentialSpaces: ConfidentialSpaceService;
+  spaceCleanup: SpaceCleanupService;
   meetings: MeetingService;
   agenda: AgendaService;
   meetingReminders: MeetingReminders;
@@ -673,7 +675,7 @@ export function createAccountServices(options: {
   });
   const people = new PeopleService({ database, authorization });
   const savedSearches = new SavedSearchService({ database });
-  const spaces = new SpaceService({ database, audit, authorization, settings, people });
+  const spaces = new SpaceService({ database, audit, authorization, settings, people, notifications });
   const spacePermissions = new SpacePermissionService({
     database,
     audit,
@@ -990,6 +992,15 @@ export function createAccountServices(options: {
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   const confidentialSpaces = new ConfidentialSpaceService({ database, audit, notifications });
   memberships.onDeactivated((tx, accountId) => confidentialSpaces.afterDeactivation(tx, accountId));
+  const spaceCleanup = new SpaceCleanupService({ database, audit, settings, trash });
+  spacePermissions.onAccessChange((tx, spaceId) => spaceCleanup.afterAccessChange(tx, spaceId));
+  administration.onReactivated((tx, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  memberships.onMembershipAdded((tx, _organizationId, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  invitations.onAccepted((tx, _invitationId, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  memberships.onDeactivated((tx, accountId) => spaceCleanup.afterDeactivation(tx, accountId));
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    spaceCleanup.afterMembershipEnded(tx, organizationId, accountId),
+  );
   memberships.onDeactivated((tx, accountId) => ownership.afterDeactivation(tx, accountId));
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     ownership.afterMembershipEnded(tx, organizationId, accountId),
@@ -1312,6 +1323,7 @@ export function createAccountServices(options: {
     diagrams,
     guestShares,
     confidentialSpaces,
+    spaceCleanup,
     meetings,
     meetingReminders,
     topics,

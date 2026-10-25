@@ -25,6 +25,7 @@ import {
   Share2,
   ShieldAlert,
   ShieldCheck,
+  UserCog,
   UserPlus,
   UserRound,
   UserRoundX,
@@ -235,6 +236,22 @@ notificationTypes.register(
     id: "export.failed",
     icon: FileArchive,
     link: () => ({ to: "/settings/exports" }),
+  },
+  {
+    id: "space.administratorAppointed",
+    icon: UserCog,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
+    id: "space.administratorTaken",
+    icon: ShieldAlert,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
   },
   {
     id: "space.confidentialWithoutAdministrator",

@@ -232,6 +232,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
         "spaces.organization.withoutAdminDescription",
       ),
     ]),
+    section("spaces.cleanup.tab", [setting("spaces.cleanupGraceDays")]),
   ],
   "instance.general": [
     section("instance.general.identity", [

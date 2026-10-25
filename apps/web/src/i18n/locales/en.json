@@ -1506,6 +1506,8 @@
     "atlassianRateLimited": "Atlassian limits how often Lunedo may ask. Wait a minute and try again.",
     "atlassianUnreachable": "Lunedo could not read the people from this Confluence site. Check the address and try again.",
     "spaceHasMembers": "As long as active members remain, only they can decide about the space. Ask them to delete it.",
+    "alreadyAdministrator": "You already are space admin of this space. Open it from the list.",
+    "notInCleanup": "Someone joined the space again or its waiting period has not passed yet. Reload the list.",
     "confidentialVisibility": "A confidential space is always private. Keep it private, or move the content into a space that is not confidential.",
     "confidentialScope": "In a confidential space, a link can only be shared with specific people. Choose them under “Who can open it”.",
     "seriesEnded": "Bring the series back from the archive to plan meetings or add topics.",
@@ -2691,6 +2693,10 @@
       "identityProviders_syncLogRetentionDays": {
         "label": "Keep synchronization logs for",
         "description": "Older synchronization runs with identity providers are deleted."
+      },
+      "spaces_cleanupGraceDays": {
+        "label": "Waiting period before clean-up",
+        "description": "How long a personal, one-on-one or confidential space stays without active members before it appears under Clean up. At least 7 days."
       }
     },
     "disabled": {
@@ -2979,6 +2985,7 @@
       "accessExpiring": "Role or membership ends soon",
       "serviceAccountUnattended": "Service account without responsible person",
       "breakGlassStarted": "Break-glass access started",
+      "spaceAdministratorTaken": "An administrator became space admin of my space",
       "signInNewBrowser": "Sign-in from a new browser",
       "apiTokenUnused": "API token unused",
       "accountHomeOrganizationChanged": "Home organization changed",
@@ -3072,7 +3079,9 @@
         "started": "{actor} started a one-on-one with you: {itemTitle}."
       },
       "space": {
-        "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members."
+        "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members.",
+        "administratorAppointed": "{actor} made you space admin of {spaceName}.",
+        "administratorTaken": "{actorName} became space admin of {spaceName} through the administration of {organizationName}: {reason}"
       },
       "import": {
         "finished": "The import into {spaceName} ({spaceKey}) is ready for review. {problems, plural, =0 {Nothing needs attention.} one {# item needs attention.} other {# items need attention.}}",
@@ -4351,6 +4360,8 @@
         "unarchived": "Space brought back from the archive",
         "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
         "confidentialDeleted": "Confidential space deleted",
+        "administratorTaken": "Administrator became space admin",
+        "cleanupDeleted": "Space without members deleted",
         "pageStatusValuesChanged": "Page status values changed",
         "exported": "Space exported",
         "shortcutsChanged": "Space shortcuts changed"
@@ -6057,6 +6068,55 @@
     },
     "news": {
       "title": "New in this space"
+    },
+    "become": {
+      "action": "Become space admin …",
+      "title": "Become space admin of {space}",
+      "description": "You get the space admin role in {space}. The space admins are told at once, by notification and e-mail, who took the role, when and why.",
+      "effectTitle": "What this changes",
+      "effect": "You can read and change all content of the space, manage its permissions and settings and empty its trash. The role appears in the permissions of the space like any other, and any space admin can remove it. The step is written to the audit log.",
+      "reason": "Reason",
+      "reasonHint": "The space admins read this in their notification and e-mail.",
+      "reasonRequired": "Name the reason with up to {max} characters.",
+      "confirm": "Become space admin",
+      "done": "You are now space admin of {space}.",
+      "openSpace": "Open space",
+      "failed": "You could not become space admin of {space}"
+    },
+    "cleanup": {
+      "tab": "Clean up",
+      "title": "Spaces without active members",
+      "description": "Personal spaces, one-on-ones and confidential spaces appear here when nobody active has been in them for {days, plural, one {# day} other {# days}}. You see only key, kind and numbers, never names or content.",
+      "loadFailed": "The spaces to clean up could not be loaded",
+      "none": "Nothing to clean up",
+      "noneDescription": "When everyone in a protected space has left or was deactivated, it shows up here after the waiting period.",
+      "caption": "Spaces to clean up",
+      "key": "Key",
+      "kind": "Kind",
+      "kinds": {
+        "personal": "Personal space",
+        "oneOnOne": "One-on-one",
+        "confidential": "Confidential space"
+      },
+      "size": "Size",
+      "pages": "Pages",
+      "lastActivity": "Last activity",
+      "formerMembers": "Former members",
+      "noFormerMembers": "None",
+      "emptySince": "Empty since {date}",
+      "actionsFor": "Actions for {key}",
+      "delete": "Delete …",
+      "deleteTitle": "Delete the space {key}",
+      "deleteDescription": "{count, plural, one {The space and its # page go to the second stage of the trash without anyone reading them.} other {The space and its # pages go to the second stage of the trash without anyone reading them.}} When the retention period ends, they are deleted for good. Until then only the people who were its space admins can restore it, and for personal spaces the instance administrators.",
+      "reason": "Reason",
+      "reasonHint": "Goes into the audit log, for example why nobody remains.",
+      "reasonRequired": "Name the reason with up to {max} characters.",
+      "typeKey": "Type {key} to confirm",
+      "keyMismatch": "The key does not match.",
+      "deleteConfirm": "Delete space",
+      "deleted": "{key} was moved to the trash.",
+      "deleteFailed": "The space {key} could not be deleted",
+      "waitingTitle": "Waiting period"
     }
   },
   "tree": {
@@ -8055,7 +8115,6 @@
       "none": "No confidential spaces",
       "noneDescription": "When members create confidential spaces or one-on-ones, they appear here as a key with a few numbers.",
       "noAdmin": "No space admin",
-      "noMembers": "No active members",
       "created": "created {date}",
       "members": "{count, plural, one {# member} other {# members}}",
       "pages": "{count, plural, one {# page} other {# pages}}",
@@ -8065,24 +8124,13 @@
       "appointDescription": "Choose one of the remaining members. You cannot appoint yourself or anyone who is not a member.",
       "remaining": "Remaining members",
       "remainingFailed": "The remaining members could not be loaded",
-      "noRemaining": "No other member remains. The space can be deleted once no active member is left.",
+      "noRemaining": "No other member remains. Once no active member is left, the space appears under Clean up after the waiting period.",
       "choosePerson": "Choose a member.",
       "appointNoticeTitle": "Written to the audit log",
       "appointNotice": "The new space admin manages the space from then on. You still cannot read it.",
       "appointConfirm": "Appoint as space admin",
       "appointed": "{person} is now space admin of {key}.",
-      "appointFailed": "The space admin could not be appointed",
-      "delete": "Delete space",
-      "deleteTitle": "Delete the confidential space {key}",
-      "deleteDescription": "{count, plural, one {The space and its # page are deleted for good, without anyone reading them. This cannot be undone.} other {The space and its # pages are deleted for good, without anyone reading them. This cannot be undone.}}",
-      "reason": "Reason",
-      "reasonHint": "Goes into the audit log, for example why no member remains.",
-      "reasonRequired": "Name the reason with up to {max} characters.",
-      "typeKey": "Type {key} to confirm",
-      "keyMismatch": "The key does not match.",
-      "deleteConfirm": "Delete space permanently",
-      "deleted": "{key} was deleted.",
-      "deleteFailed": "The space could not be deleted"
+      "appointFailed": "The space admin could not be appointed"
     },
     "copyOutTitle": "The copy leaves the confidential space",
     "copyOut": "The copy is not protected from administrators, and the people above can open it."

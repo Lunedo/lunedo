@@ -76,6 +76,7 @@ describe("notification events", () => {
       "backupRecovered",
       "backupTestRestoreFailed",
       "identityProviderCredentialExpiring",
+      "spaceAdministratorTaken",
       "signInNewBrowser",
     ]);
   });

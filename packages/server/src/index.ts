@@ -992,6 +992,12 @@ export { accessRequestStatuses, restrictionKinds, shareLinkScopes, shareRoles } 
 export * from "./sharing/settings.js";
 export { ValueSigner } from "./sharing/signer.js";
 export { type ArchivedItem, ArchiveService } from "./spaces/archive.js";
+export {
+  type FormerMember,
+  type OrphanedSpace,
+  type ProtectedSpaceKind,
+  SpaceCleanupService,
+} from "./spaces/cleanup.js";
 export { auditScopeOf, SpaceError } from "./spaces/common.js";
 export { ConfidentialSpaceService, type ConfidentialSpaceSummary } from "./spaces/confidential.js";
 export {
@@ -1085,6 +1091,8 @@ export {
   versionReasons,
 } from "./spaces/schema.js";
 export {
+  CLEANUP_GRACE_MINIMUM_DAYS,
+  cleanupGraceDaysSetting,
   type DefaultSpacePermissions,
   defaultPageModeSetting,
   defaultSpacePermissionsSchema,

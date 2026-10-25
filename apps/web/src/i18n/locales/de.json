@@ -1506,6 +1506,8 @@
     "atlassianRateLimited": "Atlassian begrenzt, wie oft Lunedo fragen darf. Warte eine Minute und versuche es erneut.",
     "atlassianUnreachable": "Lunedo konnte die Personen dieser Confluence-Site nicht lesen. Prüfe die Adresse und versuche es erneut.",
     "spaceHasMembers": "Solange aktive Mitglieder bleiben, entscheiden nur sie über den Space. Bitte sie, ihn zu löschen.",
+    "alreadyAdministrator": "Du bist schon Space-Admin dieses Space. Öffne ihn aus der Liste.",
+    "notInCleanup": "Jemand ist wieder im Space aktiv, oder die Wartezeit ist noch nicht vorbei. Lade die Liste neu.",
     "confidentialVisibility": "Ein vertraulicher Space ist immer privat. Lass ihn privat oder verschiebe den Inhalt in einen Space, der nicht vertraulich ist.",
     "confidentialScope": "In einem vertraulichen Space kann ein Link nur mit bestimmten Personen geteilt werden. Wähle sie unter „Wer ihn öffnen kann“.",
     "seriesEnded": "Hole die Serie aus dem Archiv zurück, um Besprechungen zu planen oder Themen hinzuzufügen.",
@@ -2691,6 +2693,10 @@
       "identityProviders_syncLogRetentionDays": {
         "label": "Aufbewahrung der Synchronisierungsprotokolle",
         "description": "Ältere Läufe der Synchronisierung mit Identitätsanbietern werden entfernt."
+      },
+      "spaces_cleanupGraceDays": {
+        "label": "Wartezeit vor dem Aufräumen",
+        "description": "Wie lange ein persönlicher, 1:1- oder vertraulicher Space ohne aktive Mitglieder bleibt, bevor er unter Aufräumen erscheint. Mindestens 7 Tage."
       }
     },
     "disabled": {
@@ -2979,6 +2985,7 @@
       "accessExpiring": "Rolle oder Mitgliedschaft endet bald",
       "serviceAccountUnattended": "Dienstkonto ohne verantwortliche Person",
       "breakGlassStarted": "Notfallzugriff begonnen",
+      "spaceAdministratorTaken": "Ein Administrator wurde Space-Admin meines Space",
       "signInNewBrowser": "Anmeldung in einem neuen Browser",
       "apiTokenUnused": "API-Token ungenutzt",
       "accountHomeOrganizationChanged": "Heimatorganisation geändert",
@@ -3072,7 +3079,9 @@
         "started": "{actor} hat ein 1:1 mit dir gestartet: {itemTitle}."
       },
       "space": {
-        "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen."
+        "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.",
+        "administratorAppointed": "{actor} hat dich zum Space-Admin von {spaceName} ernannt.",
+        "administratorTaken": "{actorName} ist über die Verwaltung von {organizationName} Space-Admin von {spaceName} geworden: {reason}"
       },
       "import": {
         "finished": "Der Import in {spaceName} ({spaceKey}) ist bereit zur Prüfung. {problems, plural, =0 {Nichts ist zu prüfen.} one {# Punkt ist zu prüfen.} other {# Punkte sind zu prüfen.}}",
@@ -4352,6 +4361,8 @@
         "confidentialAdministratorAppointed": "Space-Admin eines vertraulichen Space ernannt",
         "pageStatusValuesChanged": "Werte für den Seitenstatus geändert",
         "confidentialDeleted": "Vertraulicher Space gelöscht",
+        "administratorTaken": "Administrator wurde Space-Admin",
+        "cleanupDeleted": "Space ohne Mitglieder gelöscht",
         "exported": "Space exportiert",
         "shortcutsChanged": "Verknüpfungen des Space geändert"
       },
@@ -6057,6 +6068,55 @@
     },
     "news": {
       "title": "Neu in diesem Space"
+    },
+    "become": {
+      "action": "Space-Admin werden …",
+      "title": "Space-Admin von {space} werden",
+      "description": "Du bekommst die Rolle Space-Admin in {space}. Die Space-Admins erfahren sofort per Benachrichtigung und E-Mail, wer die Rolle übernommen hat, wann und warum.",
+      "effectTitle": "Was sich ändert",
+      "effect": "Du kannst alle Inhalte des Space lesen und ändern, seine Berechtigungen und Einstellungen verwalten und seinen Papierkorb leeren. Die Rolle steht in den Berechtigungen des Space wie jede andere, und jeder Space-Admin kann sie entfernen. Der Schritt wird im Audit-Log festgehalten.",
+      "reason": "Begründung",
+      "reasonHint": "Die Space-Admins lesen sie in ihrer Benachrichtigung und E-Mail.",
+      "reasonRequired": "Nenne die Begründung mit höchstens {max} Zeichen.",
+      "confirm": "Space-Admin werden",
+      "done": "Du bist jetzt Space-Admin von {space}.",
+      "openSpace": "Space öffnen",
+      "failed": "Du konntest nicht Space-Admin von {space} werden"
+    },
+    "cleanup": {
+      "tab": "Aufräumen",
+      "title": "Spaces ohne aktive Mitglieder",
+      "description": "Persönliche Spaces, 1:1-Spaces und vertrauliche Spaces erscheinen hier, wenn seit {days, plural, one {# Tag} other {# Tagen}} niemand Aktives mehr darin ist. Du siehst nur Schlüssel, Art und Zahlen, nie Namen oder Inhalte.",
+      "loadFailed": "Die Spaces zum Aufräumen konnten nicht geladen werden",
+      "none": "Nichts aufzuräumen",
+      "noneDescription": "Wenn alle in einem geschützten Space gegangen sind oder deaktiviert wurden, erscheint er hier nach der Wartezeit.",
+      "caption": "Spaces zum Aufräumen",
+      "key": "Schlüssel",
+      "kind": "Art",
+      "kinds": {
+        "personal": "Persönlicher Space",
+        "oneOnOne": "1:1",
+        "confidential": "Vertraulicher Space"
+      },
+      "size": "Größe",
+      "pages": "Seiten",
+      "lastActivity": "Letzte Aktivität",
+      "formerMembers": "Frühere Mitglieder",
+      "noFormerMembers": "Keine",
+      "emptySince": "Leer seit {date}",
+      "actionsFor": "Aktionen für {key}",
+      "delete": "Löschen …",
+      "deleteTitle": "Space {key} löschen",
+      "deleteDescription": "{count, plural, one {Der Space und seine # Seite kommen in die zweite Stufe des Papierkorbs, ohne dass jemand sie liest.} other {Der Space und seine # Seiten kommen in die zweite Stufe des Papierkorbs, ohne dass jemand sie liest.}} Nach Ablauf der Aufbewahrungsfrist werden sie endgültig gelöscht. Bis dahin können ihn nur seine früheren Space-Admins wiederherstellen, bei persönlichen Spaces auch die Instanz-Administration.",
+      "reason": "Begründung",
+      "reasonHint": "Kommt ins Audit-Log, zum Beispiel warum niemand mehr da ist.",
+      "reasonRequired": "Nenne die Begründung mit höchstens {max} Zeichen.",
+      "typeKey": "Tippe {key} zur Bestätigung",
+      "keyMismatch": "Der Schlüssel stimmt nicht.",
+      "deleteConfirm": "Space löschen",
+      "deleted": "{key} wurde in den Papierkorb verschoben.",
+      "deleteFailed": "Der Space {key} konnte nicht gelöscht werden",
+      "waitingTitle": "Wartezeit"
     }
   },
   "tree": {
@@ -8055,7 +8115,6 @@
       "none": "Keine vertraulichen Spaces",
       "noneDescription": "Wenn Mitglieder vertrauliche Spaces oder 1:1-Gespräche anlegen, erscheinen sie hier als Schlüssel mit einigen Zahlen.",
       "noAdmin": "Kein Space-Admin",
-      "noMembers": "Keine aktiven Mitglieder",
       "created": "angelegt am {date}",
       "members": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
       "pages": "{count, plural, one {# Seite} other {# Seiten}}",
@@ -8065,24 +8124,13 @@
       "appointDescription": "Wähle eines der verbliebenen Mitglieder. Du kannst weder dich selbst noch Personen außerhalb des Space ernennen.",
       "remaining": "Verbliebene Mitglieder",
       "remainingFailed": "Die verbliebenen Mitglieder konnten nicht geladen werden",
-      "noRemaining": "Kein anderes Mitglied ist übrig. Der Space kann gelöscht werden, sobald kein aktives Mitglied mehr übrig ist.",
+      "noRemaining": "Kein anderes Mitglied ist übrig. Wenn kein aktives Mitglied mehr da ist, erscheint der Space nach der Wartezeit unter Aufräumen.",
       "choosePerson": "Wähle ein Mitglied.",
       "appointNoticeTitle": "Wird im Audit-Log festgehalten",
       "appointNotice": "Die neue Person verwaltet den Space ab dann. Du kannst ihn weiterhin nicht lesen.",
       "appointConfirm": "Als Space-Admin ernennen",
       "appointed": "{person} ist jetzt Space-Admin von {key}.",
-      "appointFailed": "Der Space-Admin konnte nicht ernannt werden",
-      "delete": "Space löschen",
-      "deleteTitle": "Vertraulichen Space {key} löschen",
-      "deleteDescription": "{count, plural, one {Der Space und seine # Seite werden endgültig gelöscht, ohne dass jemand sie liest. Das lässt sich nicht rückgängig machen.} other {Der Space und seine # Seiten werden endgültig gelöscht, ohne dass jemand sie liest. Das lässt sich nicht rückgängig machen.}}",
-      "reason": "Grund",
-      "reasonHint": "Kommt ins Audit-Log, zum Beispiel warum kein Mitglied mehr übrig ist.",
-      "reasonRequired": "Nenne den Grund mit bis zu {max} Zeichen.",
-      "typeKey": "Tippe {key} zur Bestätigung",
-      "keyMismatch": "Der Schlüssel stimmt nicht überein.",
-      "deleteConfirm": "Space endgültig löschen",
-      "deleted": "{key} wurde gelöscht.",
-      "deleteFailed": "Der Space konnte nicht gelöscht werden"
+      "appointFailed": "Der Space-Admin konnte nicht ernannt werden"
     },
     "copyOutTitle": "Die Kopie verlässt den vertraulichen Space",
     "copyOut": "Die Kopie ist nicht vor Admins geschützt, und die oben genannten Personen können sie öffnen."

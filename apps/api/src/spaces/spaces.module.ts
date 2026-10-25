@@ -16,6 +16,7 @@ import { PersonalSpacesController } from "./personal-spaces.controller.js";
 import { PortalAccountsController } from "./portal-accounts.controller.js";
 import { ReviewsController } from "./reviews.controller.js";
 import { ShortcutsController } from "./shortcuts.controller.js";
+import { SpaceCleanupController } from "./space-cleanup.controller.js";
 import { SpacesController } from "./spaces.controller.js";
 import { StatisticsController } from "./statistics.controller.js";
 import { TemplateFilesController } from "./template-files.controller.js";
@@ -28,6 +29,7 @@ import { VersionsController } from "./versions.controller.js";
     SpacesController,
     OrganizationSpacesController,
     ConfidentialSpacesController,
+    SpaceCleanupController,
     ItemsController,
     KnowledgeBasesController,
     ArticleApiController,
