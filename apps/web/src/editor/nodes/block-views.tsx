@@ -9,32 +9,24 @@ import {
   CircleAlert,
   Columns2,
   Columns3,
-  Frame,
   Heading1,
   Heading2,
   Heading3,
   Heading4,
   Heading5,
   Heading6,
-  ImageOff,
   Info,
   Lightbulb,
   ListTree,
   type LucideIcon,
-  Paperclip,
-  SquareDashed,
   StickyNote,
   TriangleAlert,
-  WandSparkles,
 } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAttachmentUrl } from "../../files/attachment-source.js";
-import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
 import { NamedIcon } from "../../knowledge-bases/icons.js";
 import { useEditable } from "../context.js";
-import { useImageTooLarge } from "../references.js";
 
 const headingIcons: LucideIcon[] = [Heading1, Heading2, Heading3, Heading4, Heading5, Heading6];
 
@@ -44,12 +36,6 @@ const calloutIcons: Record<(typeof calloutVariants)[number], LucideIcon> = {
   note: StickyNote,
   warning: TriangleAlert,
   error: CircleAlert,
-};
-
-const frameIcons: Record<"auto" | "on" | "off", LucideIcon> = {
-  auto: WandSparkles,
-  on: Frame,
-  off: SquareDashed,
 };
 
 export interface TocEntry {
@@ -347,40 +333,6 @@ export function SectionView({ node }: NodeViewProps) {
   );
 }
 
-function frameValue(frame: unknown): "on" | "off" | undefined {
-  return frame === true ? "on" : frame === false ? "off" : undefined;
-}
-
-function FrameMenu({ frame, onChange }: { frame: unknown; onChange: (frame: boolean | null) => void }) {
-  const { t } = useTranslation();
-  const current = frame === true ? "on" : frame === false ? "off" : "auto";
-  return (
-    <div className="ld-image-controls">
-      <Menu
-        align="start"
-        trigger={
-          <button
-            type="button"
-            className="ld-inline-button"
-            aria-label={t("knowledgeBase.frame.change", {
-              frame: translateKey(t, `knowledgeBase.frame.${current}`),
-            })}
-          >
-            <Frame aria-hidden="true" className="size-icon-sm" />
-            {translateKey(t, `knowledgeBase.frame.${current}`)}
-            <ChevronDown aria-hidden="true" className="size-icon-sm" />
-          </button>
-        }
-        items={(["auto", "on", "off"] as const).map((value) => ({
-          label: translateKey(t, `knowledgeBase.frame.${value}`),
-          icon: frameIcons[value],
-          onSelect: () => onChange(value === "auto" ? null : value === "on"),
-        }))}
-      />
-    </div>
-  );
-}
-
 export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
   const { t } = useTranslation();
   return (
@@ -390,61 +342,6 @@ export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
       contentEditable={false}
     >
       <p>{t("editor.unsupportedMacro", { name: String(node.attrs.name) })}</p>
-    </NodeViewWrapper>
-  );
-}
-
-export function AttachmentView({ node, selected, editor, updateAttributes }: NodeViewProps) {
-  const editable = useEditable(editor);
-  const { t } = useTranslation();
-  const preview = useAttachmentPreview();
-  const attachmentUrl = useAttachmentUrl();
-  const id = typeof node.attrs.attachmentId === "string" ? node.attrs.attachmentId : null;
-  const isImage = node.type.name === "image";
-  const tooLarge = useImageTooLarge(isImage ? id : null);
-  const name = String((isImage ? node.attrs.alt : node.attrs.name) || "");
-  return (
-    <NodeViewWrapper
-      className={`${isImage ? "ld-image" : "ld-file"}${selected ? " ld-node-selected" : ""}`}
-      data-align={isImage ? String(node.attrs.align) : undefined}
-      data-frame={isImage ? frameValue(node.attrs.frame) : undefined}
-      contentEditable={false}
-    >
-      {isImage && editable && selected && id ? (
-        <FrameMenu frame={node.attrs.frame} onChange={(frame) => updateAttributes({ frame })} />
-      ) : null}
-      {isImage && id && tooLarge ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm">
-          <span className="flex min-w-0 items-center gap-2 text-text-muted">
-            <ImageOff aria-hidden="true" className="size-icon-md shrink-0" />
-            {t("editor.attachment.imageTooLarge", { name: name || t("editor.readView.image") })}
-          </span>
-          <a
-            href={attachmentUrl(id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-hit items-center font-medium text-accent underline focus-visible:focus-ring"
-          >
-            {t("editor.attachment.openFullSize")}
-          </a>
-        </div>
-      ) : isImage && id ? (
-        <img src={attachmentUrl(id, undefined, "display")} alt={name} loading="lazy" draggable={false} />
-      ) : isImage || !id ? (
-        <p className="ld-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">
-          <ImageOff aria-hidden="true" className="size-icon-md" />
-          {t("editor.attachment.missingImage")}
-        </p>
-      ) : (
-        <button
-          type="button"
-          className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 hover:bg-hover focus-visible:focus-ring"
-          onClick={() => preview?.open(id)}
-        >
-          <Paperclip aria-hidden="true" className="size-icon-md" />
-          {name || t("editor.attachment.file", { name: "" })}
-        </button>
-      )}
     </NodeViewWrapper>
   );
 }

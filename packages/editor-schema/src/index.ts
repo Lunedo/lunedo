@@ -240,6 +240,8 @@ export {
   cleanLabel,
   codeLanguages,
   contentColors,
+  IMAGE_REFERENCE_PIXELS,
+  imageWidthPercent,
   isAllowedHref,
   isIsoDate,
   isTemplateId,

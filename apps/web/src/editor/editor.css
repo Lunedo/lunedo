@@ -1275,8 +1275,57 @@ details.ld-expand > summary {
   @apply rounded-md border border-solid border-border bg-surface-sunken p-2 shadow-card;
 }
 
-.ld-image-controls {
-  @apply mb-1 flex justify-start;
+.ld-content .ld-image {
+  @apply relative;
+}
+
+.ld-image-frame {
+  @apply relative inline-block max-w-full align-top;
+}
+
+.ld-image[data-width] .ld-image-frame,
+.ld-content .ld-image[data-width] > img,
+.ld-content .ld-image[data-width] > .ld-image-full {
+  width: var(--image-width);
+}
+
+.ld-image[data-width] .ld-image-frame img,
+.ld-content .ld-image[data-width] > .ld-image-full img,
+.ld-content .ld-image[data-width] > img {
+  @apply w-full;
+}
+
+.ld-image-frame img {
+  @apply block h-auto max-w-full;
+}
+
+.ld-image-handle {
+  @apply absolute size-3 rounded-sm border-2 border-accent bg-surface;
+  touch-action: none;
+}
+
+.ld-image-handle[data-corner="top-left"] {
+  @apply -top-1 -left-1 cursor-nwse-resize;
+}
+
+.ld-image-handle[data-corner="top-right"] {
+  @apply -top-1 -right-1 cursor-nesw-resize;
+}
+
+.ld-image-handle[data-corner="bottom-left"] {
+  @apply -bottom-1 -left-1 cursor-nesw-resize;
+}
+
+.ld-image-handle[data-corner="bottom-right"] {
+  @apply -right-1 -bottom-1 cursor-nwse-resize;
+}
+
+.ld-image-size {
+  @apply pointer-events-none absolute right-2 bottom-2 rounded-sm bg-text px-2 text-xs font-medium text-bg;
+}
+
+.ld-image-bar {
+  @apply absolute bottom-full left-1/2 z-10 mb-2 flex w-max max-w-full -translate-x-1/2 flex-wrap items-center gap-1 rounded-md border border-solid border-border bg-surface p-1 text-text shadow-popover;
 }
 
 .ld-section-missing {

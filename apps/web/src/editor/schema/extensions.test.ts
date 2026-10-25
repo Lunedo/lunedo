@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { schema as reference, validateDocument } from "@lunedo/editor-schema";
+import { type DocumentJson, migrateDocument, schema as reference, validateDocument } from "@lunedo/editor-schema";
 import { Editor, getSchema } from "@tiptap/core";
 import type { MarkType, NodeType, Schema } from "@tiptap/pm/model";
 import { describe, expect, it } from "vitest";
@@ -65,7 +65,10 @@ function fixtures(): { name: string; document: unknown }[] {
       .filter((file) => file.endsWith(".json"))
       .map((file) => ({
         name: `${version}/${file}`,
-        document: JSON.parse(readFileSync(path.join(fixtureRoot, version, file), "utf8")) as unknown,
+        document: migrateDocument(
+          JSON.parse(readFileSync(path.join(fixtureRoot, version, file), "utf8")) as DocumentJson,
+          Number(version.slice(1)),
+        ) as unknown,
       })),
   );
 }

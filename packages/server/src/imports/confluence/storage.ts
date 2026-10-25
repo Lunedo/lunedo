@@ -2,6 +2,7 @@ import {
   type DocumentJson,
   defaultImportTexts,
   type ImportText,
+  imageWidthPercent,
   isAllowedHref,
   isIsoDate,
   MAX_DOCUMENT_BYTES,
@@ -824,7 +825,7 @@ class Converter {
           attrs: {
             attachmentId: found.attachmentId,
             alt,
-            width: width !== null && width <= 10_000 ? width : null,
+            width: width !== null && width > 0 ? imageWidthPercent(width) : null,
             align: align === "left" || align === "right" ? align : "center",
           },
         },

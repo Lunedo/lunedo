@@ -14,7 +14,6 @@ import { ExcerptView, IncludeView } from "../includes.js";
 import { ContentByLabelView, RelatedLabelsView } from "../label-blocks.js";
 import { AttachmentListView, ChildPagesView } from "../listings.js";
 import {
-  AttachmentView,
   CalloutView,
   CodeBlockView,
   ColumnsView,
@@ -27,6 +26,7 @@ import {
 import { DrawioReferenceView, DrawioView, TextDiagramView } from "../nodes/diagram-views.js";
 import { DrawingView } from "../nodes/drawing-view.js";
 import { EmbedView, FileView, TabsView, WhiteboardView } from "../nodes/embed-views.js";
+import { ImageView } from "../nodes/image-view.js";
 import {
   DateView,
   EmojiView,
@@ -84,7 +84,7 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   codeBlock: CodeBlockView,
   section: SectionView,
   unsupportedMacro: UnsupportedMacroView,
-  image: AttachmentView,
+  image: ImageView,
   file: FileView,
   embed: EmbedView,
   whiteboard: WhiteboardView,

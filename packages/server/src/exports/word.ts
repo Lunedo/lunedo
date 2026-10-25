@@ -443,7 +443,9 @@ class WordWriter {
       });
     }
     const maximum = Math.floor(this.#textWidth * PIXELS_PER_TWIP);
-    const width = Math.min(block.width ?? image.width, image.width, maximum);
+    const width = block.width
+      ? Math.max(1, Math.round((maximum * block.width) / 100))
+      : Math.min(image.width, maximum);
     const height = Math.max(1, Math.round((image.height * width) / Math.max(1, image.width)));
     const common = {
       transformation: { width, height },

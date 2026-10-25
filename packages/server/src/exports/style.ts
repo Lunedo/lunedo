@@ -74,6 +74,7 @@ const contentRules = [
   `hr{border:0;border-top:1px solid var(--border);margin:${space[6]} 0}`,
   "img{max-width:100%;height:auto}",
   ".ld-image{text-align:center}.ld-image[data-align=left]{text-align:left}.ld-image[data-align=right]{text-align:right}",
+  Array.from({ length: 100 }, (_, index) => `.ld-image[data-width="${index + 1}"] img{width:${index + 1}%}`).join(""),
   ".ld-whiteboard{text-align:center}",
   `table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--border);padding:${space[1]} ${space[2]};text-align:left;vertical-align:top}th{background:var(--surface-sunken)}`,
   ".ld-table{overflow-x:auto}",

@@ -34,7 +34,7 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `hardBreak` | | |
 | `section` | blocks | `key` (a semantic key such as `resolution`), `title`, `icon` (name of a Lucide icon such as `wrench`, or null). Images in the sections `steps`, `symptom` and `resolution` are framed unless they switch it off. |
 | `unsupportedMacro` | | `name`, `data` (the original data, up to 256 KiB) |
-| `image` | | `attachmentId`, `alt`, `width`, `align`, `frame` (true or false, or null for the default of the section) |
+| `image` | | `attachmentId`, `alt`, `width` (percent of the content width, 1 to 100, or null for the natural size up to the content width; before version 13 it held pixels), `align`, `frame` (true or false, or null for the default of the section) |
 | `file` | | `attachmentId`, `name`, `preview` (show the file inline), `height` (150 to 2,000 pixels or null), `zoom` (25 to 400 percent, or null to fit the width) |
 | `embed` | | `url` (`http` or `https` link), `title` (up to 255 characters), `height` (100 to 2,000 pixels or null), `thumbnailId` (an image stored with the block, for print and Word, or null). Whether it shows a frame is decided at render time by the `embed` resolver of the render context, from the allowlist that applies to the reader; without a resolver it becomes a link. It never stores frame markup. |
 | `tabs` | 1 to 20 `tab` | |

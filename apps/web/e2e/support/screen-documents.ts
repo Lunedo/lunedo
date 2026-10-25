@@ -147,7 +147,7 @@ export function richDocument(ids: {
       attrs: {
         attachmentId: ids.imageId,
         alt: "Serverraum mit drei Racks",
-        width: 720,
+        width: 95,
         align: "center",
         frame: true,
       },

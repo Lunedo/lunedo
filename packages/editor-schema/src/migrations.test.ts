@@ -40,6 +40,23 @@ describe("migrateDocument", () => {
   });
 });
 
+describe("migration from schema version 12", () => {
+  it("turns image widths in pixels into percent of the content width", () => {
+    const stored: DocumentJson = {
+      type: "doc",
+      content: [
+        { type: "image", attrs: { attachmentId: null, alt: "", width: 380, align: "center" } },
+        { type: "image", attrs: { attachmentId: null, alt: "", width: 2000, align: "left" } },
+        { type: "image", attrs: { attachmentId: null, alt: "", width: 3, align: "left" } },
+        { type: "image", attrs: { attachmentId: null, alt: "", width: null, align: "left" } },
+      ],
+    };
+    const migrated = migrateDocument(stored, 12, migrations, 13);
+    expect(migrated.content?.map((node) => node.attrs?.width)).toEqual([50, 100, 1, null]);
+    expect(validateDocument(migrated).ok).toBe(true);
+  });
+});
+
 describe("migration from schema version 5", () => {
   it("keeps version 5 documents unchanged, as task reports without page or label filters show every page", () => {
     const stored: DocumentJson = {

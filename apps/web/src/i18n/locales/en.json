@@ -5745,6 +5745,30 @@
       "insert": "Insert",
       "tip": "Tip: /table 4x3",
       "invalid": "Enter a number from 1 to {max} for columns and rows."
+    },
+    "image": {
+      "bar": "Image",
+      "sizes": {
+        "small": "Small, {percent} % wide",
+        "medium": "Medium, {percent} % wide",
+        "large": "Large, {percent} % wide",
+        "full": "Full width"
+      },
+      "sizeShort": {
+        "small": "S",
+        "medium": "M",
+        "large": "L",
+        "full": "Full"
+      },
+      "alignLeft": "Align left",
+      "alignCenter": "Center",
+      "alignRight": "Align right",
+      "frame": "Frame",
+      "altText": "Alternative text",
+      "altTitle": "Alternative text",
+      "altHint": "Describes the image for people who cannot see it.",
+      "remove": "Remove image",
+      "size": "{percent} %"
     }
   },
   "spaces": {
@@ -10804,12 +10828,6 @@
       "title": "Required sections are empty",
       "description": "{count, plural, one {Fill in the section {sections}, then publish again.} other {Fill in the sections {sections}, then publish again.}}",
       "atSection": "{title} is required. Add text or an image here before publishing."
-    },
-    "frame": {
-      "change": "Frame of the image: {frame}. Change it",
-      "auto": "Frame as in the section",
-      "on": "Always framed",
-      "off": "No frame"
     },
     "icons": {
       "monitor": "Monitor",

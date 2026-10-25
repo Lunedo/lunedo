@@ -5745,6 +5745,30 @@
       "insert": "Einfügen",
       "tip": "Tipp: /tabelle 4x3",
       "invalid": "Gib für Spalten und Zeilen je eine Zahl von 1 bis {max} ein."
+    },
+    "image": {
+      "bar": "Bild",
+      "sizes": {
+        "small": "Klein, {percent} % breit",
+        "medium": "Mittel, {percent} % breit",
+        "large": "Groß, {percent} % breit",
+        "full": "Volle Breite"
+      },
+      "sizeShort": {
+        "small": "S",
+        "medium": "M",
+        "large": "L",
+        "full": "Voll"
+      },
+      "alignLeft": "Links",
+      "alignCenter": "Mitte",
+      "alignRight": "Rechts",
+      "frame": "Rahmen",
+      "altText": "Alternativtext",
+      "altTitle": "Alternativtext",
+      "altHint": "Beschreibt das Bild für Menschen, die es nicht sehen.",
+      "remove": "Bild entfernen",
+      "size": "{percent} %"
     }
   },
   "spaces": {
@@ -10804,12 +10828,6 @@
       "title": "Pflichtabschnitte sind leer",
       "description": "{count, plural, one {Fülle den Abschnitt {sections} aus und veröffentliche dann erneut.} other {Fülle die Abschnitte {sections} aus und veröffentliche dann erneut.}}",
       "atSection": "{title} ist Pflicht. Füge hier Text oder ein Bild ein, bevor du veröffentlichst."
-    },
-    "frame": {
-      "change": "Rahmen des Bilds: {frame}. Ändern",
-      "auto": "Rahmen wie im Abschnitt",
-      "on": "Immer mit Rahmen",
-      "off": "Ohne Rahmen"
     },
     "icons": {
       "monitor": "Bildschirm",

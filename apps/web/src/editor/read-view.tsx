@@ -185,6 +185,9 @@ export function applyWidths(root: HTMLElement): void {
   for (const column of Array.from(root.querySelectorAll<HTMLElement>(".ld-column[data-width]"))) {
     column.style.setProperty("--column-width", `${Number(column.dataset.width)}%`);
   }
+  for (const image of Array.from(root.querySelectorAll<HTMLElement>(".ld-image[data-width]"))) {
+    image.style.setProperty("--image-width", `${Number(image.dataset.width)}%`);
+  }
   for (const table of Array.from(root.querySelectorAll<HTMLTableElement>(".ld-table table"))) {
     const firstRow = table.rows[0];
     if (!firstRow) continue;

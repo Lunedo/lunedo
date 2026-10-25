@@ -157,7 +157,7 @@ describe("storage format conversion", () => {
     expect(ofType(page, "image")[0]?.attrs).toEqual({
       attachmentId: DIAGRAM,
       alt: "Diagram",
-      width: 300,
+      width: 39,
       align: "left",
       frame: null,
     });

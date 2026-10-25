@@ -1,6 +1,7 @@
 import type { DocumentJson, NodeJson } from "./json.js";
+import { imageWidthPercent } from "./values.js";
 
-export const editorSchemaVersion = 12;
+export const editorSchemaVersion = 13;
 
 export type Migration = (doc: DocumentJson) => DocumentJson;
 
@@ -28,6 +29,12 @@ export const migrations: Record<number, Migration> = {
   9: (doc) => doc,
   10: (doc) => doc,
   11: (doc) => doc,
+  12: (doc) =>
+    mapNodes(doc, (node) => {
+      const width = node.attrs?.width;
+      if (node.type !== "image" || typeof width !== "number") return node;
+      return { ...node, attrs: { ...node.attrs, width: imageWidthPercent(width) } };
+    }) as DocumentJson,
 };
 
 export class MigrationError extends Error {
