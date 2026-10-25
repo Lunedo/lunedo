@@ -1,5 +1,5 @@
 import { IconButton, Menu, type MenuItem } from "@lunedo/ui";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   Building2,
@@ -21,6 +21,7 @@ import { useHelpUrl } from "../knowledge-bases/help-target.js";
 import { NotificationPopover } from "../notifications/notification-panel.js";
 import { useUnreadCount } from "../notifications/notifications-api.js";
 import { isNavigationVisible, type NavigationSection, navigationItems } from "./extensions.js";
+import { useShownLocation } from "./navigation-pending.js";
 import { useRegistry } from "./registry.js";
 import { useShell } from "./shell.js";
 import { useOrganizationState, useSession } from "./shell-context.js";
@@ -93,7 +94,7 @@ export function useAdminAreas() {
 export function SettingsGear() {
   const { t } = useTranslation();
   const shell = useShell();
-  const location = useLocation();
+  const location = useShownLocation();
   const areas = useAdminAreas();
   const open = (to: string) =>
     shell.navigate(to, shell.organizationId ? { organizationId: shell.organizationId } : {});

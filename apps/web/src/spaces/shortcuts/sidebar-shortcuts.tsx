@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { ExternalLink, Link2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useShownLocation } from "../../shell/navigation-pending.js";
 import { shortcutHref, shortcutsQuery } from "./shortcut-queries.js";
 
 export function SidebarShortcuts({ spaceId }: { spaceId: string }) {
   const { t } = useTranslation();
-  const location = useLocation();
+  const location = useShownLocation();
   const shortcuts = useQuery({ ...shortcutsQuery(spaceId), throwOnError: false });
   const entries = (shortcuts.data ?? []).flatMap((shortcut) => {
     const target = shortcutHref(shortcut);

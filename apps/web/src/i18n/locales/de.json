@@ -1091,7 +1091,8 @@
     "watching": "Beobachtete Inhalte",
     "profile": "Profil",
     "backTo": "Zurück zu {name}",
-    "loadingSettings": "Einstellungen werden geladen"
+    "loadingSettings": "Einstellungen werden geladen",
+    "loadingScreen": "Wird geladen"
   },
   "navigationGroups": {
     "access": "Zugriff",

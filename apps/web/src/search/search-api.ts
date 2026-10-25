@@ -1,4 +1,11 @@
-import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import type { paths } from "../api/generated/schema.js";
 import { request } from "../api/request.js";
@@ -92,6 +99,15 @@ export function searchPage(
       signal,
     }),
   );
+}
+
+export function searchResultsQuery(organizationId: string, query: string, filters: SearchFilters) {
+  return infiniteQueryOptions({
+    queryKey: searchKeys.page(organizationId, query, filters),
+    queryFn: ({ pageParam, signal }) => searchPage(organizationId, query, filters, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: SearchResponse) => last.nextCursor,
+  });
 }
 
 export function peopleQuery(query: string, limit = 3) {

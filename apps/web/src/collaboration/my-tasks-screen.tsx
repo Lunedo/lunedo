@@ -83,6 +83,23 @@ function Person({ person }: { person: { name: string } | null }) {
   );
 }
 
+type MyTasksSearch = ReturnType<typeof route.useSearch>;
+
+export function myTasksQuery(search: MyTasksSearch, cursor: string | null): TaskQuery {
+  const view: TaskView = search.view ?? "open";
+  return {
+    ...(view === "created" ? { assignedBy: "me" as const } : { assignee: "me" as const }),
+    ...(search.by && view !== "created" ? { assignedBy: search.by } : {}),
+    ...(search.space ? { spaceId: search.space } : {}),
+    status: view === "done" ? "done" : "open",
+    due: search.due ?? "any",
+    sort: search.sort ?? "due",
+    direction: search.dir ?? "asc",
+    limit: PAGE_SIZE,
+    ...(cursor ? { cursor } : {}),
+  };
+}
+
 export function MyTasksScreen() {
   const { t } = useTranslation();
   const format = useFormat();
@@ -108,17 +125,7 @@ export function MyTasksScreen() {
     void navigate({ to: "/tasks", search: { ...search, ...next }, replace: true });
   };
 
-  const query: TaskQuery = {
-    ...(view === "created" ? { assignedBy: "me" as const } : { assignee: "me" as const }),
-    ...(search.by && view !== "created" ? { assignedBy: search.by } : {}),
-    ...(search.space ? { spaceId: search.space } : {}),
-    status: view === "done" ? "done" : "open",
-    due,
-    sort: sortKey,
-    direction,
-    limit: PAGE_SIZE,
-    ...(cursors.at(-1) ? { cursor: cursors.at(-1) as string } : {}),
-  };
+  const query = myTasksQuery(search, cursors.at(-1) ?? null);
   const tasks = useQuery({ ...tasksQuery(query), placeholderData: keepPreviousData });
   const spaces = useQuery({
     ...spacesQuery(organizationId, spaceTerm, 20),

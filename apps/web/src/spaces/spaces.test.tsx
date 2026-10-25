@@ -1,8 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { queryKeys } from "../api/queries.js";
 import { App, createQueryClient } from "../app.js";
 import { initI18n } from "../i18n/index.js";
+import { PENDING_MS, PROGRESS_DELAY_MS } from "../shell/navigation-pending.js";
 import { mockApi, problem, type RecordedRequest } from "../testing/render.js";
 
 const OLIVIA = {
@@ -229,6 +231,25 @@ async function renderAt(path: string) {
   render(<App i18n={i18n} queryClient={createQueryClient()} />);
 }
 
+function overviewContent() {
+  return {
+    body: {
+      itemId: OVERVIEW,
+      title: "IT Operations",
+      version: 1,
+      document: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Welcome" }] }],
+      },
+      schemaVersion: 2,
+      revision: 1,
+      updatedAt: "2026-10-05T08:10:00.000Z",
+      updatedBy: null,
+      references: { people: {}, pages: {} },
+    },
+  };
+}
+
 describe("spaces", () => {
   it("lists readable spaces, filters them and offers to clear a filter without results", async () => {
     const { requests } = mockApi({
@@ -446,7 +467,7 @@ describe("spaces", () => {
           redirected: false,
         },
       }),
-      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
     });
@@ -462,7 +483,7 @@ describe("spaces", () => {
       ...baseRoutes(),
       ...spaceRoutes(),
       "GET /api/v1/space-keys/OLDKEY": () => problem(404, "notFound"),
-      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
     });
@@ -690,7 +711,7 @@ describe("spaces", () => {
     mockApi({
       ...baseRoutes(),
       ...spaceRoutes("reader"),
-      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
     });
@@ -1607,6 +1628,14 @@ describe("app shell", () => {
       ...spaceRoutes(),
       ...shellRoutes(),
       "GET /api/v1/space-keys/PERSONAL1": () => ({ body: { space: personal, redirected: false } }),
+      [`GET /api/v1/items/${RUNBOOKS}`]: () => ({
+        body: {
+          ...item(RUNBOOKS, "Runbooks", "folder", null, true),
+          spaceKey: "PERSONAL1",
+          spaceName: "",
+          ancestors: [],
+        },
+      }),
     });
     await renderAt(`/spaces/PERSONAL1/folders/${RUNBOOKS}/runbooks`);
     const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
@@ -1827,5 +1856,104 @@ describe("app shell", () => {
         .getAllByRole("menuitem")
         .map((entry) => entry.textContent),
     ).toEqual(["Lunedo documentation", "Keyboard shortcuts?", "API reference"]);
+  });
+});
+
+describe("navigation between screens", () => {
+  function networkRoutes(item: () => Promise<{ body: unknown }>) {
+    return {
+      [`GET /api/v1/items/${NETWORK}`]: item,
+      [`GET /api/v1/pages/${NETWORK}/content`]: () => ({
+        body: { ...overviewContent().body, itemId: NETWORK, title: "Network" },
+      }),
+      [`GET /api/v1/pages/${NETWORK}/labels`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${NETWORK}/backlinks`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${NETWORK}/tasks`]: () => ({ body: [] }),
+    };
+  }
+  const networkItem = () => ({
+    body: {
+      ...item(NETWORK, "Network", "page", OVERVIEW),
+      spaceKey: "ITOPS",
+      spaceName: "IT Operations",
+      ancestors: [],
+    },
+  });
+
+  async function openNetwork() {
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    const network = await within(tree).findByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("link"));
+  }
+
+  it("keeps the shell and the current screen while the next one loads, then shows progress and a placeholder", async () => {
+    const gate = { release: () => {} };
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...networkRoutes(
+        () =>
+          new Promise((resolve) => {
+            gate.release = () => resolve(networkItem());
+          }),
+      ),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("heading", { name: "Runbooks", level: 1 });
+    const started = Date.now();
+    await openNetwork();
+    expect(screen.getByRole("heading", { name: "Runbooks", level: 1 })).toBeTruthy();
+    expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull();
+
+    await screen.findByRole("progressbar", { name: "Loading" });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(PROGRESS_DELAY_MS);
+    expect(screen.getByRole("heading", { name: "Runbooks", level: 1 })).toBeTruthy();
+    expect(document.querySelector("[data-content-pending]")).toBeNull();
+
+    await waitFor(() => expect(document.querySelector("[data-content-pending]")).not.toBeNull(), {
+      timeout: 2_000,
+    });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(PENDING_MS);
+    expect(document.querySelector("header")).not.toBeNull();
+    expect(screen.getByRole("tree", { name: "Page tree" })).toBeTruthy();
+
+    gate.release();
+    expect(await screen.findByRole("heading", { name: "Network", level: 1 })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull());
+  });
+
+  it("reuses the checked session while it is fresh instead of asking the server on every navigation", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...networkRoutes(async () => networkItem()),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("heading", { name: "Runbooks", level: 1 });
+    const checks = () => requests.filter((request) => request.path === "/api/v1/auth/session").length;
+    const before = checks();
+    await openNetwork();
+    expect(await screen.findByRole("heading", { name: "Network", level: 1 })).toBeTruthy();
+    expect(checks()).toBe(before);
+  });
+
+  it("navigates with the cached session and checks a stale one in the background", async () => {
+    const routes = baseRoutes();
+    let checked = 0;
+    mockApi({
+      ...routes,
+      ...spaceRoutes(),
+      ...networkRoutes(async () => networkItem()),
+      "GET /api/v1/auth/session": () =>
+        checked++ === 0 ? routes["GET /api/v1/auth/session"]() : new Promise(() => {}),
+    });
+    window.history.replaceState(null, "", `/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const queryClient = createQueryClient();
+    render(<App i18n={await initI18n(["en"])} queryClient={queryClient} />);
+    await screen.findByRole("heading", { name: "Runbooks", level: 1 });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.session });
+    await openNetwork();
+    expect(await screen.findByRole("heading", { name: "Network", level: 1 })).toBeTruthy();
+    expect(checked).toBeGreaterThan(1);
   });
 });

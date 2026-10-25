@@ -9,13 +9,34 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
+import { securityQuery, sessionsQuery } from "./api/account-queries.js";
+import {
+  breakGlassQuery,
+  instanceOrganizationsQuery,
+  instanceRolesQuery,
+  instanceSettingsQuery,
+  mailQuery,
+  operationsStatusQuery,
+  renderingQuery,
+  storageQuery,
+} from "./api/instance-queries.js";
+import {
+  domainsQuery,
+  membersQuery,
+  organizationQuery,
+  organizationSettingsQuery,
+  organizationTokensQuery,
+  rolesQuery,
+  serviceAccountsQuery,
+} from "./api/organization-queries.js";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
 import { BlogPostScreen } from "./collaboration/blog/blog-post-screen.js";
 import { OrganizationBlogScreen } from "./collaboration/blog/organization-blog-screen.js";
 import { SpaceBlogScreen } from "./collaboration/blog/space-blog-screen.js";
 import { HomeScreen } from "./collaboration/home-screen.js";
 import { Landing } from "./collaboration/landing.js";
-import { MyTasksScreen } from "./collaboration/my-tasks-screen.js";
+import { MyTasksScreen, myTasksQuery } from "./collaboration/my-tasks-screen.js";
+import { blogPostQuery, homeQuery, taskStatusesQuery, tasksQuery } from "./collaboration/queries.js";
 import {
   AppNotFoundScreen,
   NotFoundScreen,
@@ -27,6 +48,7 @@ import { PrintScreen } from "./exports/print-screen.js";
 import { printRouteSearch } from "./exports/print-search.js";
 import { ConfluenceRedirectScreen } from "./imports/confluence-link.js";
 import { ImportsScreen } from "./imports/imports-screen.js";
+import { isKnowledgeBase } from "./knowledge-bases/queries.js";
 import { ReviewScreen } from "./knowledge-bases/reviews/review-screen.js";
 import { reviewSearch } from "./knowledge-bases/reviews/review-search.js";
 import { ReviewSettingsScreen } from "./knowledge-bases/reviews/review-settings-screen.js";
@@ -38,13 +60,16 @@ import { PortalAccountsScreen } from "./knowledge-bases/settings/portal-accounts
 import { KnowledgeBaseVisibilityScreen } from "./knowledge-bases/settings/visibility-screen.js";
 import { StatisticsScreen } from "./knowledge-bases/statistics/statistics-screen.js";
 import { statisticsSearch } from "./knowledge-bases/statistics/statistics-search.js";
+import { seriesQuery, spaceSeriesQuery, topicQuery } from "./meetings/queries.js";
 import { SeriesListScreen } from "./meetings/series-list-screen.js";
 import { SeriesScreen } from "./meetings/series-screen.js";
 import { TopicScreen } from "./meetings/topic-screen.js";
 import { NotificationsScreen } from "./notifications/notification-panel.js";
+import { notificationListQuery } from "./notifications/notifications-api.js";
 import { OpenNotificationScreen } from "./notifications/open-notification-screen.js";
 import { UnsubscribeScreen } from "./notifications/unsubscribe-screen.js";
 import { RootLayout } from "./root-layout.js";
+import { loadShell, settle } from "./route-data.js";
 import { NotificationPreferencesScreen } from "./screens/account/notification-preferences-screen.js";
 import { PreferencesScreen } from "./screens/account/preferences-screen.js";
 import { ProfileScreen } from "./screens/account/profile-screen.js";
@@ -81,7 +106,7 @@ import { InstanceRolesScreen } from "./screens/instance/roles-screen.js";
 import { InstanceSecurityScreen } from "./screens/instance/security-screen.js";
 import { InstanceStatusScreen } from "./screens/instance/status-screen.js";
 import { InstanceStorageScreen } from "./screens/instance/storage-screen.js";
-import { InstanceUpdatesScreen } from "./screens/instance/updates-screen.js";
+import { InstanceUpdatesScreen, updatesQuery } from "./screens/instance/updates-screen.js";
 import { AccessOverviewScreen } from "./screens/organization/access-overview-screen.js";
 import { OrganizationAnnouncementsScreen } from "./screens/organization/announcements-screen.js";
 import { OrganizationTokensScreen } from "./screens/organization/api-tokens-screen.js";
@@ -98,14 +123,19 @@ import { ServiceAccountScreen } from "./screens/organization/service-account-scr
 import { ServiceAccountsScreen } from "./screens/organization/service-accounts-screen.js";
 import { SettingsLayout } from "./screens/settings/settings-layout.js";
 import { SettingsPending } from "./screens/settings/settings-pending.js";
-import { searchPageSearch } from "./search/search-params.js";
+import { searchResultsQuery } from "./search/search-api.js";
+import { activeFilterCount, fromSearchParams, searchPageSearch } from "./search/search-params.js";
 import { SearchScreen } from "./search/search-screen.js";
 import { leavesApp, safeRedirect } from "./session/redirect.js";
 import { AccessRequestScreen, MyAccessRequestsScreen } from "./sharing/access-requests.js";
 import { LinkLandingScreen } from "./sharing/link-landing.js";
 import { SharedPageScreen } from "./sharing/shared-page-screen.js";
-import { AppShell } from "./shell/app-shell.js";
+import { sharedWithMeQuery } from "./sharing/sharing-api.js";
+import { AppShell, ShellPending } from "./shell/app-shell.js";
+import { ContentPending, PagePending, PENDING_MIN_MS, PENDING_MS } from "./shell/navigation-pending.js";
+import { currentOrganizationId } from "./shell/shell-context.js";
 import { FolderScreen } from "./spaces/folder-screen.js";
+import { itemHref } from "./spaces/item-paths.js";
 import { LabelScreen } from "./spaces/label-screen.js";
 import { PageScreen } from "./spaces/page-screen.js";
 import { PersonalSpaceScreen } from "./spaces/personal-space-screen.js";
@@ -122,8 +152,9 @@ import { SpacePermissionsScreen } from "./spaces/settings/space-permissions-scre
 import { SpaceSettingsLayout } from "./spaces/settings/space-settings-layout.js";
 import { SpaceShortcutsScreen } from "./spaces/settings/space-shortcuts-screen.js";
 import { SpaceStatusScreen } from "./spaces/settings/space-status-screen.js";
-import { SpaceLayout, SpaceOverviewRedirect } from "./spaces/space-layout.js";
-import { SpacesScreen } from "./spaces/spaces-screen.js";
+import { SpaceLayout, SpaceLoading, SpaceOverviewRedirect } from "./spaces/space-layout.js";
+import { contentQuery, itemQuery, spaceByKeyQuery } from "./spaces/space-queries.js";
+import { SpacesScreen, spaceListFilter, spaceListQuery } from "./spaces/spaces-screen.js";
 import { InstanceTemplatesScreen } from "./spaces/templates/instance-templates-screen.js";
 import { OrganizationTemplatesScreen } from "./spaces/templates/organization-templates-screen.js";
 import { SpaceTemplatesScreen } from "./spaces/templates/space-templates-screen.js";
@@ -175,6 +206,7 @@ const setupRoute = createRoute({
     const info = await context.queryClient.ensureQueryData(instanceInfoQuery);
     if (info.setupComplete) throw redirect({ to: "/sign-in" });
   },
+  pendingComponent: PagePending,
   component: lazyRouteComponent(() => import("./screens/setup/setup-screen.js"), "SetupScreen"),
 });
 
@@ -182,6 +214,7 @@ const linkLandingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/s/$token",
   beforeLoad: ({ context }) => requireSetupComplete(context.queryClient),
+  pendingComponent: PagePending,
   component: LinkLandingScreen,
 });
 
@@ -189,6 +222,7 @@ const publicRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "public",
   beforeLoad: ({ context }) => requireSetupComplete(context.queryClient),
+  pendingComponent: PagePending,
   component: AuthLayout,
 });
 
@@ -283,7 +317,7 @@ const unsubscribeRoute = createRoute({
 
 async function requireSession(queryClient: QueryClient, href: string) {
   await requireSetupComplete(queryClient);
-  const session = await queryClient.fetchQuery(sessionQuery);
+  const session = await queryClient.ensureQueryData({ ...sessionQuery, revalidateIfStale: true });
   if (!session) throw redirect({ to: "/sign-in", search: { redirect: href } });
   if (session.sessionKind === "secondFactorSetup") throw redirect({ to: "/second-factor-setup" });
   return session;
@@ -295,6 +329,9 @@ const appRoute = createRoute({
   beforeLoad: async ({ context, location }) => ({
     session: await requireSession(context.queryClient, location.href),
   }),
+  loader: ({ context, params }) =>
+    loadShell(context.queryClient, context.session, (params as { organizationId?: string }).organizationId),
+  pendingComponent: ShellPending,
   component: AppShell,
 });
 
@@ -311,6 +348,7 @@ const printRoute = createRoute({
   beforeLoad: async ({ context, location }) => ({
     session: await requireSession(context.queryClient, location.href),
   }),
+  pendingComponent: PagePending,
   component: PrintScreen,
 });
 
@@ -323,6 +361,9 @@ const homeRoute = createRoute({
 const forYouRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/home",
+  loader: ({ context: { queryClient } }) => {
+    void settle(queryClient.ensureQueryData(homeQuery()), queryClient.ensureQueryData(sharedWithMeQuery()));
+  },
   component: HomeScreen,
 });
 
@@ -337,6 +378,14 @@ const searchRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/search",
   validateSearch: searchPageSearch,
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context: { queryClient, session }, deps }) => {
+    const { query, filters } = fromSearchParams(deps);
+    if (query.trim().length === 0 && activeFilterCount(filters) === 0) return;
+    const organizationId = await currentOrganizationId(queryClient, session, undefined);
+    if (organizationId)
+      await settle(queryClient.ensureInfiniteQueryData(searchResultsQuery(organizationId, query, filters)));
+  },
   component: SearchScreen,
 });
 
@@ -352,6 +401,9 @@ const myTasksRoute = createRoute({
     sort: z.enum(["due", "text", "item", "assignedBy"]).optional().catch(undefined),
     dir: z.enum(["asc", "desc"]).optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, deps }) =>
+    settle(queryClient.ensureQueryData(tasksQuery(myTasksQuery(deps, null)))),
   component: MyTasksScreen,
 });
 
@@ -375,6 +427,11 @@ const spacesRoute = createRoute({
     oneOnOnes: z.boolean().optional().catch(undefined),
     deleted: z.boolean().optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, deps }) =>
+    deps.deleted
+      ? undefined
+      : settle(queryClient.ensureInfiniteQueryData(spaceListQuery(spaceListFilter(deps)))),
   component: SpacesScreen,
 });
 
@@ -387,6 +444,8 @@ const personalSpaceRoute = createRoute({
 const notificationsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/notifications",
+  loader: ({ context: { queryClient } }) =>
+    settle(queryClient.ensureInfiniteQueryData(notificationListQuery({ unreadOnly: false }))),
   component: NotificationsScreen,
 });
 
@@ -423,12 +482,24 @@ const sharedPageRoute = createRoute({
 const spaceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/spaces/$spaceKey",
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(spaceByKeyQuery(params.spaceKey))),
+  pendingComponent: SpaceLoading,
   component: SpaceLayout,
 });
 
 const spaceIndexRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/",
+  loader: async ({ context: { queryClient }, params }) => {
+    const resolved = await queryClient.ensureQueryData(spaceByKeyQuery(params.spaceKey)).catch(() => null);
+    const space = resolved?.space;
+    if (!space?.overviewItemId || isKnowledgeBase(space)) return;
+    const overview = await queryClient.ensureQueryData(itemQuery(space.overviewItemId)).catch(() => null);
+    if (!overview) return;
+    const href = itemHref({ ...overview, link: null }, space.key);
+    if (href) throw redirect({ href, replace: true });
+  },
   component: SpaceOverviewRedirect,
 });
 
@@ -448,6 +519,12 @@ const pageRoute = createRoute({
   path: "/pages/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: itemSearch,
+  loader: ({ context: { queryClient }, params }) =>
+    settle(
+      queryClient.ensureQueryData(itemQuery(params.itemId)),
+      queryClient.ensureQueryData(contentQuery(params.itemId)),
+      queryClient.ensureQueryData(taskStatusesQuery(params.itemId)),
+    ),
   component: PageScreen,
 });
 
@@ -462,6 +539,12 @@ const blogPostRoute = createRoute({
   path: "/blog/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
   validateSearch: itemSearch,
+  loader: ({ context: { queryClient }, params }) =>
+    settle(
+      queryClient.ensureQueryData(itemQuery(params.itemId)),
+      queryClient.ensureQueryData(blogPostQuery(params.itemId)),
+      queryClient.ensureQueryData(taskStatusesQuery(params.itemId)),
+    ),
   component: BlogPostScreen,
 });
 
@@ -469,6 +552,8 @@ const whiteboardRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/whiteboards/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(itemQuery(params.itemId))),
   component: WhiteboardScreen,
 });
 
@@ -497,6 +582,8 @@ const historyRoute = createRoute({
       .catch(undefined),
     view: z.enum(["inline", "sideBySide"]).optional().catch(undefined),
   }),
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(itemQuery(params.itemId))),
   component: VersionsScreen,
 });
 
@@ -524,12 +611,18 @@ const folderRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/folders/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(itemQuery(params.itemId))),
   component: FolderScreen,
 });
 
 const meetingsRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/meetings",
+  loader: async ({ context: { queryClient }, params }) => {
+    const space = await queryClient.ensureQueryData(spaceByKeyQuery(params.spaceKey)).catch(() => null);
+    if (space) await settle(queryClient.ensureQueryData(spaceSeriesQuery(space.space.id)));
+  },
   component: SeriesListScreen,
 });
 
@@ -541,6 +634,8 @@ const seriesRoute = createRoute({
     tab: z.enum(["overview", "topics", "tasks", "decisions", "meetings"]).optional().catch(undefined),
     status: z.enum(["open", "closed", "all"]).optional().catch(undefined),
   }),
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(seriesQuery(params.seriesId))),
   component: SeriesScreen,
 });
 
@@ -548,6 +643,8 @@ const topicRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/topics/$topicId",
   params: { parse: (params) => ({ ...params, topicId: z.uuid().parse(params.topicId) }) },
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(topicQuery(params.topicId))),
   component: TopicScreen,
 });
 
@@ -562,8 +659,6 @@ const spaceSettingsRoute = createRoute({
   path: "/settings",
   component: SpaceSettingsLayout,
   pendingComponent: SettingsPending,
-  pendingMs: 0,
-  pendingMinMs: 0,
 });
 
 const spaceSettingsIndexRoute = createRoute({
@@ -683,8 +778,6 @@ const settingsRoute = createRoute({
   path: "/settings",
   component: SettingsLayout,
   pendingComponent: SettingsPending,
-  pendingMs: 0,
-  pendingMinMs: 0,
 });
 
 const settingsIndexRoute = createRoute({
@@ -710,6 +803,8 @@ const preferencesRoute = createRoute({
 const securityRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/security",
+  loader: ({ context: { queryClient } }) =>
+    settle(queryClient.ensureQueryData(securityQuery), queryClient.ensureQueryData(sessionsQuery)),
   component: SecurityScreen,
 });
 
@@ -735,6 +830,9 @@ const organizationRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/organizations/$organizationId",
   params: { parse: (params) => ({ organizationId: z.uuid().parse(params.organizationId) }) },
+  beforeLoad: ({ params }) => ({ organizationId: params.organizationId }),
+  loader: ({ context: { queryClient }, params }) =>
+    settle(queryClient.ensureQueryData(organizationQuery(params.organizationId))),
 });
 
 const organizationIndexRoute = createRoute({
@@ -745,31 +843,90 @@ const organizationIndexRoute = createRoute({
   },
 });
 
-function organizationScreen<TPath extends string>(path: TPath, component: RouteComponent) {
+type OrganizationLoad = (queryClient: QueryClient, organizationId: string) => readonly Promise<unknown>[];
+type OrganizationLoader = (match: { context: RouterContext & { organizationId: string } }) => Promise<void>;
+
+function organizationLoader(load: OrganizationLoad | undefined): OrganizationLoader {
+  return ({ context }) => settle(...(load?.(context.queryClient, context.organizationId) ?? []));
+}
+
+function organizationScreen<TPath extends string>(
+  path: TPath,
+  component: RouteComponent,
+  load?: OrganizationLoad,
+) {
   return createRoute({
     getParentRoute: () => organizationRoute,
     path,
+    loader: organizationLoader(load),
     component,
   });
 }
 
-const organizationGeneralRoute = organizationScreen("/general", OrganizationGeneralScreen);
-const membersRoute = organizationScreen("/members", MembersScreen);
+const withOrganizationSettings: OrganizationLoad = (queryClient, organizationId) => [
+  queryClient.ensureQueryData(organizationSettingsQuery(organizationId)),
+];
+
+const organizationGeneralRoute = organizationScreen(
+  "/general",
+  OrganizationGeneralScreen,
+  withOrganizationSettings,
+);
+const membersRoute = organizationScreen("/members", MembersScreen, (queryClient, organizationId) => [
+  queryClient.ensureQueryData(membersQuery(organizationId)),
+]);
 const groupsRoute = organizationScreen("/groups", GroupsScreen);
 const groupRoute = organizationScreen("/groups/$groupId", GroupScreen);
-const rolesRoute = organizationScreen("/roles", OrganizationRolesScreen);
-const serviceAccountsRoute = organizationScreen("/service-accounts", ServiceAccountsScreen);
+const rolesRoute = organizationScreen("/roles", OrganizationRolesScreen, (queryClient, organizationId) => [
+  queryClient.ensureQueryData(rolesQuery(organizationId)),
+  queryClient.ensureQueryData(membersQuery(organizationId)),
+]);
+const serviceAccountsRoute = organizationScreen(
+  "/service-accounts",
+  ServiceAccountsScreen,
+  (queryClient, organizationId) => [
+    queryClient.ensureQueryData(serviceAccountsQuery(organizationId)),
+    queryClient.ensureQueryData(membersQuery(organizationId)),
+  ],
+);
 const serviceAccountRoute = organizationScreen("/service-accounts/$serviceAccountId", ServiceAccountScreen);
-const organizationTokensRoute = organizationScreen("/api-tokens", OrganizationTokensScreen);
-const organizationSecurityRoute = organizationScreen("/security", OrganizationSecurityScreen);
-const domainsRoute = organizationScreen("/domains-and-guests", DomainsScreen);
+const organizationTokensRoute = organizationScreen(
+  "/api-tokens",
+  OrganizationTokensScreen,
+  (queryClient, organizationId) => [
+    queryClient.ensureQueryData(organizationTokensQuery(organizationId)),
+    queryClient.ensureQueryData(membersQuery(organizationId)),
+  ],
+);
+const organizationSecurityRoute = organizationScreen(
+  "/security",
+  OrganizationSecurityScreen,
+  withOrganizationSettings,
+);
+const domainsRoute = organizationScreen(
+  "/domains-and-guests",
+  DomainsScreen,
+  (queryClient, organizationId) => [
+    ...withOrganizationSettings(queryClient, organizationId),
+    queryClient.ensureQueryData(domainsQuery(organizationId)),
+  ],
+);
 const organizationNotificationsRoute = organizationScreen(
   "/notifications",
   OrganizationNotificationDefaultsScreen,
+  withOrganizationSettings,
 );
 const organizationAnnouncementsRoute = organizationScreen("/announcements", OrganizationAnnouncementsScreen);
-const organizationSpacesRoute = organizationScreen("/spaces", OrganizationSpacesScreen);
-const organizationContentRoute = organizationScreen("/content", OrganizationContentScreen);
+const organizationSpacesRoute = organizationScreen(
+  "/spaces",
+  OrganizationSpacesScreen,
+  withOrganizationSettings,
+);
+const organizationContentRoute = organizationScreen(
+  "/content",
+  OrganizationContentScreen,
+  withOrganizationSettings,
+);
 const organizationTemplatesRoute = organizationScreen("/templates", OrganizationTemplatesScreen);
 const organizationAccessRoute = organizationScreen("/access", AccessOverviewScreen);
 
@@ -825,13 +982,25 @@ const instanceRoute = createRoute({
   path: "/instance",
 });
 
-function instanceScreen<TPath extends string>(path: TPath, component: RouteComponent) {
+type InstanceLoad = (queryClient: QueryClient) => readonly Promise<unknown>[];
+type InstanceLoader = (match: { context: RouterContext }) => Promise<void>;
+
+function instanceLoader(load: InstanceLoad | undefined): InstanceLoader {
+  return ({ context }) => settle(...(load?.(context.queryClient) ?? []));
+}
+
+function instanceScreen<TPath extends string>(path: TPath, component: RouteComponent, load?: InstanceLoad) {
   return createRoute({
     getParentRoute: () => instanceRoute,
     path,
+    loader: instanceLoader(load),
     component,
   });
 }
+
+const withInstanceSettings: InstanceLoad = (queryClient) => [
+  queryClient.ensureQueryData(instanceSettingsQuery),
+];
 
 const instanceIndexRoute = createRoute({
   getParentRoute: () => instanceRoute,
@@ -840,15 +1009,22 @@ const instanceIndexRoute = createRoute({
     throw redirect({ to: "/settings/instance/general" });
   },
 });
-const instanceStatusRoute = instanceScreen("/status", InstanceStatusScreen);
-const instanceUpdatesRoute = instanceScreen("/updates", InstanceUpdatesScreen);
+const instanceStatusRoute = instanceScreen("/status", InstanceStatusScreen, (queryClient) => [
+  queryClient.ensureQueryData(operationsStatusQuery),
+]);
+const instanceUpdatesRoute = instanceScreen("/updates", InstanceUpdatesScreen, (queryClient) => [
+  ...withInstanceSettings(queryClient),
+  queryClient.ensureQueryData(updatesQuery),
+]);
 const instanceMaintenanceRoute = instanceScreen("/maintenance", InstanceMaintenanceScreen);
-const instanceGeneralRoute = instanceScreen("/general", InstanceGeneralScreen);
+const instanceGeneralRoute = instanceScreen("/general", InstanceGeneralScreen, withInstanceSettings);
 const instanceOrganizationsRoute = instanceScreen("/organizations", InstanceOrganizationsScreen);
 const instanceAccountsRoute = instanceScreen("/accounts", InstanceAccountsScreen);
 const instanceAccountRoute = instanceScreen("/accounts/$accountId", InstanceAccountScreen);
-const instanceRolesRoute = instanceScreen("/roles", InstanceRolesScreen);
-const instanceSecurityRoute = instanceScreen("/security", InstanceSecurityScreen);
+const instanceRolesRoute = instanceScreen("/roles", InstanceRolesScreen, (queryClient) => [
+  queryClient.ensureQueryData(instanceRolesQuery),
+]);
+const instanceSecurityRoute = instanceScreen("/security", InstanceSecurityScreen, withInstanceSettings);
 const instanceProvidersRoute = instanceScreen("/sign-in-providers", InstanceProvidersScreen);
 const instanceNewProviderRoute = createRoute({
   getParentRoute: () => instanceRoute,
@@ -862,17 +1038,35 @@ const instanceProviderRoute = createRoute({
   validateSearch: providerSearch,
   component: InstanceProviderScreen,
 });
-const instanceEmbedsRoute = instanceScreen("/embeds", InstanceEmbedsScreen);
-const instancePortalsRoute = instanceScreen("/portals", InstancePortalsScreen);
-const instanceRenderingRoute = instanceScreen("/rendering", InstanceRenderingScreen);
-const instanceMailRoute = instanceScreen("/mail", InstanceMailScreen);
-const instanceStorageRoute = instanceScreen("/storage", InstanceStorageScreen);
+const instanceEmbedsRoute = instanceScreen("/embeds", InstanceEmbedsScreen, withInstanceSettings);
+const instancePortalsRoute = instanceScreen("/portals", InstancePortalsScreen, withInstanceSettings);
+const instanceRenderingRoute = instanceScreen("/rendering", InstanceRenderingScreen, (queryClient) => [
+  queryClient.ensureQueryData(renderingQuery),
+]);
+const instanceMailRoute = instanceScreen("/mail", InstanceMailScreen, (queryClient) => [
+  queryClient.ensureQueryData(mailQuery),
+]);
+const instanceStorageRoute = instanceScreen("/storage", InstanceStorageScreen, (queryClient) => [
+  ...withInstanceSettings(queryClient),
+  queryClient.ensureQueryData(storageQuery),
+]);
 const instanceBackupsRoute = instanceScreen("/backups", InstanceBackupsScreen);
-const breakGlassRoute = instanceScreen("/break-glass", BreakGlassScreen);
-const instanceNotificationsRoute = instanceScreen("/notifications", InstanceNotificationDefaultsScreen);
+const breakGlassRoute = instanceScreen("/break-glass", BreakGlassScreen, (queryClient) => [
+  queryClient.ensureQueryData(breakGlassQuery),
+  queryClient.ensureQueryData(instanceOrganizationsQuery),
+]);
+const instanceNotificationsRoute = instanceScreen(
+  "/notifications",
+  InstanceNotificationDefaultsScreen,
+  withInstanceSettings,
+);
 const instanceAnnouncementsRoute = instanceScreen("/announcements", InstanceAnnouncementsScreen);
-const instancePersonalSpacesRoute = instanceScreen("/personal-spaces", InstancePersonalSpacesScreen);
-const instanceContentRoute = instanceScreen("/content", InstanceContentScreen);
+const instancePersonalSpacesRoute = instanceScreen(
+  "/personal-spaces",
+  InstancePersonalSpacesScreen,
+  withInstanceSettings,
+);
+const instanceContentRoute = instanceScreen("/content", InstanceContentScreen, withInstanceSettings);
 const instanceTemplatesRoute = instanceScreen("/templates", InstanceTemplatesScreen);
 const instanceAuditRoute = instanceScreen("/audit-log", InstanceAuditScreen);
 
@@ -1026,6 +1220,9 @@ export function createAppRouter(queryClient: QueryClient) {
     routeTree,
     context: { queryClient },
     defaultPreload: "intent",
+    defaultPendingComponent: ContentPending,
+    defaultPendingMs: PENDING_MS,
+    defaultPendingMinMs: PENDING_MIN_MS,
     defaultErrorComponent: ScreenErrorScreen,
     defaultPreloadStaleTime: 0,
     scrollRestoration: true,

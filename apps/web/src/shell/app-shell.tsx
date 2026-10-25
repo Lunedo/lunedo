@@ -1,6 +1,6 @@
 import { Notice } from "@lunedo/ui";
 import { queryOptions, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Outlet, useLocation, useRouter } from "@tanstack/react-router";
+import { getRouteApi, Outlet, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -22,6 +22,7 @@ import { type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
 import { MaintenanceBanner } from "./maintenance-banner.js";
 import { useNavigationFocus } from "./navigation-focus.js";
+import { NavigationProgress, useShownLocation } from "./navigation-pending.js";
 import { useRegistry } from "./registry.js";
 import {
   type CreateKind,
@@ -71,7 +72,7 @@ function ShellFrame() {
     () => allShortcuts.filter((shortcut) => !shortcut.listOnly),
     [allShortcuts],
   );
-  const location = useLocation();
+  const location = useShownLocation();
   const sidebarSlots = useSidebarSlotState();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [collapseSuggested, setCollapseSuggested] = useState(false);
@@ -205,7 +206,8 @@ function ShellFrame() {
           <WithheldRolesBanner />
           <div className="relative flex min-h-0 min-w-0 flex-1">
             {inSettings ? null : <AppSidebar />}
-            <div className="flex min-h-0 min-w-0 flex-1">
+            <div data-content-area="" className="relative flex min-h-0 min-w-0 flex-1">
+              <NavigationProgress />
               <Outlet />
             </div>
           </div>
@@ -217,7 +219,7 @@ function ShellFrame() {
   );
 }
 
-const withheldRolesQuery = queryOptions({
+export const withheldRolesQuery = queryOptions({
   queryKey: ["account", "withheldRoles"],
   queryFn: () => request(() => api.GET("/api/v1/account/withheld-roles")),
   staleTime: 60_000,
@@ -240,6 +242,11 @@ function useShellSettled(): boolean {
   const [shown, setShown] = useState(settled);
   if (settled && !shown) setShown(true);
   return shown || settled;
+}
+
+export function ShellPending() {
+  const preferences = usePreferences();
+  return <ShellPlaceholder collapsed={preferences.sidebarCollapsed} />;
 }
 
 function ShellPlaceholder({ collapsed }: { collapsed: boolean }) {

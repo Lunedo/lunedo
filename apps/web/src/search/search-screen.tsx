@@ -27,9 +27,7 @@ import {
   filtersOf,
   type RecentSearch,
   recentSearchesQuery,
-  type SearchResponse,
-  searchKeys,
-  searchPage,
+  searchResultsQuery,
   useForgetSearch,
   useRememberSearch,
 } from "./search-api.js";
@@ -99,10 +97,7 @@ export function SearchScreen() {
 
   const searchable = query.trim().length > 0 || activeFilterCount(filters) > 0;
   const results = useInfiniteQuery({
-    queryKey: searchKeys.page(organizationId ?? "", query, filters),
-    queryFn: ({ pageParam, signal }) => searchPage(organizationId ?? "", query, filters, pageParam, signal),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last: SearchResponse) => last.nextCursor,
+    ...searchResultsQuery(organizationId ?? "", query, filters),
     enabled: organizationId !== null && searchable,
     placeholderData: keepPreviousData,
     throwOnError: false,

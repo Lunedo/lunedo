@@ -1,5 +1,5 @@
 import type { Areas, RoleScope } from "@lunedo/shared";
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
@@ -57,6 +57,19 @@ export function chooseOrganization(
     byId(remembered) ??
     organizations.find((organization) => organization.membershipKind === "member") ??
     organizations[0] ??
+    null
+  );
+}
+
+export async function currentOrganizationId(
+  queryClient: QueryClient,
+  session: SessionInfo,
+  fromRoute: string | undefined,
+): Promise<string | null> {
+  if (fromRoute) return fromRoute;
+  const organizations = await queryClient.ensureQueryData(organizationsQuery).catch(() => []);
+  return (
+    chooseOrganization(organizations, undefined, rememberedOrganization(session.account?.id ?? ""))?.id ??
     null
   );
 }

@@ -1,4 +1,5 @@
 import {
+  infiniteQueryOptions,
   type QueryClient,
   useInfiniteQuery,
   useMutation,
@@ -40,10 +41,9 @@ export interface NotificationFilter {
   spaceId?: string;
 }
 
-export function useNotificationList(filter: NotificationFilter) {
-  return useInfiniteQuery({
+export function notificationListQuery(filter: NotificationFilter) {
+  return infiniteQueryOptions({
     queryKey: notificationKeys.list(filter),
-    throwOnError: false,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       request(() =>
@@ -61,6 +61,10 @@ export function useNotificationList(filter: NotificationFilter) {
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
+}
+
+export function useNotificationList(filter: NotificationFilter) {
+  return useInfiniteQuery({ ...notificationListQuery(filter), throwOnError: false });
 }
 
 export type NotificationItem = NonNullable<

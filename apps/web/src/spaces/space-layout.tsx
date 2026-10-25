@@ -1,6 +1,6 @@
 import { Button, IconButton, Menu, type MenuItem, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { getRouteApi, Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import {
   BookOpen,
   CalendarDays,
@@ -37,6 +37,7 @@ import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
 import { useWatchEntries } from "../notifications/watch-menu.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
 import { SidebarEntry } from "../shell/app-sidebar.js";
+import { ContentPending, useShownLocation } from "../shell/navigation-pending.js";
 import { type CreateKind, useShell } from "../shell/shell.js";
 import { SidebarContent } from "../shell/sidebar-slot.js";
 import { ArchiveSection } from "./archive/archive-section.js";
@@ -63,9 +64,9 @@ function isUuid(value: string | undefined): value is string {
 export function SpaceLayout() {
   const { t } = useTranslation();
   const { spaceKey } = route.useParams();
-  const location = useLocation();
-  const [, root, pathKey = "", ...rest] = location.pathname.split("/");
-  const currentKey = root === "spaces" ? pathKey : spaceKey;
+  const location = useShownLocation();
+  const [, , , ...rest] = location.pathname.split("/");
+  const currentKey = spaceKey;
   const urlItemId =
     (rest[0] === "pages" || rest[0] === "folders" || rest[0] === "blog") && isUuid(rest[1]) ? rest[1] : null;
   const addressed = useQuery({
@@ -75,8 +76,7 @@ export function SpaceLayout() {
     throwOnError: false,
   });
   const redirectByItem =
-    urlItemId !== null &&
-    (addressed.isPending || (addressed.data !== undefined && addressed.data.spaceKey !== currentKey));
+    urlItemId !== null && addressed.data !== undefined && addressed.data.spaceKey !== currentKey;
   const resolved = useQuery({
     ...spaceByKeyQuery(spaceKey),
     retry: false,
@@ -130,7 +130,7 @@ export function SpaceLayout() {
 
 const TREE_PLACEHOLDERS = ["w-3/4", "w-2/3", "w-4/5", "w-1/2", "w-3/5"];
 
-function SpaceLoading() {
+export function SpaceLoading() {
   const shell = useShell();
   const collapsed = shell.sidebarCollapsed && !shell.mobileSidebarOpen;
   const middle = collapsed ? (
@@ -152,14 +152,14 @@ function SpaceLoading() {
   return (
     <>
       <SidebarContent middle={middle} bottom={null} />
-      <div aria-busy="true" className="flex-1" />
+      <ContentPending />
     </>
   );
 }
 
 function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const shell = useShell();
-  const location = useLocation();
+  const location = useShownLocation();
   const settingsPath = `/spaces/${space.key}/settings`;
   const inSettings = location.pathname === settingsPath || location.pathname.startsWith(`${settingsPath}/`);
   const params = useParams({ strict: false }) as { itemId?: string };
@@ -422,7 +422,7 @@ function SpaceNavigation({
   collapsed: boolean;
 }) {
   const { t } = useTranslation();
-  const location = useLocation();
+  const location = useShownLocation();
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
   const name = useSpaceDisplayName()(space);
   const path = location.pathname.replace(/\/$/, "");

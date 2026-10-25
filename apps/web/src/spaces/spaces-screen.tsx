@@ -9,7 +9,7 @@ import {
   Table,
   type TableColumn,
 } from "@lunedo/ui";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { FileInput, Layers, Lock, Plus, Search, User, Users } from "lucide-react";
@@ -33,6 +33,53 @@ import { type Space, spaceKeys } from "./space-queries.js";
 
 const route = getRouteApi("/app/spaces");
 
+export interface SpaceListFilter {
+  query: string;
+  organizationId: string | null;
+  archived: boolean;
+  oneOnOnes: boolean;
+}
+
+export function spaceListFilter(search: {
+  q?: string | undefined;
+  organization?: string | undefined;
+  archived?: boolean | undefined;
+  oneOnOnes?: boolean | undefined;
+  deleted?: boolean | undefined;
+}): SpaceListFilter {
+  const deleted = search.deleted === true;
+  const oneOnOnes = search.oneOnOnes === true && !deleted;
+  return {
+    query: search.q?.trim() ?? "",
+    organizationId: search.organization ?? null,
+    archived: search.archived === true && !oneOnOnes && !deleted,
+    oneOnOnes,
+  };
+}
+
+export function spaceListQuery({ query, organizationId, archived, oneOnOnes }: SpaceListFilter) {
+  return infiniteQueryOptions({
+    queryKey: [...spaceKeys.list({ search: query, organizationId }), archived, oneOnOnes],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      request(() =>
+        api.GET("/api/v1/spaces", {
+          params: {
+            query: {
+              limit: 50,
+              ...(query ? { q: query } : {}),
+              ...(organizationId ? { organizationId } : {}),
+              ...(archived ? { archived: "true" as const } : {}),
+              ...(oneOnOnes ? { oneOnOne: "true" as const } : {}),
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
+          },
+        }),
+      ),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+  });
+}
+
 export function SpacesScreen() {
   const { t } = useTranslation();
   useDocumentTitle(t("spaces.list.title"));
@@ -48,24 +95,7 @@ export function SpacesScreen() {
   const [creating, setCreating] = useState(false);
   const [creatingOneOnOne, setCreatingOneOnOne] = useState(false);
   const spaces = useInfiniteQuery({
-    queryKey: [...spaceKeys.list({ search: query, organizationId: organizationFilter }), archived, oneOnOnes],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      request(() =>
-        api.GET("/api/v1/spaces", {
-          params: {
-            query: {
-              limit: 50,
-              ...(query ? { q: query } : {}),
-              ...(organizationFilter ? { organizationId: organizationFilter } : {}),
-              ...(archived ? { archived: "true" as const } : {}),
-              ...(oneOnOnes ? { oneOnOne: "true" as const } : {}),
-              ...(pageParam ? { cursor: pageParam } : {}),
-            },
-          },
-        }),
-      ),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    ...spaceListQuery({ query, organizationId: organizationFilter, archived, oneOnOnes }),
     enabled: !deleted,
   });
   const items = spaces.data?.pages.flatMap((page) => page.items) ?? [];

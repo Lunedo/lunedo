@@ -120,7 +120,19 @@ async function renderApp(path: string) {
 
 describe("the web client", () => {
   it("sends a signed-out visitor to the sign-in page and back after both factors", async () => {
-    const { requests } = api();
+    const { requests } = api({
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: false,
+          secondFactorRequiredBy: null,
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+    });
     await renderApp("/settings/security");
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
     expect(new URL(window.location.href).searchParams.get("redirect")).toBe("/settings/security");

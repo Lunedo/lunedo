@@ -1,6 +1,6 @@
 import { classNames, Icon, RailButton, SidebarGroup, SidebarItem } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Home, Layers, ListChecks, type LucideIcon, User } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,7 @@ import { starredQuery, tasksQuery } from "../collaboration/queries.js";
 import { recentlyViewedQuery } from "../search/search-api.js";
 import { referenceSpaceName, SpaceBadge } from "../spaces/space-badge.js";
 import { spaceByKeyQuery } from "../spaces/space-queries.js";
+import { useShownLocation } from "./navigation-pending.js";
 import { useShell } from "./shell.js";
 import { useOrganizationState, useSession } from "./shell-context.js";
 import { useSidebarSlots } from "./sidebar-slot.js";
@@ -100,7 +101,7 @@ function TasksEntry({ collapsed, current }: { collapsed: boolean; current: boole
 const SPACE_PATH = /^\/spaces\/([^/?#]+)/;
 
 function useInOwnPersonalSpace(): boolean {
-  const location = useLocation();
+  const location = useShownLocation();
   const session = useSession();
   const match = SPACE_PATH.exec(location.pathname);
   const key = match?.[1] ? decodeURIComponent(match[1]) : null;
@@ -170,7 +171,7 @@ function SpacesNavigation({ collapsed }: { collapsed: boolean }) {
 export function AppSidebar() {
   const { t } = useTranslation();
   const shell = useShell();
-  const location = useLocation();
+  const location = useShownLocation();
   const { setMiddle, setBottom, claimed } = useSidebarSlots();
   const overlay = shell.mobileSidebarOpen;
   const collapsed = shell.sidebarCollapsed && !overlay;

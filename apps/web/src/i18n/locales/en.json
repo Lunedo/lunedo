@@ -1091,7 +1091,8 @@
     "watching": "Watched items",
     "profile": "Profile",
     "backTo": "Back to {name}",
-    "loadingSettings": "Loading settings"
+    "loadingSettings": "Loading settings",
+    "loadingScreen": "Loading"
   },
   "navigationGroups": {
     "access": "Access",

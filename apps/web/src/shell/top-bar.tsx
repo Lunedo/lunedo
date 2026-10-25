@@ -153,7 +153,10 @@ export function TopBar() {
   const { t } = useTranslation();
   const items = useRegistry(topBarItems);
   return (
-    <header className="flex h-toolbar shrink-0 items-center gap-2 border-b border-border bg-bg px-2 md:gap-3">
+    <header
+      data-top-bar=""
+      className="flex h-toolbar shrink-0 items-center gap-2 border-b border-border bg-bg px-2 md:gap-3"
+    >
       <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-2">
         <SidebarToggle />
         <Link
