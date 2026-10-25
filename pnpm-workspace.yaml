@@ -28,6 +28,10 @@ overrides:
   "@excalidraw/mermaid-to-excalidraw>nanoid": ^5.1.11
   "@excalidraw/excalidraw>sass": "-"
   lodash-es: ^4.18.1
+  # GHSA-67mh-4wv8-2f99: drizzle-kit's loader pins esbuild ~0.18 and has no release with a fixed range.
+  "@esbuild-kit/core-utils>esbuild": ^0.25.12
+  # GHSA-238p-pmpm-9mq7: mermaid 11 pins katex ^0.16, which has no fixed release; mermaid 12 uses katex 0.18.
+  "mermaid@11>katex": ^0.18.10
 
 patchedDependencies:
   "@tiptap/y-tiptap@3.0.9": patches/@tiptap__y-tiptap@3.0.9.patch
