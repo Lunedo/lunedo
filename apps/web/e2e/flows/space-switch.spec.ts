@@ -47,7 +47,7 @@ test("opens another space from a page in the current space by every way there is
   await page.keyboard.press("Control+k");
   await expect(page.getByRole("dialog", { name: "Search" })).toBeVisible();
   await page.keyboard.type(secondKey);
-  await page.getByRole("option", { name: new RegExp(secondName) }).click();
+  await page.getByRole("option", { name: `${secondName} ${secondKey}`, exact: true }).click();
   await expectInSpace(page, secondKey, secondName);
 
   await page.goto(first.pagePath);
