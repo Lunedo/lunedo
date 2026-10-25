@@ -273,6 +273,8 @@ jobs:
             type=gha,scope=amd64
             type=gha,scope=image
           cache-to: type=gha,mode=max,scope=amd64
+      - name: Check the size of the image
+        run: scripts/check-image-size.sh lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Back up, restore and compare
         run: scripts/backup-roundtrip.sh lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove the containers, volumes and networks of this job

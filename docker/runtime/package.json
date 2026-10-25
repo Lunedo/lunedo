@@ -1,0 +1,12 @@
+{
+  "name": "@lunedo/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Production dependencies of the API, collaboration server and worker, deployed once into the image",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "@lunedo/api": "workspace:*",
+    "@lunedo/collab": "workspace:*",
+    "@lunedo/worker": "workspace:*"
+  }
+}

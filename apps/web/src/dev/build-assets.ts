@@ -9,9 +9,13 @@ const gzipped = promisify(gzip);
 const COMPRESSIBLE = /\.(?:js|mjs|css|html|svg|json|wasm|txt|xml)$/;
 const MIN_BYTES = 1024;
 const LOCALE_CHUNKS_PLACEHOLDER = '"__LUNEDO_LOCALE_CHUNKS__"';
+const GZIP_ONLY = /^drawio\//;
 
-export function isCompressible(file: string, size: number): boolean {
-  return size >= MIN_BYTES && COMPRESSIBLE.test(file);
+export type Encoding = "br" | "gz";
+
+export function encodingsFor(file: string, size: number): Encoding[] {
+  if (size < MIN_BYTES || !COMPRESSIBLE.test(file)) return [];
+  return GZIP_ONLY.test(file) ? ["gz"] : ["br", "gz"];
 }
 
 async function filesBelow(directory: string): Promise<string[]> {
@@ -31,25 +35,25 @@ export async function precompress(directory: string): Promise<number> {
   await Promise.all(
     files.map(async (file) => {
       const { size } = await stat(file);
-      if (!isCompressible(file, size)) return;
+      const encodings = encodingsFor(path.relative(directory, file).split(path.sep).join("/"), size);
+      if (encodings.length === 0) return;
       const content = await readFile(file);
-      const [br, gz] = await Promise.all([
-        brotli(content, {
-          params: {
-            [constants.BROTLI_PARAM_QUALITY]: constants.BROTLI_MAX_QUALITY,
-            [constants.BROTLI_PARAM_SIZE_HINT]: size,
-          },
+      await Promise.all(
+        encodings.map(async (encoding) => {
+          const compressed =
+            encoding === "br"
+              ? await brotli(content, {
+                  params: {
+                    [constants.BROTLI_PARAM_QUALITY]: constants.BROTLI_MAX_QUALITY,
+                    [constants.BROTLI_PARAM_SIZE_HINT]: size,
+                  },
+                })
+              : await gzipped(content, { level: constants.Z_BEST_COMPRESSION });
+          if (compressed.length >= size) return;
+          await writeFile(`${file}.${encoding}`, compressed);
+          written += 1;
         }),
-        gzipped(content, { level: constants.Z_BEST_COMPRESSION }),
-      ]);
-      if (br.length < size) {
-        await writeFile(`${file}.br`, br);
-        written += 1;
-      }
-      if (gz.length < size) {
-        await writeFile(`${file}.gz`, gz);
-        written += 1;
-      }
+      );
     }),
   );
   return written;

@@ -1,23 +1,27 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { brotliDecompressSync, gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
-import { isCompressible, precompress, withLocaleChunks } from "./build-assets.js";
+import { encodingsFor, precompress, withLocaleChunks } from "./build-assets.js";
 
 describe("precompressed build files", () => {
   let directory = "";
   afterEach(() => rmSync(directory, { recursive: true, force: true }));
 
   it("compress scripts, styles and pages but leave small files and images alone", () => {
-    expect(isCompressible("assets/main-1234.js", 4096)).toBe(true);
-    expect(isCompressible("drawio/31.4.6/js/app.min.js", 4096)).toBe(true);
-    expect(isCompressible("index.html", 4096)).toBe(true);
-    expect(isCompressible("assets/main-1234.css", 4096)).toBe(true);
-    expect(isCompressible("assets/tiny-1234.js", 200)).toBe(false);
-    expect(isCompressible("excalidraw/fonts/Virgil.woff2", 40_000)).toBe(false);
-    expect(isCompressible("assets/logo.png", 40_000)).toBe(false);
-    expect(isCompressible("assets/main-1234.js.br", 40_000)).toBe(false);
+    expect(encodingsFor("assets/main-1234.js", 4096)).toEqual(["br", "gz"]);
+    expect(encodingsFor("index.html", 4096)).toEqual(["br", "gz"]);
+    expect(encodingsFor("assets/main-1234.css", 4096)).toEqual(["br", "gz"]);
+    expect(encodingsFor("assets/tiny-1234.js", 200)).toEqual([]);
+    expect(encodingsFor("excalidraw/fonts/Virgil.woff2", 40_000)).toEqual([]);
+    expect(encodingsFor("assets/logo.png", 40_000)).toEqual([]);
+    expect(encodingsFor("assets/main-1234.js.br", 40_000)).toEqual([]);
+  });
+
+  it("keep only a gzip copy of the draw.io files, which load only when a diagram is edited", () => {
+    expect(encodingsFor("drawio/31.4.6/js/app.min.js", 4096)).toEqual(["gz"]);
+    expect(encodingsFor("drawio/31.4.6/stencils/aws4.xml", 4096)).toEqual(["gz"]);
   });
 
   it("write brotli and gzip copies next to each file with the same content", async () => {
@@ -29,6 +33,18 @@ describe("precompressed build files", () => {
     expect(brotliDecompressSync(readFileSync(path.join(directory, "main.js.br"))).toString()).toBe(script);
     expect(gunzipSync(readFileSync(path.join(directory, "main.js.gz"))).toString()).toBe(script);
     expect(() => readFileSync(path.join(directory, "small.js.br"))).toThrow();
+  });
+
+  it("write only the gzip copy below the draw.io folder", async () => {
+    directory = mkdtempSync(path.join(tmpdir(), "lunedo-build-"));
+    const script = "export const value = 1;\n".repeat(500);
+    mkdirSync(path.join(directory, "drawio", "js"), { recursive: true });
+    writeFileSync(path.join(directory, "drawio", "js", "app.min.js"), script);
+    expect(await precompress(directory)).toBe(1);
+    expect(gunzipSync(readFileSync(path.join(directory, "drawio", "js", "app.min.js.gz"))).toString()).toBe(
+      script,
+    );
+    expect(existsSync(path.join(directory, "drawio", "js", "app.min.js.br"))).toBe(false);
   });
 });
 

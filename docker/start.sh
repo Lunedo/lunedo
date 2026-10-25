@@ -5,15 +5,15 @@ roles=(api collab worker)
 role="${1:-all}"
 
 start_role() {
-  node --enable-source-maps "/app/$1/dist/main.js"
+  node "/app/$1/dist/main.js"
 }
 
 case "$role" in
   backup | keys | audit | search | maintenance | version | release-notes | help)
-    exec node --enable-source-maps /app/worker/dist/cli/main.js "$@"
+    exec node /app/worker/dist/cli/main.js "$@"
     ;;
   api | collab | worker)
-    exec node --enable-source-maps "/app/$role/dist/main.js"
+    exec node "/app/$role/dist/main.js"
     ;;
   all)
     pids=()

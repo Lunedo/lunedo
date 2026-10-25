@@ -168,6 +168,7 @@ overrides:
   '@excalidraw/mermaid-to-excalidraw>nanoid': ^5.1.11
   '@excalidraw/excalidraw>sass': '-'
   lodash-es: ^4.18.1
+  lowlight>highlight.js: ~11.12.0
   '@esbuild-kit/core-utils>esbuild': ^0.25.12
   mermaid@11>katex: ^0.18.10
 
@@ -654,6 +655,18 @@ importers:
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.3.4(@types/node@24.19.2)(jiti@2.7.0))
+
+  docker/runtime:
+    dependencies:
+      '@lunedo/api':
+        specifier: workspace:*
+        version: link:../../apps/api
+      '@lunedo/collab':
+        specifier: workspace:*
+        version: link:../../apps/collab
+      '@lunedo/worker':
+        specifier: workspace:*
+        version: link:../../apps/worker
 
   packages/config:
     devDependencies:
@@ -5567,10 +5580,6 @@ packages:
 
   hastscript@9.0.1:
     resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
-
-  highlight.js@11.11.2:
-    resolution: {integrity: sha512-oaXMACAU0kzOMXBjWpNcX+vlwSBCIAiZ9BHa7gA15NOTtT2L/l8OSZDuqS2XppOhZBPJ7hm4o8ep2kyuip2uEQ==}
-    engines: {node: '>=12.0.0'}
 
   highlight.js@11.12.0:
     resolution: {integrity: sha512-nbfWpyRMcMrPMmDwJB+dhX/eiaPKtc2RB+0QZskqJ3WjRA/FDS0e9hZrx8EC/lbEv8gXy98FcDbNa/dspAaJMg==}
@@ -12297,8 +12306,6 @@ snapshots:
       property-information: 7.2.0
       space-separated-tokens: 2.0.2
 
-  highlight.js@11.11.2: {}
-
   highlight.js@11.12.0: {}
 
   hookable@6.1.2: {}
@@ -12646,7 +12653,7 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.5
       devlop: 1.1.0
-      highlight.js: 11.11.2
+      highlight.js: 11.12.0
 
   lru-cache@11.5.3: {}
 

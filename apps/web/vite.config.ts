@@ -5,7 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 import { type BundledChunk, precompress, withLocaleChunks } from "./src/dev/build-assets.js";
-import { drawioContentType, drawioFile, ensureDrawio } from "./src/dev/drawio-assets.js";
+import { drawioContentType, drawioFile, ensureDrawio, isServedDrawioFile } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
 import { isPreviewFrameAsset } from "./src/dev/preview-frame-assets.js";
 import { publicAddress } from "./src/dev/public-address.js";
@@ -99,7 +99,14 @@ function drawioAssets(): Plugin {
     async writeBundle(options) {
       if (!options.dir) return;
       const target = path.join(options.dir, "drawio", DRAWIO_VERSION);
-      await cp(await prepare(), target, { recursive: true, filter: (source) => !source.endsWith(".ready") });
+      const source = await prepare();
+      await cp(source, target, {
+        recursive: true,
+        filter: (file) => {
+          const name = path.relative(source, file).split(path.sep).join("/");
+          return name === "" || (name !== ".ready" && isServedDrawioFile(name));
+        },
+      });
       await cp(path.join(root, "drawio", "LICENSE"), path.join(target, "LICENSE"));
     },
   };
