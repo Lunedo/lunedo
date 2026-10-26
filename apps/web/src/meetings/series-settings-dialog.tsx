@@ -178,7 +178,11 @@ export function SeriesSettingsDialog({
             }
           />
         </Field>
-        <Field label={t("meetings.reminder.label")} hint={t("meetings.reminder.hint")}>
+        <Field
+          label={t("meetings.reminder.label")}
+          hint={t("meetings.reminder.hint")}
+          help={t("meetings.reminder.help")}
+        >
           <Select
             value={reminder}
             onValueChange={(value) => {

@@ -118,7 +118,7 @@ export function Field({ label, hint, help, error, required = false, id, labelAct
   }
   return (
     <FieldContext.Provider value={{ id: controlId, describedBy, invalid: Boolean(error), required }}>
-      <div className="flex flex-col gap-1">
+      <div data-field-stacked="" className="flex w-full max-w-card-wide flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             <label htmlFor={controlId} className="font-medium text-text">
@@ -200,31 +200,14 @@ export function Textarea({ invalid, className, rows = 4, ...props }: TextareaPro
   );
 }
 
-export function FieldGrid({
-  columns = 2,
-  className,
-  children,
-}: {
-  columns?: 2 | 3;
-  className?: string;
-  children: ReactNode;
-}) {
+export function FieldGrid({ className, children }: { className?: string; children: ReactNode }) {
   const layout = useFieldLayout();
   if (layout === "row") return <>{children}</>;
   return (
-    <div
-      data-field-grid=""
-      className={classNames("grid gap-4", columns === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2", className)}
-    >
+    <div data-field-grid="" className={classNames("flex flex-col gap-4", className)}>
       {children}
     </div>
   );
-}
-
-export function FieldGridItem({ span, children }: { span: 2; children: ReactNode }) {
-  const layout = useFieldLayout();
-  if (layout === "row") return <>{children}</>;
-  return <div className={span === 2 ? "sm:col-span-2" : undefined}>{children}</div>;
 }
 
 export function InlineField({ children }: { children: ReactNode }) {

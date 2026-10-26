@@ -16,7 +16,6 @@ import {
   ErrorState,
   Field,
   FieldGrid,
-  FieldGridItem,
   Input,
   Notice,
   PasswordInput,
@@ -307,12 +306,10 @@ export function SmtpForm({
           ]}
         />
       </Field>
-      <FieldGrid columns={3}>
-        <FieldGridItem span={2}>
-          <Field label={t("mail.host")} {...fieldError("host")}>
-            <Input autoComplete="off" {...form.register("host")} />
-          </Field>
-        </FieldGridItem>
+      <FieldGrid>
+        <Field label={t("mail.host")} {...fieldError("host")}>
+          <Input autoComplete="off" {...form.register("host")} />
+        </Field>
         <Field label={t("mail.port")} {...fieldError("port")}>
           <Input inputMode="numeric" autoComplete="off" {...form.register("port")} />
         </Field>

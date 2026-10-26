@@ -114,7 +114,7 @@ function OwnerForm({ back, onSaved }: { back: StepProps<"owner">["back"]; onSave
           {error}
         </Notice>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={t("auth.name")} error={form.formState.errors.name?.message}>
           <Input autoComplete="name" autoFocus {...form.register("name")} />
         </Field>

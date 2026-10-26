@@ -424,7 +424,7 @@ export function PropertiesReportSettings({
         <summary className="flex min-h-hit cursor-pointer items-center rounded-md px-4 py-2 font-medium focus-visible:focus-ring">
           {t("editor.reports.moreOptions")}
         </summary>
-        <div className="grid gap-3 border-t border-border p-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-3 border-t border-border p-4">
           <Field
             label={t("editor.propertiesReport.firstColumn")}
             hint={t("editor.propertiesReport.firstColumnHint")}

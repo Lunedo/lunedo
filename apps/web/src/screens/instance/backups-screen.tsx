@@ -744,7 +744,7 @@ function RetentionSection({ data, canManage }: { data: BackupOverview; canManage
   return (
     <Section title={t("backups.retention.title")}>
       <p className="pt-3 text-sm text-text-muted">{t("backups.retention.description")}</p>
-      <FieldGrid columns={3} className="p-4">
+      <FieldGrid className="p-4">
         {counts.map((kind) => (
           <NumberSetting
             key={kind}

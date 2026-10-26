@@ -91,7 +91,7 @@ function EmbedSettings({
   const [title, setTitle] = useState(String(attrs.title ?? ""));
   const limits = { min: MIN_EMBED_HEIGHT, max: MAX_EMBED_HEIGHT };
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-3">
       <div className="sm:col-span-2">
         <Field
           label={t("editor.embed.address")}
@@ -268,7 +268,7 @@ export function FileView({ node, editor, updateAttributes, selected }: NodeViewP
               label={t("editor.filePreview.show")}
             />
             {showPreview ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-3">
                 <HeightField
                   label={t("editor.filePreview.height")}
                   hint={t("editor.filePreview.heightHint", limits)}

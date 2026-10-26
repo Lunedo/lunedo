@@ -99,7 +99,6 @@ export {
   type FieldControlProps,
   FieldError,
   FieldGrid,
-  FieldGridItem,
   type FieldLayout,
   FieldLayoutProvider,
   type FieldProps,

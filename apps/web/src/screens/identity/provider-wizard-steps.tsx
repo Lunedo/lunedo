@@ -13,6 +13,7 @@ import {
   Notice,
   PasswordInput,
   SegmentedControl,
+  SettingHelp,
   Switch,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,7 +34,7 @@ import {
 import { problemMessage } from "../../errors/problem-message.js";
 import { connectionCheckField, connectionCheckMessage, FailedCheckNotice } from "./connection-check.js";
 import { FileButton, readFileText } from "./file-button.js";
-import { domainsHintKey, parseList } from "./provider-config.js";
+import { domainsHelpKey, domainsHintKey, parseList } from "./provider-config.js";
 import { presetLabel } from "./provider-labels.js";
 import { CERTIFICATE_TYPES, isPlainLdap, ldapUrlSchema, serviceAccountField } from "./provider-ldap.js";
 import { METADATA_TYPES, metadataUrlSchema } from "./provider-saml.js";
@@ -103,16 +104,23 @@ export function DomainsField({
   value,
   error,
   hint,
+  help,
   onChange,
 }: {
   value: string;
   error: string | undefined;
   hint: string;
+  help: string;
   onChange: (domains: string) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <Field label={t("identityProviders.accounts.domains")} hint={hint} {...(error ? { error } : {})}>
+    <Field
+      label={t("identityProviders.accounts.domains")}
+      hint={hint}
+      help={help}
+      {...(error ? { error } : {})}
+    >
       <Input value={value} onChange={(event) => onChange(event.target.value)} />
     </Field>
   );
@@ -124,6 +132,7 @@ function ChosenFile({
   file,
   error,
   hint,
+  help,
   onFile,
 }: {
   label: string;
@@ -131,6 +140,7 @@ function ChosenFile({
   file: { name: string } | null;
   error: string | undefined;
   hint: string;
+  help: string;
   onFile: (file: File) => void;
 }) {
   const { t } = useTranslation();
@@ -142,7 +152,10 @@ function ChosenFile({
           {file ? file.name : t("identityProviders.wizard.noFile")}
         </span>
       </div>
-      <span className="text-sm text-text-muted">{hint}</span>
+      <span className="flex items-center gap-1 text-sm text-text-muted">
+        {hint}
+        <SettingHelp subject={label}>{help}</SettingHelp>
+      </span>
       {error ? (
         <span role="alert" className="text-danger text-sm">
           {error}
@@ -318,6 +331,7 @@ export function SamlConnectionStep({
             file={draft.file}
             error={errors.file}
             hint={t("identityProviders.wizard.metadataFileHint")}
+            help={t("identityProviders.wizard.metadataFileHelp")}
             onFile={(file) => void chooseFile(file)}
           />
         )}
@@ -326,6 +340,7 @@ export function SamlConnectionStep({
         value={domains}
         error={errors.domains}
         hint={t(domainsHintKey("saml", draft.preset))}
+        help={t(domainsHelpKey("saml", draft.preset))}
         onChange={(next) => onCommonChange({ domains: next })}
       />
       {checkFailed ? <FailedCheckNotice busy={busy} onSaveAnyway={() => void create(true)} /> : null}
@@ -548,10 +563,11 @@ export function LdapConnectionStep({
       {plain && !draft.startTls ? (
         <Notice variant="warning">{t("identityProviders.ldap.plainWarning")}</Notice>
       ) : null}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field
           label={t("identityProviders.ldap.bindDn")}
           hint={t(serviceAccount.hint)}
+          help={t(serviceAccount.help)}
           {...(errors.bindDn ? { error: errors.bindDn } : {})}
         >
           <Input
@@ -574,6 +590,7 @@ export function LdapConnectionStep({
         <Field
           label={t("identityProviders.ldap.userBaseDn")}
           hint={t("identityProviders.ldap.userBaseDnHint")}
+          help={t("identityProviders.ldap.userBaseDnHelp")}
           {...(errors.userBaseDn ? { error: errors.userBaseDn } : {})}
         >
           <Input
@@ -585,6 +602,7 @@ export function LdapConnectionStep({
         <Field
           label={t("identityProviders.ldap.groupBaseDn")}
           hint={t("identityProviders.ldap.groupBaseDnHint")}
+          help={t("identityProviders.ldap.groupBaseDnHelp")}
           {...(errors.groupBaseDn ? { error: errors.groupBaseDn } : {})}
         >
           <Input
@@ -598,6 +616,7 @@ export function LdapConnectionStep({
         value={domains}
         error={errors.domains}
         hint={t("identityProviders.accounts.domainsHintDirectory")}
+        help={t("identityProviders.accounts.domainsHelpDirectory")}
         onChange={(next) => onCommonChange({ domains: next })}
       />
       <div className="flex flex-col gap-2">
@@ -608,6 +627,7 @@ export function LdapConnectionStep({
           file={draft.ca}
           error={errors.ca}
           hint={t("identityProviders.wizard.caHint")}
+          help={t("identityProviders.wizard.caHelp")}
           onFile={(file) => void chooseCa(file)}
         />
       </div>

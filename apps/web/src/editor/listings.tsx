@@ -259,7 +259,7 @@ export function ChildPagesSettings({
   });
   const scope = request.pageId || choosing ? "other" : "this";
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-3">
       <Field label={t("editor.childPages.scope")}>
         <Select
           value={scope}

@@ -20,9 +20,8 @@ describe("the instance step", () => {
       />,
     );
     expect((screen.getByLabelText("Address") as HTMLInputElement).value).toBe("http://wiki.example.org");
-    expect(
-      screen.getByText("Taken from the current address. Used in links, e-mails and for passkeys."),
-    ).toBeTruthy();
+    expect(screen.getByText("Taken from the current address.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Address/ })).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 

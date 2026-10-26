@@ -96,7 +96,7 @@ export function TaskReport({
       </h3>
       {filters.seriesId ? <p className="text-sm text-text-muted">{t("tasks.report.seriesScope")}</p> : null}
       {onChange ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-3">
           {filters.seriesId ? null : (
             <Field label={t("tasks.report.scope")}>
               <Select

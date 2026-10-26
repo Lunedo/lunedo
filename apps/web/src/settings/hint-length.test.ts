@@ -64,3 +64,37 @@ describe("hints of settings", () => {
     }
   });
 });
+
+function allFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) return allFiles(full);
+    return /\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name) ? [full] : [];
+  });
+}
+
+function dialogHintKeys(): string[] {
+  const keys = new Set<string>();
+  for (const file of allFiles(path.resolve("src"))) {
+    const text = readFileSync(file, "utf8");
+    if (!/<Dialog\b|<ConfirmDialog\b|\bsteps\b/.test(text) && !/dialog|wizard|setup/i.test(file)) continue;
+    for (const match of text.matchAll(/hint=\{\s*t\("([\w.]+)"\)\s*\}/g)) if (match[1]) keys.add(match[1]);
+  }
+  return [...keys];
+}
+
+describe("hints in dialogs and wizards", () => {
+  it("say one sentence below the field and keep the rest behind the help", () => {
+    const keys = dialogHintKeys();
+    expect(keys.length).toBeGreaterThan(40);
+    for (const language of Object.keys(resources) as (keyof typeof resources)[]) {
+      const long = keys.filter((key) => {
+        const text = lookup(language, key);
+        if (typeof text !== "string") return false;
+        const sentences = text.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(])/).filter(Boolean);
+        return text.length > 70 && sentences.length > 1;
+      });
+      expect(long, language).toEqual([]);
+    }
+  });
+});

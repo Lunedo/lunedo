@@ -159,7 +159,11 @@ export function CreateSeriesDialog({
             }
           />
         </Field>
-        <Field label={t("meetings.create.members")} hint={t("meetings.create.membersHint")}>
+        <Field
+          label={t("meetings.create.members")}
+          hint={t("meetings.create.membersHint")}
+          help={t("meetings.create.membersHelp")}
+        >
           <Combobox
             multiple
             load={membersLoader}

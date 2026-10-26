@@ -431,7 +431,7 @@ function TemplateForm({
         void save();
       }}
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={t("templates.name")} error={errors.name} required>
           <Input
             value={name}
@@ -451,7 +451,11 @@ function TemplateForm({
         </Field>
       </div>
       {articleTypes ? (
-        <Field label={t("templates.articleType")} hint={t("templates.articleTypeHint")}>
+        <Field
+          label={t("templates.articleType")}
+          hint={t("templates.articleTypeHint")}
+          help={t("templates.articleTypeHelp")}
+        >
           <Select
             value={articleType}
             onValueChange={setArticleType}

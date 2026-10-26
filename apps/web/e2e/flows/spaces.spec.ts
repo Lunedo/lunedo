@@ -82,8 +82,8 @@ test("creates a space and arranges pages, folders and links", async ({ page, org
   await page.getByRole("button", { name: "Create space" }).first().click();
   const dialog = page.getByRole("dialog", { name: "Create a space" });
   await dialog.getByLabel("Name").fill("Team Handbook");
-  await expect(dialog.getByLabel("Key")).toHaveValue(/^TH\d*$/);
-  const spaceKey = await dialog.getByLabel("Key").inputValue();
+  await expect(dialog.getByLabel("Key", { exact: true })).toHaveValue(/^TH\d*$/);
+  const spaceKey = await dialog.getByLabel("Key", { exact: true }).inputValue();
   await expect(dialog.getByText("Who gets access")).toBeVisible();
   await expectAccessible(page, "create space");
   await dialog.getByRole("button", { name: "Create space" }).click();

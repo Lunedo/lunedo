@@ -271,7 +271,7 @@ export function ConnectionStep({
             }}
           >
             {cloud ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <Field
                   label={t("imports.connection.site")}
                   hint={t("imports.connection.siteHint")}
@@ -306,6 +306,7 @@ export function ConnectionStep({
               <Field
                 label={t("imports.connection.baseUrl")}
                 hint={t("imports.connection.baseUrlHint")}
+                help={t("imports.connection.baseUrlHelp")}
                 {...(errors.baseUrl ? { error: errors.baseUrl } : {})}
               >
                 <Input
@@ -344,6 +345,7 @@ export function ConnectionStep({
                 <Field
                   label={t("imports.connection.certificates")}
                   hint={t("imports.connection.certificatesHint")}
+                  help={t("imports.connection.certificatesHelp")}
                   {...(errors.certificates ? { error: errors.certificates } : {})}
                 >
                   <Textarea

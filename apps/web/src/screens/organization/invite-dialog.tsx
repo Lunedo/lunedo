@@ -147,7 +147,7 @@ export function InviteDialog({
             autoFocus
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <Field label={t("members.kind")}>
             <SegmentedControl
               label={t("members.kind")}

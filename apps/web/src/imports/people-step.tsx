@@ -199,7 +199,7 @@ function TokenForm({
         void check();
       }}
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field
           label={t("imports.people.token.site")}
           hint={t("imports.people.token.siteHint")}

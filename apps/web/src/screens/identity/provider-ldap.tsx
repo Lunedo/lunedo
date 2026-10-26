@@ -77,11 +77,13 @@ export function serviceAccountField(preset: LdapConfigInput["preset"]) {
     ? ({
         schema: activeDirectoryServiceAccountSchema,
         hint: "identityProviders.ldap.bindDnHintActiveDirectory",
+        help: "identityProviders.ldap.bindDnHelpActiveDirectory",
         invalid: "identityProviders.ldap.serviceAccountInvalid",
       } as const)
     : ({
         schema: distinguishedNameSchema,
         hint: "identityProviders.ldap.bindDnHint",
+        help: "identityProviders.ldap.bindDnHelp",
         invalid: "identityProviders.ldap.dnInvalid",
       } as const);
 }
@@ -162,6 +164,7 @@ export function LdapConnectionFields({
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.bindDn")}
           hint={t(serviceAccount.hint)}
+          help={t(serviceAccount.help)}
           value={config.bindDn}
           schema={serviceAccount.schema}
           invalidMessage={t(serviceAccount.invalid)}

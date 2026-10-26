@@ -205,6 +205,13 @@ export function domainsHintKey(type: IdentityProvider["type"], preset: string) {
   return "identityProviders.accounts.domainsHint" as const;
 }
 
+export function domainsHelpKey(type: IdentityProvider["type"], preset: string) {
+  if (type === "ldap") return "identityProviders.accounts.domainsHelpDirectory" as const;
+  if (preset === "google") return "identityProviders.accounts.domainsHelpGoogle" as const;
+  if (preset === "entraId") return "identityProviders.accounts.domainsHelpEntraId" as const;
+  return "identityProviders.accounts.domainsHelp" as const;
+}
+
 export function providerKind(provider: IdentityProvider): "entraId" | "google" | "oidc" | "saml" | "ldap" {
   if (provider.type !== "oidc") return provider.type;
   return provider.config.preset === "generic" ? "oidc" : provider.config.preset;
@@ -458,6 +465,7 @@ export function AccountFields({
           <ExplicitSaveTextField
             label={t("identityProviders.accounts.domains")}
             hint={t(domainsHintKey(provider.type, config.preset))}
+            help={t(domainsHelpKey(provider.type, config.preset))}
             value={config.domains.join(", ")}
             schema={domainList}
             invalidMessage={t("identityProviders.accounts.domainsInvalid")}

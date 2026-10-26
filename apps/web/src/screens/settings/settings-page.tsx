@@ -55,7 +55,7 @@ export function SettingsPage({
         />
       </div>
       {wide || steps ? (
-        <FieldLayoutProvider layout="row">{children}</FieldLayoutProvider>
+        <FieldLayoutProvider layout={steps ? "stacked" : "row"}>{children}</FieldLayoutProvider>
       ) : (
         <div
           className={

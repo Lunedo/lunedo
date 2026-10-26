@@ -49,7 +49,9 @@ test("an administrator uploads an XML export, a reviewer reads it in quarantine 
   await expect(page.getByRole("heading", { name: "Space", level: 1 })).toBeVisible();
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Synthetic space");
   await page.getByLabel("Key", { exact: true }).fill(key);
-  await page.getByLabel("Address of the Confluence site").fill("https://example.atlassian.net/wiki");
+  await page
+    .getByLabel("Address of the Confluence site", { exact: true })
+    .fill("https://example.atlassian.net/wiki");
   await page.getByRole("combobox", { name: "Add a reviewer" }).fill(reviewer.name.split(" ")[0] ?? "");
   await page.getByRole("option", { name: new RegExp(reviewer.name) }).click();
   await expect(page.getByRole("button", { name: `Remove ${reviewer.name}` })).toBeVisible();

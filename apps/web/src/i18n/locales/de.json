@@ -406,9 +406,9 @@
       "create": "Konten bei der ersten Anmeldung anlegen",
       "createHint": "Sonst nur Eingeladene und Bestehende.",
       "domains": "Domains",
-      "domainsHint": "Gib jede Domain ein, die deine Personen bei diesem Anbieter verwenden, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
-      "domainsHintEntraId": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
-      "domainsHintGoogle": "Gib jede Domain deines Google Workspace ein, für Anmeldenamen und für E-Mail-Adressen. Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
+      "domainsHint": "Gib jede Domain ein, die deine Personen bei diesem Anbieter verwenden, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at.",
+      "domainsHintEntraId": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at.",
+      "domainsHintGoogle": "Gib jede Domain deines Google Workspace ein, für Anmeldenamen und für E-Mail-Adressen.",
       "domainsInvalid": "Gib Domains wie example.org ein, durch Kommas getrennt.",
       "requireGroup": "Gruppenmitgliedschaft verlangen",
       "requireGroupHint": "Meist besser beim Anbieter beschränken.",
@@ -418,11 +418,15 @@
       "linkHint": "Einmal mit dem alten Passwort bestätigen.",
       "linkFixed": "Aus Sicherheitsgründen fest",
       "confirmationRequired": "Bestätigung erforderlich",
-      "domainsHintDirectory": "Gib die Domains der E-Mail-Adressen und Anmeldenamen im Verzeichnis ein, zum Beispiel example.com. Die Anmeldeseite fragt Personen mit diesen Domains nach ihrem Verzeichnispasswort, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHintDirectory": "Gib die Domains der E-Mail-Adressen und Anmeldenamen im Verzeichnis ein, zum Beispiel example.com.",
       "groupsHelp": "IDs der Gruppen beim Anbieter, durch Kommas getrennt. Die Mitgliedschaft in einer davon genügt.",
       "createHelp": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
       "requireGroupHelp": "Meist nicht nötig: Beschränke den Zugang besser beim Anbieter. Verwende das nur, wenn der Anbieter den Zugang nicht selbst beschränken kann.",
-      "linkHelp": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Lunedo verknüpft Konten nie automatisch."
+      "linkHelp": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Lunedo verknüpft Konten nie automatisch.",
+      "domainsHelp": "Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHelpEntraId": "Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "domainsHelpGoogle": "Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
+      "domainsHelpDirectory": "Die Anmeldeseite fragt Personen mit diesen Domains nach ihrem Verzeichnispasswort, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter."
     },
     "credentials": {
       "title": "Zugänge",
@@ -642,7 +646,7 @@
         "generic": "Die Adresse der Metadaten des Identitätsanbieters, beginnend mit https://."
       },
       "chooseMetadata": "Metadatendatei auswählen",
-      "metadataFileHint": "Die XML-Datei mit den Metadaten des Identitätsanbieters. Ohne Adresse musst du eine neue Datei hochladen, sobald sich sein Zertifikat ändert.",
+      "metadataFileHint": "Die XML-Datei mit den Metadaten des Identitätsanbieters.",
       "metadataFileRequired": "Wähle die Metadatendatei des Identitätsanbieters aus.",
       "noFile": "Keine Datei ausgewählt",
       "fileUnreadable": "Die Datei konnte nicht gelesen werden. Wähle sie erneut aus oder versuche eine andere Datei.",
@@ -652,7 +656,7 @@
         "activeDirectory": "Lege im Active Directory ein Dienstkonto an, das Personen und Gruppen lesen darf. Weitere Rechte braucht es nicht.",
         "generic": "Lege im Verzeichnis ein Dienstkonto an, das Personen und Gruppen lesen darf, zum Beispiel in OpenLDAP oder FreeIPA. Weitere Rechte braucht es nicht."
       },
-      "caHint": "Optional. Nur nötig, wenn das Serverzertifikat von deiner eigenen Zertifizierungsstelle ausgestellt wurde.",
+      "caHint": "Optional.",
       "caFailedTitle": "Der Anbieter ist gespeichert, das CA-Zertifikat aber nicht",
       "caFailedAction": "Mach weiter und lade das richtige CA-Zertifikat im Testschritt oder in den Verbindungseinstellungen hoch.",
       "graphHint": "SAML-Assertions aus Entra ID enthalten höchstens 150 Gruppen. Mit einer App-Registrierung mit den Anwendungsberechtigungen GroupMember.Read.All und User.Read.All lädt Lunedo den Rest über Microsoft Graph und synchronisiert Konten im Hintergrund. Du kannst diesen Schritt überspringen und ihn später in den Einstellungen nachholen.",
@@ -679,7 +683,9 @@
         "adfs": "in ADFS"
       },
       "typeFixed": "Nach dem Speichern nicht mehr änderbar",
-      "stepLater": "Öffnet sich, sobald der aktuelle Schritt gespeichert ist"
+      "stepLater": "Öffnet sich, sobald der aktuelle Schritt gespeichert ist",
+      "metadataFileHelp": "Ohne Adresse musst du eine neue Datei hochladen, sobald sich sein Zertifikat ändert.",
+      "caHelp": "Nur nötig, wenn das Serverzertifikat von deiner eigenen Zertifizierungsstelle ausgestellt wurde."
     },
     "types": {
       "oidc": "OIDC",
@@ -762,12 +768,12 @@
       "startTlsLdaps": "Nur für ldap://-Adressen; ldaps:// ist bereits verschlüsselt.",
       "plainWarning": "Ohne StartTLS werden Passwörter unverschlüsselt übertragen. Lunedo lehnt eine solche Verbindung ab, außer die Instanz läuft mit erlaubten unsicheren Identitätsanbietern.",
       "bindDn": "Dienstkonto",
-      "bindDnHint": "Das Konto, mit dem Lunedo Personen nachschlägt, zum Beispiel CN=lunedo,OU=Service,DC=example,DC=org. Es braucht nur Leserechte für Personen und Gruppen.",
-      "bindDnHintActiveDirectory": "Das Konto, mit dem Lunedo Personen nachschlägt, zum Beispiel svc-lunedo@example.org. EXAMPLE\\svc-lunedo oder der vollständige Distinguished Name funktionieren ebenso. Es braucht nur Leserechte für Personen und Gruppen.",
+      "bindDnHint": "Das Konto, mit dem Lunedo Personen nachschlägt, zum Beispiel CN=lunedo,OU=Service,DC=example,DC=org.",
+      "bindDnHintActiveDirectory": "Das Konto, mit dem Lunedo Personen nachschlägt, zum Beispiel svc-lunedo@example.org.",
       "userBaseDn": "Basis-DN für Personen",
-      "userBaseDnHint": "Der Teil des Verzeichnisses mit den Personen, die sich anmelden dürfen, zum Beispiel OU=Staff,DC=example,DC=org. Lunedo sucht auch in allem darunter.",
+      "userBaseDnHint": "Der Teil des Verzeichnisses mit den Personen, die sich anmelden dürfen, zum Beispiel OU=Staff,DC=example,DC=org.",
       "groupBaseDn": "Basis-DN für Gruppen",
-      "groupBaseDnHint": "Der Teil des Verzeichnisses mit den Gruppen, zum Beispiel OU=Groups,DC=example,DC=org. Lunedo sucht auch in allem darunter.",
+      "groupBaseDnHint": "Der Teil des Verzeichnisses mit den Gruppen, zum Beispiel OU=Groups,DC=example,DC=org.",
       "dnInvalid": "Gib einen Distinguished Name wie OU=Staff,DC=example,DC=org ein.",
       "serviceAccountInvalid": "Gib einen Distinguished Name, einen Benutzerprinzipalnamen wie svc-lunedo@example.org oder EXAMPLE\\svc-lunedo ein.",
       "userFilter": "Filter für Personen",
@@ -830,7 +836,11 @@
       "disabledValuesHelp": "Durch Kommas getrennt. Ohne Werte bedeutet jeder Wert des Attributs deaktiviert.",
       "caNoneHelp": "Lunedo vertraut nur Zertifikaten öffentlicher Zertifizierungsstellen.",
       "signInAttributeHelp": "Was Personen auf der Anmeldeseite neben ihrem Passwort eingeben.",
-      "groupMembershipHelp": "Wo das Verzeichnis festhält, wer zu einer Gruppe gehört."
+      "groupMembershipHelp": "Wo das Verzeichnis festhält, wer zu einer Gruppe gehört.",
+      "userBaseDnHelp": "Lunedo sucht auch in allem darunter.",
+      "groupBaseDnHelp": "Lunedo sucht auch in allem darunter.",
+      "bindDnHelp": "Es braucht nur Leserechte für Personen und Gruppen.",
+      "bindDnHelpActiveDirectory": "EXAMPLE\\svc-lunedo oder der vollständige Distinguished Name funktionieren ebenso. Es braucht nur Leserechte für Personen und Gruppen."
     },
     "directoryTest": {
       "title": "Verzeichnis testen",
@@ -2084,9 +2094,10 @@
       "title": "Deine Instanz",
       "description": "Die Adresse und der Name, die alle sehen.",
       "url": "Adresse",
-      "urlHint": "Aus der aktuellen Adresse übernommen. Wird in Links, E-Mails und für Passkeys verwendet.",
+      "urlHint": "Aus der aktuellen Adresse übernommen.",
       "locked": "Gesperrt:",
-      "name": "Name der Instanz"
+      "name": "Name der Instanz",
+      "urlHelp": "Wird in Links, E-Mails und für Passkeys verwendet."
     },
     "owner": {
       "title": "Owner-Konto",
@@ -6139,7 +6150,7 @@
       "namePlaceholder": "Zum Beispiel IT-Betrieb",
       "nameRequired": "Gib einen Namen für den Space ein.",
       "key": "Schlüssel",
-      "keyHint": "2 bis 10 Buchstaben oder Ziffern. Er steht in Adressen, zum Beispiel /spaces/ITOPS.",
+      "keyHint": "2 bis 10 Buchstaben oder Ziffern.",
       "keyInvalid": "Verwende 2 bis 10 Buchstaben oder Ziffern, ohne Leerzeichen und andere Zeichen.",
       "keyTaken": "Ein anderer Space verwendet bereits {key}. Wähle einen anderen Schlüssel.",
       "description": "Beschreibung",
@@ -6160,7 +6171,8 @@
       "submit": "Space erstellen",
       "created": "Space {name} erstellt",
       "failed": "Der Space konnte nicht erstellt werden",
-      "descriptionHelp": "Optional. Ein oder zwei Sätze dazu, wofür der Space da ist."
+      "descriptionHelp": "Optional. Ein oder zwei Sätze dazu, wofür der Space da ist.",
+      "keyHelp": "Er steht in Adressen, zum Beispiel /spaces/ITOPS."
     },
     "personal": {
       "label": "Persönlicher Space",
@@ -6733,7 +6745,7 @@
     "consequenceVersions": "Alle Versionen, Entwürfe, Labels und Links davon werden entfernt.",
     "consequenceAudit": "Die Löschung und ihr Grund werden im Audit-Log festgehalten.",
     "reason": "Grund",
-    "reasonHint": "Zum Beispiel die Löschanfrage und ihr Aktenzeichen. Der Grund wird im Audit-Log gespeichert.",
+    "reasonHint": "Zum Beispiel die Löschanfrage und ihr Aktenzeichen.",
     "reasonRequired": "Gib einen Grund mit höchstens {max} Zeichen an.",
     "typeTitle": "Gib {title} zur Bestätigung ein",
     "titleMismatch": "Der Titel stimmt nicht überein. Gib ihn genau wie angezeigt ein.",
@@ -6742,7 +6754,8 @@
     "deletedNow": "„{title}“ endgültig gelöscht",
     "deleteNowFailed": "Der Eintrag konnte nicht gelöscht werden",
     "sidebarLink": "Papierkorb",
-    "moreActionsFor": "Weitere Aktionen für {title}"
+    "moreActionsFor": "Weitere Aktionen für {title}",
+    "reasonHelp": "Der Grund wird im Audit-Log gespeichert."
   },
   "templates": {
     "title": "Vorlagen",
@@ -6906,7 +6919,7 @@
     "restrictedConfirm": "Alle, die die Vorlagen von {space} verwenden können, dürfen diesen Inhalt sehen",
     "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab.",
     "articleType": "Artikelart",
-    "articleTypeHint": "Artikel aus dieser Vorlage bekommen diese Art. Lesende filtern im Portal danach.",
+    "articleTypeHint": "Artikel aus dieser Vorlage bekommen diese Art.",
     "ownTemplates": "Eigene Vorlagen",
     "builtIn": {
       "title": "Eingebaute Vorlagen",
@@ -6917,7 +6930,8 @@
       "duplicated": "{name} wurde dupliziert. Die Kopie steht in der Liste oben.",
       "duplicateFailed": "{name} konnte nicht dupliziert werden",
       "loadFailed": "Die eingebauten Vorlagen konnten nicht geladen werden"
-    }
+    },
+    "articleTypeHelp": "Lesende filtern im Portal danach."
   },
   "versions": {
     "history": "Versionen",
@@ -7916,11 +7930,12 @@
       "templateHint": "Jede Besprechungsseite beginnt mit dieser Vorlage.",
       "templateLoading": "Vorlagen werden geladen",
       "members": "Mitglieder",
-      "membersHint": "Nur Personen mit Zugriff auf diesen Space. Sie werden zu jeder Besprechung eingeladen; was sie in den Notizen sehen, ergibt sich aus ihrer Rolle im Space.",
+      "membersHint": "Nur Personen mit Zugriff auf diesen Space.",
       "membersPlaceholder": "Personen nach Namen suchen",
       "submit": "Serie anlegen",
       "created": "{name} angelegt. Die erste Besprechung ist bereit.",
-      "failed": "Die Serie konnte nicht angelegt werden"
+      "failed": "Die Serie konnte nicht angelegt werden",
+      "membersHelp": "Sie werden zu jeder Besprechung eingeladen; was sie in den Notizen sehen, ergibt sich aus ihrer Rolle im Space."
     },
     "schedule": {
       "rhythm": "Rhythmus",
@@ -8230,11 +8245,12 @@
     },
     "reminder": {
       "label": "Erinnerung an die Teilnehmenden",
-      "hint": "Die Teilnehmenden werden gebeten, ihre Themen einzutragen, mit einem Link zur Besprechung. Jede Besprechung wird einmal erinnert.",
+      "hint": "Die Teilnehmenden werden gebeten, ihre Themen einzutragen, mit einem Link zur Besprechung.",
       "off": "Keine Erinnerung",
       "oneDay": "1 Tag vorher",
       "twoDays": "2 Tage vorher",
-      "oneWeek": "1 Woche vorher"
+      "oneWeek": "1 Woche vorher",
+      "help": "Jede Besprechung wird einmal erinnert."
     },
     "inactive": "Inaktiv",
     "agenda": {
@@ -8656,7 +8672,7 @@
         "keyInvalid": "Verwende 2 bis 10 Buchstaben oder Ziffern.",
         "keyTaken": "Der Schlüssel {key} gehört schon einem anderen Space. Wähle einen anderen Schlüssel.",
         "sourceUrl": "Adresse der Confluence-Site",
-        "sourceUrlHint": "Optional. Links auf Seiten, die nicht in diesem Export sind, zeigen dorthin. Ohne Adresse werden solche Links zu einfachem Text.",
+        "sourceUrlHint": "Optional.",
         "sourceUrlPlaceholder": "https://example.atlassian.net/wiki",
         "sourceUrlInvalid": "Gib die Adresse mit https:// ein, zum Beispiel https://example.atlassian.net/wiki.",
         "whatTitle": "Was importiert wird",
@@ -8672,7 +8688,8 @@
           "currentDescription": "Am schnellsten. Jede Seite beginnt mit einer Version.",
           "full": "Vollständiger Seitenverlauf",
           "fullDescription": "Jede Confluence-Version wird eine Lunedo-Version mit Autor und Datum. Dauert deutlich länger."
-        }
+        },
+        "sourceUrlHelp": "Links auf Seiten, die nicht in diesem Export sind, zeigen dorthin. Ohne Adresse werden solche Links zu einfachem Text."
       },
       "check": {
         "intro": "Lunedo hat den Export gelesen. Noch ist nichts importiert.",
@@ -9677,7 +9694,7 @@
       "email": "Deine Atlassian-E-Mail-Adresse",
       "emailInvalid": "Gib die E-Mail-Adresse des Atlassian-Kontos ein, das das API-Token erstellt hat.",
       "baseUrl": "Basisadresse",
-      "baseUrlHint": "Die Adresse, unter der du Confluence öffnest, samt Kontextpfad wie /confluence. Eine Instanz-Administration muss den Host vorher freigeben.",
+      "baseUrlHint": "Die Adresse, unter der du Confluence öffnest, samt Kontextpfad wie /confluence.",
       "baseUrlInvalid": "Gib die https-Adresse deines Confluence ein, etwa https://wiki.example.com/confluence.",
       "apiToken": "API-Token",
       "apiTokenHint": "Erstelle es unter id.atlassian.com › Sicherheit › API-Token.",
@@ -9686,7 +9703,7 @@
       "tokenRequired": "Füge das Token genau so ein, wie Confluence es angezeigt hat.",
       "advanced": "Erweitert",
       "certificates": "Zertifizierungsstelle (PEM)",
-      "certificatesHint": "Nur nötig, wenn der Server ein Zertifikat deiner eigenen Zertifizierungsstelle nutzt. Füge das Zertifikat der Stelle ein, nicht das des Servers.",
+      "certificatesHint": "Nur nötig, wenn der Server ein Zertifikat deiner eigenen Zertifizierungsstelle nutzt.",
       "readOnly": "Lunedo liest nur. Das Token wird verschlüsselt gespeichert, nur für diesen Import genutzt und gelöscht, wenn der Import übernommen, verworfen, angehalten wird oder fehlschlägt.",
       "test": "Verbindung testen",
       "change": "Verbindung ändern",
@@ -9703,7 +9720,9 @@
       "deleted": "Lunedo hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Teste die Verbindung erneut, um fortzufahren.",
       "sitePlaceholder": "example.atlassian.net",
       "baseUrlPlaceholder": "https://wiki.example.com/confluence",
-      "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----"
+      "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----",
+      "baseUrlHelp": "Eine Instanz-Administration muss den Host vorher freigeben.",
+      "certificatesHelp": "Füge das Zertifikat der Stelle ein, nicht das des Servers."
     },
     "selection": {
       "intro": "Wähle einen oder mehrere Bereiche und, wenn du willst, nur einige Seitenbäume des Bereichs dieses Imports. Lunedo liest sie im nächsten Schritt; in Confluence ändert sich nichts.",

@@ -48,6 +48,7 @@ export function InstanceStep({ details, back, onDone }: StepProps<"instance">) {
         <Field
           label={t("setup.instance.url")}
           hint={t("setup.instance.urlHint")}
+          help={t("setup.instance.urlHelp")}
           error={form.formState.errors.url?.message}
         >
           <Input type="url" autoComplete="url" {...form.register("url")} />

@@ -246,6 +246,7 @@ function CreateSpaceForm({
       <Field
         label={t("spaces.create.key")}
         hint={t("spaces.create.keyHint")}
+        help={t("spaces.create.keyHelp")}
         {...(errors.key ? { error: errors.key } : {})}
       >
         <Input

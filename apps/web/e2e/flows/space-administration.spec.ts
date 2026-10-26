@@ -23,8 +23,8 @@ test("an organization administrator becomes space admin with a reason and the sp
   const dialog = page.getByRole("dialog", { name: `Become space admin of Field notes ${key}` });
   await dialog.getByRole("button", { name: "Become space admin" }).click();
   await expect(dialog.getByText(/Name the reason/)).toBeVisible();
-  await expect(dialog.getByLabel("Reason")).toBeFocused();
-  await dialog.getByLabel("Reason").fill("The team asked for help with its permissions");
+  await expect(dialog.getByLabel("Reason", { exact: true })).toBeFocused();
+  await dialog.getByLabel("Reason", { exact: true }).fill("The team asked for help with its permissions");
   await dialog.getByRole("button", { name: "Become space admin" }).click();
   await expect(page.getByText(`You are now space admin of Field notes ${key}.`).first()).toBeVisible();
   await page.getByRole("button", { name: "Open space" }).first().click();

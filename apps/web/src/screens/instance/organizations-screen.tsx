@@ -287,7 +287,7 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
         >
           <Input className="font-mono" {...form.register("slug")} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <Field label={t("instance.organizations.language")}>
             <Controller
               control={form.control}

@@ -126,7 +126,7 @@ export function ScheduleFields({
           </div>
         </fieldset>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={firstMeetingLabel ?? t("meetings.schedule.firstDate")} error={errors.startsOn} required>
           <AppDatePicker value={value.startsOn} onValueChange={(startsOn) => set({ startsOn })} />
         </Field>

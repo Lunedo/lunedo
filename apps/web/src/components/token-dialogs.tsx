@@ -671,7 +671,7 @@ export function CreateTokenDialog({
                   {error}
                 </Notice>
               ) : null}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <Field label={t("tokens.name")} error={form.formState.errors.name?.message}>
                   <Input
                     autoComplete="off"

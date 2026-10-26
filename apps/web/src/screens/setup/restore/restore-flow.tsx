@@ -402,7 +402,7 @@ function BucketPage({ back, onNext }: { back: ReactNode; onNext: () => void }) {
       <Field label={t("setup.restore.s3.endpoint")} hint={t("setup.restore.s3.endpointHint")}>
         <Input type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={t("setup.restore.s3.bucket")} error={errors.bucket}>
           <Input ref={fields.bucket} value={input.bucket} onChange={set("bucket")} />
         </Field>
@@ -789,14 +789,15 @@ function KeysPage({
           className="sr-only"
           aria-label={t("setup.restore.keys.masterKeys")}
           aria-invalid={errors.masterKeys ? true : undefined}
-          onChange={async (event) => {
+          onChange={(event) => {
             const chosen = event.target.files?.[0];
             if (!chosen) return;
-            const text = await readKeyFile(chosen);
-            setKeyFile({ name: chosen.name, text });
-            setErrors((current) => ({ ...current, masterKeys: undefined }));
-            const fromFile = backupKeyFrom(text);
-            if (fromFile && !backupKey.trim()) setBackupKey(fromFile);
+            void readKeyFile(chosen).then((text) => {
+              setKeyFile({ name: chosen.name, text });
+              setErrors((current) => ({ ...current, masterKeys: undefined }));
+              const fromFile = backupKeyFrom(text);
+              if (fromFile && !backupKey.trim()) setBackupKey(fromFile);
+            });
           }}
         />
         <p className="text-sm text-text-muted">{t("setup.restore.keys.masterKeysHint")}</p>

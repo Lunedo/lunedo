@@ -987,7 +987,7 @@ function SpaceStep({
     <>
       {entry.state === "analyzing" ? <Reading entry={entry} /> : null}
       <Section title={t("imports.wizard.space.title")}>
-        <div className="grid gap-4 p-4 md:grid-cols-2">
+        <div className="flex flex-col gap-4 p-4">
           <Field
             label={t("imports.wizard.space.name")}
             {...(errors.spaceName ? { error: errors.spaceName } : {})}
@@ -1027,6 +1027,7 @@ function SpaceStep({
               <Field
                 label={t("imports.wizard.space.sourceUrl")}
                 hint={t("imports.wizard.space.sourceUrlHint")}
+                help={t("imports.wizard.space.sourceUrlHelp")}
                 {...(errors.sourceUrl ? { error: errors.sourceUrl } : {})}
               >
                 <Input

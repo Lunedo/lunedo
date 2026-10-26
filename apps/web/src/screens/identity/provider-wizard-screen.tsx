@@ -787,7 +787,7 @@ function OidcConnectionStep({
         error={errors.name}
         onChange={(next) => onCommonChange({ name: next })}
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         {preset === "entraId" ? (
           <Field
             label={t("identityProviders.fields.tenantId")}
@@ -832,6 +832,7 @@ function OidcConnectionStep({
           value={domains}
           error={errors.domains}
           hint={t("identityProviders.accounts.domainsHintGoogle")}
+          help={t("identityProviders.accounts.domainsHelpGoogle")}
           onChange={(next) => onCommonChange({ domains: next })}
         />
       ) : null}

@@ -177,7 +177,7 @@ export function MeetingDateDialog({
     >
       {needsDate ? (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             <Field label={t("meetings.schedule.date")} error={error ?? undefined}>
               <AppDatePicker
                 ref={dateInput}

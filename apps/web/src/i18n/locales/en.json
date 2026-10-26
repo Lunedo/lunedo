@@ -406,9 +406,9 @@
       "create": "Create accounts at first sign-in",
       "createHint": "Otherwise only invited and existing ones.",
       "domains": "Domains",
-      "domainsHint": "Enter every domain your people use at this provider, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
-      "domainsHintEntraId": "Enter every domain that is verified in the tenant, for sign-in names and for e-mail addresses, for example example.com and example.at. The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
-      "domainsHintGoogle": "Enter every domain of your Google Workspace, for sign-in names and for e-mail addresses. The sign-in page sends people with these domains to Google.",
+      "domainsHint": "Enter every domain your people use at this provider, for sign-in names and for e-mail addresses, for example example.com and example.at.",
+      "domainsHintEntraId": "Enter every domain that is verified in the tenant, for sign-in names and for e-mail addresses, for example example.com and example.at.",
+      "domainsHintGoogle": "Enter every domain of your Google Workspace, for sign-in names and for e-mail addresses.",
       "domainsInvalid": "Enter domains like example.org, separated by commas.",
       "requireGroup": "Require group membership",
       "requireGroupHint": "Usually better restricted at the provider.",
@@ -418,11 +418,15 @@
       "linkHint": "Confirmed once with the old password.",
       "linkFixed": "Fixed for security",
       "confirmationRequired": "Confirmation required",
-      "domainsHintDirectory": "Enter the domains of the e-mail addresses and sign-in names in the directory, for example example.com. The sign-in page asks people with these domains for their directory password, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHintDirectory": "Enter the domains of the e-mail addresses and sign-in names in the directory, for example example.com.",
       "groupsHelp": "IDs of the groups at the provider, separated by commas. Membership in one of them is enough.",
       "createHelp": "Without this, only invited people and existing accounts can sign in.",
       "requireGroupHelp": "Usually not needed: restrict access in the provider instead. Use this only when the provider cannot restrict access itself.",
-      "linkHelp": "When an account with the same verified address exists, the person confirms once with its password and second factor. Lunedo never links accounts automatically."
+      "linkHelp": "When an account with the same verified address exists, the person confirms once with its password and second factor. Lunedo never links accounts automatically.",
+      "domainsHelp": "The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHelpEntraId": "The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
+      "domainsHelpGoogle": "The sign-in page sends people with these domains to Google.",
+      "domainsHelpDirectory": "The sign-in page asks people with these domains for their directory password, and accounts are created only for them. A domain belongs to one provider only."
     },
     "credentials": {
       "title": "Credentials",
@@ -642,7 +646,7 @@
         "generic": "The address of the identity provider's metadata, starting with https://."
       },
       "chooseMetadata": "Choose metadata file",
-      "metadataFileHint": "The XML file with the metadata of the identity provider. Without an address, upload a new file whenever its certificate changes.",
+      "metadataFileHint": "The XML file with the metadata of the identity provider.",
       "metadataFileRequired": "Choose the metadata file of the identity provider.",
       "noFile": "No file chosen",
       "fileUnreadable": "The file could not be read. Choose it again or try another file.",
@@ -652,7 +656,7 @@
         "activeDirectory": "Create a service account in Active Directory that may read people and groups. It needs no other rights.",
         "generic": "Create a service account in the directory that may read people and groups, for example in OpenLDAP or FreeIPA. It needs no other rights."
       },
-      "caHint": "Optional. Only needed when the server certificate was issued by your own certificate authority.",
+      "caHint": "Optional.",
       "caFailedTitle": "The provider is saved, but the CA certificate is not",
       "caFailedAction": "Continue and upload the right CA certificate in the test step or in the connection settings.",
       "graphHint": "SAML assertions from Entra ID carry at most 150 groups. With an app registration that has the application permissions GroupMember.Read.All and User.Read.All, Lunedo loads the rest through Microsoft Graph and also synchronizes accounts in the background. You can skip this step and add it later in the settings.",
@@ -679,7 +683,9 @@
         "adfs": "in ADFS"
       },
       "typeFixed": "Fixed once the provider is saved",
-      "stepLater": "Opens after the current step is saved"
+      "stepLater": "Opens after the current step is saved",
+      "metadataFileHelp": "Without an address, upload a new file whenever its certificate changes.",
+      "caHelp": "Only needed when the server certificate was issued by your own certificate authority."
     },
     "types": {
       "oidc": "OIDC",
@@ -762,12 +768,12 @@
       "startTlsLdaps": "Only for ldap:// addresses; ldaps:// is encrypted already.",
       "plainWarning": "Without StartTLS, passwords travel unencrypted. Lunedo refuses such a connection unless the instance runs with insecure identity providers allowed.",
       "bindDn": "Service account",
-      "bindDnHint": "The account Lunedo uses to look people up, for example CN=lunedo,OU=Service,DC=example,DC=org. It only needs to read people and groups.",
-      "bindDnHintActiveDirectory": "The account Lunedo uses to look people up, for example svc-lunedo@example.org. EXAMPLE\\svc-lunedo or the full distinguished name work as well. It only needs to read people and groups.",
+      "bindDnHint": "The account Lunedo uses to look people up, for example CN=lunedo,OU=Service,DC=example,DC=org.",
+      "bindDnHintActiveDirectory": "The account Lunedo uses to look people up, for example svc-lunedo@example.org.",
       "userBaseDn": "Base DN for people",
-      "userBaseDnHint": "The part of the directory that holds the people who may sign in, for example OU=Staff,DC=example,DC=org. Lunedo also looks in everything below it.",
+      "userBaseDnHint": "The part of the directory that holds the people who may sign in, for example OU=Staff,DC=example,DC=org.",
       "groupBaseDn": "Base DN for groups",
-      "groupBaseDnHint": "The part of the directory that holds the groups, for example OU=Groups,DC=example,DC=org. Lunedo also looks in everything below it.",
+      "groupBaseDnHint": "The part of the directory that holds the groups, for example OU=Groups,DC=example,DC=org.",
       "dnInvalid": "Enter a distinguished name such as OU=Staff,DC=example,DC=org.",
       "serviceAccountInvalid": "Enter a distinguished name, a user principal name such as svc-lunedo@example.org, or EXAMPLE\\svc-lunedo.",
       "userFilter": "Filter for people",
@@ -830,7 +836,11 @@
       "disabledValuesHelp": "Separated by commas. Without values, any value of the attribute means disabled.",
       "caNoneHelp": "Lunedo trusts only certificates of public certificate authorities.",
       "signInAttributeHelp": "What people enter on the sign-in page besides their password.",
-      "groupMembershipHelp": "Where the directory records who belongs to a group."
+      "groupMembershipHelp": "Where the directory records who belongs to a group.",
+      "userBaseDnHelp": "Lunedo also looks in everything below it.",
+      "groupBaseDnHelp": "Lunedo also looks in everything below it.",
+      "bindDnHelp": "It only needs to read people and groups.",
+      "bindDnHelpActiveDirectory": "EXAMPLE\\svc-lunedo or the full distinguished name work as well. It only needs to read people and groups."
     },
     "directoryTest": {
       "title": "Test the directory",
@@ -2084,9 +2094,10 @@
       "title": "Your instance",
       "description": "The address and name people see.",
       "url": "Address",
-      "urlHint": "Taken from the current address. Used in links, e-mails and for passkeys.",
+      "urlHint": "Taken from the current address.",
       "locked": "Locked:",
-      "name": "Instance name"
+      "name": "Instance name",
+      "urlHelp": "Used in links, e-mails and for passkeys."
     },
     "owner": {
       "title": "Owner account",
@@ -6139,7 +6150,7 @@
       "namePlaceholder": "For example IT Operations",
       "nameRequired": "Enter a name for the space.",
       "key": "Key",
-      "keyHint": "2 to 10 letters or digits. It appears in addresses, for example /spaces/ITOPS.",
+      "keyHint": "2 to 10 letters or digits.",
       "keyInvalid": "Use 2 to 10 letters or digits, without spaces or other characters.",
       "keyTaken": "Another space already uses {key}. Choose a different key.",
       "description": "Description",
@@ -6160,7 +6171,8 @@
       "submit": "Create space",
       "created": "Space {name} created",
       "failed": "The space could not be created",
-      "descriptionHelp": "Optional. One or two sentences about what the space is for."
+      "descriptionHelp": "Optional. One or two sentences about what the space is for.",
+      "keyHelp": "It appears in addresses, for example /spaces/ITOPS."
     },
     "personal": {
       "label": "Personal space",
@@ -6733,7 +6745,7 @@
     "consequenceVersions": "All versions, drafts, labels and links of it are removed.",
     "consequenceAudit": "The deletion and its reason are written to the audit log.",
     "reason": "Reason",
-    "reasonHint": "For example the erasure request and its reference. It is stored in the audit log.",
+    "reasonHint": "For example the erasure request and its reference.",
     "reasonRequired": "Enter a reason of up to {max} characters.",
     "typeTitle": "Type {title} to confirm",
     "titleMismatch": "The title does not match. Type it exactly as shown.",
@@ -6742,7 +6754,8 @@
     "deletedNow": "“{title}” deleted permanently",
     "deleteNowFailed": "The entry could not be deleted",
     "sidebarLink": "Trash",
-    "moreActionsFor": "More actions for {title}"
+    "moreActionsFor": "More actions for {title}",
+    "reasonHelp": "It is stored in the audit log."
   },
   "templates": {
     "title": "Templates",
@@ -6906,7 +6919,7 @@
     "restrictedConfirm": "Everyone who can use the templates of {space} may see this content",
     "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel.",
     "articleType": "Article type",
-    "articleTypeHint": "Articles created from this template get this type. Readers filter by it in the portal.",
+    "articleTypeHint": "Articles created from this template get this type.",
     "ownTemplates": "Own templates",
     "builtIn": {
       "title": "Built-in templates",
@@ -6917,7 +6930,8 @@
       "duplicated": "{name} was duplicated. The copy is in the list above.",
       "duplicateFailed": "{name} could not be duplicated",
       "loadFailed": "The built-in templates could not be loaded"
-    }
+    },
+    "articleTypeHelp": "Readers filter by it in the portal."
   },
   "versions": {
     "history": "Versions",
@@ -7916,11 +7930,12 @@
       "templateHint": "Each meeting page starts from this template.",
       "templateLoading": "Loading templates",
       "members": "Members",
-      "membersHint": "Only people with access to this space. They are invited to every meeting; what they see in the notes follows from their role in the space.",
+      "membersHint": "Only people with access to this space.",
       "membersPlaceholder": "Search people by name",
       "submit": "Create series",
       "created": "{name} created. The first meeting is ready.",
-      "failed": "The series could not be created"
+      "failed": "The series could not be created",
+      "membersHelp": "They are invited to every meeting; what they see in the notes follows from their role in the space."
     },
     "schedule": {
       "rhythm": "Rhythm",
@@ -8230,11 +8245,12 @@
     },
     "reminder": {
       "label": "Reminder to attendees",
-      "hint": "Attendees are asked to add their topics, with a link to the meeting. Each meeting is reminded once.",
+      "hint": "Attendees are asked to add their topics, with a link to the meeting.",
       "off": "No reminder",
       "oneDay": "1 day before",
       "twoDays": "2 days before",
-      "oneWeek": "1 week before"
+      "oneWeek": "1 week before",
+      "help": "Each meeting is reminded once."
     },
     "inactive": "Inactive",
     "agenda": {
@@ -8656,7 +8672,7 @@
         "keyInvalid": "Use 2 to 10 letters or digits.",
         "keyTaken": "The key {key} is already used by another space. Choose another key.",
         "sourceUrl": "Address of the Confluence site",
-        "sourceUrlHint": "Optional. Links to pages that are not part of this export point there. Without it, such links become plain text.",
+        "sourceUrlHint": "Optional.",
         "sourceUrlPlaceholder": "https://example.atlassian.net/wiki",
         "sourceUrlInvalid": "Enter the address starting with https://, for example https://example.atlassian.net/wiki.",
         "whatTitle": "What to import",
@@ -8672,7 +8688,8 @@
           "currentDescription": "Fastest. Each page starts with one version.",
           "full": "Full page history",
           "fullDescription": "Every Confluence version becomes a Lunedo version with its author and date. Takes noticeably longer."
-        }
+        },
+        "sourceUrlHelp": "Links to pages that are not part of this export point there. Without it, such links become plain text."
       },
       "check": {
         "intro": "Lunedo has read the export. Nothing is imported yet.",
@@ -9677,7 +9694,7 @@
       "email": "Your Atlassian e-mail address",
       "emailInvalid": "Enter the e-mail address of the Atlassian account that created the API token.",
       "baseUrl": "Base address",
-      "baseUrlHint": "The address you open Confluence with, including a context path like /confluence. An instance administrator must allow the host first.",
+      "baseUrlHint": "The address you open Confluence with, including a context path like /confluence.",
       "baseUrlInvalid": "Enter the https address of your Confluence, such as https://wiki.example.com/confluence.",
       "apiToken": "API token",
       "apiTokenHint": "Create it at id.atlassian.com › Security › API tokens.",
@@ -9686,7 +9703,7 @@
       "tokenRequired": "Paste the token exactly as Confluence showed it.",
       "advanced": "Advanced",
       "certificates": "Certificate authority (PEM)",
-      "certificatesHint": "Only needed when the server uses a certificate from your own certificate authority. Paste the certificate of the authority, not the one of the server.",
+      "certificatesHint": "Only needed when the server uses a certificate from your own certificate authority.",
       "readOnly": "Lunedo only reads. The token is stored encrypted, used only for this import and deleted when the import is accepted, discarded, stopped or fails.",
       "test": "Test connection",
       "change": "Change connection",
@@ -9703,7 +9720,9 @@
       "deleted": "Lunedo deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Test the connection again to continue.",
       "sitePlaceholder": "example.atlassian.net",
       "baseUrlPlaceholder": "https://wiki.example.com/confluence",
-      "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----"
+      "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----",
+      "baseUrlHelp": "An instance administrator must allow the host first.",
+      "certificatesHelp": "Paste the certificate of the authority, not the one of the server."
     },
     "selection": {
       "intro": "Choose one or more spaces and, if you like, only some page trees of this import's space. Lunedo reads them in the next step; nothing changes in Confluence.",

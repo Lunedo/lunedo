@@ -37,7 +37,7 @@ test("an administrator resets a member's second factor with a reason", async ({
   await expect(page.getByRole("heading", { level: 1, name: person.name })).toBeVisible();
   await page.getByRole("main").getByRole("button", { name: "Reset second factor" }).click();
   const dialog = page.getByRole("dialog", { name: `Reset the second factor of ${person.name}?` });
-  await dialog.getByLabel("Reason").fill("Lost phone, confirmed by call");
+  await dialog.getByLabel("Reason", { exact: true }).fill("Lost phone, confirmed by call");
   await dialog.getByRole("button", { name: "Reset second factor" }).click();
   const confirm = page.getByRole("dialog", { name: "Confirm your identity" });
   if (await confirm.isVisible().catch(() => false)) {

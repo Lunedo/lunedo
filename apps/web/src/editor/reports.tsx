@@ -344,7 +344,7 @@ export function PageReportSettings({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-3">
       <ScopeField
         spaceId={report.spaceId}
         currentSpaceId={currentSpaceId}

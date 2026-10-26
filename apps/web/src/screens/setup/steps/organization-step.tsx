@@ -92,7 +92,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
       <Field label={t("setup.organization.name")} error={form.formState.errors.name?.message}>
         <Input autoComplete="organization" autoFocus {...form.register("name")} />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={t("setup.organization.language")} error={form.formState.errors.language?.message}>
           <Controller
             control={form.control}
@@ -148,7 +148,7 @@ export function OrganizationStep({ details, back, onDone }: StepProps<"organizat
           <fieldset id="setup-formats" className="flex flex-col gap-3">
             <legend className="sr-only">{t("setup.organization.formats")}</legend>
             <p className="text-sm text-text-muted">{t("setup.organization.formatsHint")}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-4">
               {FORMAT_FIELDS.map((format) => (
                 <Field key={format.name} label={translateKey(t, format.labelKey)}>
                   <Controller
