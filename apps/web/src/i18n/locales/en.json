@@ -4359,6 +4359,7 @@
         "archived": "Space archived",
         "unarchived": "Space brought back from the archive",
         "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
+        "personalAdministratorAppointed": "Space admin of a personal space appointed",
         "confidentialDeleted": "Confidential space deleted",
         "administratorTaken": "Administrator became space admin",
         "cleanupDeleted": "Space without members deleted",
@@ -6073,7 +6074,7 @@
       "transfer": "Transfer",
       "transferTitle": "Transfer the personal space of {owner}",
       "newOwner": "New owner",
-      "newOwnerHint": "An active standard account. You cannot transfer it to yourself.",
+      "newOwnerHint": "One of the remaining members. You cannot transfer the space to yourself.",
       "chooseAccount": "Choose the new owner first.",
       "transferEffectTitle": "The new owner gets all content",
       "transferEffect": "The new owner becomes space admin and can read everything {owner} wrote there. The transfer is recorded in the audit log.",
@@ -6082,7 +6083,10 @@
       "transferFailed": "The personal space could not be transferred",
       "delete": "Delete personal space",
       "deleteTitle": "Delete the personal space of {owner}?",
-      "deleted": "Personal space deleted. Restore it under Pages and trash during second-stage recovery."
+      "deleted": "Personal space deleted. Restore it under Pages and trash during second-stage recovery.",
+      "nobodyRemains": "Nobody remains",
+      "nobodyRemainsDescription": "No active member remains besides the deactivated person. The space can only be deleted, or removed under Clean-up after the waiting period.",
+      "remainingFailed": "The remaining members could not be loaded"
     },
     "access": {
       "tab": "Access",
@@ -11796,6 +11800,13 @@
       "Amman": "Amman",
       "Istanbul": "Istanbul",
       "Reykjavik": "Reykjavik"
+    }
+  },
+  "personalSpaces": {
+    "organization": {
+      "title": "Personal spaces of deactivated people",
+      "description": "Personal spaces of people of this organization who were deactivated and left other members behind. They appear with their key only.",
+      "loadFailed": "The personal spaces could not be loaded"
     }
   }
 }

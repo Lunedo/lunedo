@@ -683,7 +683,7 @@ export function createAccountServices(options: {
     holders: new SpaceHolders(people),
     people,
   });
-  const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces });
+  const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces, notifications });
   const watches = new WatchService({ database, authorization, settings });
   const activity = new ContentActivity({ database, notifications, authorization, watches });
   const documents = new PageDocumentService({

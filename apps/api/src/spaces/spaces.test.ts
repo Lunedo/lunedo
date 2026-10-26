@@ -720,6 +720,20 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       personal.json().id,
     );
     const successor = await person();
+    const outsider = await person();
+    await test.runtime.pool.query(
+      `insert into space_permissions (id, space_id, principal_kind, principal_id, role)
+       values (gen_random_uuid(), $1, 'account', $2, 'reader')`,
+      [personal.json().id, successor.id],
+    );
+    const candidates = await owner.get(
+      `/api/v1/instance/personal-spaces/${personal.json().id}/remaining-members`,
+    );
+    expect(candidates.json().map((member: { id: string }) => member.id)).toEqual([successor.id]);
+    const refused = await owner.post(`/api/v1/instance/personal-spaces/${personal.json().id}/transfer`, {
+      accountId: outsider.id,
+    });
+    expect(refused.json()).toMatchObject({ code: "invalidHolder" });
     const transfer = await owner.post(`/api/v1/instance/personal-spaces/${personal.json().id}/transfer`, {
       accountId: successor.id,
     });
@@ -728,6 +742,42 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       role: "admin",
     });
     expect((await owner.get(`/api/v1/spaces/${personal.json().id}`)).statusCode).toBe(404);
+  });
+
+  it("lets administrators of the home organization appoint a remaining member of a personal space", async () => {
+    const leaving = await person();
+    const remaining = await person();
+    const ordinary = await person();
+    const personal = (
+      await leaving.client.post("/api/v1/account/personal-space", { overviewTitle: "Personal space" })
+    ).json();
+    await test.runtime.pool.query("update accounts set home_organization_id = $1 where id = $2", [
+      organizationId,
+      leaving.id,
+    ]);
+    await test.runtime.pool.query(
+      `insert into space_permissions (id, space_id, principal_kind, principal_id, role)
+       values (gen_random_uuid(), $1, 'account', $2, 'editor')`,
+      [personal.id, remaining.id],
+    );
+    await test.runtime.pool.query("update accounts set state = 'deactivated' where id = $1", [leaving.id]);
+    const base = `/api/v1/organizations/${organizationId}/personal-spaces`;
+    expect((await ordinary.client.get(base)).statusCode).toBe(403);
+    expect(
+      (await ordinary.client.post(`${base}/${personal.id}/administrator`, { accountId: ordinary.id }))
+        .statusCode,
+    ).toBe(403);
+    const listed = await owner.get(base);
+    expect(listed.json().items).toEqual([
+      expect.objectContaining({ id: personal.id, activeMembers: 1, needsAdministrator: true }),
+    ]);
+    const members = await owner.get(`${base}/${personal.id}/remaining-members`);
+    expect(members.json()).toEqual([{ id: remaining.id, name: expect.any(String) }]);
+    const appointed = await owner.post(`${base}/${personal.id}/administrator`, { accountId: remaining.id });
+    expect(appointed.statusCode, appointed.body).toBe(204);
+    expect((await remaining.client.get(`/api/v1/spaces/${personal.id}`)).json()).toMatchObject({
+      role: "admin",
+    });
   });
 
   it("finds people the caller may see", async () => {

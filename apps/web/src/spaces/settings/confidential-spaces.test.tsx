@@ -74,6 +74,54 @@ describe("confidential spaces in the organization settings", () => {
   });
 });
 
+describe("personal spaces of deactivated people in the organization settings", () => {
+  it("offer an appointment from the remaining members through the personal space routes", async () => {
+    const api = mockApi({
+      [`GET /api/v1/organizations/${ORGANIZATION}/personal-spaces`]: () => ({
+        body: { items: [summary({ key: "P7K2M9QX" })], nextCursor: null },
+      }),
+      [`GET /api/v1/organizations/${ORGANIZATION}/personal-spaces/${SPACE}/remaining-members`]: () => ({
+        body: [{ id: REMAINING, name: "Anna Berger" }],
+      }),
+      [`POST /api/v1/organizations/${ORGANIZATION}/personal-spaces/${SPACE}/administrator`]: () => ({
+        status: 204,
+      }),
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <ConfidentialSpaces organizationId={ORGANIZATION} canManage kind="personal" />
+      </PreferencesProvider>,
+    );
+    expect(await screen.findByText("Personal spaces of deactivated people")).toBeTruthy();
+    await userEvent.click(await screen.findByRole("button", { name: "Appoint space admin" }));
+    const dialog = await screen.findByRole("dialog", { name: "Appoint a space admin for P7K2M9QX" });
+    await userEvent.click(await within(dialog).findByRole("radio", { name: "Anna Berger" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Appoint as space admin" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "POST")?.path).toBe(
+        `/api/v1/organizations/${ORGANIZATION}/personal-spaces/${SPACE}/administrator`,
+      ),
+    );
+  });
+
+  it("stay out of the way while there are none", async () => {
+    const api = mockApi({
+      [`GET /api/v1/organizations/${ORGANIZATION}/personal-spaces`]: () => ({
+        body: { items: [], nextCursor: null },
+      }),
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <ConfidentialSpaces organizationId={ORGANIZATION} canManage kind="personal" />
+      </PreferencesProvider>,
+    );
+    await waitFor(() =>
+      expect(api.requests.some((request) => request.path.includes("/personal-spaces"))).toBe(true),
+    );
+    expect(screen.queryByText("Personal spaces of deactivated people")).toBeNull();
+  });
+});
+
 describe("deleted confidential spaces in the organization trash", () => {
   it("are counted only, with who can restore them", async () => {
     mockApi({

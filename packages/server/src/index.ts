@@ -1056,7 +1056,7 @@ export {
 } from "./spaces/ownership.js";
 export type { Person } from "./spaces/people.js";
 export type { PermissionChange, SpacePermissionEntry } from "./spaces/permissions.js";
-export type { PersonalSpaceForReview } from "./spaces/personal.js";
+export type { PersonalSpaceForReview, PersonalSpaceSummary } from "./spaces/personal.js";
 export {
   type DecisionReportPage,
   type LabeledItem,

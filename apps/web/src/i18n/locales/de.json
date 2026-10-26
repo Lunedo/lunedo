@@ -4359,6 +4359,7 @@
         "archived": "Space archiviert",
         "unarchived": "Space aus dem Archiv geholt",
         "confidentialAdministratorAppointed": "Space-Admin eines vertraulichen Space ernannt",
+        "personalAdministratorAppointed": "Space-Admin eines persönlichen Space ernannt",
         "pageStatusValuesChanged": "Werte für den Seitenstatus geändert",
         "confidentialDeleted": "Vertraulicher Space gelöscht",
         "administratorTaken": "Administrator wurde Space-Admin",
@@ -6073,7 +6074,7 @@
       "transfer": "Übertragen",
       "transferTitle": "Persönlichen Space von {owner} übertragen",
       "newOwner": "Neuer Inhaber",
-      "newOwnerHint": "Ein aktives Standardkonto. Du kannst ihn nicht dir selbst übertragen.",
+      "newOwnerHint": "Eines der verbliebenen Mitglieder. Du kannst den Space nicht dir selbst übertragen.",
       "chooseAccount": "Wähle zuerst den neuen Inhaber.",
       "transferEffectTitle": "Der neue Inhaber bekommt alle Inhalte",
       "transferEffect": "Der neue Inhaber wird Space-Admin und kann alles lesen, was {owner} dort geschrieben hat. Die Übertragung wird im Audit-Log festgehalten.",
@@ -6082,7 +6083,10 @@
       "transferFailed": "Der persönliche Space konnte nicht übertragen werden",
       "delete": "Persönlichen Space löschen",
       "deleteTitle": "Persönlichen Space von {owner} löschen?",
-      "deleted": "Persönlicher Space gelöscht. Du kannst ihn während der Admin-Wiederherstellung unter Seiten und Papierkorb zurückholen."
+      "deleted": "Persönlicher Space gelöscht. Du kannst ihn während der Admin-Wiederherstellung unter Seiten und Papierkorb zurückholen.",
+      "nobodyRemains": "Niemand übrig",
+      "nobodyRemainsDescription": "Außer der deaktivierten Person ist kein aktives Mitglied übrig. Der Space lässt sich nur noch löschen oder nach der Wartezeit unter Aufräumen entfernen.",
+      "remainingFailed": "Die verbliebenen Mitglieder konnten nicht geladen werden"
     },
     "access": {
       "tab": "Zugriff",
@@ -11796,6 +11800,13 @@
       "Amman": "Amman",
       "Istanbul": "Istanbul",
       "Reykjavik": "Reykjavík"
+    }
+  },
+  "personalSpaces": {
+    "organization": {
+      "title": "Persönliche Spaces deaktivierter Personen",
+      "description": "Persönliche Spaces von Personen dieser Organisation, die deaktiviert wurden und andere Mitglieder zurücklassen. Sie erscheinen nur mit ihrem Schlüssel.",
+      "loadFailed": "Die persönlichen Spaces konnten nicht geladen werden"
     }
   }
 }

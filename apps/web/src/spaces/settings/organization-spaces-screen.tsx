@@ -125,6 +125,11 @@ export function OrganizationSpacesScreen() {
                 organizationId={organizationId}
                 canManage={state.can("organization.spaces.manage")}
               />
+              <ConfidentialSpaces
+                organizationId={organizationId}
+                canManage={state.can("organization.spaces.manage")}
+                kind="personal"
+              />
             </div>
           ) : tab === "cleanup" ? (
             <SpaceCleanup

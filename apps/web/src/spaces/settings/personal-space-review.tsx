@@ -1,12 +1,12 @@
 import {
   Button,
-  Combobox,
   ConfirmDialog,
   Dialog,
   EmptyState,
   Field,
   focusFirstInvalidSoon,
   Notice,
+  RadioGroup,
   Skeleton,
   Table,
   useToast,
@@ -35,6 +35,7 @@ interface ReviewEntry {
   ownerName: string | null;
   ownerState: string | null;
   pages: number;
+  remainingMembers: number;
   lastChangedAt: string;
 }
 
@@ -109,10 +110,14 @@ export function PersonalSpaceReview() {
                 header: t("spaces.instance.actions"),
                 cell: (entry) =>
                   canManage ? (
-                    <span className="flex justify-end gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => setTransferring(entry)}>
-                        {t("spaces.instance.transfer")}
-                      </Button>
+                    <span className="flex flex-wrap items-center justify-end gap-2">
+                      {entry.remainingMembers > 0 ? (
+                        <Button variant="secondary" size="sm" onClick={() => setTransferring(entry)}>
+                          {t("spaces.instance.transfer")}
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-text-muted">{t("spaces.instance.nobodyRemains")}</span>
+                      )}
                       <Button variant="danger" size="sm" onClick={() => setDeleting(entry)}>
                         {t("spaces.instance.delete")}
                       </Button>
@@ -216,6 +221,16 @@ function TransferDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [account, setAccount] = useState<{ value: string; label: string } | null>(null);
+  const remaining = useQuery({
+    queryKey: [...spaceKeys.personalReview, entry?.spaceId, "remaining"],
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/instance/personal-spaces/{spaceId}/remaining-members", {
+          params: { path: { spaceId: entry?.spaceId ?? "" } },
+        }),
+      ),
+    enabled: entry !== null,
+  });
   const [error, setError] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -275,29 +290,29 @@ function TransferDialog({
           hint={t("spaces.instance.newOwnerHint")}
           {...(error ? { error } : {})}
         >
-          <Combobox
-            aria-label={t("spaces.instance.newOwner")}
-            value={account?.value ?? null}
-            selectedItem={account}
-            emptyText={t("spaces.holders.noMatch")}
-            load={async (query) => {
-              const found = await request(() =>
-                api.GET("/api/v1/instance/accounts", {
-                  params: { query: { limit: 20, ...(query ? { q: query } : {}) } },
-                }),
-              );
-              return {
-                items: found.items
-                  .filter((candidate) => candidate.type === "standard" && candidate.state === "active")
-                  .map((candidate) => ({
-                    value: candidate.id,
-                    label: candidate.name,
-                    ...(candidate.email ? { description: candidate.email } : {}),
-                  })),
-              };
-            }}
-            onValueChange={(value, item) => setAccount(value && item ? { value, label: item.label } : null)}
-          />
+          {remaining.isPending ? <Skeleton className="h-field w-full" /> : null}
+          {remaining.isError ? (
+            <LoadError
+              what={t("spaces.instance.remainingFailed")}
+              error={remaining.error}
+              onRetry={() => remaining.refetch()}
+            />
+          ) : null}
+          {remaining.data && remaining.data.length === 0 ? (
+            <p className="text-sm text-text-muted">{t("spaces.instance.nobodyRemainsDescription")}</p>
+          ) : null}
+          {remaining.data && remaining.data.length > 0 ? (
+            <RadioGroup
+              label={t("spaces.instance.newOwner")}
+              value={account?.value ?? ""}
+              onValueChange={(value) => {
+                const chosen = remaining.data.find((member) => member.id === value);
+                setAccount(chosen ? { value: chosen.id, label: chosen.name } : null);
+                setError(null);
+              }}
+              options={remaining.data.map((member) => ({ value: member.id, label: member.name }))}
+            />
+          ) : null}
         </Field>
         <Notice variant="warning" title={t("spaces.instance.transferEffectTitle")}>
           {t("spaces.instance.transferEffect", { owner })}

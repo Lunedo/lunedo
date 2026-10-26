@@ -32,43 +32,70 @@ interface Summary {
   needsAdministrator: boolean;
 }
 
+type Kind = "confidential" | "personal";
+
 const keys = {
-  list: (organizationId: string) => ["organization", organizationId, "confidentialSpaces"] as const,
-  remaining: (organizationId: string, spaceId: string) =>
-    ["organization", organizationId, "confidentialSpaces", spaceId, "remaining"] as const,
+  list: (organizationId: string, kind: Kind) => ["organization", organizationId, `${kind}Spaces`] as const,
+  remaining: (organizationId: string, kind: Kind, spaceId: string) =>
+    ["organization", organizationId, `${kind}Spaces`, spaceId, "remaining"] as const,
 };
+
+function listSpaces(organizationId: string, kind: Kind) {
+  const params = { params: { path: { organizationId }, query: { limit: 200 } } };
+  return request(() =>
+    kind === "confidential"
+      ? api.GET("/api/v1/organizations/{organizationId}/confidential-spaces", params)
+      : api.GET("/api/v1/organizations/{organizationId}/personal-spaces", params),
+  );
+}
+
+function remainingMembers(organizationId: string, kind: Kind, spaceId: string) {
+  const params = { params: { path: { organizationId, spaceId } } };
+  return request(() =>
+    kind === "confidential"
+      ? api.GET(
+          "/api/v1/organizations/{organizationId}/confidential-spaces/{spaceId}/remaining-members",
+          params,
+        )
+      : api.GET("/api/v1/organizations/{organizationId}/personal-spaces/{spaceId}/remaining-members", params),
+  );
+}
+
+function appoint(organizationId: string, kind: Kind, spaceId: string, accountId: string) {
+  const options = { params: { path: { organizationId, spaceId } }, body: { accountId } };
+  return request(() =>
+    kind === "confidential"
+      ? api.POST(
+          "/api/v1/organizations/{organizationId}/confidential-spaces/{spaceId}/administrator",
+          options,
+        )
+      : api.POST("/api/v1/organizations/{organizationId}/personal-spaces/{spaceId}/administrator", options),
+  );
+}
 
 export function ConfidentialSpaces({
   organizationId,
   canManage,
+  kind = "confidential",
 }: {
   organizationId: string;
   canManage: boolean;
+  kind?: Kind;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
   const [appointing, setAppointing] = useState<Summary | null>(null);
   const spaces = useQuery({
-    queryKey: keys.list(organizationId),
-    queryFn: () =>
-      request(() =>
-        api.GET("/api/v1/organizations/{organizationId}/confidential-spaces", {
-          params: { path: { organizationId }, query: { limit: 200 } },
-        }),
-      ),
+    queryKey: keys.list(organizationId, kind),
+    queryFn: () => listSpaces(organizationId, kind),
   });
+  if (kind === "personal" && !spaces.isError && !spaces.data?.items.length) return null;
+  const texts = kind === "confidential" ? "confidential.organization" : "personalSpaces.organization";
   return (
-    <Panel
-      title={t("confidential.organization.title")}
-      description={t("confidential.organization.description")}
-    >
+    <Panel title={t(`${texts}.title`)} description={t(`${texts}.description`)}>
       {spaces.isPending ? <Skeleton className="h-field w-full" /> : null}
       {spaces.isError ? (
-        <LoadError
-          what={t("confidential.organization.loadFailed")}
-          error={spaces.error}
-          onRetry={() => spaces.refetch()}
-        />
+        <LoadError what={t(`${texts}.loadFailed`)} error={spaces.error} onRetry={() => spaces.refetch()} />
       ) : null}
       {spaces.data && spaces.data.items.length === 0 ? (
         <EmptyState
@@ -110,6 +137,7 @@ export function ConfidentialSpaces({
       {appointing ? (
         <AppointDialog
           organizationId={organizationId}
+          kind={kind}
           space={appointing}
           onClose={() => setAppointing(null)}
         />
@@ -120,10 +148,12 @@ export function ConfidentialSpaces({
 
 function AppointDialog({
   organizationId,
+  kind,
   space,
   onClose,
 }: {
   organizationId: string;
+  kind: Kind;
   space: Summary;
   onClose: () => void;
 }) {
@@ -135,13 +165,8 @@ function AppointDialog({
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const remaining = useQuery({
-    queryKey: keys.remaining(organizationId, space.id),
-    queryFn: () =>
-      request(() =>
-        api.GET("/api/v1/organizations/{organizationId}/confidential-spaces/{spaceId}/remaining-members", {
-          params: { path: { organizationId, spaceId: space.id } },
-        }),
-      ),
+    queryKey: keys.remaining(organizationId, kind, space.id),
+    queryFn: () => remainingMembers(organizationId, kind, space.id),
   });
   const submit = async () => {
     const chosen = remaining.data?.find((member) => member.id === person);
@@ -153,13 +178,8 @@ function AppointDialog({
     setSaving(true);
     setFailure(null);
     try {
-      await request(() =>
-        api.POST("/api/v1/organizations/{organizationId}/confidential-spaces/{spaceId}/administrator", {
-          params: { path: { organizationId, spaceId: space.id } },
-          body: { accountId: chosen.id },
-        }),
-      );
-      await queryClient.invalidateQueries({ queryKey: keys.list(organizationId) });
+      await appoint(organizationId, kind, space.id, chosen.id);
+      await queryClient.invalidateQueries({ queryKey: keys.list(organizationId, kind) });
       toast({
         variant: "success",
         title: t("confidential.organization.appointed", { person: chosen.name, key: space.key }),
