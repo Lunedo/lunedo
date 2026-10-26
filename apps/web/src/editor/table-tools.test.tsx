@@ -79,4 +79,29 @@ describe("table grips and bar", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: "Delete row" }));
     expect(current.state.doc.child(1).childCount).toBe(1);
   });
+
+  it("turns the header column on and off from the grip of the first column only", async () => {
+    const current = await open();
+    act(() => {
+      current.commands.focus();
+      current.commands.setTextSelection(13);
+    });
+    const firstColumn = () => [0, 1].map((row) => current.state.doc.child(1).child(row).child(0).type.name);
+    fireEvent.pointerDown(await screen.findByRole("button", { name: "Column 2" }), { button: 0 });
+    expect(await screen.findByRole("menuitem", { name: "Delete column" })).toBeTruthy();
+    expect(screen.queryByRole("menuitemcheckbox", { name: "Header column" })).toBeNull();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+    fireEvent.pointerDown(await screen.findByRole("button", { name: "Column 1" }), { button: 0 });
+    const toggle = await screen.findByRole("menuitemcheckbox", { name: "Header column" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(toggle);
+    expect(firstColumn()).toEqual(["tableHeader", "tableHeader"]);
+
+    fireEvent.pointerDown(await screen.findByRole("button", { name: "Column 1" }), { button: 0 });
+    const again = await screen.findByRole("menuitemcheckbox", { name: "Header column" });
+    expect(again.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(again);
+    expect(firstColumn()).toEqual(["tableHeader", "tableCell"]);
+  });
 });

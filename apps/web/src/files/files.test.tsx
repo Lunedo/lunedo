@@ -347,6 +347,18 @@ describe("the attachments of a page", () => {
     expect(await screen.findByText("Version 1 is current again")).toBeTruthy();
   });
 
+  it("browses through all attachments in the order of the list", async () => {
+    routes();
+    await renderSection(false);
+    await userEvent.click(await screen.findByRole("button", { name: /^Rack\.png/ }));
+    const photo = await screen.findByRole("dialog", { name: "Rack.png" });
+    expect(within(photo).getByText(/2 of 2/)).toBeTruthy();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(await screen.findByRole("dialog", { name: "Report.pdf" })).toBeTruthy();
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(await screen.findByRole("dialog", { name: "Rack.png" })).toBeTruthy();
+  });
+
   it("shows images in full size with zoom, download and a new tab, and closes with Escape", async () => {
     routes();
     await renderSection(false);

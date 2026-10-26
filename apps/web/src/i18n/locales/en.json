@@ -5253,6 +5253,7 @@
       "addColumnAfter": "Add column to the right",
       "deleteColumn": "Delete column",
       "headerRow": "Header row on or off",
+      "headerColumn": "Header column",
       "background": "Cell background",
       "deleteTable": "Delete table",
       "addColumnHere": "Insert a column here",

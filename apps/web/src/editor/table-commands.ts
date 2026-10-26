@@ -26,6 +26,14 @@ export function hasMergedCells(table: ProseMirrorNode): boolean {
   return merged;
 }
 
+export function hasHeaderColumn(table: ProseMirrorNode): boolean {
+  let header = table.childCount > 0;
+  table.forEach((row) => {
+    if (row.firstChild?.type.spec.tableRole !== "header_cell") header = false;
+  });
+  return header;
+}
+
 function cellPos(table: ActiveTable, row: number, column: number): number {
   return table.pos + 1 + (table.map.map[row * table.map.width + column] ?? 0);
 }

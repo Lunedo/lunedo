@@ -13,6 +13,7 @@ import {
   BetweenVerticalStart,
   GripHorizontal,
   GripVertical,
+  PanelLeft,
   Trash2,
 } from "lucide-react";
 import { type RefObject, useEffect, useState } from "react";
@@ -21,6 +22,7 @@ import { translateKey } from "../i18n/translate.js";
 import {
   type ActiveTable,
   activeTable,
+  hasHeaderColumn,
   hasMergedCells,
   moveColumn,
   moveRow,
@@ -180,6 +182,20 @@ export function TableGrips({
       disabled: merged,
       onSelect: () => sortByColumn(editor, table, column, "descending", i18n.language),
     },
+    ...(column === 0
+      ? [
+          { type: "separator" as const },
+          {
+            label: t("editor.table.headerColumn"),
+            icon: PanelLeft,
+            checked: hasHeaderColumn(table.node),
+            onSelect: () => {
+              selectColumn(editor, table, column);
+              chain().toggleHeaderColumn().run();
+            },
+          },
+        ]
+      : []),
     { type: "separator" },
     {
       label: t("editor.table.deleteColumn"),

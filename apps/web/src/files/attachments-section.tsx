@@ -210,6 +210,9 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
     [all],
   );
   const ordinary = (all ?? []).filter((attachment) => diagramFile(attachment.name) === null);
+  const listed = [...ordinary, ...diagrams.map(({ attachment }) => attachment)].map(
+    (attachment) => attachment.id,
+  );
   const [positions, setPositions] = useState<Map<string, number>>(new Map());
   useEffect(() => {
     setPositions(
@@ -233,7 +236,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
       <li key={attachment.id} className="flex items-center gap-2 py-2">
         <button
           type="button"
-          onClick={() => preview?.open(attachment.id)}
+          onClick={() => preview?.open(attachment.id, listed)}
           className="flex min-h-hit min-w-0 flex-1 items-center gap-3 rounded-md px-2 text-start hover:bg-hover focus-visible:focus-ring"
         >
           <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
@@ -280,7 +283,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
             {
               label: t("files.preview.open"),
               icon: Eye,
-              onSelect: () => preview?.open(attachment.id),
+              onSelect: () => preview?.open(attachment.id, listed),
             },
             ...(diagram
               ? [{ label: t("files.showDiagram"), icon: LocateFixed, onSelect: () => showInPage(diagram) }]

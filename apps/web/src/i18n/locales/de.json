@@ -5253,6 +5253,7 @@
       "addColumnAfter": "Spalte rechts einfügen",
       "deleteColumn": "Spalte löschen",
       "headerRow": "Kopfzeile ein oder aus",
+      "headerColumn": "Kopfspalte",
       "background": "Zellenhintergrund",
       "deleteTable": "Tabelle löschen",
       "addColumnHere": "Spalte hier einfügen",
