@@ -83,16 +83,16 @@ describe.skipIf(!baseUrl)("organizations", () => {
       timeZone: "Europe/Vienna",
       ownerAccountId: owner,
     });
-    expect(first).toMatchObject({ slug: "cafe-olberg", language: "de", timeZone: "Europe/Vienna" });
+    expect(first).toMatchObject({ slug: "cafe-oelberg", language: "de", timeZone: "Europe/Vienna" });
     const second = await test.services.organizations.createAsActor(SYSTEM, {
       name: "Café Ölberg",
       ownerAccountId: owner,
     });
-    expect(second.slug).toBe("cafe-olberg-2");
+    expect(second.slug).toBe("cafe-oelberg-2");
     await expect(
       test.services.organizations.createAsActor(SYSTEM, {
         name: "Other",
-        slug: "Cafe-Olberg",
+        slug: "Cafe-Oelberg",
         ownerAccountId: owner,
       }),
     ).rejects.toMatchObject({ code: "slugTaken" });

@@ -55,7 +55,7 @@ export function headingsOf(doc: ProseMirrorNode): TocEntry[] {
       node.type.name === "heading" ? Number(node.attrs.level) : node.type.name === "section" ? 2 : null;
     if (level === null) return true;
     const text = (node.type.name === "section" ? String(node.attrs.title) : node.textContent).trim();
-    const base = slugify(text);
+    const base = slugify(text) || "section";
     const count = used.get(base) ?? 0;
     used.set(base, count + 1);
     entries.push({ level, text, id: count === 0 ? base : `${base}-${count + 1}` });

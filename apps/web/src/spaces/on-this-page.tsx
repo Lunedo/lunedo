@@ -1,3 +1,4 @@
+import { slugify } from "@lunedo/editor-schema";
 import { classNames } from "@lunedo/ui";
 import { type MouseEvent, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,14 +27,33 @@ function headingEntries(root: HTMLElement): Entry[] {
 }
 
 export function anchorOf(title: string): string {
-  return (
-    title
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "section"
-  );
+  return slugify(title) || "section";
+}
+
+export function legacyAnchorOf(title: string): string {
+  const slug = title
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/g, "");
+  return slug || "section";
+}
+
+export function entryForLegacyAnchor<T extends { id: string; title: string }>(
+  entries: readonly T[],
+  anchor: string,
+): T | null {
+  const used = new Map<string, number>();
+  for (const entry of entries) {
+    const base = legacyAnchorOf(entry.title);
+    const count = used.get(base) ?? 0;
+    used.set(base, count + 1);
+    if ((count === 0 ? base : `${base}-${count + 1}`) === anchor) return entry;
+  }
+  return null;
 }
 
 function sectionEntries(root: HTMLElement): Entry[] {
@@ -103,13 +123,16 @@ export function OnThisPage({
   }, [shown, onShownChange]);
 
   useEffect(() => {
-    if (!shown) return;
-    const id = decodeURIComponent(window.location.hash.slice(1));
-    if (id && entries.some((entry) => entry.id === id)) {
-      document.getElementById(id)?.scrollIntoView({ block: "start" });
-      setActive(id);
-    }
-  }, [shown, entries]);
+    const anchor = decodeURIComponent(window.location.hash.slice(1));
+    if (!anchor) return;
+    const id = entries.some((entry) => entry.id === anchor)
+      ? anchor
+      : entryForLegacyAnchor(entries, anchor)?.id;
+    if (!id) return;
+    if (id !== anchor) window.history.replaceState(window.history.state, "", `#${encodeURIComponent(id)}`);
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+    setActive(id);
+  }, [entries]);
 
   useEffect(() => {
     const root = content.current;

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { slugify } from "@lunedo/editor-schema";
 import type { AccentColor } from "@lunedo/shared";
 import {
   domainSchema,
@@ -80,10 +81,7 @@ function isUniqueViolation(error: unknown, constraint: string): boolean {
 }
 
 export function slugFromName(name: string): string {
-  const slug = name
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
+  const slug = slugify(name)
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 64)

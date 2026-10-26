@@ -76,16 +76,44 @@ export function markdownUrl(href: string): string {
   return href.replace(/[\s()<>]/g, (character) => encodeURIComponent(character));
 }
 
+const SLUG_LETTERS: Record<string, string> = {
+  ä: "ae",
+  ö: "oe",
+  ü: "ue",
+  Ä: "Ae",
+  Ö: "Oe",
+  Ü: "Ue",
+  ß: "ss",
+  ẞ: "SS",
+  ø: "o",
+  Ø: "O",
+  đ: "d",
+  Đ: "D",
+  ł: "l",
+  Ł: "L",
+  ħ: "h",
+  Ħ: "H",
+  ı: "i",
+};
+
+const MAX_SLUG_LENGTH = 80;
+
 export function slugify(text: string): string {
   const slug = text
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
+    .normalize("NFC")
+    .replace(/[äöüÄÖÜßẞøØđĐłŁħĦı]/gu, (letter) => SLUG_LETTERS[letter] ?? letter)
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80)
-    .replace(/-+$/g, "");
-  return slug.length > 0 ? slug : "section";
+    .normalize("NFD")
+    .replace(/(\p{Script=Latin})\p{M}+/gu, "$1")
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, "-")
+    .replace(/^[-\p{M}]+|-+$/gu, "");
+  const characters = Array.from(slug);
+  if (characters.length <= MAX_SLUG_LENGTH) return slug;
+  const cut = characters.slice(0, MAX_SLUG_LENGTH).join("");
+  if (characters[MAX_SLUG_LENGTH] === "-") return cut;
+  const hyphen = cut.lastIndexOf("-");
+  return hyphen > 0 ? cut.slice(0, hyphen) : cut;
 }
 
 export function headingNumberHtml(number: string | null): string {
