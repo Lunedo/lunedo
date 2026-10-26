@@ -30,6 +30,7 @@ import {
   serviceAccountsQuery,
 } from "./api/organization-queries.js";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
+import { openForUpdate } from "./app-update/app-update.js";
 import { BlogPostScreen } from "./collaboration/blog/blog-post-screen.js";
 import { OrganizationBlogScreen } from "./collaboration/blog/organization-blog-screen.js";
 import { SpaceBlogScreen } from "./collaboration/blog/space-blog-screen.js";
@@ -180,6 +181,9 @@ const providerSearch = z.object({
 });
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: ({ location }) => {
+    if (openForUpdate(location.href)) return new Promise<never>(() => {});
+  },
   component: RootLayout,
   notFoundComponent: () => <NotFoundScreen />,
   errorComponent: RouteErrorScreen,

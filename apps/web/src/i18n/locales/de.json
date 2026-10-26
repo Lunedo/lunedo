@@ -1736,7 +1736,8 @@
     "invalidKeys": "Ein Schlüssel hat nicht das erwartete Format. Füge den Backup-Schlüssel so ein, wie er in der Schlüsseldatei steht, und wähle die Datei mit den Master-Schlüsseln.",
     "settingNotAtLevel": "Diese Einstellung gibt es auf dieser Ebene nicht mehr. Ändere sie in den Einstellungen der Organisation.",
     "invalidSpaces": "Wähle 1 bis 50 Spaces, jeden nur einmal, und versuche es erneut.",
-    "administratorBySpaceAdmins": "Nur die Space-Admins dieses Space können jemanden zum Space-Admin machen. Wähle eine andere Rolle oder frag einen Space-Admin."
+    "administratorBySpaceAdmins": "Nur die Space-Admins dieses Space können jemanden zum Space-Admin machen. Wähle eine andere Rolle oder frag einen Space-Admin.",
+    "clientOutdated": "Lunedo wurde aktualisiert. Lade die Seite neu, um weiterzuarbeiten."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -12154,5 +12155,13 @@
       "description": "Persönliche Spaces von Personen dieser Organisation, die deaktiviert wurden und andere Mitglieder zurücklassen. Sie erscheinen nur mit ihrem Schlüssel.",
       "loadFailed": "Die persönlichen Spaces konnten nicht geladen werden"
     }
+  },
+  "appUpdate": {
+    "title": "Lunedo wurde aktualisiert.",
+    "refused": "Dieser Tab läuft noch mit der vorherigen Version, die der Server nicht mehr annimmt. Lade neu, um weiterzuarbeiten.",
+    "refusedUnsaved": "Dieser Tab läuft noch mit der vorherigen Version, die der Server nicht mehr annimmt. Offene Änderungen werden zuerst gespeichert, dann wird die Seite neu geladen.",
+    "reload": "Neu laden",
+    "saveAndReload": "Speichern und neu laden",
+    "saving": "Wird gespeichert …"
   }
 }

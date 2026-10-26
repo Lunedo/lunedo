@@ -2,8 +2,10 @@ import { Button, EmptyState, ErrorState } from "@lunedo/ui";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { Compass, Lock } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, isApiError } from "../api/request.js";
+import { isChunkLoadError, reloadAfterChunkError } from "../app-update/app-update.js";
 import { isRetryable } from "./failure.js";
 import { problemMessage } from "./problem-message.js";
 
@@ -62,6 +64,8 @@ function useRetry(reset: () => void) {
 export function ScreenErrorScreen({ error, reset }: ErrorComponentProps) {
   const { t } = useTranslation();
   const retry = useRetry(reset);
+  const [reloading] = useState(() => isChunkLoadError(error) && reloadAfterChunkError());
+  if (reloading) return null;
   if (isApiError(error, "notFound")) return <NotFoundScreen />;
   if (isApiError(error, "forbidden")) return <ForbiddenScreen />;
   if (!(error instanceof ApiError)) {

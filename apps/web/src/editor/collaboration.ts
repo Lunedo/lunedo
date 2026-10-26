@@ -1,5 +1,6 @@
 import { HocuspocusProvider, WebSocketStatus } from "@hocuspocus/provider";
 import * as Y from "yjs";
+import { registerUnsavedChanges } from "../app-update/app-update.js";
 import { onSignOut } from "../session/sign-out.js";
 import { coversOwnChanges, decodeBase64, type SaveState, SaveTracker } from "./save-state.js";
 
@@ -273,6 +274,29 @@ export function closeCollaboration(collaboration: PageCollaboration): void {
   globalThis.addEventListener("beforeunload", warnBeforeUnload);
   finish();
 }
+
+function anyUnsavedChanges(): boolean {
+  for (const entry of openCollaborations.values()) if (entry.collaboration.hasUnsavedChanges) return true;
+  return false;
+}
+
+function saved(collaboration: PageCollaboration): Promise<void> {
+  return new Promise((resolve) => {
+    if (!collaboration.hasUnsavedChanges) {
+      resolve();
+      return;
+    }
+    const unsubscribe = collaboration.subscribe(() => {
+      if (collaboration.hasUnsavedChanges) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
+registerUnsavedChanges(anyUnsavedChanges, async () => {
+  await Promise.all([...openCollaborations.values()].map((entry) => saved(entry.collaboration)));
+});
 
 export function discardOpenCollaborations(): void {
   for (const entry of openCollaborations.values()) {

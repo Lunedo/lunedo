@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -9,6 +10,7 @@ const gzipped = promisify(gzip);
 const COMPRESSIBLE = /\.(?:js|mjs|css|html|svg|json|wasm|txt|xml)$/;
 const MIN_BYTES = 1024;
 const LOCALE_CHUNKS_PLACEHOLDER = '"__LUNEDO_LOCALE_CHUNKS__"';
+export const BUILD_PLACEHOLDER = "__LUNEDO_BUILD__";
 const GZIP_ONLY = /^drawio\//;
 
 export const ICON_MODULES =
@@ -66,6 +68,25 @@ export interface BundledChunk {
   type: string;
   fileName: string;
   facadeModuleId?: string | null;
+  source?: string | Uint8Array;
+}
+
+export function buildIdentity(bundle: Record<string, BundledChunk>): string {
+  const chunks = Object.values(bundle)
+    .filter((item) => item.type === "chunk")
+    .map((item) => item.fileName)
+    .sort();
+  return createHash("sha256").update(chunks.join("\n")).digest("hex").slice(0, 16);
+}
+
+export function stampBuild(bundle: Record<string, BundledChunk>): string {
+  const build = buildIdentity(bundle);
+  for (const output of Object.values(bundle)) {
+    if (output.type === "asset" && output.fileName.endsWith(".html") && typeof output.source === "string") {
+      output.source = output.source.replaceAll(BUILD_PLACEHOLDER, build);
+    }
+  }
+  return build;
 }
 
 export function withLocaleChunks(html: string, bundle: Record<string, BundledChunk> | undefined): string {

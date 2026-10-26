@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
+import { resetUpdateState, setUpdateEnvironment } from "../app-update/app-update.js";
 import { initI18n } from "../i18n/index.js";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { SystemCheckStep } from "../screens/setup/steps/system-check-step.js";
@@ -259,5 +260,30 @@ describe("screens that cannot load", () => {
     expect(screen.queryByText(/server gave an unexpected answer/)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Reload page" }));
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reload once instead of showing an error when a part of the app is gone after an update", async () => {
+    const reload = vi.fn();
+    resetUpdateState();
+    const values = new Map<string, string>();
+    setUpdateEnvironment({
+      reload,
+      storage: () =>
+        ({
+          getItem: (key: string) => values.get(key) ?? null,
+          setItem: (key: string, value: string) => values.set(key, value),
+        }) as unknown as Storage,
+    });
+    await renderWithProviders(
+      <ScreenErrorScreen
+        error={new TypeError("Failed to fetch dynamically imported module: /assets/space-1.js")}
+        reset={() => undefined}
+        info={{ componentStack: "" }}
+      />,
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Something went wrong in this browser")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reload page" })).toBeNull();
+    resetUpdateState();
   });
 });

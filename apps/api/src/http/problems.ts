@@ -459,6 +459,7 @@ export const problems = {
     title: "The address of the instance is set in the server environment",
   },
   instanceMoved: { status: 409, title: "The instance has moved to another address" },
+  clientOutdated: { status: 409, title: "The web client is older than this server accepts" },
   settingLocked: { status: 409, title: "A higher level locked the setting" },
   setupIncomplete: { status: 409, title: "The setup is not complete" },
   setupNotReady: { status: 409, title: "The setup step is not ready" },

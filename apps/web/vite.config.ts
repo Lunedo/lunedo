@@ -1,11 +1,19 @@
 import { createReadStream, readFileSync } from "node:fs";
 import { cp } from "node:fs/promises";
 import path from "node:path";
+import { CLIENT_BUILD_FILE, CLIENT_BUILD_META } from "@lunedo/shared";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 import { collectNotices, packageDirectoryOf, renderNotices } from "../../scripts/third-party-notices.js";
-import { type BundledChunk, ICON_MODULES, precompress, withLocaleChunks } from "./src/dev/build-assets.js";
+import {
+  BUILD_PLACEHOLDER,
+  type BundledChunk,
+  ICON_MODULES,
+  precompress,
+  stampBuild,
+  withLocaleChunks,
+} from "./src/dev/build-assets.js";
 import { drawioContentType, drawioFile, ensureDrawio, isServedDrawioFile } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
 import { isPreviewFrameAsset } from "./src/dev/preview-frame-assets.js";
@@ -144,6 +152,36 @@ function thirdPartyNotices(): Plugin {
   };
 }
 
+function clientBuild(): Plugin {
+  return {
+    name: "lunedo-client-build",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler: (_html, context) => {
+        if (!context.bundle) return [];
+        return [
+          {
+            tag: "meta",
+            attrs: { name: CLIENT_BUILD_META, content: BUILD_PLACEHOLDER },
+            injectTo: "head",
+          },
+        ];
+      },
+    },
+    generateBundle: {
+      order: "post",
+      handler(_options, bundle) {
+        this.emitFile({
+          type: "asset",
+          fileName: CLIENT_BUILD_FILE,
+          source: `${JSON.stringify({ build: stampBuild(bundle) })}\n`,
+        });
+      },
+    },
+  };
+}
+
 function localeChunks(): Plugin {
   return {
     name: "lunedo-locale-chunks",
@@ -182,6 +220,7 @@ export default defineConfig({
     localeChunks(),
     compressedAssets(),
     thirdPartyNotices(),
+    clientBuild(),
   ],
   resolve: {
     conditions: ["@lunedo/source", ...defaultClientConditions],

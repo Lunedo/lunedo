@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fastifyStatic from "@fastify/static";
+import { CLIENT_BUILD_FILE } from "@lunedo/shared";
 import type { FastifyInstance } from "fastify";
 
 const SERVER_PREFIXES = ["/api/", "/health/", "/drawio/", "/help/"];
@@ -78,6 +79,19 @@ export function applicationContentSecurityPolicy(
     "worker-src 'self' blob: data:",
     `frame-src ${["'self'", ...frameSources].join(" ")}`,
   ].join("; ");
+}
+
+const BUILD_ID = /^[\w.-]{1,64}$/;
+
+export async function readClientBuild(root: string): Promise<string | null> {
+  try {
+    const { build } = JSON.parse(await readFile(path.join(root, CLIENT_BUILD_FILE), "utf8")) as {
+      build?: unknown;
+    };
+    return typeof build === "string" && BUILD_ID.test(build) ? build : null;
+  } catch {
+    return null;
+  }
 }
 
 async function readScriptHashes(root: string): Promise<string[]> {

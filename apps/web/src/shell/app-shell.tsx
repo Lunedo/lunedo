@@ -13,6 +13,7 @@ import "../notifications/browser-push.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
 import { maintenanceQuery } from "../api/maintenance.js";
+import { UpdateBanner } from "../app-update/update-banner.js";
 import { PortalAccountHome } from "../knowledge-bases/portal-account-home.js";
 import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
@@ -199,6 +200,7 @@ function ShellFrame() {
             {t("shell.skipToContent")}
           </a>
           <TopBar />
+          <UpdateBanner />
           <MaintenanceBanner />
           <AnnouncementBanners />
           <InsecureProvidersBanner />

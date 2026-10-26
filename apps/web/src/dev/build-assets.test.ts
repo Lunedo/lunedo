@@ -3,7 +3,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { brotliDecompressSync, gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
-import { encodingsFor, ICON_MODULES, precompress, withLocaleChunks } from "./build-assets.js";
+import {
+  BUILD_PLACEHOLDER,
+  buildIdentity,
+  encodingsFor,
+  ICON_MODULES,
+  precompress,
+  stampBuild,
+  withLocaleChunks,
+} from "./build-assets.js";
 
 describe("precompressed build files", () => {
   let directory = "";
@@ -85,5 +93,25 @@ describe("the language files in the start page", () => {
     expect(withLocaleChunks(`var localeChunks = "__LUNEDO_LOCALE_CHUNKS__";`, undefined)).toBe(
       "var localeChunks = {};",
     );
+  });
+});
+
+describe("the build identity", () => {
+  it("is the same in the start page and in build.json, taken from the final list of chunks", () => {
+    const page = {
+      type: "asset",
+      fileName: "index.html",
+      source: `<meta name="lunedo-build" content="${BUILD_PLACEHOLDER}">`,
+    };
+    const bundle = {
+      main: { type: "chunk", fileName: "assets/main-1.js" },
+      page,
+      style: { type: "asset", fileName: "assets/main-1.css", source: BUILD_PLACEHOLDER },
+    };
+    const build = stampBuild(bundle);
+    expect(build).toBe(buildIdentity(bundle));
+    expect(page.source).toBe(`<meta name="lunedo-build" content="${build}">`);
+    expect(bundle.style.source).toBe(BUILD_PLACEHOLDER);
+    expect(stampBuild({ ...bundle, late: { type: "chunk", fileName: "assets/late-2.js" } })).not.toBe(build);
   });
 });

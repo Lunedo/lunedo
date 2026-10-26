@@ -1,3 +1,4 @@
+import { noteRefused } from "../app-update/app-update.js";
 import type { Schemas } from "./client.js";
 
 export type Problem = Schemas["Problem"];
@@ -121,5 +122,6 @@ export async function request<T>(call: () => Promise<Result<T>>, options: Reques
   if (error.code === "instanceMoved" && error.problem.instanceUrl)
     handlers.moved?.(error.problem.instanceUrl);
   if (MAINTENANCE_CODES.has(error.code)) handlers.maintenance?.();
+  if (error.code === "clientOutdated") noteRefused();
   throw error;
 }

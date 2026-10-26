@@ -1,6 +1,7 @@
 export * from "./audit.js";
 export * from "./brand-colors.js";
 export * from "./chat.js";
+export * from "./client-build.js";
 export {
   type HealthCheck,
   type HealthCheckResult,

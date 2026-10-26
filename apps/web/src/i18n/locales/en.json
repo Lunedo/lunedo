@@ -1736,7 +1736,8 @@
     "invalidKeys": "A key does not have the expected format. Paste the backup key as it is in the key file, and choose the file with the master keys.",
     "settingNotAtLevel": "This setting no longer exists at this level. Change it in the settings of the organization.",
     "invalidSpaces": "Choose between 1 and 50 spaces, each only once, and try again.",
-    "administratorBySpaceAdmins": "Only the space admins of this space can make someone space admin. Choose another role, or ask a space admin."
+    "administratorBySpaceAdmins": "Only the space admins of this space can make someone space admin. Choose another role, or ask a space admin.",
+    "clientOutdated": "Lunedo was updated. Reload the page to continue."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -12154,5 +12155,13 @@
       "description": "Personal spaces of people of this organization who were deactivated and left other members behind. They appear with their key only.",
       "loadFailed": "The personal spaces could not be loaded"
     }
+  },
+  "appUpdate": {
+    "title": "Lunedo was updated.",
+    "refused": "This tab still runs the previous version, which the server no longer accepts. Reload to continue.",
+    "refusedUnsaved": "This tab still runs the previous version, which the server no longer accepts. Your open changes are saved first, then the page reloads.",
+    "reload": "Reload",
+    "saveAndReload": "Save and reload",
+    "saving": "Saving…"
   }
 }

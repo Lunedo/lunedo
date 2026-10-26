@@ -7,6 +7,7 @@ import {
   type Logger,
   type RequestContext,
 } from "@lunedo/server";
+import { acceptsClientApiLevel, CLIENT_API_HEADER, CLIENT_BUILD_HEADER } from "@lunedo/shared";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { type FastifyRequest, LogController } from "fastify";
@@ -19,7 +20,7 @@ import { instanceUrlOf } from "./http/instance-url.js";
 import { bearerToken, carriesCookieCredentials } from "./http/request.js";
 import { NestLogger } from "./nest-logger.js";
 import { registerPortal } from "./portal/routes.js";
-import { registerWebClient } from "./web-client.js";
+import { readClientBuild, registerWebClient } from "./web-client.js";
 
 export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = []): FastifyAdapter {
   return new FastifyAdapter({
@@ -87,6 +88,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
   fastify.addContentTypeParser("application/octet-stream", (_request, payload, done) => done(null, payload));
   fastify.addContentTypeParser("text/csv", (_request, payload, done) => done(null, payload));
 
+  const clientBuild = context.webRoot ? await readClientBuild(context.webRoot) : null;
   const requestContexts = new WeakMap<FastifyRequest, RequestContext>();
   const endRequestCache = (request: FastifyRequest) => {
     const requestContext = requestContexts.get(request);
@@ -104,6 +106,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     requestContexts.set(request, requestContext);
     enterRequestContext(requestContext);
     reply.header("x-request-id", request.id);
+    if (clientBuild) reply.header(CLIENT_BUILD_HEADER, clientBuild);
   });
   fastify.addHook("onRequestAbort", async (request) => endRequestCache(request));
   registerPortal(fastify, context);
@@ -128,6 +131,12 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
       "csrfRejected",
       "State-changing requests need the X-Lunedo-Request header and a matching Origin",
     );
+  });
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (!request.url.startsWith("/api/")) return;
+    const level = request.headers[CLIENT_API_HEADER.toLowerCase()];
+    if (acceptsClientApiLevel(Array.isArray(level) ? level[0] : level)) return;
+    return sendProblem(reply, "clientOutdated", "Reload Lunedo to load the current web client");
   });
   fastify.addHook("onResponse", async (request, reply) => {
     endRequestCache(request);

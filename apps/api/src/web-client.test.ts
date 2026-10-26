@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { brotliCompressSync, gunzipSync, gzipSync } from "node:zlib";
+import { CLIENT_API_LEVEL } from "@lunedo/shared";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestApp } from "./testing/create-test-app.js";
@@ -24,6 +25,7 @@ beforeAll(async () => {
   writeFileSync(path.join(webRoot, "preview.html"), "<!doctype html><title>Preview</title>");
   writeFileSync(path.join(webRoot, "print.html"), "<!doctype html><title>Print</title>");
   writeFileSync(path.join(webRoot, "diagram.html"), "<!doctype html><title>Diagram</title>");
+  writeFileSync(path.join(webRoot, "build.json"), JSON.stringify({ build: "build-5678" }));
   writeFileSync(path.join(webRoot, "favicon.ico"), Buffer.from([0, 0, 1, 0, 1, 0]));
   writeFileSync(path.join(webRoot, "favicon.svg"), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   mkdirSync(path.join(webRoot, "drawio", "31.4.6", "js"), { recursive: true });
@@ -178,6 +180,33 @@ describe("web client", () => {
     expect(policy).toContain("connect-src 'none'");
     expect(policy).toContain("img-src data: blob:");
     expect(policy).not.toContain("allow-same-origin");
+  });
+
+  it("names the build of the served web client in every response, also of the API", async () => {
+    for (const url of ["/", "/assets/app-1234.js", "/api/v1/instance/info", "/health/live"]) {
+      const response = await app.inject({ method: "GET", url });
+      expect(response.headers["x-lunedo-build"], url).toBe("build-5678");
+    }
+  });
+
+  it("refuses API requests of a web client older than the server accepts, and only those", async () => {
+    const old = await app.inject({
+      method: "GET",
+      url: "/api/v1/instance/info",
+      headers: { "x-lunedo-client-api": "0" },
+    });
+    expect(old.statusCode).toBe(409);
+    expect(old.json().code).toBe("clientOutdated");
+    expect(old.headers["x-lunedo-build"]).toBe("build-5678");
+    const current = await app.inject({
+      method: "GET",
+      url: "/api/v1/instance/info",
+      headers: { "x-lunedo-client-api": String(CLIENT_API_LEVEL) },
+    });
+    expect(current.statusCode).not.toBe(409);
+    expect((await app.inject({ method: "GET", url: "/api/v1/instance/info" })).statusCode).not.toBe(409);
+    const page = await app.inject({ method: "GET", url: "/spaces", headers: { "x-lunedo-client-api": "0" } });
+    expect(page.statusCode).toBe(200);
   });
 
   it("keeps the health endpoints", async () => {
