@@ -525,12 +525,13 @@ export class PageExportRenderer {
   }
 
   async exportable(ids: Iterable<string>): Promise<Set<string>> {
-    const result = new Set<string>();
-    for (const id of await this.#readerVisible(ids)) {
-      if (await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))
-        result.add(id);
-    }
-    return result;
+    const visible = [...(await this.#readerVisible(ids))];
+    const decisions = await this.#authorization.explainMany(
+      this.#viewer,
+      "item.export",
+      visible.map((id) => ({ type: "item", id })),
+    );
+    return new Set(visible.filter((_, index) => decisions[index]?.allowed));
   }
 
   async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {

@@ -13,7 +13,7 @@ import {
   type SyncRunSignal,
   type UnsubscribeState,
 } from "@lunedo/server";
-import { idSchema } from "@lunedo/shared";
+import { idSchema, UNREAD_COUNT_CAP } from "@lunedo/shared";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -187,7 +187,14 @@ function unsubscribeView(state: UnsubscribeState) {
   };
 }
 const readAllSchema = z.object({ before: z.iso.datetime().optional() }).strict();
-const countSchema = z.object({ count: z.number().int() });
+const countSchema = z.object({
+  count: z
+    .number()
+    .int()
+    .min(0)
+    .max(UNREAD_COUNT_CAP)
+    .describe(`Counts up to ${UNREAD_COUNT_CAP}; ${UNREAD_COUNT_CAP} means at least that many.`),
+});
 const countQuery = z
   .object({
     kind: z.enum(notificationKinds).optional().describe("Count only notifications of this kind."),

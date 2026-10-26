@@ -290,6 +290,8 @@ describe("the notification panel", () => {
       await screen.findByRole("button", { name: "Notifications, 1 unread" }, { timeout: 5000 }),
     ).toBeTruthy();
     expect(FakeEventSource.last?.url).toBe("/api/v1/notifications/stream");
+    FakeEventSource.last?.emit("notifications", { unreadCount: 100 });
+    expect(await screen.findByRole("button", { name: "Notifications, 99+ unread" })).toBeTruthy();
     FakeEventSource.last?.emit("notifications", { unreadCount: 4 });
     expect(await screen.findByRole("button", { name: "Notifications, 4 unread" })).toBeTruthy();
 

@@ -205,7 +205,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom", runAfterC
 export interface TabsProps {
   value: string;
   onValueChange: (value: string) => void;
-  tabs: { value: string; label: ReactNode; count?: number }[];
+  tabs: { value: string; label: ReactNode; count?: number | string }[];
   label: string;
   children?: ReactNode;
   fill?: boolean;

@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { UNREAD_COUNT_CAP } from "@lunedo/shared";
 import { useEffect } from "react";
 import { api } from "../api/client.js";
 import { identityKeys } from "../api/identity-queries.js";
@@ -24,6 +25,10 @@ export const notificationKeys = {
   list: (filter: NotificationFilter) => ["notifications", "list", filter] as const,
   unreadOf: (kind: NotificationKind) => ["notifications", "unread", kind] as const,
 };
+
+export function unreadCountLabel(count: number): string {
+  return count >= UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP - 1}+` : String(count);
+}
 
 export function useUnreadCountOf(kind: NotificationKind, enabled = true) {
   return useQuery({

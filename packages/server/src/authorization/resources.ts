@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import {
   membersCreateGroupsSetting,
@@ -16,7 +16,13 @@ import {
   personalSpacesSetting,
 } from "../spaces/settings.js";
 import { grantsLevel } from "./areas.js";
-import type { ActionDefinition, ResourceType, RestrictionResult, RuleContext } from "./registry.js";
+import type {
+  ActionDefinition,
+  ResourceType,
+  Restriction,
+  RestrictionResult,
+  RuleContext,
+} from "./registry.js";
 
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -288,7 +294,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
 
   const space: ResourceType = {
     type: "space",
-    spaceOf: async (_executor, id) => id,
+    spaceOf: async (_executor, ids) => new Map(ids.map((id) => [id, id])),
     organizationOf: async (executor, id) => {
       const result = await executor.execute<{ organization_id: string | null }>(
         sql`select organization_id from spaces where id = ${id}`,
@@ -319,19 +325,25 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         ),
     },
     restrictions: {
-      present: async (executor, id) => {
-        const state = await spaceState(executor, id);
-        return state?.deleted ? { denial: "inTrash" } : null;
+      present: async (executor, ids) => {
+        const states = await spaceStates(executor, ids);
+        return each(ids, (id) => (states.get(id)?.deleted ? { denial: "inTrash" } : null));
       },
-      exportable: async (executor, id) => {
-        const state = await spaceState(executor, id);
-        if (!state || state.deleted) return { denial: "inTrash" };
-        return exportDisabled(executor, id);
+      exportable: async (executor, ids) => {
+        const states = await spaceStates(executor, ids);
+        return each(ids, (id) => {
+          const state = states.get(id);
+          if (!state || state.deleted) return { denial: "inTrash" };
+          return exportDisabled(executor, id);
+        });
       },
-      writable: async (executor, id) => {
-        const state = await spaceState(executor, id);
-        if (state?.deleted) return { denial: "inTrash" };
-        return state?.archived ? { denial: "archived" } : null;
+      writable: async (executor, ids) => {
+        const states = await spaceStates(executor, ids);
+        return each(ids, (id) => {
+          const state = states.get(id);
+          if (state?.deleted) return { denial: "inTrash" };
+          return state?.archived ? { denial: "archived" } : null;
+        });
       },
     },
   };
@@ -352,13 +364,9 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
 
   const item: ResourceType = {
     type: "item",
-    spaceOf: async (executor, id) => {
-      const result = await executor.execute<{ space_id: string }>(
-        sql`select space_id from tree_items where id = ${id}`,
-      );
-      return result.rows[0]?.space_id ?? null;
-    },
-    itemOf: async (_executor, id) => id,
+    spaceOf: (executor, ids) =>
+      lookup(executor, sql`select id, space_id as value from tree_items where id = any(${uuids(ids)})`),
+    itemOf: async (_executor, ids) => new Map(ids.map((id) => [id, id])),
     actions: {
       "item.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
       "item.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
@@ -416,28 +424,21 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       },
     },
     restrictions: {
-      readable: async (executor, id) => {
-        const state = await itemState(executor, id);
+      readable: byItemState((state) => {
         if (!state || state.trashed) return { denial: "inTrash" };
         return state.unpublished ? { denial: "unpublished", unless: "editor" } : null;
-      },
-      writable: async (executor, id) => {
-        const state = await itemState(executor, id);
-        if (!state || state.trashed) return { denial: "inTrash" };
-        return state.archived ? { denial: "archived" } : null;
-      },
-      present: async (executor, id) => {
-        const state = await itemState(executor, id);
+      }),
+      writable: byItemState(writableItem),
+      present: byItemState((state) => {
         if (!state || state.trashed) return { denial: "inTrash" };
         return state.spaceArchived ? { denial: "archived" } : null;
-      },
-      interactive: async (executor, id) => interactiveItem(await itemState(executor, id)),
-      exportable: async (executor, id) => {
-        const state = await itemState(executor, id);
+      }),
+      interactive: byItemState(interactiveItem),
+      exportable: byItemState((state, executor) => {
         if (!state || state.trashed) return { denial: "inTrash" };
         if (state.unpublished) return { denial: "unpublished" };
         return exportDisabled(executor, state.spaceId);
-      },
+      }),
     },
   };
 
@@ -449,13 +450,9 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
 
   const comment: ResourceType = {
     type: "comment",
-    spaceOf: commentSpace,
-    itemOf: async (executor, id) => {
-      const result = await executor.execute<{ item_id: string }>(
-        sql`select item_id from comments where id = ${id}`,
-      );
-      return result.rows[0]?.item_id ?? null;
-    },
+    spaceOf: commentSpaces,
+    itemOf: (executor, ids) =>
+      lookup(executor, sql`select id, item_id as value from comments where id = any(${uuids(ids)})`),
     actions: {
       "comment.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
       "comment.reply": { scope: "space", spaceRole: "commenter", restriction: "open" },
@@ -481,44 +478,39 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         (await commentAuthor(context.executor, context.resource.id)) === context.accountId,
       authorWhoComments: async (context) => {
         if ((await commentAuthor(context.executor, context.resource.id)) !== context.accountId) return false;
-        return hasRole(context, await commentSpace(context.executor, context.resource.id ?? ""), "commenter");
+        const id = context.resource.id ?? "";
+        const spaces = UUID.test(id) ? await commentSpaces(context.executor, [id.toLowerCase()]) : new Map();
+        return hasRole(context, spaces.get(id.toLowerCase()) ?? null, "commenter");
       },
     },
     restrictions: {
-      visible: async (executor, id) => {
-        const state = await commentState(executor, id);
+      visible: byCommentState((state) => {
         if (!state || state.trashed) return { denial: "inTrash" };
         return state.unpublished || state.hidden ? { denial: "unpublished", unless: "editor" } : null;
-      },
-      restorable: async (executor, id) => {
-        const state = await commentState(executor, id);
+      }),
+      restorable: byCommentState((state) => {
         if (!state || state.trashed) return { denial: "inTrash" };
         if (state.archived) return { denial: "archived" };
         return state.unpublished || state.hidden ? { denial: "unpublished", unless: "editor" } : null;
-      },
-      open: async (executor, id) => {
-        const state = await commentState(executor, id);
+      }),
+      open: byCommentState((state) => {
         if (!state || state.trashed || state.deleted) return { denial: "inTrash" };
         if (state.archived) return { denial: "archived" };
         return state.unpublished || state.hidden ? { denial: "unpublished", unless: "editor" } : null;
-      },
+      }),
     },
   };
 
   const task: ResourceType = {
     type: "task",
-    spaceOf: async (executor, id) => {
-      const result = await executor.execute<{ space_id: string }>(
-        sql`select t.space_id from tasks k join tree_items t on t.id = k.item_id where k.id = ${id}`,
-      );
-      return result.rows[0]?.space_id ?? null;
-    },
-    itemOf: async (executor, id) => {
-      const result = await executor.execute<{ item_id: string }>(
-        sql`select item_id from tasks where id = ${id}`,
-      );
-      return result.rows[0]?.item_id ?? null;
-    },
+    spaceOf: (executor, ids) =>
+      lookup(
+        executor,
+        sql`select k.id, t.space_id as value from tasks k join tree_items t on t.id = k.item_id
+          where k.id = any(${uuids(ids)})`,
+      ),
+    itemOf: (executor, ids) =>
+      lookup(executor, sql`select id, item_id as value from tasks where id = any(${uuids(ids)})`),
     actions: {
       "task.view": { scope: "space", spaceRole: "reader", restriction: "visible" },
       "task.update": { scope: "space", spaceRole: "editor", rule: "assignee", restriction: "interactive" },
@@ -532,66 +524,51 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       },
     },
     restrictions: {
-      visible: async (executor, id) => {
-        const result = await executor.execute<{ item_id: string; published: boolean }>(
-          sql`select item_id, published from tasks where id = ${id}`,
-        );
-        const row = result.rows[0];
-        const state = row ? await itemState(executor, row.item_id) : null;
-        if (!state || state.trashed) return { denial: "inTrash" };
-        return state.unpublished || !row?.published ? { denial: "unpublished", unless: "editor" } : null;
-      },
-      interactive: async (executor, id) => {
-        const result = await executor.execute<{ item_id: string }>(
-          sql`select item_id from tasks where id = ${id}`,
-        );
-        const itemId = result.rows[0]?.item_id;
-        return interactiveItem(itemId ? await itemState(executor, itemId) : null);
-      },
+      visible: byParentState(
+        (executor, ids) =>
+          parents(executor, sql`select id, item_id, published from tasks where id = any(${uuids(ids)})`),
+        (state, task) => {
+          if (!state || state.trashed) return { denial: "inTrash" };
+          return state.unpublished || !task?.published ? { denial: "unpublished", unless: "editor" } : null;
+        },
+      ),
+      interactive: byParentState(
+        (executor, ids) =>
+          parents(executor, sql`select id, item_id, published from tasks where id = any(${uuids(ids)})`),
+        interactiveItem,
+      ),
     },
   };
 
-  const attachmentItem = async (executor: Executor, id: string): Promise<string | null> => {
-    const result = await executor.execute<{ item_id: string }>(
-      sql`select item_id from attachments where id = ${id} and (deleted_at is null or published_version_id is not null)`,
+  const attachmentParents = (executor: Executor, ids: readonly string[]) =>
+    parents(
+      executor,
+      sql`select id, item_id, published_version_id is not null as published from attachments
+        where id = any(${uuids(ids)}) and (deleted_at is null or published_version_id is not null)`,
     );
-    return result.rows[0]?.item_id ?? null;
-  };
-  const viaItem =
-    (restriction: (executor: Executor, id: string) => Promise<RestrictionResult | null>) =>
-    async (executor: Executor, id: string): Promise<RestrictionResult | null> => {
-      const itemId = await attachmentItem(executor, id);
-      return itemId ? restriction(executor, itemId) : { denial: "inTrash" };
-    };
 
   const attachment: ResourceType = {
     type: "attachment",
-    spaceOf: async (executor, id) => {
-      const result = await executor.execute<{ space_id: string }>(sql`
-        select t.space_id from attachments a join tree_items t on t.id = a.item_id
-        where a.id = ${id} and (a.deleted_at is null or a.published_version_id is not null)`);
-      return result.rows[0]?.space_id ?? null;
-    },
-    itemOf: attachmentItem,
+    spaceOf: (executor, ids) =>
+      lookup(
+        executor,
+        sql`select a.id, t.space_id as value from attachments a join tree_items t on t.id = a.item_id
+          where a.id = any(${uuids(ids)}) and (a.deleted_at is null or a.published_version_id is not null)`,
+      ),
+    itemOf: async (executor, ids) =>
+      new Map([...(await attachmentParents(executor, ids))].map(([id, parent]) => [id, parent.item_id])),
     actions: {
       "attachment.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
       "attachment.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
     },
     restrictions: {
-      readable: async (executor, id) => {
-        const result = await executor.execute<{ item_id: string; published: boolean }>(sql`
-          select item_id, published_version_id is not null as published from attachments
-          where id = ${id} and (deleted_at is null or published_version_id is not null)`);
-        const row = result.rows[0];
-        const state = row ? await itemState(executor, row.item_id) : null;
+      readable: byParentState(attachmentParents, (state, attachment) => {
         if (!state || state.trashed) return { denial: "inTrash" };
-        return state.unpublished || !row?.published ? { denial: "unpublished", unless: "editor" } : null;
-      },
-      writable: viaItem(async (executor, itemId) => {
-        const state = await itemState(executor, itemId);
-        if (!state || state.trashed) return { denial: "inTrash" };
-        return state.archived ? { denial: "archived" } : null;
+        return state.unpublished || !attachment?.published
+          ? { denial: "unpublished", unless: "editor" }
+          : null;
       }),
+      writable: byParentState(attachmentParents, writableItem),
     },
   };
 
@@ -744,17 +721,87 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
   ];
 }
 
-function interactiveItem(state: Awaited<ReturnType<typeof itemState>>): RestrictionResult | null {
+type Decided = RestrictionResult | null;
+
+const uuids = (ids: readonly string[]) => sql`${sql.param([...ids])}::uuid[]`;
+
+async function lookup(executor: Executor, query: SQL): Promise<Map<string, string>> {
+  const result = await executor.execute<{ id: string; value: string }>(query);
+  return new Map(result.rows.map((row) => [row.id, row.value]));
+}
+
+async function each(
+  ids: readonly string[],
+  decide: (id: string) => Decided | Promise<Decided>,
+): Promise<Map<string, RestrictionResult>> {
+  const restricted = new Map<string, RestrictionResult>();
+  for (const id of ids) {
+    const result = await decide(id);
+    if (result) restricted.set(id, result);
+  }
+  return restricted;
+}
+
+interface ItemState {
+  spaceId: string;
+  trashed: boolean;
+  archived: boolean;
+  spaceArchived: boolean;
+  unpublished: boolean;
+}
+
+function writableItem(state: ItemState | undefined): Decided {
+  if (!state || state.trashed) return { denial: "inTrash" };
+  return state.archived ? { denial: "archived" } : null;
+}
+
+function interactiveItem(state: ItemState | undefined): Decided {
   if (!state || state.trashed) return { denial: "inTrash" };
   if (state.archived) return { denial: "archived" };
   return state.unpublished ? { denial: "unpublished", unless: "editor" } : null;
 }
 
-async function commentSpace(executor: Executor, id: string): Promise<string | null> {
-  const result = await executor.execute<{ space_id: string }>(
-    sql`select t.space_id from comments c join tree_items t on t.id = c.item_id where c.id = ${id}`,
+function byItemState(
+  decide: (state: ItemState | undefined, executor: Executor) => Decided | Promise<Decided>,
+): Restriction {
+  return async (executor, ids) => {
+    const states = await itemStates(executor, ids);
+    return each(ids, (id) => decide(states.get(id), executor));
+  };
+}
+
+interface Parent {
+  item_id: string;
+  published: boolean;
+}
+
+async function parents(executor: Executor, query: SQL): Promise<Map<string, Parent>> {
+  const result = await executor.execute<Parent & { id: string; [key: string]: unknown }>(query);
+  return new Map(result.rows.map((row) => [row.id, { item_id: row.item_id, published: row.published }]));
+}
+
+function byParentState(
+  load: (executor: Executor, ids: readonly string[]) => Promise<Map<string, Parent>>,
+  decide: (state: ItemState | undefined, parent: Parent | undefined) => Decided,
+): Restriction {
+  return async (executor, ids) => {
+    const found = await load(executor, ids);
+    const states = await itemStates(executor, [
+      ...new Set([...found.values()].map((parent) => parent.item_id)),
+    ]);
+    return each(ids, (id) => {
+      const parent = found.get(id);
+      return decide(parent ? states.get(parent.item_id) : undefined, parent);
+    });
+  };
+}
+
+function commentSpaces(executor: Executor, ids: readonly string[]): Promise<Map<string, string>> {
+  return lookup(
+    executor,
+    sql`select c.id, t.space_id as value from comments c join tree_items t on t.id = c.item_id
+      where c.id = any(${uuids(ids)})`,
   );
-  return result.rows[0]?.space_id ?? null;
 }
 
 async function commentAuthor(executor: Executor, id: string | undefined): Promise<string | null> {
@@ -765,73 +812,65 @@ async function commentAuthor(executor: Executor, id: string | undefined): Promis
   return result.rows[0]?.author_id ?? null;
 }
 
-async function commentState(
-  executor: Executor,
-  id: string,
-): Promise<{
+interface CommentState {
   trashed: boolean;
   archived: boolean;
   unpublished: boolean;
   hidden: boolean;
   deleted: boolean;
-} | null> {
-  const result = await executor.execute<{
-    trashed: boolean;
-    archived: boolean;
-    unpublished: boolean;
-    hidden: boolean;
-    deleted: boolean;
-  }>(sql`
-    select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
-      (t.archived_root_id is not null or s.archived_at is not null or s.quarantined) as archived,
-      not t.reader_visible as unpublished,
-      (r.quote is not null and not r.quote_public) as hidden,
-      c.deleted_at is not null as deleted
-    from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
-    join tree_items t on t.id = c.item_id join spaces s on s.id = t.space_id
-    where c.id = ${id}`);
-  return result.rows[0] ?? null;
 }
 
-async function spaceState(
-  executor: Executor,
-  id: string,
-): Promise<{ deleted: boolean; archived: boolean } | null> {
-  const result = await executor.execute<{ deleted: boolean; archived: boolean }>(sql`
-    select deleted_at is not null as deleted, (archived_at is not null or quarantined) as archived from spaces where id = ${id}`);
-  return result.rows[0] ?? null;
+function byCommentState(decide: (state: CommentState | undefined) => Decided): Restriction {
+  return async (executor, ids) => {
+    const result = await executor.execute<CommentState & { id: string; [key: string]: unknown }>(sql`
+      select c.id, (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
+        (t.archived_root_id is not null or s.archived_at is not null or s.quarantined) as archived,
+        not t.reader_visible as unpublished,
+        (r.quote is not null and not r.quote_public) as hidden,
+        c.deleted_at is not null as deleted
+      from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
+      join tree_items t on t.id = c.item_id join spaces s on s.id = t.space_id
+      where c.id = any(${uuids(ids)})`);
+    const states = new Map(result.rows.map((row) => [row.id, row]));
+    return each(ids, (id) => decide(states.get(id)));
+  };
 }
 
-async function itemState(
+async function spaceStates(
   executor: Executor,
-  id: string,
-): Promise<{
-  spaceId: string;
-  trashed: boolean;
-  archived: boolean;
-  spaceArchived: boolean;
-  unpublished: boolean;
-} | null> {
+  ids: readonly string[],
+): Promise<Map<string, { deleted: boolean; archived: boolean }>> {
+  const result = await executor.execute<{ id: string; deleted: boolean; archived: boolean }>(sql`
+    select id, deleted_at is not null as deleted, (archived_at is not null or quarantined) as archived
+    from spaces where id = any(${uuids(ids)})`);
+  return new Map(result.rows.map((row) => [row.id, row]));
+}
+
+async function itemStates(executor: Executor, ids: readonly string[]): Promise<Map<string, ItemState>> {
+  if (ids.length === 0) return new Map();
   const result = await executor.execute<{
+    id: string;
     space_id: string;
     trashed: boolean;
     archived: boolean;
     space_archived: boolean;
     unpublished: boolean;
   }>(sql`
-    select t.space_id, (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
+    select t.id, t.space_id, (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
       (t.archived_root_id is not null or s.archived_at is not null or s.quarantined) as archived,
       (s.archived_at is not null or s.quarantined) as space_archived,
       not t.reader_visible as unpublished
-    from tree_items t join spaces s on s.id = t.space_id where t.id = ${id}`);
-  const row = result.rows[0];
-  return row
-    ? {
+    from tree_items t join spaces s on s.id = t.space_id where t.id = any(${uuids(ids)})`);
+  return new Map(
+    result.rows.map((row) => [
+      row.id,
+      {
         spaceId: row.space_id,
         trashed: row.trashed,
         archived: row.archived,
         spaceArchived: row.space_archived,
         unpublished: row.unpublished,
-      }
-    : null;
+      },
+    ]),
+  );
 }

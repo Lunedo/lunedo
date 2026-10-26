@@ -1037,7 +1037,7 @@
     "label": "Main navigation",
     "home": "Lunedo home",
     "notifications": "Notifications",
-    "notificationsUnread": "Notifications, {count, plural, one {# unread} other {# unread}}",
+    "notificationsUnread": "Notifications, {label} unread",
     "help": "Help",
     "settings": "Settings",
     "account": "Account",

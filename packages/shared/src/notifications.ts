@@ -2,6 +2,8 @@ import { z } from "zod";
 import { chatChannelKinds, chatFailureReasons } from "./chat.js";
 import { idSchema } from "./validation.js";
 
+export const UNREAD_COUNT_CAP = 100;
+
 export const notificationChannels = ["inApp", "email", "push"] as const;
 export type NotificationChannel = (typeof notificationChannels)[number];
 

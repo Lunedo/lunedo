@@ -19,7 +19,7 @@ import { PersonAvatar } from "../components/person-avatar.js";
 import { docsUrl } from "../docs/docs-url.js";
 import { useHelpUrl } from "../knowledge-bases/help-target.js";
 import { NotificationPopover } from "../notifications/notification-panel.js";
-import { useUnreadCount } from "../notifications/notifications-api.js";
+import { unreadCountLabel, useUnreadCount } from "../notifications/notifications-api.js";
 import { isNavigationVisible, type NavigationSection, navigationItems } from "./extensions.js";
 import { useShownLocation } from "./navigation-pending.js";
 import { useRegistry } from "./registry.js";
@@ -40,7 +40,11 @@ export function NotificationsButton() {
         }}
         trigger={
           <IconButton
-            label={count > 0 ? t("rail.notificationsUnread", { count }) : t("rail.notifications")}
+            label={
+              count > 0
+                ? t("rail.notificationsUnread", { count, label: unreadCountLabel(count) })
+                : t("rail.notifications")
+            }
             icon={Bell}
             size="field"
           />

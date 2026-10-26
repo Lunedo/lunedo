@@ -394,7 +394,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(2);
   });
 
-  it("checks at most the newest 1,000 groups, so a large backlog costs a bounded amount of work", async () => {
+  it("stops counting at 100, so a large backlog costs a bounded amount of work", async () => {
     const org = await organization();
     await notify(guestNotice(org.id, [org.owner.id]));
     await test.pool.query(
@@ -405,7 +405,21 @@ describe.skipIf(!baseUrl)("notifications", () => {
        from notifications, generate_series(1, 1000) as n where recipient_id = $1`,
       [org.owner.id],
     );
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1000);
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(100);
+  });
+
+  it("counts visible notifications behind more than 100 hidden ones", async () => {
+    const org = await organization();
+    for (let index = 0; index < 3; index += 1) await notify(guestNotice(org.id, [org.owner.id]));
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key,
+         in_app, count, created_at, updated_at)
+       select gen_random_uuid(), $1, $2, 'content.changed', 'item', gen_random_uuid()::text, '{}'::jsonb,
+         'hidden-' || n, true, 1, now(), now() + make_interval(secs => n)
+       from generate_series(1, 150) as n`,
+      [org.owner.id, org.id],
+    );
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(3);
   });
 
   it("asks the authorization service once per decision, however many notifications share it", async () => {
@@ -427,10 +441,11 @@ describe.skipIf(!baseUrl)("notifications", () => {
         },
       });
     }
-    const explain = vi.spyOn(test.services.authorization, "explain");
+    const explain = vi.spyOn(test.services.authorization, "explainMany");
     try {
       expect(await test.services.notifications.unreadCount(administrator.id)).toBe(12);
       expect(explain).toHaveBeenCalledTimes(1);
+      expect(explain.mock.calls[0]?.[2]).toHaveLength(1);
     } finally {
       explain.mockRestore();
     }

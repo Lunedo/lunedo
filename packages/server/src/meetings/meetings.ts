@@ -658,18 +658,18 @@ export class MeetingService {
     }
     await this.#database.transaction(async (tx) => {
       const series = await this.#writableSeries(tx, seriesId);
-      for (const id of links) {
-        const visible = await this.#authorization.explain(
-          actor,
-          "item.view",
-          { type: "item", id },
-          { executor: tx, fresh: true },
-        );
-        const found = await tx.execute<{ id: string }>(sql`
-          select id from tree_items where id = ${id} and space_id = ${series.space_id} and trash_entry_id is null`);
-        if (!visible.allowed || found.rows.length === 0) {
-          throw new SpaceError("invalidOverviewLink", "Link pages of the same space that you can open");
-        }
+      const visible = await this.#authorization.explainMany(
+        actor,
+        "item.view",
+        links.map((id) => ({ type: "item", id })),
+        { executor: tx, fresh: true },
+      );
+      const found = await tx.execute<{ id: string }>(sql`
+        select id from tree_items where id = any(${sql.param(links)}::uuid[])
+          and space_id = ${series.space_id} and trash_entry_id is null`);
+      const inSpace = new Set(found.rows.map((row) => row.id));
+      if (links.some((id, index) => !visible[index]?.allowed || !inSpace.has(id))) {
+        throw new SpaceError("invalidOverviewLink", "Link pages of the same space that you can open");
       }
       const layout: OverviewLayout = {
         columns: input.columns,

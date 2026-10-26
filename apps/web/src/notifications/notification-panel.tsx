@@ -30,6 +30,7 @@ import {
   type NotificationKind,
   useMarkAllRead,
   useNotificationList,
+  unreadCountLabel,
   useUnreadCount,
   useUnreadCountOf,
 } from "./notifications-api.js";
@@ -317,7 +318,11 @@ function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; o
           onValueChange={(value) => setKind(value as Kind)}
           tabs={kinds.map((value) => {
             const count = counts[value];
-            return { value, label: t(`notifications.kinds.${value}`), ...(count ? { count } : {}) };
+            return {
+              value,
+              label: t(`notifications.kinds.${value}`),
+              ...(count ? { count: unreadCountLabel(count) } : {}),
+            };
           })}
           fill={!page}
         >

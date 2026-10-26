@@ -196,99 +196,133 @@ export interface ItemFacts {
   editRestriction: { listed: boolean } | null;
 }
 
-function cached<T>(key: string, load: () => Promise<T>, fresh: boolean): Promise<T> {
-  const cache = fresh ? undefined : currentRequestContext()?.cache;
-  if (!cache) return load();
-  const existing = cache.get(key) as Promise<T> | undefined;
-  if (existing) return existing;
-  const loading = load();
-  cache.set(key, loading);
-  loading.catch(() => cache.delete(key));
-  return loading;
-}
-
 export async function itemFacts(
   executor: Executor,
   accountId: string,
   itemId: string,
   options: { fresh?: boolean } = {},
 ): Promise<ItemFacts | null> {
-  return cached(
-    `authorization:item:${accountId}:${itemId}`,
-    async () => {
-      const account = sql`${accountId}::uuid`;
-      const item = await executor.execute<{
-        path: string[];
-        space_id: string;
-        organization_id: string | null;
-        in_organization: boolean;
-      }>(sql`
-        select t.path, t.space_id, s.organization_id,
-          ${organizationMembership(sql`s.organization_id`, account)} as in_organization
-        from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
-      const row = item.rows[0];
-      if (!row) return null;
-      const organization = sql`${row.organization_id}::uuid`;
-      const path = row.path.length > 0 ? row.path : [itemId];
-      const shares = await executor.execute<{
-        id: string;
-        item_id: string;
-        role: SpaceRole;
-        principal_kind: "account" | "group";
-        principal_id: string;
-        group_name: string | null;
-      }>(sql`
-        select ps.id, ps.item_id, ps.role, ps.principal_kind, ps.principal_id, g.name as group_name
-        from page_shares ps left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
-        where ps.item_id = any(${sql.param(path)}::uuid[])
-          and (ps.item_id = ${itemId} or ps.include_descendants)
-          and ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, account)}
-        order by ps.id`);
-      const links = await executor.execute<{ id: string; scope: string }>(sql`
-        select l.id, l.scope from share_link_accesses la join share_links l on l.id = la.link_id
-        join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
-        where l.item_id = ${itemId} and la.account_id = ${account} and ${activeLinkCondition(sql`l`)}
-          and ${linkScopeCondition(sql`l`, account, sql`s`)}
-        order by l.id`);
-      const restrictions = await executor.execute<{
-        item_id: string;
-        kind: "view" | "edit";
-        listed: boolean;
-      }>(sql`
-        select r.item_id, r.kind, ${restrictionListedCondition(sql`r`, account, organization)} as listed
-        from page_restrictions r
-        where (r.kind = 'view' and r.item_id = any(${sql.param(path)}::uuid[])) or (r.kind = 'edit' and r.item_id = ${itemId})
-        order by array_position(${sql.param(path)}::uuid[], r.item_id)`);
-      const edit = restrictions.rows.find((restriction) => restriction.kind === "edit");
-      const shareSource = (share: (typeof shares.rows)[number]): ItemGrantSource => ({
-        type: "share",
-        role: share.role,
-        itemId: share.item_id,
-        inherited: share.item_id !== itemId,
-        shareId: share.id,
-        via:
-          share.principal_kind === "group"
-            ? { type: "group", groupId: share.principal_id, name: share.group_name ?? "" }
-            : { type: "account" },
-      });
-      const inert = (share: (typeof shares.rows)[number]) =>
-        share.principal_kind === "account" && !row.in_organization;
-      return {
-        itemId,
-        path,
-        inactiveSources: shares.rows.filter(inert).map(shareSource),
-        sources: [
-          ...shares.rows.filter((share) => !inert(share)).map(shareSource),
-          ...links.rows.map(
-            (link): ItemGrantSource => ({ type: "link", linkId: link.id, scope: link.scope }),
-          ),
-        ],
-        viewRestrictions: restrictions.rows
-          .filter((restriction) => restriction.kind === "view")
-          .map((restriction) => ({ itemId: restriction.item_id, listed: restriction.listed })),
-        editRestriction: edit ? { listed: edit.listed } : null,
-      };
-    },
-    options.fresh ?? false,
+  return (await itemFactsMany(executor, accountId, [itemId], options)).get(itemId) ?? null;
+}
+
+export async function itemFactsMany(
+  executor: Executor,
+  accountId: string,
+  itemIds: readonly string[],
+  options: { fresh?: boolean } = {},
+): Promise<Map<string, ItemFacts>> {
+  const cache = options.fresh ? undefined : currentRequestContext()?.cache;
+  const key = (itemId: string) => `authorization:item:${accountId}:${itemId}`;
+  const found = new Map<string, ItemFacts>();
+  const missing: string[] = [];
+  const pending: Promise<void>[] = [];
+  const keep = (itemId: string, facts: ItemFacts | null) => {
+    if (facts) found.set(itemId, facts);
+  };
+  for (const itemId of new Set(itemIds)) {
+    const existing = cache?.get(key(itemId)) as Promise<ItemFacts | null> | undefined;
+    if (existing) pending.push(existing.then((facts) => keep(itemId, facts)));
+    else missing.push(itemId);
+  }
+  if (missing.length > 0) {
+    const loading = loadItemFacts(executor, accountId, missing);
+    for (const itemId of missing) {
+      const one = loading.then((loaded) => loaded.get(itemId) ?? null);
+      if (cache) {
+        cache.set(key(itemId), one);
+        one.catch(() => cache.delete(key(itemId)));
+      }
+      pending.push(one.then((facts) => keep(itemId, facts)));
+    }
+  }
+  await Promise.all(pending);
+  return found;
+}
+
+async function loadItemFacts(
+  executor: Executor,
+  accountId: string,
+  itemIds: readonly string[],
+): Promise<Map<string, ItemFacts>> {
+  const account = sql`${accountId}::uuid`;
+  const ids = sql`${sql.param([...itemIds])}::uuid[]`;
+  const targets = sql`targets as (
+    select t.id as target, case when cardinality(t.path) > 0 then t.path else array[t.id] end as path,
+      s.organization_id, ${organizationMembership(sql`s.organization_id`, account)} as in_organization
+    from tree_items t join spaces s on s.id = t.space_id where t.id = any(${ids}))`;
+  const items = await executor.execute<{ target: string; path: string[]; in_organization: boolean }>(
+    sql`with ${targets} select target, path, in_organization from targets`,
   );
+  if (items.rows.length === 0) return new Map();
+  const shares = await executor.execute<{
+    target: string;
+    id: string;
+    item_id: string;
+    role: SpaceRole;
+    principal_kind: "account" | "group";
+    principal_id: string;
+    group_name: string | null;
+  }>(sql`
+    with ${targets}
+    select x.target, ps.id, ps.item_id, ps.role, ps.principal_kind, ps.principal_id, g.name as group_name
+    from targets x join page_shares ps on ps.item_id = any(x.path)
+      and (ps.item_id = x.target or ps.include_descendants)
+    left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
+    where ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, account)}
+    order by x.target, ps.id`);
+  const links = await executor.execute<{ target: string; id: string; scope: string }>(sql`
+    select l.item_id as target, l.id, l.scope from share_link_accesses la join share_links l on l.id = la.link_id
+    join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
+    where l.item_id = any(${ids}) and la.account_id = ${account} and ${activeLinkCondition(sql`l`)}
+      and ${linkScopeCondition(sql`l`, account, sql`s`)}
+    order by l.item_id, l.id`);
+  const restrictions = await executor.execute<{
+    target: string;
+    item_id: string;
+    kind: "view" | "edit";
+    listed: boolean;
+  }>(sql`
+    with ${targets}
+    select x.target, r.item_id, r.kind,
+      ${restrictionListedCondition(sql`r`, account, sql`x.organization_id`)} as listed
+    from targets x join page_restrictions r
+      on (r.kind = 'view' and r.item_id = any(x.path)) or (r.kind = 'edit' and r.item_id = x.target)
+    order by x.target, array_position(x.path, r.item_id)`);
+  const facts = new Map<string, ItemFacts>();
+  for (const row of items.rows) {
+    const itemId = row.target;
+    const own = <T extends { target: string }>(rows: T[]) => rows.filter((entry) => entry.target === itemId);
+    const itemShares = own(shares.rows);
+    const itemRestrictions = own(restrictions.rows);
+    const edit = itemRestrictions.find((restriction) => restriction.kind === "edit");
+    const shareSource = (share: (typeof itemShares)[number]): ItemGrantSource => ({
+      type: "share",
+      role: share.role,
+      itemId: share.item_id,
+      inherited: share.item_id !== itemId,
+      shareId: share.id,
+      via:
+        share.principal_kind === "group"
+          ? { type: "group", groupId: share.principal_id, name: share.group_name ?? "" }
+          : { type: "account" },
+    });
+    const inert = (share: (typeof itemShares)[number]) =>
+      share.principal_kind === "account" && !row.in_organization;
+    facts.set(itemId, {
+      itemId,
+      path: row.path,
+      inactiveSources: itemShares.filter(inert).map(shareSource),
+      sources: [
+        ...itemShares.filter((share) => !inert(share)).map(shareSource),
+        ...own(links.rows).map(
+          (link): ItemGrantSource => ({ type: "link", linkId: link.id, scope: link.scope }),
+        ),
+      ],
+      viewRestrictions: itemRestrictions
+        .filter((restriction) => restriction.kind === "view")
+        .map((restriction) => ({ itemId: restriction.item_id, listed: restriction.listed })),
+      editRestriction: edit ? { listed: edit.listed } : null,
+    });
+  }
+  return facts;
 }

@@ -291,10 +291,15 @@ export class AccessRequestService {
     const result = await this.#database.execute<RequestRow>(sql`
       ${this.#select(viewer)} where r.space_id = ${spaceId} and r.status = 'open'
       order by r.created_at limit 500`);
-    const requests: AccessRequest[] = [];
-    for (const row of result.rows)
-      if (await this.#mayDecide(viewer, row)) requests.push(this.#toRequest(row));
-    return requests;
+    const decide = this.#authorization.batch(viewer);
+    const decidable = await Promise.all(
+      result.rows.map(
+        async (row) =>
+          (await decide("space.manage", { type: "space", id: row.space_id })).allowed ||
+          (row.item_id !== null && (await decide("item.share", { type: "item", id: row.item_id })).allowed),
+      ),
+    );
+    return result.rows.filter((_, index) => decidable[index]).map((row) => this.#toRequest(row));
   }
 
   async #mayDecide(viewer: Principal, row: { space_id: string; item_id: string | null }): Promise<boolean> {

@@ -160601,8 +160601,9 @@
                   "properties": {
                     "count": {
                       "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "minimum": 0,
+                      "maximum": 100,
+                      "description": "Counts up to 100; 100 means at least that many."
                     }
                   },
                   "required": [

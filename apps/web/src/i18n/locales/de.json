@@ -1037,7 +1037,7 @@
     "label": "Hauptnavigation",
     "home": "Lunedo-Startseite",
     "notifications": "Benachrichtigungen",
-    "notificationsUnread": "Benachrichtigungen, {count, plural, one {# ungelesen} other {# ungelesen}}",
+    "notificationsUnread": "Benachrichtigungen, {label} ungelesen",
     "help": "Hilfe",
     "settings": "Einstellungen",
     "account": "Konto",

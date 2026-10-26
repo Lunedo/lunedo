@@ -159,12 +159,13 @@ export class WatchService {
   }
 
   async setMany(accountId: string, changes: readonly WatchChange[]): Promise<number> {
-    const principal = accountPrincipal(accountId);
-    const allowed: WatchChange[] = [];
-    for (const change of changes) {
-      const action = change.target.type === "item" ? "item.view" : "space.view";
-      if ((await this.#authorization.explain(principal, action, change.target)).allowed) allowed.push(change);
-    }
+    const decide = this.#authorization.batch(accountPrincipal(accountId));
+    const decisions = await Promise.all(
+      changes.map((change) =>
+        decide(change.target.type === "item" ? "item.view" : "space.view", change.target),
+      ),
+    );
+    const allowed = changes.filter((_, index) => decisions[index]?.allowed);
     await this.#database.transaction(async (tx) => {
       for (const change of allowed) await this.#write(tx, accountId, change);
     });
@@ -279,14 +280,20 @@ export class WatchService {
         and (t.id is null or t.trash_entry_id is null) and s.deleted_at is null
       order by w.updated_at desc, w.id desc
       limit ${LIST_LIMIT}`);
-    const principal = accountPrincipal(accountId);
+    const decide = this.#authorization.batch(accountPrincipal(accountId));
+    const targets = rows.rows.map(
+      (row): WatchTarget =>
+        row.item_id
+          ? { type: "item", id: row.item_id }
+          : { type: "space", id: row.space_id ?? row.target_space_id },
+    );
+    const decisions = await Promise.all(
+      targets.map((target) => decide(target.type === "item" ? "item.view" : "space.view", target)),
+    );
     const entries: WatchedEntry[] = [];
-    for (const row of rows.rows) {
-      const target: WatchTarget = row.item_id
-        ? { type: "item", id: row.item_id }
-        : { type: "space", id: row.space_id ?? row.target_space_id };
-      const action = target.type === "item" ? "item.view" : "space.view";
-      if (!(await this.#authorization.explain(principal, action, target)).allowed) continue;
+    for (const [index, row] of rows.rows.entries()) {
+      const target = targets[index];
+      if (!target || !decisions[index]?.allowed) continue;
       entries.push({
         target,
         state: row.state,
