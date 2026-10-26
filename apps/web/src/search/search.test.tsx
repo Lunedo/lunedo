@@ -12,12 +12,16 @@ const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const SPACE = "01929b1e-0000-7000-8000-000000000010";
 const OTHER_SPACE = "01929b1e-0000-7000-8000-000000000011";
 const AUTHOR = "01929b1e-0000-7000-8000-000000000012";
+const ITEM = "01929b1e-0000-7000-8000-000000000013";
 
-function hit(id: string, title: string, spaceId = SPACE) {
+const ids = (n: number) => `01929b1e-0000-7000-8000-0000000001${String(n).padStart(2, "0")}`;
+
+function hit(n: number, title: string, spaceId = SPACE) {
   return {
     type: "page",
-    id,
-    itemId: id,
+    id: ids(n),
+    itemId: ids(n),
+    number: 1100 + n,
     title,
     heading: "",
     anchor: null,
@@ -66,8 +70,6 @@ function response(results: ReturnType<typeof hit>[], extra: Record<string, unkno
     ...extra,
   };
 }
-
-const ids = (n: number) => `01929b1e-0000-7000-8000-0000000001${String(n).padStart(2, "0")}`;
 
 function shellRoutes(search: (request: RecordedRequest) => { status?: number; body?: unknown }) {
   return {
@@ -121,6 +123,7 @@ function shellRoutes(search: (request: RecordedRequest) => { status?: number; bo
       body: [
         {
           id: ids(90),
+          number: 1190,
           kind: "page",
           title: "Network overview",
           spaceId: SPACE,
@@ -149,11 +152,25 @@ function shellRoutes(search: (request: RecordedRequest) => { status?: number; bo
   };
 }
 
-async function renderApp(
-  path: string,
-  search: (request: RecordedRequest) => { status?: number; body?: unknown },
-) {
-  const api = mockApi(shellRoutes(search));
+type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
+
+const numberedItem = {
+  id: ITEM,
+  number: 1040,
+  spaceId: SPACE,
+  parentId: null,
+  kind: "page",
+  title: "VPN access",
+  spaceKey: "OPS",
+  spaceName: "Operations",
+};
+
+const readableItem: Record<string, Handler> = {
+  [`GET /api/v1/items/${ITEM}`]: () => ({ body: numberedItem }),
+};
+
+async function renderApp(path: string, search: Handler, extra: Record<string, Handler> = {}) {
+  const api = mockApi({ ...shellRoutes(search), ...extra });
   window.history.replaceState(null, "", path);
   const i18n = await initI18n(["en"]);
   render(<App i18n={i18n} queryClient={createQueryClient()} />);
@@ -163,6 +180,12 @@ async function renderApp(
 
 function queryOf(request: RecordedRequest): URLSearchParams {
   return new URL(request.path, "http://localhost").searchParams;
+}
+
+function searchRequests(requests: RecordedRequest[]): RecordedRequest[] {
+  return requests.filter((request) =>
+    request.path.startsWith(`/api/v1/organizations/${ORGANIZATION}/search?`),
+  );
 }
 
 describe("search parameters in the address", () => {
@@ -195,7 +218,7 @@ describe("results of attachments, running topics and decisions", () => {
   const SERIES = "01929b1e-0000-7000-8000-000000000021";
   const MEETING = "01929b1e-0000-7000-8000-000000000022";
   const FILE = "01929b1e-0000-7000-8000-000000000023";
-  const base = { ...hit(ids(1), "Gateway"), attachment: null, topic: null, series: null, itemType: "page" };
+  const base = { ...hit(1, "Gateway"), attachment: null, topic: null, series: null, itemType: "page" };
 
   it("open the file on its page, the topic in its series and the meeting when the topic is hidden", async () => {
     const i18n = await initI18n(["en"]);
@@ -207,13 +230,13 @@ describe("results of attachments, running topics and decisions", () => {
       heading: "handbook.docx",
       attachment: { id: FILE, name: "handbook.docx", contentType: "application/pdf", size: 10 },
     };
-    expect(hitHref(file)).toBe(`/spaces/OPS/pages/${ids(1)}/gateway?attachment=${FILE}`);
+    expect(hitHref(file)).toBe(`/spaces/OPS/pages/1101/gateway?attachment=${FILE}`);
     expect(hitHref({ ...file, itemType: "blogPost" })).toBe(
-      `/spaces/OPS/blog/${ids(1)}/gateway?attachment=${FILE}`,
+      `/spaces/OPS/blog/1101/gateway?attachment=${FILE}`,
     );
     expect(hitTitle(t, file)).toBe("handbook.docx on “Gateway”");
     expect(typeLabel(t, "attachment")).toBe("Attachment");
-    const page = hit("01929b1e-0000-7000-8000-0000000000aa", "Gateway");
+    const page = hit(70, "Gateway");
     expect(hitTypeLabel(t, page)).toBe("Page");
     expect(hitTypeLabel(t, { ...page, space: page.space && { ...page.space, knowledgeBase: true } })).toBe(
       "Article",
@@ -224,25 +247,31 @@ describe("results of attachments, running topics and decisions", () => {
       type: "topic",
       id: TOPIC,
       itemId: TOPIC,
+      number: 1120,
       itemType: "topic",
       title: "Rollout",
-      topic: { id: TOPIC, title: "Rollout" },
-      series: { id: SERIES, title: "Jour fixe" },
+      topic: { id: TOPIC, number: 1120, title: "Rollout" },
+      series: { id: SERIES, number: 1121, title: "Jour fixe" },
     };
-    expect(hitHref(topic)).toBe(`/spaces/OPS/topics/${TOPIC}`);
+    expect(hitHref(topic)).toBe("/spaces/OPS/topics/1120/rollout");
     expect(hitPath(t, topic)).toEqual(["Operations", "Jour fixe"]);
     expect(hitTitle(t, { ...topic, id: ids(5) })).toBe("Comment on “Rollout”");
     expect(hitHref({ ...topic, space: null, sharedWithYou: true })).toBeNull();
     expect(typeLabel(t, "topic")).toBe("Running topic");
 
-    const decision = { ...base, type: "decision", id: ids(6), itemId: MEETING, title: "Jour fixe · 18 Mar" };
-    expect(hitHref({ ...decision, topic: { id: TOPIC, title: "Rollout" } })).toBe(
-      `/spaces/OPS/topics/${TOPIC}`,
+    const decision = {
+      ...base,
+      type: "decision",
+      id: ids(6),
+      itemId: MEETING,
+      number: 1122,
+      title: "Jour fixe · 18 Mar",
+    };
+    expect(hitHref({ ...decision, topic: { id: TOPIC, number: 1120, title: "Rollout" } })).toBe(
+      "/spaces/OPS/topics/1120/rollout",
     );
-    expect(hitHref(decision)).toBe(`/spaces/OPS/pages/${MEETING}/jour-fixe-18-mar`);
-    expect(hitHref({ ...decision, space: null, sharedWithYou: true })).toBe(
-      `/shared/${MEETING}/jour-fixe-18-mar`,
-    );
+    expect(hitHref(decision)).toBe("/spaces/OPS/pages/1122/jour-fixe-18-mar");
+    expect(hitHref({ ...decision, space: null, sharedWithYou: true })).toBe("/shared/1122/jour-fixe-18-mar");
     expect(hitTitle(t, decision)).toBe("Decision in “Jour fixe · 18 Mar”");
     expect(typeLabel(t, "decision")).toBe("Decision");
   });
@@ -308,7 +337,7 @@ describe("quick search", () => {
     const pending = new Map<string, () => void>();
     const api = await renderApp("/settings/preferences", (request) => {
       const q = queryOf(request).get("q") ?? "";
-      return { body: response(q === "gate" ? [hit(ids(1), "Gate list")] : [hit(ids(2), "Gateway restart")]) };
+      return { body: response(q === "gate" ? [hit(1, "Gate list")] : [hit(2, "Gateway restart")]) };
     });
     const answer = api.fetch.getMockImplementation();
     api.fetch.mockImplementation(async (resource: Request | string, init?: RequestInit) => {
@@ -335,7 +364,7 @@ describe("quick search", () => {
     const opened = vi.fn();
     vi.stubGlobal("open", opened);
     await renderApp("/settings/preferences", () => ({
-      body: response([hit(ids(3), "Gateway restart"), hit(ids(4), "Gateway overview")]),
+      body: response([hit(3, "Gateway restart"), hit(4, "Gateway overview")]),
     }));
     await userEvent.keyboard("/");
     const dialog = await screen.findByRole("dialog", { name: "Search" });
@@ -350,7 +379,7 @@ describe("quick search", () => {
         .getAttribute("aria-selected"),
     ).toBe("true");
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
-    expect(opened).toHaveBeenCalledWith(`/spaces/OPS/pages/${ids(4)}/gateway-overview`, "_blank", "noopener");
+    expect(opened).toHaveBeenCalledWith("/spaces/OPS/pages/1104/gateway-overview", "_blank", "noopener");
     expect(screen.getByRole("dialog", { name: "Search" })).toBeTruthy();
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Search" })).toBeNull());
@@ -363,7 +392,102 @@ describe("quick search", () => {
       name: /Gateway restart/,
     });
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/OPS/pages/${ids(3)}/gateway-restart`));
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/OPS/pages/1103/gateway-restart"));
+  });
+});
+
+describe("quick search by item number", () => {
+  beforeEach(() => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    vi.stubGlobal(
+      "EventSource",
+      class {
+        addEventListener() {}
+        removeEventListener() {}
+        close() {}
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("shows the item with that number first and opens it with Enter", async () => {
+    const api = await renderApp(
+      "/settings/preferences",
+      () => ({ body: response([hit(7, "Port 1040 rules")]) }),
+      readableItem,
+    );
+    await userEvent.keyboard("/");
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(dialog).getByRole("combobox"), "#1040");
+    const item = await within(dialog).findByRole("option", { name: /VPN access/ });
+    const group = within(dialog).getByRole("group", { name: "Open by number" });
+    expect(group.contains(item)).toBe(true);
+    expect(within(dialog).getAllByRole("option")[0]).toBe(item);
+    await within(dialog).findByRole("option", { name: /Port 1040 rules/ });
+    await waitFor(() => expect(item.getAttribute("aria-selected")).toBe("true"));
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/OPS/pages/1040/vpn-access"));
+    expect(api.requests.some((request) => request.path === "/api/v1/items/by-number/1040")).toBe(true);
+  });
+
+  it("shows only the search results when the number is unknown or hidden", async () => {
+    await renderApp("/settings/preferences", () => ({ body: response([hit(7, "Port 1040 rules")]) }));
+    await userEvent.keyboard("/");
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(dialog).getByRole("combobox"), "1040");
+    const result = await within(dialog).findByRole("option", { name: /Port 1040 rules/ });
+    expect(within(dialog).queryByRole("group", { name: "Open by number" })).toBeNull();
+    expect(within(dialog).queryByRole("option", { name: /VPN access/ })).toBeNull();
+    await waitFor(() => expect(result.getAttribute("aria-selected")).toBe("true"));
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/OPS/pages/1107/port-1040-rules"));
+  });
+});
+
+describe("the search page by item number", () => {
+  beforeEach(() => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    vi.stubGlobal(
+      "EventSource",
+      class {
+        addEventListener() {}
+        removeEventListener() {}
+        close() {}
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("opens the item with that number without searching", async () => {
+    const api = await renderApp(
+      "/search",
+      () => ({ body: response([hit(7, "Port 1040 rules")]) }),
+      readableItem,
+    );
+    await userEvent.type(await screen.findByRole("searchbox", { name: "Search" }), "#1040{Enter}");
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/OPS/pages/1040/vpn-access"));
+    expect(api.requests.some((request) => request.path === "/api/v1/items/by-number/1040")).toBe(true);
+    expect(searchRequests(api.requests)).toEqual([]);
+  });
+
+  it("searches for the number when no item with that number can be read", async () => {
+    const api = await renderApp("/search", () => ({ body: response([hit(7, "Port 1040 rules")]) }));
+    await userEvent.type(await screen.findByRole("searchbox", { name: "Search" }), "1040{Enter}");
+    expect(await screen.findByText("1 result")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Port 1040 rules/ })).toBeTruthy();
+    expect(window.location.pathname).toBe("/search");
+    expect((screen.getByRole("searchbox", { name: "Search" }) as HTMLInputElement).value).toBe("1040");
+    const lookup = api.requests.find((request) => request.path === "/api/v1/items/by-number/1040");
+    expect(lookup).toBeTruthy();
+    expect(searchRequests(api.requests).map((request) => queryOf(request).get("q"))).toEqual(["1040"]);
   });
 });
 
@@ -387,7 +511,7 @@ describe("the search page", () => {
 
   it("reads query and filters from the address and writes changed filters back", async () => {
     const api = await renderApp(`/search?q=gateway&spaces=${SPACE}&updated=week&sort=newest`, () => ({
-      body: response([hit(ids(5), "Gateway restart")]),
+      body: response([hit(5, "Gateway restart")]),
     }));
     expect(await screen.findByText("1 result")).toBeTruthy();
     const sent = queryOf(
@@ -409,7 +533,7 @@ describe("the search page", () => {
   });
 
   it("keeps the language filter under More, so the filter row fits one line", async () => {
-    await renderApp("/search?q=gateway", () => ({ body: response([hit(ids(5), "Gateway restart")]) }));
+    await renderApp("/search?q=gateway", () => ({ body: response([hit(5, "Gateway restart")]) }));
     expect(await screen.findByText("1 result")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Language/ })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
@@ -440,7 +564,7 @@ describe("the search page", () => {
     await renderApp(`/search?q=gatwy&labels=runbook`, (request) =>
       queryOf(request).get("labels")
         ? { body: response([], { suggestion: "gateway" }) }
-        : { body: response([hit(ids(6), "Gateway restart")]) },
+        : { body: response([hit(6, "Gateway restart")]) },
     );
     expect(await screen.findByText("No results for “gatwy” with these filters")).toBeTruthy();
     expect(screen.getByRole("link", { name: "gateway" })).toBeTruthy();

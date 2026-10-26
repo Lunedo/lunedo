@@ -10,7 +10,7 @@ import {
   Skeleton,
   useToast,
 } from "@lunedo/ui";
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { Bookmark, CircleHelp, Clock, MoreHorizontal, RotateCcw, Search, SearchX, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
@@ -21,6 +21,7 @@ import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { useOrganizationState } from "../shell/shell-context.js";
+import { hrefOfNumber } from "./number-jump.js";
 import { useClearRecentSearches } from "./recent-searches.js";
 import { SavedSearchChips, SaveSearchDialog } from "./saved-searches.js";
 import {
@@ -103,11 +104,17 @@ export function SearchScreen() {
     throwOnError: false,
   });
 
+  const queryClient = useQueryClient();
+  const open = async (trimmed: string) => {
+    const href = await hrefOfNumber(queryClient, trimmed);
+    if (href) await navigate({ href });
+    else show(trimmed, filters);
+  };
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const trimmed = text.trim();
     if (trimmed) remember.mutate({ query: trimmed, filters });
-    show(trimmed, filters);
+    void open(trimmed);
   };
 
   const list = useRef<HTMLDivElement>(null);

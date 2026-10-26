@@ -10208,6 +10208,7 @@
       "pagesAndPosts": "Inhalte",
       "comments": "Kommentare",
       "otherSpaces": "Andere Spaces",
+      "byNumber": "Nach Nummer öffnen",
       "createPage": "Seite „{title}“ erstellen",
       "createArticle": "Artikel „{title}“ erstellen",
       "createIn": "in {space}",

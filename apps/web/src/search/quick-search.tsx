@@ -1,7 +1,18 @@
 import { Button, type CommandGroup, type CommandItem, CommandPalette, Highlighted, Kbd } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { Bookmark, Clock, FilePlus, Globe, History, Layers, SearchX, UserRound, X } from "lucide-react";
+import {
+  Bookmark,
+  Clock,
+  FilePlus,
+  FileText,
+  Globe,
+  History,
+  Layers,
+  SearchX,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounced } from "../components/table-state.js";
@@ -11,9 +22,10 @@ import { useCommandGroups } from "../shell/command-groups.js";
 import { isApplePlatform } from "../shell/keyboard.js";
 import { useShell } from "../shell/shell.js";
 import { useOrganizationState } from "../shell/shell-context.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { useSpaceDisplayName } from "../spaces/space-badge.js";
-import { spaceByKeyQuery } from "../spaces/space-queries.js";
+import { itemNumberQuery, spaceByKeyQuery } from "../spaces/space-queries.js";
+import { itemNumberOf, numberedItemHref } from "./number-jump.js";
 import { useClearRecentSearches } from "./recent-searches.js";
 import {
   filtersOf,
@@ -91,6 +103,13 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const createTarget = useShell().spaceCreateTarget;
   const canCreatePage = createTarget?.kinds.includes("page") ?? false;
 
+  const typedNumber = itemNumberOf(typed);
+  const numbered = useQuery({
+    ...itemNumberQuery(typedNumber ?? 0),
+    enabled: typedNumber !== null,
+    retry: false,
+    throwOnError: false,
+  });
   const results = useQuery({
     ...quickSearchQuery(organizationId ?? "", debounced, inSpace ? space.id : null),
     enabled: organizationId !== null && debounced.length > 0,
@@ -168,7 +187,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         });
       }
       const items = (viewed.data ?? []).flatMap<CommandItem>((item) => {
-        const href = itemHref({ id: item.id, kind: item.kind, title: item.title, link: null }, item.spaceKey);
+        const href = contentHref({ kind: item.kind, number: item.number, title: item.title }, item.spaceKey);
         if (!href) return [];
         return [
           {
@@ -231,7 +250,25 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
           group.heading === commandHeading ? { ...group, items: [...createItems, ...group.items] } : group,
         )
       : [{ heading: commandHeading, items: createItems }, ...otherCommands];
+    const numberedHref = typedNumber !== null && numbered.data ? numberedItemHref(numbered.data) : null;
     const list: CommandGroup[] = [
+      ...(numbered.data && numberedHref
+        ? [
+            {
+              heading: t("search.quick.byNumber"),
+              items: [
+                {
+                  id: `number:${numbered.data.id}`,
+                  label: numbered.data.title,
+                  description: numbered.data.spaceName || undefined,
+                  icon: FileText,
+                  href: numberedHref,
+                  onSelect: () => go(numberedHref),
+                },
+              ],
+            },
+          ]
+        : []),
       ...linkGroups,
       ...commandList,
       {
