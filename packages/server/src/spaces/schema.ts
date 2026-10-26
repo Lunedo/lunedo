@@ -9,6 +9,7 @@ import {
   integer,
   jsonb,
   pgEnum,
+  pgSequence,
   pgTable,
   primaryKey,
   text,
@@ -195,10 +196,13 @@ export const spacePermissions = pgTable(
   ],
 );
 
+export const treeItemNumbers = pgSequence("tree_item_numbers", { startWith: 1000, minValue: 1000 });
+
 export const treeItems = pgTable(
   "tree_items",
   {
     id: primaryId(),
+    number: bigint({ mode: "number" }).notNull().default(sql`nextval('tree_item_numbers')`),
     spaceId: uuid()
       .notNull()
       .references(() => spaces.id, { onDelete: "cascade" }),
@@ -241,6 +245,7 @@ export const treeItems = pgTable(
         table.position,
       )
       .where(sql`${table.trashEntryId} is null and ${table.archivedRootId} is distinct from ${table.id}`),
+    uniqueIndex("tree_items_number_unique").on(table.number),
     index("tree_items_title_index").on(table.spaceId, sql`lower(${table.title})`),
     index().on(table.parentId),
     index().on(table.linkItemId),

@@ -270,6 +270,7 @@ export {
   trashEntries,
   trashEntryKind,
   treeItemKind,
+  treeItemNumbers,
   treeItems,
   versionReason,
 } from "../spaces/schema.js";

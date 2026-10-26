@@ -9,7 +9,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { uuid } from "../http/schemas.js";
+import { itemNumberParam, uuid } from "../http/schemas.js";
 import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
   archivedItemSchema,
@@ -35,9 +35,13 @@ import {
 const TAG = "Pages";
 const space = { type: "space", param: "spaceId" } as const;
 const item = { type: "item", param: "itemId" } as const;
+const numberedItem = { type: "item", param: "number", by: "number" } as const;
 const page = { type: "item", param: "pageId" } as const;
 const spaceParams = z.object({ spaceId: uuid("ID of the space.") }).strict();
 const itemParams = z.object({ itemId: uuid("ID of the page, folder or link.") }).strict();
+const numberParams = z
+  .object({ number: itemNumberParam("Number of the item, as shown in the addresses of the app.") })
+  .strict();
 const pageParams = z.object({ pageId: uuid("ID of the page.") }).strict();
 const labelParams = pageParams.extend({ label: z.string().max(200).describe("The label.") });
 const spaceLabelParams = spaceParams.extend({ label: z.string().max(200).describe("The label.") });
@@ -334,6 +338,36 @@ export class ItemsController {
   })
   async get(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
     const found = await this.#services.tree.details(actorOf(request), itemId);
+    if (!found) throw notFound();
+    return found;
+  }
+
+  @Get("items/by-number/:number")
+  @Permission("item.view", numberedItem)
+  @ApiRoute({
+    summary: "Get an item by its number",
+    description:
+      "Returns the same item as `GET /items/{itemId}`, found by the number in its address in the app. A number that does not exist and a number of an item the caller cannot see give the same `notFound` answer.",
+    tags: [TAG],
+    params: numberParams,
+    response: {
+      description: "The item.",
+      schema: itemDetailsSchema,
+      example: {
+        ...exampleItem,
+        spaceKey: "ITOPS",
+        spaceName: "IT Operations",
+        spaceAccess: true,
+        spaceContentLanguage: "en",
+        ancestors: [],
+        owner: null,
+        ownershipTransferable: false,
+      },
+    },
+  })
+  async getByNumber(@Param("number") number: string, @Req() request: FastifyRequest) {
+    const itemId = await this.#services.tree.idOfNumber(Number(number));
+    const found = itemId ? await this.#services.tree.details(actorOf(request), itemId) : null;
     if (!found) throw notFound();
     return found;
   }

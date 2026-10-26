@@ -18,7 +18,14 @@ import {
 } from "@lunedo/server";
 import { contentLanguages } from "@lunedo/shared";
 import { z } from "zod";
-import { extensibleEnum, jobTitleField, pictureRefField, timestamp, uuid } from "../http/schemas.js";
+import {
+  extensibleEnum,
+  itemNumber,
+  jobTitleField,
+  pictureRefField,
+  timestamp,
+  uuid,
+} from "../http/schemas.js";
 
 export const visibilitySchema = z
   .enum(spaceVisibilities)
@@ -399,6 +406,7 @@ export const linkSchema = z
     target: z
       .object({
         spaceId: uuid("Space of the target."),
+        number: itemNumber("Number of the target in the addresses of the app."),
         spaceKey: z.string().describe("Key of that space."),
         kind: extensibleEnum(treeItemKinds, "Kind of the target."),
         title: z.string().describe("Title of the target."),
@@ -454,6 +462,9 @@ export const examplePageStatus = {
 export const treeItemSchema = z
   .object({
     id: uuid("ID of the item."),
+    number: itemNumber(
+      "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused.",
+    ),
     spaceId: uuid("Space of the item."),
     parentId: uuid("Parent item, or null at the root of the tree.").nullable(),
     kind: extensibleEnum(
@@ -508,6 +519,7 @@ export const treeItemSchema = z
 
 export const exampleItem = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+  number: 4711,
   spaceId: exampleSpace.id,
   parentId: null,
   kind: "page",
@@ -555,6 +567,7 @@ export const itemDetailsSchema = treeItemSchema
         z
           .object({
             id: uuid("ID of the ancestor."),
+            number: itemNumber("Number of the ancestor in the addresses of the app."),
             kind: extensibleEnum(treeItemKinds, "Kind of the ancestor."),
             title: z.string().describe("Title of the ancestor."),
             published: z

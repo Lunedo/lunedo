@@ -56,7 +56,7 @@ export interface ItemLink {
   url: string | null;
   accessible: boolean;
   inTrash: boolean;
-  target: { spaceId: string; spaceKey: string; kind: TreeItemKind; title: string } | null;
+  target: { spaceId: string; spaceKey: string; kind: TreeItemKind; number: number; title: string } | null;
 }
 
 const LINK_TARGET_KINDS: ReadonlySet<string> = new Set<TreeItemKind>(["page", "folder", "whiteboard"]);
@@ -65,6 +65,7 @@ export type ChildItem = TreeItem & { updatedBy: { id: string; name: string | nul
 
 export interface TreeItem {
   id: string;
+  number: number;
   spaceId: string;
   parentId: string | null;
   kind: TreeItemKind;
@@ -123,6 +124,7 @@ export interface Placement {
 
 type ItemRow = {
   id: string;
+  number: string | number;
   space_id: string;
   parent_id: string | null;
   kind: TreeItemKind;
@@ -144,6 +146,7 @@ type ItemRow = {
   link_space_id: string | null;
   link_space_key: string | null;
   link_kind: TreeItemKind | null;
+  link_number: string | number | null;
   link_title: string | null;
   creator_id: string | null;
   owner_id: string | null;
@@ -202,6 +205,7 @@ function toItem(row: ItemRow): TreeItem {
   const accessible = row.link_url !== null || row.link_accessible === true;
   return {
     id: row.id,
+    number: Number(row.number),
     spaceId: row.space_id,
     parentId: row.parent_id,
     kind: row.kind,
@@ -223,11 +227,17 @@ function toItem(row: ItemRow): TreeItem {
           accessible,
           inTrash: !accessible && row.link_in_trash === true,
           target:
-            accessible && row.link_space_id && row.link_space_key && row.link_kind && row.link_title !== null
+            accessible &&
+            row.link_space_id &&
+            row.link_space_key &&
+            row.link_kind &&
+            row.link_number !== null &&
+            row.link_title !== null
               ? {
                   spaceId: row.link_space_id,
                   spaceKey: row.link_space_key,
                   kind: row.link_kind,
+                  number: Number(row.link_number),
                   title: row.link_title,
                 }
               : null,
@@ -505,7 +515,7 @@ export class TreeService {
   }
 
   #select(viewer: Principal) {
-    return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.number_headings, t.mode,
+    return sql`select t.id, t.number, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.number_headings, t.mode,
         (t.kind not in ('page', 'blogPost') or t.mode = 'live' or t.published_version_id is not null) as published,
         (t.archived_root_id is not null) as archived, t.position,
         exists (select 1 from tree_items c where c.parent_id = t.id and c.kind <> 'meetingTopic'
@@ -518,7 +528,7 @@ export class TreeService {
         (lt.id is not null and ${visibleItem(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_accessible,
         (lt.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`lt`, sql`ls`)}
           and ${publishedFor(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_in_trash,
-        lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
+        lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.number as link_number, lt.title as link_title,
         t.creator_id, t.owner_id, t.content_language, t.article_type, t.translation_of, sv.id as status_id, sv.built_in as status_built_in, sv.name as status_name,
         sv.color as status_color, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
@@ -598,6 +608,13 @@ export class TreeService {
     return row ? toItem(row) : null;
   }
 
+  async idOfNumber(number: number): Promise<string | null> {
+    const result = await this.#database.execute<{ id: string }>(
+      sql`select id from tree_items where number = ${number}`,
+    );
+    return result.rows[0]?.id ?? null;
+  }
+
   async details(viewer: Principal, itemId: string): Promise<ItemDetails | null> {
     const item = await this.get(viewer, itemId);
     if (!item) return null;
@@ -631,9 +648,10 @@ export class TreeService {
     viewer: Principal,
     itemId: string,
     executor: Executor = this.#database,
-  ): Promise<{ id: string; kind: TreeItemKind; title: string; published: boolean }[]> {
+  ): Promise<{ id: string; number: number; kind: TreeItemKind; title: string; published: boolean }[]> {
     const result = await executor.execute<{
       id: string;
+      number: string | number;
       kind: TreeItemKind;
       title: string;
       published: boolean;
@@ -646,7 +664,7 @@ export class TreeService {
         select p.id, p.kind, p.title, p.mode, p.published_version_id, p.parent_id, up.depth + 1
         from up join tree_items p on p.id = up.parent_id where up.depth < 1000
       )
-      select up.id, up.kind, up.title,
+      select up.id, p.number, up.kind, up.title,
         (up.kind not in ('page', 'blogPost') or up.mode = 'live' or up.published_version_id is not null) as published,
         up.depth
       from up join tree_items p on p.id = up.id join spaces s on s.id = p.space_id
@@ -654,6 +672,7 @@ export class TreeService {
       order by up.depth desc`);
     return result.rows.map((row) => ({
       id: row.id,
+      number: Number(row.number),
       kind: row.kind,
       title: row.title,
       published: row.published,

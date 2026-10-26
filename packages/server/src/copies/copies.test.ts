@@ -186,6 +186,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(item.title).toBe("Copy of Runbook");
       const details = await test.services.tree.get(accountPrincipal(copier), item.id);
       expect(details).toMatchObject({ kind: "page", width: "full", numberHeadings: true, mode: "live" });
+      expect(details?.number).toBeGreaterThan(source.number);
       expect(details).toMatchObject({ ownerId: copier, creatorId: copier });
       expect(await test.services.documents.labels(item.id)).toEqual(["network"]);
       const content = await snapshot(item.id);

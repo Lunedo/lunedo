@@ -21,6 +21,7 @@ import { COOKIES, readCookie } from "../http/cookies.js";
 import { writesDuringMaintenance } from "../http/maintenance.js";
 import { forbiddenProblem, ProblemException } from "../http/problems.js";
 import { bearerToken } from "../http/request.js";
+import { ITEM_NUMBER_PATTERN } from "../http/schemas.js";
 import { ROUTE_ACCESS, type RouteAccess } from "./route-access.js";
 
 type AccountPrincipal = Extract<Principal, { type: "account" }>;
@@ -200,7 +201,7 @@ export class RouteAccessGuard implements CanActivate {
     }
     const resource: Resource =
       "param" in access.resource
-        ? { type: access.resource.type, id: params[access.resource.param] ?? "" }
+        ? { type: access.resource.type, id: await this.#resourceId(services, access.resource, params) }
         : { type: access.resource.type };
     const decision = await services.authorization.decide(principal, access.action, resource);
     if (decision.allowed) return true;
@@ -211,6 +212,17 @@ export class RouteAccessGuard implements CanActivate {
       throw new ProblemException("notFound");
     }
     throw forbiddenProblem(decision.denials);
+  }
+
+  async #resourceId(
+    services: AccountServices,
+    source: { type: string; param: string; by?: "number" },
+    params: Record<string, string | undefined>,
+  ): Promise<string> {
+    const value = params[source.param] ?? "";
+    if (source.by !== "number") return value;
+    if (source.type !== "item" || !ITEM_NUMBER_PATTERN.test(value)) return "";
+    return (await services.tree.idOfNumber(Number(value))) ?? "";
   }
 
   async #hidden(services: AccountServices, principal: Principal, resource: Resource): Promise<boolean> {

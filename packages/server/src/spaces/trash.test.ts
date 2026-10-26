@@ -86,6 +86,8 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       await test.services.trash.restore(context.editor, entry.id);
       expect(await rootTitles(context)).toContain("Folder");
       expect(await rootTitles(context, child.id)).toEqual(["Grandchild"]);
+      expect((await test.services.tree.get(context.editor, folder.id))?.number).toBe(folder.number);
+      expect((await test.services.tree.get(context.editor, child.id))?.number).toBe(child.number);
       expect(await test.services.trash.listSpace(context.editor, context.space.id)).toEqual([]);
     });
 

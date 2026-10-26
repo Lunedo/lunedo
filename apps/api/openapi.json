@@ -17890,6 +17890,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -18019,6 +18025,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -18043,6 +18055,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -18247,6 +18260,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -18277,6 +18291,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "page",
@@ -140888,6 +140903,12 @@
                         "format": "uuid",
                         "description": "ID of the item."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                      },
                       "spaceId": {
                         "type": "string",
                         "format": "uuid",
@@ -141017,6 +141038,12 @@
                                         "format": "uuid",
                                         "description": "Space of the target."
                                       },
+                                      "number": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 9007199254740991,
+                                        "description": "Number of the target in the addresses of the app."
+                                      },
                                       "spaceKey": {
                                         "type": "string",
                                         "description": "Key of that space."
@@ -141041,6 +141068,7 @@
                                     },
                                     "required": [
                                       "spaceId",
+                                      "number",
                                       "spaceKey",
                                       "kind",
                                       "title"
@@ -141253,6 +141281,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "spaceId",
                       "parentId",
                       "kind",
@@ -141288,6 +141317,7 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "parentId": null,
                     "kind": "page",
@@ -141865,6 +141895,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -141994,6 +142030,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -142018,6 +142060,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -142276,6 +142319,12 @@
                             "format": "uuid",
                             "description": "ID of the ancestor."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the ancestor in the addresses of the app."
+                          },
                           "kind": {
                             "type": "string",
                             "description": "Kind of the ancestor. New values can be added in later versions; handle unknown values.",
@@ -142300,6 +142349,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "kind",
                           "title",
                           "published"
@@ -142375,6 +142425,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -142412,6 +142463,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "page",
@@ -142661,6 +142713,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -142790,6 +142848,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -142814,6 +142878,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -143018,6 +143083,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -143048,6 +143114,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "page",
@@ -144027,6 +144094,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -144156,6 +144229,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -144180,6 +144259,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -144384,6 +144464,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -144414,6 +144495,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "folder",
@@ -145783,6 +145865,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -145912,6 +146000,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -145936,6 +146030,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -146140,6 +146235,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -146170,6 +146266,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "page",
@@ -148933,6 +149030,780 @@
                       "title": "The instance is in maintenance mode",
                       "status": 503,
                       "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/by-number/{number}": {
+      "get": {
+        "operationId": "items.getByNumber",
+        "summary": "Get an item by its number",
+        "description": "Returns the same item as `GET /items/{itemId}`, found by the number in its address in the app. A number that does not exist and a number of an item the caller cannot see give the same `notFound` answer.\n\nRequires the permission `item.view` on the item in `number`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "number"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "Number of the item, as shown in the addresses of the app.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,14}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The item.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the item."
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Space of the item."
+                    },
+                    "parentId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Parent item, or null at the root of the tree."
+                    },
+                    "kind": {
+                      "type": "string",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "page",
+                        "folder",
+                        "link",
+                        "blogPost",
+                        "meetingSeries",
+                        "meetingTopic",
+                        "whiteboard"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title. Empty for a link to content the caller cannot read."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Short description of a folder."
+                    },
+                    "width": {
+                      "type": "string",
+                      "enum": [
+                        "fixed",
+                        "full"
+                      ],
+                      "description": "Page width: `fixed` or `full`."
+                    },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "publish",
+                        "live"
+                      ],
+                      "description": "Editing mode of a page: `publish` (readers see the last published version while editors work on a draft) or `live` (readers see every change at once). Folders and links are always `live`."
+                    },
+                    "published": {
+                      "type": "boolean",
+                      "description": "Whether readers can see the page. False for a page in publish mode that was never published; only editors see it."
+                    },
+                    "archived": {
+                      "type": "boolean",
+                      "description": "Whether the item is archived. Archived items are read-only."
+                    },
+                    "position": {
+                      "type": "string",
+                      "description": "Sort key among the siblings. Items sort by it in binary order."
+                    },
+                    "hasChildren": {
+                      "type": "boolean",
+                      "description": "Whether the item has children."
+                    },
+                    "viewRestriction": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "own",
+                        "inherited"
+                      ],
+                      "description": "Whether only an access list may view the item: set on the item itself, on a page above, or not at all."
+                    },
+                    "editRestricted": {
+                      "type": "boolean",
+                      "description": "Whether only an access list may edit the item."
+                    },
+                    "link": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
+                            },
+                            "url": {
+                              "description": "Linked `http` or `https` address, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "accessible": {
+                              "type": "boolean",
+                              "description": "Whether the caller can open the target. If not, the title is empty."
+                            },
+                            "inTrash": {
+                              "type": "boolean",
+                              "description": "Whether the target is in the trash. Only true for callers who could read it before."
+                            },
+                            "target": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "spaceId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "Space of the target."
+                                    },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
+                                    "spaceKey": {
+                                      "type": "string",
+                                      "description": "Key of that space."
+                                    },
+                                    "kind": {
+                                      "type": "string",
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
+                                        "page",
+                                        "folder",
+                                        "link",
+                                        "blogPost",
+                                        "meetingSeries",
+                                        "meetingTopic",
+                                        "whiteboard"
+                                      ]
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "description": "Title of the target."
+                                    }
+                                  },
+                                  "required": [
+                                    "spaceId",
+                                    "number",
+                                    "spaceKey",
+                                    "kind",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The linked page, folder or whiteboard, or null."
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "url",
+                            "accessible",
+                            "inTrash",
+                            "target"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Where a link in the page tree points."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Target of a link, or null for pages and folders."
+                    },
+                    "creatorId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Account that created the item, or null."
+                    },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
+                    },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
+                    "ownerId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the item was created. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the item last changed in the tree. ISO 8601 timestamp in UTC."
+                    },
+                    "contentUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the content of the page last changed. ISO 8601 timestamp in UTC."
+                    },
+                    "spaceKey": {
+                      "type": "string",
+                      "description": "Key of the space. Empty when the caller sees the item only through a share or link."
+                    },
+                    "spaceName": {
+                      "type": "string",
+                      "description": "Name of the space. Empty when the caller sees the item only through a share or link."
+                    },
+                    "spaceAccess": {
+                      "type": "boolean",
+                      "description": "Whether the caller has access to the space; false when the item is visible only through a share or link."
+                    },
+                    "spaceContentLanguage": {
+                      "type": "string",
+                      "description": "Content language of the space, which pages without a content language of their own use for search.",
+                      "x-extensible-enum": [
+                        "ar",
+                        "ca",
+                        "da",
+                        "de",
+                        "el",
+                        "en",
+                        "es",
+                        "eu",
+                        "fi",
+                        "fr",
+                        "ga",
+                        "hi",
+                        "hu",
+                        "hy",
+                        "id",
+                        "it",
+                        "lt",
+                        "nb",
+                        "ne",
+                        "nl",
+                        "pt",
+                        "ro",
+                        "ru",
+                        "sr",
+                        "sv",
+                        "ta",
+                        "tr",
+                        "yi",
+                        "other"
+                      ]
+                    },
+                    "ancestors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the ancestor."
+                          },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the ancestor in the addresses of the app."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "description": "Kind of the ancestor. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "folder",
+                              "link",
+                              "blogPost",
+                              "meetingSeries",
+                              "meetingTopic",
+                              "whiteboard"
+                            ]
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the ancestor."
+                          },
+                          "published": {
+                            "type": "boolean",
+                            "description": "Whether the ancestor counts as published: a folder, a link, a page in live mode or a page with a published version. Readers see a page only when every ancestor is published."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "number",
+                          "kind",
+                          "title",
+                          "published"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An ancestor."
+                      },
+                      "description": "Ancestors from the root down to the parent."
+                    },
+                    "owner": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the owner."
+                            },
+                            "name": {
+                              "description": "Name of the owner, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "jobTitle": {
+                              "description": "Job title the person entered on their profile, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "pictureRef": {
+                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "email": {
+                              "description": "E-mail address of the owner, or null when the caller may not see it.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "active": {
+                              "type": "boolean",
+                              "description": "Whether the owner can still act: false when the account is deactivated or its membership in the organization ended."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "jobTitle",
+                            "pictureRef",
+                            "email",
+                            "active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Owner of the item, or null when it has none."
+                    },
+                    "ownershipTransferable": {
+                      "type": "boolean",
+                      "description": "Whether the caller may give the item a new owner."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "number",
+                    "spaceId",
+                    "parentId",
+                    "kind",
+                    "title",
+                    "description",
+                    "width",
+                    "numberHeadings",
+                    "mode",
+                    "published",
+                    "archived",
+                    "position",
+                    "hasChildren",
+                    "viewRestriction",
+                    "editRestricted",
+                    "link",
+                    "creatorId",
+                    "contentLanguage",
+                    "articleType",
+                    "translationOf",
+                    "ownerId",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "contentUpdatedAt",
+                    "spaceKey",
+                    "spaceName",
+                    "spaceAccess",
+                    "spaceContentLanguage",
+                    "ancestors",
+                    "owner",
+                    "ownershipTransferable"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An item with its place in the tree."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "parentId": null,
+                  "kind": "page",
+                  "title": "VPN access for remote staff",
+                  "description": "",
+                  "width": "fixed",
+                  "numberHeadings": false,
+                  "mode": "publish",
+                  "published": true,
+                  "archived": false,
+                  "position": "a1",
+                  "hasChildren": false,
+                  "viewRestriction": "none",
+                  "editRestricted": false,
+                  "link": null,
+                  "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": null,
+                  "articleType": null,
+                  "translationOf": null,
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
+                  "createdAt": "2026-10-05T08:00:00.000Z",
+                  "updatedAt": "2026-10-05T08:00:00.000Z",
+                  "contentUpdatedAt": "2026-10-05T08:00:00.000Z",
+                  "spaceKey": "ITOPS",
+                  "spaceName": "IT Operations",
+                  "spaceAccess": true,
+                  "spaceContentLanguage": "en",
+                  "ancestors": [],
+                  "owner": null,
+                  "ownershipTransferable": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -209047,6 +209918,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -209176,6 +210053,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -209200,6 +210083,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -209404,6 +210288,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -209434,6 +210319,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "page",
@@ -243068,6 +243954,12 @@
                             "format": "uuid",
                             "description": "ID of the item."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                          },
                           "spaceId": {
                             "type": "string",
                             "format": "uuid",
@@ -243197,6 +244089,12 @@
                                             "format": "uuid",
                                             "description": "Space of the target."
                                           },
+                                          "number": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991,
+                                            "description": "Number of the target in the addresses of the app."
+                                          },
                                           "spaceKey": {
                                             "type": "string",
                                             "description": "Key of that space."
@@ -243221,6 +244119,7 @@
                                         },
                                         "required": [
                                           "spaceId",
+                                          "number",
                                           "spaceKey",
                                           "kind",
                                           "title"
@@ -243455,6 +244354,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "parentId",
                           "kind",
@@ -243505,6 +244405,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "number": 4711,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "parentId": null,
                       "kind": "page",
@@ -243876,6 +244777,12 @@
                       "format": "uuid",
                       "description": "ID of the item."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the item in the addresses of the app, unique in the instance. It never changes and is never reused."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -244005,6 +244912,12 @@
                                       "format": "uuid",
                                       "description": "Space of the target."
                                     },
+                                    "number": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991,
+                                      "description": "Number of the target in the addresses of the app."
+                                    },
                                     "spaceKey": {
                                       "type": "string",
                                       "description": "Key of that space."
@@ -244029,6 +244942,7 @@
                                   },
                                   "required": [
                                     "spaceId",
+                                    "number",
                                     "spaceKey",
                                     "kind",
                                     "title"
@@ -244233,6 +245147,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "parentId",
                     "kind",
@@ -244263,6 +245178,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "number": 4711,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "parentId": null,
                   "kind": "page",
