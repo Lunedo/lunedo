@@ -97,8 +97,8 @@ for (const language of ["en", "de"] as const) {
     await page.getByRole("button", { name: de ? /^Benachrichtigungen(,|$)/ : /^Notifications(,|$)/ }).click();
     const panel = page.getByRole("dialog", { name: de ? "Benachrichtigungen" : "Notifications" });
     const panelBox = await panel.boundingBox();
-    expect(panelBox && panelBox.x).toBeGreaterThanOrEqual(0);
-    expect(panelBox && panelBox.x + panelBox.width).toBeLessThanOrEqual(width);
+    expect(panelBox?.x).toBeGreaterThanOrEqual(0);
+    expect((panelBox?.x ?? 0) + (panelBox?.width ?? width + 1)).toBeLessThanOrEqual(width);
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
     await setAppearance(page, { language: "en", textSize: 1 });

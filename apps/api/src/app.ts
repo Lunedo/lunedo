@@ -160,7 +160,6 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
         : Promise.resolve(embedFrameSources(defaultEmbedServices)),
     );
   }
-  app.enableShutdownHooks();
 }
 
 export async function createApp(context: ApiContext): Promise<NestFastifyApplication> {

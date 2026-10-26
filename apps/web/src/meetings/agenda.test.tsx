@@ -94,7 +94,9 @@ describe("the agenda of a meeting", () => {
     expect(screen.getByText("Leasing is cheaper").parentElement?.textContent).toMatch(/^Today/);
     expect(screen.getByText("this meeting only")).toBeTruthy();
     expect(screen.getByText("No entry yet.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "archive of the series" }).className.split(" ")).toContain("underline");
+    expect(screen.getByRole("link", { name: "archive of the series" }).className.split(" ")).toContain(
+      "underline",
+    );
     await userEvent.click(screen.getByRole("button", { name: "History (2)" }));
     const history = screen.getByRole("list", { name: "History of Firewall" });
     expect(
