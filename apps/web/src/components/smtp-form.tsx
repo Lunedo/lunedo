@@ -12,8 +12,10 @@ import {
 } from "@lunedo/shared";
 import {
   Button,
+  CollapsibleSection,
   ErrorState,
   Field,
+  FieldGrid,
   Input,
   Notice,
   PasswordInput,
@@ -282,7 +284,7 @@ export function SmtpForm({
           {error}
         </Notice>
       ) : null}
-      <Field label={t("mail.preset")} hint={t("mail.presetHint")}>
+      <Field label={t("mail.preset")} hint={t("mail.presetHint")} help={t("mail.presetHelp")}>
         <Select
           aria-label={t("mail.preset")}
           value={preset}
@@ -304,17 +306,20 @@ export function SmtpForm({
           ]}
         />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="sm:col-span-2">
-          <Field label={t("mail.host")} {...fieldError("host")}>
-            <Input autoComplete="off" {...form.register("host")} />
-          </Field>
-        </div>
+      <FieldGrid>
+        <Field label={t("mail.host")} {...fieldError("host")}>
+          <Input autoComplete="off" {...form.register("host")} />
+        </Field>
         <Field label={t("mail.port")} {...fieldError("port")}>
           <Input inputMode="numeric" autoComplete="off" {...form.register("port")} />
         </Field>
-      </div>
-      <Field label={t("mail.security")} hint={t("mail.securityHint")} {...fieldError("security")}>
+      </FieldGrid>
+      <Field
+        label={t("mail.security")}
+        hint={t("mail.securityHint")}
+        help={t("mail.securityHelp")}
+        {...fieldError("security")}
+      >
         <Controller
           control={form.control}
           name="security"
@@ -331,7 +336,11 @@ export function SmtpForm({
           )}
         />
       </Field>
-      <Field label={t("mail.authentication")} hint={t("mail.authenticationHint")}>
+      <Field
+        label={t("mail.authentication")}
+        hint={t("mail.authenticationHint")}
+        help={t("mail.authenticationHelp")}
+      >
         <Controller
           control={form.control}
           name="authentication"
@@ -375,47 +384,45 @@ export function SmtpForm({
           <Field
             label={t("mail.mailbox")}
             hint={t("mail.mailboxHint")}
+            help={t("mail.mailboxHelp")}
             {...(usernameError ? { error: usernameError } : {})}
           >
             <Input type="email" autoComplete="off" {...form.register("username")} />
           </Field>
           {provider === "microsoft365" ? (
             <>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <FieldGrid>
                 <Field label={t("mail.oauth2.tenantId")} {...fieldError("tenantId")}>
                   <Input className="font-mono" autoComplete="off" {...form.register("tenantId")} />
                 </Field>
                 <Field label={t("mail.oauth2.clientId")} {...fieldError("clientId")}>
                   <Input className="font-mono" autoComplete="off" {...form.register("clientId")} />
                 </Field>
-              </div>
-              <details
-                className="rounded-md border border-border"
-                open={form.getValues("authority") !== microsoftAuthorities[0]}
+              </FieldGrid>
+              <CollapsibleSection
+                title={t("mail.oauth2.advanced")}
+                level={3}
+                layout="fields"
+                defaultOpen={form.getValues("authority") !== microsoftAuthorities[0]}
               >
-                <summary className="cursor-pointer rounded-md px-4 py-3 font-semibold focus-visible:focus-ring">
-                  {t("mail.oauth2.advanced")}
-                </summary>
-                <div className="border-border border-t p-4">
-                  <Field label={t("mail.oauth2.cloud")}>
-                    <Controller
-                      control={form.control}
-                      name="authority"
-                      render={({ field }) => (
-                        <Select
-                          aria-label={t("mail.oauth2.cloud")}
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          options={microsoftAuthorities.map((authority) => ({
-                            value: authority,
-                            label: t(`mail.oauth2.clouds.${CLOUDS[authority]}`),
-                          }))}
-                        />
-                      )}
-                    />
-                  </Field>
-                </div>
-              </details>
+                <Field label={t("mail.oauth2.cloud")}>
+                  <Controller
+                    control={form.control}
+                    name="authority"
+                    render={({ field }) => (
+                      <Select
+                        aria-label={t("mail.oauth2.cloud")}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={microsoftAuthorities.map((authority) => ({
+                          value: authority,
+                          label: t(`mail.oauth2.clouds.${CLOUDS[authority]}`),
+                        }))}
+                      />
+                    )}
+                  />
+                </Field>
+              </CollapsibleSection>
             </>
           ) : null}
           {provider === "generic" ? (
@@ -423,14 +430,14 @@ export function SmtpForm({
               <Field label={t("mail.oauth2.tokenUrl")} {...fieldError("tokenUrl")}>
                 <Input type="url" autoComplete="off" {...form.register("tokenUrl")} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <FieldGrid>
                 <Field label={t("mail.oauth2.genericClientId")} {...fieldError("genericClientId")}>
                   <Input autoComplete="off" {...form.register("genericClientId")} />
                 </Field>
                 <Field label={t("mail.oauth2.scope")} {...fieldError("scope")}>
                   <Input autoComplete="off" {...form.register("scope")} />
                 </Field>
-              </div>
+              </FieldGrid>
             </>
           ) : null}
           {provider === "google" ? (
@@ -439,6 +446,7 @@ export function SmtpForm({
               hint={
                 oauth2SecretSet && keyFile === "" ? t("mail.oauth2.keyKept") : t("mail.oauth2.keyFileHint")
               }
+              help={t("mail.oauth2.keyFileHelp")}
               {...(form.formState.errors.keyFile
                 ? {
                     error:
@@ -488,10 +496,11 @@ export function SmtpForm({
           )}
         </>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FieldGrid>
           <Field
             label={t("mail.username")}
             hint={t("mail.usernameHint")}
+            help={t("mail.usernameHelp")}
             {...(usernameError ? { error: usernameError } : {})}
           >
             <Input autoComplete="off" {...form.register("username")} />
@@ -503,12 +512,12 @@ export function SmtpForm({
           >
             <PasswordInput autoComplete="new-password" {...form.register("password")} />
           </Field>
-        </div>
+        </FieldGrid>
       )}
       <Field label={t("mail.from")} {...fieldError("from")}>
         <Input type="email" autoComplete="off" {...form.register("from")} />
       </Field>
-      <div className="flex flex-col gap-3 rounded-md border border-border p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
         <Field label={t("mail.testRecipient")}>
           <Input type="email" value={recipient} onChange={(event) => setRecipient(event.target.value)} />
         </Field>

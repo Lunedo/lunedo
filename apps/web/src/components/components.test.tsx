@@ -5,7 +5,7 @@ import type { SettingEntry } from "../api/organization-queries.js";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { AccessImpact } from "./access-impact.js";
-import { inheritedValue, SettingSource } from "./setting-source.js";
+import { inheritedValue, SettingMarks } from "./setting-source.js";
 import { SettingsList } from "./settings-list.js";
 
 function entry(patch: Partial<SettingEntry>): SettingEntry {
@@ -57,8 +57,22 @@ describe("AccessImpact", () => {
   });
 });
 
-describe("SettingSource", () => {
-  it("names the level a value is inherited from", async () => {
+describe("SettingMarks", () => {
+  const marks = (patch: Partial<SettingEntry>, own: boolean, differs: boolean, onReset = vi.fn()) =>
+    renderWithProviders(
+      <SettingMarks
+        entry={entry(patch)}
+        level="organization"
+        own={own}
+        differs={differs}
+        writable
+        label="Guest inactivity"
+        organizationName="Platform Team"
+        onReset={onReset}
+      />,
+    );
+
+  it("reads the inherited value from the nearest level above", () => {
     const inherited = entry({
       source: "instance",
       value: 60,
@@ -68,38 +82,32 @@ describe("SettingSource", () => {
       ],
     });
     expect(inheritedValue(inherited, "organization")).toBe(60);
-    await renderWithProviders(
-      <SettingSource
-        entry={inherited}
-        level="organization"
-        organizationName="Platform Team"
-        formatValue={(value) => `${value} days`}
-      />,
-    );
-    expect(screen.getByText("Instance default: 60 days")).toBeTruthy();
   });
 
-  it("shows a lock from a higher level instead of the source", async () => {
-    await renderWithProviders(
-      <SettingSource
-        entry={entry({ lockedBy: "instance", source: "instance" })}
-        level="organization"
-        formatValue={String}
-      />,
+  it("shows nothing for an inherited value", async () => {
+    await marks({ source: "instance" }, false, false);
+    expect(screen.queryByText("Own value")).toBeNull();
+    expect(screen.queryByText(/default/i)).toBeNull();
+  });
+
+  it("shows nothing for an own value that equals the inherited one", async () => {
+    await marks({ source: "organization", value: 30 }, true, false);
+    expect(screen.queryByText("Own value")).toBeNull();
+  });
+
+  it("marks an own value that differs and resets it from the chip", async () => {
+    const onReset = vi.fn();
+    await marks({ source: "organization", value: 14 }, true, true, onReset);
+    expect(screen.getByText("Own value")).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Reset Guest inactivity to the inherited value" }),
     );
+    expect(onReset).toHaveBeenCalledOnce();
+  });
+
+  it("shows a lock from a higher level", async () => {
+    await marks({ lockedBy: "instance", source: "instance" }, false, false);
     expect(screen.getByText("Locked by the instance")).toBeTruthy();
-  });
-
-  it("marks values set at the current level", async () => {
-    await renderWithProviders(
-      <SettingSource
-        entry={entry({ source: "organization", value: 14 })}
-        level="organization"
-        organizationName="Platform Team"
-        formatValue={String}
-      />,
-    );
-    expect(screen.getByText("Set for Platform Team")).toBeTruthy();
   });
 });
 
@@ -224,9 +232,8 @@ describe("SettingsList", () => {
     expect(screen.queryByRole("checkbox", { name: "No limit" })).toBeNull();
     const input = screen.getByRole("textbox", { name: "Versions of a file to keep" });
     await userEvent.type(input, "600{Enter}");
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Enter a whole number from 1 to 500. The instance allows at most 500.",
-    );
+    expect(screen.getByRole("alert").textContent).toBe("Enter a whole number from 1 to 500.");
+    expect(screen.getByText("At most 500 versions, set by the instance.")).toBeTruthy();
     expect(onChange).not.toHaveBeenCalled();
     await userEvent.clear(input);
     await userEvent.type(input, "120{Enter}");
@@ -250,9 +257,76 @@ describe("SettingsList", () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("files.keepVersions", { value: "unlimited" }));
   });
 
+  it("confirms a change with a toast whose undo restores the previous state", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "organizations.membersCreateGroups",
+          value: true,
+          defaultValue: true,
+          source: "instance",
+        }),
+      ],
+      onChange,
+    );
+    await userEvent.click(screen.getByRole("switch", { name: "Members create groups" }));
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith("organizations.membersCreateGroups", { value: false }),
+    );
+    expect(await screen.findByText("Saved “Members create groups”")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /Undo/ }));
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith("organizations.membersCreateGroups", { clear: true }),
+    );
+  });
+
+  it("shows a limit set by the instance and keeps the control within it", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [
+        entry({
+          key: "auth.passwordMinLength",
+          value: 14,
+          defaultValue: 12,
+          source: "instance",
+          stricterOnly: "higher",
+          levels: [
+            { level: "instance", value: 14, locked: false, effective: true },
+            { level: "organization", value: null, locked: false, effective: true },
+          ],
+        }),
+        entry({
+          key: "auth.twoFactorRequired",
+          value: true,
+          defaultValue: false,
+          source: "instance",
+          stricterOnly: "higher",
+          levels: [
+            { level: "instance", value: true, locked: false, effective: true },
+            { level: "organization", value: null, locked: false, effective: true },
+          ],
+        }),
+      ],
+      onChange,
+    );
+    expect(screen.getByText("At least 14 characters, set by the instance.")).toBeTruthy();
+    const input = screen.getByRole("textbox", { name: "Minimum password length" });
+    await userEvent.type(input, "10{Enter}");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("switch", { name: "Require two-factor authentication" }).getAttribute("aria-disabled"),
+    ).toBe("true");
+    expect(screen.getAllByText("Set by the instance").length).toBeGreaterThan(0);
+  });
+
   it("names an unset maximum token lifetime", async () => {
     await renderList([entry({ key: "apiTokens.maxLifetimeDays", value: null, defaultValue: null })]);
-    expect(screen.getByText("Default: No limit")).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Maximum lifetime of API tokens" }).textContent).toContain(
+      "No limit",
+    );
+    expect(screen.queryByText(/^Default:/)).toBeNull();
   });
 
   it("lets a maximum token lifetime be set and removed", async () => {
@@ -291,7 +365,8 @@ describe("SettingsList", () => {
     );
     await userEvent.click(screen.getByRole("switch", { name: "Self-registration" }));
     expect(onChange).toHaveBeenCalledWith("organizations.selfRegistration", { value: true });
-    expect(await screen.findByText("Saved")).toBeTruthy();
+    expect(await screen.findByText("Saved “Self-registration”")).toBeTruthy();
+    expect(screen.queryByText("Saved", { exact: true })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "More options for Self-registration" }));
     expect(screen.queryByRole("menuitem", { name: "Lock for members" })).toBeNull();
@@ -326,7 +401,7 @@ describe("SettingsList", () => {
     expect(alert.textContent).toMatch(/The server gave an unexpected answer/);
     fail = false;
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("Saved")).toBeTruthy();
+    expect(await screen.findByText("Saved “Instance name”")).toBeTruthy();
     expect(onChange).toHaveBeenCalledTimes(2);
   });
 
@@ -404,15 +479,17 @@ describe("SettingsList", () => {
       ],
       onChange,
     );
+    expect(screen.getByText("Formats")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Customize" }));
     const select = screen.getByRole("combobox", { name: "Time format" });
-    expect(select.textContent).toContain("24-hour");
+    expect(select.textContent).toContain("14:30");
     expect(select.hasAttribute("data-muted")).toBe(true);
     await userEvent.click(select);
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "24-hour (14:30)Default",
-      "12-hour (2:30 PM)",
+      "14:30Default",
+      "2:30 PM",
     ]);
-    await userEvent.click(screen.getByRole("option", { name: /^12-hour/ }));
+    await userEvent.click(screen.getByRole("option", { name: /^2:30 PM/ }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { value: "12h" }));
   });
 
@@ -433,8 +510,11 @@ describe("SettingsList", () => {
       ],
       onChange,
     );
+    expect(screen.getByText("2:30 PM")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Customize" }));
+    expect(screen.getByText("Own value")).toBeTruthy();
     await userEvent.click(screen.getByRole("combobox", { name: "Time format" }));
-    await userEvent.click(screen.getByRole("option", { name: /^24-hour/ }));
+    await userEvent.click(screen.getByRole("option", { name: /^14:30/ }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("locale.timeFormat", { clear: true }));
     onChange.mockClear();
     await userEvent.click(screen.getByRole("button", { name: "More options for Time format" }));

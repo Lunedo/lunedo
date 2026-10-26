@@ -17,6 +17,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 RUN pnpm turbo run build --filter=@lunedo/render --filter=@lunedo/web
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm --filter=@lunedo/render deploy --prod /out/render
+RUN node scripts/page-files.ts apps/web/dist print.html /out/viewer
 
 FROM node:24.22.1-bookworm-slim AS runtime
 ARG VERSION=dev
@@ -33,8 +34,7 @@ ENV NODE_ENV=production \
     RENDER_VIEWER_DIR=/app/viewer
 WORKDIR /app
 COPY --from=build --chown=root:root /out/render ./render
-COPY --from=build --chown=root:root /repo/apps/web/dist/print.html ./viewer/print.html
-COPY --from=build --chown=root:root /repo/apps/web/dist/assets ./viewer/assets
+COPY --from=build --chown=root:root /out/viewer ./viewer
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \

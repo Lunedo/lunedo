@@ -8,18 +8,19 @@ import {
   Field,
   focusFirstInvalidSoon,
   IconButton,
-  Input,
   Menu,
   Notice,
   Section,
+  Skeleton,
   Table,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import {
+  type InstanceAccount,
   instanceAccountsQuery,
   instanceAssignmentsQuery,
   instanceKeys,
@@ -27,6 +28,7 @@ import {
 } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { accountLoader } from "../../components/pickers.js";
 import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { TransferOwnershipDialog } from "../../components/transfer-ownership-dialog.js";
@@ -40,6 +42,31 @@ import { RoleEditorDialog } from "../organization/roles-screen.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 type Assignment = Awaited<ReturnType<NonNullable<(typeof instanceAssignmentsQuery)["queryFn"]>>>[number];
+
+export function withOwner(
+  assignments: readonly Assignment[],
+  accounts: readonly InstanceAccount[],
+): Assignment[] {
+  if (assignments.some((assignment) => assignment.builtInRole === "owner")) return [...assignments];
+  const owner = accounts.find((account) =>
+    account.instanceRoles.some((role) => role.builtInRole === "owner"),
+  );
+  if (!owner) return [...assignments];
+  return [
+    {
+      id: `owner:${owner.id}`,
+      scope: "instance",
+      organizationId: null,
+      role: "owner",
+      builtInRole: "owner",
+      customRoleId: null,
+      principalKind: "account",
+      principalId: owner.id,
+      expiresAt: null,
+    },
+    ...assignments,
+  ];
+}
 type CustomRole = Awaited<ReturnType<NonNullable<(typeof instanceRolesQuery)["queryFn"]>>>[number];
 
 export function InstanceRolesScreen() {
@@ -69,10 +96,8 @@ export function InstanceRolesScreen() {
 
   return (
     <SettingsPage
-      width="wide"
       title={t("instance.roles.title")}
       description={t("instance.roles.description")}
-      icon={ShieldCheck}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setAssigning(true)}>
@@ -141,8 +166,13 @@ export function InstanceRolesScreen() {
                       <IconButton label={t("roles.actionsFor", { name: role.name })} icon={MoreHorizontal} />
                     }
                     items={[
-                      { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.edit"), icon: Pencil, onSelect: () => setEditing(role) },
+                      {
+                        label: t("common.deleteRole"),
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setDeleting(role),
+                      },
                     ]}
                   />
                 ) : null,
@@ -154,7 +184,7 @@ export function InstanceRolesScreen() {
         <Table
           caption={t("roles.assignmentsTitle")}
           rowKey={(assignment) => assignment.id}
-          rows={[...(assignments.data ?? [])].sort(
+          rows={withOwner(assignments.data ?? [], accounts.data ?? []).sort(
             (left, right) => Number(right.builtInRole === "owner") - Number(left.builtInRole === "owner"),
           )}
           loading={assignments.isPending}
@@ -275,11 +305,30 @@ export function InstanceRolesScreen() {
   );
 }
 
-function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; roles: CustomRole[] }) {
+export function AssignInstanceRoleDialog({
+  onClose,
+  roles,
+  person,
+}: {
+  onClose: () => void;
+  roles: CustomRole[];
+  person?: { id: string; name: string; owner: boolean };
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [role, setRole] = useState<string | null>("builtIn:administrator");
-  const [people, setPeople] = useState<ComboboxItem[]>([]);
+  const [people, setPeople] = useState<ComboboxItem[]>(
+    person ? [{ value: person.id, label: person.name }] : [],
+  );
+  const assignments = useQuery({ ...instanceAssignmentsQuery, enabled: Boolean(person) });
+  const held = person
+    ? (assignments.data ?? []).filter(
+        (assignment) => assignment.principalKind === "account" && assignment.principalId === person.id,
+      )
+    : [];
+  const unassign = useUnassignWithUndo("instance", () =>
+    queryClient.invalidateQueries({ queryKey: instanceKeys.assignments }),
+  );
   const loader = useMemo(() => accountLoader(), []);
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -311,6 +360,7 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
         }),
       );
       await queryClient.invalidateQueries({ queryKey: instanceKeys.assignments });
+      await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
       onClose();
     } catch (failure) {
       setError(problemMessage(t, failure));
@@ -325,10 +375,52 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={t("roles.assign")}
+      title={person ? t("instance.accounts.changeInstanceRoleOf", { name: person.name }) : t("roles.assign")}
       size="md"
     >
       <div className="flex flex-col gap-4">
+        {person ? (
+          <section aria-labelledby="held-instance-roles" className="flex flex-col gap-2">
+            <h3 id="held-instance-roles" className="font-medium">
+              {t("instance.accounts.heldInstanceRoles")}
+            </h3>
+            {assignments.isPending ? (
+              <Skeleton className="h-8 w-full" />
+            ) : held.length === 0 && !person.owner ? (
+              <p className="text-sm text-text-muted">{t("instance.accounts.noInstanceRole")}</p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-border">
+                {person.owner ? (
+                  <li className="flex items-center justify-between gap-3 py-2">
+                    <span>{t("roles.builtIn.owner")}</span>
+                    <span className="text-sm text-text-muted">{t("instance.accounts.ownerKept")}</span>
+                  </li>
+                ) : null}
+                {held.map((assignment) => (
+                  <li key={assignment.id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate" title={roleName(t, assignment)}>
+                      {roleName(t, assignment)}
+                    </span>
+                    {assignment.builtInRole === "owner" ? null : (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() =>
+                          void unassign(
+                            assignment,
+                            t("roles.unassignedNamed", { name: person.name, role: roleName(t, assignment) }),
+                          )
+                        }
+                      >
+                        {t("roles.unassign")}
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
         {error ? (
           <Notice variant="danger" title={t("failures.assignRole")}>
             {error}
@@ -357,27 +449,33 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             ]}
           />
         </Field>
-        <Field
-          label={t("roles.peopleLabel")}
-          hint={t("roles.instancePrincipalsHint")}
-          {...(missing.people && people.length === 0 ? { error: t("roles.choosePeopleFirst") } : {})}
-        >
-          <Combobox
-            multiple
-            placeholder={t("roles.choosePeople")}
-            value={people.map((item) => item.value)}
-            selectedItems={people}
-            load={loader}
-            onValueChange={(_values, items) => setPeople(items)}
-          />
-        </Field>
+        {person ? null : (
+          <Field
+            label={t("roles.peopleLabel")}
+            hint={t("roles.instancePrincipalsHint")}
+            {...(missing.people && people.length === 0 ? { error: t("roles.choosePeopleFirst") } : {})}
+          >
+            <Combobox
+              multiple
+              placeholder={t("roles.choosePeople")}
+              value={people.map((item) => item.value)}
+              selectedItems={people}
+              load={loader}
+              onValueChange={(_values, items) => setPeople(items)}
+            />
+          </Field>
+        )}
         <Field label={t("roles.expires")} hint={t("roles.expiresHint")}>
-          <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+          <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
         </Field>
         <AccessImpact
           change="gains"
           people={people.map((item) => item.label)}
-          what={t("instance.roles.gainsWhat", { role: label, areas: areasDescription(t, "instance", areas) })}
+          what={t("instance.roles.gainsWhat", {
+            count: people.length,
+            role: label,
+            areas: areasDescription(t, "instance", areas),
+          })}
         />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>

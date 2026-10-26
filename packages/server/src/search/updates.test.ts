@@ -236,7 +236,7 @@ describe.skipIf(!baseUrl)("search index updates", () => {
       expect(hit).toMatchObject({ sharedWithYou: true, space: null, path: [] });
     }
     expect(shared.facets?.spaces).toEqual([
-      { value: null, count: 2, key: null, name: null, personal: false },
+      { value: null, count: 2, key: null, name: null, displayName: null, personal: false, mine: false },
     ]);
     const share = await test.pool.query<{ id: string }>("select id from page_shares where item_id = $1", [
       parent.id,

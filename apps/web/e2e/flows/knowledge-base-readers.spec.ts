@@ -108,7 +108,7 @@ test("enables a second language and lets readers switch the language in the port
   const reader = await context.newPage();
   await reader.goto(`${portal.path}/${article.address}`);
   await expect(reader.getByRole("heading", { name: article.title, level: 1 })).toBeVisible();
-  await reader.getByLabel("Language: English").click();
+  await reader.locator("summary", { hasText: "Language: English" }).click();
   await reader.getByRole("link", { name: "Deutsch" }).click();
   await expect(
     reader.getByRole("heading", { name: "VPN-Verbindung von zu Hause einrichten", level: 1 }),

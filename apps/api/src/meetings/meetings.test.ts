@@ -60,6 +60,119 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
     return created.json() as { spaceId: string; seriesId: string };
   }
 
+  it("run the agenda, guests, extra meetings and the overview only for people who may edit the series", async () => {
+    const lead = await person();
+    const reader = await person();
+    const outsider = await person();
+    const space = await lead.client.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: `Agenda ${counter}`,
+      key: `AG${counter}`,
+      visibility: "private",
+      grants: [{ principalKind: "account", principalId: reader.id, role: "reader" }],
+    });
+    const spaceId = space.json().id;
+    const created = await lead.client.post(`/api/v1/spaces/${spaceId}/meeting-series`, {
+      name: "Jour fixe",
+      members: [lead.id],
+      ...SCHEDULE,
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const seriesId: string = created.json().id;
+    const meetingId: string = created.json().upcoming.id;
+    expect(created.json().overview.hidden).toEqual(["attendance", "links"]);
+    const first = (
+      await lead.client.post(`/api/v1/meeting-series/${seriesId}/topics`, { title: "Firewall" })
+    ).json();
+    const second = (
+      await lead.client.post(`/api/v1/meeting-series/${seriesId}/topics`, { title: "Printers" })
+    ).json();
+
+    const order = { topicId: second.id, afterId: null };
+    expect(
+      (await reader.client.put(`/api/v1/meeting-series/${seriesId}/topic-order`, order)).statusCode,
+    ).toBe(403);
+    expect(
+      (await outsider.client.put(`/api/v1/meeting-series/${seriesId}/topic-order`, order)).statusCode,
+    ).toBe(404);
+    expect((await lead.client.put(`/api/v1/meeting-series/${seriesId}/topic-order`, order)).statusCode).toBe(
+      204,
+    );
+
+    const update = { text: "Window on 1 Nov." };
+    const updatePath = `/api/v1/meetings/${meetingId}/topics/${first.id}/update`;
+    expect((await reader.client.put(updatePath, update)).statusCode).toBe(403);
+    expect((await lead.client.put(updatePath, update)).statusCode).toBe(204);
+    const taskPath = `/api/v1/meetings/${meetingId}/topics/${first.id}/tasks`;
+    expect((await reader.client.post(taskPath, { text: "Check" })).statusCode).toBe(403);
+    const task = await lead.client.post(taskPath, {
+      text: "Check the switches",
+      assigneeId: lead.id,
+      dueDate: "2030-10-20",
+    });
+    expect(task.statusCode, task.body).toBe(201);
+    const invalid = await lead.client.post(taskPath, { text: "Check", dueDate: "tomorrow" });
+    expect(invalid.statusCode).toBe(400);
+
+    const agenda = await reader.client.get(`/api/v1/meetings/${meetingId}/agenda`);
+    expect(agenda.statusCode, agenda.body).toBe(200);
+    expect(agenda.json().topics.map((topic: { title: string }) => topic.title)).toEqual([
+      "Printers",
+      "Firewall",
+    ]);
+    expect(agenda.json().topics[1].update).toEqual({ text: "Window on 1 Nov.", formatted: false });
+    expect(agenda.json().topics[1].tasks[0]).toMatchObject({
+      id: task.json().id,
+      text: "Check the switches",
+    });
+    expect((await outsider.client.get(`/api/v1/meetings/${meetingId}/agenda`)).statusCode).toBe(404);
+
+    const guestBody = { name: "Martin Huber", note: "Printer service" };
+    expect((await reader.client.post(`/api/v1/meetings/${meetingId}/guests`, guestBody)).statusCode).toBe(
+      403,
+    );
+    const guest = await lead.client.post(`/api/v1/meetings/${meetingId}/guests`, guestBody);
+    expect(guest.statusCode, guest.body).toBe(201);
+    const guestPath = `/api/v1/meetings/${meetingId}/guests/${guest.json().id}`;
+    expect((await reader.client.put(guestPath, { attendance: "present" })).statusCode).toBe(403);
+    expect((await lead.client.put(guestPath, { attendance: "present" })).statusCode).toBe(204);
+    const meeting = await reader.client.get(`/api/v1/meetings/${meetingId}`);
+    expect(meeting.json().guests).toEqual([{ ...guestBody, id: guest.json().id, attendance: "present" }]);
+    expect((await reader.client.delete(guestPath)).statusCode).toBe(403);
+    expect((await lead.client.delete(guestPath)).statusCode).toBe(204);
+    expect((await lead.client.delete(guestPath)).statusCode).toBe(404);
+
+    const extraBody = { startsAt: "2030-10-20T12:00:00.000Z" };
+    expect(
+      (await reader.client.post(`/api/v1/meeting-series/${seriesId}/meetings`, extraBody)).statusCode,
+    ).toBe(403);
+    const extra = await lead.client.post(`/api/v1/meeting-series/${seriesId}/meetings`, extraBody);
+    expect(extra.statusCode, extra.body).toBe(201);
+    expect(extra.json()).toMatchObject({ extra: true, state: "upcoming", startsAt: extraBody.startsAt });
+    const extraAgenda = await lead.client.get(`/api/v1/meetings/${extra.json().id}/agenda`);
+    expect(extraAgenda.json().topics).toHaveLength(2);
+    const skipped = await lead.client.post(`/api/v1/meetings/${extra.json().id}/skip`, {});
+    expect(skipped.json().code).toBe("extraMeetingNotSkippable");
+
+    const layout = { columns: [["attendance", "topics"], ["links"]], hidden: [], links: [] };
+    expect((await reader.client.put(`/api/v1/meeting-series/${seriesId}/overview`, layout)).statusCode).toBe(
+      403,
+    );
+    expect((await lead.client.put(`/api/v1/meeting-series/${seriesId}/overview`, layout)).statusCode).toBe(
+      204,
+    );
+    const seen = await reader.client.get(`/api/v1/meeting-series/${seriesId}`);
+    expect(seen.json().overview.columns).toEqual(layout.columns);
+    const broken = await lead.client.put(`/api/v1/meeting-series/${seriesId}/overview`, {
+      ...layout,
+      hidden: ["topics"],
+    });
+    expect(broken.json().code).toBe("invalidLayout");
+    const rates = await reader.client.get(`/api/v1/meeting-series/${seriesId}/attendance`);
+    expect(rates.statusCode, rates.body).toBe(200);
+    expect(rates.json()).toEqual([expect.objectContaining({ id: lead.id, present: 0, meetings: 0 })]);
+    expect((await outsider.client.get(`/api/v1/meeting-series/${seriesId}/attendance`)).statusCode).toBe(404);
+  });
+
   it("hold a team's series with attendance, topics, decisions and the decision log", async () => {
     const lead = await person();
     const colleague = await person();
@@ -101,6 +214,12 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
     expect(decided.statusCode, decided.body).toBe(200);
     const log = await colleague.client.get(`/api/v1/meeting-series/${details.id}/decisions?text=AD`);
     expect(log.json().map((entry: { text: string }) => entry.text)).toEqual(["Positions stay in AD."]);
+    const early = await lead.client.post(`/api/v1/meetings/${meetingId}/close`, {});
+    expect(early.json()).toMatchObject({ code: "meetingInFuture" });
+    const moved = await lead.client.put(`/api/v1/meetings/${meetingId}/start`, {
+      startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    });
+    expect(moved.statusCode, moved.body).toBe(204);
     const closed = await lead.client.post(`/api/v1/meetings/${meetingId}/close`, {});
     expect(closed.statusCode, closed.body).toBe(200);
     const next = await lead.client.get(`/api/v1/meetings/${closed.json().nextMeetingId}`);

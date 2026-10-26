@@ -67,6 +67,7 @@ const headerSchema = z.object({
   cipher: z.string(),
   chunkSize: z.int().positive(),
   scope: z.enum(backupScopes).optional(),
+  instanceUrl: z.string().max(2048).optional(),
 });
 
 export type BackupHeader = z.infer<typeof headerSchema>;
@@ -286,6 +287,7 @@ export function openBackupArchive(options: {
   lunedoVersion: string;
   schemaVersion: string;
   scope?: BackupScope;
+  instanceUrl?: string | null | undefined;
   chunkSize?: number;
 }): BackupArchiveWriter {
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
@@ -301,6 +303,7 @@ export function openBackupArchive(options: {
     cipher: CIPHER,
     chunkSize,
     ...(options.scope === "database" ? { scope: "database" as const } : {}),
+    ...(options.instanceUrl ? { instanceUrl: options.instanceUrl } : {}),
   };
   const headerBytes = encodeBackupHeader(header);
   const pack = tar.pack();
@@ -382,6 +385,7 @@ export interface CreateBackupOptions {
   config: Record<string, string>;
   lunedoVersion: string;
   schemaVersion: string;
+  instanceUrl?: string | null | undefined;
   logger: Logger;
 }
 
@@ -418,6 +422,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
       masterKeys: options.masterKeys,
       lunedoVersion: options.lunedoVersion,
       schemaVersion: options.schemaVersion,
+      instanceUrl: options.instanceUrl,
       scope,
     });
     finished.catch(() => {});
@@ -573,8 +578,11 @@ export interface RestoreBackupOptions extends ReadOptions {
   /** Overwrite a database or file store that is not empty. */
   force: boolean;
   markRestoredIn?: string | undefined;
+  onProgress?: ((stage: RestoreStage) => void) | undefined;
   logger: Logger;
 }
+
+export type RestoreStage = "verified" | "database" | "files";
 
 /**
  * Restores a backup into an empty instance, or with `force` over an existing one.
@@ -622,6 +630,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
     await rm(staging, { recursive: true, force: true });
     throw error;
   }
+  options.onProgress?.("verified");
 
   const earlierRestoreIncomplete = await hasRestoreMarker(options.filesDir);
   await writeRestoreMarker(options.filesDir, source.name);
@@ -634,6 +643,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
       if (name === DATABASE_ENTRY) {
         await options.database.restore(content, { replaceExisting: !databaseEmpty });
         databaseRestored = true;
+        options.onProgress?.("database");
       } else if (name.startsWith(CONFIG_PREFIX) && options.configDir) {
         const target = path.join(options.configDir, ...name.slice(CONFIG_PREFIX.length).split("/"));
         await mkdir(path.dirname(target), { recursive: true });
@@ -668,6 +678,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
   }
   if (options.markRestoredIn) await writeRestoredMarker(options.markRestoredIn);
   await removeRestoreMarker(options.filesDir);
+  options.onProgress?.("files");
   options.logger.info(
     { schemaVersion: first.manifest.schemaVersion, entries: first.manifest.entries.length },
     "Backup restored",

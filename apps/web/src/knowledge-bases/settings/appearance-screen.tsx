@@ -17,7 +17,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Palette } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -73,10 +73,8 @@ export function PortalAppearanceScreen() {
   const portal = useQuery({ ...portalQuery(space.id), throwOnError: false });
   return (
     <SpaceSettingsPage
-      tab="appearance"
       title={t("knowledgeBase.appearance.title")}
       description={t("knowledgeBase.appearance.description")}
-      icon={Palette}
     >
       {portal.isPending ? <Skeleton className="h-field w-full" /> : null}
       {portal.isError ? (
@@ -131,6 +129,7 @@ function AppearanceForm({ portal }: { portal: PortalSettings }) {
           <AutoSaveTextField
             label={t("knowledgeBase.appearance.heading")}
             hint={t("knowledgeBase.appearance.headingHint")}
+            help={t("knowledgeBase.appearance.headingHelp")}
             value={portal.welcomeHeading}
             schema={z.string().max(120)}
             disabled={!editable}
@@ -139,20 +138,12 @@ function AppearanceForm({ portal }: { portal: PortalSettings }) {
           <AutoSaveTextField
             label={t("knowledgeBase.appearance.text")}
             hint={t("knowledgeBase.appearance.textHint")}
+            help={t("knowledgeBase.appearance.textHelp")}
             value={portal.welcomeText}
             schema={z.string().max(400)}
             multiline
             disabled={!editable}
             onSave={(welcomeText) => save({ welcomeText })}
-          />
-          <NumberSetting
-            label={t("knowledgeBase.appearance.threshold")}
-            hint={t("knowledgeBase.appearance.thresholdHint")}
-            value={portal.topBarThreshold}
-            min={1}
-            max={100}
-            disabled={!editable}
-            onSave={(topBarThreshold) => save({ topBarThreshold })}
           />
           <p className="text-sm text-text-muted">
             {t("knowledgeBase.appearance.orderHint")}{" "}
@@ -207,21 +198,25 @@ function useStatus() {
 function NumberSetting({
   label,
   hint,
+  help,
   value,
   min,
   max,
   disabled,
   onSave,
   confirm,
+  unit,
 }: {
   label: string;
   hint: string;
+  help: string;
   value: number;
   min: number;
   max: number;
   disabled: boolean;
   onSave: (value: number) => Promise<unknown>;
   confirm?: (next: number, apply: () => void) => boolean;
+  unit?: string;
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(String(value));
@@ -241,24 +236,27 @@ function NumberSetting({
   };
   return (
     <div className="flex flex-col gap-1">
-      <Field label={label} hint={hint} {...(invalid ? { error: invalid } : {})}>
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          className="w-number-field"
-          value={draft}
-          disabled={disabled}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commit();
-            }
-          }}
-        />
+      <Field label={label} hint={hint} help={help} {...(invalid ? { error: invalid } : {})}>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            className="w-number-field"
+            value={draft}
+            disabled={disabled}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commit();
+              }
+            }}
+          />
+          {unit ? <span className="text-text-muted">{unit}</span> : null}
+        </div>
       </Field>
       {saver.status}
     </div>
@@ -274,6 +272,8 @@ function RetentionRow({ portal, editable }: { portal: PortalSettings; editable: 
       <NumberSetting
         label={t("knowledgeBase.appearance.retention")}
         hint={t("knowledgeBase.appearance.retentionHint")}
+        help={t("knowledgeBase.appearance.retentionHelp")}
+        unit={t("knowledgeBase.appearance.retentionUnit")}
         value={portal.feedbackRetentionMonths}
         min={1}
         max={60}
@@ -309,6 +309,7 @@ function PoweredByRow({ portal, editable }: { portal: PortalSettings; editable: 
     <SettingRow
       label={t("knowledgeBase.appearance.poweredBy")}
       description={t("knowledgeBase.appearance.poweredByHint")}
+      help={t("knowledgeBase.appearance.poweredByHelp")}
       control={
         <Switch
           checked={portal.poweredBy}
@@ -375,7 +376,11 @@ export function BrandRow({ portal, editable }: { portal: PortalSettings; editabl
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <Field label={t("knowledgeBase.appearance.color")} hint={t("knowledgeBase.appearance.colorHint")}>
+      <Field
+        label={t("knowledgeBase.appearance.color")}
+        hint={t("knowledgeBase.appearance.colorHint")}
+        help={t("knowledgeBase.appearance.colorHelp")}
+      >
         <Select
           value={choice}
           onValueChange={choose}
@@ -524,6 +529,7 @@ function LogoRow({ portal, editable }: { portal: PortalSettings; editable: boole
     <SettingRow
       label={t("knowledgeBase.appearance.logo")}
       description={t("knowledgeBase.appearance.logoHint")}
+      help={t("knowledgeBase.appearance.logoHelp")}
       control={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {portal.logoRef ? (

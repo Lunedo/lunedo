@@ -5,6 +5,7 @@ import {
   accountPrincipal,
   articlePage,
   articlePath,
+  brandStyle,
   brandValues,
   type CategoryState,
   categoryPage,
@@ -32,8 +33,11 @@ import {
   type Principal,
   portalAppLinkNameSetting,
   portalCss,
+  portalIconByName,
   portalLinks,
   portalScript,
+  portalThemeScript,
+  quickSearchResult,
   RELATED_LIMIT,
   type SearchCursor,
   type SearchState,
@@ -62,10 +66,12 @@ const FEEDBACK_LIMIT = 30;
 const FEEDBACK_WINDOW_SECONDS = 600;
 const SEARCH_COUNT_LIMIT = 60;
 const SEARCH_COUNT_WINDOW_SECONDS = 600;
+const QUICK_COUNT_BODY_LIMIT = 1024;
 const ARTICLE = /^\/(\d{1,9})(?:-([a-z0-9-]{0,200}))?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SORTS = ["views", "updated", "title"] as const;
 const FILTERS: readonly PortalArticleFilter[] = ["howTo", "troubleshooting"];
+const QUICK_ARTICLES = 6;
 
 interface Target {
   config: PortalConfig;
@@ -277,11 +283,21 @@ function serveAsset(reply: FastifyReply, name: string): FastifyReply {
       .type("text/css; charset=utf-8")
       .send(portalCss);
   }
+  if (name === PORTAL_ASSETS.theme) {
+    return reply
+      .header("cache-control", "public, max-age=31536000, immutable")
+      .type("text/javascript; charset=utf-8")
+      .send(portalThemeScript);
+  }
   if (name === PORTAL_ASSETS.script) {
     return reply
       .header("cache-control", "public, max-age=31536000, immutable")
       .type("text/javascript; charset=utf-8")
       .send(portalScript);
+  }
+  const brand = portalIconByName(name);
+  if (brand) {
+    return reply.header("cache-control", "public, max-age=86400").type(brand.type).send(brand.data);
   }
   const font = name.startsWith("fonts/") ? fontFile(name.slice("fonts/".length)) : null;
   if (font)
@@ -414,6 +430,12 @@ async function buildView(
       ? `${target.root}/logo?v=o${config.organizationLogoRef}`
       : null;
   const assetBase = target.domain ? "/_assets" : "/help/_assets";
+  const languages = options.languages ?? pageLanguages(target, target.rest);
+  const coverage =
+    languages.languageLinks.length > 1
+      ? await services.portalReader.languageCoverage(viewer.principal, config)
+      : new Map<string, number>();
+  const total = coverage.get(config.defaultLanguage) ?? 0;
   return {
     config,
     t,
@@ -422,14 +444,25 @@ async function buildView(
     base: target.base,
     links: portalLinks(target.base, target.origin),
     static: false,
-    ...(options.languages ?? pageLanguages(target, target.rest)),
+    alternates: languages.alternates,
+    languageLinks: languages.languageLinks.map((link) => ({
+      ...link,
+      detail:
+        link.language === config.defaultLanguage
+          ? t.coverageAll(total)
+          : t.coverage(coverage.get(link.language) ?? 0, total),
+    })),
     note: options.note ?? null,
     maintenance: await maintenanceNote(services),
     frameSources: await services.embeds.frameSources(),
     origin: target.origin,
     nonce: randomBytes(16).toString("base64"),
-    assets: { style: `${assetBase}/${PORTAL_ASSETS.style}`, script: `${assetBase}/${PORTAL_ASSETS.script}` },
-    brandStyle: `:root{--kb:${brand.light}}@media (prefers-color-scheme:dark){:root{--kb:${brand.dark}}}`,
+    assets: {
+      style: `${assetBase}/${PORTAL_ASSETS.style}`,
+      script: `${assetBase}/${PORTAL_ASSETS.script}`,
+      theme: `${assetBase}/${PORTAL_ASSETS.theme}`,
+    },
+    brandStyle: brandStyle(brand.light, brand.dark),
     logoUrl,
     account: viewer.account ? { name: viewer.account.name, email: viewer.account.email } : null,
     appLink,
@@ -438,6 +471,7 @@ async function buildView(
       ? null
       : `${target.root}/sign-in?return=${encodeURIComponent(`${target.base}${target.rest}`)}`,
     signOutUrl: `${target.root}/sign-out`,
+    quickSearch: `${target.base}/search/quick`,
     categories,
   };
 }
@@ -463,6 +497,7 @@ async function route(
     }
     if (rest === "/sign-out") return signOut(reply, services, target, viewer);
     if (rest === "/feedback") return feedback(request, reply, services, target, viewer);
+    if (rest === "/search/quick/count") return countQuickSearch(request, reply, services, target, viewer);
     if (rest === "/authorize" && !target.domain) {
       const body = await readBody(request, CONSENT_BODY_LIMIT);
       if (body === null) return reply.code(413).send();
@@ -514,6 +549,7 @@ async function route(
   const view = await buildView(services, target, viewer);
   if (rest === "/" || rest === "") return start(reply, services, target, viewer, view);
   if (rest === "/search") return search(request, reply, services, target, viewer, view, query);
+  if (rest === "/search/quick") return quickSearch(request, reply, services, target, viewer, view, query);
   if (rest === "/contact")
     return sendPage(reply, view, contactPage(view, (query.get("q") ?? "").slice(0, 200)));
   const topic = /^\/topics\/([0-9a-f-]{36})$/i.exec(rest);
@@ -570,9 +606,11 @@ async function category(
   const type = FILTERS.find((filter) => filter === query.get("type")) ?? null;
   const sort = SORTS.find((entry) => entry === query.get("sort")) ?? "views";
   const page = Math.min(Math.max(Number.parseInt(query.get("page") ?? "1", 10) || 1, 1), 1000);
-  const state: CategoryState = { type, sort, page };
+  const deep = query.get("deep") === "1";
+  const state: CategoryState = { type, sort, page, deep };
   const list = await services.portalReader.articles(viewer.principal, target.config, {
     categoryId: id,
+    direct: !deep,
     type,
     sort,
     limit: PORTAL_PAGE_SIZE,
@@ -647,6 +685,85 @@ async function search(
   return sendPage(reply, view, searchPage(view, state, result, more, mostRead));
 }
 
+async function countQuickSearch(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  services: AccountServices,
+  target: Target,
+  viewer: Viewer,
+): Promise<FastifyReply> {
+  const body = await readBody(request, QUICK_COUNT_BODY_LIMIT);
+  if (body === null) return reply.code(413).send();
+  let term = "";
+  try {
+    const parsed = JSON.parse(body) as { q?: unknown };
+    term = typeof parsed.q === "string" ? parsed.q.trim().slice(0, 200) : "";
+  } catch {
+    return reply.code(400).send();
+  }
+  if (!term) return reply.code(400).send();
+  if (!(await services.portalReader.admits(viewer.principal, target.config))) return reply.code(404).send();
+  const limit = await services.rateLimiter.consume(
+    `portal-search:client:${clientSubject(request.ip)}`,
+    SEARCH_COUNT_LIMIT,
+    SEARCH_COUNT_WINDOW_SECONDS,
+  );
+  if (limit.allowed) {
+    const result = await services.portalReader.search(viewer.principal, target.config, {
+      query: term,
+      categoryId: null,
+      type: null,
+      cursor: null,
+      language: target.language,
+    });
+    await services.portalStatistics.recordSearch(target.config.spaceId, {
+      term,
+      results: result.total,
+      categoryId: null,
+    });
+  }
+  return reply.code(204).header("cache-control", "no-store").send();
+}
+
+async function quickSearch(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  services: AccountServices,
+  target: Target,
+  viewer: Viewer,
+  view: PortalView,
+  query: URLSearchParams,
+): Promise<FastifyReply> {
+  reply.header("cache-control", "private, no-store");
+  reply.header("x-content-type-options", "nosniff");
+  const text = (query.get("q") ?? "").trim().slice(0, 200);
+  const empty = {
+    results: [],
+    total: 0,
+    nextCursor: null,
+    categories: [],
+    typeCounts: { all: 0, howTo: 0, troubleshooting: 0 },
+    suggestion: null,
+  };
+  try {
+    const result = text
+      ? await services.portalReader.search(viewer.principal, target.config, {
+          query: text,
+          categoryId: null,
+          type: null,
+          cursor: null,
+          language: target.language,
+        })
+      : empty;
+    return reply
+      .type("application/json; charset=utf-8")
+      .send(quickSearchResult(view, text, result, QUICK_ARTICLES));
+  } catch (error) {
+    request.log.error({ err: error }, "A portal quick search failed");
+    return reply.code(503).type("application/json; charset=utf-8").send({ code: "searchUnavailable" });
+  }
+}
+
 async function articleRoute(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -680,7 +797,6 @@ async function articleRoute(
   }
   const readerLanguage = interfaceLanguage(target.language);
   const articleView = await buildView(services, target, viewer, {
-    language: article.language,
     languages: {
       languageLinks: languageLinks(target, (language) => {
         const alternate = article.alternates.find((entry) => entry.language === language);
@@ -707,7 +823,8 @@ async function articleRoute(
   await services.portalStatistics
     .recordView(target.config.spaceId, article.itemId)
     .catch((error: unknown) => request.log.warn({ err: error }, "A portal article view was not counted"));
-  const scope = article.subcategoryId ?? article.categoryId;
+  const scope = article.folderIds.at(-1) ?? null;
+  const parentScope = article.folderIds.at(-2) ?? null;
   const related =
     article.type === "howTo" && scope
       ? (
@@ -731,10 +848,10 @@ async function articleRoute(
         })
       ).articles
     : [];
-  if (similar.length === 0 && article.subcategoryId && article.categoryId) {
+  if (similar.length === 0 && parentScope) {
     similar = (
       await reader.articles(viewer.principal, target.config, {
-        categoryId: article.categoryId,
+        categoryId: parentScope,
         limit: RELATED_LIMIT,
         exclude,
         language: target.language,

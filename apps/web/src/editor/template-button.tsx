@@ -288,7 +288,7 @@ export function TemplateButtonSettingsForm({
   const template = templates.find((candidate) => candidate.id === button.templateId) ?? null;
   const keys = template?.fields.map((field) => field.key) ?? [];
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-3">
       <Field label={t("editor.templateButton.template")}>
         {gallery.isError ? (
           <LoadError

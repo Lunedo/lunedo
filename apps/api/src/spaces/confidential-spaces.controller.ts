@@ -1,4 +1,3 @@
-import { ERASURE_REASON_MAX_LENGTH } from "@lunedo/server";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -28,7 +27,6 @@ const summarySchema = z
       .describe(
         "True when no active space admin remains but other members do; one of them can be appointed.",
       ),
-    deletable: z.boolean().describe("True when no active member remains; then the space can be deleted."),
   })
   .describe("A confidential space as organization administrators see it: no name, members or content.");
 
@@ -41,26 +39,12 @@ const exampleSummary = {
   pages: 12,
   lastChangedAt: "2026-10-08T15:00:00.000Z",
   needsAdministrator: true,
-  deletable: false,
 };
 
 const appointSchema = z
   .object({ accountId: uuid("Remaining member who becomes space admin.") })
   .strict()
   .describe("The new space admin.");
-
-const deleteSchema = z
-  .object({
-    confirmation: z.string().max(40).describe("The key of the space, typed exactly."),
-    reason: z
-      .string()
-      .max(ERASURE_REASON_MAX_LENGTH * 2)
-      .describe(
-        `Why the space is deleted, 1 to ${ERASURE_REASON_MAX_LENGTH} characters; it goes into the audit log.`,
-      ),
-  })
-  .strict()
-  .describe("Confirmation and reason.");
 
 @Controller("api/v1/organizations")
 export class ConfidentialSpacesController {
@@ -125,7 +109,7 @@ export class ConfidentialSpacesController {
   @ApiRoute({
     summary: "Appoint a space admin of a confidential space",
     description:
-      "Makes a remaining member space admin of a confidential space that has none. Never the caller and never someone who is not a member. The appointment is audited.",
+      "Makes a remaining member space admin of a confidential space that has none. Never the caller and never someone who is not a member. The appointment is audited and the member is notified.",
     tags: [TAG],
     params: spaceParams,
     body: appointSchema,
@@ -144,26 +128,5 @@ export class ConfidentialSpacesController {
       spaceId,
       body.accountId,
     );
-  }
-
-  @Post(":organizationId/confidential-spaces/:spaceId/delete")
-  @Permission("organization.spaces.manage", organization, { recentAuthentication: true })
-  @ApiRoute({
-    summary: "Delete a confidential space without members",
-    description:
-      "Deletes a confidential space in which no active member remains, permanently and without reading it. Requires typing the key and a reason, which goes into the audit log. This cannot be undone.",
-    tags: [TAG],
-    params: spaceParams,
-    body: deleteSchema,
-    bodyExample: { confirmation: "MSAB", reason: "Both people left the company" },
-    errors: ["spaceHasMembers", "confirmationMismatch", "reasonRequired"],
-  })
-  async delete(
-    @Param("organizationId") organizationId: string,
-    @Param("spaceId") spaceId: string,
-    @Body() body: z.output<typeof deleteSchema>,
-    @Req() request: FastifyRequest,
-  ) {
-    await this.#services.confidentialSpaces.delete(actorOf(request), organizationId, spaceId, body);
   }
 }

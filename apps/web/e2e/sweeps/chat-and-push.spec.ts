@@ -51,7 +51,7 @@ test("browser push settings pass the accessibility check in every appearance", a
       ).toBeVisible();
     });
     await sweepAppearances(page, "instance-notification-defaults", async () => {
-      await page.goto("/settings/instance/notifications");
+      await page.goto("/settings/instance/mail");
       await expect(
         page.getByRole("switch", {
           name: /^(Browser push for this instance|Browser-Push für diese Instanz)$/,
@@ -65,7 +65,7 @@ test("browser push settings pass the accessibility check in every appearance", a
     await callApi(page, "PUT", "/api/v1/instance/settings/notifications.browserPush", { value: false });
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto("/settings/instance/notifications");
+      await page.goto("/settings/instance/mail");
       await page.getByRole("switch", { name: "Browser push for this instance" }).click();
       await expect(page.getByRole("dialog", { name: "Turn on browser push?" })).toBeVisible();
       await expectAccessible(page, `push confirmation at ${width}`);

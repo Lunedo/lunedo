@@ -107,9 +107,23 @@ const followSchema = z
   .strict()
   .describe("A link by title.");
 
+const childSchema = treeItemSchema
+  .extend({
+    updatedBy: z
+      .object({
+        id: uuid("ID of the account."),
+        name: z.string().nullable().describe("Name, or null when the caller may not see it."),
+      })
+      .nullable()
+      .describe(
+        "Who made the change readers see last: the publisher of the current version, or the last editor of a live page or whiteboard. Null for folders and links, or when unknown.",
+      ),
+  })
+  .describe("A child item.");
+
 const childrenSchema = z
   .object({
-    items: z.array(treeItemSchema).describe("Children, in tree order."),
+    items: z.array(childSchema).describe("Children, in tree order."),
     nextCursor: z.string().nullable().describe("Cursor for the next page, or null on the last page."),
   })
   .describe("Children of an item or the root items of a space.");
@@ -136,6 +150,9 @@ const pagesWithLabelSchema = z
       .object({
         itemId: uuid("ID of the page."),
         title: z.string().describe("Title of the page."),
+        parents: z
+          .array(z.string().describe("Title of a parent."))
+          .describe("Titles of the parents the caller can read, from the top down."),
         contentUpdatedAt: z.iso
           .datetime()
           .describe("When its content last changed. ISO 8601 timestamp in UTC."),
@@ -143,6 +160,25 @@ const pagesWithLabelSchema = z
       .describe("A page with the label."),
   )
   .describe("Pages with the label, ordered by title.");
+
+const editorsSchema = z
+  .object({
+    editors: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the account."),
+            name: z.string().nullable().describe("Name, or null when the caller may not see it."),
+            pictureRef: z
+              .string()
+              .nullable()
+              .describe("Version of the profile picture, or null when there is none."),
+          })
+          .describe("A person editing the page."),
+      )
+      .describe("People with the page open in the editor."),
+  })
+  .describe("Who is editing the page now.");
 
 const followResultSchema = z
   .object({
@@ -171,7 +207,12 @@ export class ItemsController {
     response: {
       description: "The items.",
       schema: childrenSchema,
-      example: { items: [exampleItem], nextCursor: null },
+      example: {
+        items: [
+          { ...exampleItem, updatedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" } },
+        ],
+        nextCursor: null,
+      },
     },
   })
   async children(
@@ -282,6 +323,8 @@ export class ItemsController {
         owner: {
           id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
           name: "Anna Weber",
+          jobTitle: "Service Manager",
+          pictureRef: null,
           email: "anna.weber@example.org",
           active: true,
         },
@@ -408,7 +451,7 @@ export class ItemsController {
   @ApiRoute({
     summary: "Get the content of a page",
     description:
-      "Returns the content readers see as ProseMirror JSON: the published version in publish mode, the current content in live mode. With it come the names of mentioned people and the titles of linked pages the caller may see. Editors get the draft from the draft endpoint.",
+      "Returns the content readers see as ProseMirror JSON: the published version in publish mode, the current content in live mode. Open comments on text of that content carry their mark, also when they were made after the version was published. With it come the names of mentioned people and the titles of linked pages the caller may see. Editors get the draft from the draft endpoint.",
     tags: [TAG],
     params: pageParams,
     response: { description: "The content.", schema: pageContentSchema, example: examplePageContent },
@@ -416,10 +459,32 @@ export class ItemsController {
   async content(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
     const readable = await this.#services.documents.readable(pageId);
     if (!readable) throw notFound();
+    const document = await this.#services.comments.markOpenThreads(pageId, readable.document);
     return {
       ...readable,
-      references: await this.#services.documents.references(actorOf(request), readable.document),
+      document,
+      references: await this.#services.documents.references(actorOf(request), document),
     };
+  }
+
+  @Get("pages/:pageId/editors")
+  @Permission("item.view", page)
+  @ApiRoute({
+    summary: "List the people editing a page now",
+    description:
+      "Lists the people who have the page open in the editor at this moment. Readers of the page are not listed. The list changes with an `editing` event in the space stream.",
+    tags: [TAG],
+    params: pageParams,
+    response: {
+      description: "The people editing the page.",
+      schema: editorsSchema,
+      example: {
+        editors: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", pictureRef: null }],
+      },
+    },
+  })
+  async editors(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
+    return { editors: await this.#services.versions.editors(actorOf(request), pageId) };
   }
 
   @Get("pages/:pageId/markdown")
@@ -659,7 +724,12 @@ export class ItemsController {
       description: "Pages with the label.",
       schema: pagesWithLabelSchema,
       example: [
-        { itemId: exampleItem.id, title: exampleItem.title, contentUpdatedAt: "2026-10-05T08:10:00.000Z" },
+        {
+          itemId: exampleItem.id,
+          title: exampleItem.title,
+          parents: ["Network"],
+          contentUpdatedAt: "2026-10-05T08:10:00.000Z",
+        },
       ],
     },
   })

@@ -170,6 +170,18 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     });
   });
 
+  it("lists a connected editor for readers and removes them when they leave", async () => {
+    const { itemId, token, account } = await editor();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const editors = async () =>
+      (await runtime.services.versions.editors(SYSTEM, itemId)).map((person) => person.id);
+    const client = open(first.url, itemId, { token });
+    await client.authenticated;
+    await waitFor(async () => (await editors()).includes(account));
+    client.destroy();
+    await waitFor(async () => (await editors()).length === 0);
+  });
+
   describe("refuses connections", () => {
     async function refusal(client: Client): Promise<string> {
       return client.authenticated.then(

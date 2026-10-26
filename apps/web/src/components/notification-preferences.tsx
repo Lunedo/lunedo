@@ -6,13 +6,19 @@ import {
   notificationChannelSettingKey,
   notificationEvents,
 } from "@lunedo/shared";
-import { Button, Notice, Section, Select, Skeleton, Switch } from "@lunedo/ui";
-import { Building2, Lock, PenLine, Server } from "lucide-react";
+import { CollapsibleSection, Notice, Section, Select, Skeleton, Switch } from "@lunedo/ui";
+import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
 import { translateKey } from "../i18n/translate.js";
 import { SaveIndicator, useSaveStates } from "./auto-save.js";
-import { disabledReason, inheritedFrom, inheritedValue, type SettingLevel } from "./setting-source.js";
+import {
+  disabledReason,
+  inheritedValue,
+  OwnValueChip,
+  type SettingLevel,
+  sameValue,
+} from "./setting-source.js";
 
 interface EventRow {
   event: NotificationEvent;
@@ -53,50 +59,18 @@ function ChannelSource({
   onReset?: (() => void) | undefined;
 }) {
   const { t } = useTranslation();
-  const className = "inline-flex items-center gap-1 text-text-muted text-xs";
-  const icon = "size-icon-sm shrink-0";
   if (entry.lockedBy && entry.lockedBy !== level) {
     return (
-      <span className={className}>
-        <Lock aria-hidden="true" className={icon} />
+      <span className="inline-flex items-center gap-1 text-text-muted text-xs">
+        <Lock aria-hidden="true" className="size-icon-sm shrink-0" />
         {entry.lockedBy === "instance"
           ? t("settings.source.lockedByInstance")
           : t("settings.source.lockedByOrganization", { name: organizationName ?? "" })}
       </span>
     );
   }
-  if (entry.source === level) {
-    return (
-      <span className="flex flex-wrap items-center gap-2">
-        <span className={className}>
-          <PenLine aria-hidden="true" className={icon} />
-          {level === "user"
-            ? t("settings.source.setByYou")
-            : level === "organization"
-              ? t("settings.source.setForOrganization", { name: organizationName ?? "" })
-              : t("settings.source.setForInstance")}
-        </span>
-        {onReset ? (
-          <Button variant="outline" size="sm" aria-label={resetLabel} onClick={onReset}>
-            {t("notifications.reset")}
-          </Button>
-        ) : null}
-      </span>
-    );
-  }
-  const from = inheritedFrom(entry, level);
-  return (
-    <span className={className}>
-      {from === "organization" ? (
-        <Building2 aria-hidden="true" className={icon} />
-      ) : (
-        <Server aria-hidden="true" className={icon} />
-      )}
-      {t(`notifications.source.${from === "organization" || from === "instance" ? from : "default"}`, {
-        name: organizationName ?? "",
-      })}
-    </span>
-  );
+  if (entry.source !== level || sameValue(entry.value, inheritedValue(entry, level))) return null;
+  return <OwnValueChip resetLabel={resetLabel} {...(onReset ? { onReset } : {})} />;
 }
 
 function EventList({
@@ -155,7 +129,7 @@ function EventList({
           const push = browserPush ? row.push : undefined;
           const pushReason = push ? disabledReason(t, push, level, editable, organizationName) : undefined;
           return (
-            <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+            <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 py-3">
               <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
                 <span className="font-medium wrap-anywhere">{label(row)}</span>
                 <SaveIndicator tracker={saveState(row.event.id)} />
@@ -261,18 +235,13 @@ export function NotificationPreferences({
         <EventList rows={content} caption={t("notifications.eventTypes")} {...tableProps} />
       </Section>
       {administration.length > 0 ? (
-        <details className="rounded-md border border-border bg-surface">
-          <summary className="cursor-pointer rounded-md px-4 py-3 font-semibold focus-visible:focus-ring">
-            {t("notifications.administrationEvents")}
-          </summary>
-          <div className="border-border border-t">
-            <EventList
-              rows={administration}
-              caption={t("notifications.administrationEvents")}
-              {...tableProps}
-            />
-          </div>
-        </details>
+        <CollapsibleSection title={t("notifications.administrationEvents")}>
+          <EventList
+            rows={administration}
+            caption={t("notifications.administrationEvents")}
+            {...tableProps}
+          />
+        </CollapsibleSection>
       ) : null}
     </>
   );

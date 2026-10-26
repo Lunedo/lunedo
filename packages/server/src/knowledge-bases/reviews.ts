@@ -8,10 +8,11 @@ import { type KeysetKey, type Page, type PageRequest, pageLimit, toPage } from "
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import { managedItemCondition, ownerActiveCondition } from "../spaces/ownership.js";
-import type { PeopleService } from "../spaces/people.js";
+import type { PeopleService, VisiblePerson } from "../spaces/people.js";
 import type { ArticleType } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { visibleItem } from "../spaces/visibility.js";
+import { folderIds, folderTitles } from "./folders.js";
 import type { ReviewInterval, ReviewLeadDays, ReviewRecipients, ReviewVia } from "./schema.js";
 import { translationState } from "./translations.js";
 
@@ -44,6 +45,12 @@ export interface ReviewSettings {
 export interface PersonReference {
   id: string;
   name: string | null;
+  pictureRef: string | null;
+}
+
+function personOf(id: string, people: Map<string, VisiblePerson>): PersonReference {
+  const person = people.get(id);
+  return { id, name: person?.name ?? null, pictureRef: person?.pictureRef ?? null };
 }
 
 export interface ArticleReview {
@@ -314,7 +321,7 @@ export class ReviewService {
       where r.item_id = ${itemId}`);
     const row = result.rows[0];
     if (!row) throw new SpaceError("notArticle", "Only articles of a knowledge base are reviewed");
-    const names = await this.#people.visibleNames(viewer, row.reviewed_by ? [row.reviewed_by] : []);
+    const people = await this.#people.visiblePeople(viewer, row.reviewed_by ? [row.reviewed_by] : []);
     const interval = effectiveInterval(row.interval_months, row.inherited_months);
     const editor = await this.#authorization.explain(viewer, "item.edit", { type: "item", id: itemId });
     const review = {
@@ -328,7 +335,7 @@ export class ReviewService {
       inherited: row.interval_months === null,
       publishedAt: date(row.published_at),
       reviewedAt: date(row.reviewed_at),
-      reviewedBy: row.reviewed_by ? { id: row.reviewed_by, name: names.get(row.reviewed_by) ?? null } : null,
+      reviewedBy: row.reviewed_by ? personOf(row.reviewed_by, people) : null,
       ...review,
       state: reviewState(review, interval, this.#clock()),
     };
@@ -473,13 +480,13 @@ export class ReviewService {
     }>(sql`
       select id, actor_id, via, reviewed_at from article_review_events where item_id = ${itemId}
       order by reviewed_at desc, id desc limit 200`);
-    const names = await this.#people.visibleNames(
+    const people = await this.#people.visiblePeople(
       viewer,
       result.rows.map((row) => row.actor_id).filter((id): id is string => id !== null),
     );
     return result.rows.map((row) => ({
       id: row.id,
-      actor: row.actor_id ? { id: row.actor_id, name: names.get(row.actor_id) ?? null } : null,
+      actor: row.actor_id ? personOf(row.actor_id, people) : null,
       via: row.via,
       at: new Date(row.reviewed_at),
     }));
@@ -490,12 +497,6 @@ export class ReviewService {
       and s.archived_at is null and ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`, "editor", {
         editRestriction: true,
       })})`;
-  }
-
-  #category(viewer: Principal, index: number): SQL {
-    return sql`(select c.id from tree_items c join spaces cs on cs.id = c.space_id
-      where c.id = t.path[${index}] and c.kind = 'folder' and c.id <> t.id
-        and ${visibleItem(this.#authorization, viewer, sql`c`, sql`cs`)})`;
   }
 
   async list(
@@ -548,6 +549,7 @@ export class ReviewService {
       category_titles: string[];
       owner_id: string | null;
       owner_name: string | null;
+      owner_picture_ref: string | null;
       owner_active: boolean;
       interval_months: number | null;
       inherited_months: number | null;
@@ -561,11 +563,10 @@ export class ReviewService {
     }>(
       sql`
       select * from (select t.id, t.title, t.article_type,
-        array_remove(array[${this.#category(viewer, 1)}, ${this.#category(viewer, 2)}], null) as category_ids,
-        array(select c.title from tree_items c
-          where c.id = any(array[${this.#category(viewer, 1)}, ${this.#category(viewer, 2)}])
-          order by cardinality(c.path)) as category_titles,
-        t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name, ${ownerActive} as owner_active,
+        ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
+        ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles,
+        t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
+        ${this.#people.visiblePictureRef(viewer, sql`o`)} as owner_picture_ref, ${ownerActive} as owner_active,
         r.interval_months, kb.review_interval_months as inherited_months, r.published_at, r.reviewed_at, r.due_at,
         r.source_changed_at, case when src.id is null then null else t.content_language end as language,
         ${outdated} as translation_outdated,
@@ -584,7 +585,9 @@ export class ReviewService {
       (row): ReviewListItem => {
         const interval = effectiveInterval(row.interval_months, row.inherited_months);
         const review = { dueAt: date(row.due_at), sourceChangedAt: date(row.source_changed_at) };
-        const person = row.owner_id ? { id: row.owner_id, name: row.owner_name } : null;
+        const person = row.owner_id
+          ? { id: row.owner_id, name: row.owner_name, pictureRef: row.owner_picture_ref }
+          : null;
         return {
           id: row.id,
           title: row.title,

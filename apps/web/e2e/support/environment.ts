@@ -15,6 +15,7 @@ export const STATE_DIR = process.env.LUNEDO_E2E_STATE_DIR ?? path.join(tmpdir(),
 export interface E2EState {
   setupCode?: string;
   databaseUrl?: string;
+  dataDir?: string;
   ownerSecret?: string;
   totpSteps?: Record<string, number>;
 }

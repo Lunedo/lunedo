@@ -37,6 +37,7 @@ export function BrowserPushSetting({
       <SettingRow
         label={t("notifications.push.instanceLabel")}
         description={t("notifications.push.instanceDescription")}
+        help={t("notifications.push.instanceHelp")}
         control={
           <Switch
             label={t("notifications.push.instanceLabel")}

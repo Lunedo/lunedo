@@ -304,11 +304,118 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       const pageComment = await test.services.comments.create(context.commenter, created.id, {
         body: comment("x"),
       });
-      await expect(
-        test.services.comments.resolve(context.commenter, pageComment, true),
-      ).rejects.toMatchObject({
+      await test.services.comments.resolve(context.commenter, pageComment, true);
+      const resolvedPageThread = (await threadsOf(context.reader, created.id)).find(
+        (thread) => thread.id === pageComment,
+      );
+      expect(resolvedPageThread?.resolvedBy?.id).toBe(context.commenterId);
+      const reply = await test.services.comments.reply(context.commenter, pageComment, {
+        body: comment("y"),
+      });
+      await expect(test.services.comments.resolve(context.commenter, reply, true)).rejects.toMatchObject({
         code: "notInlineComment",
       });
+    });
+  });
+
+  describe("the read view", () => {
+    it("marks open comments made on published text after publishing, but not resolved ones", async () => {
+      const context = await setup();
+      const created = await publishedPage(context, doc(paragraph("Public text.")));
+      const open = await test.services.comments.create(context.commenter, created.id, {
+        body: comment("Check"),
+        anchor: { exact: "Public", prefix: "", suffix: " text." },
+      });
+      const done = await test.services.comments.create(context.commenter, created.id, {
+        body: comment("Done"),
+        anchor: { exact: "text", prefix: "Public ", suffix: "." },
+      });
+      await test.services.comments.resolve(context.commenter, done, true);
+      const readable = await test.services.documents.readable(created.id);
+      if (!readable) throw new Error("The page has no published version");
+      expect(JSON.stringify(readable.document)).not.toContain(open);
+      const marked = JSON.stringify(
+        await test.services.comments.markOpenThreads(created.id, readable.document),
+      );
+      expect(marked).toContain(open);
+      expect(marked).not.toContain(done);
+    });
+
+    it("does not mark comments on text that exists only in the draft", async () => {
+      const context = await setup();
+      const created = await publishedPage(context, doc(paragraph("Public text.")));
+      await test.services.documents.replace(
+        context.editor,
+        created.id,
+        doc(paragraph("Public text. Secret plan.")),
+      );
+      const draftOnly = await test.services.comments.create(context.editor, created.id, {
+        body: comment("Draft"),
+        anchor: { exact: "Secret plan", prefix: "Public text. ", suffix: "." },
+      });
+      const readable = await test.services.documents.readable(created.id);
+      if (!readable) throw new Error("The page has no published version");
+      const marked = JSON.stringify(
+        await test.services.comments.markOpenThreads(created.id, readable.document),
+      );
+      expect(marked).not.toContain(draftOnly);
+      expect(marked).not.toContain("Secret plan");
+    });
+
+    it("counts the comments of a blog post that are not deleted", async () => {
+      const context = await setup();
+      const post = await test.services.blog.create(context.editor, context.space.id, {
+        title: "Office move",
+      });
+      const first = await test.services.comments.create(context.editor, post.id, { body: comment("When?") });
+      await test.services.comments.reply(context.editor, first, { body: comment("Monday") });
+      expect((await test.services.blog.get(context.editor, post.id))?.commentCount).toBe(2);
+      await test.services.comments.delete(context.editor, first);
+      expect((await test.services.blog.get(context.editor, post.id))?.commentCount).toBe(1);
+    });
+
+    it("names who published the version readers see in the list of children", async () => {
+      const context = await setup();
+      const created = await publishedPage(context, doc(paragraph("Public text.")));
+      const children = await test.services.tree.children(context.reader, context.space.id, null);
+      const child = children.items.find((item) => item.id === created.id);
+      expect(child?.updatedBy?.id).toBe(context.editorId);
+      expect(child?.updatedBy?.name).toBe("Editor");
+    });
+
+    it("leaves comments on draft-only text out of the blog count for readers", async () => {
+      const context = await setup();
+      const post = await test.services.blog.create(context.editor, context.space.id, {
+        title: "Office move",
+      });
+      await test.services.documents.replace(context.editor, post.id, doc(paragraph("Public text.")));
+      await test.services.versions.publish(context.editor, post.id);
+      await test.services.documents.replace(
+        context.editor,
+        post.id,
+        doc(paragraph("Public text. Secret plan.")),
+      );
+      await test.services.comments.create(context.editor, post.id, {
+        body: comment("Draft"),
+        anchor: { exact: "Secret plan", prefix: "Public text. ", suffix: "." },
+      });
+      await test.services.comments.create(context.editor, post.id, { body: comment("Nice") });
+      expect((await test.services.blog.get(context.editor, post.id))?.commentCount).toBe(2);
+      expect((await test.services.blog.get(context.reader, post.id))?.commentCount).toBe(1);
+    });
+
+    it("lists the people editing a page until they leave", async () => {
+      const context = await setup();
+      const created = await publishedPage(context, doc(paragraph("Public text.")));
+      await test.services.versions.touchEditor(created.id, "node-a", context.editorId, 1);
+      await test.services.versions.touchEditor(created.id, "node-b", context.editorId, 1);
+      expect(
+        (await test.services.versions.editors(context.reader, created.id)).map((person) => person.id),
+      ).toEqual([context.editorId]);
+      await test.services.versions.touchEditor(created.id, "node-a", context.editorId, -1);
+      expect(await test.services.versions.editors(context.reader, created.id)).toHaveLength(1);
+      await test.services.versions.endSession(created.id, "node-b");
+      expect(await test.services.versions.editors(context.reader, created.id)).toEqual([]);
     });
   });
 
@@ -738,6 +845,50 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       });
       expect(report.counts).toEqual({ open: 3, done: 1, overdue: 1 });
     });
+
+    it("list tasks by who assigned them, sorted by any column and paged in that order", async () => {
+      const context = await setup();
+      await page(
+        context,
+        doc(
+          task(randomUUID(), "beta", { assignee: context.readerId, dueDate: daysFromToday(5) }),
+          task(randomUUID(), "Alpha", { assignee: context.readerId, dueDate: daysFromToday(9) }),
+          task(randomUUID(), "gamma", { assignee: context.readerId }),
+        ),
+        { mode: "live" },
+      );
+      const mine = await test.services.tasks.list(context.reader, { assignee: "me" });
+      expect(mine.items.map((entry) => entry.assignedBy)).toEqual([
+        { id: context.editorId, name: "Editor" },
+        { id: context.editorId, name: "Editor" },
+        { id: context.editorId, name: "Editor" },
+      ]);
+      expect(
+        (await test.services.tasks.list(context.editor, { assignedBy: "me" })).items.map(
+          (entry) => entry.text,
+        ),
+      ).toEqual(["beta", "Alpha", "gamma"]);
+      expect((await test.services.tasks.list(context.reader, { assignedBy: "me" })).items).toEqual([]);
+      const first = await test.services.tasks.list(context.reader, {
+        assignee: "me",
+        sort: "text",
+        direction: "desc",
+        limit: 2,
+      });
+      expect(first.items.map((entry) => entry.text)).toEqual(["gamma", "beta"]);
+      const rest = await test.services.tasks.list(context.reader, {
+        assignee: "me",
+        sort: "text",
+        direction: "desc",
+        after: first.next ?? undefined,
+      });
+      expect(rest.items.map((entry) => entry.text)).toEqual(["Alpha"]);
+      expect(
+        (await test.services.tasks.list(context.reader, { assignee: "me", sort: "text" })).items.map(
+          (entry) => entry.text,
+        ),
+      ).toEqual(["Alpha", "beta", "gamma"]);
+    });
   });
 
   describe("reactions", () => {
@@ -838,6 +989,7 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         .then((entries) => entries.filter((candidate) => candidate.principalId === authorId));
       const author = accountPrincipal(authorId);
       const post = await test.services.blog.create(author, context.space.id, { title: "Office move" });
+      expect(post.commentCount).toBe(0);
       await test.services.documents.replace(author, post.id, doc(paragraph("We move on Friday.")));
       await test.services.blog.schedule(author, post.id, {
         at: new Date(Date.now() + 3_600_000),

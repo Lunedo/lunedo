@@ -87,6 +87,22 @@ const en: Texts = {
     title: "A confidential space has no space admin",
     body: text(params.spaceKey),
   }),
+  "space.personalWithoutAdministrator": ({ params }) => ({
+    title: "A personal space has no space admin",
+    body: text(params.spaceKey),
+  }),
+  "space.memberAddedByAdministration": ({ params }) => ({
+    title: "The administration added someone to a space",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
+  "space.memberRemovedByAdministration": ({ params }) => ({
+    title: "The administration removed someone from a space",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
+  "space.administratorAppointed": ({ params }) => ({
+    title: "You are now space admin",
+    body: text(params.spaceName),
+  }),
   "article.reviewDue": ({ params }) => ({
     title: "An article is due for review",
     body: text(params.itemTitle),
@@ -130,6 +146,10 @@ const en: Texts = {
   "breakGlass.started": ({ params }) => ({
     title: "Break-glass access started",
     body: text(params.requesterName),
+  }),
+  "space.administratorTaken": ({ params }) => ({
+    title: "An organization admin made themselves space admin",
+    body: `${text(params.actorName)} · ${text(params.spaceName)}`,
   }),
   "auth.emergencySignIn": ({ params }) => ({
     title: "Emergency sign-in used",
@@ -193,7 +213,7 @@ const de: Texts = {
     body: text(params.taskText),
   }),
   "page.shared": ({ params, actor }) => ({
-    title: `${actor ?? "Jemand"} hat eine Seite für dich freigegeben`,
+    title: `${actor ?? "Jemand"} hat eine Seite mit dir geteilt`,
     body: text(params.itemTitle),
   }),
   "access.requested": ({ params }) => ({
@@ -249,6 +269,22 @@ const de: Texts = {
     title: "Ein vertraulicher Space hat keinen Space-Admin",
     body: text(params.spaceKey),
   }),
+  "space.personalWithoutAdministrator": ({ params }) => ({
+    title: "Ein persönlicher Space hat keinen Space-Admin",
+    body: text(params.spaceKey),
+  }),
+  "space.memberAddedByAdministration": ({ params }) => ({
+    title: "Die Verwaltung hat jemanden zu einem Space hinzugefügt",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
+  "space.memberRemovedByAdministration": ({ params }) => ({
+    title: "Die Verwaltung hat jemanden aus einem Space entfernt",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
+  "space.administratorAppointed": ({ params }) => ({
+    title: "Du bist jetzt Space-Admin",
+    body: text(params.spaceName),
+  }),
   "article.reviewDue": ({ params }) => ({
     title: "Ein Artikel ist zur Überprüfung fällig",
     body: text(params.itemTitle),
@@ -298,6 +334,10 @@ const de: Texts = {
   "breakGlass.started": ({ params }) => ({
     title: "Notfallzugriff begonnen",
     body: text(params.requesterName),
+  }),
+  "space.administratorTaken": ({ params }) => ({
+    title: "Organisations-Admin hat sich zum Space-Admin gemacht",
+    body: `${text(params.actorName)} · ${text(params.spaceName)}`,
   }),
   "auth.emergencySignIn": ({ params }) => ({
     title: "Notfall-Anmeldung verwendet",

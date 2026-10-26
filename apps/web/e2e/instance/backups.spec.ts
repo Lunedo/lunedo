@@ -1,10 +1,20 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import {
+  PG_DUMP_MISSING,
+  PG_DUMP_REQUIRED,
+  pgDumpFound,
+  SKIP_WITHOUT_PG_DUMP,
+} from "../support/backup-tools.js";
 import { STATE_DIR } from "../support/environment.js";
 import { expect, test } from "../support/fixtures.js";
 import { unique } from "../support/people.js";
 
 test.use({ instanceAdministrator: true });
+
+const pgDump = pgDumpFound();
+test.skip(!pgDump && SKIP_WITHOUT_PG_DUMP, PG_DUMP_MISSING);
+test.beforeAll(() => expect(pgDump, PG_DUMP_REQUIRED).toBe(true));
 
 test("configures a local target and a schedule, backs up now and test-restores the backup", async ({
   page,

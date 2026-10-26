@@ -34,27 +34,36 @@ export interface RuleContext {
 
 export type Rule = (context: RuleContext) => Promise<boolean>;
 
-export type RestrictionDenial =
-  | "inTrash"
-  | "archived"
-  | "unpublished"
-  | "restricted"
-  | "editRestricted"
-  | "exportDisabled";
+export const restrictionDenials = [
+  "inTrash",
+  "archived",
+  "unpublished",
+  "restricted",
+  "editRestricted",
+  "notResponsible",
+  "exportDisabled",
+] as const;
+
+export type RestrictionDenial = (typeof restrictionDenials)[number];
 
 export interface RestrictionResult {
   denial: RestrictionDenial;
   unless?: SpaceRole;
 }
 
-export type Restriction = (executor: Executor, id: string) => Promise<RestrictionResult | null>;
+export type Restriction = (
+  executor: Executor,
+  ids: readonly string[],
+) => Promise<Map<string, RestrictionResult>>;
+
+export type Lookup = (executor: Executor, ids: readonly string[]) => Promise<Map<string, string>>;
 
 export interface ResourceType {
   type: string;
   actions: Record<string, ActionDefinition>;
   organizationOf?: (executor: Executor, id: string) => Promise<string | null>;
-  spaceOf?: (executor: Executor, id: string) => Promise<string | null>;
-  itemOf?: (executor: Executor, id: string) => Promise<string | null>;
+  spaceOf?: Lookup;
+  itemOf?: Lookup;
   rules?: Record<string, Rule>;
   restrictions?: Record<string, Restriction>;
 }

@@ -365,6 +365,35 @@ export class TemplatesController {
     return this.#services.templates.list({ level: "organization", organizationId });
   }
 
+  @Get("organizations/:organizationId/templates/built-in")
+  @Permission("organization.templates.manage", organization)
+  @ApiRoute({
+    summary: "List the built-in templates",
+    description:
+      "Lists the templates that ship with Lunedo, in the language of the caller. They cannot be changed; duplicate one to adapt it.",
+    tags: [TAG],
+    params: organizationParams,
+    response: {
+      description: "Built-in templates.",
+      schema: templates,
+      example: [
+        {
+          ...exampleTemplate,
+          id: "builtin:team-meeting",
+          level: "builtIn",
+          spaceId: null,
+          category: "meetings",
+          updatedAt: null,
+        },
+      ],
+    },
+  })
+  async builtInTemplates(@Req() request: FastifyRequest) {
+    const actor = actorOf(request);
+    const language = await this.#services.templates.language(actor);
+    return this.#services.templates.builtIn(language).filter((template) => !template.knowledgeBase);
+  }
+
   @Post("organizations/:organizationId/templates")
   @Permission("organization.templates.manage", organization)
   @ApiRoute({
@@ -550,7 +579,13 @@ export class TemplatesController {
     params: spaceSettingParams,
     body: settingUpdateSchema,
     bodyExample: { value: "live" },
-    errors: ["invalidSetting", "settingLocked", "settingBelowMinimum", "settingAboveMaximum"],
+    errors: [
+      "invalidSetting",
+      "settingLocked",
+      "settingBelowMinimum",
+      "settingAboveMaximum",
+      "settingNotAtLevel",
+    ],
   })
   async updateSpaceSetting(
     @Param("spaceId") spaceId: string,

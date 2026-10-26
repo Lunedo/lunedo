@@ -3,7 +3,15 @@ import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { initI18n } from "../i18n/index.js";
 import { renderWithProviders } from "../testing/render.js";
-import { filterSlashCommands, slashCommands, slashMenuOpen, slashSuggestionItems } from "./slash-items.js";
+import {
+  filterSlashCommands,
+  recentSlashCommands,
+  rememberSlashCommand,
+  sizedTable,
+  slashCommands,
+  slashMenuOpen,
+  slashSuggestionItems,
+} from "./slash-items.js";
 import { moveIndex, SuggestionList, type SuggestionListHandle } from "./suggestion-list.js";
 
 describe("slash commands", () => {
@@ -132,5 +140,43 @@ describe("suggestion list", () => {
     expect(moveIndex(0, -1, 3)).toBe(2);
     expect(moveIndex(2, 1, 3)).toBe(0);
     expect(moveIndex(0, 1, 0)).toBe(0);
+  });
+});
+
+describe("the slash menu extras", () => {
+  it("lists recently used blocks first while nothing is typed", async () => {
+    const i18n = await initI18n(["en"]);
+    localStorage.removeItem("lunedo.recentBlocks");
+    rememberSlashCommand("taskList");
+    rememberSlashCommand("table");
+    expect(recentSlashCommands()).toEqual(["table", "taskList"]);
+    const items = slashSuggestionItems("", i18n.t);
+    expect(items.slice(0, 2).map((item) => [item.id, item.group])).toEqual([
+      ["recent:table", "Recently used"],
+      ["recent:taskList", "Recently used"],
+    ]);
+    expect(slashSuggestionItems("tab", i18n.t).some((item) => item.id.startsWith("recent:"))).toBe(false);
+  });
+
+  it("inserts a table of the typed size", async () => {
+    const i18n = await initI18n(["de"]);
+    expect(sizedTable("tabelle 4x3")).toEqual({ columns: 4, rows: 3 });
+    expect(sizedTable("table 2 × 5")).toEqual({ columns: 2, rows: 5 });
+    expect(sizedTable("tabelle 40x3")).toBeNull();
+    expect(slashMenuOpen("tabelle 4x3", i18n.t)).toBe(true);
+    const [item] = slashSuggestionItems("tabelle 4x3", i18n.t);
+    expect(item?.label).toBe("Tabelle 4 × 3");
+  });
+
+  it("shows keyboard hints under the entries", async () => {
+    await renderWithProviders(
+      <SuggestionList
+        items={[{ id: "a", label: "Table", select: () => undefined }]}
+        label="Blocks"
+        emptyText="Nothing"
+        hints="↑↓ select · ↵ insert · Esc close"
+      />,
+    );
+    expect(screen.getByText("↑↓ select · ↵ insert · Esc close")).toBeTruthy();
   });
 });

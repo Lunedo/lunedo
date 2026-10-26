@@ -19,6 +19,7 @@ import type { SettingsService } from "../settings/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import { insertInitialWhiteboard } from "../whiteboards/initial.js";
 import { actorIdOf, SpaceError } from "./common.js";
+import { spaceDisplayName } from "./display-name.js";
 import { insertInitialDocument, type PageDocumentService } from "./documents.js";
 import { positionBetween } from "./fractional-index.js";
 import {
@@ -59,6 +60,8 @@ export interface ItemLink {
 }
 
 const LINK_TARGET_KINDS: ReadonlySet<string> = new Set<TreeItemKind>(["page", "folder", "whiteboard"]);
+
+export type ChildItem = TreeItem & { updatedBy: { id: string; name: string | null } | null };
 
 export interface TreeItem {
   id: string;
@@ -390,6 +393,15 @@ export async function checkParent(
   }
   if (knowledgeBase && row.kind !== "folder" && parentId !== translationOf)
     throw knowledgeBasePlacementError();
+  if (knowledgeBase && row.kind === "folder") {
+    const writable = await authorization.explain(
+      actor,
+      "item.edit",
+      { type: "item", id: parentId },
+      { executor: tx, fresh: true },
+    );
+    if (!writable.allowed) throw new ForbiddenError(writable);
+  }
   const meeting = await tx.execute<{ item_id: string }>(
     sql`select item_id from meetings where item_id = ${parentId}`,
   );
@@ -522,7 +534,7 @@ export class TreeService {
     spaceId: string,
     parentId: string | null,
     options: { after?: string | undefined; limit?: number } = {},
-  ): Promise<{ items: TreeItem[]; next: string | null }> {
+  ): Promise<{ items: ChildItem[]; next: string | null }> {
     const limit = Math.min(Math.max(options.limit ?? MAX_TREE_PAGE, 1), MAX_TREE_PAGE);
     const result = await this.#database.execute<ItemRow>(sql`
       ${this.#select(viewer)}
@@ -540,10 +552,40 @@ export class TreeService {
       order by t.position
       limit ${limit + 1}`);
     const rows = result.rows.slice(0, limit);
+    const editors = await this.#editors(
+      viewer,
+      rows.map((row) => row.id),
+    );
     return {
-      items: rows.map(toItem),
+      items: rows.map((row) => ({ ...toItem(row), updatedBy: editors.get(row.id) ?? null })),
       next: result.rows.length > limit ? (rows.at(-1)?.position ?? null) : null,
     };
+  }
+
+  async #editors(
+    viewer: Principal,
+    itemIds: readonly string[],
+  ): Promise<Map<string, { id: string; name: string | null }>> {
+    if (itemIds.length === 0) return new Map();
+    const result = await this.#database.execute<{
+      id: string;
+      editor_id: string;
+      editor_name: string | null;
+    }>(sql`
+      select x.id, x.editor_id, ${this.#people.visibleName(viewer, sql`a`)} as editor_name
+      from (
+        select t.id, case
+          when t.kind = 'page' and t.mode = 'publish' then v.created_by
+          when t.kind = 'page' then d.updated_by
+          when t.kind = 'whiteboard' then w.updated_by
+        end as editor_id
+        from tree_items t
+        left join page_versions v on v.id = t.published_version_id
+        left join page_documents d on d.item_id = t.id
+        left join whiteboard_documents w on w.item_id = t.id
+        where t.id = any(${sql.param([...itemIds])}::uuid[])
+      ) x join accounts a on a.id = x.editor_id`);
+    return new Map(result.rows.map((row) => [row.id, { id: row.editor_id, name: row.editor_name }]));
   }
 
   async get(
@@ -824,6 +866,10 @@ export class TreeService {
     const targetSpaceId = target.spaceId ?? sourceSpaceId;
     await this.#requireEdit(actor, sourceSpaceId);
     if (targetSpaceId !== sourceSpaceId) await this.#requireEdit(actor, targetSpaceId);
+    if (await isKnowledgeBase(this.#database, sourceSpaceId)) {
+      const movable = await this.#authorization.explain(actor, "item.edit", { type: "item", id: itemId });
+      if (!movable.allowed) throw new ForbiddenError(movable);
+    }
 
     await this.#database
       .transaction(async (tx) => {
@@ -1031,7 +1077,7 @@ export class TreeService {
     const limit = Math.min(Math.max(options.limit ?? 20, 1), 50);
     const kinds = options.kinds ?? ["page", "folder"];
     const result = await this.#database.execute<ItemRow & { space_key: string; space_name: string }>(sql`
-      select found.*, s.key as space_key, s.name as space_name from (${this.#select(viewer)}
+      select found.*, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name from (${this.#select(viewer)}
         where t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`ts`)}) found
       join spaces s on s.id = found.space_id
       where ${this.#authorization.spaceFilter(viewer, sql`s`)}

@@ -1,5 +1,5 @@
 import { classNames, focusMainHeading, IconButton, useToast } from "@lunedo/ui";
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,12 @@ import { useOrganizationState } from "./shell-context.js";
 const MAX_TIMER_MS = 2_147_483_647;
 
 export const announcementKeys = { shown: ["announcements", "shown"] as const };
+
+export const shownAnnouncementsQuery = queryOptions({
+  queryKey: announcementKeys.shown,
+  staleTime: 60_000,
+  queryFn: () => request(() => api.GET("/api/v1/announcements")),
+});
 
 export interface BannerAnnouncement {
   id: string;
@@ -88,13 +94,13 @@ export function AnnouncementBanner({
           : t("announcements.organizationRegion")
       }
       className={classNames(
-        "flex items-center gap-3 border-b border-border px-4 py-2",
-        warning ? "bg-warning-soft" : "bg-info-soft",
+        "flex min-h-8 items-center gap-2 border-b border-l-2 border-border bg-bg py-1 pr-2 pl-4",
+        warning ? "border-l-warning" : "border-l-accent",
       )}
     >
       <Glyph
         aria-hidden
-        className={classNames("size-icon shrink-0", warning ? "text-warning" : "text-info")}
+        className={classNames("size-icon-sm shrink-0", warning ? "text-warning" : "text-accent")}
       />
       <p className="min-w-0 flex-1 text-sm wrap-anywhere text-text">
         {warning ? <span className="sr-only">{t("announcements.warningLabel")} </span> : null}
@@ -127,12 +133,7 @@ export function AnnouncementBanners() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const organization = useOrganizationState();
-  const shown = useQuery({
-    queryKey: announcementKeys.shown,
-    throwOnError: false,
-    staleTime: 60_000,
-    queryFn: () => request(() => api.GET("/api/v1/announcements")),
-  });
+  const shown = useQuery({ ...shownAnnouncementsQuery, throwOnError: false });
   const announcements = shown.data ?? [];
   const now = useNow(announcements);
   const dismiss = useMutation({

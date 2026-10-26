@@ -1,7 +1,7 @@
 import type { Areas, RoleScope } from "@lunedo/shared";
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   type OwnOrganization,
   organizationsQuery,
@@ -23,6 +23,8 @@ export interface OrganizationState {
   can(action: string): boolean;
   grantableAreas(scope: RoleScope): Areas;
   permissionsLoaded: boolean;
+  settled: boolean;
+  switchOrganization(organizationId: string): void;
 }
 
 const OrganizationContext = createContext<OrganizationState | null>(null);
@@ -59,12 +61,30 @@ export function chooseOrganization(
   );
 }
 
+export async function currentOrganizationId(
+  queryClient: QueryClient,
+  session: SessionInfo,
+  fromRoute: string | undefined,
+): Promise<string | null> {
+  if (fromRoute) return fromRoute;
+  const organizations = await queryClient.ensureQueryData(organizationsQuery).catch(() => []);
+  return (
+    chooseOrganization(organizations, undefined, rememberedOrganization(session.account?.id ?? ""))?.id ??
+    null
+  );
+}
+
 export function OrganizationProvider({ session, children }: { session: SessionInfo; children: ReactNode }) {
   const params = useParams({ strict: false }) as { organizationId?: string };
   const organizations = useQuery({ ...organizationsQuery, throwOnError: false });
   const accountId = session.account?.id ?? "";
   const list = organizations.data ?? [];
-  const organization = chooseOrganization(list, params.organizationId, rememberedOrganization(accountId));
+  const [chosen, setChosen] = useState<string | null>(null);
+  const organization = chooseOrganization(
+    list,
+    params.organizationId,
+    chosen ?? rememberedOrganization(accountId),
+  );
   const routeOrganization = params.organizationId ?? null;
   const organizationId = routeOrganization ?? organization?.id ?? null;
   const permissions = useQuery({ ...permissionsQuery(organizationId), throwOnError: false });
@@ -79,6 +99,14 @@ export function OrganizationProvider({ session, children }: { session: SessionIn
     if (organization && isAccentColor(organization.accentColor)) setAccentColor(organization.accentColor);
   }, [organization]);
 
+  const switchOrganization = useCallback(
+    (id: string) => {
+      if (accountId) rememberOrganization(accountId, id);
+      setChosen(id);
+    },
+    [accountId],
+  );
+
   const value = useMemo<OrganizationState>(() => {
     const allowed = permissions.data;
     return {
@@ -90,8 +118,19 @@ export function OrganizationProvider({ session, children }: { session: SessionIn
       can: (action) => (allowed ? allowed.instance.has(action) || allowed.organization.has(action) : false),
       grantableAreas: (scope) => (allowed?.grantableAreas[scope] as Areas | undefined) ?? {},
       permissionsLoaded: allowed !== undefined,
+      settled: !organizations.isPending && !permissions.isPending,
+      switchOrganization,
     };
-  }, [session, list, organization, organizationId, permissions.data]);
+  }, [
+    session,
+    list,
+    organization,
+    organizationId,
+    permissions.data,
+    organizations.isPending,
+    permissions.isPending,
+    switchOrganization,
+  ]);
 
   return <OrganizationContext value={value}>{children}</OrganizationContext>;
 }

@@ -12,6 +12,8 @@ function entry(value: boolean): SettingEntry {
     defaultValue: false,
     source: value ? "instance" : "default",
     lockedBy: null,
+    stricterOnly: null,
+    minimum: null,
     locked: false,
     lockable: false,
     levelsBelow: [],

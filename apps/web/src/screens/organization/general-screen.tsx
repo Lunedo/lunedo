@@ -1,8 +1,17 @@
 import { organizationNameSchema, slugSchema } from "@lunedo/shared";
-import { Button, ConfirmDialog, Notice, Section, SettingRow, Skeleton, useToast } from "@lunedo/ui";
+import {
+  Button,
+  ConfirmDialog,
+  FieldGrid,
+  Notice,
+  Section,
+  SettingRow,
+  Skeleton,
+  useToast,
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Building2, ImageUp, LogOut, Trash2 } from "lucide-react";
+import { ImageUp, LogOut, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -14,6 +23,7 @@ import {
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { IMAGE_MAX_BYTES, IMAGE_TYPES, toBase64 } from "../../components/image-upload.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { HelpTargetSection } from "../../knowledge-bases/help-target.js";
@@ -24,16 +34,6 @@ import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/general");
-
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
-const LOGO_MAX_BYTES = 256 * 1024;
-
-async function toBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
 
 export function OrganizationGeneralScreen() {
   const { t } = useTranslation();
@@ -47,12 +47,7 @@ export function OrganizationGeneralScreen() {
   const membership = state.organizations.find((entry) => entry.id === organizationId);
 
   return (
-    <SettingsPage
-      title={t("organization.general.title")}
-      description={t("organization.general.description")}
-      icon={Building2}
-      organizationId={organizationId}
-    >
+    <SettingsPage title={t("organization.general.title")} description={t("organization.general.description")}>
       {organization.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {organization.data ? (
         <ProfileSection
@@ -63,16 +58,6 @@ export function OrganizationGeneralScreen() {
       ) : null}
       <Section title={t("organization.general.branding")}>
         {organization.data ? <LogoRow organization={organization.data} editable={canUpdate} /> : null}
-        <SettingsList
-          settings={settings.data}
-          keys={["branding.accentColor"]}
-          level="organization"
-          {...(organization.data ? { organizationName: organization.data.name } : {})}
-          canManage={() => canManageSettings}
-          onChange={async (key, change) => {
-            await mutation.mutateAsync({ key, change });
-          }}
-        />
       </Section>
       <Section title={t("organization.general.localeDefaults")}>
         <SettingsList
@@ -115,7 +100,7 @@ function ProfileSection({
   };
   return (
     <Section title={t("organization.general.profile")}>
-      <div className="grid gap-4 p-4 sm:grid-cols-2">
+      <FieldGrid className="p-4">
         <AutoSaveTextField
           label={t("organization.general.name")}
           value={organization.name}
@@ -126,6 +111,7 @@ function ProfileSection({
         <AutoSaveTextField
           label={t("organization.general.slug")}
           hint={t("organization.general.slugHint")}
+          help={t("organization.general.slugHelp")}
           value={organization.slug}
           schema={slugSchema}
           invalidMessage={t("validation.slug")}
@@ -133,7 +119,7 @@ function ProfileSection({
           className="font-mono"
           onSave={(slug) => save({ slug })}
         />
-      </div>
+      </FieldGrid>
     </Section>
   );
 }
@@ -159,7 +145,7 @@ function LogoRow({
   };
 
   const upload = async (file: File) => {
-    if (!(LOGO_TYPES as readonly string[]).includes(file.type) || file.size > LOGO_MAX_BYTES) {
+    if (!(IMAGE_TYPES as readonly string[]).includes(file.type) || file.size > IMAGE_MAX_BYTES) {
       toast({ title: t("failures.uploadLogo"), description: t("problems.invalidLogo"), variant: "error" });
       return;
     }
@@ -169,7 +155,7 @@ function LogoRow({
       await request(() =>
         api.PUT("/api/v1/organizations/{organizationId}/logo", {
           params: { path: { organizationId: organization.id } },
-          body: { contentType: file.type as (typeof LOGO_TYPES)[number], data },
+          body: { contentType: file.type as (typeof IMAGE_TYPES)[number], data },
         }),
       );
       await refresh();
@@ -186,6 +172,7 @@ function LogoRow({
     <SettingRow
       label={t("organization.general.logo")}
       description={t("organization.general.logoHint")}
+      help={t("organization.general.logoHelp")}
       control={
         <div className="flex flex-wrap items-center gap-3">
           {organization.logoRef ? (
@@ -202,7 +189,7 @@ function LogoRow({
               <input
                 ref={input}
                 type="file"
-                accept={LOGO_TYPES.join(",")}
+                accept={IMAGE_TYPES.join(",")}
                 className="sr-only"
                 aria-label={t("organization.general.uploadLogo")}
                 tabIndex={-1}
@@ -262,6 +249,7 @@ function LeaveSection({ organizationId, name }: { organizationId: string; name: 
       <SettingRow
         label={t("organization.general.leave", { name })}
         description={t("organization.general.leaveDescription")}
+        help={t("organization.general.leaveHelp")}
         control={
           <Button variant="danger" icon={LogOut} onClick={() => setOpen(true)}>
             {t("organization.general.leaveAction")}

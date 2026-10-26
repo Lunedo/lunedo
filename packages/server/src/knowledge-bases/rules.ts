@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 import { organizationLanguage } from "../settings/sql.js";
 import { SpaceError } from "../spaces/common.js";
@@ -6,6 +6,19 @@ import type { SpaceType, TreeItemKind } from "../spaces/schema.js";
 import { articleLanguages } from "./translations.js";
 
 export const KNOWLEDGE_BASE_KINDS: ReadonlySet<TreeItemKind> = new Set<TreeItemKind>(["page", "folder"]);
+
+function articleOfCategories(item: SQL): SQL {
+  return sql`${item}.kind = 'page' and ${item}.trash_entry_id is null and ${item}.archived_root_id is null
+    and ${item}.translation_of is null`;
+}
+
+export function countedArticle(item: SQL): SQL {
+  return sql`(${articleOfCategories(item)} and (${item}.mode = 'live' or ${item}.published_version_id is not null))`;
+}
+
+export function draftArticle(item: SQL): SQL {
+  return sql`(${articleOfCategories(item)} and ${item}.mode = 'publish' and ${item}.published_version_id is null)`;
+}
 
 export async function spaceTypeOf(executor: Executor, spaceId: string): Promise<SpaceType | null> {
   const result = await executor.execute<{ type: SpaceType }>(

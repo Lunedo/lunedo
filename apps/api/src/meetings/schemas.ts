@@ -1,21 +1,28 @@
 import {
+  AGENDA_TASK_TEXT_MAX_LENGTH,
+  ATTENDANCE_WINDOW,
   attendanceValues,
+  GUEST_NAME_MAX_LENGTH,
+  GUEST_NOTE_MAX_LENGTH,
   MAX_INTERVAL,
+  MAX_OVERVIEW_LINKS,
   MAX_SERIES_MEMBERS,
   MAX_STATEMENT_LENGTH,
   MAX_TOPIC_LABELS,
   meetingReminders,
   meetingStates,
+  overviewModules,
   rhythmFrequencies,
   SERIES_NAME_MAX_LENGTH,
   scheduleSources,
   TOPIC_TITLE_MAX_LENGTH,
   topicOutcomes,
   topicStatuses,
+  UPDATE_TEXT_MAX_LENGTH,
   weekdays,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleDocument } from "../spaces/schemas.js";
 
 const weekday = z.enum(weekdays).describe("Weekday as in iCalendar: `MO` to `SU`.");
@@ -152,6 +159,7 @@ const memberSchema = z
   .object({
     id: uuid("Account ID."),
     name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+    pictureRef: pictureRefField,
     active: z
       .boolean()
       .describe(
@@ -180,6 +188,12 @@ export const meetingSummarySchema = z
     durationMinutes: z.number().int().describe("Duration in minutes."),
     attendees: z.number().int().describe("Number of attendees."),
     present: z.number().int().describe("Number of attendees marked present."),
+    extra: z.boolean().describe("True for an additional meeting outside the rhythm."),
+    next: z
+      .boolean()
+      .describe(
+        "True for the next meeting of the series: the earliest one that is neither held nor skipped.",
+      ),
   })
   .describe("A meeting of a series.");
 
@@ -192,7 +206,72 @@ export const exampleMeetingSummary = {
   durationMinutes: 45,
   attendees: 5,
   present: 0,
+  extra: false,
+  next: true,
 };
+
+const overviewModuleSchema = extensibleEnum(overviewModules, "A module of the series overview.");
+
+export const overviewSchema = z
+  .object({
+    columns: z
+      .array(z.array(overviewModuleSchema))
+      .length(2)
+      .describe("Modules of the left and the right column, from top to bottom."),
+    hidden: z.array(overviewModuleSchema).describe("Modules that are not shown."),
+    links: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the item."),
+            title: z.string().describe("Title of the item."),
+            kind: z.string().describe("Kind of the item, such as `page` or `folder`."),
+            spaceKey: z.string().describe("Key of its space."),
+          })
+          .describe("A pinned item."),
+      )
+      .describe("Pinned items for the Links module that the caller can open, in their order."),
+  })
+  .describe("The overview of the series, the same for all members.");
+
+export const saveOverviewSchema = z
+  .object({
+    columns: z
+      .array(z.array(z.string().max(40)).max(overviewModules.length))
+      .length(2)
+      .describe(`Modules of the left and the right column. Known modules: ${overviewModules.join(", ")}.`),
+    hidden: z
+      .array(z.string().max(40))
+      .max(overviewModules.length)
+      .describe("Modules that are not shown. Modules left out anywhere are hidden too."),
+    links: z
+      .array(uuid("A page, folder, blog post or whiteboard of the same space."))
+      .max(MAX_OVERVIEW_LINKS)
+      .describe(`Pinned items, up to ${MAX_OVERVIEW_LINKS}.`),
+  })
+  .strict()
+  .describe("The overview layout.");
+
+export const attendanceRatesSchema = z
+  .array(
+    z
+      .object({
+        id: uuid("Account ID of the member."),
+        name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+        pictureRef: pictureRefField,
+        present: z.number().int().describe("Meetings the member was marked present in."),
+        meetings: z.number().int().describe("Meetings counted."),
+      })
+      .describe("Attendance of one member."),
+  )
+  .describe(
+    `Attendance of the members over the last ${ATTENDANCE_WINDOW} held meetings the caller can read.`,
+  );
+
+export const extraMeetingSchema = z
+  .object({ startsAt: inputTimestamp("Start of the additional meeting.") })
+  .strict()
+  .describe("An additional meeting outside the rhythm. It shows the open topics of the series.");
 
 export const seriesSchema = z
   .object({
@@ -233,6 +312,7 @@ export const seriesSchema = z
       .nullable()
       .describe("The next meeting, or null when the series has ended."),
     openTopics: z.number().int().describe("Open running topics the caller can see."),
+    overview: overviewSchema,
     createdAt: timestamp("When the series was created."),
   })
   .describe("A meeting series.");
@@ -244,7 +324,15 @@ export const exampleSeries = {
   parentId: null,
   archived: false,
   oneOnOne: false,
-  members: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", active: true, canRead: true }],
+  members: [
+    {
+      id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+      name: "Anna Berger",
+      pictureRef: null,
+      active: true,
+      canRead: true,
+    },
+  ],
   schedule: {
     rhythm: { frequency: "weekly", interval: 1, weekdays: ["MO"] },
     recurrence: "FREQ=WEEKLY;BYDAY=MO",
@@ -259,6 +347,14 @@ export const exampleSeries = {
   calendarUid: null,
   upcoming: exampleMeetingSummary,
   openTopics: 3,
+  overview: {
+    columns: [
+      ["topics", "tasks"],
+      ["meetings", "decisions"],
+    ],
+    hidden: ["attendance", "links"],
+    links: [],
+  },
   createdAt: "2026-10-05T08:00:00.000Z",
 };
 
@@ -275,6 +371,23 @@ export const seriesListSchema = z
   )
   .describe("The meeting series of the space the caller can see.");
 
+const adjacentMeetingSchema = z
+  .object({
+    id: uuid("ID of the meeting."),
+    title: z.string().describe("Title."),
+    startsAt: timestamp("Start.").nullable(),
+  })
+  .describe("A neighboring meeting.");
+
+const historyEntrySchema = z
+  .object({
+    meetingId: uuid("Meeting of the update."),
+    meetingTitle: z.string().describe("Title of that meeting."),
+    startsAt: timestamp("Start of that meeting.").nullable(),
+    text: z.string().describe("The update as plain text."),
+  })
+  .describe("An earlier update.");
+
 export const meetingSchema = z
   .object({
     id: uuid("ID of the meeting page."),
@@ -285,6 +398,11 @@ export const meetingSchema = z
       .describe("Name of the series, or null when the caller cannot read it."),
     title: z.string().describe("Title of the meeting page."),
     state: meetingStateSchema,
+    next: z
+      .boolean()
+      .describe(
+        "True for the next meeting of the series: the earliest one that is neither held nor skipped.",
+      ),
     current: z.boolean().describe("Whether the meeting is open: upcoming or reopened."),
     startsAt: timestamp("Start, or null when not scheduled yet.").nullable(),
     recurrenceId: timestamp("Original start in the rhythm, or null.").nullable(),
@@ -301,6 +419,12 @@ export const meetingSchema = z
     nextMeetingId: uuid(
       "The meeting created when this one was closed or skipped, or null when the caller cannot read the series.",
     ).nullable(),
+    previousMeeting: adjacentMeetingSchema
+      .nullable()
+      .describe("The meeting of the series before this one that the caller can read, skipped ones left out."),
+    followingMeeting: adjacentMeetingSchema
+      .nullable()
+      .describe("The meeting of the series after this one that the caller can read, skipped ones left out."),
     rhythm: z
       .boolean()
       .nullable()
@@ -313,6 +437,7 @@ export const meetingSchema = z
           .object({
             id: uuid("Account ID."),
             name: z.string().nullable().describe("Name, if visible."),
+            pictureRef: pictureRefField,
             attendance: extensibleEnum(attendanceValues, "Attendance, or null when not recorded.").nullable(),
             member: z
               .boolean()
@@ -330,6 +455,19 @@ export const meetingSchema = z
           .describe("An attendee."),
       )
       .describe("Attendees in order."),
+    extra: z.boolean().describe("True for an additional meeting outside the rhythm."),
+    guests: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the guest entry."),
+            name: z.string().describe("Name as entered."),
+            note: z.string().nullable().describe("Optional note, such as the company."),
+            attendance: extensibleEnum(attendanceValues, "Attendance, or null when not recorded.").nullable(),
+          })
+          .describe("A person without an account. Guests have no access to anything."),
+      )
+      .describe("Guests without an account, in order."),
     calendarUid: z.string().nullable().describe("Calendar UID of the meeting when it comes from a calendar."),
   })
   .describe("A meeting.");
@@ -340,6 +478,7 @@ export const exampleMeeting = {
   seriesTitle: exampleSeries.title,
   title: exampleMeetingSummary.title,
   state: "upcoming",
+  next: true,
   current: true,
   startsAt: exampleMeetingSummary.startsAt,
   recurrenceId: exampleMeetingSummary.recurrenceId,
@@ -348,19 +487,169 @@ export const exampleMeeting = {
   closedAt: null,
   closedBy: null,
   nextMeetingId: null,
+  previousMeeting: null,
+  followingMeeting: null,
   rhythm: true,
   attendees: [
     {
       id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
       name: "Anna Berger",
+      pictureRef: null,
       attendance: "present",
       member: true,
       active: true,
       canRead: true,
     },
   ],
+  extra: false,
+  guests: [
+    {
+      id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6c00",
+      name: "Martin Huber",
+      note: "Printer service",
+      attendance: null,
+    },
+  ],
   calendarUid: null,
 };
+
+export const addGuestSchema = z
+  .object({
+    name: z
+      .string()
+      .max(GUEST_NAME_MAX_LENGTH * 2)
+      .describe(`Name of the person, 1 to ${GUEST_NAME_MAX_LENGTH} characters.`),
+    note: z
+      .string()
+      .max(GUEST_NOTE_MAX_LENGTH * 2)
+      .nullable()
+      .optional()
+      .describe(`Optional note, up to ${GUEST_NOTE_MAX_LENGTH} characters.`),
+  })
+  .strict()
+  .describe("A guest without an account, recorded for the attendance of this meeting only.");
+
+export const guestCreatedSchema = z
+  .object({ id: uuid("ID of the guest entry.") })
+  .describe("The new guest entry.");
+
+const agendaTaskSchema = z
+  .object({
+    id: uuid("ID of the task."),
+    text: z.string().describe("Text of the task."),
+    done: z.boolean().describe("Whether the task is done."),
+    dueDate: z.string().nullable().describe("Due date as `YYYY-MM-DD`, or null."),
+    assignee: z
+      .object({ id: uuid("Account ID."), name: z.string().nullable().describe("Name, if visible.") })
+      .nullable()
+      .describe("The assignee, or null."),
+    meetingId: uuid("Meeting the task was written in."),
+  })
+  .describe("A task.");
+
+export const agendaSchema = z
+  .object({
+    meetingId: uuid("The meeting."),
+    seriesId: uuid("Its series."),
+    current: z
+      .boolean()
+      .describe(
+        "True while the meeting is open: then the list holds all open topics. A closed meeting lists the topics it discussed.",
+      ),
+    topics: z
+      .array(
+        z
+          .object({
+            id: uuid("ID of the topic."),
+            title: z.string().describe("Title."),
+            status: extensibleEnum(topicStatuses, "Whether the topic is open."),
+            outcome: extensibleEnum(topicOutcomes, "How a closed topic ended.").nullable(),
+            oneOff: z
+              .boolean()
+              .describe("True for a topic of this meeting only; it closes with the meeting."),
+            owner: z
+              .object({ id: uuid("Account ID."), name: z.string().nullable().describe("Name, if visible.") })
+              .nullable()
+              .describe("Who owns the topic."),
+            labels: z.array(z.string()).describe("Labels."),
+            createdAt: timestamp("When the topic was raised."),
+            update: z
+              .object({
+                text: z
+                  .string()
+                  .describe("The update of this meeting as plain text, paragraphs on own lines."),
+                formatted: z
+                  .boolean()
+                  .describe("True when the update has formatting; change it in the notes then."),
+              })
+              .nullable()
+              .describe("This meeting's update, or null when the notes have no block for the topic."),
+            previous: z
+              .array(historyEntrySchema)
+              .describe("The last earlier updates the caller can read, newest first."),
+            history: z
+              .array(historyEntrySchema)
+              .describe(
+                "All updates of meetings before this one that the caller can read, oldest first. The first is the start of the topic.",
+              ),
+            meetings: z
+              .number()
+              .int()
+              .min(1)
+              .describe("How many meetings of the series the topic has been on, this one included."),
+            tasks: z.array(agendaTaskSchema).describe("Tasks written in the updates of this topic."),
+          })
+          .describe("A topic on the agenda."),
+      )
+      .describe("Topics in the order of the series."),
+    closedTopics: z.number().int().min(0).describe("How many topics were closed in this meeting."),
+    decisions: z
+      .array(
+        z
+          .object({
+            id: uuid("Decision ID."),
+            topicId: uuid("Topic it closed, or null.").nullable(),
+            topicTitle: z.string().nullable().describe("Title of that topic, if visible."),
+            text: z.string().describe("The statement as plain text."),
+          })
+          .describe("A decision."),
+      )
+      .describe("Decisions recorded in this meeting."),
+    tasks: z.array(agendaTaskSchema).describe("Tasks written in this meeting."),
+  })
+  .describe("The agenda of a meeting.");
+
+export const saveUpdateSchema = z
+  .object({
+    text: z
+      .string()
+      .max(UPDATE_TEXT_MAX_LENGTH)
+      .describe(`The update as plain text, up to ${UPDATE_TEXT_MAX_LENGTH} characters. Empty clears it.`),
+  })
+  .strict()
+  .describe("This meeting's update of a topic.");
+
+export const addAgendaTaskSchema = z
+  .object({
+    text: z
+      .string()
+      .max(AGENDA_TASK_TEXT_MAX_LENGTH * 2)
+      .describe(`What is to be done, 1 to ${AGENDA_TASK_TEXT_MAX_LENGTH} characters.`),
+    assigneeId: uuid("Who does it.").nullable().optional(),
+    dueDate: z.iso.date().nullable().optional().describe("Due date as `YYYY-MM-DD`."),
+  })
+  .strict()
+  .describe("A task for a topic, written into this meeting's update.");
+
+export const agendaTaskCreatedSchema = z.object({ id: uuid("ID of the task.") }).describe("The new task.");
+
+export const moveTopicSchema = z
+  .object({
+    topicId: uuid("The topic to move."),
+    afterId: uuid("The topic it goes after, or null for the top.").nullable(),
+  })
+  .strict()
+  .describe("A new place of an open topic in the order of the series.");
 
 export const nextDateSchema = z
   .object({
@@ -410,6 +699,7 @@ export const topicSchema = z
       .nullable()
       .describe("Who owns the topic."),
     labels: z.array(z.string()).describe("Labels."),
+    oneOff: z.boolean().describe("True for a topic of one meeting only; it closes with that meeting."),
     raisedIn: z
       .object({
         id: uuid("Meeting ID."),
@@ -419,7 +709,12 @@ export const topicSchema = z
       .nullable()
       .describe("The meeting the topic was raised in, if the caller can read it."),
     updates: z.number().int().describe("Number of updates the caller can read."),
+    openTasks: z.number().int().describe("Open tasks written in those updates."),
     lastUpdateAt: timestamp("When the last update was written.").nullable(),
+    lastUpdateText: z
+      .string()
+      .nullable()
+      .describe("Text of the last update that is not empty, in one line, or null when there is none."),
     createdAt: timestamp("When the topic was raised."),
     closedAt: timestamp("When the topic was closed.").nullable(),
     decisionId: uuid("The decision that closed the topic.").nullable(),
@@ -434,13 +729,16 @@ export const exampleTopic = {
   outcome: null,
   owner: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
   labels: ["directory"],
+  oneOff: false,
   raisedIn: {
     id: exampleMeetingSummary.id,
     title: exampleMeetingSummary.title,
     startsAt: exampleMeetingSummary.startsAt,
   },
   updates: 3,
+  openTasks: 1,
   lastUpdateAt: "2026-10-05T08:30:00.000Z",
+  lastUpdateText: "Positions stay in AD; the sync runs nightly.",
   createdAt: "2026-09-21T08:00:00.000Z",
   closedAt: null,
   decisionId: null,
@@ -500,6 +798,19 @@ export const createTopicSchema = z
     ownerId: uuid("Owner; the caller when left out.").nullable().optional(),
     labels: z.array(z.string().max(200)).max(MAX_TOPIC_LABELS).optional().describe("Labels."),
     meetingId: uuid("Meeting the topic is raised in; the current meeting when left out.").optional(),
+    oneOff: z
+      .boolean()
+      .optional()
+      .describe(
+        "True for a topic of the given meeting only. It closes when that meeting is closed. Needs `meetingId`.",
+      ),
+    description: z
+      .string()
+      .max(UPDATE_TEXT_MAX_LENGTH)
+      .optional()
+      .describe(
+        `What the topic is about, up to ${UPDATE_TEXT_MAX_LENGTH} characters. It becomes the topic's update in the meeting it is raised in, the first entry of its history. Needs a meeting that has not been closed.`,
+      ),
   })
   .strict()
   .describe("A new running topic. It is added to the upcoming meeting.");
@@ -670,7 +981,11 @@ export const oneOnOneSchema = z
     partners: z
       .array(
         z
-          .object({ id: uuid("Account ID."), name: z.string().nullable().describe("Name.") })
+          .object({
+            id: uuid("Account ID."),
+            name: z.string().nullable().describe("Name."),
+            pictureRef: pictureRefField,
+          })
           .describe("A person."),
       )
       .describe("The other people of the one-on-one."),

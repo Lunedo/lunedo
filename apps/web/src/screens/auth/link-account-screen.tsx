@@ -14,7 +14,8 @@ import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
-import { AuthCard } from "./auth-layout.js";
+import { AUTH_LINK, AuthCard } from "./auth-layout.js";
+import { BackToSignIn } from "./reset-password-screen.js";
 
 type Factor = "totp" | "passkey" | "recoveryCode";
 
@@ -228,11 +229,8 @@ export function LinkAccountScreen() {
   }
   if (pending.isError) {
     return (
-      <AuthCard title={t("auth.link.unavailableTitle")}>
+      <AuthCard title={t("auth.link.unavailableTitle")} links={<BackToSignIn />}>
         <LoadError what={t("failures.loadLink")} error={pending.error} onRetry={() => pending.refetch()} />
-        <Link to="/sign-in" className="text-center font-medium text-accent hover:underline">
-          {t("auth.link.backToSignIn")}
-        </Link>
       </AuthCard>
     );
   }
@@ -241,6 +239,14 @@ export function LinkAccountScreen() {
     <AuthCard
       title={t("auth.link.title", { provider: data.providerName })}
       description={t("auth.link.description", { email: data.email ?? "" })}
+      links={
+        <>
+          <button type="button" className={AUTH_LINK} disabled={declining} onClick={() => void decline()}>
+            {t("auth.link.notMine")}
+          </button>
+          <BackToSignIn />
+        </>
+      }
     >
       <div className="flex items-center gap-3 rounded-md border border-border bg-surface-sunken p-3">
         <KeyRound aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
@@ -371,16 +377,6 @@ export function LinkAccountScreen() {
         </div>
       ) : null}
       <p className="text-sm text-text-muted">{t("auth.link.afterwards", { provider: data.providerName })}</p>
-      <p className="text-center text-sm">
-        <button
-          type="button"
-          className="font-medium text-text-muted hover:underline focus-visible:focus-ring"
-          disabled={declining}
-          onClick={() => void decline()}
-        >
-          {t("auth.link.notMine")}
-        </button>
-      </p>
     </AuthCard>
   );
 }

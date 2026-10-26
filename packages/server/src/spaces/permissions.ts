@@ -36,6 +36,18 @@ export type PermissionChange =
   | { action: "change"; permissionId: string; role: SpaceRole }
   | { action: "remove"; permissionId: string };
 
+export interface SpaceHolder {
+  principalKind: PrincipalKind;
+  principalId: string | null;
+}
+
+function grantsOf(
+  holders: readonly SpaceHolder[],
+  role: SpaceRole,
+): Extract<PermissionChange, { action: "grant" }>[] {
+  return holders.map((holder) => ({ action: "grant" as const, ...holder, role }));
+}
+
 interface StoredPermission extends SpaceGrantRow {
   id: string;
 }
@@ -212,9 +224,9 @@ export class SpacePermissionService {
     }));
   }
 
-  async #states(space: Space, change: PermissionChange, executor: Pick<Database, "execute">) {
+  async #states(space: Space, changes: PermissionChange[], executor: Pick<Database, "execute">) {
     const current = await storedPermissions(executor, space.id);
-    const next = apply(current, change);
+    const next = changes.reduce(apply, current);
     const state = (grants: StoredPermission[]): SpaceAccessState => ({
       organizationId: space.organizationId,
       visibility: space.visibility,
@@ -226,7 +238,7 @@ export class SpacePermissionService {
   async preview(actor: Principal, spaceId: string, change: PermissionChange): Promise<AccessImpact> {
     return this.#database.transaction(async (tx) => {
       const space = await this.#spaces.require(spaceId, tx);
-      const { current, before, after } = await this.#states(space, change, tx);
+      const { current, before, after } = await this.#states(space, [change], tx);
       if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
       if (change.action === "change") await this.#validateRoleChange(tx, current, change);
       return accessImpact(tx, before, after, (account) => this.#people.visibleCondition(actor, account));
@@ -267,6 +279,33 @@ export class SpacePermissionService {
     );
   }
 
+  async previewGrants(
+    actor: Principal,
+    spaceId: string,
+    holders: readonly SpaceHolder[],
+    role: SpaceRole,
+  ): Promise<AccessImpact> {
+    return this.#database.transaction(async (tx) => {
+      const space = await this.#spaces.require(spaceId, tx);
+      const changes = grantsOf(holders, role);
+      const { before, after } = await this.#states(space, changes, tx);
+      for (const change of changes) await this.#validateGrant(tx, space, change, actor);
+      return accessImpact(tx, before, after, (account) => this.#people.visibleCondition(actor, account));
+    });
+  }
+
+  async grant(
+    actor: Principal,
+    spaceId: string,
+    holders: readonly SpaceHolder[],
+    role: SpaceRole,
+  ): Promise<SpacePermissionEntry[]> {
+    await this.#database.transaction(async (tx) => {
+      for (const change of grantsOf(holders, role)) await this.apply(actor, spaceId, change, { tx });
+    });
+    return this.list(spaceId);
+  }
+
   onAccessChange(listener: (tx: Transaction, spaceId: string) => Promise<void>): void {
     this.#listeners.push(listener);
   }
@@ -279,7 +318,7 @@ export class SpacePermissionService {
   ): Promise<SpacePermissionEntry[]> {
     await (options.tx ?? this.#database).transaction(async (tx) => {
       const space = await this.#spaces.lock(tx, spaceId);
-      const { current, before, after } = await this.#states(space, change, tx);
+      const { current, before, after } = await this.#states(space, [change], tx);
       if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
       if (change.action === "change") await this.#validateRoleChange(tx, current, change);
       const administrator = await tx.execute<{ present: boolean }>(sql`

@@ -67,12 +67,13 @@ export function EmergencyRecipients() {
   }));
   return (
     <>
-      <p className="px-4 pt-3 text-sm text-text-muted">
+      <p className="pt-3 text-sm text-text-muted">
         {canManage ? t("emergencyRecipients.description") : t("emergencyRecipients.ownerOnly")}
       </p>
       <SettingRow
         label={t("emergencyRecipients.administrators")}
         description={t("emergencyRecipients.administratorsHint")}
+        help={t("emergencyRecipients.administratorsHelp")}
         control={
           <Switch
             label={t("emergencyRecipients.administrators")}
@@ -87,8 +88,12 @@ export function EmergencyRecipients() {
         }
         status={<SaveIndicator tracker={tracker("administrators")} />}
       />
-      <div className="flex flex-col gap-1 px-4 py-3">
-        <Field label={t("emergencyRecipients.accounts")} hint={t("emergencyRecipients.accountsHint")}>
+      <div className="flex flex-col gap-1 py-3">
+        <Field
+          label={t("emergencyRecipients.accounts")}
+          hint={t("emergencyRecipients.accountsHint")}
+          help={t("emergencyRecipients.accountsHelp")}
+        >
           <Combobox
             multiple
             aria-label={t("emergencyRecipients.accounts")}
@@ -102,11 +107,13 @@ export function EmergencyRecipients() {
         </Field>
         <SaveIndicator tracker={tracker("accounts")} />
       </div>
-      <div className="px-4 py-3">
+      <div className="py-3">
         <AutoSaveTextField
           label={t("emergencyRecipients.addresses")}
           hint={t("emergencyRecipients.addressesHint")}
-          value={current.addresses.join(", ")}
+          help={t("emergencyRecipients.addressesHelp")}
+          multiline
+          value={current.addresses.join("\n")}
           schema={addressList}
           invalidMessage={t("emergencyRecipients.addressesInvalid")}
           disabled={!canManage}

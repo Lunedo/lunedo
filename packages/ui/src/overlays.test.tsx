@@ -1,6 +1,6 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MoreHorizontal, Trash } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Button, IconButton } from "./button.js";
@@ -19,7 +19,7 @@ describe("Menu", () => {
         trigger={<IconButton label="Actions for Lena" icon={MoreHorizontal} tooltip={false} />}
         items={[
           { type: "label", label: "Lena Hofer" },
-          { label: "Edit", onSelect: edit },
+          { label: "Edit", icon: Pencil, onSelect: edit },
           { type: "separator" },
           { label: "Remove", icon: Trash, onSelect: remove, danger: true },
         ]}
@@ -28,10 +28,37 @@ describe("Menu", () => {
     screen.getByRole("button", { name: "Actions for Lena" }).focus();
     await userEvent.keyboard("{Enter}");
     const menu = await screen.findByRole("menu");
-    expect(menu).toBeDefined();
+    expect(menu.className).toContain("overflow-y-auto");
+    expect(menu.style.maxHeight).toBe("var(--radix-dropdown-menu-content-available-height)");
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
     await waitFor(() => expect(remove).toHaveBeenCalledOnce());
     expect(edit).not.toHaveBeenCalled();
+  });
+
+  it("shows a header with name and e-mail and marks the checked entry", async () => {
+    const choose = vi.fn();
+    renderUi(
+      <Menu
+        trigger={<Button>Account</Button>}
+        items={[
+          { type: "header", title: "Lena Hofer", description: "lena@example.test" },
+          { label: "North", icon: Pencil, checked: true, onSelect: choose },
+          { label: "South", icon: Pencil, checked: false, onSelect: choose },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Account" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("Lena Hofer")).toBeDefined();
+    expect(within(menu).getByText("lena@example.test")).toBeDefined();
+    expect(within(menu).getByRole("menuitemcheckbox", { name: "North" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(within(menu).getByRole("menuitemcheckbox", { name: "South" }).getAttribute("aria-checked")).toBe(
+      "false",
+    );
+    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "South" }));
+    expect(choose).toHaveBeenCalledOnce();
   });
 });
 
@@ -74,6 +101,13 @@ describe("Tabs", () => {
       expect(screen.getByRole("tab", { name: /Guests/ }).getAttribute("aria-selected")).toBe("true"),
     );
     expect(screen.getByRole("tabpanel").textContent).toBe("Panel guests");
+  });
+
+  it("scroll their row sideways only, never up and down", () => {
+    renderUi(<TabsProbe />);
+    const row = screen.getByRole("tablist", { name: "Member types" }).parentElement as HTMLElement;
+    expect(row.className).toContain("overflow-x-auto");
+    expect(row.className).toContain("overflow-y-hidden");
   });
 });
 
@@ -352,5 +386,28 @@ describe("SegmentedControl that does not fit", () => {
       if (scrollWidth) Object.defineProperty(HTMLElement.prototype, "scrollWidth", scrollWidth);
       if (clientWidth) Object.defineProperty(HTMLElement.prototype, "clientWidth", clientWidth);
     }
+  });
+});
+
+describe("Menu that runs its action after closing", () => {
+  it("runs the action once the menu is closed and leaves the focus to it", async () => {
+    const events: string[] = [];
+    renderUi(
+      <Menu
+        runAfterClose
+        trigger={<button type="button">Tools</button>}
+        items={[
+          {
+            label: "Insert table",
+            icon: Pencil,
+            onSelect: () => events.push(document.querySelector('[role="menu"]') ? "open" : "closed"),
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Tools" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Insert table" }));
+    await waitFor(() => expect(events).toEqual(["closed"]));
+    expect(document.activeElement).not.toBe(screen.getByRole("button", { name: "Tools" }));
   });
 });

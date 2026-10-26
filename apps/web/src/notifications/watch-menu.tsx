@@ -17,7 +17,7 @@ export function previousChange(status: WatchStatus | undefined): WatchChange {
     : { state: null };
 }
 
-export function WatchMenu({ target, name }: { target: WatchTarget; name: string }) {
+export function useWatchEntries(target: WatchTarget, name: string) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const failed = useFailureToast();
@@ -106,43 +106,64 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
       : watching
         ? t("notifications.watching.menuWatched", { name })
         : t("notifications.watching.menuNotWatched", { name });
+  const dialog = (
+    <Dialog
+      open={muting}
+      onOpenChange={setMuting}
+      title={t("notifications.watching.muteTitle", { name })}
+      description={t("notifications.watching.muteDescription", { name })}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => setMuting(false)}>
+            {t("notifications.watching.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setMuting(false);
+              apply({ state: "muted", keepActionable }, t("notifications.watching.mutedToast", { name }));
+            }}
+          >
+            {t("notifications.watching.muteConfirm")}
+          </Button>
+        </>
+      }
+    >
+      <Checkbox
+        checked={keepActionable}
+        onCheckedChange={setKeepActionable}
+        label={t("notifications.watching.keepActionable")}
+      />
+    </Dialog>
+  );
+  return { items, dialog, icon, label, watching };
+}
+
+export function WatchMenu({
+  target,
+  name,
+  size = "md",
+}: {
+  target: WatchTarget;
+  name: string;
+  size?: "sm" | "md";
+}) {
+  const watch = useWatchEntries(target, name);
   return (
     <>
       <Menu
         align="end"
         trigger={
-          <IconButton label={label} icon={icon} {...(watching ? { variant: "primary" as const } : {})} />
+          <IconButton
+            label={watch.label}
+            icon={watch.icon}
+            size={size}
+            {...(watch.watching ? { variant: "primary" as const } : {})}
+          />
         }
-        items={items}
+        items={watch.items}
       />
-      <Dialog
-        open={muting}
-        onOpenChange={setMuting}
-        title={t("notifications.watching.muteTitle", { name })}
-        description={t("notifications.watching.muteDescription", { name })}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setMuting(false)}>
-              {t("notifications.watching.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setMuting(false);
-                apply({ state: "muted", keepActionable }, t("notifications.watching.mutedToast", { name }));
-              }}
-            >
-              {t("notifications.watching.muteConfirm")}
-            </Button>
-          </>
-        }
-      >
-        <Checkbox
-          checked={keepActionable}
-          onCheckedChange={setKeepActionable}
-          label={t("notifications.watching.keepActionable")}
-        />
-      </Dialog>
+      {watch.dialog}
     </>
   );
 }

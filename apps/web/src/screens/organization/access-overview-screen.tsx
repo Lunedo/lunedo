@@ -120,7 +120,7 @@ function PersonOverview({ organizationId, accountId }: { organizationId: string;
           download
           className="inline-flex min-h-hit items-center gap-2 self-start rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring sm:self-auto"
         >
-          <Download aria-hidden="true" className="size-icon" />
+          <Download aria-hidden="true" className="size-icon-md" />
           {t("organization.access.exportPerson")}
         </a>
       </div>
@@ -153,13 +153,7 @@ export function AccessOverviewScreen() {
   const state = useOrganizationState();
   const [person, setPerson] = useState<string | null>(null);
   return (
-    <SettingsPage
-      width="wide"
-      title={t("organization.access.title")}
-      description={t("organization.access.description")}
-      icon={UserSearch}
-      organizationId={organizationId}
-    >
+    <SettingsPage title={t("organization.access.title")} description={t("organization.access.description")}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="w-full min-w-0 sm:flex-1">
@@ -181,7 +175,7 @@ export function AccessOverviewScreen() {
             download
             className="inline-flex min-h-hit items-center gap-2 self-start rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring sm:self-auto"
           >
-            <Download aria-hidden="true" className="size-icon" />
+            <Download aria-hidden="true" className="size-icon-md" />
             {t("organization.access.exportAll")}
           </a>
         </div>

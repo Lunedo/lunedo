@@ -1,5 +1,6 @@
 import {
   defaultSpacePermissionsSchema,
+  ERASURE_REASON_MAX_LENGTH,
   isValidSpaceKey,
   normalizeSpaceKey,
   SpaceError,
@@ -11,9 +12,16 @@ import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { nameCursor, pageQuerySchema, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
+import {
+  nameCursor,
+  pageQuerySchema,
+  pageRequest,
+  pageSchema,
+  searchQuerySchema,
+  toApiPage,
+} from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
-import { organizationIdParams, uuid } from "../http/schemas.js";
+import { organizationIdParams, timestamp, uuid } from "../http/schemas.js";
 import {
   createSpaceSchema,
   exampleSpace,
@@ -28,6 +36,46 @@ const TAG = "Spaces";
 const organization = { type: "organization", param: "organizationId" } as const;
 const keyParams = organizationIdParams.extend({ key: z.string().max(20).describe("Key to check.") });
 const appointParams = organizationIdParams.extend({ spaceId: uuid("ID of the space.") });
+
+const organizationSpacesQuery = searchQuerySchema
+  .extend({
+    type: z.enum(["standard", "knowledgeBase"]).optional().describe("Only spaces of this type."),
+    state: z.enum(["active", "archived"]).optional().describe("Only active or only archived spaces."),
+  })
+  .strict();
+
+const organizationSpaceSchema = z
+  .object({
+    id: uuid("ID of the space."),
+    key: z.string().describe("Key of the space."),
+    name: z
+      .string()
+      .nullable()
+      .describe("Name of the space, or null for a confidential space, whose name administrators do not see."),
+    type: z.string().describe("`standard` or `knowledgeBase`."),
+    visibility: visibilitySchema,
+    confidential: z.boolean().describe("Whether the space is confidential."),
+    archived: z.boolean().describe("Whether the space is archived."),
+    administrators: z
+      .array(
+        z
+          .object({
+            kind: z.enum(["account", "group"]).describe("Whether a person or a group holds the role."),
+            id: uuid("ID of the account or group."),
+            name: z.string().describe("Name of the account or group."),
+          })
+          .describe("A holder of the space admin role."),
+      )
+      .describe("Space admins, ordered by name. Empty for confidential spaces."),
+    pages: z.number().int().describe("Pages and blog posts in the space, without the trash."),
+    storageBytes: z.number().int().describe("Size of all files attached in the space, in bytes."),
+    lastActivityAt: timestamp("When content in the space last changed."),
+    canManage: z
+      .boolean()
+      .describe("Whether the caller may change the settings of the space and archive it."),
+    canDelete: z.boolean().describe("Whether the caller may delete the space."),
+  })
+  .describe("A space of the organization as administrators see it.");
 
 const suggestionQuery = z
   .object({ name: z.string().trim().min(1).max(100).describe("Name of the new space.") })
@@ -72,6 +120,18 @@ const defaultsBodySchema = z
   })
   .strict()
   .describe("Default permissions for new spaces.");
+
+const becomeAdministratorSchema = z
+  .object({
+    reason: z
+      .string()
+      .max(ERASURE_REASON_MAX_LENGTH * 2)
+      .describe(
+        `Why the caller needs the role, 1 to ${ERASURE_REASON_MAX_LENGTH} characters; it goes into the audit log and to the space admins.`,
+      ),
+  })
+  .strict()
+  .describe("The reason.");
 
 const appointSchema = z
   .object({ accountId: uuid("Person of the organization who becomes space admin.") })
@@ -253,6 +313,57 @@ export class OrganizationSpacesController {
     );
   }
 
+  @Get(":organizationId/spaces")
+  @Permission("organization.spaces.view", organization)
+  @ApiRoute({
+    summary: "List the spaces of an organization",
+    description:
+      "Lists every space of the organization except personal spaces and one-on-one spaces, with its space admins, size and last activity. Confidential spaces appear with their key only.",
+    tags: [TAG],
+    params: organizationIdParams,
+    query: organizationSpacesQuery,
+    response: {
+      description: "Spaces of the organization.",
+      schema: pageSchema(organizationSpaceSchema, "Spaces, ordered by name."),
+      example: {
+        items: [
+          {
+            id: exampleSpace.id,
+            key: exampleSpace.key,
+            name: exampleSpace.name,
+            type: "standard",
+            visibility: "organization",
+            confidential: false,
+            archived: false,
+            administrators: [
+              { kind: "account", id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Ada Lovelace" },
+            ],
+            pages: 42,
+            storageBytes: 1048576,
+            lastActivityAt: "2026-10-24T08:15:00.000Z",
+            canManage: true,
+            canDelete: true,
+          },
+        ],
+        nextCursor: null,
+      },
+    },
+  })
+  async organizationSpaces(
+    @Param("organizationId") organizationId: string,
+    @Query() query: z.output<typeof organizationSpacesQuery>,
+    @Req() request: FastifyRequest,
+  ) {
+    return toApiPage(
+      await this.#services.spaces.organizationOverview(
+        actorOf(request),
+        organizationId,
+        pageRequest(query, nameCursor),
+        { type: query.type, state: query.state },
+      ),
+    );
+  }
+
   @Get(":organizationId/spaces-without-administrator")
   @Permission("organization.spaces.view", organization)
   @ApiRoute({
@@ -282,7 +393,7 @@ export class OrganizationSpacesController {
   @ApiRoute({
     summary: "Appoint a space admin",
     description:
-      "Makes a person of the organization space admin of a space that has none. Administrators cannot appoint themselves. The appointment is audited.",
+      "Makes a person of the organization space admin of a space that has none. Administrators cannot appoint themselves. The appointment is audited and the person is notified.",
     tags: [TAG],
     params: appointParams,
     body: appointSchema,
@@ -299,5 +410,26 @@ export class OrganizationSpacesController {
     if (!space || space.organizationId !== organizationId)
       throw new SpaceError("spaceNotFound", "The space does not exist");
     await this.#services.spaces.appointAdministrator(actorOf(request), spaceId, body.accountId);
+  }
+
+  @Post(":organizationId/spaces/:spaceId/self-appointment")
+  @Permission("organization.spaces.manage", organization, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Become space admin of a space",
+    description:
+      "Gives the caller the space admin role in a space of the organization that is not personal, one-on-one or confidential. Requires a reason, which goes into the audit log; the current space admins get a notification and an e-mail with who, when and why. The role is a normal space admin role: visible in the permissions of the space and removable there. Needs a signed-in session; API tokens are refused.",
+    tags: [TAG],
+    params: appointParams,
+    body: becomeAdministratorSchema,
+    bodyExample: { reason: "The team left; the space needs a new owner for its pages" },
+    errors: ["alreadyAdministrator", "invalidHolder", "reasonRequired"],
+  })
+  async becomeAdministrator(
+    @Param("organizationId") organizationId: string,
+    @Param("spaceId") spaceId: string,
+    @Body() body: z.output<typeof becomeAdministratorSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.spaces.becomeAdministrator(actorOf(request), organizationId, spaceId, body.reason);
   }
 }

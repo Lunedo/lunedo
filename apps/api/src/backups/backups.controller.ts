@@ -47,7 +47,7 @@ function presentOverview(overview: BackupOverview): z.input<typeof backupOvervie
     restoredAt: iso(overview.restoredAt),
     nextRunAt: iso(overview.nextRunAt),
     keyConfirmed: overview.keyConfirmed
-      ? { at: overview.keyConfirmed.at.toISOString(), by: overview.keyConfirmed.by }
+      ? { ...overview.keyConfirmed, at: overview.keyConfirmed.at.toISOString() }
       : null,
     lastSuccess: overview.lastSuccess ? presentRun(overview.lastSuccess) : null,
     lastFailure: overview.lastFailure ? presentRun(overview.lastFailure) : null,

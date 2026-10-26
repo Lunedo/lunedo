@@ -1,4 +1,4 @@
-import en from "../i18n/locales/en.json" with { type: "json" };
+import { notificationEvents } from "@lunedo/shared";
 import { settingDescriptionKey, settingLabelKey } from "./setting-fields.js";
 
 export interface IndexEntry {
@@ -31,22 +31,6 @@ export const LOCALE_DEFAULT_KEYS = [
   "locale.timeFormat",
   "locale.numberFormat",
   "locale.firstDayOfWeek",
-] as const;
-
-export const INSTANCE_ORGANIZATION_KEYS = [
-  "organizations.selfServiceCreation",
-  "organizations.membersCreateGroups",
-  "organizations.selfRegistration",
-  "organizations.guestExpiryReminderDays",
-  "organizations.guestInactivityDays",
-  "organizations.expiryReminderDays",
-  "organizations.breakGlassMinutes",
-] as const;
-
-export const RETENTION_KEYS = [
-  "audit.retentionDays",
-  "notifications.retentionDays",
-  "apiTokens.publicDocumentation",
 ] as const;
 
 export const SIGN_IN_KEYS = [
@@ -97,10 +81,8 @@ const LOCALE_PREFERENCES = [
   row("locale.firstDayOfWeek", "preferences.firstDayOfWeek"),
 ];
 
-const notificationEvents = (): IndexEntry[] =>
-  Object.keys(en.notifications.events).map((event) =>
-    row(`notifications.${event}`, `notifications.events.${event}`),
-  );
+const notificationEventRows = (): IndexEntry[] =>
+  notificationEvents.map((event) => row(`notifications.${event.id}`, `notifications.events.${event.id}`));
 
 export const NOTIFICATION_DELIVERY_KEYS = [
   "notifications.digestEnabled",
@@ -122,12 +104,6 @@ export const COLLABORATION_KEYS = ["reactions.enabled"] as const;
 
 export const FILE_KEYS = ["files.maxFileSizeMegabytes", "files.keepVersions"] as const;
 
-export const INSTANCE_FILE_KEYS = [
-  "files.maxFileSizeMegabytes",
-  "files.keepVersions",
-  "files.keepVersionsMaximum",
-] as const;
-
 export const SPACE_FILE_KEYS = ["files.keepVersions"] as const;
 
 export const IMPORT_KEYS = [
@@ -146,6 +122,27 @@ export const SHARING_KEYS = [
 
 export const TRASH_MINIMUM_KEYS = ["trash.firstStageMinimumDays", "trash.secondStageMinimumDays"] as const;
 
+export const POLICY_SECTIONS = [
+  { titleKey: "instance.policies.signIn", keys: SIGN_IN_KEYS },
+  { titleKey: "instance.policies.protection", keys: PROTECTION_KEYS },
+  {
+    titleKey: "instance.policies.apiTokens",
+    keys: [...INSTANCE_TOKEN_KEYS, "apiTokens.publicDocumentation"],
+  },
+  { titleKey: "instance.policies.sharing", keys: ["sharing.anyoneLinks", "sharing.anyoneLinkMaxDays"] },
+  { titleKey: "instance.policies.files", keys: ["files.maxFileSizeMegabytes", "files.keepVersionsMaximum"] },
+  { titleKey: "instance.policies.trash", keys: TRASH_MINIMUM_KEYS },
+  { titleKey: "instance.policies.imports", keys: IMPORT_KEYS },
+  {
+    titleKey: "instance.policies.organizationsAndSpaces",
+    keys: ["organizations.selfServiceCreation", "spaces.personalSpaces"],
+  },
+  {
+    titleKey: "instance.policies.retention",
+    keys: ["audit.retentionDays", "identityProviders.syncLogRetentionDays", "notifications.retentionDays"],
+  },
+] as const satisfies readonly { titleKey: string; keys: readonly string[] }[];
+
 export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "organization.content": [
     section("content.pagesSection", PAGE_MODE_KEYS.map(setting)),
@@ -153,13 +150,6 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("content.collaborationSection", COLLABORATION_KEYS.map(setting)),
     section("content.sharingSection", SHARING_KEYS.map(setting)),
     section("content.filesSection", FILE_KEYS.map(setting)),
-  ],
-  "instance.content": [
-    section("content.pagesSection", ["pages.liveVersionIdleMinutes"].map(setting)),
-    section("content.trashSection", [...TRASH_MINIMUM_KEYS, ...TRASH_KEYS].map(setting)),
-    section("content.sharingSection", SHARING_KEYS.map(setting)),
-    section("content.filesSection", INSTANCE_FILE_KEYS.map(setting)),
-    section("content.importsSection", IMPORT_KEYS.map(setting)),
   ],
   "account.preferences": [
     section("preferences.display", [
@@ -183,7 +173,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
   ],
   "account.notifications": [
-    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.eventTypes", notificationEventRows()),
     section("notifications.digest.title", [
       setting("notifications.digestEnabled"),
       setting("notifications.digestTime"),
@@ -204,7 +194,6 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
     section("organization.general.branding", [
       row("logo", "organization.general.logo", "organization.general.logoHint"),
-      setting("branding.accentColor"),
     ]),
     section("organization.general.localeDefaults", LOCALE_DEFAULT_KEYS.map(setting)),
   ],
@@ -217,7 +206,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("organization.domains.guests", GUEST_KEYS.map(setting)),
   ],
   "organization.notifications": [
-    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.eventTypes", notificationEventRows()),
     section("notifications.delivery", NOTIFICATION_DELIVERY_KEYS.map(setting)),
   ],
   "organization.announcements": [
@@ -243,6 +232,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
         "spaces.organization.withoutAdminDescription",
       ),
     ]),
+    section("spaces.cleanup.tab", [setting("spaces.cleanupGraceDays")]),
   ],
   "instance.general": [
     section("instance.general.identity", [
@@ -250,14 +240,18 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
       setting("instance.url"),
       setting("branding.accentColor"),
     ]),
-    section("instance.general.localeDefaults", LOCALE_DEFAULT_KEYS.map(setting)),
-    section("instance.general.organizations", INSTANCE_ORGANIZATION_KEYS.map(setting)),
-    section("instance.general.retention", RETENTION_KEYS.map(setting)),
+    section("instance.general.localeDefaults", ["locale.language", "locale.timeZone"].map(setting)),
   ],
-  "instance.security": [
-    section("instance.security.signIn", SIGN_IN_KEYS.map(setting)),
-    section("instance.security.protection", PROTECTION_KEYS.map(setting)),
-    section("instance.security.apiTokens", INSTANCE_TOKEN_KEYS.map(setting)),
+  "instance.security": POLICY_SECTIONS.map((policy) => section(policy.titleKey, policy.keys.map(setting))),
+  "instance.breakGlass": [section("breakGlass.title", [setting("organizations.breakGlassMinutes")])],
+  "instance.mail": [
+    section("notifications.push.title", [setting("notifications.browserPush")]),
+    section("storage.contacts.title", [row("operationsContacts", "storage.contacts.title")]),
+  ],
+  "instance.accounts": [
+    section("spaces.instance.review", [
+      row("personalSpaceReview", "spaces.instance.review", "spaces.instance.reviewDescription"),
+    ]),
   ],
   "instance.storage": [section("storage.reminder.title", [setting("storage.reminder")])],
   "instance.updates": [section("updates.check.title", [setting("operations.updateCheck")])],
@@ -272,23 +266,9 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
       row("emergencyRecipients", "emergencyRecipients.title", "emergencyRecipients.description"),
     ]),
   ],
-  "instance.notifications": [
-    section("notifications.eventTypes", notificationEvents()),
-    section("notifications.delivery", [
-      setting("notifications.digestEnabled"),
-      setting("notifications.digestTime"),
-    ]),
-    section("notifications.push.title", [setting("notifications.browserPush")]),
-  ],
   "instance.announcements": [
     section("announcements.banner", [
       row("announcement", "announcements.title", "announcements.instanceDescription"),
-    ]),
-  ],
-  "instance.personalSpaces": [
-    section("spaces.instance.availability", [setting("spaces.personalSpaces")]),
-    section("spaces.instance.review", [
-      row("personalSpaceReview", "spaces.instance.review", "spaces.instance.reviewDescription"),
     ]),
   ],
 };

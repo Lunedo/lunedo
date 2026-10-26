@@ -174,7 +174,7 @@ function IncludeSettings({
   const [name, setName] = useState(String(attrs.name ?? ""));
   const imported = textOrNull(attrs.sourceTitle);
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-3">
       <Field
         label={t("editor.include.page")}
         hint={

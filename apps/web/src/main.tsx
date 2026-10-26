@@ -3,11 +3,13 @@ import "./styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
+import { watchForUpdates } from "./app-update/app-update.js";
 import { initI18n } from "./i18n/index.js";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root is missing");
 
+watchForUpdates();
 const i18n = await initI18n(navigator.languages);
 
 createRoot(root).render(

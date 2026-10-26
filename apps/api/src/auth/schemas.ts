@@ -9,6 +9,7 @@ import {
   totpCodeSchema,
 } from "@lunedo/shared";
 import { z } from "zod";
+import { pictureRefField } from "../http/schemas.js";
 
 const base64url = (max: number) =>
   z
@@ -136,6 +137,7 @@ const sessionAccount = z
     id: idSchema,
     email: z.string().nullable(),
     name: z.string(),
+    pictureRef: pictureRefField,
     type: z.enum(["standard", "guest", "portal", "service"]).describe("Kind of account."),
     homeOrganizationId: idSchema.nullable().describe("Organization the account belongs to, or null."),
   })

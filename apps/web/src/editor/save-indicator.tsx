@@ -2,11 +2,13 @@ import { Button, Notice } from "@lunedo/ui";
 import { AlertTriangle, Check, CloudOff, LoaderCircle, PencilLine } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { registerUnsavedChanges } from "../app-update/app-update.js";
 import { translateKey } from "../i18n/translate.js";
 import type { CollaborationProblem } from "./collaboration.js";
 import type { SaveState } from "./save-state.js";
 
 const ICONS = {
+  connecting: LoaderCircle,
   editing: PencilLine,
   saving: LoaderCircle,
   saved: Check,
@@ -27,7 +29,9 @@ export function SaveStateIndicator({ state, draft = false }: { state: SaveState;
       <Icon
         aria-hidden="true"
         className={
-          state === "saving" ? "size-icon-sm animate-spin motion-reduce:animate-none" : "size-icon-sm"
+          state === "saving" || state === "connecting"
+            ? "size-icon-sm animate-spin motion-reduce:animate-none"
+            : "size-icon-sm"
         }
       />
       {translateKey(t, draft && state === "saved" ? "editor.save.savedDraft" : `editor.save.${state}`)}
@@ -36,6 +40,7 @@ export function SaveStateIndicator({ state, draft = false }: { state: SaveState;
 }
 
 export function useUnsavedChangesWarning(hasUnsavedChanges: () => boolean): void {
+  useEffect(() => registerUnsavedChanges(hasUnsavedChanges), [hasUnsavedChanges]);
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!hasUnsavedChanges()) return;

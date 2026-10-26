@@ -78,6 +78,7 @@ import {
   MoreHorizontal,
   Palette,
   Plus,
+  RotateCcw,
   Search,
   Settings,
   Share2,
@@ -135,6 +136,16 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     browserTimeZone: "This browser",
     undo: "Undo",
     secondsLeft: "{seconds} s",
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    today: "Today",
+    chooseDate: "Choose a date",
+    rowsPerPage: "Rows per page",
+    previous: "Previous",
+    next: "Next",
+    selectAll: "Select all on this page",
+    selection: "Selection",
+    moreAbout: "More about",
   },
   de: {
     close: "Schließen",
@@ -181,6 +192,16 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     browserTimeZone: "Dieser Browser",
     undo: "Rückgängig",
     secondsLeft: "{seconds} s",
+    previousMonth: "Vorheriger Monat",
+    nextMonth: "Nächster Monat",
+    today: "Heute",
+    chooseDate: "Datum wählen",
+    rowsPerPage: "Einträge pro Seite",
+    previous: "Zurück",
+    next: "Weiter",
+    selectAll: "Alle auf dieser Seite auswählen",
+    selection: "Auswahl",
+    moreAbout: "Mehr zu",
   },
 };
 
@@ -192,7 +213,7 @@ function useText(): (english: string, german: string) => string {
 }
 
 const BUTTON_VARIANTS: ButtonVariant[] = ["primary", "secondary", "outline", "danger", "dangerPrimary"];
-const BUTTON_SIZES: ButtonSize[] = ["sm", "md", "lg"];
+const BUTTON_SIZES: ButtonSize[] = ["sm", "md", "field", "lg"];
 const NOTICE_VARIANTS: NoticeVariant[] = ["info", "success", "warning", "danger"];
 const TEXT_SIZES = [0.875, 0.9375, 1, 1.125, 1.25];
 
@@ -699,7 +720,7 @@ function RowMenu() {
       align="end"
       trigger={<IconButton label={t("More options", "Weitere Optionen")} icon={MoreHorizontal} />}
       items={[
-        { label: t("Reset to default", "Auf Standard zurücksetzen"), onSelect: () => {} },
+        { label: t("Reset to default", "Auf Standard zurücksetzen"), icon: RotateCcw, onSelect: () => {} },
         { label: t("Lock for members", "Für Mitglieder sperren"), icon: Lock, onSelect: () => {} },
       ]}
     />

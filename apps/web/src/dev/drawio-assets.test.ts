@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { drawioUrl } from "../diagrams/drawio-protocol.js";
 import { DRAWIO_PATH } from "../diagrams/drawio-version.js";
-import { drawioContentType, drawioFile, isShippedDrawioFile } from "./drawio-assets.js";
+import { drawioContentType, drawioFile, isServedDrawioFile, isShippedDrawioFile } from "./drawio-assets.js";
 
 describe("shipped draw.io files", () => {
   it("leave out server parts, cloud connectors, plugins, client secrets and source maps", () => {
@@ -33,6 +34,22 @@ describe("shipped draw.io files", () => {
     ]) {
       expect(isShippedDrawioFile(name), name).toBe(true);
     }
+  });
+
+  it("ship the translations of every language the editor is opened in, and no others", () => {
+    for (const language of ["de-AT", "de", "en-GB", "fr"]) {
+      const lang = new URL(drawioUrl(language), "http://localhost").searchParams.get("lang");
+      const file = lang === "en" ? "resources/dia.txt" : `resources/dia_${lang}.txt`;
+      expect(isShippedDrawioFile(file), language).toBe(true);
+    }
+    expect(isShippedDrawioFile("resources/dia_fr.txt")).toBe(false);
+    expect(isShippedDrawioFile("resources/dia_zh-tw.txt")).toBe(false);
+  });
+
+  it("copy Lunedo's configuration although the files of the same name in the archive are left out", () => {
+    expect(isServedDrawioFile("js/PreConfig.js")).toBe(true);
+    expect(isServedDrawioFile("js/PostConfig.js")).toBe(true);
+    expect(isServedDrawioFile("js/embed.dev.js")).toBe(false);
   });
 
   it("map request paths of the pinned version to shipped files and Lunedo's configuration", () => {

@@ -39,9 +39,9 @@ function preference(key: string, value: unknown) {
   };
 }
 
-function api(
-  overrides: Record<string, (request: RecordedRequest) => { status?: number; body?: unknown }> = {},
-) {
+type Reply = { status?: number; body?: unknown };
+
+function api(overrides: Record<string, (request: RecordedRequest) => Reply | Promise<Reply>> = {}) {
   let signedIn = false;
   return mockApi({
     "GET /api/v1/instance/info": () => ({
@@ -58,6 +58,7 @@ function api(
     "GET /api/v1/auth/session": () => (signedIn ? { body: SESSION } : problem(401, "notSignedIn")),
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
+        providers: [],
         emailStep: true,
         directProvider: null,
         lastProvider: null,
@@ -86,7 +87,7 @@ function api(
         preference("appearance.textSize", 1.25),
       ],
     }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 2 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 2, capped: false } }),
     ...overrides,
   });
 }
@@ -119,9 +120,21 @@ async function renderApp(path: string) {
 
 describe("the web client", () => {
   it("sends a signed-out visitor to the sign-in page and back after both factors", async () => {
-    const { requests } = api();
+    const { requests } = api({
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: true,
+          passkeys: [],
+          recoveryCodes: 8,
+          secondFactorRequired: false,
+          secondFactorRequiredBy: null,
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+    });
     await renderApp("/settings/security");
-    expect(await screen.findByRole("heading", { name: "Sign in to Platform Team" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
     expect(new URL(window.location.href).searchParams.get("redirect")).toBe("/settings/security");
 
     await userEvent.type(
@@ -139,7 +152,7 @@ describe("the web client", () => {
     await userEvent.type(screen.getByLabelText("Code from your authenticator app"), "123456");
     await userEvent.click(screen.getByRole("button", { name: "Verify" }));
 
-    expect(await screen.findByRole("heading", { name: "Security", level: 1 })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Sign-in and security", level: 1 })).toBeTruthy();
     const signIn = requests.find((request) => request.path === "/api/v1/auth/sign-in");
     expect(signIn?.headers.get("X-Lunedo-Request")).toBe("1");
   });
@@ -154,8 +167,8 @@ describe("the web client", () => {
       "PUT /api/v1/account/preferences/locale.language": () => ({ status: 204 }),
     });
     await renderApp("/sign-in");
-    await userEvent.click(await screen.findByRole("combobox", { name: "Language" }));
-    await userEvent.click(screen.getByRole("option", { name: "Deutsch" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Language: English/ }));
+    await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Deutsch" }));
     cleanup();
     signedIn = true;
     await renderApp("/settings/preferences");
@@ -164,6 +177,17 @@ describe("the web client", () => {
         requests.find((request) => request.path === "/api/v1/account/preferences/locale.language")?.body,
       ).toEqual({ value: "de" }),
     );
+  });
+
+  it("switches the appearance on the sign-in page at once and remembers it in the browser", async () => {
+    api({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
+    await renderApp("/sign-in");
+    localStorage.removeItem("lunedo.appearance");
+    await userEvent.click(await screen.findByRole("button", { name: /^Appearance: / }));
+    await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Dark" }));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    expect(JSON.parse(localStorage.getItem("lunedo.appearance") ?? "{}").colorMode).toBe("dark");
+    expect(screen.getByRole("button", { name: "Appearance: Dark" })).toBeTruthy();
   });
 
   it("keeps a person's own language over the one chosen on the sign-in page", async () => {
@@ -189,9 +213,208 @@ describe("the web client", () => {
     expect(document.documentElement.style.getPropertyValue("--ld-text-scale")).toBe("1.25");
     expect(await screen.findByRole("button", { name: "Notifications, 2 unread" })).toBeTruthy();
     const navigation = screen.getByRole("navigation", { name: "Settings" });
-    expect(within(navigation).getByRole("link", { name: "Members" })).toBeTruthy();
+    expect(within(navigation).getByRole("heading", { name: "My account" })).toBeTruthy();
+    expect(within(navigation).getByRole("link", { name: "Preferences" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    expect(within(navigation).getByRole("link", { name: "Sign-in and security" })).toBeTruthy();
+    expect(within(navigation).queryByRole("link", { name: "Members" })).toBeNull();
+  });
+
+  it("shows only the entries of the organization area, grouped, with the parent of a detail page active", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp(`/settings/organizations/${ORGANIZATION.id}/members`);
+    const navigation = await screen.findByRole("navigation", { name: "Settings" });
+    expect(await within(navigation).findByRole("heading", { name: "Platform Team" })).toBeTruthy();
+    const group = within(navigation).getByRole("list", { name: "People and access" });
+    expect(within(group).getByRole("link", { name: "Members" }).getAttribute("aria-current")).toBe("page");
     expect(within(navigation).queryByRole("link", { name: "Roles" })).toBeNull();
+    expect(within(navigation).queryByRole("link", { name: "Preferences" })).toBeNull();
     expect(within(navigation).queryByRole("link", { name: "Organizations" })).toBeNull();
+  });
+
+  it("opens the organization settings directly from the gear for an organization admin", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-haspopup")).toBeNull(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe(`/settings/organizations/${ORGANIZATION.id}/members`),
+    );
+    expect(screen.queryByRole("menuitem")).toBeNull();
+  });
+
+  it("offers organization and instance in the gear to people who manage both", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.settings.view"],
+          organization: ["organization.view", "organization.members.view"],
+        },
+      }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-haspopup")).toBe("menu"),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await waitFor(() =>
+      expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+        "Organization",
+        "Instance",
+      ]),
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Instance" }));
+    await waitFor(() => expect(window.location.pathname.startsWith("/settings/instance/")).toBe(true));
+  });
+
+  it("shows no gear to people who manage nothing and reaches the own account through the avatar", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
+      "GET /api/v1/account/identities": () => ({ body: [] }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Settings" })).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "Account" }));
+    expect(await screen.findByText(SESSION.account.email)).toBeTruthy();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Profile" }));
+    expect(await screen.findByRole("heading", { name: "Profile", level: 1 })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/profile");
+  });
+
+  it("opens the profile first, with the name, the e-mail address and the linked sign-ins", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
+      "GET /api/v1/account/identities": () => ({
+        body: [
+          {
+            id: "01929b1e-0000-7000-8000-0000000000a1",
+            providerId: "01929b1e-0000-7000-8000-0000000000a2",
+            providerName: "Entra ID",
+            subject: "tid:oid",
+            email: "olivia@example.org",
+            signInName: null,
+            displayName: "Olivia",
+            lastSignInAt: null,
+            createdAt: "2026-09-01T08:00:00.000Z",
+          },
+        ],
+      }),
+    });
+    await renderApp("/settings");
+    expect(await screen.findByRole("heading", { name: "Profile", level: 1 })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/profile");
+    const navigation = screen.getByRole("navigation", { name: "Settings" });
+    const links = within(navigation).getAllByRole("link");
+    expect(links[0]?.textContent).toBe("Back to For you");
+    expect(links[0]?.getAttribute("href")).toBe("/home");
+    expect(links[1]?.textContent).toBe("Profile");
+    expect(links[1]?.getAttribute("aria-current")).toBe("page");
+    expect(screen.queryByRole("navigation", { name: "Main navigation" })).toBeNull();
+    expect(((await screen.findByLabelText("Display name")) as HTMLInputElement).value).toBe("Olivia Owner");
+    expect(screen.getByText("olivia@example.org", { selector: "[data-setting-hint] *" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change e-mail address" })).toBeTruthy();
+    expect(await screen.findByText("Entra ID")).toBeTruthy();
+  });
+
+  it("lists watched and muted items in two tabs and changes several at once", async () => {
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/watches": () => ({
+        body: {
+          items: [
+            {
+              target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d1" },
+              state: "watching",
+              keepActionable: false,
+              automatic: false,
+              title: "VPN access",
+              kind: "page",
+              spaceId: "01929b1e-0000-7000-8000-0000000000d0",
+              spaceKey: "OPS",
+              spaceName: "Operations",
+              updatedAt: "2026-10-01T08:00:00.000Z",
+            },
+            {
+              target: { type: "space", id: "01929b1e-0000-7000-8000-0000000000d0" },
+              state: "watching",
+              keepActionable: false,
+              automatic: false,
+              title: "Operations",
+              kind: "space",
+              spaceId: "01929b1e-0000-7000-8000-0000000000d0",
+              spaceKey: "OPS",
+              spaceName: "Operations",
+              updatedAt: "2026-10-01T08:00:00.000Z",
+            },
+            {
+              target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d2" },
+              state: "muted",
+              keepActionable: false,
+              automatic: false,
+              title: "Old notes",
+              kind: "page",
+              spaceId: "01929b1e-0000-7000-8000-0000000000d0",
+              spaceKey: "OPS",
+              spaceName: "Operations",
+              updatedAt: "2026-10-01T08:00:00.000Z",
+            },
+          ],
+          counts: { watchedItems: 1, watchedSpaces: 1, mutedItems: 1, mutedSpaces: 0 },
+        },
+      }),
+      "PUT /api/v1/account/watches": () => ({ body: { changed: 2 } }),
+    });
+    await renderApp("/settings/notifications/watching");
+    expect(await screen.findByRole("tab", { name: /^Watching.*2/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^Muted.*1/ })).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Watching" });
+    expect(within(table).getByRole("link", { name: "VPN access" })).toBeTruthy();
+    expect(within(table).getByRole("link", { name: "Operations" })).toBeTruthy();
+    expect(within(table).queryByText("Old notes")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Spaces" }));
+    expect(within(screen.getByRole("table", { name: "Watching" })).queryByText("VPN access")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    const bulk = screen.getByRole("region", { name: "Selection" });
+    expect(within(bulk).getByText("2 selected")).toBeTruthy();
+    await userEvent.click(within(bulk).getByRole("button", { name: "Mute" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/account/watches" && request.method === "PUT")
+          ?.body,
+      ).toEqual({
+        changes: [
+          {
+            target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d1" },
+            state: "muted",
+            keepActionable: true,
+          },
+          {
+            target: { type: "space", id: "01929b1e-0000-7000-8000-0000000000d0" },
+            state: "muted",
+            keepActionable: true,
+          },
+        ],
+      }),
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /Muted/ }));
+    expect(
+      within(await screen.findByRole("table", { name: "Muted" })).getByRole("link", { name: "Old notes" }),
+    ).toBeTruthy();
   });
 
   it("searches the settings of every area it shows and offers to clear an empty result", async () => {
@@ -284,7 +507,8 @@ describe("the web client", () => {
     await userEvent.type(within(dialog).getByLabelText("Repeat the password"), "a new long passphrase");
     await userEvent.click(within(dialog).getByRole("button", { name: "Change password" }));
 
-    const confirm = await screen.findByRole("dialog", { name: "Confirm your identity" });
+    const confirm = await within(dialog).findByRole("region", { name: "Confirm your identity" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await userEvent.type(within(confirm).getByLabelText("Password"), "correct horse battery");
     await userEvent.click(within(confirm).getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Change password" })).toBeNull());
@@ -294,6 +518,106 @@ describe("the web client", () => {
       method: "password",
       password: "correct horse battery",
     });
+  });
+
+  it("binds a personal token to the organization only when asked and never with instance areas", async () => {
+    const created = {
+      status: 201,
+      body: {
+        id: "01929b1e-0000-7000-8000-0000000000f8",
+        name: "Ops",
+        token: "ld_created_secret",
+        scopes: { organization: { membersAndGroups: "view" } },
+        contentLevel: "read",
+        knowledgeBaseIds: null,
+        expiresAt: null,
+        lastUsedAt: null,
+        createdAt: "2026-10-01T08:00:00.000Z",
+      },
+    };
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: { instance: ["instance.settings.view"], organization: ["organization.view"] },
+      }),
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: false,
+          passkeys: [],
+          recoveryCodes: 0,
+          secondFactorRequired: false,
+          secondFactorRequiredBy: null,
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+      "POST /api/v1/account/tokens": () => created,
+    });
+    const tokenBodies = () =>
+      requests
+        .filter((request) => request.method === "POST" && request.path === "/api/v1/account/tokens")
+        .map((request) => request.body as { organizationId?: string; scopes: Record<string, unknown> });
+    await renderApp("/settings/security");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Create token" }));
+    let dialog = await screen.findByRole("dialog", { name: "Create API token" });
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Ops");
+    const appliesTo = within(dialog).getByRole("radiogroup", { name: "Applies to" });
+    expect(
+      within(appliesTo)
+        .getByRole("radio", { name: `Only ${ORGANIZATION.name}` })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Rights in detail/ }));
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
+        name: "Read",
+      }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(tokenBodies()).toHaveLength(1));
+    expect(tokenBodies()[0]?.organizationId).toBe(ORGANIZATION.id);
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Done" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    dialog = await screen.findByRole("dialog", { name: "Create API token" });
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Ops everywhere");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Rights in detail/ }));
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
+        name: "Read",
+      }),
+    );
+    const instanceSettings = within(
+      within(dialog).getByRole("group", { name: "Access to the instance" }),
+    ).getByRole("radiogroup", { name: "Settings" });
+    expect(within(instanceSettings).getByRole("radio", { name: "Read" }).hasAttribute("disabled")).toBe(true);
+    expect(within(dialog).getByText(/Instance rights belong to no single organization/)).toBeTruthy();
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Applies to" })).getByRole("radio", {
+        name: "All my organizations",
+      }),
+    );
+    await userEvent.click(
+      within(
+        within(within(dialog).getByRole("group", { name: "Access to the instance" })).getByRole(
+          "radiogroup",
+          {
+            name: "Settings",
+          },
+        ),
+      ).getByRole("radio", {
+        name: "Read",
+      }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(tokenBodies()).toHaveLength(2));
+    expect(tokenBodies()[1]).not.toHaveProperty("organizationId");
+    expect(tokenBodies()[1]?.scopes).toMatchObject({
+      instance: { settings: "view" },
+      organization: { membersAndGroups: "view" },
+    });
+    expect(tokenBodies()[1]).not.toHaveProperty("limitedToOrganization");
   });
 
   it("asks for the identity inside the token dialog instead of opening a second dialog", async () => {
@@ -337,9 +661,10 @@ describe("the web client", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Create token" }));
     const dialog = await screen.findByRole("dialog", { name: "Create API token" });
     await userEvent.type(within(dialog).getByLabelText("Name"), "Chatbot");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Rights in detail/ }));
     await userEvent.click(
       within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
-        name: "View",
+        name: "Read",
       }),
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
@@ -352,7 +677,68 @@ describe("the web client", () => {
   });
 });
 
-describe("the command palette", () => {
+describe("the shell while it loads", () => {
+  it("appears only once permissions and notices are known, so nothing moves afterwards", async () => {
+    let release: () => void = () => {};
+    const permissions = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": async () => {
+        await permissions;
+        return { body: { instance: ["instance.settings.view"], organization: ["organization.view"] } };
+      },
+      "GET /api/v1/announcements": () => ({
+        body: [
+          {
+            id: "01929b1e-0000-7000-8000-0000000000f1",
+            scope: "instance",
+            organizationId: null,
+            version: "1",
+            severity: "warning",
+            text: "Planned update tonight",
+            link: null,
+            startsAt: "2020-01-01T00:00:00.000Z",
+            endsAt: "2999-01-01T00:00:00.000Z",
+            dismissed: false,
+          },
+        ],
+      }),
+    });
+    await renderApp("/settings/preferences");
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
+    expect(screen.queryByText("Planned update tonight")).toBeNull();
+    release();
+    const create = await screen.findByRole("button", { name: "Create" });
+    expect(create.className).toContain("h-control-field");
+    expect(screen.getByRole("button", { name: "Settings" }).className).toContain("size-control-field");
+    expect(screen.getByText("Planned update tonight")).toBeTruthy();
+  });
+});
+
+describe("the search", () => {
+  it("opens the same search with commands from the top bar field and with Ctrl K", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: { instance: [], organization: ["organization.view"] },
+      }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await userEvent.click(screen.getAllByRole("button", { name: "Search" })[0] as HTMLElement);
+    const fromField = await screen.findByRole("dialog", { name: "Search" });
+    expect(within(fromField).getByRole("group", { name: "Actions" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await userEvent.keyboard("{Control>}k{/Control}");
+    const fromKeys = await screen.findByRole("dialog", { name: "Search" });
+    expect(within(fromKeys).getByRole("group", { name: "Actions" })).toBeTruthy();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
   it("names the scope of settings pages that share a name", async () => {
     api({
       "GET /api/v1/auth/session": () => ({ body: SESSION }),
@@ -370,12 +756,69 @@ describe("the command palette", () => {
     await userEvent.type(await screen.findByRole("combobox"), "notifcations");
     await waitFor(() =>
       expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(
-        expect.arrayContaining([
-          "Notifications · Personal",
-          "Notifications · Organization",
-          "Notifications · Instance",
-        ]),
+        expect.arrayContaining(["Notifications · Personal", "Notifications · Organization"]),
       ),
     );
+  });
+});
+
+describe("the spaces flyout", () => {
+  it("lists only spaces of the current organization, also among starred and recent ones", async () => {
+    const OTHER = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60";
+    const sales = {
+      id: "01929b1e-0000-7000-8000-0000000000d1",
+      key: "SALES",
+      name: "Sales",
+      personal: false,
+      ownerId: null,
+      ownerName: null,
+      type: "team",
+      organizationId: ORGANIZATION.id,
+    };
+    const foreign = {
+      ...sales,
+      id: "01929b1e-0000-7000-8000-0000000000d2",
+      key: "SALES2",
+      organizationId: OTHER,
+    };
+    const { requests } = api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/spaces": () => ({ body: { items: [sales], nextCursor: null } }),
+      "GET /api/v1/starred": () => ({
+        body: {
+          items: [],
+          spaces: [
+            {
+              id: foreign.id,
+              key: foreign.key,
+              name: foreign.name,
+              personal: false,
+              mySpace: false,
+              starredAt: "2026-10-08T07:00:00.000Z",
+            },
+          ],
+        },
+      }),
+      "GET /api/v1/recent": () => ({ body: [] }),
+      [`GET /api/v1/space-keys/${foreign.key}`]: () => ({ body: { space: foreign, role: "reader" } }),
+    });
+    await renderApp("/tasks");
+    await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+    const panel = await screen.findByRole("dialog");
+    expect(await within(panel).findByText("Sales")).toBeTruthy();
+    await waitFor(() => expect(within(panel).getAllByText("Sales")).toHaveLength(1));
+    const listed = requests.find((request) => request.path.startsWith("/api/v1/spaces?"));
+    expect(listed?.path).toContain(`organizationId=${ORGANIZATION.id}`);
+  });
+});
+
+describe("an address that does not exist", () => {
+  it("shows the not-found page inside the app shell for signed-in people", async () => {
+    api({ "GET /api/v1/auth/session": () => ({ body: SESSION }) });
+    await renderApp("/does/not/exist");
+    expect(await screen.findByText("Page not found")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "My tasks" })).toBeTruthy();
+    expect(screen.getByRole("main").id).toBe("main");
+    await waitFor(() => expect(document.title).toBe("Page not found · Lunedo"));
   });
 });

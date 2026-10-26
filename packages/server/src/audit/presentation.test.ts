@@ -36,7 +36,14 @@ describe("presentAuditEntry", () => {
     expect(view).toEqual({
       labelKey: "audit.events.settings.changed",
       changeKind: "setting",
-      actor: { type: "account", id: ACCOUNT, name: "Olivia Owner", former: false },
+      actor: {
+        type: "account",
+        id: ACCOUNT,
+        name: "Olivia Owner",
+        former: false,
+        serviceAccount: false,
+        token: null,
+      },
       target: { type: "setting", id: "branding.accentColor", name: null, former: false },
       scope: { type: "instance", id: null, name: null },
       changes: [{ property: "value", old: "violet", new: "blue" }],
@@ -51,7 +58,14 @@ describe("presentAuditEntry", () => {
       ...entry({ name: "auth.signedIn", targetType: "account", targetId: ACCOUNT, labels: null }),
       formerSubjects: [ACCOUNT],
     });
-    expect(view.actor).toEqual({ type: "account", id: ACCOUNT, name: null, former: true });
+    expect(view.actor).toEqual({
+      type: "account",
+      id: ACCOUNT,
+      name: null,
+      former: true,
+      serviceAccount: false,
+      token: null,
+    });
     expect(view.target).toEqual({ type: "account", id: ACCOUNT, name: null, former: true });
     expect(view.formerAccounts).toEqual([ACCOUNT]);
   });
@@ -163,5 +177,23 @@ describe("presentAuditEntry", () => {
     );
     expect(signedIn.changes).toEqual([{ property: "methods", old: null, new: ["password"] }]);
     expect(signedIn.actor.name).toBe("Olivia Owner");
+  });
+});
+
+describe("the actor of an event", () => {
+  it("names a service account and the API token it acted with", () => {
+    const view = presentAuditEntry({
+      scopeType: "organization",
+      scopeId: ACCOUNT,
+      name: "page.published",
+      actorType: "account",
+      actorId: ACCOUNT,
+      targetType: "page",
+      targetId: ACCOUNT,
+      fields: { spaceId: ACCOUNT, title: "Guide", version: 2, note: "", credentialId: ACCOUNT },
+      labels: { actor: "Sync bot", actorKind: "serviceAccount", actorToken: "Publishing" },
+    });
+    expect(view.actor).toMatchObject({ name: "Sync bot", serviceAccount: true, token: "Publishing" });
+    expect(view.changes.map((change) => change.property)).not.toContain("credentialId");
   });
 });

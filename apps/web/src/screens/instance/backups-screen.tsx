@@ -3,11 +3,13 @@ import {
   type BadgeVariant,
   Button,
   Checkbox,
+  CollapsibleSection,
   ConfirmDialog,
   CopyButton,
-  Drawer,
+  Dialog,
   EmptyState,
   Field,
+  FieldGrid,
   focusFirstInvalidSoon,
   IconButton,
   Input,
@@ -24,7 +26,7 @@ import {
   type TableColumn,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DatabaseBackup, MoreHorizontal } from "lucide-react";
+import { DatabaseBackup, Eye, MoreHorizontal, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -119,14 +121,14 @@ function StatusSection({
   return (
     <Section title={t("backups.status.title")}>
       {data.alert === "failing" && data.lastFailure ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice variant="danger" title={t("backups.status.failingTitle")}>
             {data.lastFailure.error ?? t("backups.status.failingUnknown")}
           </Notice>
         </div>
       ) : null}
       {data.alert === "missing" ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice variant="warning" title={t("backups.status.missingTitle")}>
             {t("backups.status.missingBody", { count: data.settings.missingDays })}
           </Notice>
@@ -162,7 +164,7 @@ function StatusSection({
           </span>
         }
       />
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 py-3">
         {data.running ? <Badge variant="info">{t("backups.status.running")}</Badge> : null}
         {canManage ? (
           <Button variant="primary" loading={tracker.state === "saving"} onClick={() => void backUpNow()}>
@@ -211,9 +213,11 @@ function KeySection({ data, canManage }: { data: BackupOverview; canManage: bool
           label={t("backups.key.confirm")}
           description={
             confirmed
-              ? confirmed.by
-                ? t("backups.key.confirmedBy", { date: format.date(confirmed.at), name: confirmed.by.name })
-                : t("backups.key.confirmedAt", { date: format.date(confirmed.at) })
+              ? confirmed.inSetup
+                ? t("backups.key.confirmedInSetup", { date: format.date(confirmed.at) })
+                : confirmed.by
+                  ? t("backups.key.confirmedBy", { date: format.date(confirmed.at), name: confirmed.by.name })
+                  : t("backups.key.confirmedAt", { date: format.date(confirmed.at) })
               : t("backups.key.notConfirmed")
           }
         />
@@ -398,8 +402,13 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
     setResult(null);
   };
 
-  const field = (name: TargetField, label: string, hint: string, control: React.ReactNode) => (
-    <Field label={label} hint={hint} {...(errors[name] ? { error: errors[name] } : {})}>
+  const field = (name: TargetField, label: string, hint: string, control: React.ReactNode, help?: string) => (
+    <Field
+      label={label}
+      hint={hint}
+      {...(help ? { help } : {})}
+      {...(errors[name] ? { error: errors[name] } : {})}
+    >
       {control}
     </Field>
   );
@@ -442,6 +451,7 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
               t("backups.target.path"),
               t("backups.target.pathHint"),
               text("path", "/var/lib/lunedo/backups"),
+              t("backups.target.pathHelp"),
             )}
             {data.target?.kind === "local" && data.target.sameVolumeAsFiles && !changed ? (
               <Notice variant="warning" title={t("backups.target.sameVolumeTitle")}>
@@ -552,6 +562,7 @@ function useImmediate(
 function NumberSetting({
   label,
   hint,
+  help,
   value,
   min,
   max,
@@ -560,6 +571,7 @@ function NumberSetting({
 }: {
   label: string;
   hint: string;
+  help?: string;
   value: number;
   min: number;
   max: number;
@@ -588,7 +600,7 @@ function NumberSetting({
   };
   const shown = error ?? (tracker.state === "error" ? tracker.error : null);
   return (
-    <Field label={label} hint={hint} {...(shown ? { error: shown } : {})}>
+    <Field label={label} hint={hint} {...(help ? { help } : {})} {...(shown ? { error: shown } : {})}>
       <div className="flex items-center gap-2">
         <Input
           className="w-24"
@@ -641,6 +653,7 @@ function ScheduleSection({ data, canManage }: { data: BackupOverview; canManage:
       <SettingRow
         label={t("backups.schedule.enabled")}
         description={t("backups.schedule.enabledHint")}
+        help={t("backups.schedule.enabledHelp")}
         status={<SaveIndicator tracker={enabledTracker} />}
         control={
           <Switch
@@ -681,7 +694,11 @@ function ScheduleSection({ data, canManage }: { data: BackupOverview; canManage:
             {timeTracker.state === "error" ? null : <SaveIndicator tracker={timeTracker} />}
           </div>
         </Field>
-        <Field label={t("backups.schedule.weekly")} hint={t("backups.schedule.weeklyHint")}>
+        <Field
+          label={t("backups.schedule.weekly")}
+          hint={t("backups.schedule.weeklyHint")}
+          help={t("backups.schedule.weeklyHelp")}
+        >
           <div className="flex items-center gap-2">
             <Select
               value={settings.weeklyDay === null ? "none" : String(settings.weeklyDay)}
@@ -697,7 +714,11 @@ function ScheduleSection({ data, canManage }: { data: BackupOverview; canManage:
             <SaveIndicator tracker={weeklyTracker} />
           </div>
         </Field>
-        <Field label={t("backups.schedule.monthly")} hint={t("backups.schedule.monthlyHint")}>
+        <Field
+          label={t("backups.schedule.monthly")}
+          hint={t("backups.schedule.monthlyHint")}
+          help={t("backups.schedule.monthlyHelp")}
+        >
           <div className="flex items-center gap-2">
             <Select
               value={settings.monthlyDay === null ? "none" : String(settings.monthlyDay)}
@@ -728,8 +749,8 @@ function RetentionSection({ data, canManage }: { data: BackupOverview; canManage
   const counts = ["daily", "weekly", "monthly"] as const;
   return (
     <Section title={t("backups.retention.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("backups.retention.description")}</p>
-      <div className="grid gap-4 p-4 sm:grid-cols-3">
+      <p className="pt-3 text-sm text-text-muted">{t("backups.retention.description")}</p>
+      <FieldGrid className="p-4">
         {counts.map((kind) => (
           <NumberSetting
             key={kind}
@@ -742,7 +763,7 @@ function RetentionSection({ data, canManage }: { data: BackupOverview; canManage
             onSave={(value) => save({ retention: { [kind]: value } })}
           />
         ))}
-      </div>
+      </FieldGrid>
     </Section>
   );
 }
@@ -755,7 +776,7 @@ function UpdatesSection({ data, canManage }: { data: BackupOverview; canManage: 
   return (
     <Section title={t("backups.updates.title")}>
       {environment ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice variant="info" title={t("backups.updates.environmentTitle")}>
             {t("backups.updates.environment")}
           </Notice>
@@ -763,7 +784,8 @@ function UpdatesSection({ data, canManage }: { data: BackupOverview; canManage: 
       ) : null}
       <SettingRow
         label={t("backups.updates.enabled")}
-        description={data.target ? t("backups.updates.enabledHint") : t("backups.updates.defaultTarget")}
+        description={t("backups.updates.enabledHint")}
+        help={t("backups.updates.enabledHelp")}
         status={<SaveIndicator tracker={tracker} />}
         control={
           <Switch
@@ -796,54 +818,53 @@ function AdvancedSection({ data, canManage }: { data: BackupOverview; canManage:
   const [scopeTracker, saveScope] = useImmediate(save);
   const [testTracker, saveTest] = useImmediate(save);
   return (
-    <details className="rounded-md border border-border bg-surface">
-      <summary className="cursor-pointer px-4 py-3 font-medium">{t("backups.advanced.title")}</summary>
-      <div className="flex flex-col gap-4 border-border border-t p-4">
-        <RadioGroup
-          label={t("backups.advanced.scope")}
-          value={data.settings.scope}
-          onValueChange={(value) => void saveScope({ scope: value === "database" ? "database" : "all" })}
-          options={[
-            {
-              value: "all",
-              label: t("backups.advanced.scopeAll"),
-              description: t("backups.advanced.scopeAllHint"),
-            },
-            {
-              value: "database",
-              label: t("backups.advanced.scopeDatabase"),
-              description: t("backups.advanced.scopeDatabaseHint"),
-              disabled: !canManage,
-            },
-          ]}
-        />
-        <SaveIndicator tracker={scopeTracker} />
-        <NumberSetting
-          label={t("backups.advanced.missingDays")}
-          hint={t("backups.advanced.missingDaysHint")}
-          value={data.settings.missingDays}
-          min={1}
-          max={365}
-          disabled={!canManage}
-          onSave={(value) => save({ missingDays: value })}
-        />
-        <SettingRow
-          label={t("backups.advanced.autoTestRestore")}
-          description={t("backups.advanced.autoTestRestoreHint")}
-          status={<SaveIndicator tracker={testTracker} />}
-          control={
-            <Switch
-              label={t("backups.advanced.autoTestRestore")}
-              labelHidden
-              checked={data.settings.autoTestRestore}
-              disabled={!canManage}
-              onCheckedChange={(checked) => void saveTest({ autoTestRestore: checked })}
-            />
-          }
-        />
-        <p className="text-sm text-text-muted">{t("backups.advanced.contacts")}</p>
-      </div>
-    </details>
+    <CollapsibleSection title={t("backups.advanced.title")} layout="fields">
+      <RadioGroup
+        label={t("backups.advanced.scope")}
+        value={data.settings.scope}
+        onValueChange={(value) => void saveScope({ scope: value === "database" ? "database" : "all" })}
+        options={[
+          {
+            value: "all",
+            label: t("backups.advanced.scopeAll"),
+            description: t("backups.advanced.scopeAllHint"),
+          },
+          {
+            value: "database",
+            label: t("backups.advanced.scopeDatabase"),
+            description: t("backups.advanced.scopeDatabaseHint"),
+            disabled: !canManage,
+          },
+        ]}
+      />
+      <SaveIndicator tracker={scopeTracker} />
+      <NumberSetting
+        label={t("backups.advanced.missingDays")}
+        hint={t("backups.advanced.missingDaysHint")}
+        help={t("backups.advanced.missingDaysHelp")}
+        value={data.settings.missingDays}
+        min={1}
+        max={365}
+        disabled={!canManage}
+        onSave={(value) => save({ missingDays: value })}
+      />
+      <SettingRow
+        label={t("backups.advanced.autoTestRestore")}
+        description={t("backups.advanced.autoTestRestoreHint")}
+        help={t("backups.advanced.autoTestRestoreHelp")}
+        status={<SaveIndicator tracker={testTracker} />}
+        control={
+          <Switch
+            label={t("backups.advanced.autoTestRestore")}
+            labelHidden
+            checked={data.settings.autoTestRestore}
+            disabled={!canManage}
+            onCheckedChange={(checked) => void saveTest({ autoTestRestore: checked })}
+          />
+        }
+      />
+      <p className="text-sm text-text-muted">{t("backups.advanced.contacts")}</p>
+    </CollapsibleSection>
   );
 }
 
@@ -858,15 +879,14 @@ function TestRestoreDetails({ test, onClose }: { test: TestRestore | null; onClo
   const { t } = useTranslation();
   const format = useFormat();
   return (
-    <Drawer
+    <Dialog
       open={test !== null}
       onOpenChange={(open) => (open ? null : onClose())}
       title={t("backups.test.title")}
-      side="right"
-      size="panel"
+      size="lg"
     >
       {test ? (
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4">
           <Badge variant={TEST_BADGES[test.state]}>
             {translateKey(t, `backups.test.states.${test.state}`)}
           </Badge>
@@ -918,7 +938,7 @@ function TestRestoreDetails({ test, onClose }: { test: TestRestore | null; onClo
           </ul>
         </div>
       ) : null}
-    </Drawer>
+    </Dialog>
   );
 }
 
@@ -982,12 +1002,12 @@ function BackupsTable({
               <IconButton icon={MoreHorizontal} label={t("backups.list.actionsFor", { name: row.name })} />
             }
             items={[
-              { label: t("backups.list.runTestRestore"), onSelect: () => onTest(row) },
+              { label: t("backups.list.runTestRestore"), icon: Play, onSelect: () => onTest(row) },
               ...(row.testRestore
-                ? [{ label: t("backups.list.showTestRestore"), onSelect: () => onDetails(row) }]
+                ? [{ label: t("backups.list.showTestRestore"), icon: Eye, onSelect: () => onDetails(row) }]
                 : []),
               { type: "separator" as const },
-              { label: t("backups.list.delete"), danger: true, onSelect: () => onDelete(row) },
+              { label: t("backups.list.delete"), icon: Trash2, danger: true, onSelect: () => onDelete(row) },
             ]}
           />
         ) : null,
@@ -1147,7 +1167,7 @@ export function InstanceBackupsScreen() {
   const busy = serverBusy || awaitingSince !== null;
   const started = () => setAwaitingSince(Date.now());
   return (
-    <SettingsPage title={t("backups.title")} description={t("backups.description")} icon={DatabaseBackup}>
+    <SettingsPage title={t("backups.title")} description={t("backups.description")}>
       {overview.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {overview.isError ? (
         <LoadError

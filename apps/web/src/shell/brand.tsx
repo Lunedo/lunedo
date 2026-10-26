@@ -26,7 +26,7 @@ export function BrandMark({ organization }: { organization: BrandOrganization | 
   }
   return (
     <div className="flex items-center gap-2 font-semibold text-lg">
-      <LunedoMark className="size-8" />
+      <LunedoMark className="h-8" />
       <span>{t("brand.name")}</span>
     </div>
   );

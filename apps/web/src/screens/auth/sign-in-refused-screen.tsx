@@ -1,7 +1,7 @@
 import { Button, Notice } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, Lock, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isRefusalReason } from "../../api/identity-queries.js";
@@ -39,47 +39,55 @@ export function SignInRefusedScreen() {
   };
   const canRetry = RETRY_REASONS.has(reason);
   return (
-    <AuthCard title={t("auth.refused.title")}>
-      <Notice variant="danger" title={t(`auth.refused.reasons.${reason}.title`, { name })}>
-        <div className="flex flex-col gap-2">
-          <p>{t(`auth.refused.reasons.${reason}.cause`, { name })}</p>
-          <p>
-            <span className="font-semibold">{t("auth.refused.whatToDo")}</span>{" "}
-            {t(`auth.refused.reasons.${reason}.action`, { name })}
+    <AuthCard
+      banner={
+        <p className="flex items-center gap-2 rounded-md bg-danger-soft px-3 py-2 font-medium text-danger text-sm">
+          <Lock aria-hidden="true" className="size-icon-md shrink-0" />
+          {t("auth.refused.title")}
+        </p>
+      }
+      title={t(`auth.refused.reasons.${reason}.title`, { name })}
+      description={t(`auth.refused.reasons.${reason}.cause`, { name })}
+      links={
+        search.reference ? (
+          <p className="text-center text-text-muted">
+            {t("auth.refused.reference")} <span className="font-mono text-text">{search.reference}</span>
           </p>
-        </div>
-      </Notice>
+        ) : null
+      }
+    >
+      <p>
+        <span className="font-semibold">{t("auth.refused.whatToDo")}</span>{" "}
+        {t(`auth.refused.reasons.${reason}.action`, { name })}
+      </p>
       {error ? (
         <Notice variant="danger" title={t("auth.signInFailed")}>
           {error}
         </Notice>
       ) : null}
-      {canRetry ? (
+      <div className="flex flex-col gap-2">
+        {canRetry ? (
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            icon={RotateCcw}
+            loading={retrying}
+            onClick={() => void retry()}
+          >
+            {t("auth.refused.retry")}
+          </Button>
+        ) : null}
         <Button
-          variant="primary"
+          variant={canRetry ? "outline" : "primary"}
           size="lg"
           block
-          icon={RotateCcw}
-          loading={retrying}
-          onClick={() => void retry()}
+          icon={ArrowLeft}
+          onClick={() => void navigate({ to: "/sign-in" })}
         >
-          {t("auth.refused.retry")}
+          {t("auth.refused.anotherAccount")}
         </Button>
-      ) : null}
-      <Button
-        variant="outline"
-        size="lg"
-        block
-        icon={ArrowLeft}
-        onClick={() => void navigate({ to: "/sign-in" })}
-      >
-        {t("auth.refused.anotherAccount")}
-      </Button>
-      {search.reference ? (
-        <p className="text-center text-sm text-text-muted">
-          {t("auth.refused.reference")} <span className="font-mono text-text">{search.reference}</span>
-        </p>
-      ) : null}
+      </div>
     </AuthCard>
   );
 }

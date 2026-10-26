@@ -687,6 +687,48 @@
       "when": 1792687814603,
       "tag": "0097_rename_kept_decision",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1792754894483,
+      "tag": "0098_account_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1792836465321,
+      "tag": "0099_editing_presence",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1792841224098,
+      "tag": "0100_meeting_agenda",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1792945927519,
+      "tag": "0101_settings_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1792953850950,
+      "tag": "0102_space_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1793025042260,
+      "tag": "0103_category_responsibility",
+      "breakpoints": true
     }
   ]
 }

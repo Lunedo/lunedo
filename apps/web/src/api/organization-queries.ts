@@ -20,6 +20,8 @@ export const organizationKeys = {
   groupMembers: (id: string) => ["group", id, "members"] as const,
   serviceAccount: (id: string) => ["serviceAccount", id] as const,
   serviceAccountTokens: (id: string) => ["serviceAccount", id, "tokens"] as const,
+  member: (organizationId: string, accountId: string) =>
+    ["organization", organizationId, "members", accountId] as const,
   memberPermissions: (organizationId: string, accountId: string) =>
     ["organization", organizationId, "members", accountId, "permissions"] as const,
 };
@@ -209,6 +211,22 @@ export function domainsQuery(organizationId: string) {
       ),
   });
 }
+
+export function memberDetailsQuery(organizationId: string, accountId: string) {
+  return queryOptions({
+    queryKey: organizationKeys.member(organizationId, accountId),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/organizations/{organizationId}/members/{accountId}", {
+          params: { path: { organizationId, accountId } },
+        }),
+      ),
+  });
+}
+
+export type MemberDetails = Awaited<
+  ReturnType<NonNullable<ReturnType<typeof memberDetailsQuery>["queryFn"]>>
+>;
 
 export function memberPermissionsQuery(organizationId: string, accountId: string) {
   return queryOptions({

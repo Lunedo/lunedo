@@ -142,6 +142,14 @@ afterEach(() => {
 });
 
 describe("the attachments of a page", () => {
+  it("draws no placeholder below the page while the attachments load", async () => {
+    routes({ [`GET /api/v1/pages/${PAGE}/attachments`]: () => new Promise(() => {}) });
+    await renderSection();
+    const text = screen.getByText("Page text");
+    expect(text.nextElementSibling).toBeNull();
+    expect(document.querySelector(".animate-pulse")).toBeNull();
+  });
+
   it("lists each file with name, type and size", async () => {
     await renderSection(false);
     const report = await screen.findByRole("button", { name: /^Report\.pdf/ });
@@ -211,10 +219,12 @@ describe("the attachments of a page", () => {
     expect(screen.queryByRole("heading", { name: /Attachments/ })).toBeNull();
   });
 
-  it("explains how to add files when an editor sees an empty list", async () => {
+  it("shows no section while a page has no files, so that only the page menu offers the upload", async () => {
     list = [];
     await renderSection(true);
-    expect(await screen.findByText("No files yet. Upload files or drop them on the page.")).toBeTruthy();
+    await waitFor(() => expect(requests.some((request) => request.path.endsWith("/attachments"))).toBe(true));
+    expect(screen.queryByRole("region", { name: /^Attachments/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Upload" })).toBeNull();
   });
 
   it("uploads chosen files with real progress and refreshes the list", async () => {
@@ -321,7 +331,7 @@ describe("the attachments of a page", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^Rack\.png/ }));
     const drawer = await screen.findByRole("dialog", { name: "Rack.png" });
     const image = await within(drawer).findByRole("img", { name: "Rack.png" });
-    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${PHOTO}/content?version=1&size=display`);
+    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${PHOTO}/content?version=1`);
     await userEvent.keyboard("{Escape}");
     await userEvent.click(await screen.findByRole("button", { name: /^Report\.pdf/ }));
     const report = await screen.findByRole("dialog", { name: "Report.pdf" });
@@ -337,16 +347,35 @@ describe("the attachments of a page", () => {
     expect(await screen.findByText("Version 1 is current again")).toBeTruthy();
   });
 
-  it("keeps the summary and the download away from the edge of the preview panel", async () => {
+  it("browses through all attachments in the order of the list", async () => {
+    routes();
+    await renderSection(false);
+    await userEvent.click(await screen.findByRole("button", { name: /^Rack\.png/ }));
+    const photo = await screen.findByRole("dialog", { name: "Rack.png" });
+    expect(within(photo).getByText(/2 of 2/)).toBeTruthy();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(await screen.findByRole("dialog", { name: "Report.pdf" })).toBeTruthy();
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(await screen.findByRole("dialog", { name: "Rack.png" })).toBeTruthy();
+  });
+
+  it("shows images in full size with zoom, download and a new tab, and closes with Escape", async () => {
     routes();
     await renderSection(false);
     await userEvent.click(await screen.findByRole("button", { name: /^Rack.png/ }));
-    const drawer = await screen.findByRole("dialog", { name: "Rack.png" });
-    const summary = await within(drawer).findByText(/Image/);
-    const download = within(drawer).getByRole("link", { name: "Download" });
-    const padded = drawer.querySelector(".p-4");
-    expect(padded?.contains(summary)).toBe(true);
-    expect(padded?.contains(download)).toBe(true);
+    const lightbox = await screen.findByRole("dialog", { name: "Rack.png" });
+    const image = await within(lightbox).findByRole("img", { name: "Rack.png" });
+    expect(image.className).toContain("max-w-full");
+    await userEvent.click(within(lightbox).getByRole("button", { name: "Zoom in" }));
+    expect(image.className).toContain("max-w-none");
+    expect(within(lightbox).getByRole("link", { name: "Download" }).getAttribute("href")).toContain(
+      "download=true",
+    );
+    expect(within(lightbox).getByRole("link", { name: "Open in a new tab" }).getAttribute("target")).toBe(
+      "_blank",
+    );
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Rack.png" })).toBeNull());
   });
 
   it("marks a version to keep and shows which versions are kept", async () => {

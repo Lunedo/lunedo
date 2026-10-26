@@ -5,6 +5,7 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
+  FirstAndMore,
   IconButton,
   Input,
   Menu,
@@ -12,10 +13,12 @@ import {
   Table,
   TableToolbar,
   TimeZoneCombobox,
+  TruncatedText,
+  useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Building2, MoreHorizontal, Plus } from "lucide-react";
+import { Copy, Globe, MoreHorizontal, Plus, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -46,10 +49,10 @@ const createForm = z.object({
   ownerAccountId: z.string(),
 });
 
-function fetchOrganizations(search: string, cursor: string | null) {
+function fetchOrganizations(search: string, cursor: string | null, limit: number) {
   return request(() =>
     api.GET("/api/v1/instance/organizations", {
-      params: { query: { limit: 25, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) } },
+      params: { query: { limit, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) } },
     }),
   );
 }
@@ -59,7 +62,20 @@ export function InstanceOrganizationsScreen() {
   const state = useOrganizationState();
   const format = useFormat();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const table = useServerTable([...instanceKeys.organizations], fetchOrganizations);
+  const copyId = async (organization: { id: string }) => {
+    try {
+      await navigator.clipboard.writeText(organization.id);
+      toast({ title: t("instance.organizations.idCopied") });
+    } catch {
+      toast({
+        variant: "error",
+        title: t("instance.organizations.idCopyFailed"),
+        description: t("common.copyFailed"),
+      });
+    }
+  };
   const [creating, setCreating] = useState(false);
   const [breakGlass, setBreakGlass] = useState<{ id: string; name: string } | null>(null);
   const memberOf = new Set(state.organizations.map((entry) => entry.id));
@@ -68,10 +84,9 @@ export function InstanceOrganizationsScreen() {
 
   return (
     <SettingsPage
-      width="wide"
+      wide
       title={t("instance.organizations.title")}
       description={t("instance.organizations.description")}
-      icon={Building2}
       actions={
         state.can("instance.organizations.create") ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
@@ -86,6 +101,7 @@ export function InstanceOrganizationsScreen() {
           label: t("instance.organizations.search"),
           placeholder: t("instance.organizations.search"),
         }}
+        pagination={table.pagination}
       />
       {table.query.isError ? (
         <LoadError
@@ -99,7 +115,7 @@ export function InstanceOrganizationsScreen() {
         rowKey={(organization) => organization.id}
         rows={table.rows}
         loading={table.query.isPending}
-        {...(table.pagination ? { pagination: table.pagination } : {})}
+        pagination={table.pagination}
         onRowClick={(organization) => {
           if (memberOf.has(organization.id)) open(organization.id);
         }}
@@ -110,16 +126,20 @@ export function InstanceOrganizationsScreen() {
             key: "name",
             header: t("instance.organizations.name"),
             cell: (organization) => (
-              <div className="flex min-w-0 flex-col">
-                <span className="font-medium">{organization.name}</span>
-                <span className="font-mono text-sm text-text-muted">{organization.slug}</span>
-              </div>
+              <TruncatedText text={organization.name} className="max-w-field font-medium" />
             ),
           },
           {
             key: "owners",
             header: t("instance.organizations.owners"),
-            cell: (organization) => organization.owners.map((owner) => owner.name).join(", ") || "—",
+            cell: (organization) => (
+              <FirstAndMore
+                title={t("instance.organizations.ownersOf", { name: organization.name })}
+                moreLabel={(count) => t("instance.organizations.moreOwners", { count })}
+                values={organization.owners.map((owner) => ({ id: owner.id, label: owner.name }))}
+                empty="—"
+              />
+            ),
           },
           {
             key: "members",
@@ -165,6 +185,7 @@ export function InstanceOrganizationsScreen() {
                     ? [
                         {
                           label: t("breakGlass.request"),
+                          icon: ShieldAlert,
                           danger: true,
                           onSelect: () => setBreakGlass(organization),
                         },
@@ -172,12 +193,18 @@ export function InstanceOrganizationsScreen() {
                     : []),
                   {
                     label: t("instance.organizations.domains"),
+                    icon: Globe,
                     disabled: !memberOf.has(organization.id),
                     onSelect: () =>
                       void navigate({
                         to: "/settings/organizations/$organizationId/domains-and-guests",
                         params: { organizationId: organization.id },
                       }),
+                  },
+                  {
+                    label: t("instance.organizations.copyId"),
+                    icon: Copy,
+                    onSelect: () => void copyId(organization),
                   },
                 ]}
               />
@@ -266,11 +293,12 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
         <Field
           label={t("organization.general.slug")}
           hint={t("instance.organizations.slugHint")}
+          help={t("instance.organizations.slugHelp")}
           error={form.formState.errors.slug?.message}
         >
           <Input className="font-mono" {...form.register("slug")} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <Field label={t("instance.organizations.language")}>
             <Controller
               control={form.control}

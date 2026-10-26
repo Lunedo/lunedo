@@ -58,6 +58,7 @@ function signedOutApi(options: Record<string, unknown>, overrides: Record<string
     "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
+        providers: [],
         emailStep: true,
         directProvider: null,
         lastProvider: null,
@@ -144,7 +145,7 @@ describe("the sign-in page", () => {
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Emergency sign-in for the instance owner" }));
+    await userEvent.click(screen.getByRole("link", { name: "Emergency sign-in" }));
     const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
     await userEvent.type(within(dialog).getByLabelText("E-mail"), OLIVIA.email);
     await userEvent.type(within(dialog).getByLabelText("Password"), "correct horse battery");
@@ -169,7 +170,7 @@ describe("the sign-in page", () => {
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
     expect(screen.queryByLabelText("Work e-mail address or sign-in name")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Emergency sign-in for the instance owner" }));
+    await userEvent.click(screen.getByRole("link", { name: "Emergency sign-in" }));
     const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
     await userEvent.type(within(dialog).getByLabelText("E-mail"), OLIVIA.email);
     await userEvent.type(within(dialog).getByLabelText("Password"), "correct horse battery");
@@ -181,11 +182,29 @@ describe("the sign-in page", () => {
     });
   });
 
-  it("offers the provider used last as a shortcut", async () => {
-    const { requests } = signedOutApi({ lastProvider: { ...ENTRA, name: "Microsoft Entra ID" } });
+  it("offers the providers above the e-mail address, the one used last first", async () => {
+    const other = {
+      ...ENTRA,
+      id: "01929b1e-0000-7000-8000-0000000000d1",
+      preset: "generic",
+      name: "Nordwind SSO",
+    };
+    const { requests } = signedOutApi({
+      providers: [other, ENTRA],
+      lastProvider: ENTRA,
+    });
     await renderPath("/sign-in");
-    await userEvent.click(await screen.findByRole("button", { name: "Microsoft Entra ID" }));
-    await waitFor(() => expect(requests.some((request) => request.path.endsWith("/start"))).toBe(true));
+    const microsoft = await screen.findByRole("button", { name: "Sign in with Microsoft" });
+    const nordwind = screen.getByRole("button", { name: "Continue with Nordwind SSO" });
+    const email = screen.getByLabelText("Work e-mail address or sign-in name");
+    expect(microsoft.compareDocumentPosition(nordwind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(nordwind.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(microsoft);
+    await waitFor(() =>
+      expect(requests.some((request) => request.path === `/api/v1/auth/providers/${ENTRA.id}/start`)).toBe(
+        true,
+      ),
+    );
   });
 
   it("explains a refused sign-in with what to do and the reference", async () => {
@@ -388,7 +407,7 @@ function adminApi(overrides: Record<string, Handler> = {}) {
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/settings": () => ({
       body: {
         items: [
@@ -488,6 +507,7 @@ describe("setting up a provider as a draft", () => {
     });
     await renderPath("/settings/instance/sign-in-providers/new");
     expect(await screen.findByText(/saves the setup as a draft from the next step on/)).toBeTruthy();
+    expect(screen.getAllByText("Opens after the current step is saved")).toHaveLength(1);
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     const redirect = await screen.findByDisplayValue(
       `https://wiki.example.org/api/v1/auth/providers/${PROVIDER}/callback`,
@@ -532,7 +552,7 @@ describe("setting up a provider as a draft", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     const section = await screen.findByRole("region", { name: "Unfinished setups" });
-    expect(within(section).getByText("Old draft")).toBeTruthy();
+    expect(await within(section).findByText("Old draft")).toBeTruthy();
     expect(within(section).getByText(/nobody signs in through it until the setup is finished/)).toBeTruthy();
     expect(screen.getByText("Setup not finished")).toBeTruthy();
     const removeButtons = within(section).getAllByRole("button", { name: "Remove draft" });
@@ -621,7 +641,7 @@ describe("the sign-in settings of the instance", () => {
     const table = await screen.findByRole("table", { name: "Identity providers" });
     expect(within(table).getByText("example.org, example.at")).toBeTruthy();
     expect(screen.getByText(/The credential of Microsoft Entra ID · Example expires soon/)).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "Password sign-in" })).toBeTruthy();
+    expect(await screen.findByRole("switch", { name: "Password sign-in" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add provider" })).toBeTruthy();
   });
 
@@ -639,7 +659,7 @@ describe("the sign-in settings of the instance", () => {
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add credential" })).toBeTruthy();
     await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
-    expect(await screen.findByText("Existing accounts")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Existing accounts" })).toBeTruthy();
     expect(screen.queryByText(/Organizations/)).toBeNull();
   });
 
@@ -856,7 +876,7 @@ describe("the sign-in settings of the instance", () => {
     expect(screen.getByText(/could not read your groups from Microsoft/)).toBeTruthy();
   });
 
-  it("tells a person without an organization that the administrators were informed", async () => {
+  it("tells a person without an organization on For you that the administrators were informed", async () => {
     adminApi({
       "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
       "GET /api/v1/auth/session": () => ({
@@ -868,8 +888,9 @@ describe("the sign-in settings of the instance", () => {
         },
       }),
     });
-    await renderPath("/settings/instance/sign-in-providers");
+    await renderPath("/home");
     expect(await screen.findByText("No organization is assigned to you yet")).toBeTruthy();
+    expect(screen.queryByText("Welcome to Lunedo")).toBeNull();
   });
 
   it("offers one primary action to add the first provider", async () => {
@@ -877,6 +898,15 @@ describe("the sign-in settings of the instance", () => {
     await renderPath("/settings/instance/sign-in-providers");
     await screen.findByText("No identity providers yet");
     expect(screen.getAllByRole("button", { name: "Add provider" })).toHaveLength(1);
+  });
+
+  it("names the owner's emergency sign-in and links to the emergency access to organizations", async () => {
+    adminApi({ "GET /api/v1/instance/identity-providers": () => ({ body: [] }) });
+    await renderPath("/settings/instance/sign-in-providers");
+    const section = await screen.findByRole("region", { name: "Emergency sign-in of the owner" });
+    expect(
+      within(section).getByRole("link", { name: "Emergency access to organizations" }).getAttribute("href"),
+    ).toBe("/settings/instance/break-glass");
   });
 
   it("warns sign-in administrators when identity providers are not checked strictly", async () => {
@@ -1013,6 +1043,9 @@ describe("linked identities", () => {
   it("lets people unlink their own identity and explains a refusal", async () => {
     let refuse = true;
     const { requests } = adminApi({
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
       "GET /api/v1/account/identities": () => ({
         body: [
           {
@@ -1042,7 +1075,7 @@ describe("linked identities", () => {
       "DELETE /api/v1/account/identities/01929b1e-0000-7000-8000-0000000000c2": () =>
         refuse ? problem(409, "lastSignInMethod") : { status: 204 },
     });
-    await renderPath("/settings/security");
+    await renderPath("/settings/profile");
     await userEvent.click(await screen.findByRole("button", { name: "Unlink" }));
     let confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));
@@ -1054,7 +1087,7 @@ describe("linked identities", () => {
     await waitFor(() => expect(requests.filter((request) => request.method === "DELETE")).toHaveLength(2));
   });
 
-  it("lets administrators unlink an identity in the account panel", { timeout: 15_000 }, async () => {
+  it("lets administrators unlink an identity on the account page", { timeout: 15_000 }, async () => {
     const { requests } = adminApi({
       "GET /api/v1/instance/accounts": () => ({
         body: {
@@ -1095,6 +1128,7 @@ describe("linked identities", () => {
           sessions: [],
           tokens: [],
           twoFactor: { totp: false, passkeys: 0, recoveryCodes: 0 },
+          personalSpaceKey: null,
         },
       }),
       [`GET /api/v1/accounts/${MAX}/identities`]: () => ({
@@ -1119,7 +1153,9 @@ describe("linked identities", () => {
     await renderPath("/settings/instance/accounts");
     const table = await screen.findByRole("table", { name: "Accounts" });
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const heading = await screen.findByRole("heading", { level: 1, name: "Max Member" });
+    const panel = heading.closest("main") as HTMLElement;
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
     expect(await within(panel).findByText(/Signs in as mmember@example.org/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Unlink" }));
     const confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });

@@ -1,7 +1,8 @@
-import type { LucideIcon } from "lucide-react";
+import { Check, type LucideIcon } from "lucide-react";
 import { DropdownMenu, Popover as PopoverPrimitive, Tabs as TabsPrimitive } from "radix-ui";
 import { type ReactNode, useRef } from "react";
 import { classNames } from "./class-names.js";
+import { FieldLayoutProvider } from "./field.js";
 import { WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { rememberMenuOpener } from "./return-focus.js";
@@ -12,44 +13,69 @@ type Align = "start" | "center" | "end";
 
 const SURFACE = "z-50 rounded-md border border-border bg-surface text-text shadow-popover";
 
+export interface PopoverAnchor {
+  getBoundingClientRect(): DOMRect;
+}
+
 export interface PopoverProps {
-  trigger: ReactNode;
+  trigger?: ReactNode;
+  anchor?: PopoverAnchor;
   children: ReactNode;
   align?: Align;
   side?: Side;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   label?: string;
+  labelledBy?: string;
   onCloseAutoFocus?: (event: Event) => void;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  variant?: "default" | "panel";
 }
 
 export function Popover({
   trigger,
+  anchor,
   children,
   align = "center",
   side = "bottom",
   open,
   onOpenChange,
   label,
+  labelledBy,
   onCloseAutoFocus,
+  onEscapeKeyDown,
+  variant = "default",
 }: PopoverProps) {
+  const panel = variant === "panel";
   return (
     <PopoverPrimitive.Root
       {...(open !== undefined ? { open } : {})}
       {...(onOpenChange ? { onOpenChange } : {})}
     >
-      <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger>
+      {anchor ? <PopoverPrimitive.Anchor virtualRef={{ current: anchor }} /> : null}
+      {trigger ? <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger> : null}
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           align={align}
           side={side}
-          sideOffset={6}
-          collisionPadding={8}
+          sideOffset={panel ? 10 : 6}
+          collisionPadding={panel ? 0 : 8}
           {...(label ? { "aria-label": label } : {})}
+          {...(labelledBy ? { "aria-labelledby": labelledBy } : {})}
           {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
-          className={classNames(SURFACE, "max-w-dialog-sm p-3 focus-visible:focus-ring")}
+          {...(onEscapeKeyDown ? { onEscapeKeyDown } : {})}
+          {...(panel
+            ? { style: { maxHeight: "min(70dvh, var(--radix-popover-content-available-height))" } }
+            : {})}
+          className={classNames(
+            SURFACE,
+            "focus-visible:focus-ring",
+            panel
+              ? "flex w-card max-w-screen flex-col overflow-hidden max-md:w-screen max-md:rounded-none max-md:border-x-0"
+              : "max-w-dialog-sm p-3",
+          )}
         >
-          {children}
+          <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>
@@ -60,24 +86,34 @@ export type MenuItem =
   | {
       type?: "item";
       label: string;
-      icon?: LucideIcon;
+      icon: LucideIcon;
       onSelect: () => void;
       danger?: boolean;
       disabled?: boolean;
       shortcut?: string;
+      checked?: boolean;
+      attention?: string;
     }
   | { type: "separator" }
-  | { type: "label"; label: string };
+  | { type: "label"; label: string }
+  | { type: "header"; title: string; description?: string };
 
 export interface MenuProps {
   trigger: ReactNode;
   items: MenuItem[];
   align?: Align;
   side?: Side;
+  runAfterClose?: boolean;
 }
 
-export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuProps) {
+export function Menu({ trigger, items, align = "end", side = "bottom", runAfterClose = false }: MenuProps) {
   const opener = useRef<HTMLButtonElement>(null);
+  const pending = useRef<(() => void) | null>(null);
+  const select = (action: () => void) => {
+    rememberMenuOpener(opener.current);
+    if (runAfterClose) pending.current = action;
+    else action();
+  };
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild ref={opener}>
@@ -89,7 +125,15 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
           side={side}
           sideOffset={4}
           collisionPadding={8}
-          className={classNames(SURFACE, "min-w-field p-1")}
+          onCloseAutoFocus={(event) => {
+            const action = pending.current;
+            if (!action) return;
+            pending.current = null;
+            event.preventDefault();
+            action();
+          }}
+          style={{ maxHeight: "var(--radix-dropdown-menu-content-available-height)" }}
+          className={classNames(SURFACE, "max-w-dialog-sm min-w-field overflow-y-auto p-1")}
         >
           {items.map((item, index) => {
             if (item.type === "separator") {
@@ -106,21 +150,58 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
                 </DropdownMenu.Label>
               );
             }
+            if (item.type === "header") {
+              return (
+                <div key={`header-${item.title}`} className="flex flex-col px-2 pt-2 pb-2">
+                  <span className="truncate font-semibold" title={item.title}>
+                    {item.title}
+                  </span>
+                  {item.description && (
+                    <span className="truncate text-sm text-text-muted" title={item.description}>
+                      {item.description}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+            if (item.checked !== undefined) {
+              return (
+                <DropdownMenu.CheckboxItem
+                  key={item.label}
+                  checked={item.checked}
+                  onSelect={() => select(item.onSelect)}
+                  {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
+                  className="flex h-row cursor-default items-center gap-2 rounded-sm px-2 text-text outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover"
+                >
+                  <Icon icon={item.icon} className="text-text-muted" />
+                  <span className="min-w-0 flex-1 truncate" title={item.label}>
+                    {item.label}
+                  </span>
+                  <DropdownMenu.ItemIndicator className="flex">
+                    <Icon icon={Check} className="text-accent" />
+                  </DropdownMenu.ItemIndicator>
+                </DropdownMenu.CheckboxItem>
+              );
+            }
             return (
               <DropdownMenu.Item
                 key={item.label}
-                onSelect={() => {
-                  rememberMenuOpener(opener.current);
-                  item.onSelect();
-                }}
+                onSelect={() => select(item.onSelect)}
                 {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
                 className={classNames(
                   "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover",
                   item.danger ? "text-danger" : "text-text",
                 )}
               >
-                {item.icon && <Icon icon={item.icon} className={item.danger ? "" : "text-text-muted"} />}
-                <span className="flex-1">{item.label}</span>
+                <Icon icon={item.icon} className={item.danger ? "" : "text-text-muted"} />
+                <span className="min-w-0 flex-1 truncate" title={item.label}>
+                  {item.label}
+                </span>
+                {item.attention && (
+                  <span data-attention="" className="size-2 shrink-0 rounded-full bg-badge">
+                    <span className="sr-only">{item.attention}</span>
+                  </span>
+                )}
                 {item.shortcut && <span className="text-xs text-text-muted">{item.shortcut}</span>}
               </DropdownMenu.Item>
             );
@@ -134,15 +215,20 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
 export interface TabsProps {
   value: string;
   onValueChange: (value: string) => void;
-  tabs: { value: string; label: ReactNode; count?: number }[];
+  tabs: { value: string; label: ReactNode; count?: number | string }[];
   label: string;
   children?: ReactNode;
+  fill?: boolean;
 }
 
-export function Tabs({ value, onValueChange, tabs, label, children }: TabsProps) {
+export function Tabs({ value, onValueChange, tabs, label, children, fill = false }: TabsProps) {
   return (
-    <TabsPrimitive.Root value={value} onValueChange={onValueChange} className="flex flex-col gap-4">
-      <ScrollArea surface="bg">
+    <TabsPrimitive.Root
+      value={value}
+      onValueChange={onValueChange}
+      className={classNames("flex flex-col", fill ? "min-h-0 flex-1 gap-1" : "gap-4")}
+    >
+      <ScrollArea surface="bg" className="overflow-y-hidden">
         <TabsPrimitive.List aria-label={label} className="flex w-max min-w-full gap-1 border-b border-border">
           {tabs.map((tab) => (
             <TabsPrimitive.Trigger
@@ -159,7 +245,10 @@ export function Tabs({ value, onValueChange, tabs, label, children }: TabsProps)
           ))}
         </TabsPrimitive.List>
       </ScrollArea>
-      <TabsPrimitive.Content value={value} className="focus-visible:focus-ring">
+      <TabsPrimitive.Content
+        value={value}
+        className={classNames("focus-visible:focus-ring", fill && "min-h-0 flex-1 overflow-y-auto")}
+      >
         {children}
       </TabsPrimitive.Content>
     </TabsPrimitive.Root>

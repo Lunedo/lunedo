@@ -1,4 +1,4 @@
-import { emailSchema, passkeyNameSchema, passwordSchema } from "@lunedo/shared";
+import { passkeyNameSchema, passwordSchema } from "@lunedo/shared";
 import {
   Badge,
   Button,
@@ -18,7 +18,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fingerprint, KeyRound, LockKeyhole, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
+import { Fingerprint, Monitor, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -33,29 +33,28 @@ import {
 import { api } from "../../api/client.js";
 import { instanceInfoQuery } from "../../api/queries.js";
 import { request } from "../../api/request.js";
-import { OwnIdentities } from "../../components/linked-identities.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
-import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
-import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
+import { useSpaceNames } from "../../components/token-content-access.js";
+import { CreateTokenDialog, RevokeTokenDialog, TokenRightsDialog } from "../../components/token-dialogs.js";
+import { TokenTable } from "../../components/token-table.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { createPasskey, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
+import { useInlineReauthentication } from "../../session/reauthentication.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { EmailRow } from "./profile-screen.js";
 
 export function SecurityScreen() {
   const { t } = useTranslation();
   const session = useSession();
   return (
-    <SettingsPage title={t("security.title")} description={t("security.description")} icon={LockKeyhole}>
+    <SettingsPage title={t("security.title")} description={t("security.description")}>
       <SignInSection />
-      <Section title={t("identities.title")}>
-        <OwnIdentities />
-      </Section>
       <TwoFactorSection />
       <SessionsSection />
       <TokensSection />
@@ -107,38 +106,23 @@ function SecurityDangerZone() {
   );
 }
 
-export function SignInSection() {
+export function SignInSection({ withEmail = false }: { withEmail?: boolean }) {
   const { t } = useTranslation();
-  const session = useSession();
-  const [dialog, setDialog] = useState<"password" | "email" | null>(null);
+  const [open, setOpen] = useState(false);
   return (
     <Section title={t("security.signIn")}>
       <SettingRow
         label={t("auth.password")}
         description={t("security.passwordDescription")}
+        help={t("security.passwordHelp")}
         control={
-          <Button variant="outline" onClick={() => setDialog("password")}>
+          <Button variant="outline" onClick={() => setOpen(true)}>
             {t("security.changePassword")}
           </Button>
         }
       />
-      <SettingRow
-        label={t("auth.email")}
-        description={session.account?.email ?? ""}
-        control={
-          <Button variant="outline" onClick={() => setDialog("email")}>
-            {t("security.changeEmail")}
-          </Button>
-        }
-      />
-      <ChangePasswordDialog
-        open={dialog === "password"}
-        onOpenChange={(open) => setDialog(open ? "password" : null)}
-      />
-      <ChangeEmailDialog
-        open={dialog === "email"}
-        onOpenChange={(open) => setDialog(open ? "email" : null)}
-      />
+      {withEmail ? <EmailRow /> : null}
+      <ChangePasswordDialog open={open} onOpenChange={setOpen} />
     </Section>
   );
 }
@@ -159,6 +143,7 @@ function ChangePasswordDialog({
   const info = useQuery(instanceInfoQuery);
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const reauthentication = useInlineReauthentication(open);
   const form = useSchemaForm(passwordForm, {
     defaultValues: { password: "", repeated: "" },
     messages: { repeated: t("auth.passwordsDiffer") },
@@ -177,7 +162,13 @@ function ChangePasswordDialog({
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("security.changePassword")} size="sm">
-      <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
+      {reauthentication.panel}
+      <form
+        className="flex flex-col gap-4"
+        noValidate
+        hidden={reauthentication.active}
+        onSubmit={submitWith(submit)}
+      >
         {error ? (
           <Notice variant="danger" title={t("failures.changePassword")}>
             {error}
@@ -186,6 +177,7 @@ function ChangePasswordDialog({
         <Field
           label={t("auth.newPassword")}
           hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
+          help={t("auth.passwordHelp", { minimum: info.data?.passwordMinLength ?? 12 })}
           error={form.formState.errors.password?.message}
         >
           <PasswordInput autoComplete="new-password" autoFocus {...form.register("password")} />
@@ -200,54 +192,6 @@ function ChangePasswordDialog({
           </Button>
           <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
             {t("security.changePassword")}
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-}
-
-const emailForm = z.object({ email: emailSchema });
-
-function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const [error, setError] = useState<string | null>(null);
-  const form = useSchemaForm(emailForm, { defaultValues: { email: "" } });
-  const submit = form.handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await request(() => api.POST("/api/v1/account/email", { body: values }));
-      toast({ title: t("security.emailConfirmationSent"), variant: "success" });
-      form.reset();
-      onOpenChange(false);
-    } catch (failure) {
-      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
-    }
-  });
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("security.changeEmail")}
-      description={t("security.changeEmailDescription")}
-      size="sm"
-    >
-      <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-        {error ? (
-          <Notice variant="danger" title={t("failures.changeEmail")}>
-            {error}
-          </Notice>
-        ) : null}
-        <Field label={t("security.newEmail")} error={form.formState.errors.email?.message}>
-          <Input type="email" autoComplete="email" autoFocus {...form.register("email")} />
-        </Field>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {t("common.cancel")}
-          </Button>
-          <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
-            {t("security.sendConfirmation")}
           </Button>
         </div>
       </form>
@@ -292,7 +236,7 @@ export function TwoFactorSection() {
   return (
     <Section title={t("security.twoFactor")}>
       {data.secondFactorRequiredBy ? (
-        <div className="px-4 pt-4">
+        <div className="pt-4">
           <Notice variant="info">{t(`security.twoFactorRequired.${data.secondFactorRequiredBy}`)}</Notice>
         </div>
       ) : null}
@@ -314,6 +258,7 @@ export function TwoFactorSection() {
         description={
           data.passkeys.length === 0 ? t("security.noPasskeys") : t("security.passkeysDescription")
         }
+        help={t("security.noPasskeysHelp")}
         control={
           passkeysSupported() ? (
             <Button variant="outline" icon={Plus} onClick={() => setDialog("passkey")}>
@@ -444,6 +389,7 @@ function AddPasskeyDialog({
 }) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
+  const reauthentication = useInlineReauthentication(open);
   const form = useSchemaForm(passkeyForm, { defaultValues: { name: "" } });
   const submit = form.handleSubmit(async (values) => {
     setError(null);
@@ -461,7 +407,13 @@ function AddPasskeyDialog({
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("security.addPasskey")} size="sm">
-      <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
+      {reauthentication.panel}
+      <form
+        className="flex flex-col gap-4"
+        noValidate
+        hidden={reauthentication.active}
+        onSubmit={submitWith(submit)}
+      >
         {error ? (
           <Notice variant="danger" title={t("failures.addPasskey")}>
             {error}
@@ -470,6 +422,7 @@ function AddPasskeyDialog({
         <Field
           label={t("security.passkeyName")}
           hint={t("security.passkeyNameHint")}
+          help={t("security.passkeyNameHelp")}
           error={form.formState.errors.name?.message}
         >
           <Input autoComplete="off" autoFocus {...form.register("name")} />
@@ -567,7 +520,7 @@ export function SessionsSection() {
 
 function TokensSection() {
   const { t } = useTranslation();
-  const format = useFormat();
+  const _format = useFormat();
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const organization = useOrganizationState();
@@ -603,41 +556,21 @@ function TokensSection() {
         </Button>
       }
     >
-      {tokens.isPending ? <Skeleton className="h-12 w-full" /> : null}
-      {tokens.data?.length === 0 ? <p className="px-4 py-3 text-text-muted">{t("tokens.none")}</p> : null}
-      <List>
-        {tokens.data?.map((token) => (
-          <ListRow
-            key={token.id}
-            icon={KeyRound}
-            title={token.name}
-            description={[
-              scopeSummary(t, token, knowledgeBaseNames),
-              token.expiresAt
-                ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
-                : t("tokens.noExpiry"),
-              token.lastUsedAt
-                ? t("tokens.lastUsed", { when: format.relative(token.lastUsedAt) })
-                : t("tokens.neverUsed"),
-            ].join(" · ")}
-            actions={
-              <>
-                {token.scopes.organization?.spaces ? (
-                  <Button variant="secondary" onClick={() => setChanging(token)}>
-                    {t("tokens.content.change")}
-                  </Button>
-                ) : null}
-                <Button variant="danger" onClick={() => setRevoking(token)}>
-                  {t("tokens.revoke")}
-                </Button>
-              </>
-            }
-          />
-        ))}
-      </List>
-      <ContentAccessDialog
+      <div className="pt-3">
+        <TokenTable
+          caption={t("tokens.personal")}
+          tokens={tokens.data ?? []}
+          loading={tokens.isPending}
+          knowledgeBaseNames={knowledgeBaseNames}
+          canManage
+          onChangeContent={setChanging}
+          onRevoke={setRevoking}
+        />
+      </div>
+      <TokenRightsDialog
         token={changing}
-        organizationId={changing?.organizationId ?? null}
+        allowInstance={instanceAccess}
+        organizationName={organization.organization?.name ?? null}
         onOpenChange={(open) => {
           if (!open) setChanging(null);
         }}
@@ -660,12 +593,13 @@ function TokensSection() {
         allowInstance={instanceAccess}
         allowOrganization={organization.organizationId !== null}
         organizationId={organization.organizationId}
-        onCreate={async (input) => {
+        organizationName={organization.organization?.name ?? null}
+        onCreate={async ({ limitedToOrganization, ...input }) => {
           const created = await request(() =>
             api.POST("/api/v1/account/tokens", {
               body: {
                 ...input,
-                ...(input.scopes.organization && organization.organizationId
+                ...(limitedToOrganization && organization.organizationId
                   ? { organizationId: organization.organizationId }
                   : {}),
               },

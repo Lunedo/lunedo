@@ -6,21 +6,40 @@ import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/re
 import {
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   Columns2,
-  Frame,
-  ImageOff,
+  Columns3,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   Info,
+  Lightbulb,
   ListTree,
-  Paperclip,
+  type LucideIcon,
+  StickyNote,
+  Trash2,
+  TriangleAlert,
+  Ungroup,
 } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAttachmentUrl } from "../../files/attachment-source.js";
-import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
 import { NamedIcon } from "../../knowledge-bases/icons.js";
 import { useEditable } from "../context.js";
-import { useImageTooLarge } from "../references.js";
+import { dissolveLayout, removeLayoutColumn } from "../layout-commands.js";
+
+const headingIcons: LucideIcon[] = [Heading1, Heading2, Heading3, Heading4, Heading5, Heading6];
+
+const calloutIcons: Record<(typeof calloutVariants)[number], LucideIcon> = {
+  info: Info,
+  tip: Lightbulb,
+  note: StickyNote,
+  warning: TriangleAlert,
+  error: CircleAlert,
+};
 
 export interface TocEntry {
   level: number;
@@ -84,6 +103,7 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
                 .filter((level) => level <= maxLevel)
                 .map((level) => ({
                   label: t("editor.toc.fromLevel", { level }),
+                  icon: headingIcons[level - 1] ?? Heading6,
                   onSelect: () => updateAttributes({ minLevel: level }),
                 }))}
             />
@@ -98,6 +118,7 @@ export function TableOfContentsView({ node, editor, updateAttributes, selected }
                 .filter((level) => level >= minLevel)
                 .map((level) => ({
                   label: t("editor.toc.levels", { level }),
+                  icon: headingIcons[level - 1] ?? Heading6,
                   onSelect: () => updateAttributes({ maxLevel: level }),
                 }))}
             />
@@ -143,6 +164,7 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
             }
             items={calloutVariants.map((candidate) => ({
               label: translateKey(t, `editor.callout.${candidate}`),
+              icon: calloutIcons[candidate],
               onSelect: () => updateAttributes({ variant: candidate }),
             }))}
           />
@@ -223,9 +245,27 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
       })
       .run();
   };
+  const removeColumn = (index: number) => {
+    const position = getPos();
+    if (typeof position !== "number") return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => removeLayoutColumn(tr, position, node, index))
+      .run();
+  };
+  const dissolve = () => {
+    const position = getPos();
+    if (typeof position !== "number") return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => dissolveLayout(tr, position, node))
+      .run();
+  };
   return (
     <NodeViewWrapper className="ld-columns" data-count={count}>
-      {editable && layouts.length > 1 ? (
+      {editable ? (
         <div contentEditable={false} className="ld-columns-control">
           <Menu
             align="start"
@@ -234,10 +274,26 @@ export function ColumnsView({ node, editor, getPos }: NodeViewProps) {
                 <Columns2 aria-hidden="true" className="size-icon-sm" />
               </button>
             }
-            items={layouts.map((widths) => ({
-              label: widths.map((width) => `${width} %`).join(" · "),
-              onSelect: () => apply(widths),
-            }))}
+            items={[
+              ...(layouts.length > 1
+                ? [
+                    { type: "label" as const, label: t("editor.columns.widths") },
+                    ...layouts.map((widths) => ({
+                      label: widths.map((width) => `${width} %`).join(" · "),
+                      icon: count === 3 ? Columns3 : Columns2,
+                      onSelect: () => apply(widths),
+                    })),
+                    { type: "separator" as const },
+                  ]
+                : []),
+              ...Array.from({ length: count }, (_, index) => ({
+                label: t("editor.columns.removeColumn", { number: index + 1 }),
+                icon: Trash2,
+                onSelect: () => removeColumn(index),
+              })),
+              { type: "separator" as const },
+              { label: t("editor.columns.dissolve"), icon: Ungroup, onSelect: dissolve },
+            ]}
           />
         </div>
       ) : null}
@@ -313,39 +369,6 @@ export function SectionView({ node }: NodeViewProps) {
   );
 }
 
-function frameValue(frame: unknown): "on" | "off" | undefined {
-  return frame === true ? "on" : frame === false ? "off" : undefined;
-}
-
-function FrameMenu({ frame, onChange }: { frame: unknown; onChange: (frame: boolean | null) => void }) {
-  const { t } = useTranslation();
-  const current = frame === true ? "on" : frame === false ? "off" : "auto";
-  return (
-    <div className="ld-image-controls">
-      <Menu
-        align="start"
-        trigger={
-          <button
-            type="button"
-            className="ld-inline-button"
-            aria-label={t("knowledgeBase.frame.change", {
-              frame: translateKey(t, `knowledgeBase.frame.${current}`),
-            })}
-          >
-            <Frame aria-hidden="true" className="size-icon-sm" />
-            {translateKey(t, `knowledgeBase.frame.${current}`)}
-            <ChevronDown aria-hidden="true" className="size-icon-sm" />
-          </button>
-        }
-        items={(["auto", "on", "off"] as const).map((value) => ({
-          label: translateKey(t, `knowledgeBase.frame.${value}`),
-          onSelect: () => onChange(value === "auto" ? null : value === "on"),
-        }))}
-      />
-    </div>
-  );
-}
-
 export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
   const { t } = useTranslation();
   return (
@@ -355,61 +378,6 @@ export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
       contentEditable={false}
     >
       <p>{t("editor.unsupportedMacro", { name: String(node.attrs.name) })}</p>
-    </NodeViewWrapper>
-  );
-}
-
-export function AttachmentView({ node, selected, editor, updateAttributes }: NodeViewProps) {
-  const editable = useEditable(editor);
-  const { t } = useTranslation();
-  const preview = useAttachmentPreview();
-  const attachmentUrl = useAttachmentUrl();
-  const id = typeof node.attrs.attachmentId === "string" ? node.attrs.attachmentId : null;
-  const isImage = node.type.name === "image";
-  const tooLarge = useImageTooLarge(isImage ? id : null);
-  const name = String((isImage ? node.attrs.alt : node.attrs.name) || "");
-  return (
-    <NodeViewWrapper
-      className={`${isImage ? "ld-image" : "ld-file"}${selected ? " ld-node-selected" : ""}`}
-      data-align={isImage ? String(node.attrs.align) : undefined}
-      data-frame={isImage ? frameValue(node.attrs.frame) : undefined}
-      contentEditable={false}
-    >
-      {isImage && editable && selected && id ? (
-        <FrameMenu frame={node.attrs.frame} onChange={(frame) => updateAttributes({ frame })} />
-      ) : null}
-      {isImage && id && tooLarge ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm">
-          <span className="flex min-w-0 items-center gap-2 text-text-muted">
-            <ImageOff aria-hidden="true" className="size-icon shrink-0" />
-            {t("editor.attachment.imageTooLarge", { name: name || t("editor.readView.image") })}
-          </span>
-          <a
-            href={attachmentUrl(id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-hit items-center font-medium text-accent underline focus-visible:focus-ring"
-          >
-            {t("editor.attachment.openFullSize")}
-          </a>
-        </div>
-      ) : isImage && id ? (
-        <img src={attachmentUrl(id, undefined, "display")} alt={name} loading="lazy" draggable={false} />
-      ) : isImage || !id ? (
-        <p className="ld-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">
-          <ImageOff aria-hidden="true" className="size-icon" />
-          {t("editor.attachment.missingImage")}
-        </p>
-      ) : (
-        <button
-          type="button"
-          className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 hover:bg-hover focus-visible:focus-ring"
-          onClick={() => preview?.open(id)}
-        >
-          <Paperclip aria-hidden="true" className="size-icon" />
-          {name || t("editor.attachment.file", { name: "" })}
-        </button>
-      )}
     </NodeViewWrapper>
   );
 }

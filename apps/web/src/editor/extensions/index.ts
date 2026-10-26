@@ -14,7 +14,6 @@ import { ExcerptView, IncludeView } from "../includes.js";
 import { ContentByLabelView, RelatedLabelsView } from "../label-blocks.js";
 import { AttachmentListView, ChildPagesView } from "../listings.js";
 import {
-  AttachmentView,
   CalloutView,
   CodeBlockView,
   ColumnsView,
@@ -27,6 +26,7 @@ import {
 import { DrawioReferenceView, DrawioView, TextDiagramView } from "../nodes/diagram-views.js";
 import { DrawingView } from "../nodes/drawing-view.js";
 import { EmbedView, FileView, TabsView, WhiteboardView } from "../nodes/embed-views.js";
+import { ImageView } from "../nodes/image-view.js";
 import {
   DateView,
   EmojiView,
@@ -47,6 +47,7 @@ import { DecisionReportView, PageReportView } from "../reports.js";
 import { RoadmapView } from "../roadmap-view.js";
 import { schemaExtensions } from "../schema/extensions.js";
 import { slashMenuOpen, slashSuggestionItems } from "../slash-items.js";
+import { deleteSelectedTablePart } from "../table-commands.js";
 import { TemplateButtonView } from "../template-button.js";
 import { BlockFormatting } from "./block-formatting.js";
 import { DocumentEdges } from "./document-edges.js";
@@ -61,6 +62,7 @@ import { PropertyNavigation } from "./property-navigation.js";
 import { RequiredSections } from "./required-sections.js";
 import { PageLinkSuggestion, SlashCommand, type SuggestionItem, suggestionRender } from "./suggestions.js";
 import { TaskIds } from "./task-ids.js";
+import { TaskListAdd } from "./task-list-add.js";
 
 const INLINE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   mention: MentionView,
@@ -83,7 +85,7 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   codeBlock: CodeBlockView,
   section: SectionView,
   unsupportedMacro: UnsupportedMacroView,
-  image: AttachmentView,
+  image: ImageView,
   file: FileView,
   embed: EmbedView,
   whiteboard: WhiteboardView,
@@ -232,8 +234,9 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     SlashCommand.configure({
       items: (query) => slashSuggestionItems(query, t),
       open: (query) => slashMenuOpen(query, t),
-      labels: labels("editor.suggestions.blocks"),
+      labels: () => ({ ...labels("editor.suggestions.blocks")(), hints: t("editor.suggestions.hints") }),
     }),
+    TaskListAdd.configure({ label: () => t("editor.tasks.add") }),
     PageLinkSuggestion.configure({
       spaceId: options.spaceId,
       labels: () => ({
@@ -245,6 +248,16 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     }),
     FindReplace.configure({ onOpen: options.onOpenFind ?? (() => undefined) }),
     DocumentEdges,
+    Extension.create({
+      name: "tablePartDeletion",
+      priority: 1000,
+      addKeyboardShortcuts() {
+        return {
+          Backspace: () => deleteSelectedTablePart(this.editor),
+          Delete: () => deleteSelectedTablePart(this.editor),
+        };
+      },
+    }),
     Extension.create({
       name: "editorShortcuts",
       addKeyboardShortcuts() {

@@ -12,6 +12,7 @@ x-node-modules: &node-modules
   - node-modules-worker:/repo/apps/worker/node_modules
   - node-modules-render:/repo/apps/render/node_modules
   - node-modules-editor-schema:/repo/packages/editor-schema/node_modules
+  - node-modules-fractional-indexing:/repo/packages/fractional-indexing/node_modules
   - node-modules-shared:/repo/packages/shared/node_modules
   - node-modules-ui:/repo/packages/ui/node_modules
   - node-modules-tokens:/repo/packages/tokens/node_modules
@@ -99,6 +100,8 @@ services:
       # Only the Vite dev proxy in this container forwards the client's address and protocol.
       LUNEDO_TRUSTED_PROXIES: 127.0.0.1,::1
       LUNEDO_UPDATE_CHECK: "false"
+      # Development data needs no backup before updates, and this container has no pg_dump.
+      LUNEDO_BACKUP_BEFORE_UPDATE: "false"
       # Optional: PDF on the server through the render container of the profile "render".
       # Set both to use it, for example LUNEDO_RENDER_URL=http://render:3000.
       LUNEDO_RENDER_URL: ${LUNEDO_RENDER_URL:-}
@@ -249,6 +252,7 @@ volumes:
   node-modules-worker:
   node-modules-render:
   node-modules-editor-schema:
+  node-modules-fractional-indexing:
   node-modules-shared:
   node-modules-ui:
   node-modules-tokens:

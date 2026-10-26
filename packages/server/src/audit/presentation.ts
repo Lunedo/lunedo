@@ -11,7 +11,14 @@ export interface AuditChange {
 export interface AuditPresentation {
   labelKey: string;
   changeKind: AuditChangeKind;
-  actor: { type: string; id: string | null; name: string | null; former: boolean };
+  actor: {
+    type: string;
+    id: string | null;
+    name: string | null;
+    former: boolean;
+    serviceAccount: boolean;
+    token: string | null;
+  };
   target: { type: string; id: string | null; name: string | null; former: boolean };
   scope: { type: "instance" | "organization" | "account"; id: string | null; name: string | null };
   changes: AuditChange[];
@@ -119,6 +126,8 @@ export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentati
       id: entry.actorId,
       name: labels.actor ?? null,
       former: entry.actorId !== null && former.has(entry.actorId),
+      serviceAccount: labels.actorKind === "serviceAccount",
+      token: labels.actorToken ?? null,
     },
     target: {
       type: entry.targetType,

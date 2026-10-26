@@ -40,9 +40,11 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
 }) => {
   const { pageId, pagePath } = await place(page, organization);
   await page.goto(pagePath);
-  const section = attachments(page);
-  await expect(section.getByText("No files yet. Upload files or drop them on the page.")).toBeVisible();
-  await section.locator('input[type="file"]').setInputFiles({
+  await expect(attachments(page)).toBeHidden();
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Attach files" }).click();
+  await (await chooser).setFiles({
     name: "notes.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("First version of the notes"),
@@ -65,10 +67,11 @@ test("uploads files by picker, drop and paste, previews them in a sandbox and re
       new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
     );
   }, pasted);
-  await expect(row(page, "page.html")).toBeVisible();
-  await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("button", { name: "Done" })).toBeHidden();
+  await expect(attachments(page)).toBeHidden();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toBeHidden();
   await expect(page).not.toHaveURL(/edit=true/);
+  await expect(row(page, "page.html")).toBeVisible();
 
   await attachments(page)
     .locator('input[type="file"]')
@@ -159,7 +162,7 @@ test("previews every supported type without running scripts inside the files", a
     { name: "budget.xlsx", mimeType: "application/octet-stream", buffer: xlsx("Budget total") },
     { name: "chime.wav", mimeType: "audio/wav", buffer: wav() },
   ];
-  await attachments(page).locator('input[type="file"]').setInputFiles(files);
+  await page.locator("input[data-page-attach]").setInputFiles(files);
   for (const file of files) await expect(row(page, file.name)).toBeVisible();
   const open = async (name: string) => {
     await row(page, name).click();
@@ -214,9 +217,10 @@ test("restricts and shares a page, opens links and decides an access request", a
     await expectAccessible(page, "share dialog with pending change");
     await pending.getByRole("button", { name: "Share page" }).click();
     await expect(
-      dialog.getByRole("region", { name: "People and groups on the access list" }).getByText(colleague.name),
+      dialog.getByRole("region", { name: "Who has access" }).getByText(colleague.name),
     ).toBeVisible();
 
+    await dialog.getByRole("button", { name: "Change", exact: true }).click();
     await dialog.getByRole("combobox", { name: "Who can view this page" }).click();
     await page.getByRole("option", { name: "Only the people and groups on the list" }).click();
     await dialog
@@ -225,7 +229,7 @@ test("restricts and shares a page, opens links and decides an access request", a
       .click();
     await expect(page.getByText(/^Page restricted/)).toBeVisible();
 
-    await dialog.getByRole("tab", { name: "Share links" }).click();
+    await dialog.getByRole("tab", { name: /^Share links/ }).click();
     await dialog.getByRole("button", { name: "Create link" }).click();
     await expect(dialog.getByText("Add at least one person or group.")).toBeVisible();
     await dialog.getByRole("combobox", { name: "People and groups" }).fill(colleague.name);
@@ -247,6 +251,7 @@ test("restricts and shares a page, opens links and decides an access request", a
     await other.getByRole("textbox", { name: /Message/ }).fill("I prepare the budget review.");
     await other.getByRole("button", { name: "Request access" }).click();
     await expect(other.getByText("Request sent")).toBeVisible();
+    await expect(other.getByRole("region", { name: "Your access requests" }).getByText("Open")).toBeVisible();
 
     const requests = (await (await page.request.get(`/api/v1/spaces/${spaceId}/access-requests`)).json()) as {
       id: string;
@@ -369,10 +374,15 @@ test("shows a large photo as its display version and opens the original in full 
   const image = page.getByRole("img", { name: "Site survey" });
   await expect(image).toHaveAttribute("src", `/api/v1/attachments/${file.id}/content?size=display`);
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(2048);
-  const full = page.getByRole("link", { name: "Site survey" });
-  await expect(full).toHaveAttribute("title", "Open full size");
+  await page.getByRole("link", { name: "Open Site survey large" }).click();
+  const lightbox = page.getByRole("dialog");
+  await expect(lightbox.getByRole("img")).toHaveAttribute(
+    "src",
+    `/api/v1/attachments/${file.id}/content?version=1`,
+  );
+  await expectAccessible(page, "image lightbox");
   const opened = page.waitForEvent("popup");
-  await full.click();
+  await lightbox.getByRole("link", { name: "Open in a new tab" }).click();
   const tab = await opened;
   await tab.waitForLoadState();
   expect(new URL(tab.url()).pathname + new URL(tab.url()).search).toBe(
@@ -382,5 +392,7 @@ test("shows a large photo as its display version and opens the original in full 
   expect(shown.headers()["content-type"]).toBe("image/png");
   expect((await shown.body()).equals(original)).toBe(true);
   await tab.close();
+  await page.keyboard.press("Escape");
+  await expect(lightbox).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`${pagePath}$`));
 });

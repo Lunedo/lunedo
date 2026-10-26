@@ -1,11 +1,9 @@
-import { Button, Combobox, type ComboboxItem, Dialog, Field, Notice, RadioGroup } from "@lunedo/ui";
+import { Combobox, type ComboboxItem, Field, SegmentedControl } from "@lunedo/ui";
 import { useQueries } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ApiToken } from "../api/account-queries.js";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
 import { knowledgeBaseLoader } from "./pickers.js";
 
@@ -67,32 +65,43 @@ export function ContentAccessFields({
   organizationId,
   error,
   allowNone = true,
+  readOnly = false,
 }: {
   value: ContentAccess;
   onChange: (next: ContentAccess) => void;
   organizationId: string | null;
   error?: string | undefined;
   allowNone?: boolean;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const choices = allowNone ? CONTENT_CHOICES : CONTENT_CHOICES.filter((choice) => choice !== "none");
+  const reach = t("tokens.content.reach");
   return (
-    <fieldset className="flex flex-col gap-3">
-      <legend className="mb-1 font-medium">{t("tokens.content.title")}</legend>
-      <RadioGroup
-        label={t("tokens.content.title")}
-        value={value.choice}
-        onValueChange={(choice) => onChange({ ...value, choice: choice as ContentChoice })}
-        options={choices.map((choice) => ({
-          value: choice,
-          label: translateKey(t, `tokens.content.levels.${choice}`),
-          description: translateKey(t, `tokens.content.descriptions.${choice}`),
-        }))}
-      />
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+        <span className="min-w-0">{t("tokens.content.areas")}</span>
+        <SegmentedControl
+          label={t("tokens.content.title")}
+          value={value.choice}
+          onValueChange={(choice) => onChange({ ...value, choice: choice as ContentChoice })}
+          options={choices.map((choice) => ({
+            value: choice,
+            label: translateKey(t, `tokens.content.short.${choice}`),
+            ...(readOnly && (choice === "draft" || choice === "publish")
+              ? { disabled: true, disabledReason: t("tokens.content.readOnlyReason") }
+              : {}),
+          }))}
+        />
+      </div>
+      <p className="text-sm text-text-muted">
+        {translateKey(t, `tokens.content.descriptions.${value.choice}`)}
+      </p>
       {value.choice !== "none" && organizationId ? (
-        <>
-          <RadioGroup
-            label={t("tokens.content.reach")}
+        <div className="flex flex-col gap-2 pt-2">
+          <h5 className="font-medium">{reach}</h5>
+          <SegmentedControl
+            label={reach}
             value={value.limited ? "selected" : "all"}
             onValueChange={(next) => onChange({ ...value, limited: next === "selected" })}
             options={[
@@ -114,9 +123,9 @@ export function ContentAccessFields({
               />
             </Field>
           ) : null}
-        </>
+        </div>
       ) : null}
-    </fieldset>
+    </div>
   );
 }
 
@@ -131,86 +140,4 @@ export function contentRequest(access: ContentAccess): {
     contentLevel: access.choice,
     ...(access.limited ? { knowledgeBaseIds: access.knowledgeBases.map((item) => item.value) } : {}),
   };
-}
-
-export function ContentAccessDialog({
-  token,
-  organizationId,
-  onOpenChange,
-  onSave,
-}: {
-  token: (Pick<ApiToken, "scopes" | "contentLevel" | "knowledgeBaseIds"> & { name: string }) | null;
-  organizationId: string | null;
-  onOpenChange: (open: boolean) => void;
-  onSave: (change: { contentLevel: ContentLevel; knowledgeBaseIds: string[] | null }) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [access, setAccess] = useState<ContentAccess | null>(null);
-  const [fieldError, setFieldError] = useState<string | undefined>();
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const names = useSpaceNames(token?.knowledgeBaseIds ?? []);
-  const current = access ?? (token ? contentAccessOf(token, names) : NO_CONTENT_ACCESS);
-  const manages = token?.scopes.organization?.spaces === "manage";
-  const close = (open: boolean) => {
-    if (!open) {
-      setAccess(null);
-      setFieldError(undefined);
-      setError(null);
-    }
-    onOpenChange(open);
-  };
-  const save = async () => {
-    setError(null);
-    if (current.choice === "none") return;
-    if (current.limited && current.knowledgeBases.length === 0) {
-      setFieldError(t("tokens.content.knowledgeBasesRequired"));
-      return;
-    }
-    setFieldError(undefined);
-    setSaving(true);
-    try {
-      await onSave({
-        contentLevel: current.choice,
-        knowledgeBaseIds: current.limited ? current.knowledgeBases.map((item) => item.value) : null,
-      });
-      close(false);
-    } catch (failure) {
-      setError(problemMessage(t, failure));
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <Dialog
-      open={token !== null}
-      onOpenChange={close}
-      title={t("tokens.content.changeTitle", { name: token?.name ?? "" })}
-      size="md"
-    >
-      <div className="flex flex-col gap-4">
-        {error ? (
-          <Notice variant="danger" title={t("tokens.content.changeFailed")}>
-            {error}
-          </Notice>
-        ) : null}
-        {manages ? null : <Notice variant="info">{t("tokens.content.readOnlyScope")}</Notice>}
-        <ContentAccessFields
-          value={current}
-          onChange={setAccess}
-          organizationId={organizationId}
-          error={fieldError}
-          allowNone={false}
-        />
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => close(false)}>
-            {t("common.cancel")}
-          </Button>
-          <Button variant="primary" loading={saving} onClick={() => void save()}>
-            {t("tokens.content.save")}
-          </Button>
-        </div>
-      </div>
-    </Dialog>
-  );
 }

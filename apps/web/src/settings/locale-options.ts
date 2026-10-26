@@ -8,24 +8,31 @@ import {
   weekStarts,
 } from "@lunedo/shared";
 import type { TFunction } from "i18next";
+import { timeFormatSample } from "../format/clock-time.js";
 import { createFormatter, defaultFormatSettings, type Formatter } from "../format/format.js";
 import { timeZoneOptions } from "../format/time-zones.js";
 import { supportedLanguages } from "../i18n/index.js";
 import { translateKey } from "../i18n/translate.js";
 
-const SAMPLE = new Date(Date.UTC(2026, 8, 30, 14, 30));
 const SAMPLE_NUMBER = 1234567.89;
+
+function sampleOf(now: Date): Date {
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 14, 30));
+}
 
 function formatterFor(language: string, dateFormat: DateFormat): Formatter {
   return createFormatter({ ...defaultFormatSettings, language, timeZone: "UTC", dateFormat });
 }
 
-export function dateFormatLabel(_t: TFunction, value: string, language: string): string {
-  return `${value} (${formatterFor(language, value as DateFormat).date(SAMPLE)})`;
+export function dateFormatLabel(_t: TFunction, value: string, language: string, now = new Date()): string {
+  const example = (format: DateFormat) => formatterFor(language, format).date(sampleOf(now));
+  const label = example(value as DateFormat);
+  const ambiguous = dateFormats.some((other) => other !== value && example(other) === label);
+  return ambiguous ? `${label} (${value})` : label;
 }
 
-export function timeFormatLabel(t: TFunction, value: string): string {
-  return value === "24h" ? t("preferences.time24") : t("preferences.time12");
+export function timeFormatLabel(_t: TFunction, value: string, now = new Date()): string {
+  return timeFormatSample(value === "12h", sampleOf(now));
 }
 
 export function numberFormatLabel(_t: TFunction, value: string): string {

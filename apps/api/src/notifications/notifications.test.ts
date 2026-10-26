@@ -101,16 +101,61 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       count: 1,
       readAt: null,
     });
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 2 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 2,
+      capped: false,
+    });
 
     expect((await owner.post(`/api/v1/notifications/${list.items[0].id}/read`)).statusCode).toBe(204);
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
     expect((await owner.get("/api/v1/notifications?unread=true")).json().items).toHaveLength(1);
 
     const before = new Date(Date.now() - 60_000).toISOString();
     expect((await owner.post("/api/v1/notifications/read-all", { before })).json()).toEqual({ marked: 0 });
     expect((await owner.post("/api/v1/notifications/read-all", {})).json()).toEqual({ marked: 1 });
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 0,
+      capped: false,
+    });
+  });
+
+  it("marks notifications unread and several read at once, only the caller's own", async () => {
+    await owner.post("/api/v1/notifications/read-all", {});
+    await notice([ownerId]);
+    await notice([ownerId]);
+    const ids = (await owner.get("/api/v1/notifications"))
+      .json()
+      .items.slice(0, 2)
+      .map((item: { id: string }) => item.id);
+    expect((await owner.post("/api/v1/notifications/read", { ids })).json()).toEqual({ marked: 2 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 0,
+      capped: false,
+    });
+    expect((await owner.post(`/api/v1/notifications/${ids[0]}/unread`)).statusCode).toBe(204);
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
+    expect((await owner.get("/api/v1/notifications/unread-count?kind=mentions")).json()).toEqual({
+      count: 0,
+      capped: false,
+    });
+
+    const other = await createAccount(test, "other.marker@example.org");
+    const client = await signedInClient(test, other.email, other.password);
+    expect((await client.post(`/api/v1/notifications/${ids[1]}/unread`)).statusCode).toBe(404);
+    expect((await client.post("/api/v1/notifications/read", { ids: [ids[0]] })).json()).toEqual({
+      marked: 0,
+    });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
+    await owner.post("/api/v1/notifications/read-all", {});
   });
 
   it("returns one own notification and answers like an unknown one for others", async () => {
@@ -169,7 +214,10 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const ownerItems = (await owner.get("/api/v1/notifications")).json().items;
     const response = await client.post(`/api/v1/notifications/${ownerItems[0].id}/read`);
     expect(response.statusCode).toBe(404);
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1 });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
   });
 
   it("lets accounts choose channels per event type in their preferences", async () => {
@@ -762,11 +810,11 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       });
       await expect.poll(() => connected, { timeout: 5000 }).toBe(true);
 
-      const instanceUrl = "/api/v1/instance/settings/locale.firstDayOfWeek";
-      expect((await owner.put(instanceUrl, { value: "sunday" })).statusCode).toBe(204);
+      const instanceAccent = "/api/v1/instance/settings/branding.accentColor";
+      expect((await owner.put(instanceAccent, { value: "blue" })).statusCode).toBe(204);
       await expect
         .poll(() => settings, { timeout: 5000 })
-        .toEqual([{ key: "locale.firstDayOfWeek", level: "instance", organizationId: null }]);
+        .toEqual([{ key: "branding.accentColor", level: "instance", organizationId: null }]);
 
       const ownPreference = "/api/v1/account/preferences/locale.firstDayOfWeek";
       expect((await otherClient.put(ownPreference, { value: "monday" })).statusCode).toBe(204);
@@ -774,16 +822,16 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await expect.poll(() => settings.length, { timeout: 5000 }).toBe(2);
       expect(settings[1]).toEqual({ key: "locale.firstDayOfWeek", level: "user", organizationId: null });
 
-      expect((await owner.put(instanceUrl, { value: "monday" })).statusCode).toBe(204);
+      expect((await owner.put(organizationValue, { value: "monday" })).statusCode).toBe(204);
       expect(
         (
-          await owner.put(`/api/v1/organizations/${organizationId}/settings/branding.accentColor`, {
-            value: "violet",
+          await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.numberFormat`, {
+            value: "fr-FR",
           })
         ).statusCode,
       ).toBe(204);
       await expect.poll(() => settings.length, { timeout: 5000 }).toBe(3);
-      expect(settings[2]).toEqual({ key: "branding.accentColor", level: "organization", organizationId });
+      expect(settings[2]).toEqual({ key: "locale.numberFormat", level: "organization", organizationId });
 
       const language = "/api/v1/instance/settings/locale.language";
       expect(
@@ -805,7 +853,13 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await owner.put("/api/v1/instance/settings/locale.language", { clear: true });
       await owner.put("/api/v1/account/preferences/locale.language", { clear: true });
       await owner.put("/api/v1/account/preferences/locale.firstDayOfWeek", { clear: true });
-      await owner.put("/api/v1/instance/settings/locale.firstDayOfWeek", { clear: true });
+      await owner.put("/api/v1/instance/settings/branding.accentColor", { clear: true });
+      await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.firstDayOfWeek`, {
+        clear: true,
+      });
+      await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.numberFormat`, {
+        clear: true,
+      });
       response?.destroy();
       await second?.close();
       await secondRuntime.close();

@@ -1,4 +1,4 @@
-import { DRAWIO_PATH } from "./drawio-version.js";
+import { DRAWIO_PATH, drawioLanguage } from "./drawio-version.js";
 
 export const EMPTY_DRAWIO =
   '<mxfile><diagram name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>';
@@ -25,7 +25,7 @@ export function drawioUrl(language: string): string {
     saveAndExit: "0",
     splash: "0",
     libraries: "1",
-    lang: language.startsWith("de") ? "de" : "en",
+    lang: drawioLanguage(language),
   });
   return `${DRAWIO_PATH}index.html?${query.toString()}`;
 }

@@ -18,7 +18,7 @@ export interface EventSettings {
   push: SettingDefinition<boolean>;
 }
 
-const PREFERENCE_LEVELS = ["instance", "organization", "user"] as const;
+const PREFERENCE_LEVELS = ["organization", "user"] as const;
 
 export const notificationEventSettings = new Map<string, EventSettings>(
   notificationEvents.map((event) => [
@@ -224,6 +224,33 @@ const breakGlassStarted = defineNotificationType({
   mail: (params) => ({ template: "breakGlassStarted", params }),
 });
 
+export function formatMoment(instant: string, locale: MailLocale): string {
+  const time = new Intl.DateTimeFormat(locale.language, {
+    timeZone: locale.timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(instant));
+  return `${formatDay(instant, locale)} ${time}`;
+}
+
+const spaceAdministratorTaken = defineNotificationType({
+  type: "space.administratorTaken",
+  targetType: "space",
+  params: notificationParamSchemas["space.administratorTaken"],
+  visible: async (context) =>
+    context.targetId !== null && context.can("space.manage", { type: "space", id: context.targetId }),
+  mail: (params, locale) => ({
+    template: "spaceAdministratorTaken",
+    params: {
+      organizationName: params.organizationName,
+      spaceName: params.spaceName,
+      actorName: params.actorName,
+      reason: params.reason,
+      takenAt: formatMoment(params.takenAt, locale),
+    },
+  }),
+});
+
 const signInNewBrowser = defineNotificationType({
   type: "signIn.newBrowser",
   targetType: "account",
@@ -315,6 +342,7 @@ export const builtinNotificationTypes = [
   accessExpiring,
   serviceAccountUnattended,
   breakGlassStarted,
+  spaceAdministratorTaken,
   signInNewBrowser,
   emergencySignIn,
   accountWithoutOrganization,

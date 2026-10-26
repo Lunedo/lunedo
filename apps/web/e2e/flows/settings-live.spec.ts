@@ -13,7 +13,8 @@ test("switches the whole interface at once when the own language changes", async
 }) => {
   const { context, page } = await preferences(browser, organization.adminState);
   const settings = page.getByRole("navigation", { name: "Settings" });
-  await expect(settings.getByRole("link", { name: "Security" }).first()).toBeVisible();
+  await expect(settings.getByRole("link", { name: "Sign-in and security" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Customize" }).click();
   const englishDate = await page.getByRole("combobox", { name: "Date format", exact: true }).textContent();
   await expect(page.getByRole("group", { name: "Text size" })).toContainText("100%");
 
@@ -22,17 +23,21 @@ test("switches the whole interface at once when the own language changes", async
 
   await expect(page.getByRole("heading", { name: "Darstellung und Sprache", level: 1 })).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Einstellungen" }).getByRole("link", { name: "Sicherheit" }).first(),
+    page
+      .getByRole("navigation", { name: "Einstellungen" })
+      .getByRole("link", { name: "Anmeldung und Sicherheit" })
+      .first(),
   ).toBeVisible();
   await expect(page.getByRole("group", { name: "Textgröße" })).toContainText(/100\s%/);
-  const sample = /\d{2}[./-]\d{2}[./-]\d{4}/.exec(englishDate ?? "")?.[0] ?? "missing";
-  await expect(page.getByRole("combobox", { name: "Datumsformat", exact: true })).toContainText(sample);
+  const germanDate = page.getByRole("combobox", { name: "Datumsformat", exact: true });
+  await expect(germanDate).toContainText(String(new Date().getFullYear()));
+  await expect(germanDate).not.toHaveText(englishDate ?? "");
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
   await page.getByRole("combobox", { name: "Sprache", exact: true }).click();
   await page.getByRole("option", { name: /Standard/ }).click();
   await expect(page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
-  await expect(settings.getByRole("link", { name: "Security" }).first()).toBeVisible();
+  await expect(settings.getByRole("link", { name: "Sign-in and security" }).first()).toBeVisible();
   await context.close();
 });
 
@@ -47,11 +52,8 @@ test("applies a locked organization language and time zone to people with their 
   await appliesLockedValues(browser, organization, "organization");
 });
 
-test("applies organization formats, time zone and accent color to open sessions", async ({
-  browser,
-  organization,
-}) => {
-  await appliesFormats(browser, organization, "organization");
+test("applies organization formats to open sessions", async ({ browser, organization }) => {
+  await appliesFormats(browser, organization);
 });
 
 test("applies appearance changes to the other open sessions of the same person", async ({

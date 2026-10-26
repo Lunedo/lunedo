@@ -13,8 +13,8 @@ import {
   TruncatedText,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Eye, KeyRound, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -95,7 +95,7 @@ function UnfinishedSetups({ providers, canManage }: { providers: IdentityProvide
     <Section title={t("identityProviders.unfinished.title")}>
       <ul className="flex flex-col divide-y divide-border">
         {items.map((item) => (
-          <li key={item.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
+          <li key={item.key} className="flex flex-wrap items-center gap-3 py-3">
             <KeyRound aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
             <span className="flex min-w-0 flex-1 flex-col">
               <TruncatedText text={item.name} className="font-medium" />
@@ -380,11 +380,12 @@ export function ProvidersTable({
                   />
                 }
                 items={[
-                  { label: t("identityProviders.openDetails"), onSelect: () => open(provider) },
+                  { label: t("identityProviders.openDetails"), icon: Eye, onSelect: () => open(provider) },
                   ...(canManage && !provider.setupComplete
                     ? [
                         {
                           label: t("identityProviders.unfinished.continue"),
+                          icon: ArrowRight,
                           onSelect: () =>
                             void navigate(continueSetupPath({ providerId: provider.id }) as never),
                         },
@@ -438,10 +439,8 @@ export function InstanceProvidersScreen() {
   const canManage = state.can("instance.signIn.manage");
   return (
     <SettingsPage
-      width="wide"
       title={t("identityProviders.title")}
       description={t("identityProviders.description")}
-      icon={KeyRound}
       actions={
         canManage && (providers.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} onClick={() => void navigate(newProviderPath)}>
@@ -486,6 +485,12 @@ export function InstanceProvidersScreen() {
         <SettingsList {...editor} keys={["auth.passwordSignIn"]} level="instance" />
       </Section>
       <Section title={t("emergencyRecipients.title")}>
+        <p className="pt-3 text-sm text-text-muted">
+          {t("emergencyRecipients.otherEmergency")}{" "}
+          <Link to="/settings/instance/break-glass" className="font-medium text-accent hover:underline">
+            {t("breakGlass.title")}
+          </Link>
+        </p>
         <EmergencyRecipients />
       </Section>
     </SettingsPage>

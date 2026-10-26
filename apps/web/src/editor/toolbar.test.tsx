@@ -6,28 +6,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n } from "../i18n/index.js";
 import { renderWithProviders } from "../testing/render.js";
 import { createEditorExtensions } from "./extensions/index.js";
+import { filterSlashCommands, slashCommands } from "./slash-items.js";
 import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
 import { toolbarItems } from "./toolbar-items.js";
-import { fitItems, nextIndex } from "./toolbar-model.js";
+import { fitGroups, nextIndex } from "./toolbar-model.js";
 
 describe("toolbar layout", () => {
-  it("keeps every item when there is room and moves the rest into More from the end", () => {
-    expect(fitItems([30, 30, 30], 100, 30)).toEqual([true, true, true]);
-    expect(fitItems([30, 30, 30], 89, 30)).toEqual([true, false, false]);
-    expect(fitItems([30, 30, 30], 93, 30, 2)).toEqual([true, false, false]);
-    expect(fitItems([30, 30, 30, 30], 100, 30)).toEqual([true, true, false, false]);
-    expect(fitItems([30, 30, 30], 10, 30)).toEqual([false, false, false]);
-  });
-
-  it("keeps essential items visible before the others and reserves room for More", () => {
-    expect(fitItems([30, 30, 30, 30], 100, 30, 0, { essential: [true, false, false, true] })).toEqual([
-      true,
-      false,
-      false,
-      true,
-    ]);
-    expect(fitItems([30, 30], 100, 30, 0, { alwaysMore: true })).toEqual([true, true]);
-    expect(fitItems([30, 30], 80, 30, 0, { alwaysMore: true })).toEqual([true, false]);
+  it("keeps every group when there is room and moves movable groups into More from the end", () => {
+    const groups = [
+      { width: 60, movable: false },
+      { width: 40, movable: true },
+      { width: 60, movable: false },
+      { width: 40, movable: true },
+    ];
+    expect(fitGroups(groups, 200, 30)).toEqual([true, true, true, true]);
+    expect(fitGroups(groups, 190, 30)).toEqual([true, true, true, false]);
+    expect(fitGroups(groups, 140, 30)).toEqual([true, false, true, false]);
+    expect(fitGroups(groups, 50, 30)).toEqual([true, false, true, false]);
+    expect(fitGroups(groups, 204, 30, 1)).toEqual([true, true, true, true]);
+    expect(fitGroups(groups, 203, 30, 1)).toEqual([true, true, true, false]);
   });
 
   it("moves with arrow keys, Home and End and wraps", () => {
@@ -147,33 +144,148 @@ describe("toolbar order", () => {
     return result;
   }
 
-  it("lists the most important items first and keeps subscript and superscript in More", async () => {
+  it("follows the order of the groups and shows every shortcut in the tooltip", async () => {
     const shown = await labels(5000);
-    expect(shown.slice(0, 12)).toEqual([
+    expect(shown).toEqual([
       "Undo",
       "Redo",
       "Text style: Paragraph",
       "Bold",
       "Italic",
       "Underline",
-      "Link",
+      "More formatting",
+      "Text color and highlight",
       "Bulleted list",
       "Numbered list",
       "Task list",
+      "Outdent",
+      "Indent",
+      "Alignment",
+      "Link",
+      "Mention someone",
+      "Emoji",
       "Insert table",
+      "Column layout",
+      "Callout",
       "Insert: Insert",
+      "Find and replace",
     ]);
-    expect(shown.slice(12, 16)).toEqual(["Strikethrough", "Inline code", "Text color", "Highlight"]);
-    expect(shown).not.toContain("Subscript");
-    expect(shown.at(-1)).toBe("More formatting");
   });
 
-  it("keeps undo, text style, bold, italic, link and Insert on a phone", async () => {
-    const shown = await labels(358);
-    for (const name of ["Undo", "Text style: Paragraph", "Bold", "Italic", "Link", "Insert: Insert"]) {
+  it("moves the middle groups into More on a narrow window and keeps the base groups", async () => {
+    const shown = await labels(700);
+    for (const name of [
+      "Undo",
+      "Redo",
+      "Text style: Paragraph",
+      "Bold",
+      "More formatting",
+      "Bulleted list",
+      "Link",
+      "Emoji",
+      "Insert: Insert",
+      "Find and replace",
+    ]) {
       expect(shown).toContain(name);
     }
-    expect(shown).not.toContain("Find and replace");
-    expect(shown.at(-1)).toBe("More formatting");
+    for (const name of ["Text color and highlight", "Indent", "Insert table", "Callout"]) {
+      expect(shown).not.toContain(name);
+    }
+    expect(shown.at(-1)).toBe("More tools");
+  });
+});
+
+describe("toolbar menus", () => {
+  const actions = {
+    openEmojiPicker: vi.fn(),
+    openLinkDialog: vi.fn(),
+    openFind: vi.fn(),
+    focusToolbar: vi.fn(),
+    pickFiles: vi.fn(),
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function open() {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(5000);
+    const i18n = await initI18n(["en"]);
+    const editor = new Editor({
+      extensions: createEditorExtensions({ t: i18n.t, spaceId: null }),
+      content: "<p>Hello</p>",
+    });
+    const items = toolbarItems(editor, i18n.t, actions);
+    await renderWithProviders(<EditorToolbar editor={editor} items={items} />);
+    return { editor, items };
+  }
+
+  it("offers text styles up to heading 4, quote and code block with their shortcuts", async () => {
+    const { editor, items } = await open();
+    const blockType = items.find((item) => item.id === "blockType");
+    expect(blockType?.menu?.map((entry) => ("separator" in entry ? "—" : entry.label))).toEqual([
+      "Paragraph",
+      "Heading 1",
+      "Heading 2",
+      "Heading 3",
+      "Heading 4",
+      "—",
+      "Quote",
+      "Code block",
+    ]);
+    const more = items.find((item) => item.id === "moreFormatting");
+    expect(more?.menu?.flatMap((entry) => ("separator" in entry ? [] : [entry.shortcut ?? "none"]))).toEqual([
+      "mod+shift+s",
+      "mod+e",
+      "mod+.",
+      "mod+,",
+      "none",
+    ]);
+    editor.destroy();
+  });
+
+  it("lists every other insertable block in Insert with its slash command", async () => {
+    const { editor, items } = await open();
+    const insert = items.find((item) => item.id === "insert");
+    const ids = insert?.menu?.flatMap((entry) => ("separator" in entry ? [] : [entry.id])) ?? [];
+    for (const id of [
+      "insert-expand",
+      "insert-tabs",
+      "insert-horizontalRule",
+      "insert-date",
+      "insert-status",
+    ]) {
+      expect(ids).toContain(id);
+    }
+    for (const id of ["insert-table", "insert-codeBlock", "insert-callout-info", "insert-columns2"]) {
+      expect(ids).not.toContain(id);
+    }
+    const i18n = await initI18n(["en"]);
+    const hints: string[] = [];
+    for (const entry of insert?.menu ?? []) {
+      if ("separator" in entry) continue;
+      expect(entry.hint).toMatch(/^\//);
+      hints.push(entry.hint ?? "");
+      const found = filterSlashCommands(slashCommands, (entry.hint ?? "").slice(1), i18n.t).map(
+        (command) => `insert-${command.id}`,
+      );
+      expect(found, entry.hint).toContain(entry.id);
+    }
+    expect(new Set(hints).size).toBe(hints.length);
+    editor.destroy();
+  });
+
+  it("picks text color and highlight from the palette", async () => {
+    const { editor } = await open();
+    act(() => {
+      editor.commands.selectAll();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Text color and highlight" }));
+    const palette = await screen.findByRole("dialog", { name: "Text color and highlight" });
+    const swatches = palette.querySelectorAll("button");
+    expect(swatches).toHaveLength(20);
+    fireEvent.click(screen.getAllByRole("button", { name: "Red" })[0] as HTMLElement);
+    expect(JSON.stringify(editor.getJSON())).toContain('"color":"red"');
+    editor.destroy();
   });
 });

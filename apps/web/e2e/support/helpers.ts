@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type BrowserContext, expect, type Page } from "@playwright/test";
+import { type BrowserContext, expect, type Locator, type Page } from "@playwright/test";
 import { Secret, TOTP } from "otpauth";
 import { MAILPIT_URL, readState, writeState } from "./environment.js";
 
@@ -148,4 +148,37 @@ export async function callApi(
   });
   expect(response.status(), `${method} ${path}: ${await response.text()}`).toBeLessThan(300);
   return response.status() === 204 ? null : ((await response.json()) as unknown);
+}
+
+export async function openSettingsArea(
+  page: Page,
+  area: "My account" | "Organization" | "Instance",
+): Promise<void> {
+  if (area === "My account") {
+    await page.getByRole("button", { name: "Account", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Profile" }).click();
+  } else {
+    const gear = page.getByRole("button", { name: "Settings", exact: true });
+    const menu = (await gear.getAttribute("aria-haspopup")) === "menu";
+    await gear.click();
+    if (menu) await page.getByRole("menuitem", { name: area }).click();
+    await expect(page).toHaveURL(
+      area === "Instance" ? /\/settings\/instance\// : /\/settings\/organizations\//,
+    );
+  }
+  await expect(page.getByRole("navigation", { name: "Settings", exact: true })).toBeVisible();
+}
+
+export async function chooseDate(page: Page, trigger: Locator, isoDate: string): Promise<void> {
+  await trigger.click();
+  const day = page.locator(`[data-date="${isoDate}"]`);
+  for (let step = 0; step < 240 && (await day.count()) === 0; step += 1) {
+    await page.getByRole("button", { name: /^(Next month|Nächster Monat)$/ }).click();
+  }
+  await day.click();
+}
+
+export async function chooseTime(page: Page, combobox: Locator, time: string): Promise<void> {
+  await combobox.fill(time);
+  await page.getByRole("option", { name: time, exact: true }).click();
 }

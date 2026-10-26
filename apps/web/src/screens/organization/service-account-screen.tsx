@@ -7,6 +7,7 @@ import {
   DangerAction,
   DangerZone,
   Field,
+  InlineField,
   List,
   ListRow,
   Notice,
@@ -16,7 +17,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Bot, KeyRound, Plus, PowerOff, UserRound } from "lucide-react";
+import { Plus, PowerOff, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -33,8 +34,9 @@ import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
 import { memberLoader } from "../../components/pickers.js";
-import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
-import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
+import { useSpaceNames } from "../../components/token-content-access.js";
+import { CreateTokenDialog, RevokeTokenDialog, TokenRightsDialog } from "../../components/token-dialogs.js";
+import { TokenTable } from "../../components/token-table.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -51,7 +53,7 @@ export function ServiceAccountScreen() {
   const { t } = useTranslation();
   const { organizationId, serviceAccountId } = route.useParams();
   const state = useOrganizationState();
-  const format = useFormat();
+  const _format = useFormat();
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const account = useQuery({ ...serviceAccountQuery(serviceAccountId), throwOnError: false });
@@ -131,15 +133,10 @@ export function ServiceAccountScreen() {
     <SettingsPage
       title={data?.name ?? ""}
       description={data?.description || t("serviceAccounts.description")}
-      icon={Bot}
-      organizationId={organizationId}
-      breadcrumbs={[
-        {
-          label: t("serviceAccounts.title"),
-          href: `/settings/organizations/${organizationId}/service-accounts`,
-        },
-        { label: data?.name ?? "" },
-      ]}
+      back={{
+        label: t("serviceAccounts.title"),
+        href: `/settings/organizations/${organizationId}/service-accounts`,
+      }}
     >
       {account.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {data && !active ? <Notice variant="warning">{t("serviceAccounts.deactivatedNotice")}</Notice> : null}
@@ -147,7 +144,7 @@ export function ServiceAccountScreen() {
       {data && manage && active ? <DetailsSection account={data} onSaved={refresh} /> : null}
       {data ? (
         <Section title={t("serviceAccounts.responsible")}>
-          <p className="px-4 pt-3 text-sm text-text-muted">{t("serviceAccounts.responsibleHint")}</p>
+          <p className="pt-3 text-sm text-text-muted">{t("serviceAccounts.responsibleHint")}</p>
           <List>
             {data.responsibleAccountIds.map((id) => (
               <ListRow
@@ -166,7 +163,7 @@ export function ServiceAccountScreen() {
           </List>
           {manage && active ? (
             <div className="flex flex-wrap items-end gap-2 p-4">
-              <div className="w-field max-w-full">
+              <InlineField>
                 <Field
                   label={t("serviceAccounts.responsiblePerson")}
                   id="responsible-person"
@@ -183,7 +180,7 @@ export function ServiceAccountScreen() {
                     }}
                   />
                 </Field>
-              </div>
+              </InlineField>
               <Button
                 variant="outline"
                 icon={Plus}
@@ -214,39 +211,17 @@ export function ServiceAccountScreen() {
           ) : null
         }
       >
-        {tokens.data?.length === 0 ? <p className="px-4 py-3 text-text-muted">{t("tokens.none")}</p> : null}
-        <List>
-          {tokens.data?.map((token) => (
-            <ListRow
-              key={token.id}
-              icon={KeyRound}
-              title={token.name}
-              description={[
-                scopeSummary(t, token, knowledgeBaseNames),
-                token.expiresAt
-                  ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
-                  : t("tokens.noExpiry"),
-                token.lastUsedAt
-                  ? t("tokens.lastUsed", { when: format.relative(token.lastUsedAt) })
-                  : t("tokens.neverUsed"),
-              ].join(" · ")}
-              actions={
-                manage ? (
-                  <>
-                    {token.scopes.organization?.spaces ? (
-                      <Button variant="secondary" size="sm" onClick={() => setChanging(token)}>
-                        {t("tokens.content.change")}
-                      </Button>
-                    ) : null}
-                    <Button variant="danger" size="sm" onClick={() => setRevoking(token)}>
-                      {t("tokens.revoke")}
-                    </Button>
-                  </>
-                ) : null
-              }
-            />
-          ))}
-        </List>
+        <div className="pt-3">
+          <TokenTable
+            caption={t("serviceAccounts.tokens")}
+            tokens={tokens.data ?? []}
+            loading={tokens.isPending}
+            knowledgeBaseNames={knowledgeBaseNames}
+            canManage={manage}
+            onChangeContent={setChanging}
+            onRevoke={setRevoking}
+          />
+        </div>
       </Section>
       {data && manage && active ? (
         <DangerZone title={t("common.dangerZone")}>
@@ -261,9 +236,10 @@ export function ServiceAccountScreen() {
           />
         </DangerZone>
       ) : null}
-      <ContentAccessDialog
-        token={changing}
-        organizationId={organizationId}
+      <TokenRightsDialog
+        token={changing === null ? null : { ...changing, organizationId }}
+        allowInstance={false}
+        organizationName={state.organization?.name ?? null}
         onOpenChange={(open) => {
           if (!open) setChanging(null);
         }}
@@ -287,7 +263,7 @@ export function ServiceAccountScreen() {
         allowOrganization
         organizationId={organizationId}
         hint={t("serviceAccounts.tokenHint")}
-        onCreate={async (input) => {
+        onCreate={async ({ limitedToOrganization, ...input }) => {
           const created = await request(() =>
             api.POST("/api/v1/service-accounts/{serviceAccountId}/tokens", {
               params: { path: { serviceAccountId } },

@@ -6,7 +6,8 @@ import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
-import { accountPrincipal } from "./accounts/principal.js";
+import { accountPrincipal, SYSTEM } from "./accounts/principal.js";
+import { ProfileService } from "./accounts/profile.js";
 import {
   ANNOUNCEMENT_STARTS_SCHEDULE,
   AnnouncementService,
@@ -60,7 +61,12 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { KeyRotation } from "./crypto/rotation.js";
 import type { Database } from "./database/database.js";
-import { currentSchemaVersion, knownSchemaVersions, schemaVersionTimes } from "./database/migrate.js";
+import {
+  currentSchemaVersion,
+  knownSchemaVersions,
+  runMigrations,
+  schemaVersionTimes,
+} from "./database/migrate.js";
 import type { DatabasePool } from "./database/pool.js";
 import { DiagramService } from "./diagrams/diagrams.js";
 import { EmbedServices } from "./embeds/embeds.js";
@@ -126,6 +132,7 @@ import { WordReader } from "./imports/word/reader.js";
 import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import { ArticleApiService } from "./knowledge-bases/article-api.js";
+import { CategoryAccessService } from "./knowledge-bases/category-access.js";
 import { knowledgeBaseNotificationTypes } from "./knowledge-bases/notifications.js";
 import { PortalAccountService } from "./knowledge-bases/portal-accounts.js";
 import { ReviewService } from "./knowledge-bases/reviews.js";
@@ -142,12 +149,14 @@ import {
   mailCredentialReminderJob,
 } from "./mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
+import { AgendaService } from "./meetings/agenda.js";
 import { DecisionService } from "./meetings/decisions.js";
 import { MeetingService } from "./meetings/meetings.js";
 import { meetingNotificationTypes } from "./meetings/notifications.js";
 import { OneOnOneService } from "./meetings/one-on-ones.js";
 import { PrivateNotesService } from "./meetings/private-notes.js";
 import { MEETING_REMINDERS_SCHEDULE, MeetingReminders, meetingRemindersJob } from "./meetings/reminders.js";
+import { MeetingTemplateSections, meetingTemplateSectionsJob } from "./meetings/template-sections.js";
 import { TopicService } from "./meetings/topics.js";
 import {
   NOTIFICATION_EMAIL_SCHEDULE,
@@ -178,6 +187,7 @@ import {
   organizationExpiryJob,
   organizationRemindersJob,
 } from "./organizations/lifecycle.js";
+import { MemberDetailService } from "./organizations/member-details.js";
 import { MembershipService } from "./organizations/memberships.js";
 import { OrganizationService } from "./organizations/organizations.js";
 import { RoleService } from "./organizations/roles.js";
@@ -202,6 +212,7 @@ import { SavedSearchService } from "./search/saved-searches.js";
 import { SearchService } from "./search/service.js";
 import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
+import { SetupRestoreService } from "./setup/restore.js";
 import { SetupService } from "./setup/setup-service.js";
 import { builtinSetupSteps } from "./setup/steps.js";
 import { AccessExplanationService } from "./sharing/explain.js";
@@ -213,6 +224,7 @@ import { PageAccessService } from "./sharing/page-access.js";
 import { AccessRequestService } from "./sharing/requests.js";
 import { ValueSigner } from "./sharing/signer.js";
 import { ArchiveService } from "./spaces/archive.js";
+import { SpaceCleanupService } from "./spaces/cleanup.js";
 import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { IncludeService } from "./spaces/includes.js";
@@ -224,6 +236,7 @@ import {
   TRASH_RETENTION_SCHEDULE,
   trashRetentionJob,
 } from "./spaces/jobs.js";
+import { MemberSpaceService } from "./spaces/member-spaces.js";
 import { spaceNotificationTypes } from "./spaces/notifications.js";
 import { OwnershipService } from "./spaces/ownership.js";
 import { PeopleService } from "./spaces/people.js";
@@ -272,6 +285,7 @@ export interface AccountServices {
   security: AccountSecurityService;
   setup: SetupService;
   setupRegistry: SetupRegistry;
+  setupRestore: SetupRestoreService;
   authorization: AuthorizationService;
   organizations: OrganizationService;
   memberships: MembershipService;
@@ -304,6 +318,8 @@ export interface AccountServices {
   savedSearches: SavedSearchService;
   spaces: SpaceService;
   spacePermissions: SpacePermissionService;
+  memberSpaces: MemberSpaceService;
+  memberDetails: MemberDetailService;
   personalSpaces: PersonalSpaceService;
   tree: TreeService;
   ownership: OwnershipService;
@@ -319,6 +335,7 @@ export interface AccountServices {
   archive: ArchiveService;
   templates: TemplateService;
   knowledgeBases: KnowledgeBaseService;
+  categoryAccess: CategoryAccessService;
   translations: ArticleTranslationService;
   articleApi: ArticleApiService;
   portalAccounts: PortalAccountService;
@@ -344,14 +361,18 @@ export interface AccountServices {
   accessExplanations: AccessExplanationService;
   giveAccessDrafts: GiveAccessDraftService;
   files: FileService;
+  profiles: ProfileService;
   displayVersions: DisplayVersionService;
   storage: StorageService;
   backups: BackupService;
   attachments: AttachmentService;
   guestShares: GuestShareService;
   confidentialSpaces: ConfidentialSpaceService;
+  spaceCleanup: SpaceCleanupService;
   meetings: MeetingService;
+  agenda: AgendaService;
   meetingReminders: MeetingReminders;
+  meetingTemplateSections: MeetingTemplateSections;
   topics: TopicService;
   decisions: DecisionService;
   reports: ReportService;
@@ -386,6 +407,7 @@ export function createAccountServices(options: {
   configuredInstanceUrl?: string | undefined;
   passwordHashConcurrency: number;
   insecureIdentityProviders?: boolean;
+  meetingClock?: () => Date;
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
@@ -408,6 +430,8 @@ export function createAccountServices(options: {
     backupDir: string;
     workDir: string;
     secretsDir: string;
+    masterKeysPath?: string;
+    backupKeysConfigured?: boolean;
     configuration: Record<string, string>;
     lunedoVersion: string;
     beforeUpdateEnvironment: boolean;
@@ -453,7 +477,11 @@ export function createAccountServices(options: {
   });
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
-  const overview = new AccountOverviewService({ database, accounts });
+  const overview = new AccountOverviewService({
+    database,
+    accounts,
+    secondFactorRequired: (accountId) => signIn.secondFactorRequired(accountId),
+  });
   const accessReductions = new AccessReductions();
   const roles = new RoleService({ database, audit, authorization, reductions: accessReductions });
   const groups = new GroupService({ database, audit, authorization, reductions: accessReductions });
@@ -659,7 +687,7 @@ export function createAccountServices(options: {
   });
   const people = new PeopleService({ database, authorization });
   const savedSearches = new SavedSearchService({ database });
-  const spaces = new SpaceService({ database, audit, authorization, settings, people });
+  const spaces = new SpaceService({ database, audit, authorization, settings, people, notifications });
   const spacePermissions = new SpacePermissionService({
     database,
     audit,
@@ -667,7 +695,16 @@ export function createAccountServices(options: {
     holders: new SpaceHolders(people),
     people,
   });
-  const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces });
+  const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces, notifications });
+  const memberSpaces = new MemberSpaceService({
+    database,
+    authorization,
+    spaces,
+    permissions: spacePermissions,
+    audit,
+    notifications,
+  });
+  const memberDetails = new MemberDetailService({ database, authorization, settings, memberships });
   const watches = new WatchService({ database, authorization, settings });
   const activity = new ContentActivity({ database, notifications, authorization, watches });
   const documents = new PageDocumentService({
@@ -826,6 +863,7 @@ export function createAccountServices(options: {
       configuration: backupOptions?.configuration ?? {},
       lunedoVersion: backupOptions?.lunedoVersion ?? "dev",
       schemaVersion: currentSchemaVersion(),
+      instanceUrl: async () => (await instanceAddress.get()).url,
     },
     testRestore: {
       databaseUrl: backupDatabaseUrl,
@@ -848,6 +886,35 @@ export function createAccountServices(options: {
     beforeUpdateEnvironment: backupOptions?.beforeUpdateEnvironment ?? true,
     logger,
     ...(backupOptions?.clock ? { clock: backupOptions.clock } : {}),
+  });
+  const setupRestore = new SetupRestoreService({
+    backupDir,
+    workDir,
+    filesDir: options.filesDir,
+    databaseUrl: backupDatabaseUrl,
+    objectStore: files.store.kind === "s3" ? files.store : undefined,
+    policy: backupOptions?.policy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
+    keys: {
+      provider: options.keyProvider ?? "file",
+      masterKeysPath:
+        backupOptions?.masterKeysPath ??
+        path.join(backupOptions?.secretsDir ?? options.filesDir, "master-keys"),
+      backupKeysPath: backupOptions?.backupKeysConfigured
+        ? null
+        : path.join(backupOptions?.secretsDir ?? options.filesDir, "backup-keys"),
+    },
+    keyRing: options.keyRing,
+    pool: options.pool,
+    database,
+    knownSchemaVersions: knownSchemaVersions(),
+    migrate: () => runMigrations(options.pool, { logger }),
+    adoptInstanceUrl: async (url) => {
+      if ((await instanceAddress.get()).source === "environment") return false;
+      await instanceAddress.change(SYSTEM, url);
+      return true;
+    },
+    ...(backupOptions?.archiver ? { archiver: backupOptions.archiver } : {}),
+    logger,
   });
   const attachments = new AttachmentService({ database, files, settings, people, audit, storage });
   const templates = new TemplateService({
@@ -880,6 +947,7 @@ export function createAccountServices(options: {
     people,
     templates,
   });
+  const categoryAccess = new CategoryAccessService({ database, authorization, audit, people });
   const translations = new ArticleTranslationService({ database, authorization, audit, spaces, tree });
   const portalAccounts = new PortalAccountService({ database, audit, spaces, invitations, memberships });
   const whiteboards = new WhiteboardService({
@@ -946,6 +1014,18 @@ export function createAccountServices(options: {
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   const confidentialSpaces = new ConfidentialSpaceService({ database, audit, notifications });
   memberships.onDeactivated((tx, accountId) => confidentialSpaces.afterDeactivation(tx, accountId));
+  memberships.onDeactivated((tx, accountId) => personalSpaces.afterDeactivation(tx, accountId));
+  const spaceCleanup = new SpaceCleanupService({ database, audit, settings, trash });
+  spacePermissions.onAccessChange((tx, spaceId) => spaceCleanup.afterAccessChange(tx, spaceId));
+  administration.onReactivated((tx, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  memberships.onMembershipAdded((tx, _organizationId, accountId) =>
+    spaceCleanup.afterActivity(tx, accountId),
+  );
+  invitations.onAccepted((tx, _invitationId, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  memberships.onDeactivated((tx, accountId) => spaceCleanup.afterDeactivation(tx, accountId));
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    spaceCleanup.afterMembershipEnded(tx, organizationId, accountId),
+  );
   memberships.onDeactivated((tx, accountId) => ownership.afterDeactivation(tx, accountId));
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     ownership.afterMembershipEnded(tx, organizationId, accountId),
@@ -970,9 +1050,12 @@ export function createAccountServices(options: {
     people,
     notifications,
     activity,
+    ...(options.meetingClock ? { clock: options.meetingClock } : {}),
   });
   const meetingReminders = new MeetingReminders({ database, authorization, notifications });
+  const meetingTemplateSections = new MeetingTemplateSections({ database, documents });
   const topics = new TopicService({ database, authorization, people, documents, meetings, activity });
+  const agenda = new AgendaService({ database, authorization, people, documents, meetings });
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people, documents });
   const includes = new IncludeService({ database, authorization, documents });
@@ -1190,6 +1273,7 @@ export function createAccountServices(options: {
     security,
     setup,
     setupRegistry,
+    setupRestore,
     authorization,
     organizations,
     memberships,
@@ -1219,6 +1303,8 @@ export function createAccountServices(options: {
     savedSearches,
     spaces,
     spacePermissions,
+    memberSpaces,
+    memberDetails,
     personalSpaces,
     tree,
     ownership,
@@ -1231,6 +1317,7 @@ export function createAccountServices(options: {
     archive,
     templates,
     knowledgeBases,
+    categoryAccess,
     translations,
     articleApi,
     portalAccounts,
@@ -1256,6 +1343,7 @@ export function createAccountServices(options: {
     accessExplanations,
     giveAccessDrafts,
     files,
+    profiles: new ProfileService({ database, files, audit, people, storage }),
     displayVersions,
     storage,
     attachments,
@@ -1264,9 +1352,12 @@ export function createAccountServices(options: {
     diagrams,
     guestShares,
     confidentialSpaces,
+    spaceCleanup,
     meetings,
     meetingReminders,
+    meetingTemplateSections,
     topics,
+    agenda,
     decisions,
     reports,
     includes,
@@ -1379,6 +1470,12 @@ export async function workAccountJobs(
   await jobs.work(adoptTemplateFilesJob, (job) => services.templates.adoptPendingFiles(job.logger));
   if (await services.templates.hasPendingFiles()) {
     await jobs.enqueue(adoptTemplateFilesJob, {}, { idempotencyKey: "pending" });
+  }
+  await jobs.work(meetingTemplateSectionsJob, async (job) => {
+    await services.meetingTemplateSections.removeUntouched(job.logger, job.signal);
+  });
+  if (await services.meetingTemplateSections.pending()) {
+    await jobs.enqueue(meetingTemplateSectionsJob, {}, { idempotencyKey: "pending" });
   }
   await jobs.work(copyWatchdogJob, async () => {
     await services.copies.watchdog();

@@ -155,7 +155,7 @@ export interface BackupOverview {
   timeZone: string;
   nextRunAt: Date | null;
   beforeUpdate: BeforeUpdateState;
-  keyConfirmed: { at: Date; by: { id: string; name: string } | null } | null;
+  keyConfirmed: { at: Date; by: { id: string; name: string } | null; inSetup: boolean } | null;
   running: boolean;
   testRestoreRunning: boolean;
   alert: BackupAlert;
@@ -383,7 +383,18 @@ export class BackupService {
         ? (await this.#database.execute<{ name: string }>(sql`select name from accounts where id = ${by}`))
             .rows[0]?.name
         : undefined;
-      keyConfirmed = { at: configuration.keyConfirmed.at, by: by && name ? { id: by, name } : null };
+      const setupCompletedAt = (
+        await this.#database.execute<{ setup_completed_at: Date | string | null }>(
+          sql`select setup_completed_at from instance`,
+        )
+      ).rows[0]?.setup_completed_at;
+      keyConfirmed = {
+        at: configuration.keyConfirmed.at,
+        by: by && name ? { id: by, name } : null,
+        inSetup:
+          setupCompletedAt != null &&
+          configuration.keyConfirmed.at.getTime() <= new Date(setupCompletedAt).getTime(),
+      };
     }
     return {
       settings: configuration.settings,

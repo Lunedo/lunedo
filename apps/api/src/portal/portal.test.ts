@@ -1,4 +1,10 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@lunedo/server";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  messagesFor,
+  PORTAL_ASSETS,
+  SYSTEM,
+} from "@lunedo/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addTotp,
@@ -101,6 +107,23 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     return created.json().id as string;
   }
 
+  async function restrictCategory(spaceId: string, itemId: string) {
+    const group = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
+      name: `Readers ${itemId.slice(-8)}`,
+    });
+    const groupId = (group.json() as { id: string }).id;
+    const session = (await owner.get("/api/v1/auth/session")).json() as { account: { id: string } };
+    await owner.post(`/api/v1/groups/${groupId}/members`, { accountId: session.account.id });
+    const restricted = await owner.put(
+      `/api/v1/spaces/${spaceId}/knowledge-base/categories/${itemId}/access`,
+      {
+        responsibleGroupIds: [],
+        visibleGroupIds: [groupId],
+      },
+    );
+    expect(restricted.statusCode, restricted.body).toBe(200);
+  }
+
   async function article(
     spaceId: string,
     parentId: string | null,
@@ -169,6 +192,54 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const category = await reader.get(`${kb.path}/topics/${it}`);
     expect(category.statusCode).toBe(200);
     expect(category.body).toContain("VPN einrichten");
+  });
+
+  it("gives every folder of any depth its own page with breadcrumb, introduction, contact and counts", async () => {
+    const kb = await knowledgeBase("public");
+    await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/contact`, { contactEmail: "help@example.org" });
+    const it = await folder(kb.id, "IT");
+    const microsoft = await folder(kb.id, "Microsoft", it);
+    const outlook = await folder(kb.id, "Outlook", microsoft);
+    const web = await folder(kb.id, "Web App", outlook);
+    await owner.put(`/api/v1/categories/${microsoft}/contact`, { contactEmail: "m365@example.org" });
+    const icon = await owner.put(`/api/v1/categories/${web}`, { icon: "globe" });
+    expect(icon.statusCode, icon.body).toBe(204);
+    const intro = await owner.patch(`/api/v1/items/${web}`, {
+      description:
+        "Outlook **im Browser**, siehe [Anleitung](https://example.org/owa).\n\n> Nie <script> speichern",
+    });
+    expect(intro.statusCode, intro.body).toBe(200);
+    const signIn = await article(kb.id, web, "Wie melde ich mich an", "Im Browser anmelden.");
+    await article(kb.id, outlook, "Welche Version habe ich", "Version ansehen.");
+    await index();
+    const reader = anonymous();
+    const page = await reader.get(`${kb.path}/topics/${web}`);
+    expect(page.statusCode, page.body).toBe(200);
+    for (const id of [it, microsoft, outlook]) expect(page.body).toContain(`${kb.path}/topics/${id}"`);
+    expect(page.body).toContain("Outlook <strong>im Browser</strong>, siehe ");
+    expect(page.body).toContain('<a href="https://example.org/owa">Anleitung</a>');
+    expect(page.body).toContain('<div class="callout">Nie &lt;script&gt; speichern</div>');
+    expect(page.body).toContain("m365@example.org");
+    expect(page.body).toContain("Wie melde ich mich an");
+    const entry = await reader.get(`${kb.path}/${signIn.number}-wie-melde-ich-mich-an`);
+    expect(entry.body).toContain("mailto:m365@example.org?subject=");
+    expect(entry.body).toContain(`${kb.path}/topics/${web}"`);
+    const categories = await owner.get(`/api/v1/spaces/${kb.id}/categories`);
+    expect(
+      (
+        categories.json() as {
+          title: string;
+          level: number;
+          articles: number;
+          effectiveContactEmail: string;
+        }[]
+      ).map((entry) => [entry.title, entry.level, entry.articles, entry.effectiveContactEmail]),
+    ).toEqual([
+      ["IT", 1, 2, "help@example.org"],
+      ["Microsoft", 2, 2, "m365@example.org"],
+      ["Outlook", 3, 2, "m365@example.org"],
+      ["Web App", 4, 1, "m365@example.org"],
+    ]);
   });
 
   it("serves article images to readers who may read the article and to nobody else", async () => {
@@ -268,7 +339,10 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
       const response = await visitor.get(`${kb.path}${path}`);
       expect(response.statusCode).toBe(200);
       expect(response.body).toContain("/sign-in?redirect=");
+      expect(response.body).toContain('class="dlg" role="dialog" aria-modal="true"');
+      expect(response.body).toContain('<header class="ph">');
       expect(response.body).not.toContain("Drucken im Büro.");
+      expect(response.body).not.toContain('class="dd areas"');
     }
     const member = await person();
     const read = await member.client.get(`${kb.path}/${entry.number}-drucker`);
@@ -363,10 +437,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const closed = await folder(kb.id, "Geschlossen");
     await article(kb.id, open, "Sichtbar", "Für alle.");
     const hiddenEntry = await article(kb.id, closed, "Versteckt", "Nur für wenige.");
-    const restricted = await owner.post(`/api/v1/pages/${closed}/access`, {
-      changes: [{ action: "restrict", kind: "view" }],
-    });
-    expect(restricted.statusCode, restricted.body).toBe(200);
+    await restrictCategory(kb.id, closed);
     await index();
     const visitor = anonymous();
     const start = await visitor.get(`${kb.path}/`);
@@ -374,9 +445,92 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(start.body).not.toContain("Geschlossen");
     const hidden = await visitor.get(`${kb.path}/${hiddenEntry.number}-versteckt`);
     expect(hidden.statusCode).toBe(404);
-    expect((await visitor.get(`${kb.path}/topics/${closed}`)).statusCode).toBe(404);
+    const unknown = await visitor.get(`${kb.path}/topics/01929b1e-0000-7000-8000-00000000ffff`);
+    const restrictedPage = await visitor.get(`${kb.path}/topics/${closed}`);
+    expect(restrictedPage.statusCode).toBe(404);
+    expect(restrictedPage.body).toContain(messagesFor("en").signInRestrictedHeading);
+    expect(restrictedPage.body).not.toContain("Geschlossen");
+    expect(comparable(restrictedPage.body).replaceAll(closed, "ID")).toBe(
+      comparable(unknown.body).replaceAll("01929b1e-0000-7000-8000-00000000ffff", "ID"),
+    );
     const search = await visitor.get(`${kb.path}/search?q=wenige`);
     expect(search.body).not.toContain("Versteckt");
+    const quick = await visitor.get(`${kb.path}/search/quick?q=Geschlossen`);
+    expect(quick.json()).toMatchObject({ topics: [], articles: [] });
+    const editor = await owner.get(`${kb.path}/topics/${open}`);
+    expect(editor.body).not.toContain('class="lock"');
+    const locked = await owner.get(`${kb.path}/topics/${closed}`);
+    expect(locked.statusCode).toBe(200);
+    expect(locked.body).toMatch(/aria-current="page"><span class="cicon s32"[\s\S]*?Geschlossen/);
+    const signedIn = await (await person()).client.get(`${kb.path}/topics/${closed}`);
+    expect(signedIn.statusCode).toBe(404);
+    expect(signedIn.body).toContain("find this page");
+    expect(signedIn.body).not.toContain(messagesFor("en").signInRestrictedHeading);
+  });
+
+  it("lists the articles of a folder, with those of its subtopics on request, and searches in a window", async () => {
+    const kb = await knowledgeBase("public");
+    const it = await folder(kb.id, "IT");
+    const microsoft = await folder(kb.id, "Microsoft", it);
+    const outlook = await folder(kb.id, "Outlook", microsoft);
+    const web = await folder(kb.id, "Web App", outlook);
+    const restricted = await folder(kb.id, "Outlook intern", microsoft);
+    await article(kb.id, web, "Outlook im Browser anmelden", "Mit dem Browser anmelden.", { type: "howTo" });
+    await article(kb.id, outlook, "Outlook startet nicht", "Neu starten hilft.", { type: "troubleshooting" });
+    await article(kb.id, restricted, "Outlook Geheimnis", "Nur intern.");
+    await restrictCategory(kb.id, restricted);
+    await index();
+    const reader = anonymous();
+    const t = messagesFor("en");
+    const direct = await reader.get(`${kb.path}/topics/${microsoft}`);
+    expect(direct.statusCode).toBe(200);
+    expect(direct.body).toContain(t.noDirectArticles);
+    expect(direct.body).toContain(t.topicsIn("Microsoft"));
+    expect(direct.body).toContain('aria-pressed="false" role="button"');
+    expect(direct.body).not.toContain("Outlook intern");
+    const deep = await reader.get(`${kb.path}/topics/${microsoft}?deep=1`);
+    expect(deep.body).toContain("Outlook im Browser anmelden");
+    expect(deep.body).toContain("Outlook startet nicht");
+    expect(deep.body).toContain('<span class="path">Outlook › Web App</span>');
+    expect(deep.body).not.toContain("Outlook Geheimnis");
+    const outlookPage = await reader.get(`${kb.path}/topics/${outlook}`);
+    expect(outlookPage.body).toContain("Outlook startet nicht");
+    expect(outlookPage.body).not.toContain("Outlook im Browser anmelden");
+    expect(outlookPage.body).toMatch(/<nav class="ptree" id="ptree" aria-label="Topics in IT">/);
+    const quick = await reader.get(`${kb.path}/search/quick?q=Outlook`);
+    expect(quick.statusCode).toBe(200);
+    expect(quick.headers["content-type"]).toContain("application/json");
+    const found = quick.json() as {
+      topics: { title: string; path: string; count: number; href: string }[];
+      articles: { title: string; path: string; href: string }[];
+      total: number;
+      all: string;
+    };
+    expect(found.topics).toEqual([
+      { title: "Outlook", path: "IT › Microsoft", count: 2, href: `${kb.path}/topics/${outlook}` },
+    ]);
+    expect(found.articles.map((entry) => [entry.title, entry.path]).sort()).toEqual([
+      ["Outlook im Browser anmelden", "IT › … › Outlook › Web App"],
+      ["Outlook startet nicht", "IT › Microsoft › Outlook"],
+    ]);
+    expect(found.all).toBe(`${kb.path}/search?q=Outlook`);
+    const nothing = await reader.get(`${kb.path}/search/quick?q=`);
+    expect(nothing.json()).toMatchObject({ topics: [], articles: [], total: 0 });
+    const theme = await reader.get(`/help/_assets/${PORTAL_ASSETS.theme}`);
+    expect(theme.statusCode).toBe(200);
+    expect(theme.body).toContain("lunedo.portal.theme");
+    const home = await reader.get(kb.path);
+    expect(home.body).toContain(
+      '<link rel="icon" href="/help/_assets/favicon.ico" sizes="48x48"><link rel="icon" href="/help/_assets/favicon.svg" type="image/svg+xml">',
+    );
+    const icon = await reader.get("/help/_assets/favicon.svg");
+    expect(icon.statusCode).toBe(200);
+    expect(icon.headers["content-type"]).toContain("image/svg+xml");
+    expect(icon.body).toContain("prefers-color-scheme:dark");
+    const fallback = await reader.get("/help/_assets/favicon.ico");
+    expect(fallback.statusCode).toBe(200);
+    expect(fallback.headers["content-type"]).toContain("image/x-icon");
+    expect(fallback.rawPayload.subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
   });
 
   it("shows when an article was last reviewed while reviews apply, and otherwise when it changed", async () => {
@@ -525,6 +679,49 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     }
     const feedback = await services().portalStatistics.feedback(kb.id);
     expect(feedback.map((entry) => entry.text)).toEqual(["Schritt fehlt"]);
+  });
+
+  it("writes dates in the format of the organization and lays out the start page without gaps", async () => {
+    const kb = await knowledgeBase("public");
+    const area = await folder(kb.id, "Ein Bereich mit einem sehr langen Namen, der umbrechen darf");
+    await article(kb.id, area, "Drucker einrichten", "Drucker im dritten Stock.", { type: "howTo" });
+    await index();
+    await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.dateFormat`, {
+      value: "YYYY-MM-DD",
+    });
+    const start = (await anonymous().get(`${kb.path}/`)).body;
+    const today = new Date().toISOString().slice(0, 10);
+    expect(start).toContain(today);
+    expect(start).not.toContain(`class="sec cols2"`);
+    expect(start).toContain(`<b class="clamp2"`);
+    expect(start).toContain(`<span class="m"><span class="mi"><span>`);
+    expect(start).not.toContain(`<span class="dot"></span>`);
+    await owner.put(`/api/v1/organizations/${organizationId}/settings/locale.dateFormat`, { clear: true });
+  });
+
+  it("counts a search from the quick window when the reader opens a result, so that it can become frequent", async () => {
+    const kb = await knowledgeBase("public");
+    await article(kb.id, null, "Drucker", "Toner im Drucker wechseln.");
+    await index();
+    const reader = anonymous();
+    for (let index = 0; index < 3; index += 1) {
+      await reader.get(`${kb.path}/search/quick?q=toner`);
+      const counted = await reader.post(`${kb.path}/search/quick/count`, { q: " Toner " });
+      expect(counted.statusCode, counted.body).toBe(204);
+    }
+    const searches = await test.runtime.pool.query<{ term: string; results: number }>(
+      "select term, results from portal_searches where space_id = $1",
+      [kb.id],
+    );
+    expect(searches.rows).toEqual([
+      { term: "toner", results: 1 },
+      { term: "toner", results: 1 },
+      { term: "toner", results: 1 },
+    ]);
+    expect((await reader.get(`${kb.path}/`)).body).toContain(">toner</a>");
+    expect((await reader.post(`${kb.path}/search/quick/count`, { q: "  " })).statusCode).toBe(400);
+    const foreign = new TestClient(test.app, { origin: "https://evil.example" });
+    expect((await foreign.post(`${kb.path}/search/quick/count`, { q: "toner" })).statusCode).toBe(403);
   });
 
   it("shows a frequent search only to readers who find something with it", async () => {
@@ -733,11 +930,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(english.body).toContain(messagesFor("en").onThisPage);
     expect(english.body).toContain('class="dd lang"');
     expect(english.body).toMatch(
-      /hreflang="en" lang="en" aria-current="true"><span class="trunc" title="English">English<\/span><svg class="i cur"/,
+      /hreflang="en" lang="en" aria-current="true"><span class="cur"><svg[\s\S]*?<\/svg><\/span><span class="trunc" title="English">English<\/span><span class="n" lang="en">1 of 2 translated<\/span>/,
     );
     expect(english.body).toMatch(
-      /hreflang="de" lang="de"><span class="trunc" title="Deutsch">Deutsch<\/span><\/a>/,
+      /hreflang="de" lang="de"><span class="cur"><\/span><span class="trunc" title="Deutsch">Deutsch<\/span><span class="n" lang="en">all 2<\/span><\/a>/,
     );
+    expect(english.body).toContain("Also in German");
     expect(english.body).toContain(
       `<link rel="alternate" hreflang="de" href="${TEST_ORIGIN}${kb.path}/${original.number}-passwort-aendern">`,
     );
@@ -753,10 +951,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(wrongSlug.headers.location).toBe(`${kb.path}/en/${original.number}-change-the-password`);
     const fallback = await reader.get(`${kb.path}/en/${untranslated.number}-drucker`);
     expect(fallback.statusCode, fallback.body).toBe(200);
-    expect(fallback.body).toContain('<html lang="de"');
+    expect(fallback.body).toContain('<html lang="en"');
+    expect(fallback.body).toContain('<div class="body" lang="de">');
     expect(fallback.body).toContain("Drucker im Flur.");
     expect(fallback.body).toContain('class="langnote" role="note" lang="en"');
-    expect(fallback.body).toContain(messagesFor("de").onThisPage);
+    expect(fallback.body).toContain(messagesFor("en").onThisPage);
+    expect(fallback.body).not.toContain("Also in");
     const prefixed = await reader.get(`${kb.path}/de/${original.number}-passwort-aendern`);
     expect(prefixed.statusCode).toBe(301);
     expect(prefixed.headers.location).toBe(`${kb.path}/${original.number}-passwort-aendern`);
@@ -768,6 +968,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(start.body).toContain('<html lang="en"');
     expect(start.body).toContain("Change the password");
     expect(start.body).toContain(`href="${kb.path}/en/${original.number}-change-the-password"`);
+    expect(start.body).toContain('<span class="ltag" lang="en">only German</span>');
     const search = await reader.get(`${kb.path}/en/search?q=Drucker`);
     expect(search.statusCode).toBe(200);
     expect(search.body).not.toContain('class="langnote"');

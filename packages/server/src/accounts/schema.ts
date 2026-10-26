@@ -40,9 +40,12 @@ export const accounts = pgTable(
     secondFactorResetAt: timestamp({ withTimezone: true, mode: "date" }),
     lastSignInAt: timestamp({ withTimezone: true, mode: "date" }),
     mergedIntoId: uuid().references((): AnyPgColumn => accounts.id),
+    jobTitle: text(),
+    pictureRef: text(),
     ...timestamps(),
   },
   (table) => [
+    check("accounts_job_title_length", sql`char_length(${table.jobTitle}) between 1 and 100`),
     uniqueIndex("accounts_email_unique").on(sql`lower(${table.email})`),
     index().on(table.homeOrganizationId),
     index("accounts_name_id_index").on(sql`lower(${table.name})`, table.id),

@@ -1,7 +1,8 @@
 import { Badge, Button, IconButton, useToast } from "@lunedo/ui";
 import { Link } from "@tanstack/react-router";
-import { CircleAlert, Clock, FilePen, Pin, PinOff } from "lucide-react";
+import { CircleAlert, Clock, FilePen, MessageSquare, Pin, PinOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { CoverImage } from "../../files/cover.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -18,8 +19,8 @@ export function PostMeta({ post }: { post: BlogPost }) {
   const author = post.author?.name ?? t("editor.mention.unknown");
   if (post.publishedAt) {
     return (
-      <span className="text-sm text-text-muted">
-        {t("blog.byOn", { author, date: format.date(post.publishedAt) })}
+      <span className="text-sm text-text-muted" title={format.dateTime(post.publishedAt)}>
+        {t("blog.byOn", { author, date: format.day(post.publishedAt) })}
       </span>
     );
   }
@@ -101,27 +102,37 @@ export function BlogList({
   };
   return (
     <div className="flex flex-col gap-3">
-      <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+      <ul className="flex flex-col divide-y divide-border border-t border-border">
         {posts.map((post) => {
           const pinned = level === "space" ? post.pinnedInSpace : post.pinnedInOrganization;
           return (
-            <li key={post.id} className="flex items-start gap-3 p-4">
+            <li key={post.id} className="flex items-start gap-3 py-5">
               <article className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    to={postHref(post)}
-                    className="min-w-0 text-base font-semibold hover:underline focus-visible:focus-ring"
-                    title={post.title}
-                  >
-                    {post.title}
-                  </Link>
-                  <PostBadges post={post} level={level} />
-                </div>
-                <span className="flex flex-wrap gap-x-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <PersonAvatar
+                    id={post.author?.id}
+                    name={post.author?.name ?? t("editor.mention.unknown")}
+                    size="sm"
+                    decorative
+                  />
                   <PostMeta post={post} />
                   {showSpace ? <span className="text-sm text-text-muted">· {post.spaceName}</span> : null}
+                  <PostBadges post={post} level={level} />
                 </span>
-                {post.excerpt ? <p className="text-text">{post.excerpt}</p> : null}
+                <Link
+                  to={postHref(post)}
+                  className="min-w-0 text-lg font-semibold tracking-heading hover:underline focus-visible:focus-ring"
+                  title={post.title}
+                >
+                  {post.title}
+                </Link>
+                {post.excerpt ? <p className="text-text-muted">{post.excerpt}</p> : null}
+                {post.commentCount > 0 ? (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-text-muted">
+                    <MessageSquare aria-hidden="true" className="size-icon-sm" />
+                    {t("blog.commentCount", { count: post.commentCount })}
+                  </span>
+                ) : null}
               </article>
               {post.cover ? (
                 <CoverImage

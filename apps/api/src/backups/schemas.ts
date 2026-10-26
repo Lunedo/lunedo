@@ -151,6 +151,9 @@ export const backupOverviewSchema = z
           .object({ id: z.string().describe("Account ID."), name: z.string().describe("Name.") })
           .nullable()
           .describe("Who confirmed it."),
+        inSetup: z
+          .boolean()
+          .describe("Whether it was confirmed in the setup, when the keys were downloaded."),
       })
       .nullable()
       .describe("When an administrator confirmed that the backup key is stored outside Lunedo."),
@@ -390,6 +393,7 @@ export const exampleBackupOverview = {
   keyConfirmed: {
     at: "2026-10-01T09:00:00.000Z",
     by: { id: "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03", name: "Olivia Owner" },
+    inSetup: false,
   },
   running: false,
   testRestoreRunning: false,

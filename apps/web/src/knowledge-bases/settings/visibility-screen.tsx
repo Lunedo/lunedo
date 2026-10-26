@@ -11,7 +11,6 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -40,10 +39,8 @@ export function KnowledgeBaseVisibilityScreen() {
   const settings = useQuery({ ...knowledgeBaseSettingsQuery(space.id), throwOnError: false });
   return (
     <SpaceSettingsPage
-      tab="visibility"
       title={t("knowledgeBase.audience.title")}
       description={t("knowledgeBase.audience.description")}
-      icon={Eye}
     >
       {settings.isPending ? <Skeleton className="h-field w-full" /> : null}
       {settings.isError ? (

@@ -201,7 +201,7 @@ test.describe("sign-in through SAML (Keycloak)", () => {
   async function signIn(page: Page) {
     await page.goto("/sign-in");
     await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByRole("button", { name: "Continue with E2E SAML" }).click();
     await keycloak.signIn(page, user.username);
     await signedIn(page);
@@ -338,7 +338,7 @@ test.describe("sign-in through LDAP (OpenLDAP)", () => {
   async function signIn(page: Page, uid: string, password = LDAP_PASSWORD) {
     await page.goto("/sign-in");
     await page.getByLabel("Work e-mail address or sign-in name").fill(`${uid}@${LDAP_DOMAIN}`);
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
   }

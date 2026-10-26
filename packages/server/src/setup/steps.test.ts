@@ -69,11 +69,22 @@ describe.skipIf(!baseUrl)("the system check", () => {
   function check(configuredInstanceUrl: string | undefined) {
     const step = systemCheckStep({
       pool: test.pool,
+      database: test.database,
       settings: test.settings,
+      probe: {
+        resolve: async () => ["203.0.113.10"],
+        fetch: async () => {
+          throw new TypeError("fetch failed");
+        },
+      },
       filesDir: mkdtempSync(path.join(tmpdir(), "lunedo-check-")),
       configuredInstanceUrl,
-    } as SetupStepDependencies);
-    return step.describe({ request: { protocol: "http", host: "10.0.0.5:3000" }, state: {} }) as Promise<{
+    } as unknown as SetupStepDependencies);
+    return step.describe({
+      request: { protocol: "http", host: "10.0.0.5:3000" },
+      state: {},
+      completed: false,
+    }) as Promise<{
       checks: Record<string, Record<string, unknown>>;
     }>;
   }
@@ -87,6 +98,11 @@ describe.skipIf(!baseUrl)("the system check", () => {
       source: "configuration",
     });
     expect(checks.https).toMatchObject({ status: "ok", cause: null });
+    expect(checks.reachability).toMatchObject({
+      status: "warning",
+      cause: "unreachable",
+      url: "https://wiki.example.org",
+    });
   });
 
   it("warns when the configured instance URL does not use HTTPS", async () => {

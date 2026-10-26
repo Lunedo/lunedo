@@ -6,8 +6,8 @@ import {
   DangerAction,
   Dialog,
   Field,
+  FieldGrid,
   focusFirstInvalidSoon,
-  Input,
   List,
   ListRow,
   Notice,
@@ -30,6 +30,7 @@ import {
   type ProviderCredential,
   removeCredential,
 } from "../../api/identity-queries.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -153,7 +154,7 @@ export function CredentialFields({
         />
       ) : null}
       {draft.kind === "clientSecret" ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FieldGrid>
           <Field
             label={t("identityProviders.credentials.secret")}
             {...(invalid === "secret" ? { error: t("validation.required") } : {})}
@@ -170,13 +171,13 @@ export function CredentialFields({
             hint={t("identityProviders.credentials.expiresOnHint")}
             {...(invalid === "expiresOn" ? { error: t("validation.format") } : {})}
           >
-            <Input
-              type="date"
+            <AppDatePicker
               value={draft.expiresOn}
-              onChange={(event) => onChange({ ...draft, expiresOn: event.target.value })}
+              clearable
+              onValueChange={(expiresOn) => onChange({ ...draft, expiresOn })}
             />
           </Field>
-        </div>
+        </FieldGrid>
       ) : null}
       {draft.kind === "bindPassword" ? (
         <Field

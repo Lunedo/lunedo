@@ -44,6 +44,7 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
 
   it("asks for the e-mail address and offers passkeys and password sign-in without providers", async () => {
     expect(await test.services.providerSignIn.signInOptions(null)).toEqual({
+      providers: [],
       emailStep: true,
       directProvider: null,
       lastProvider: null,
@@ -58,6 +59,7 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
     await test.settings.set(passwordSignInSetting, {}, "instance", false);
     try {
       expect(await test.services.providerSignIn.signInOptions(null)).toMatchObject({
+        providers: [{ id, name: "Only", preset: "generic" }],
         emailStep: false,
         directProvider: { id, name: "Only", preset: "generic" },
         passwordSignIn: false,
@@ -91,6 +93,11 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
     });
     expect(await test.services.providerSignIn.discover("person@gamma.example")).toEqual({ step: "password" });
     expect(await test.services.providerSignIn.discover("not an address")).toEqual({ step: "password" });
+    const listed = (await test.services.providerSignIn.signInOptions(null)).providers.map(
+      (entry) => entry.id,
+    );
+    expect(listed).toEqual(expect.arrayContaining([alpha, beta]));
+    expect(listed.indexOf(alpha)).toBeLessThan(listed.indexOf(beta));
   });
 
   it("answers the same for addresses with and without an account", async () => {

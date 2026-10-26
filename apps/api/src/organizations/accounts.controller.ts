@@ -5,14 +5,15 @@ import {
   passwordSchema,
   signInEmailSchema,
 } from "@lunedo/shared";
-import { Body, Controller, Inject, Param, Post, Put, Req } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import { Body, Controller, Get, Inject, Param, Post, Put, Req, Res } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
+import { InternalRoute, Permission, PublicRoute, SessionRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { originOf } from "../http/instance-url.js";
+import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 
 const acceptSchema = z
@@ -67,6 +68,10 @@ const secondFactorResetSchema = z
   })
   .strict();
 
+const pictureQuery = z
+  .object({ v: z.string().max(64).optional().describe("The `pictureRef` of the person, to bypass caches.") })
+  .strict();
+
 @Controller("api/v1")
 @InternalRoute()
 export class AccountsController {
@@ -74,6 +79,38 @@ export class AccountsController {
 
   get #services() {
     return servicesOf(this.context);
+  }
+
+  @Get("accounts/:accountId/picture")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Get a profile picture",
+    description:
+      "Returns the profile picture of a person whose name the caller may see, with its stored image type. Add the `pictureRef` of the person as `v` so a changed picture is loaded again. It is sent with `X-Content-Type-Options: nosniff` and a content security policy that blocks scripts.",
+    tags: ["Accounts"],
+    params: z.object({ accountId: idSchema }).strict(),
+    query: pictureQuery,
+    raw: {
+      contentTypes: ["image/png", "image/jpeg", "image/webp"],
+      description: "The picture.",
+      example: "",
+    },
+    errors: ["notFound"],
+  })
+  async picture(
+    @Param("accountId") accountId: string,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const picture = await this.#services.profiles.picture(actorOf(request), accountId);
+    if (!picture) throw notFound();
+    reply
+      .header("content-type", picture.contentType)
+      .header("x-content-type-options", "nosniff")
+      .header("content-security-policy", "default-src 'none'; sandbox")
+      .header("cache-control", "private, max-age=300")
+      .header("etag", `"${picture.ref}"`);
+    return picture.data;
   }
 
   @Post("accounts/:accountId/deactivate")
@@ -118,6 +155,26 @@ export class AccountsController {
   })
   async endSessions(@Param("accountId") accountId: string, @Req() request: FastifyRequest) {
     return this.#services.administration.endSessions(actorOf(request), accountId);
+  }
+
+  @Post("accounts/:accountId/sessions/:sessionId/end")
+  @Permission("account.sessions.end", { type: "account", param: "accountId" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "End one session of another account",
+    description: "Signs the account out on one device. Owners can only be signed out by owners.",
+    tags: ["Accounts"],
+    status: 204,
+    params: z.object({ accountId: idSchema, sessionId: idSchema }).strict(),
+    errors: ["endOwnSessions", "notFound"],
+  })
+  async endSession(
+    @Param("accountId") accountId: string,
+    @Param("sessionId") sessionId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    if (!(await this.#services.administration.endSession(actorOf(request), accountId, sessionId))) {
+      throw notFound();
+    }
   }
 
   @Post("accounts/:accountId/second-factor/reset")

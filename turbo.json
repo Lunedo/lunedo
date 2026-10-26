@@ -16,9 +16,13 @@
     "GITHUB_ENV",
     "GITHUB_EVENT_NAME",
     "GITHUB_EVENT_PATH",
+    "GITHUB_REF",
     "GITHUB_OUTPUT",
     "GITHUB_SHA",
-    "GITHUB_STEP_SUMMARY"
+    "GITHUB_STEP_SUMMARY",
+    "RUNNER_NAME",
+    "INIT_CWD",
+    "npm_execpath"
   ],
   "tasks": {
     "build": {

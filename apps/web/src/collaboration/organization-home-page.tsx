@@ -3,6 +3,7 @@ import {
   Combobox,
   type ComboboxLoader,
   Field,
+  InlineField,
   type SaveState,
   SaveStatus,
   Skeleton,
@@ -91,7 +92,7 @@ export function OrganizationHomePage({
       </p>
       {canManage ? (
         <div className="flex flex-wrap items-end gap-2">
-          <div className="w-field max-w-full">
+          <InlineField>
             <Field label={t("home.choosePage")} error={error}>
               <Combobox
                 aria-label={t("home.choosePage")}
@@ -102,7 +103,7 @@ export function OrganizationHomePage({
                 onValueChange={(value) => void save(value)}
               />
             </Field>
-          </div>
+          </InlineField>
           {page ? (
             <Button variant="secondary" icon={X} onClick={() => void save(null)}>
               {t("home.removeOrganizationPage")}

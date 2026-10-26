@@ -24,10 +24,11 @@ import {
   pageReportSorts,
   taskReportDueWindows,
   taskReportStatuses,
+  taskSorts,
   treeItemKinds,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleItem, exampleSpace, pageReferencesSchema } from "../spaces/schemas.js";
 
 const person = (description: string) =>
@@ -35,6 +36,15 @@ const person = (description: string) =>
     .object({
       id: uuid("Account ID."),
       name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+    })
+    .describe(description);
+
+const personWithPicture = (description: string) =>
+  z
+    .object({
+      id: uuid("Account ID."),
+      name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+      pictureRef: pictureRefField,
     })
     .describe(description);
 
@@ -64,7 +74,7 @@ const commentShape = {
   id: uuid("ID of the comment."),
   itemId: uuid("Page or blog post the comment belongs to."),
   parentId: uuid("The comment this replies to, or null for a new thread.").nullable(),
-  author: person("Author, or null for a deleted comment.").nullable(),
+  author: personWithPicture("Author, or null for a deleted comment.").nullable(),
   body: commentBodySchema.nullable().describe("Content, or null for a deleted comment."),
   deleted: z
     .boolean()
@@ -94,7 +104,7 @@ export const threadSchema = z
       .nullable()
       .describe("The whiteboard element the comment refers to, also after it was removed, or null."),
     resolvedAt: timestamp("When the inline comment was resolved, or null while it is open.").nullable(),
-    resolvedBy: person("Who resolved it, or null.").nullable(),
+    resolvedBy: personWithPicture("Who resolved it, or null.").nullable(),
     replies: z.array(commentSchema).describe("Replies, oldest first. Replies are one level deep."),
   })
   .describe("A comment with its replies.");
@@ -112,7 +122,7 @@ export const exampleThread = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b01",
   itemId: exampleItem.id,
   parentId: null,
-  author: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer" },
+  author: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer", pictureRef: null },
   body: exampleCommentBody,
   deleted: false,
   createdAt: "2026-10-06T08:00:00.000Z",
@@ -218,6 +228,13 @@ const contentReferenceShape = {
 
 export const contentReferenceSchema = z.object(contentReferenceShape).describe("A page or blog post.");
 
+const homeReferenceShape = {
+  ...contentReferenceShape,
+  mySpace: z.boolean().describe("Whether the item lies in the caller's own personal space."),
+};
+
+const homeReferenceSchema = z.object(homeReferenceShape).describe("A page or blog post.");
+
 export const taskEntrySchema = z
   .object({
     id: uuid("ID of the task."),
@@ -231,6 +248,10 @@ export const taskEntrySchema = z
       .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })
       .nullable()
       .describe("The assignee, or null."),
+    assignedBy: z
+      .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })
+      .nullable()
+      .describe("Who assigned the task to the assignee when publishing, or null."),
     item: z
       .object({
         id: uuid("Page or blog post with the task."),
@@ -251,6 +272,7 @@ export const exampleTask = {
   dueDate: "2026-10-17",
   overdue: false,
   assignee: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer" },
+  assignedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21", name: "Mira Klein" },
   item: {
     id: exampleItem.id,
     kind: "page",
@@ -263,7 +285,9 @@ export const exampleTask = {
 
 export const taskListSchema = z
   .object({
-    items: z.array(taskEntrySchema).describe("Tasks sorted by due date, tasks without one last."),
+    items: z
+      .array(taskEntrySchema)
+      .describe("Tasks in the order of `sort`; by default by due date, tasks without one last."),
     counts: z
       .object({
         open: z.number().int().describe("Open tasks that match the filters other than the status."),
@@ -281,6 +305,10 @@ export const taskQuerySchema = z
       .union([z.literal("me"), uuid("Account ID.")])
       .optional()
       .describe("`me` for the caller's tasks, or an account ID. Leave it out for everyone."),
+    assignedBy: z
+      .union([z.literal("me"), uuid("Account ID.")])
+      .optional()
+      .describe("`me` for tasks the caller assigned, or an account ID of the person who assigned them."),
     spaceId: uuid("Only tasks in this space.").optional(),
     seriesId: uuid(
       "Only tasks written in the meetings of this meeting series. Meetings that were skipped are left out.",
@@ -294,7 +322,14 @@ export const taskQuerySchema = z
       .describe(
         "`any` (default), `overdue`, `next7Days` and `next30Days` (including overdue ones) or `none` for tasks without a due date.",
       ),
-    cursor: z.string().max(200).optional().describe("Cursor from `nextCursor` of the previous page."),
+    sort: z
+      .enum(taskSorts)
+      .default("due")
+      .describe(
+        "`due` (default, tasks without a due date last), `text`, `item` (title of the page), `assignedBy` or `assignee` (names).",
+      ),
+    direction: z.enum(["asc", "desc"]).default("asc").describe("`asc` (default) or `desc`."),
+    cursor: z.string().max(2000).optional().describe("Cursor from `nextCursor` of the previous page."),
     limit: z.coerce
       .number()
       .int()
@@ -339,6 +374,11 @@ export const blogPostSchema = z
       })
       .nullable()
       .describe("Cover image with the point that stays visible in every crop, or null."),
+    commentCount: z
+      .number()
+      .int()
+      .min(0)
+      .describe("Number of comments and replies on the post that are not deleted."),
     createdAt: timestamp("When the post was created."),
   })
   .describe("A blog post.");
@@ -361,6 +401,7 @@ export const exampleBlogPost = {
   pinnedInSpace: false,
   pinnedInOrganization: true,
   cover: { attachmentId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40", focusX: 0.5, focusY: 0.3 },
+  commentCount: 4,
   createdAt: "2026-10-05T15:00:00.000Z",
 };
 
@@ -429,7 +470,7 @@ export const starredSchema = z
     items: z
       .array(
         z
-          .object({ ...contentReferenceShape, starredAt: timestamp("When it was starred.") })
+          .object({ ...homeReferenceShape, starredAt: timestamp("When it was starred.") })
           .describe("A starred page or post."),
       )
       .describe("Starred pages and blog posts the caller can read, newest first."),
@@ -441,6 +482,7 @@ export const starredSchema = z
             key: z.string().describe("Key of the space."),
             name: z.string().describe("Name of the space. Empty for a personal space without a name."),
             personal: z.boolean().describe("Whether it is a personal space."),
+            mySpace: z.boolean().describe("Whether it is the caller's own personal space."),
             starredAt: timestamp("When it was starred."),
           })
           .describe("A starred space."),
@@ -452,7 +494,7 @@ export const starredSchema = z
 export const recentSchema = z
   .array(
     z
-      .object({ ...contentReferenceShape, viewedAt: timestamp("When the caller last viewed it.") })
+      .object({ ...homeReferenceShape, viewedAt: timestamp("When the caller last viewed it.") })
       .describe("A recently viewed item."),
   )
   .describe("Items the caller viewed in the last 90 days, newest first. Only the caller sees this list.");
@@ -460,7 +502,7 @@ export const recentSchema = z
 export const mentionSchema = z
   .object({
     id: uuid("ID of the mention."),
-    item: contentReferenceSchema,
+    item: homeReferenceSchema,
     commentId: uuid("The comment with the mention, or null for a mention in the content.").nullable(),
     actor: z
       .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })
@@ -482,7 +524,7 @@ export const forYouSchema = z
 
 export const homePageSchema = z
   .object({
-    page: contentReferenceSchema
+    page: homeReferenceSchema
       .nullable()
       .describe("The organization home page, or null when none is set or the caller cannot read it."),
   })
@@ -805,6 +847,10 @@ export const labeledContentSchema = z
       .string()
       .nullable()
       .describe("Plain text of the excerpt when asked for, or the excerpt of a blog post; null otherwise."),
+    parents: z
+      .array(z.string().describe("Title of a parent."))
+      .describe("Titles of the parents the caller can read, from the top down."),
+    contentUpdatedAt: timestamp("When its content last changed."),
   })
   .describe("A page or blog post with a label.");
 

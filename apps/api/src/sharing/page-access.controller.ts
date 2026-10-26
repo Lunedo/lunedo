@@ -199,6 +199,7 @@ export class PageAccessController {
       "ownShare",
       "restrictionWithoutViewers",
       "restrictionWithoutEditors",
+      "categoryAccessManaged",
     ],
   })
   async change(

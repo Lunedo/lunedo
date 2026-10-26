@@ -16,7 +16,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus, ShieldCheck } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -90,11 +90,8 @@ export function OrganizationRolesScreen() {
 
   return (
     <SettingsPage
-      width="wide"
       title={t("roles.title")}
       description={t("roles.description")}
-      icon={ShieldCheck}
-      organizationId={organizationId}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setAssigning(true)}>
@@ -162,8 +159,13 @@ export function OrganizationRolesScreen() {
                       <IconButton label={t("roles.actionsFor", { name: role.name })} icon={MoreHorizontal} />
                     }
                     items={[
-                      { label: t("common.edit"), onSelect: () => setEditing(role) },
-                      { label: t("common.deleteRole"), danger: true, onSelect: () => setDeleting(role) },
+                      { label: t("common.edit"), icon: Pencil, onSelect: () => setEditing(role) },
+                      {
+                        label: t("common.deleteRole"),
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setDeleting(role),
+                      },
                     ]}
                   />
                 ) : null,
@@ -342,7 +344,11 @@ export function OrganizationRolesScreen() {
           <AccessImpact
             change="loses"
             {...holders(removing)}
-            what={t("roles.losesWhat", { role: roleName(t, removing), name: organizationName })}
+            what={t("roles.losesWhat", {
+              count: holders(removing).people.length,
+              role: roleName(t, removing),
+              name: organizationName,
+            })}
           />
         ) : null}
       </ConfirmDialog>

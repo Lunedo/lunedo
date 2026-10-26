@@ -15,7 +15,7 @@ import {
   VisuallyHidden,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Globe, LibraryBig, Plus } from "lucide-react";
+import { Globe, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -44,7 +44,7 @@ type PortalDomain = {
 export function InstancePortalsScreen() {
   const { t } = useTranslation();
   return (
-    <SettingsPage title={t("portals.title")} description={t("portals.description")} icon={LibraryBig}>
+    <SettingsPage title={t("portals.title")} description={t("portals.description")}>
       <AppLinkSection />
       <DomainsSection />
     </SettingsPage>
@@ -72,6 +72,7 @@ function AppLinkSection() {
           <AutoSaveTextField
             label={t("portals.appLink.label")}
             hint={t("portals.appLink.hint")}
+            help={t("portals.appLink.help")}
             value={typeof value === "string" ? value : ""}
             schema={z.string().max(60)}
             disabled={!state.can("instance.settings.manage")}
@@ -276,6 +277,7 @@ function AllowDomainDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         <Field
           label={t("portals.domains.domain")}
           hint={t("portals.domains.domainHint")}
+          help={t("portals.domains.domainHelp")}
           {...(errors.domain ? { error: errors.domain } : {})}
         >
           <Input

@@ -29,6 +29,8 @@ export interface Group {
   description: string;
   managedBy?: { providerId: string; providerName: string } | null;
   formerlySynchronizedFrom?: string | null;
+  memberCount?: number;
+  spaceCount?: number;
 }
 
 export interface GroupDetails extends Group {
@@ -38,6 +40,8 @@ export interface GroupDetails extends Group {
 export interface GroupMember {
   accountId: string;
   name: string;
+  jobTitle: string | null;
+  pictureRef: string | null;
   expiresAt: Date | null;
 }
 
@@ -104,6 +108,14 @@ export class GroupService {
         formerlySynchronizedFrom: groups.formerProvider,
         managedProviderId: managedGroups.providerId,
         managedProviderName: identityProviders.name,
+        memberCount: sql<number>`(
+          select count(*)::int from ${groupMembers} gm
+          join ${accounts} a on a.id = gm.account_id
+          where gm.group_id = ${groups.id} and a.state = 'active'
+            and (gm.expires_at is null or gm.expires_at > now()))`,
+        spaceCount: sql<number>`(
+          select count(distinct sp.space_id)::int from space_permissions sp join spaces s on s.id = sp.space_id
+          where sp.principal_kind = 'group' and sp.principal_id = ${groups.id} and s.deleted_at is null)`,
         sortName,
       })
       .from(groups)
@@ -122,8 +134,10 @@ export class GroupService {
       rows,
       page,
       (row) => [row.sortName, row.id],
-      ({ sortName: _sortName, managedProviderId, managedProviderName, ...row }) => ({
+      ({ sortName: _sortName, managedProviderId, managedProviderName, memberCount, spaceCount, ...row }) => ({
         ...row,
+        memberCount: Number(memberCount),
+        spaceCount: Number(spaceCount),
         managedBy: managedBy(managedProviderId, managedProviderName),
       }),
     );
@@ -135,6 +149,8 @@ export class GroupService {
       .select({
         accountId: groupMembers.accountId,
         name: accounts.name,
+        jobTitle: accounts.jobTitle,
+        pictureRef: accounts.pictureRef,
         expiresAt: groupMembers.expiresAt,
         sortName,
       })

@@ -26,6 +26,14 @@ export interface Formatter {
   dateTime(value: Date | string): string;
   month(value: Date | string): string;
   relative(value: Date | string, now?: Date): string;
+  distance(value: Date | string, now?: Date): string;
+  short(value: Date | string, now?: Date): string;
+  day(value: Date | string, now?: Date): string;
+  calendarDate(value: Date | string, now?: Date): string;
+  calendarDateTime(value: Date | string, now?: Date): string;
+  shortDateTime(value: Date | string, now?: Date): string;
+  weekdayDate(value: Date | string, now?: Date): string;
+  weekdayDateTime(value: Date | string, now?: Date): string;
   number(value: number): string;
   percent(value: number): string;
   bytes(value: number): string;
@@ -52,10 +60,62 @@ export function createFormatter(settings: FormatSettings): Formatter {
   const numbers = new Intl.NumberFormat(numberLocale);
   const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 2 });
   const relative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto" });
+  const shortRelative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto", style: "short" });
+  const dayMonth = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    day: "numeric",
+    month: "short",
+  });
+  const dayMonthYear = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const weekdayDayMonth = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  });
+  const weekdayDayMonthYear = new Intl.DateTimeFormat(settings.language, {
+    timeZone: settings.timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const calendarDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: settings.timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 
   const date = (value: Date | string) =>
     formatDate(toDate(value), settings.dateFormat, settings.timeZone, settings.language);
   const time = (value: Date | string) => timeFormatter.format(toDate(value));
+  const calendarDate = (value: Date | string, now = new Date()) => {
+    const moment = toDate(value);
+    return calendarDay.format(moment).slice(0, 4) === calendarDay.format(now).slice(0, 4)
+      ? dayMonth.format(moment)
+      : dayMonthYear.format(moment);
+  };
+  const weekdayDate = (value: Date | string, now = new Date()) => {
+    const moment = toDate(value);
+    return calendarDay.format(moment).slice(0, 4) === calendarDay.format(now).slice(0, 4)
+      ? weekdayDayMonth.format(moment)
+      : weekdayDayMonthYear.format(moment);
+  };
+  const day = (value: Date | string, now = new Date()) => {
+    const moment = toDate(value);
+    const target = calendarDay.format(moment);
+    const offset = Math.round(
+      (Date.parse(`${target}T00:00:00Z`) - Date.parse(`${calendarDay.format(now)}T00:00:00Z`)) / 86_400_000,
+    );
+    if (Math.abs(offset) <= 1) return relative.format(offset, "day");
+    return calendarDate(moment, now);
+  };
 
   return {
     settings,
@@ -72,6 +132,28 @@ export function createFormatter(settings: FormatSettings): Formatter {
       if (absolute < 30 * 86_400) return relative.format(Math.round(seconds / 86_400), "day");
       return date(value);
     },
+    distance(value, now = new Date()) {
+      const days = Math.round((toDate(value).getTime() - now.getTime()) / 86_400_000);
+      if (Math.abs(days) < 1) return relative.format(0, "day");
+      if (Math.abs(days) < 45) return relative.format(days, "day");
+      if (Math.abs(days) < 548) return relative.format(Math.round(days / 30.44), "month");
+      return relative.format(Math.round(days / 365.25), "year");
+    },
+    short(value, now = new Date()) {
+      const moment = toDate(value);
+      if (calendarDay.format(moment) !== calendarDay.format(now)) return day(moment, now);
+      const seconds = Math.round((moment.getTime() - now.getTime()) / 1000);
+      const absolute = Math.abs(seconds);
+      if (absolute < 60) return shortRelative.format(0, "minute");
+      if (absolute < 3600) return shortRelative.format(Math.round(seconds / 60), "minute");
+      return shortRelative.format(Math.round(seconds / 3600), "hour");
+    },
+    day,
+    calendarDate,
+    calendarDateTime: (value, now = new Date()) => `${calendarDate(value, now)}, ${time(value)}`,
+    shortDateTime: (value, now = new Date()) => `${day(value, now)}, ${time(value)}`,
+    weekdayDate,
+    weekdayDateTime: (value, now = new Date()) => `${weekdayDate(value, now)}, ${time(value)}`,
     number: (value) => numbers.format(value),
     percent: (value) => percent.format(value),
     bytes(value) {

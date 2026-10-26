@@ -10,9 +10,10 @@ import {
   Select,
   Skeleton,
   useToast,
+  VisuallyHidden,
 } from "@lunedo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Flag, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -69,10 +70,8 @@ export function SpaceStatusScreen() {
   });
   return (
     <SpaceSettingsPage
-      tab="status"
       title={t("pageStatus.settingsTitle")}
       description={t("pageStatus.settingsDescription")}
-      icon={Flag}
     >
       <div className="flex flex-col gap-8">
         <Panel title={t("pageStatus.title")}>
@@ -166,6 +165,7 @@ function StatusValues({ admin }: { admin: boolean }) {
           <li key={value.id} className="py-3">
             <ValueRow
               value={value}
+              position={index + 1}
               first={index === 0}
               last={index === list.length - 1}
               onMove={(offset) => void move(index, offset)}
@@ -221,14 +221,25 @@ function colorOptions(t: ReturnType<typeof useTranslation>["t"]) {
   return PAGE_STATUS_COLORS.map((color) => ({ value: color, label: colorName(t, color) }));
 }
 
+function RowLabel({ visible, spoken }: { visible: string; spoken: string }) {
+  return (
+    <>
+      <span aria-hidden="true">{visible}</span>
+      <VisuallyHidden>{spoken}</VisuallyHidden>
+    </>
+  );
+}
+
 function ValueRow({
   value,
+  position,
   first,
   last,
   onMove,
   onRemove,
 }: {
   value: PageStatusValue;
+  position: number;
   first: boolean;
   last: boolean;
   onMove: (offset: -1 | 1) => void;
@@ -274,7 +285,10 @@ function ValueRow({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label={t("pageStatus.name")} {...(state === "error" && error ? { error } : {})}>
+        <Field
+          label={<RowLabel visible={t("pageStatus.name")} spoken={t("pageStatus.nameOf", { position })} />}
+          {...(state === "error" && error ? { error } : {})}
+        >
           <Input
             value={name}
             maxLength={NAME_MAX_LENGTH + 20}
@@ -287,7 +301,9 @@ function ValueRow({
             }}
           />
         </Field>
-        <Field label={t("pageStatus.color")}>
+        <Field
+          label={<RowLabel visible={t("pageStatus.color")} spoken={t("pageStatus.colorOf", { position })} />}
+        >
           <Select
             value={value.color}
             options={colorOptions(t)}

@@ -10,7 +10,7 @@ import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
 import { CreateSeriesDialog } from "./create-series-dialog.js";
-import { seriesPath, spaceSeriesQuery } from "./queries.js";
+import { isToday, seriesPath, spaceSeriesQuery } from "./queries.js";
 
 export function SeriesListScreen() {
   const { t } = useTranslation();
@@ -65,16 +65,18 @@ export function SeriesListScreen() {
                 to={seriesPath(space.key, entry.id)}
                 className="flex min-h-hit flex-wrap items-center gap-3 px-4 py-3 hover:bg-hover focus-visible:focus-ring"
               >
-                <Repeat aria-hidden className="size-icon text-text-muted" />
+                <Repeat aria-hidden className="size-icon-md text-text-muted" />
                 <span className="min-w-0 flex-1 basis-field truncate font-semibold" title={entry.title}>
                   {entry.title}
                 </span>
                 {entry.archived ? <Badge>{t("meetings.ended")}</Badge> : null}
                 {!entry.archived ? (
                   <span className="flex items-center gap-1 text-sm text-text-muted">
-                    <CalendarClock aria-hidden className="size-icon" />
+                    <CalendarClock aria-hidden className="size-icon-md" />
                     {entry.upcomingAt
-                      ? t("meetings.list.next", { date: format.dateTime(entry.upcomingAt) })
+                      ? isToday(entry.upcomingAt, format.settings.timeZone)
+                        ? t("meetings.list.today", { time: format.time(entry.upcomingAt) })
+                        : t("meetings.list.next", { date: format.weekdayDateTime(entry.upcomingAt) })
                       : t("meetings.notScheduled")}
                   </span>
                 ) : null}

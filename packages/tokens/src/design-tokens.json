@@ -29,7 +29,9 @@
       "infoSoft": "#E6EEFB",
       "badge": "#C2410C",
       "presence": "#1F9D5B",
-      "overlay": "rgba(15, 17, 20, 0.36)"
+      "overlay": "rgba(15, 17, 20, 0.36)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "dark": {
       "bg": "#151617",
@@ -59,7 +61,9 @@
       "infoSoft": "#1B2333",
       "badge": "#F08A4B",
       "presence": "#3DBE78",
-      "overlay": "rgba(0, 0, 0, 0.55)"
+      "overlay": "rgba(0, 0, 0, 0.55)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "highContrastLight": {
       "bg": "#FFFFFF",
@@ -89,7 +93,9 @@
       "infoSoft": "#E0E9FA",
       "badge": "#9A3100",
       "presence": "#0E6B3A",
-      "overlay": "rgba(0, 0, 0, 0.6)"
+      "overlay": "rgba(0, 0, 0, 0.6)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "highContrastDark": {
       "bg": "#000000",
@@ -119,7 +125,9 @@
       "infoSoft": "#0F1A30",
       "badge": "#FFA36B",
       "presence": "#5EE095",
-      "overlay": "rgba(0, 0, 0, 0.75)"
+      "overlay": "rgba(0, 0, 0, 0.75)",
+      "lightbox": "rgba(10, 12, 14, 0.95)",
+      "onLightbox": "#F5F6F7"
     },
     "palette": {
       "light": {
@@ -210,13 +218,15 @@
     },
     "weight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700 },
     "size": {
+      "2xs": "0.6875rem",
       "xs": "0.75rem",
       "sm": "0.8125rem",
       "base": "0.875rem",
       "content": "1rem",
       "lg": "1.25rem",
       "xl": "1.625rem",
-      "2xl": "2rem"
+      "2xl": "2rem",
+      "display": "1.875rem"
     },
     "lineHeight": { "tight": 1.2, "ui": 1.45, "content": 1.65 },
     "letterSpacing": { "heading": "-0.015em", "label": "0.05em" }
@@ -244,18 +254,21 @@
   "layout": {
     "railWidth": "3.75rem",
     "sidebarWidth": "16.5rem",
-    "toolbarHeight": "3.25rem",
+    "toolbarHeight": "3.5rem",
     "contentWidth": "47.5rem",
     "rowHeight": { "default": "1.875rem", "compact": "1.75rem" },
     "control": { "sm": "1.75rem", "md": "2rem", "lg": "2.5rem", "field": "2.25rem" },
     "controlCompact": { "sm": "1.5rem", "md": "1.75rem", "lg": "2.25rem", "field": "2rem" },
     "cardWidth": "25rem",
     "cardWidthWide": "40rem",
+    "columnWidth": "35rem",
     "pageWidth": "56rem",
+    "pageWidthWide": "67.5rem",
     "panelWidth": "22.5rem",
-    "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem" },
+    "dialogWidth": { "sm": "28rem", "md": "32rem", "lg": "40rem", "xl": "56.25rem" },
     "qrCodeSize": "7.5rem",
     "fieldWidth": "16rem",
+    "settingLabelWidth": "20rem",
     "hitArea": "44px",
     "numberFieldWidth": "6rem",
     "unitFieldWidth": "9rem"

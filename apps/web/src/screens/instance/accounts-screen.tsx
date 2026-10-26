@@ -5,35 +5,42 @@ import {
   DangerAction,
   DangerZone,
   Dialog,
-  Drawer,
   Field,
+  FirstAndMore,
   focusFirstInvalidSoon,
   IconButton,
   Notice,
   Section,
   Select,
+  Skeleton,
   Table,
   TableToolbar,
+  Tabs,
   Textarea,
   Tooltip,
+  TruncatedText,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { Info, UserPlus, UserRound } from "lucide-react";
+import { Info, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { instanceKeys, instanceOrganizationsQuery } from "../../api/instance-queries.js";
+import { instanceKeys, instanceOrganizationsQuery, instanceRolesQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
+import { AuditLog } from "../../components/audit-log.js";
 import { formerUser } from "../../components/audit-presentation.js";
 import { AccountIdentities } from "../../components/linked-identities.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { useServerTable } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
+import { PersonalSpaceReview } from "../../spaces/settings/personal-space-review.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import {
   AnonymizeDialog,
@@ -42,6 +49,7 @@ import {
   MergePlaceholder,
   PlaceholderDialog,
 } from "./account-lifecycle.js";
+import { AssignInstanceRoleDialog } from "./roles-screen.js";
 
 const STATE_BADGES = {
   active: "success",
@@ -56,14 +64,19 @@ type Account = AccountPage["items"][number];
 
 const STATE_FILTERS = ["active", "deactivated", "placeholder", "anonymized"] as const;
 
-type AccountFilter = "all" | "withoutOrganization" | (typeof STATE_FILTERS)[number];
+type AccountFilter = "all" | "withoutOrganization" | "personalSpaceReview" | (typeof STATE_FILTERS)[number];
 
-function fetchAccounts(search: string, cursor: string | null, filter: AccountFilter = "all") {
+function fetchAccounts(
+  search: string,
+  cursor: string | null,
+  filter: Exclude<AccountFilter, "personalSpaceReview"> = "all",
+  limit = 25,
+) {
   return request(() =>
     api.GET("/api/v1/instance/accounts", {
       params: {
         query: {
-          limit: 25,
+          limit,
           ...(search ? { q: search } : {}),
           ...(cursor ? { cursor } : {}),
           ...(filter === "withoutOrganization" ? { withoutOrganization: "true" as const } : {}),
@@ -86,23 +99,21 @@ export function InstanceAccountsScreen() {
   const { t } = useTranslation();
   const format = useFormat();
   const [filter, setFilter] = useState<AccountFilter>("all");
-  const table = useServerTable([...instanceKeys.accounts, filter], (search, cursor) =>
-    fetchAccounts(search, cursor, filter),
+  const table = useServerTable([...instanceKeys.accounts, filter], (search, cursor, limit) =>
+    fetchAccounts(search, cursor, filter === "personalSpaceReview" ? "all" : filter, limit),
   );
-  const [open, setOpen] = useState<Account | null>(null);
+  const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const queryClient = useQueryClient();
-  const manage = useOrganizationState().can("instance.accounts.manage");
+  const state = useOrganizationState();
+  const manage = state.can("instance.accounts.manage");
+  const reviewing = filter === "personalSpaceReview";
 
   return (
-    <SettingsPage
-      width="wide"
-      title={t("instance.accounts.title")}
-      description={t("instance.accounts.description")}
-      icon={UserRound}
-    >
+    <SettingsPage wide title={t("instance.accounts.title")} description={t("instance.accounts.description")}>
       <TableToolbar
         search={{ ...table.search, label: t("members.search"), placeholder: t("members.search") }}
+        pagination={table.pagination}
         filters={
           <div className="w-field max-w-full">
             <Select
@@ -112,10 +123,13 @@ export function InstanceAccountsScreen() {
               options={[
                 { value: "all", label: t("instance.accounts.filterAll") },
                 { value: "withoutOrganization", label: t("instance.accounts.withoutOrganization") },
-                ...STATE_FILTERS.map((state) => ({
-                  value: state,
-                  label: t(`instance.accounts.states.${state}`),
+                ...STATE_FILTERS.map((accountState) => ({
+                  value: accountState,
+                  label: t(`instance.accounts.states.${accountState}`),
                 })),
+                ...(state.can("instance.personalSpaces.view")
+                  ? [{ value: "personalSpaceReview", label: t("instance.accounts.personalSpaceReview") }]
+                  : []),
               ]}
             />
           </div>
@@ -141,7 +155,9 @@ export function InstanceAccountsScreen() {
           }}
         />
       ) : null}
-      {table.query.isError ? (
+      {reviewing ? (
+        <PersonalSpaceReview />
+      ) : table.query.isError ? (
         <LoadError
           what={t("failures.loadAccounts")}
           error={table.query.error}
@@ -153,8 +169,10 @@ export function InstanceAccountsScreen() {
           rowKey={(account) => account.id}
           rows={table.rows}
           loading={table.query.isPending}
-          {...(table.pagination ? { pagination: table.pagination } : {})}
-          onRowClick={setOpen}
+          pagination={table.pagination}
+          onRowClick={(account) =>
+            void navigate({ to: "/settings/instance/accounts/$accountId", params: { accountId: account.id } })
+          }
           rowLabel={(account) => t("instance.accounts.open", { name: account.name })}
           empty={<p className="p-4 text-text-muted">{t("instance.accounts.empty")}</p>}
           columns={[
@@ -181,7 +199,12 @@ export function InstanceAccountsScreen() {
             {
               key: "organizations",
               header: t("instance.accounts.organizations"),
-              cell: (account) => <AccountOrganizations organizations={account.organizations} />,
+              cell: (account) => (
+                <AccountOrganizations
+                  name={account.name ?? account.email ?? ""}
+                  organizations={account.organizations}
+                />
+              ),
             },
             {
               key: "role",
@@ -197,11 +220,13 @@ export function InstanceAccountsScreen() {
               header: t("instance.accounts.twoFactor"),
               cell: (account) =>
                 !canHaveSecondFactor(account) ? (
-                  "—"
+                  <span className="text-text-muted">—</span>
                 ) : account.twoFactorActive ? (
-                  <Badge variant="success">{t("instance.accounts.twoFactorOn")}</Badge>
+                  <span className="whitespace-nowrap">{t("common.yes")}</span>
+                ) : account.secondFactorRequired ? (
+                  <Badge variant="warning">{t("members.twoFactorMissing")}</Badge>
                 ) : (
-                  <Badge variant="warning">{t("instance.accounts.twoFactorOff")}</Badge>
+                  <span className="whitespace-nowrap text-text-muted">{t("common.no")}</span>
                 ),
             },
             {
@@ -235,31 +260,155 @@ export function InstanceAccountsScreen() {
           ]}
         />
       )}
-      {open ? <AccountPanel account={open} onClose={() => setOpen(null)} /> : null}
     </SettingsPage>
   );
 }
 
-function AccountOrganizations({ organizations }: { organizations: Account["organizations"] }) {
+function AccountOrganizations({
+  name,
+  organizations,
+}: {
+  name: string;
+  organizations: Account["organizations"];
+}) {
   const { t } = useTranslation();
-  if (organizations.length === 0) {
-    return <Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>;
-  }
   return (
-    <ul className="flex min-w-0 flex-col gap-0.5">
-      {organizations.map((organization) => (
-        <li key={organization.id} className="flex min-w-0 items-center gap-1.5">
-          {organization.home ? <HomeMark /> : null}
-          <span className="break-words">{organization.name}</span>
-        </li>
-      ))}
-    </ul>
+    <FirstAndMore
+      title={t("instance.accounts.organizationsOf", { name })}
+      moreLabel={(count) => t("instance.accounts.moreOrganizations", { count })}
+      values={organizations.map((organization) => ({
+        id: organization.id,
+        label: organization.name,
+        ...(organization.home ? { icon: <HomeMark /> } : {}),
+      }))}
+      empty={<Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>}
+    />
   );
 }
 
 type PanelAction = "deactivate" | "reactivate" | "endSessions" | "reset" | "anonymize";
 
-function AccountPanel({ account, onClose }: { account: Account; onClose: () => void }) {
+const accountRoute = getRouteApi("/app/settings/instance/accounts/$accountId");
+
+function fetchAccount(accountId: string) {
+  return request(() => api.GET("/api/v1/instance/accounts/{accountId}", { params: { path: { accountId } } }));
+}
+
+type AccountDetail = Awaited<ReturnType<typeof fetchAccount>>;
+
+export function InstanceAccountScreen() {
+  const { t } = useTranslation();
+  const { accountId } = accountRoute.useParams();
+  const navigate = useNavigate();
+  const detail = useQuery({
+    queryKey: [...instanceKeys.accounts, "detail", accountId],
+    queryFn: () => fetchAccount(accountId),
+    throwOnError: false,
+  });
+  const back = { label: t("instance.accounts.title"), href: "/settings/instance/accounts" };
+  const manageRoles = useOrganizationState().can("instance.roles.manage");
+  const roles = useQuery({ ...instanceRolesQuery, enabled: manageRoles });
+  const [changingRole, setChangingRole] = useState(false);
+  if (!detail.data) {
+    return (
+      <SettingsPage title={detail.isError ? t("instance.accounts.account") : ""} back={back}>
+        {detail.isError ? (
+          <LoadError what={t("failures.loadAccount")} error={detail.error} onRetry={() => detail.refetch()} />
+        ) : (
+          <Skeleton className="h-32 w-full" />
+        )}
+      </SettingsPage>
+    );
+  }
+  const account = detail.data.account;
+  return (
+    <SettingsPage
+      title={accountName(t, account)}
+      back={back}
+      wide
+      leading={<PersonAvatar id={account.id} name={account.name} size="lg" />}
+      status={<Badge variant="neutral">{t(`instance.accounts.types.${account.type}`)}</Badge>}
+      description={account.email ?? "—"}
+      {...(manageRoles
+        ? {
+            actions: (
+              <Button variant="secondary" onClick={() => setChangingRole(true)}>
+                {t("instance.accounts.changeInstanceRole")}
+              </Button>
+            ),
+          }
+        : {})}
+    >
+      {changingRole ? (
+        <AssignInstanceRoleDialog
+          roles={roles.data ?? []}
+          person={{
+            id: account.id,
+            name: accountName(t, account),
+            owner: account.instanceRoles.some((role) => role.builtInRole === "owner"),
+          }}
+          onClose={() => setChangingRole(false)}
+        />
+      ) : null}
+      <AccountDetails
+        detail={detail.data}
+        onRefetch={async () => {
+          await detail.refetch();
+        }}
+        onGone={() => void navigate({ to: "/settings/instance/accounts" })}
+      />
+    </SettingsPage>
+  );
+}
+
+type AccountTab = "overview" | "security" | "organizations" | "tokens" | "activity";
+
+function AccountCard({
+  title,
+  count,
+  wide = false,
+  children,
+}: {
+  title: string;
+  count?: number;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4 ${wide ? "lg:col-span-2" : ""}`}
+    >
+      <h2 className="flex items-baseline gap-2 text-sm font-semibold">
+        {title}
+        {count !== undefined ? <span className="font-normal text-text-muted">{count}</span> : null}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function AccountFacts({ rows }: { rows: [string, ReactNode][] }) {
+  return (
+    <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
+      {rows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-text-muted">{label}</dt>
+          <dd className="min-w-0 break-words">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function AccountDetails({
+  detail,
+  onRefetch,
+  onGone,
+}: {
+  detail: AccountDetail;
+  onRefetch: () => Promise<void>;
+  onGone: () => void;
+}) {
   const { t } = useTranslation();
   const format = useFormat();
   const session = useSession();
@@ -267,22 +416,26 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const { toast } = useToast();
+  const search = accountRoute.useSearch();
+  const navigateTab = accountRoute.useNavigate();
+  const tab = (search.tab ?? "overview") as AccountTab;
+  const setTab = (next: AccountTab) =>
+    void navigateTab({
+      to: ".",
+      search: { tab: next === "overview" ? undefined : next },
+      replace: true,
+    });
   const [action, setAction] = useState<PanelAction | null>(null);
-  const detail = useQuery({
-    queryKey: [...instanceKeys.accounts, "detail", account.id],
-    queryFn: () =>
-      request(() =>
-        api.GET("/api/v1/instance/accounts/{accountId}", { params: { path: { accountId: account.id } } }),
-      ),
-    throwOnError: false,
-  });
+  const [ending, setEnding] = useState<AccountDetail["sessions"][number] | null>(null);
+  const account = detail.account;
   const own = account.id === session.account?.id;
   const manage = state.can("instance.accounts.manage");
-  const current = detail.data?.account ?? account;
-  const home = current.organizations.find((organization) => organization.home);
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
   };
+  const device = (entry: AccountDetail["sessions"][number]) =>
+    [entry.browser, entry.operatingSystem].filter(Boolean).join(" · ") ||
+    t("instance.accounts.unknownBrowser");
 
   const run = async (kind: Exclude<PanelAction, "reset" | "anonymize">) => {
     const accountId = account.id;
@@ -311,208 +464,440 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
     }
   };
 
+  const endSession = async (entry: AccountDetail["sessions"][number]) => {
+    try {
+      await request(() =>
+        api.POST("/api/v1/accounts/{accountId}/sessions/{sessionId}/end", {
+          params: { path: { accountId: account.id, sessionId: entry.id } },
+        }),
+      );
+      toast({ title: t("instance.accounts.sessionEnded", { device: device(entry) }), variant: "success" });
+      setEnding(null);
+      await refresh();
+    } catch (failure) {
+      showFailure(t("failures.changeAccount"), failure, () => void endSession(entry));
+    }
+  };
+
   const dangerButton = (kind: PanelAction, label: string) => (
     <Button variant="danger" size="sm" onClick={() => setAction(kind)}>
       {label}
     </Button>
   );
   const anonymizable =
-    current.state !== "anonymized" && (account.type === "standard" || account.type === "guest");
+    account.state !== "anonymized" && (account.type === "standard" || account.type === "guest");
+  const secondFactor = canHaveSecondFactor({ type: account.type, state: account.state });
+  const tabs = [
+    { value: "overview", label: t("instance.accounts.page.overview") },
+    { value: "security", label: t("instance.accounts.page.security") },
+    { value: "organizations", label: t("instance.accounts.organizations"), count: detail.memberships.length },
+    { value: "tokens", label: t("instance.accounts.tokens"), count: detail.tokens.length },
+    ...(state.can("instance.audit.view")
+      ? [{ value: "activity", label: t("instance.accounts.page.activity") }]
+      : []),
+  ];
 
   return (
-    <Drawer
-      open
-      onOpenChange={(next) => (next ? undefined : onClose())}
-      title={accountName(t, account)}
-      size="panel"
-    >
-      <div className="flex flex-col gap-6 p-4">
-        <div className="flex flex-col gap-1 text-sm">
-          <span>{account.email ?? "—"}</span>
-          <span className="text-text-muted">
-            {t(`instance.accounts.types.${account.type}`)} · {t(`instance.accounts.states.${current.state}`)}
-          </span>
-          {home ? <span>{t("instance.accounts.managedBy", { organization: home.name })}</span> : null}
-        </div>
-        {manage && own ? (
-          <p className="text-sm text-text-muted">{t("instance.accounts.ownAccount")}</p>
-        ) : null}
-        {manage && !own && current.state === "deactivated" ? (
-          <div>
-            <Button size="sm" onClick={() => setAction("reactivate")}>
-              {t("instance.accounts.reactivate")}
-            </Button>
-          </div>
-        ) : null}
-        {manage &&
-        account.type === "standard" &&
-        current.state === "active" &&
-        current.homeOrganizationId === null ? (
-          <AssignOrganization accountId={account.id} onAssigned={refresh} />
-        ) : null}
-        {manage && current.state === "placeholder" ? (
-          <PanelSection title={t("lifecycle.merge.title")}>
-            <MergePlaceholder
-              placeholder={{ id: account.id, name: account.name }}
-              ownAccountId={session.account?.id ?? null}
-              onMerged={async () => {
-                await refresh();
-                onClose();
-              }}
-            />
-          </PanelSection>
-        ) : null}
-        {manage &&
-        current.state === "active" &&
-        account.type === "standard" &&
-        current.homeOrganizationId !== null &&
-        detail.data ? (
-          <PanelSection title={t("lifecycle.home.title")}>
-            <HomeOrganizationChange
-              accountId={account.id}
-              memberships={detail.data.memberships}
-              onChanged={async () => {
-                await refresh();
-                await detail.refetch();
-              }}
-            />
-          </PanelSection>
-        ) : null}
-        {detail.isError ? (
-          <LoadError what={t("failures.loadAccount")} error={detail.error} onRetry={() => detail.refetch()} />
-        ) : null}
-        {detail.data ? (
-          <>
-            {canHaveSecondFactor({ type: account.type, state: current.state }) ? (
-              <PanelSection title={t("instance.accounts.twoFactorStatus")}>
-                <ul className="flex flex-col gap-1 text-sm">
-                  <li>
-                    {t("security.authenticatorApp")}:{" "}
-                    {detail.data.twoFactor.totp
-                      ? t("instance.accounts.twoFactorOn")
-                      : t("instance.accounts.twoFactorOff")}
-                  </li>
-                  <li>{t("instance.accounts.passkeyCount", { count: detail.data.twoFactor.passkeys })}</li>
-                  <li>
-                    {t("instance.accounts.recoveryCodeCount", { count: detail.data.twoFactor.recoveryCodes })}
-                  </li>
-                </ul>
+    <>
+      {manage && own ? <p className="text-sm text-text-muted">{t("instance.accounts.ownAccount")}</p> : null}
+      <Tabs
+        label={t("instance.accounts.page.tabs")}
+        value={tab}
+        onValueChange={(value) => setTab(value as AccountTab)}
+        tabs={tabs}
+      >
+        {tab === "overview" ? (
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <AccountCard title={t("instance.accounts.account")}>
+                <AccountFacts
+                  rows={[
+                    [t("instance.accounts.type"), t(`instance.accounts.types.${account.type}`)],
+                    [
+                      t("instance.accounts.state"),
+                      <Badge
+                        key="state"
+                        variant={STATE_BADGES[account.state as keyof typeof STATE_BADGES] ?? "neutral"}
+                      >
+                        {t(`instance.accounts.states.${account.state}`)}
+                      </Badge>,
+                    ],
+                    [
+                      t("instance.accounts.instanceRole"),
+                      account.instanceRoles.length > 0
+                        ? account.instanceRoles.map((role) => instanceRoleName(t, role)).join(", ")
+                        : "—",
+                    ],
+                    [t("instance.accounts.page.created"), format.date(account.createdAt)],
+                    [
+                      t("instance.accounts.lastSignIn"),
+                      account.lastSignInAt
+                        ? format.dateTime(account.lastSignInAt)
+                        : t("instance.accounts.never"),
+                    ],
+                    [
+                      t("instance.accounts.page.personalSpace"),
+                      detail.personalSpaceKey ??
+                        (account.type === "standard"
+                          ? t("instance.accounts.page.noPersonalSpace")
+                          : t("instance.accounts.page.noPersonalSpaceGuest")),
+                    ],
+                  ]}
+                />
+              </AccountCard>
+              <AccountCard title={t("instance.accounts.page.securityAtAGlance")}>
+                <AccountFacts
+                  rows={[
+                    ...(secondFactor
+                      ? ([
+                          [
+                            t("instance.accounts.twoFactor"),
+                            account.twoFactorActive ? (
+                              t("instance.accounts.twoFactorOn")
+                            ) : (
+                              <Badge key="factor" variant="warning">
+                                {t("instance.accounts.twoFactorOff")}
+                              </Badge>
+                            ),
+                          ],
+                          [
+                            t("instance.accounts.page.passkeys"),
+                            t("instance.accounts.passkeyCount", { count: detail.twoFactor.passkeys }),
+                          ],
+                        ] as [string, ReactNode][])
+                      : []),
+                    [
+                      t("instance.accounts.activeSessions"),
+                      t("instance.accounts.page.sessionCount", { count: detail.sessions.length }),
+                    ],
+                    [
+                      t("instance.accounts.tokens"),
+                      t("instance.accounts.page.tokenCount", { count: detail.tokens.length }),
+                    ],
+                  ]}
+                />
+              </AccountCard>
+              <AccountCard
+                title={t("instance.accounts.organizations")}
+                count={detail.memberships.length}
+                wide
+              >
+                {detail.memberships.length === 0 ? (
+                  <p className="text-sm text-text-muted">{t("instance.accounts.noMemberships")}</p>
+                ) : (
+                  <ul className="flex flex-col gap-2 text-sm">
+                    {detail.memberships.map((membership) => (
+                      <li
+                        key={membership.organizationId}
+                        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
+                      >
+                        {membership.home ? <HomeMark /> : null}
+                        <TruncatedText text={membership.name} className="max-w-field font-medium" />
+                        <span className="text-text-muted">
+                          {[
+                            t(`members.kinds.${membership.kind}`),
+                            membership.expiresAt
+                              ? t("instance.accounts.page.until", { date: format.date(membership.expiresAt) })
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        <Link
+                          to="/settings/organizations/$organizationId/members/$accountId"
+                          params={{ organizationId: membership.organizationId, accountId: account.id }}
+                          className="text-accent hover:underline focus-visible:focus-ring"
+                        >
+                          {t("instance.accounts.page.memberPage")}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </AccountCard>
+            </div>
+            {manage && !own && account.state === "deactivated" ? (
+              <div>
+                <Button size="sm" onClick={() => setAction("reactivate")}>
+                  {t("instance.accounts.reactivate")}
+                </Button>
+              </div>
+            ) : null}
+            {manage &&
+            account.type === "standard" &&
+            account.state === "active" &&
+            account.homeOrganizationId === null ? (
+              <AssignOrganization accountId={account.id} onAssigned={refresh} />
+            ) : null}
+            {manage && account.state === "placeholder" ? (
+              <PanelSection title={t("lifecycle.merge.title")}>
+                <MergePlaceholder
+                  placeholder={{ id: account.id, name: account.name }}
+                  ownAccountId={session.account?.id ?? null}
+                  onMerged={async () => {
+                    await refresh();
+                    onGone();
+                  }}
+                />
               </PanelSection>
             ) : null}
-            <PanelSection title={t("identities.title")}>
-              <AccountIdentities accountId={account.id} manage={manage} />
-            </PanelSection>
-            <PanelSection title={t("instance.accounts.memberships")}>
-              {detail.data.memberships.length === 0 ? (
-                <p className="text-sm text-text-muted">{t("instance.accounts.noMemberships")}</p>
-              ) : (
-                <ul className="flex flex-col gap-2 text-sm">
-                  {detail.data.memberships.map((membership) => (
-                    <li key={membership.organizationId} className="flex flex-col">
-                      <span className="flex items-center gap-1.5 font-medium">
-                        {membership.home ? <HomeMark /> : null}
-                        {membership.name}
-                      </span>
-                      <span className="text-text-muted">
-                        {t(`members.kinds.${membership.kind}`)}
-                        {membership.roles.length > 0
-                          ? ` · ${membership.roles
-                              .map((role) =>
-                                role.groupName
-                                  ? t("instance.accounts.roleViaGroup", {
-                                      role: instanceRoleName(t, role),
-                                      group: role.groupName,
-                                    })
-                                  : instanceRoleName(t, role),
-                              )
-                              .join(", ")}`
-                          : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PanelSection>
-            <PanelSection title={t("instance.accounts.activeSessions")}>
-              {detail.data.sessions.length === 0 ? (
-                <p className="text-sm text-text-muted">{t("instance.accounts.noSessions")}</p>
-              ) : (
-                <ul className="flex flex-col gap-2 text-sm">
-                  {detail.data.sessions.map((entry) => (
-                    <li key={entry.id} className="flex flex-col">
-                      <span>
-                        {[entry.browser, entry.operatingSystem].filter(Boolean).join(" · ") ||
-                          t("instance.accounts.unknownBrowser")}
-                      </span>
-                      <span className="text-text-muted">
-                        {[entry.clientIp, format.dateTime(entry.lastUsedAt ?? entry.createdAt)]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PanelSection>
-            <PanelSection title={t("instance.accounts.tokens")}>
-              {detail.data.tokens.length === 0 ? (
-                <p className="text-sm text-text-muted">{t("instance.accounts.noTokens")}</p>
-              ) : (
-                <ul className="flex flex-col gap-2 text-sm">
-                  {detail.data.tokens.map((token) => (
-                    <li key={token.id} className="flex flex-col">
-                      <span className="font-medium">{token.name}</span>
-                      <span className="text-text-muted">
-                        {token.expiresAt
-                          ? t("instance.accounts.tokenExpires", { date: format.date(token.expiresAt) })
-                          : t("instance.accounts.tokenNoExpiry")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PanelSection>
-          </>
-        ) : null}
-        {manage && !own && (current.state === "active" || anonymizable) ? (
-          <DangerZone title={t("common.dangerZone")}>
-            {current.state === "active" ? (
-              <>
-                <DangerAction
-                  title={t("instance.accounts.endSessions")}
-                  description={t("instance.accounts.endSessionsSummary", { name: account.name })}
-                  action={dangerButton("endSessions", t("instance.accounts.endSessions"))}
+            {manage &&
+            account.state === "active" &&
+            account.type === "standard" &&
+            account.homeOrganizationId !== null ? (
+              <PanelSection title={t("lifecycle.home.title")}>
+                <HomeOrganizationChange
+                  accountId={account.id}
+                  memberships={detail.memberships}
+                  onChanged={async () => {
+                    await refresh();
+                    await onRefetch();
+                  }}
                 />
-                <DangerAction
-                  title={t("instance.accounts.resetSecondFactor")}
-                  description={t("instance.accounts.resetSummary", { name: account.name })}
-                  action={dangerButton("reset", t("instance.accounts.resetSecondFactor"))}
-                />
-                <DangerAction
-                  title={t("members.actions.deactivate")}
-                  description={t("instance.accounts.deactivateSummary")}
-                  action={dangerButton("deactivate", t("members.actions.deactivate"))}
-                />
-              </>
+              </PanelSection>
             ) : null}
-            {anonymizable ? (
-              <DangerAction
-                title={t("lifecycle.anonymize.title")}
-                description={t("lifecycle.anonymize.summary")}
-                action={dangerButton("anonymize", t("lifecycle.anonymize.open"))}
-              />
+            {manage && !own && (account.state === "active" || anonymizable) ? (
+              <DangerZone title={t("common.dangerZone")}>
+                {account.state === "active" ? (
+                  <>
+                    <DangerAction
+                      title={t("instance.accounts.endSessions")}
+                      description={t("instance.accounts.endSessionsSummary", { name: account.name })}
+                      action={dangerButton("endSessions", t("instance.accounts.endSessions"))}
+                    />
+                    <DangerAction
+                      title={t("instance.accounts.resetSecondFactor")}
+                      description={t("instance.accounts.resetSummary", { name: account.name })}
+                      action={dangerButton("reset", t("instance.accounts.resetSecondFactor"))}
+                    />
+                    <DangerAction
+                      title={t("members.actions.deactivate")}
+                      description={t("instance.accounts.deactivateSummary")}
+                      action={dangerButton("deactivate", t("members.actions.deactivate"))}
+                    />
+                  </>
+                ) : null}
+                {anonymizable ? (
+                  <DangerAction
+                    title={t("lifecycle.anonymize.title")}
+                    description={t("lifecycle.anonymize.summary")}
+                    action={dangerButton("anonymize", t("lifecycle.anonymize.open"))}
+                  />
+                ) : null}
+              </DangerZone>
             ) : null}
-          </DangerZone>
+          </div>
+        ) : tab === "security" ? (
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {secondFactor ? (
+                <AccountCard title={t("instance.accounts.twoFactorStatus")}>
+                  <AccountFacts
+                    rows={[
+                      [
+                        t("security.authenticatorApp"),
+                        detail.twoFactor.totp
+                          ? t("instance.accounts.twoFactorOn")
+                          : t("instance.accounts.twoFactorOff"),
+                      ],
+                      [
+                        t("instance.accounts.page.passkeys"),
+                        t("instance.accounts.passkeyCount", { count: detail.twoFactor.passkeys }),
+                      ],
+                      [
+                        t("instance.accounts.page.recoveryCodes"),
+                        t("instance.accounts.recoveryCodeCount", { count: detail.twoFactor.recoveryCodes }),
+                      ],
+                    ]}
+                  />
+                </AccountCard>
+              ) : null}
+              <AccountCard title={t("identities.title")}>
+                <AccountIdentities accountId={account.id} manage={manage} />
+              </AccountCard>
+            </div>
+            <Table
+              caption={t("instance.accounts.activeSessions")}
+              rowKey={(entry) => entry.id}
+              rows={detail.sessions}
+              empty={<p className="p-4 text-text-muted">{t("instance.accounts.noSessions")}</p>}
+              columns={[
+                {
+                  key: "device",
+                  header: t("instance.accounts.page.device"),
+                  grow: true,
+                  cell: (entry) => device(entry),
+                },
+                {
+                  key: "address",
+                  header: t("instance.accounts.page.address"),
+                  hideBelow: "sm",
+                  cell: (entry) => <span className="text-text-muted">{entry.clientIp ?? "—"}</span>,
+                },
+                {
+                  key: "signedIn",
+                  header: t("instance.accounts.page.signedIn"),
+                  hideBelow: "md",
+                  cell: (entry) => format.dateTime(entry.createdAt),
+                },
+                {
+                  key: "lastUsed",
+                  header: t("instance.accounts.page.lastActive"),
+                  cell: (entry) => format.relative(entry.lastUsedAt),
+                },
+                ...(manage && !own
+                  ? [
+                      {
+                        key: "actions",
+                        header: t("settings.actions"),
+                        align: "end" as const,
+                        sticky: true,
+                        cell: (entry: AccountDetail["sessions"][number]) => (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={t("instance.accounts.page.endSessionOf", { device: device(entry) })}
+                            onClick={() => setEnding(entry)}
+                          >
+                            {t("instance.accounts.page.endSession")}
+                          </Button>
+                        ),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        ) : tab === "organizations" ? (
+          <div className="flex flex-col gap-3">
+            <Table
+              caption={t("instance.accounts.organizations")}
+              rowKey={(membership) => membership.organizationId}
+              rows={detail.memberships}
+              empty={<p className="p-4 text-text-muted">{t("instance.accounts.noMemberships")}</p>}
+              columns={[
+                {
+                  key: "organization",
+                  header: t("instance.accounts.organization"),
+                  grow: true,
+                  cell: (membership) => (
+                    <span className="flex min-w-0 items-center gap-2 font-medium">
+                      {membership.home ? <HomeMark /> : null}
+                      <TruncatedText text={membership.name} className="max-w-field" />
+                    </span>
+                  ),
+                },
+                {
+                  key: "role",
+                  header: t("members.role"),
+                  cell: (membership) =>
+                    membership.roles.length > 0
+                      ? membership.roles
+                          .map((role) =>
+                            role.groupName
+                              ? t("instance.accounts.roleViaGroup", {
+                                  role: instanceRoleName(t, role),
+                                  group: role.groupName,
+                                })
+                              : instanceRoleName(t, role),
+                          )
+                          .join(", ")
+                      : t(`members.kinds.${membership.kind}`),
+                },
+                {
+                  key: "since",
+                  header: t("members.page.since"),
+                  hideBelow: "sm",
+                  cell: (membership) => format.date(membership.since),
+                },
+                {
+                  key: "until",
+                  header: t("members.page.accessUntil"),
+                  hideBelow: "md",
+                  cell: (membership) => (membership.expiresAt ? format.date(membership.expiresAt) : "—"),
+                },
+                {
+                  key: "open",
+                  header: t("settings.actions"),
+                  align: "end",
+                  cell: (membership) => (
+                    <Link
+                      to="/settings/organizations/$organizationId/members/$accountId"
+                      params={{ organizationId: membership.organizationId, accountId: account.id }}
+                      aria-label={t("instance.accounts.page.openIn", { organization: membership.name })}
+                      className="text-accent hover:underline focus-visible:focus-ring"
+                    >
+                      {t("instance.accounts.page.open")}
+                    </Link>
+                  ),
+                },
+              ]}
+            />
+            <p className="text-sm text-text-muted">{t("instance.accounts.page.groupsInOrganizations")}</p>
+          </div>
+        ) : tab === "tokens" ? (
+          <Table
+            caption={t("instance.accounts.tokens")}
+            rowKey={(token) => token.id}
+            rows={detail.tokens}
+            empty={<p className="p-4 text-text-muted">{t("instance.accounts.noTokens")}</p>}
+            columns={[
+              {
+                key: "name",
+                header: t("instance.accounts.page.tokenName"),
+                grow: true,
+                cell: (token) => token.name,
+              },
+              {
+                key: "prefix",
+                header: t("instance.accounts.page.tokenPrefix"),
+                hideBelow: "sm",
+                cell: (token) => <code className="font-mono text-sm">{token.prefix}</code>,
+              },
+              {
+                key: "expires",
+                header: t("instance.accounts.page.tokenExpires"),
+                cell: (token) =>
+                  token.expiresAt ? format.date(token.expiresAt) : t("instance.accounts.tokenNoExpiry"),
+              },
+              {
+                key: "used",
+                header: t("instance.accounts.page.tokenUsed"),
+                hideBelow: "md",
+                cell: (token) =>
+                  token.lastUsedAt ? format.relative(token.lastUsedAt) : t("instance.accounts.never"),
+              },
+            ]}
+          />
+        ) : tab === "activity" ? (
+          <div className="flex flex-col gap-3">
+            <AuditLog scope="instance" personId={account.id} instanceOnly canExport={false} />
+            <p className="text-sm text-text-muted">{t("instance.accounts.page.activityHint")}</p>
+          </div>
         ) : null}
-      </div>
+      </Tabs>
+      <ConfirmDialog
+        open={ending !== null}
+        onOpenChange={(next) => {
+          if (!next) setEnding(null);
+        }}
+        title={t("instance.accounts.page.endSessionTitle", { device: ending ? device(ending) : "" })}
+        description={t("instance.accounts.page.endSessionDescription", { name: account.name })}
+        confirmLabel={t("instance.accounts.page.endSession")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={async () => {
+          if (ending) await endSession(ending);
+        }}
+      />
       {action === "anonymize" ? (
         <AnonymizeDialog
-          account={{ id: account.id, name: current.name }}
+          account={{ id: account.id, name: account.name }}
           onClose={() => setAction(null)}
           onDone={async () => {
             setAction(null);
             await refresh();
-            onClose();
+            onGone();
           }}
         />
       ) : null}
@@ -558,7 +943,7 @@ function AccountPanel({ account, onClose }: { account: Account; onClose: () => v
           }}
         />
       ) : null}
-    </Drawer>
+    </>
   );
 }
 
@@ -637,7 +1022,7 @@ function canHaveSecondFactor(account: { type: string; state: string }): boolean 
 function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Section title={title}>
-      <div className="px-4 py-3">{children}</div>
+      <div className="py-3">{children}</div>
     </Section>
   );
 }
@@ -704,6 +1089,7 @@ export function ResetSecondFactorDialog({
         <Field
           label={t("instance.accounts.resetReason")}
           hint={t("instance.accounts.resetReasonHint", { name: account.name })}
+          help={t("instance.accounts.resetReasonHelp", { name: account.name })}
           error={invalid ? t("instance.accounts.resetReasonRequired") : undefined}
         >
           <Textarea

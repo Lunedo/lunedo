@@ -1,3 +1,7 @@
+import { shortTimeZoneOffset } from "@lunedo/ui";
+import type { TFunction } from "i18next";
+import { translateKey } from "../i18n/translate.js";
+
 let cached: string[] | null = null;
 
 export function timeZones(): string[] {
@@ -20,4 +24,13 @@ export function timeZoneOptions() {
     label: zone.replaceAll("_", " "),
     group: zone.split("/")[0],
   }));
+}
+
+export function timeZoneName(t: TFunction, timeZone: string, now = new Date()): string {
+  if (timeZone === "UTC") return "UTC";
+  const name = timeZone
+    .split("/")
+    .map((part) => translateKey(t, `timeZones.names.${part}`, { defaultValue: part.replaceAll("_", " ") }))
+    .join("/");
+  return `${name} (${shortTimeZoneOffset(timeZone, now)})`;
 }

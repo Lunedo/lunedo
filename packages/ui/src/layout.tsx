@@ -1,7 +1,10 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronRight } from "lucide-react";
-import { isValidElement, type ReactNode, useId } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Slot } from "radix-ui";
+import { type ComponentProps, isValidElement, type ReactNode, useId, useState } from "react";
 import { classNames } from "./class-names.js";
+import { FieldLayoutProvider } from "./field.js";
+import { SettingHelp } from "./help-popover.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -18,6 +21,9 @@ export interface PageHeaderProps {
   context?: ReactNode;
   actions?: ReactNode;
   breadcrumbs?: Breadcrumb[];
+  status?: ReactNode;
+  leading?: ReactNode;
+  variant?: "content" | "settings";
 }
 
 export function PageHeader({
@@ -28,27 +34,37 @@ export function PageHeader({
   context,
   actions,
   breadcrumbs,
+  status,
+  leading,
+  variant = "content",
 }: PageHeaderProps) {
   const labels = useUiLabels();
+  const showIcon = icon && variant === "content";
   return (
     <header className="flex flex-wrap items-end gap-4">
+      {leading && <div className="flex shrink-0 self-center">{leading}</div>}
       <div className="flex min-w-0 flex-1 basis-field flex-col gap-2">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label={labels.breadcrumbs}>
             <ol className="flex flex-wrap items-center gap-x-1 gap-y-2 text-sm text-text-muted">
               {breadcrumbs.map((crumb, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: a breadcrumb is identified by its position in the path
-                <li key={index} className="inline-flex items-center gap-1">
+                <li key={index} className="inline-flex min-w-0 items-center gap-1">
                   {index > 0 && <Icon icon={ChevronRight} size="sm" />}
                   {crumb.href ? (
                     <a
                       href={crumb.href}
-                      className="rounded-sm text-accent hover:underline focus-visible:focus-ring"
+                      title={typeof crumb.label === "string" ? crumb.label : undefined}
+                      className="max-w-field truncate rounded-sm text-accent hover:underline focus-visible:focus-ring"
                     >
                       {crumb.label}
                     </a>
                   ) : (
-                    <span aria-current={index === breadcrumbs.length - 1 ? "page" : undefined}>
+                    <span
+                      aria-current={index === breadcrumbs.length - 1 ? "page" : undefined}
+                      title={typeof crumb.label === "string" ? crumb.label : undefined}
+                      className="max-w-field truncate"
+                    >
                       {crumb.label}
                     </span>
                   )}
@@ -63,13 +79,14 @@ export function PageHeader({
             {context}
           </div>
         )}
-        <div className="flex items-center gap-3">
-          {icon && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {showIcon && (
             <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent">
               <Icon icon={icon} size="lg" />
             </span>
           )}
           <h1 className="min-w-0 text-xl font-semibold tracking-heading text-balance">{title}</h1>
+          {status && <div className="flex items-center text-sm">{status}</div>}
         </div>
         {description && <p className="text-text-muted">{description}</p>}
       </div>
@@ -80,42 +97,96 @@ export function PageHeader({
 
 export function Section({
   title,
+  description,
   icon,
   actions,
   children,
 }: {
   title: ReactNode;
+  description?: ReactNode;
   icon?: LucideIcon;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="overflow-hidden rounded-md border border-border bg-surface">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-3">
+    <section aria-labelledby={id} data-section="" className="flex flex-col">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pb-2">
         {icon && <Icon icon={icon} className="text-text-muted" />}
         <h2 id={id} className="min-w-0 flex-1 font-semibold">
           {title}
         </h2>
-        {actions}
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      <div className="divide-y divide-border">{children}</div>
+      {description && <p className="pb-2 text-sm text-text-muted">{description}</p>}
+      <div className="divide-y divide-border border-t border-border">{children}</div>
     </section>
+  );
+}
+
+export function CollapsibleSection({
+  title,
+  level = 2,
+  layout = "rows",
+  open,
+  defaultOpen = false,
+  onOpenChange,
+  children,
+}: {
+  title: ReactNode;
+  level?: 2 | 3;
+  layout?: "rows" | "fields";
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  const [ownOpen, setOwnOpen] = useState(defaultOpen);
+  const expanded = open ?? ownOpen;
+  const Heading = level === 2 ? "h2" : "h3";
+  return (
+    <details
+      data-section=""
+      open={expanded}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        if (next === expanded) return;
+        setOwnOpen(next);
+        onOpenChange?.(next);
+      }}
+    >
+      <summary className="flex min-h-hit cursor-pointer list-none items-center gap-2 rounded-sm pb-2 focus-visible:focus-ring">
+        <Icon
+          icon={ChevronRight}
+          size="sm"
+          className={classNames(
+            "shrink-0 text-text-muted transition-transform motion-reduce:transition-none",
+            expanded && "rotate-90",
+          )}
+        />
+        <Heading className="min-w-0 flex-1 font-semibold">{title}</Heading>
+      </summary>
+      <div
+        data-section-content=""
+        className={classNames(
+          "border-t border-border",
+          layout === "rows" ? "divide-y divide-border" : "flex flex-col gap-4 pt-4",
+        )}
+      >
+        {children}
+      </div>
+    </details>
   );
 }
 
 export function DangerZone({ title, children }: { title: ReactNode; children: ReactNode }) {
   const id = useId();
   return (
-    <section
-      aria-labelledby={id}
-      data-danger-zone=""
-      className="overflow-hidden rounded-md border border-danger bg-surface"
-    >
-      <h2 id={id} className="border-b border-danger px-4 py-3 font-semibold text-danger">
+    <section aria-labelledby={id} data-danger-zone="" className="flex flex-col">
+      <h2 id={id} className="pb-2 font-semibold text-danger">
         {title}
       </h2>
-      <div className="divide-y divide-border">{children}</div>
+      <div className="divide-y divide-border border-t border-border">{children}</div>
     </section>
   );
 }
@@ -130,7 +201,7 @@ export function DangerAction({
   action: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+    <div className="flex flex-wrap items-center gap-3 py-3">
       <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
         <span className="font-medium text-text">{title}</span>
         <div className="text-sm text-text-muted">{description}</div>
@@ -143,27 +214,69 @@ export function DangerAction({
 export interface SettingRowProps {
   label: ReactNode;
   description?: ReactNode;
+  help?: ReactNode;
+  more?: ReactNode;
   meta?: ReactNode;
   control: ReactNode;
+  wide?: boolean;
   menu?: ReactNode;
+  error?: ReactNode;
   status?: ReactNode;
+  below?: ReactNode;
 }
 
-export function SettingRow({ label, description, meta, control, menu, status }: SettingRowProps) {
+function SettingHint({ children, more }: { children: ReactNode; more?: ReactNode }) {
+  return (
+    <div data-setting-hint="" className="flex min-w-0 items-baseline gap-1 text-sm text-text-muted">
+      <span className="min-w-0">{children}</span>
+      {more && <span className="shrink-0">{more}</span>}
+    </div>
+  );
+}
+
+export function SettingRow({
+  label,
+  description,
+  help,
+  more,
+  meta,
+  control,
+  wide = false,
+  menu,
+  error,
+  status,
+  below,
+}: SettingRowProps) {
   return (
     <div
       data-setting-row=""
-      className="grid grid-cols-1 items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-setting-row"
+      className={classNames(
+        "grid grid-cols-1 gap-x-4 gap-y-2 py-3 sm:grid-cols-setting-row",
+        below ? "items-start" : "items-center",
+      )}
     >
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="font-medium text-text">{label}</span>
-        {description && <span className="text-sm text-text-muted">{description}</span>}
-        {meta && <span className="text-xs text-text-muted">{meta}</span>}
+      <div data-setting-label="" className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 items-center gap-1">
+          <div className="font-medium text-text">{label}</div>
+          {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+        </div>
+        {(description || more) && <SettingHint more={more}>{description}</SettingHint>}
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <div data-setting-line="" className="flex items-center justify-end gap-3">
-          <div data-setting-control="" className="flex w-full min-w-0 justify-end sm:w-field">
-            {control}
+        <div data-setting-line="" className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div
+              data-setting-control=""
+              className={classNames("flex w-full min-w-0", wide ? "sm:flex-1" : "sm:w-field")}
+            >
+              <FieldLayoutProvider layout="stacked">{control}</FieldLayoutProvider>
+            </div>
+            {meta && (
+              <div data-setting-source="" className="flex shrink-0 items-center gap-2 text-xs">
+                {meta}
+              </div>
+            )}
+            {status && <div className="flex min-w-0 items-center">{status}</div>}
           </div>
           <div
             data-setting-menu=""
@@ -172,17 +285,42 @@ export function SettingRow({ label, description, meta, control, menu, status }: 
             {menu}
           </div>
         </div>
-        {status ? (
-          <div className="flex justify-end gap-3">
-            <div className="flex w-full min-w-0 justify-end sm:w-field">{status}</div>
-            <div
-              aria-hidden="true"
-              className={classNames("w-control-md shrink-0", menu ? "block" : "hidden sm:block")}
-            />
-          </div>
-        ) : null}
+        {error && <div className="min-w-0">{error}</div>}
+        {below && <div className="min-w-0">{below}</div>}
       </div>
     </div>
+  );
+}
+
+export interface BackLinkProps extends Omit<ComponentProps<"a">, "children"> {
+  label: ReactNode;
+  asChild?: boolean;
+  children?: ReactNode;
+}
+
+export function BackLink({ label, asChild = false, children, className, ...props }: BackLinkProps) {
+  const classes = classNames(
+    "inline-flex items-center gap-1 self-start rounded-sm text-sm text-text-muted hover:text-text focus-visible:focus-ring",
+    className,
+  );
+  const content = (
+    <>
+      <Icon icon={ChevronLeft} size="sm" />
+      <span className="min-w-0 truncate">{label}</span>
+    </>
+  );
+  if (asChild) {
+    return (
+      <Slot.Root data-back-link="" className={classes}>
+        <Slot.Slottable>{children}</Slot.Slottable>
+        {content}
+      </Slot.Root>
+    );
+  }
+  return (
+    <a data-back-link="" className={classes} {...props}>
+      {content}
+    </a>
   );
 }
 
@@ -233,7 +371,7 @@ export function ListRow({
 }) {
   const glyph = isLucideIcon(icon) ? <Icon icon={icon} /> : icon;
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-center gap-3 py-3">
       {glyph && <span className="flex shrink-0 items-center text-text-muted">{glyph}</span>}
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="font-medium text-text">{title}</span>

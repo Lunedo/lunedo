@@ -58,6 +58,7 @@ async function memberPreferences(organization: Organization): Promise<Session> {
   await session.page.goto("/settings/preferences");
   await expect(session.page.getByRole("heading", { name: "Preferences", level: 1 })).toBeVisible();
   await connected;
+  await session.page.getByRole("button", { name: "Customize" }).click();
   return session;
 }
 
@@ -156,8 +157,8 @@ const FORMATS: { key: string; field: string; choices: [string, RegExp][] }[] = [
     key: "locale.timeFormat",
     field: "Time format",
     choices: [
-      ["24h", /24-hour/],
-      ["12h", /12-hour/],
+      ["24h", /^14:30$/],
+      ["12h", /2:30\s?PM/],
     ],
   },
   {
@@ -186,18 +187,13 @@ const FORMATS: { key: string; field: string; choices: [string, RegExp][] }[] = [
   },
 ];
 
-export async function appliesFormats(
-  browser: Browser,
-  organization: Organization,
-  level: SharedLevel,
-): Promise<void> {
-  const set = (page: Page, at: Level, key: string, value: unknown) =>
-    change(page, organization.id, at, key, value);
+export async function appliesFormats(browser: Browser, organization: Organization): Promise<void> {
+  const set = (page: Page, key: string, value: unknown) =>
+    change(page, organization.id, "organization", key, value);
   const owner = await preferences(browser, organization.adminState);
   const organizationValues = new Map<string, unknown>();
   for (const format of FORMATS) {
     organizationValues.set(format.key, await organizationSetting(owner.page, organization.id, format.key));
-    if (level === "instance") await set(owner.page, "organization", format.key, undefined);
   }
   const member = await memberPreferences(organization);
   try {
@@ -208,7 +204,7 @@ export async function appliesFormats(
           element instanceof HTMLInputElement ? element.value : (element.textContent ?? ""),
         )) ?? "";
       const [value, expected] = format.choices.find(([, pattern]) => !pattern.test(shown)) ?? [];
-      await set(owner.page, level, format.key, value);
+      await set(owner.page, format.key, value);
       await expect
         .poll(
           () =>
@@ -219,14 +215,21 @@ export async function appliesFormats(
         )
         .toMatch(expected ?? /.^/);
     }
-    await set(owner.page, level, "branding.accentColor", "violet");
+  } finally {
+    for (const format of FORMATS) await set(owner.page, format.key, organizationValues.get(format.key));
+    await member.context.close();
+    await owner.context.close();
+  }
+}
+
+export async function appliesAccentColor(browser: Browser, organization: Organization): Promise<void> {
+  const owner = await preferences(browser, organization.adminState);
+  const member = await memberPreferences(organization);
+  try {
+    await change(owner.page, organization.id, "instance", "branding.accentColor", "violet");
     await expect(member.page.locator("html")).toHaveAttribute("data-accent", "violet");
   } finally {
-    for (const format of FORMATS) {
-      if (level === "instance") await set(owner.page, level, format.key, undefined);
-      await set(owner.page, "organization", format.key, organizationValues.get(format.key));
-    }
-    await set(owner.page, level, "branding.accentColor", undefined);
+    await change(owner.page, organization.id, "instance", "branding.accentColor", undefined);
     await member.context.close();
     await owner.context.close();
   }

@@ -1,7 +1,6 @@
 import { Button, Field, Input, Notice, RadioGroup, Switch, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -14,6 +13,7 @@ import { ImpactConfirmDialog } from "../access/impact.js";
 import { useSpace } from "../space-context.js";
 import { type SpaceVisibility, spaceKeys } from "../space-queries.js";
 import { Panel } from "./panel.js";
+import { SpaceDangerZone } from "./space-danger-zone.js";
 import { SpaceSettingsPage } from "./space-settings-page.js";
 
 const VISIBILITIES: SpaceVisibility[] = ["private", "organization", "instance"];
@@ -34,10 +34,8 @@ export function SpaceGeneralScreen() {
 
   return (
     <SpaceSettingsPage
-      tab="general"
       title={t("spaces.settings.general")}
       description={t("spaces.settings.generalDescription")}
-      icon={Settings}
     >
       <div className="flex flex-col gap-8">
         <Panel title={t("spaces.settings.about")}>
@@ -53,12 +51,14 @@ export function SpaceGeneralScreen() {
             <AutoSaveTextField
               label={t("spaces.settings.description")}
               hint={t("spaces.create.descriptionHint")}
+              help={t("spaces.create.descriptionHelp")}
               value={space.description}
               multiline
               disabled={!editable}
               schema={z.string().max(1000)}
               onSave={(description) => update({ description })}
             />
+            <KeyField />
           </div>
         </Panel>
         {space.confidential ? (
@@ -68,7 +68,6 @@ export function SpaceGeneralScreen() {
             </Notice>
           </Panel>
         ) : null}
-        <KeySection />
         {isKnowledgeBase(space) ? (
           <Panel
             title={t("knowledgeBase.settings.typeTitle")}
@@ -87,12 +86,13 @@ export function SpaceGeneralScreen() {
         ) : space.confidential ? null : (
           <VisibilitySection />
         )}
+        {space.role === "admin" ? <SpaceDangerZone /> : null}
       </div>
     </SpaceSettingsPage>
   );
 }
 
-function KeySection() {
+function KeyField() {
   const { t } = useTranslation();
   const { space } = useSpace();
   const { toast } = useToast();
@@ -137,51 +137,50 @@ function KeySection() {
   };
 
   return (
-    <Panel title={t("spaces.settings.key")} description={t("spaces.settings.keyDescription")}>
-      <form
-        className="flex flex-col gap-3"
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
+    <form
+      className="flex flex-col gap-3"
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <Field
+        label={t("spaces.settings.key")}
+        hint={t("spaces.settings.keyHint")}
+        help={t("spaces.settings.keyHelp")}
+        {...(error ? { error } : {})}
       >
-        <Field
-          label={t("spaces.settings.key")}
-          hint={t("spaces.create.keyHint")}
-          {...(error ? { error } : {})}
-        >
-          <Input
-            value={draft}
-            maxLength={10}
-            disabled={space.role !== "admin"}
-            spellCheck={false}
-            onChange={(event) => setDraft(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-          />
-        </Field>
-        {changed ? (
-          <>
-            <Notice variant="info" title={t("spaces.settings.keyRedirectTitle")}>
-              {t("spaces.settings.keyRedirect", { old: space.key })}
-            </Notice>
-            <div className="flex gap-2">
-              <Button type="submit" variant="primary" loading={saving}>
-                {t("spaces.settings.saveKey")}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setDraft(space.key);
-                  setError(null);
-                }}
-              >
-                {t("common.cancel")}
-              </Button>
-            </div>
-          </>
-        ) : null}
-      </form>
-    </Panel>
+        <Input
+          value={draft}
+          maxLength={10}
+          disabled={space.role !== "admin"}
+          spellCheck={false}
+          onChange={(event) => setDraft(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+        />
+      </Field>
+      {changed ? (
+        <>
+          <Notice variant="info" title={t("spaces.settings.keyRedirectTitle")}>
+            {t("spaces.settings.keyRedirect", { old: space.key })}
+          </Notice>
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" loading={saving}>
+              {t("spaces.settings.saveKey")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDraft(space.key);
+                setError(null);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+          </div>
+        </>
+      ) : null}
+    </form>
   );
 }
 

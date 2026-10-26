@@ -77,5 +77,5 @@ export const ICON_NAMES = Object.keys(ICONS);
 
 export function NamedIcon({ name, className }: { name: string | null | undefined; className?: string }) {
   const Icon = name && Object.hasOwn(ICONS, name) ? ICONS[name] : undefined;
-  return Icon ? <Icon aria-hidden="true" className={className ?? "size-icon"} /> : null;
+  return Icon ? <Icon aria-hidden="true" className={className ?? "size-icon-md"} /> : null;
 }

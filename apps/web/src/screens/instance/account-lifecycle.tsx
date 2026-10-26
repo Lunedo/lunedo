@@ -93,6 +93,7 @@ export function PlaceholderDialog({
         <Field
           label={t("lifecycle.placeholder.email")}
           hint={t("lifecycle.placeholder.emailHint")}
+          help={t("lifecycle.placeholder.emailHelp")}
           {...(errors.email ? { error: errors.email } : {})}
         >
           <Input
@@ -382,6 +383,7 @@ export function AnonymizeDialog({
         <Field
           label={t("lifecycle.anonymize.reason")}
           hint={t("lifecycle.anonymize.reasonHint")}
+          help={t("lifecycle.anonymize.reasonHelp")}
           {...(invalid.reason ? { error: t("lifecycle.anonymize.reasonRequired") } : {})}
         >
           <Textarea

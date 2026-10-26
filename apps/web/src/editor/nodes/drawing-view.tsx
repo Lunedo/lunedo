@@ -74,7 +74,7 @@ export function DrawingView({ node, selected, editor, updateAttributes }: NodeVi
       data-drawing-id={blockId}
     >
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2 text-sm">
-        <PenLine aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        <PenLine aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         <span className="font-semibold">{t("editor.drawing.label")}</span>
         <span className="flex-1" />
         {busy ? (

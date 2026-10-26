@@ -23,6 +23,8 @@ function entry(
     defaultValue,
     source,
     lockedBy: null,
+    stricterOnly: null,
+    minimum: null,
     locked: false,
     lockable: true,
     levelsBelow: [],
@@ -66,16 +68,16 @@ describe("notification preferences", () => {
     );
     const table = screen.getByRole("list", { name: "Events" });
     const mentions = within(table).getByText("Mentions of me").closest("li") as HTMLElement;
-    expect(within(mentions).getByText("Default of Northwind")).toBeTruthy();
-    expect(within(mentions).getByText("Default")).toBeTruthy();
+    expect(within(mentions).queryByText(/Default/)).toBeNull();
+    expect(within(mentions).queryByText("Own value")).toBeNull();
     expect(within(mentions).queryByRole("button", { name: /Reset/ })).toBeNull();
     expect(within(mentions).getByRole("combobox", { name: "Mentions of me: E-mail" }).textContent).toContain(
       "Off",
     );
 
     const changes = within(table).getByText("Changes to content I watch").closest("li") as HTMLElement;
-    expect(within(changes).getAllByText("Set by you")).toHaveLength(1);
-    expect(within(changes).getByText("Default")).toBeTruthy();
+    expect(within(changes).getAllByText("Own value")).toHaveLength(1);
+    expect(within(changes).queryByText(/Default/)).toBeNull();
     expect(within(changes).getAllByRole("button", { name: /^Reset/ })).toHaveLength(1);
     expect(
       within(changes)

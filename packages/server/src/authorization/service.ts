@@ -30,11 +30,17 @@ import {
   type ItemAccessOptions,
   type ItemFacts,
   itemFacts,
+  itemFactsMany,
   itemRoleCondition,
   portalReadableCondition,
   type ShareVia,
 } from "./item-access.js";
-import type { AuthorizationRegistry, RegisteredAction, Resource, RestrictionDenial } from "./registry.js";
+import {
+  type AuthorizationRegistry,
+  type RegisteredAction,
+  type Resource,
+  restrictionDenials,
+} from "./registry.js";
 import { spaceRoleCondition, spaceRoleConditionFor, tokenSpaceCondition } from "./space-access.js";
 
 export type Grant =
@@ -46,21 +52,24 @@ export type Grant =
   | { kind: "link"; linkId: string; scope: string }
   | { kind: "rule"; rule: string };
 
-export type Denial =
-  | "anonymous"
-  | "accountInactive"
-  | "resourceNotFound"
-  | "notMember"
-  | "limitedMembership"
-  | "noRoleGrantsArea"
-  | "ownerOnly"
-  | "instanceRolesDoNotGrantOrganizationAccess"
-  | "roleExceedsOwnPermissions"
-  | "selfExtension"
-  | "noSpaceRole"
-  | "tokenScope"
-  | "ruleNotMet"
-  | RestrictionDenial;
+export const denials = [
+  "anonymous",
+  "accountInactive",
+  "resourceNotFound",
+  "notMember",
+  "limitedMembership",
+  "noRoleGrantsArea",
+  "ownerOnly",
+  "instanceRolesDoNotGrantOrganizationAccess",
+  "roleExceedsOwnPermissions",
+  "selfExtension",
+  "noSpaceRole",
+  "tokenScope",
+  "ruleNotMet",
+  ...restrictionDenials,
+] as const;
+
+export type Denial = (typeof denials)[number];
 
 export interface GrantCheck {
   scope: RoleScope;
@@ -161,6 +170,21 @@ function limitByToken(
   return { ...decision, allowed: false, grants: [], denials: ["tokenScope"] };
 }
 
+function decisionOf(
+  action: RegisteredAction,
+  resource: Resource,
+  grants: Grant[],
+  denials: Denial[],
+): Decision {
+  return {
+    action: action.name,
+    resource,
+    allowed: grants.length > 0,
+    grants,
+    denials: grants.length > 0 ? [] : denials,
+  };
+}
+
 function ownerRole(role: HeldRole): boolean {
   return "builtIn" in role.role && role.role.builtIn === "owner";
 }
@@ -186,18 +210,218 @@ export class AuthorizationService {
     resource: Resource,
     options: { executor?: Executor; fresh?: boolean } = {},
   ): Promise<Decision> {
+    const [decision] = await this.explainMany(principal, actionName, [resource], options);
+    if (!decision) throw new Error(`No decision for ${actionName}`);
+    return decision;
+  }
+
+  async explainMany(
+    principal: Principal,
+    actionName: string,
+    resources: readonly Resource[],
+    options: { executor?: Executor; fresh?: boolean } = {},
+  ): Promise<Decision[]> {
     const action = this.#registry.action(actionName);
-    const decision = (grants: Grant[], denials: Denial[]): Decision => ({
-      action: actionName,
-      resource,
-      allowed: grants.length > 0,
-      grants,
-      denials: grants.length > 0 ? [] : denials,
-    });
-    if (principal.type === "system") return decision([{ kind: "system" }], []);
-    if (principal.type === "anonymous") return decision([], ["anonymous"]);
+    if (principal.type === "system") {
+      return resources.map((resource) => decisionOf(action, resource, [{ kind: "system" }], []));
+    }
+    if (principal.type === "anonymous") {
+      return resources.map((resource) => decisionOf(action, resource, [], ["anonymous"]));
+    }
     const executor = options.executor ?? this.#database;
     const fresh = options.fresh ?? executor !== this.#database;
+    if (action.scope === "space") return this.#explainSpace(principal, action, resources, executor, fresh);
+    const decisions: Decision[] = [];
+    for (const resource of resources) {
+      decisions.push(await this.#explainOutsideSpace(principal, action, resource, executor, fresh));
+    }
+    return decisions;
+  }
+
+  batch(
+    principal: Principal,
+    options: { executor?: Executor; fresh?: boolean } = {},
+  ): (actionName: string, resource: Resource) => Promise<Decision> {
+    const known = new Map<string, Promise<Decision>>();
+    interface Waiting {
+      resource: Resource;
+      resolve: (decision: Decision) => void;
+      reject: (error: unknown) => void;
+    }
+    let queued = new Map<string, Waiting[]>();
+    const flush = () => {
+      const groups = queued;
+      queued = new Map();
+      for (const [actionName, waiting] of groups) {
+        this.explainMany(
+          principal,
+          actionName,
+          waiting.map((entry) => entry.resource),
+          options,
+        ).then(
+          (decisions) => {
+            for (const [index, entry] of waiting.entries()) {
+              const decision = decisions[index];
+              if (decision) entry.resolve(decision);
+              else entry.reject(new Error(`No decision for ${actionName}`));
+            }
+          },
+          (error: unknown) => {
+            for (const entry of waiting) entry.reject(error);
+          },
+        );
+      }
+    };
+    return (actionName, resource) => {
+      const key = JSON.stringify([actionName, resource.type, resource.id ?? null]);
+      const existing = known.get(key);
+      if (existing) return existing;
+      const decision = new Promise<Decision>((resolve, reject) => {
+        if (queued.size === 0) queueMicrotask(flush);
+        const waiting = queued.get(actionName) ?? [];
+        waiting.push({ resource, resolve, reject });
+        queued.set(actionName, waiting);
+      });
+      known.set(key, decision);
+      return decision;
+    };
+  }
+
+  async #explainSpace(
+    principal: Extract<Principal, { type: "account" }>,
+    action: RegisteredAction,
+    resources: readonly Resource[],
+    executor: Executor,
+    fresh: boolean,
+  ): Promise<Decision[]> {
+    const accountId = principal.id;
+    const ids = resources.map((resource) =>
+      resource.id && UUID.test(resource.id) ? resource.id.toLowerCase() : null,
+    );
+    const known = [...new Set(ids.filter((id): id is string => id !== null))];
+    const spaceIds =
+      known.length > 0 && action.resourceType.spaceOf
+        ? await action.resourceType.spaceOf(executor, known)
+        : new Map<string, string>();
+    const spaces = new Map<string, SpaceFacts>();
+    for (const spaceId of new Set(spaceIds.values())) {
+      spaces.set(spaceId, await spaceFacts(executor, accountId, spaceId, { fresh }));
+    }
+    const factsOf = (id: string | null) => {
+      const spaceId = id ? spaceIds.get(id) : undefined;
+      return spaceId ? spaces.get(spaceId) : undefined;
+    };
+    const open = known.filter((id) => {
+      const facts = factsOf(id);
+      return facts?.space && facts.account?.state === "active";
+    });
+    const itemIds =
+      open.length > 0 && action.resourceType.itemOf
+        ? await action.resourceType.itemOf(executor, open)
+        : new Map<string, string>();
+    const items = await itemFactsMany(executor, accountId, [...new Set(itemIds.values())], { fresh });
+
+    const decided: (
+      | Decision
+      | { id: string; resource: Resource; grants: Grant[]; organizationId: string | null; spaceId: string }
+    )[] = [];
+    for (const [index, resource] of resources.entries()) {
+      const id = ids[index] ?? null;
+      const decision = (grants: Grant[], denials: Denial[]) => decisionOf(action, resource, grants, denials);
+      const facts = factsOf(id);
+      if (!id || !facts?.space) {
+        decided.push(decision([], ["resourceNotFound"]));
+        continue;
+      }
+      if (facts.account?.state !== "active") {
+        decided.push(decision([], ["accountInactive"]));
+        continue;
+      }
+      const grants = this.#spaceGrants(action, facts);
+      const itemId = itemIds.get(id);
+      const found = itemId ? items.get(itemId) : undefined;
+      const item = found && facts.account.type === "portal" ? { ...found, sources: [] } : (found ?? null);
+      if (item) grants.push(...this.#itemGrants(action, item));
+      const ruleMet =
+        action.rule !== undefined && (await this.#rule(action, accountId, resource, null, executor, fresh));
+      if (action.ruleRequired) {
+        if (grants.length > 0 && !ruleMet) {
+          decided.push(decision([], ["ruleNotMet"]));
+          continue;
+        }
+      } else if (ruleMet && action.rule) {
+        grants.push({ kind: "rule", rule: action.rule });
+      }
+      if (item && grants.length > 0) {
+        if (item.viewRestrictions.some((restriction) => !restriction.listed)) {
+          decided.push(decision([], ["restricted"]));
+          continue;
+        }
+        const editsItem = action.resourceType.type === "item" && action.spaceRole === "editor";
+        if (editsItem && item.editRestriction && !item.editRestriction.listed) {
+          decided.push(decision([], ["editRestricted"]));
+          continue;
+        }
+        const administers = grants.some(
+          (grant) =>
+            (grant.kind === "spaceRole" || grant.kind === "share") && grantsSpaceRole(grant.role, "admin"),
+        );
+        if (editsItem && item.responsibility && !item.responsibility.listed && !administers) {
+          decided.push(decision([], ["notResponsible"]));
+          continue;
+        }
+      }
+      decided.push({
+        id,
+        resource,
+        grants,
+        organizationId: facts.space.organizationId,
+        spaceId: facts.space.id,
+      });
+    }
+
+    const restricting = action.restriction
+      ? action.resourceType.restrictions?.[action.restriction]
+      : undefined;
+    const checked = [
+      ...new Set(
+        decided.flatMap((entry) => ("spaceId" in entry && entry.grants.length > 0 ? [entry.id] : [])),
+      ),
+    ];
+    const restrictions =
+      restricting && checked.length > 0 ? await restricting(executor, checked) : new Map<string, never>();
+    return decided.map((entry) => {
+      if (!("spaceId" in entry)) return entry;
+      const restriction = restrictions.get(entry.id);
+      let grants = entry.grants;
+      if (restriction && grants.length > 0) {
+        const { unless } = restriction;
+        grants = unless
+          ? grants.filter(
+              (grant) =>
+                (grant.kind === "spaceRole" || grant.kind === "share") && grantsSpaceRole(grant.role, unless),
+            )
+          : [];
+        if (grants.length === 0) return decisionOf(action, entry.resource, [], [restriction.denial]);
+      }
+      return limitByToken(
+        principal,
+        action,
+        entry.organizationId,
+        decisionOf(action, entry.resource, grants, ["noSpaceRole"]),
+        entry.spaceId,
+      );
+    });
+  }
+
+  async #explainOutsideSpace(
+    principal: Extract<Principal, { type: "account" }>,
+    action: RegisteredAction,
+    resource: Resource,
+    executor: Executor,
+    fresh: boolean,
+  ): Promise<Decision> {
+    const decision = (grants: Grant[], denials: Denial[]) => decisionOf(action, resource, grants, denials);
     const accountId = principal.id;
 
     if (action.scope === "instance") {
@@ -210,56 +434,6 @@ export class AuthorizationService {
         if (allowed) grants.push({ kind: "rule", rule: action.rule });
       }
       return limitByToken(principal, action, null, decision(grants, denials));
-    }
-
-    if (action.scope === "space") {
-      const spaceId = await this.#spaceOf(action, resource, executor);
-      if (!spaceId) return decision([], ["resourceNotFound"]);
-      const facts = await spaceFacts(executor, accountId, spaceId, { fresh });
-      if (!facts.space) return decision([], ["resourceNotFound"]);
-      if (facts.account?.state !== "active") return decision([], ["accountInactive"]);
-      let grants = this.#spaceGrants(action, facts);
-      const item = await this.#itemFacts(action, resource, accountId, facts, executor, fresh);
-      if (item) grants.push(...this.#itemGrants(action, item));
-      const ruleMet =
-        action.rule !== undefined && (await this.#rule(action, accountId, resource, null, executor, fresh));
-      if (action.ruleRequired) {
-        if (grants.length > 0 && !ruleMet) return decision([], ["ruleNotMet"]);
-      } else if (ruleMet && action.rule) {
-        grants.push({ kind: "rule", rule: action.rule });
-      }
-      if (item && grants.length > 0) {
-        if (item.viewRestrictions.some((restriction) => !restriction.listed)) {
-          return decision([], ["restricted"]);
-        }
-        const editsItem = action.resourceType.type === "item" && action.spaceRole === "editor";
-        if (editsItem && item.editRestriction && !item.editRestriction.listed) {
-          return decision([], ["editRestricted"]);
-        }
-      }
-      const restriction = action.restriction
-        ? await action.resourceType.restrictions?.[action.restriction]?.(
-            executor,
-            (resource.id ?? "").toLowerCase(),
-          )
-        : null;
-      if (restriction && grants.length > 0) {
-        const { unless } = restriction;
-        grants = unless
-          ? grants.filter(
-              (grant) =>
-                (grant.kind === "spaceRole" || grant.kind === "share") && grantsSpaceRole(grant.role, unless),
-            )
-          : [];
-        if (grants.length === 0) return decision([], [restriction.denial]);
-      }
-      return limitByToken(
-        principal,
-        action,
-        facts.space.organizationId,
-        decision(grants, ["noSpaceRole"]),
-        spaceId,
-      );
     }
 
     const organizationId = await this.#organizationOf(action, resource, executor);
@@ -513,23 +687,6 @@ export class AuthorizationService {
     return roles.map((role) => ({ ...role, areas: intersectAreas(role.areas, limit) }));
   }
 
-  async #itemFacts(
-    action: RegisteredAction,
-    resource: Resource,
-    accountId: string,
-    facts: SpaceFacts,
-    executor: Executor,
-    fresh: boolean,
-  ): Promise<ItemFacts | null> {
-    if (!action.resourceType.itemOf || !resource.id) return null;
-    const itemId = await action.resourceType.itemOf(executor, resource.id.toLowerCase());
-    if (!itemId) return null;
-    const item = await itemFacts(executor, accountId, itemId, { fresh });
-    if (!item) return null;
-    if (facts.account?.type === "portal") return { ...item, sources: [] };
-    return item;
-  }
-
   #itemGrants(action: RegisteredAction, item: ItemFacts): Grant[] {
     const required = action.spaceRole;
     if (!required) return [];
@@ -608,12 +765,6 @@ export class AuthorizationService {
     if (principal.type === "system") return sql`true`;
     if (principal.type === "anonymous") return sql`false`;
     return sql`(${space}.deleted_at is null and ${spaceRoleCondition(principal.id, space, minimum)} and ${tokenSpaceCondition(principal, space, minimum)})`;
-  }
-
-  async #spaceOf(action: RegisteredAction, resource: Resource, executor: Executor): Promise<string | null> {
-    if (!resource.id || !UUID.test(resource.id)) return null;
-    if (action.resourceType.type === "space") return resource.id.toLowerCase();
-    return action.resourceType.spaceOf?.(executor, resource.id.toLowerCase()) ?? null;
   }
 
   #roleGrants(action: RegisteredAction, roles: HeldRole[]): Grant[] {

@@ -4,8 +4,8 @@ import {
   Checkbox,
   Dialog,
   Field,
-  IconButton,
   Input,
+  Menu,
   Notice,
   Select,
   Skeleton,
@@ -14,11 +14,22 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Lock, Mail, Trash2, UserPlus, Users } from "lucide-react";
+import {
+  ChevronDown,
+  CornerDownRight,
+  Eye,
+  Lock,
+  Mail,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -36,6 +47,7 @@ import {
   pageAccessQuery,
   SHARE_ROLES,
   type ShareRole,
+  shareLinksQuery,
   sharingKeys,
 } from "./sharing-api.js";
 
@@ -63,14 +75,6 @@ export function useShareRoleOptions() {
   return SHARE_ROLES.map((role) => ({ value: role, label: t(`sharing.roles.${role}`) }));
 }
 
-function useScopeOptions() {
-  const { t } = useTranslation();
-  return [
-    { value: "page", label: t("sharing.people.onlyThisPage") },
-    { value: "descendants", label: t("sharing.people.withPagesBelow") },
-  ];
-}
-
 function holderName(t: TFunction, share: PageShare): string {
   if (share.holder.kind === "group") {
     return share.holder.name ?? t("spaces.holders.unknownGroup");
@@ -78,10 +82,10 @@ function holderName(t: TFunction, share: PageShare): string {
   return share.holder.name ?? t("spaces.holders.unknownPerson");
 }
 
+const ROLE_ICONS = { reader: Eye, commenter: MessageSquare, editor: Pencil } as const;
+
 function ShareRow({ share, onChange }: { share: PageShare; onChange: (pending: Pending) => void }) {
   const { t } = useTranslation();
-  const roleOptions = useShareRoleOptions();
-  const scopeOptions = useScopeOptions();
   const name = holderName(t, share);
   const meta = [
     share.holder.kind === "group"
@@ -90,84 +94,97 @@ function ShareRow({ share, onChange }: { share: PageShare; onChange: (pending: P
     share.spaceRole
       ? t("sharing.people.spaceRole", { role: t(`spaces.roles.${share.spaceRole}`) })
       : t("sharing.people.notInSpace"),
+    share.includeDescendants ? t("sharing.people.alsoBelow") : null,
   ].filter(Boolean);
+  const changeRole = (role: ShareRole) => {
+    if (role === share.role) return;
+    onChange({
+      changes: [{ action: "changeShare", shareId: share.id, role }],
+      title: t("sharing.people.changeRoleTitle", { name, role: t(`sharing.roles.${role}`) }),
+      confirmLabel: t("sharing.people.changeRole"),
+      destructive: false,
+      done: t("sharing.people.changed", { name }),
+    });
+  };
+  const toggleBelow = () => {
+    const includeDescendants = !share.includeDescendants;
+    onChange({
+      changes: [{ action: "changeShare", shareId: share.id, includeDescendants }],
+      title: includeDescendants
+        ? t("sharing.people.addBelowTitle", { name })
+        : t("sharing.people.removeBelowTitle", { name }),
+      confirmLabel: t("sharing.people.changeScope"),
+      destructive: !includeDescendants,
+      done: t("sharing.people.changed", { name }),
+    });
+  };
   return (
-    <li className="flex flex-col gap-2 py-3">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {share.holder.kind === "group" ? (
-          <Users aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
-        ) : null}
-        <div className="min-w-0">
-          <p className="truncate font-medium" title={name}>
-            {name}
-            {share.holder.active ? null : (
-              <span className="ms-2 inline-block">
-                <Badge variant="warning">
-                  {share.holder.kind === "group"
-                    ? t("sharing.people.groupDeleted")
-                    : t("sharing.people.inactive")}
-                </Badge>
-              </span>
-            )}
-          </p>
-          <p className="truncate text-sm text-text-muted" title={meta.join(" · ")}>
-            {meta.join(" · ")}
-          </p>
-        </div>
+    <li className="flex items-center gap-3 py-2">
+      {share.holder.kind === "group" ? (
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-text-muted">
+          <Users aria-hidden="true" className="size-icon-md" />
+        </span>
+      ) : (
+        <PersonAvatar id={share.holder.id} name={name} size="md" decorative />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate" title={name}>
+          {name}
+          {share.holder.active ? null : (
+            <span className="ms-2 inline-block">
+              <Badge variant="warning">
+                {share.holder.kind === "group"
+                  ? t("sharing.people.groupDeleted")
+                  : t("sharing.people.inactive")}
+              </Badge>
+            </span>
+          )}
+        </p>
+        <p className="truncate text-sm text-text-muted" title={meta.join(" · ")}>
+          {meta.join(" · ")}
+        </p>
       </div>
-      <div className="flex items-center gap-2">
-        <Select
-          aria-label={t("sharing.people.roleOf", { name })}
-          value={share.role}
-          className="min-w-0 flex-1"
-          options={roleOptions}
-          onValueChange={(role) => {
-            if (role === share.role) return;
-            onChange({
-              changes: [{ action: "changeShare", shareId: share.id, role: role as ShareRole }],
-              title: t("sharing.people.changeRoleTitle", {
-                name,
-                role: t(`sharing.roles.${role as ShareRole}`),
+      <Menu
+        trigger={
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-label={t("sharing.people.accessOf", { name, role: t(`sharing.roles.${share.role}`) })}
+          >
+            {t(`sharing.roles.${share.role}`)}
+            <ChevronDown aria-hidden="true" className="size-icon-sm" />
+          </Button>
+        }
+        items={[
+          ...SHARE_ROLES.map((role) => ({
+            label: t(`sharing.roles.${role}`),
+            icon: ROLE_ICONS[role],
+            checked: role === share.role,
+            onSelect: () => changeRole(role),
+          })),
+          { type: "separator" as const },
+          {
+            label: t("sharing.people.includeBelow"),
+            icon: CornerDownRight,
+            checked: share.includeDescendants,
+            onSelect: toggleBelow,
+          },
+          { type: "separator" as const },
+          {
+            label: t("sharing.people.removeAction"),
+            icon: Trash2,
+            danger: true,
+            onSelect: () =>
+              onChange({
+                changes: [{ action: "removeShare", shareId: share.id }],
+                title: t("sharing.people.removeTitle", { name }),
+                confirmLabel: t("sharing.people.removeConfirm"),
+                destructive: true,
+                done: t("sharing.people.removed", { name }),
               }),
-              confirmLabel: t("sharing.people.changeRole"),
-              destructive: false,
-              done: t("sharing.people.changed", { name }),
-            });
-          }}
-        />
-        <Select
-          aria-label={t("sharing.people.scopeOf", { name })}
-          value={share.includeDescendants ? "descendants" : "page"}
-          className="min-w-0 flex-1"
-          options={scopeOptions}
-          onValueChange={(scope) => {
-            const includeDescendants = scope === "descendants";
-            if (includeDescendants === share.includeDescendants) return;
-            onChange({
-              changes: [{ action: "changeShare", shareId: share.id, includeDescendants }],
-              title: includeDescendants
-                ? t("sharing.people.addBelowTitle", { name })
-                : t("sharing.people.removeBelowTitle", { name }),
-              confirmLabel: t("sharing.people.changeScope"),
-              destructive: !includeDescendants,
-              done: t("sharing.people.changed", { name }),
-            });
-          }}
-        />
-        <IconButton
-          label={t("sharing.people.remove", { name })}
-          icon={Trash2}
-          onClick={() =>
-            onChange({
-              changes: [{ action: "removeShare", shareId: share.id }],
-              title: t("sharing.people.removeTitle", { name }),
-              confirmLabel: t("sharing.people.removeConfirm"),
-              destructive: true,
-              done: t("sharing.people.removed", { name }),
-            })
-          }
-        />
-      </div>
+          },
+        ]}
+      />
     </li>
   );
 }
@@ -189,7 +206,6 @@ function AddPeople({
     name: string;
   } | null>(null);
   const [role, setRole] = useState<ShareRole>("reader");
-  const [below, setBelow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const field = useRef<HTMLDivElement>(null);
   const exclude = access.shares.map((share) => `${share.holder.kind}:${share.holder.id}`);
@@ -208,7 +224,7 @@ function AddPeople({
           holderKind: holder.principalKind,
           holderId: holder.principalId,
           role,
-          includeDescendants: below,
+          includeDescendants: false,
         },
       ],
       title: t("sharing.people.shareTitle", { name: holder.name, role: t(`sharing.roles.${role}`) }),
@@ -219,9 +235,9 @@ function AddPeople({
     setHolder(null);
   };
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-3">
-      <div ref={field}>
-        <Field label={t("sharing.people.addLabel")} hint={t("sharing.people.addHint")} error={error}>
+    <form onSubmit={submit} noValidate className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+        <div ref={field} className="min-w-0 flex-1">
           <HolderPicker
             organizationId={page.organizationId}
             organizationName={page.organizationName}
@@ -237,27 +253,28 @@ function AddPeople({
             placeholder={t("sharing.people.addPlaceholder")}
             invalid={error !== null}
           />
-        </Field>
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <Field label={t("sharing.people.role")}>
-          <Select value={role} options={roleOptions} onValueChange={(next) => setRole(next as ShareRole)} />
-        </Field>
-        <Checkbox checked={below} onCheckedChange={setBelow} label={t("sharing.people.includeBelow")} />
-        <Button type="submit" variant="primary" icon={UserPlus} className="ms-auto">
+        </div>
+        <div className="shrink-0 sm:w-select-trigger">
+          <Select
+            aria-label={t("sharing.people.role")}
+            value={role}
+            options={roleOptions}
+            onValueChange={(next) => setRole(next as ShareRole)}
+          />
+        </div>
+        <Button type="submit" variant="primary">
           {t("sharing.people.share")}
         </Button>
       </div>
-      <p className="text-sm text-text-muted">{t("sharing.people.titleVisible", { title: page.title })}</p>
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </form>
   );
 }
 
-function InviteGuest({ pageId }: { pageId: string }) {
+function InviteGuest({ pageId, onDone }: { pageId: string; onDone: () => void }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const roleOptions = useShareRoleOptions();
-  const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<ShareRole>("reader");
   const [below, setBelow] = useState(false);
@@ -283,7 +300,7 @@ function InviteGuest({ pageId }: { pageId: string }) {
       );
       toast({ title: t("sharing.guest.sent", { email: address }), variant: "success" });
       setEmail("");
-      setOpen(false);
+      onDone();
     } catch (failure) {
       setError(problemMessage(t, failure));
     } finally {
@@ -291,43 +308,73 @@ function InviteGuest({ pageId }: { pageId: string }) {
     }
   };
   return (
-    <div className="flex flex-col gap-2">
-      <DisclosureButton open={open} onToggle={() => setOpen((value) => !value)} controls="share-guest">
-        {t("sharing.guest.toggle")}
-      </DisclosureButton>
-      {open ? (
-        <form
-          id="share-guest"
-          onSubmit={(event) => void submit(event)}
-          noValidate
-          className="flex flex-col gap-3 ps-4"
-        >
-          <Field label={t("sharing.guest.email")} hint={t("sharing.guest.hint")} error={error}>
-            <Input
-              ref={input}
-              type="email"
-              autoComplete="off"
-              placeholder={t("sharing.guest.placeholder")}
-              value={email}
-              invalid={error !== null}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </Field>
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label={t("sharing.people.role")}>
-              <Select
-                value={role}
-                options={roleOptions}
-                onValueChange={(next) => setRole(next as ShareRole)}
-              />
-            </Field>
-            <Checkbox checked={below} onCheckedChange={setBelow} label={t("sharing.people.includeBelow")} />
-            <Button type="submit" variant="secondary" icon={Mail} loading={busy} className="ms-auto">
-              {t("sharing.guest.send")}
-            </Button>
-          </div>
-        </form>
-      ) : null}
+    <form
+      aria-label={t("sharing.guest.toggle")}
+      onSubmit={(event) => void submit(event)}
+      noValidate
+      className="flex flex-col gap-3 rounded-md bg-surface-sunken p-3"
+    >
+      <Field label={t("sharing.guest.email")} hint={t("sharing.guest.hint")} error={error}>
+        <Input
+          ref={input}
+          type="email"
+          autoComplete="off"
+          autoFocus
+          placeholder={t("sharing.guest.placeholder")}
+          value={email}
+          invalid={error !== null}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </Field>
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label={t("sharing.people.role")}>
+          <Select value={role} options={roleOptions} onValueChange={(next) => setRole(next as ShareRole)} />
+        </Field>
+        <Checkbox checked={below} onCheckedChange={setBelow} label={t("sharing.people.includeBelow")} />
+        <span className="ms-auto flex gap-2">
+          <Button type="button" variant="secondary" onClick={onDone}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="submit" variant="primary" icon={Mail} loading={busy}>
+            {t("sharing.guest.send")}
+          </Button>
+        </span>
+      </div>
+    </form>
+  );
+}
+
+function RestrictionLine({
+  access,
+  open,
+  onToggle,
+}: {
+  access: PageAccess;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  const { view, edit, inherited } = access.restrictions;
+  const summary = view
+    ? t("sharing.note.view")
+    : inherited.length > 0
+      ? t("sharing.note.inherited")
+      : edit
+        ? t("sharing.note.edit")
+        : t("sharing.restrict.openSummary");
+  return (
+    <div className="flex items-start gap-2 border-t border-border pt-3 text-sm text-text-muted">
+      <Lock aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+      <span className="min-w-0 flex-1">{summary}</span>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-expanded={open}
+        aria-controls="share-restrictions"
+        onClick={onToggle}
+      >
+        {open ? t("sharing.restrict.close") : t("sharing.restrict.change")}
+      </Button>
     </div>
   );
 }
@@ -342,9 +389,9 @@ function Restrictions({ access, onChange }: { access: PageAccess; onChange: (pen
       date: format.date(info.setAt),
     });
   return (
-    <section aria-labelledby="share-restrict" className="flex flex-col gap-3">
+    <section id="share-restrictions" aria-labelledby="share-restrict" className="flex flex-col gap-3">
       <h3 id="share-restrict" className="flex items-center gap-2 font-semibold">
-        <Lock aria-hidden="true" className="size-icon" />
+        <Lock aria-hidden="true" className="size-icon-md" />
         {t("sharing.restrict.title")}
       </h3>
       {inherited.length > 0 ? (
@@ -508,6 +555,8 @@ function PeopleAndAccess({ page }: { page: SharedPage }) {
   const access = useQuery({ ...pageAccessQuery(page.id), throwOnError: false });
   const [pending, setPending] = useState<Pending | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
+  const [inviting, setInviting] = useState(false);
+  const [restricting, setRestricting] = useState(false);
   const top = useRef<HTMLDivElement>(null);
 
   const propose = (next: Pending) => {
@@ -565,13 +614,29 @@ function PeopleAndAccess({ page }: { page: SharedPage }) {
         ) : (
           <AddPeople page={page} access={data} onChange={propose} />
         )}
+        {pending ? null : (
+          <p className="text-sm text-text-muted">
+            {t("sharing.people.addHint")}
+            {data.canInviteGuests && !inviting ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  onClick={() => setInviting(true)}
+                  className="text-accent hover:underline focus-visible:focus-ring"
+                >
+                  {t("sharing.guest.toggle")}
+                </button>
+              </>
+            ) : null}
+          </p>
+        )}
+        {inviting && !pending ? <InviteGuest pageId={page.id} onDone={() => setInviting(false)} /> : null}
       </div>
-      {data.canInviteGuests && !pending ? <InviteGuest pageId={page.id} /> : null}
       <section aria-labelledby="share-list" className="flex flex-col">
-        <h3 id="share-list" className="font-semibold">
+        <h3 id="share-list" className="border-b border-border pb-2 font-semibold">
           {t("sharing.people.listTitle")}
         </h3>
-        <p className="text-sm text-text-muted">{t("sharing.people.listHint")}</p>
         {data.shares.length === 0 ? (
           <p className="py-3 text-sm text-text-muted">{t("sharing.people.empty")}</p>
         ) : (
@@ -605,8 +670,13 @@ function PeopleAndAccess({ page }: { page: SharedPage }) {
           </ul>
         </section>
       ) : null}
-      <Restrictions access={data} onChange={propose} />
-      <CheckAccess page={page} />
+      <RestrictionLine access={data} open={restricting} onToggle={() => setRestricting(!restricting)} />
+      {restricting ? (
+        <>
+          <Restrictions access={data} onChange={propose} />
+          <CheckAccess page={page} />
+        </>
+      ) : null}
     </div>
   );
 }
@@ -622,6 +692,8 @@ export function ShareDialog({
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("people");
+  const links = useQuery({ ...shareLinksQuery(page.id), enabled: open, throwOnError: false });
+  const linkCount = links.data?.options.enabled ? links.data.links.length : undefined;
   return (
     <Dialog
       open={open}
@@ -636,7 +708,7 @@ export function ShareDialog({
         label={t("sharing.tabs.label")}
         tabs={[
           { value: "people", label: t("sharing.tabs.people") },
-          { value: "links", label: t("sharing.tabs.links") },
+          { value: "links", label: t("sharing.tabs.links"), ...(linkCount ? { count: linkCount } : {}) },
         ]}
       >
         {tab === "people" ? <PeopleAndAccess page={page} /> : <ShareLinksPanel page={page} />}

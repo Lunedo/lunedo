@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { proposeFormats, setupStepSchemas } from "@lunedo/shared";
+import { type Language, proposeFormats, setupStepSchemas } from "@lunedo/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -11,6 +11,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { PASSWORD_MAX_LENGTH } from "../auth/passwords.js";
 import { recoveryCodes, sessions, totpCredentials, webauthnCredentials } from "../auth/schema.js";
 import type { RecoveryCodeService, TotpService } from "../auth/two-factor.js";
+import { backupConfiguration } from "../backup/schema.js";
 import { formatKeyEntry, type KeyRing } from "../crypto/key-ring.js";
 import type { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import type { Database } from "../database/database.js";
@@ -24,6 +25,13 @@ import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import { applyFormats, formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { defineSetupAction, type SetupActionContext, type SetupStep } from "./framework.js";
+import {
+  checkReachability,
+  type ProbeOptions,
+  rememberedReachability,
+  rememberReachability,
+} from "./reachability.js";
+import { setupSteps } from "./schema.js";
 import { SetupStepError } from "./setup-service.js";
 
 const CLOCK_TOLERANCE_MS = 5_000;
@@ -165,14 +173,15 @@ export interface SetupStepDependencies {
   backupKeys: KeyRing;
   filesDir: string;
   configuredInstanceUrl?: string | undefined;
+  probe?: ProbeOptions | undefined;
 }
 
 export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "systemCheck",
-    order: 10,
+    order: 20,
     required: true,
-    async describe({ request }) {
+    async describe({ request, state, completed }) {
       const [database, clock] = await checkDatabaseAndClock(deps.pool);
       const stored = await deps.settings.get(instanceUrlSetting, {});
       const configured = deps.configuredInstanceUrl ?? "";
@@ -181,6 +190,11 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
       const httpsUrl = url.startsWith("https:");
       const httpsRequest = request.protocol === "https";
       const httpsOk = url ? httpsUrl : httpsRequest;
+      let reachability = completed ? rememberedReachability(state, url) : null;
+      if (!reachability) {
+        reachability = await checkReachability(deps.database, url, deps.probe);
+        await rememberReachability(deps.database, reachability);
+      }
       return {
         checks: {
           database,
@@ -195,11 +209,12 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             url: url || null,
             source,
           },
+          reachability,
           https: {
             status: httpsOk ? "ok" : "warning",
             cause: httpsOk ? null : url ? "instanceUrlNotHttps" : "requestNotHttps",
             fixCommand: null,
-            docs: "setup.md#https",
+            docs: "reverse-proxy.md#tls-and-the-instance-address",
             instanceUrl: httpsUrl,
             request: httpsRequest,
           },
@@ -221,7 +236,7 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
 export function instanceStep(deps: SetupStepDependencies): SetupStep {
   return {
     id: "instance",
-    order: 20,
+    order: 10,
     required: true,
     async describe({ request }) {
       return {
@@ -288,6 +303,10 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             for (const table of [totpCredentials, webauthnCredentials, recoveryCodes, sessions]) {
               await context.tx.delete(table).where(eq(table.accountId, existing.id));
             }
+            await context.tx
+              .update(setupSteps)
+              .set({ state: {}, completedAt: null, updatedAt: new Date() })
+              .where(eq(setupSteps.step, "keyBackup"));
           } else {
             const account = await deps.accounts.createStandard(context.tx, {
               email: input.email,
@@ -328,20 +347,6 @@ export function ownerStep(deps: SetupStepDependencies): SetupStep {
             targetId: owner.id,
             fields: {},
           });
-          return { body: { recoveryCodes: await issueRecoveryCodes(deps, context, owner.id) } };
-        },
-      }),
-      renewRecoveryCodes: defineSetupAction({
-        input: setupStepSchemas.owner.actions.renewRecoveryCodes.input,
-        async run(context) {
-          const owner = await confirmedOwnerOf(context);
-          return { body: { recoveryCodes: await issueRecoveryCodes(deps, context, owner.id) } };
-        },
-      }),
-      acknowledgeRecoveryCodes: defineSetupAction({
-        input: setupStepSchemas.owner.actions.acknowledgeRecoveryCodes.input,
-        async run(context) {
-          await confirmedOwnerOf(context);
           await context.complete();
           return {};
         },
@@ -393,25 +398,29 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
         input: setupStepSchemas.keyBackup.actions.download.input,
         async run(context) {
           if (typeof context.state.downloadedAt === "string") {
-            throw new SetupStepError("keysAlreadyDownloaded", "The keys can be downloaded once only");
+            throw new SetupStepError(
+              "keysAlreadyDownloaded",
+              "The emergency kit can be downloaded once only",
+            );
           }
+          const owner = await confirmedOwnerOf(context);
           const master = deps.keyRing.ring;
-          await context.setState({ downloadedAt: new Date().toISOString() });
+          const createdAt = new Date().toISOString();
+          await context.setState({ downloadedAt: createdAt });
           await deps.audit.record(context.tx, {
             name: "setup.keyBackupDownloaded",
             actor: ANONYMOUS,
             targetId: null,
             fields: { masterKeyVersions: master.versions, backupKeyVersions: deps.backupKeys.versions },
           });
-          const content = [
-            "# Lunedo keys. Store this file outside the server, for example in a password manager.",
-            "# Without these keys, encrypted data and backups cannot be restored.",
-            `LUNEDO_MASTER_KEYS=${keyRingLine(master)}`,
-            `LUNEDO_BACKUP_KEY=${keyRingLine(deps.backupKeys)}`,
-            "",
-          ].join("\n");
           return {
-            download: { filename: "lunedo-keys.env", contentType: "text/plain; charset=utf-8", content },
+            body: {
+              instanceUrl: deps.configuredInstanceUrl || (await deps.settings.get(instanceUrlSetting, {})),
+              createdAt,
+              recoveryCodes: await issueRecoveryCodes(deps, context, owner.id),
+              masterKeys: keyRingLine(master),
+              backupKey: keyRingLine(deps.backupKeys),
+            },
           };
         },
       }),
@@ -419,14 +428,36 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
         input: setupStepSchemas.keyBackup.actions.confirm.input,
         async run(context) {
           if (typeof context.state.downloadedAt !== "string") {
-            throw new SetupStepError("keysNotDownloaded", "Download the keys first");
+            throw new SetupStepError("keysNotDownloaded", "Download the emergency kit first");
           }
+          const owner = await confirmedOwnerOf(context);
+          const confirmed = { keyConfirmedAt: new Date(), keyConfirmedBy: owner.id };
+          await context.tx
+            .insert(backupConfiguration)
+            .values({ singleton: true, ...confirmed })
+            .onConflictDoUpdate({ target: backupConfiguration.singleton, set: confirmed });
+          await deps.audit.record(context.tx, {
+            name: "backup.keyConfirmed",
+            actor: accountPrincipal(owner.id),
+            targetId: null,
+            fields: { confirmed: true },
+          });
           await context.complete();
           return {};
         },
       }),
     },
   };
+}
+
+async function applyInstanceDefaults(
+  deps: SetupStepDependencies,
+  context: SetupActionContext,
+  input: { language: Language; timeZone: string },
+): Promise<void> {
+  const options = { tx: context.tx };
+  await deps.settings.set(languageSetting, {}, "instance", input.language, options);
+  await deps.settings.set(timeZoneSetting, {}, "instance", input.timeZone, options);
 }
 
 export function organizationStep(deps: SetupStepDependencies): SetupStep {
@@ -473,6 +504,7 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
               input.formats ?? proposeFormats(input.language, input.timeZone),
               { tx: context.tx },
             );
+            await applyInstanceDefaults(deps, context, input);
             await context.complete();
             return { body: { organizationId: existing } };
           }
@@ -492,6 +524,7 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
             input.formats ?? proposeFormats(input.language, input.timeZone),
             { tx: context.tx },
           );
+          await applyInstanceDefaults(deps, context, input);
           await context.setState({ organizationId: organization.id });
           await context.complete();
           return { body: { organizationId: organization.id } };
@@ -503,8 +536,8 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
 
 export function builtinSetupSteps(deps: SetupStepDependencies): SetupStep[] {
   return [
-    systemCheckStep(deps),
     instanceStep(deps),
+    systemCheckStep(deps),
     ownerStep(deps),
     keyBackupStep(deps),
     organizationStep(deps),

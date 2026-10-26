@@ -13,7 +13,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Check, Download, KeyRound } from "lucide-react";
+import { Check, Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -351,13 +351,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
 
   return (
     <SettingsPage
-      width="wide"
+      steps
       title={t("identityProviders.wizard.title")}
-      icon={KeyRound}
-      breadcrumbs={[
-        { label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" },
-        { label: t("identityProviders.wizard.new") },
-      ]}
+      back={{ label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" }}
       actions={
         <Button variant="secondary" onClick={() => void navigate(listPath)}>
           {providerId || draftId ? t("identityProviders.wizard.close") : t("common.cancel")}
@@ -395,11 +391,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                       {marker}
                       <span className="flex flex-col">
                         <span>{stepName}</span>
-                        <span className="text-xs">
-                          {providerId && position === 0
-                            ? t("identityProviders.wizard.typeFixed")
-                            : t("identityProviders.wizard.stepLater")}
-                        </span>
+                        {providerId && position === 0 ? (
+                          <span className="text-xs">{t("identityProviders.wizard.typeFixed")}</span>
+                        ) : null}
                       </span>
                     </div>
                   )}
@@ -407,6 +401,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
               );
             })}
           </ol>
+          {providerId ? null : (
+            <p className="mt-2 px-2 text-xs text-text-muted">{t("identityProviders.wizard.stepLater")}</p>
+          )}
         </nav>
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {!canManage ? <Notice variant="warning">{t("identityProviders.noPermission")}</Notice> : null}
@@ -540,7 +537,7 @@ function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
   );
   return (
     <Section title={t("identityProviders.wizard.copyTitle", { place })}>
-      <div className="flex flex-col gap-4 px-4 py-3">
+      <div className="flex flex-col gap-4 py-3">
         <p className="text-sm text-text-muted">
           {translateKey(t, `identityProviders.wizard.registerHints.${kind}`)}{" "}
           {t("identityProviders.wizard.copyHint", { place })}
@@ -551,16 +548,19 @@ function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
               label={t("identityProviders.saml.entityId")}
               value={draft.saml.entityId}
               hint={t("identityProviders.saml.entityIdHint")}
+              help={t("identityProviders.saml.entityIdHelp")}
             />
             <CopyField
               label={t("identityProviders.saml.acsUrl")}
               value={draft.redirectUri}
               hint={t("identityProviders.saml.acsUrlHint")}
+              help={t("identityProviders.saml.acsUrlHelp")}
             />
             <CopyField
               label={t("identityProviders.saml.metadataUrl")}
               value={draft.saml.metadataUrl}
               hint={t("identityProviders.saml.metadataUrlHint")}
+              help={t("identityProviders.saml.metadataUrlHelp")}
               action={
                 <a
                   href={draft.saml.metadataUrl}
@@ -619,7 +619,7 @@ function TypeStep({
     <>
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 font-semibold text-lg">{t("identityProviders.wizard.typeTitle")}</legend>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {CHOICES.map((choice) => (
             <button
               key={choice}
@@ -788,7 +788,7 @@ function OidcConnectionStep({
         error={errors.name}
         onChange={(next) => onCommonChange({ name: next })}
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         {preset === "entraId" ? (
           <Field
             label={t("identityProviders.fields.tenantId")}
@@ -806,6 +806,7 @@ function OidcConnectionStep({
           <Field
             label={t("identityProviders.fields.issuer")}
             hint={t("identityProviders.fields.issuerHint")}
+            help={t("identityProviders.fields.issuerHelp")}
             {...(errors.issuer ? { error: errors.issuer } : {})}
           >
             <Input
@@ -832,11 +833,12 @@ function OidcConnectionStep({
           value={domains}
           error={errors.domains}
           hint={t("identityProviders.accounts.domainsHintGoogle")}
+          help={t("identityProviders.accounts.domainsHelpGoogle")}
           onChange={(next) => onCommonChange({ domains: next })}
         />
       ) : null}
       <Section title={t("identityProviders.credentials.title")}>
-        <div className="px-4 py-3">
+        <div className="py-3">
           <CredentialFields
             draft={draft.credential}
             onChange={(credential) => set({ credential })}
@@ -942,7 +944,7 @@ function SavedProviderStep({
             <SamlGraphClientField provider={provider} canManage={canManage} />
           </Section>
           <Section title={t("identityProviders.credentials.groupTitles.graph")}>
-            <div className="px-4 py-3">
+            <div className="py-3">
               <CredentialsList provider={provider} canManage={canManage} group="graph" />
             </div>
           </Section>

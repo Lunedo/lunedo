@@ -1,45 +1,42 @@
-import { EmptyState, PageHeader, Section, Skeleton } from "@lunedo/ui";
+import { Button, EmptyState, PageHeader, Section } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AtSign, Clock, Layers, ListChecks, Newspaper, Share2, Star, Sun } from "lucide-react";
+import { Layers, ListChecks } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { api } from "../api/client.js";
+import { request } from "../api/request.js";
 import { LoadError } from "../errors/failure.js";
 import { DueForReview } from "../knowledge-bases/reviews/home-reviews.js";
 import { OneOnOnes, UpcomingMeetings } from "../meetings/home-sections.js";
-import { oneOnOnesQuery, upcomingQuery } from "../meetings/queries.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { sharedWithMeQuery } from "../sharing/sharing-api.js";
-import { useSession } from "../shell/shell-context.js";
+import { WithoutOrganizationNotice } from "../shell/app-shell.js";
+import { useShell } from "../shell/shell.js";
+import { useCan, useOrganizationState } from "../shell/shell-context.js";
+import { CreateSpaceDialog } from "../spaces/create-space-dialog.js";
 import { itemIcon } from "../spaces/item-icons.js";
 import { itemHref } from "../spaces/item-paths.js";
+import { referenceSpaceName, SpaceBadge } from "../spaces/space-badge.js";
 import { postHref } from "./blog/blog-list.js";
-import { type ContentReference, homeQuery } from "./queries.js";
+import { HomeEmpty, HomeRow, HomeRowsSkeleton } from "./home-rows.js";
+import { homeQuery } from "./queries.js";
 
-function ReferenceLink({
-  item,
-  meta,
-}: {
-  item: Pick<ContentReference, "id" | "kind" | "title" | "spaceKey" | "spaceName">;
-  meta?: string;
-}) {
-  const href = itemHref({ id: item.id, kind: item.kind, title: item.title, link: null }, item.spaceKey);
-  const Icon = itemIcon(item.kind);
-  if (!href) return null;
+function SectionLink({ to, children }: { to: string; children: ReactNode }) {
   return (
     <Link
-      to={href}
-      className="flex min-h-hit items-center gap-3 rounded-sm px-2 py-1 hover:bg-hover focus-visible:focus-ring"
+      to={to as never}
+      className="rounded-sm text-sm text-accent hover:underline focus-visible:focus-ring"
     >
-      <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
-      <span className="min-w-0 flex-1 truncate" title={item.title}>
-        {item.title}
-      </span>
-      <span className="hidden shrink-0 truncate text-sm text-text-muted sm:block" title={item.spaceName}>
-        {meta ?? item.spaceName}
-      </span>
+      {children}
     </Link>
   );
+}
+
+function ItemIcon({ kind }: { kind: string }) {
+  const Icon = itemIcon(kind);
+  return <Icon aria-hidden="true" className="size-icon-md" />;
 }
 
 function SharedWithYou() {
@@ -47,50 +44,236 @@ function SharedWithYou() {
   const format = useFormat();
   const shared = useQuery({ ...sharedWithMeQuery(), throwOnError: false });
   return (
-    <Section title={t("home.shared")} icon={Share2}>
-      {shared.isPending ? <Skeleton className="h-12 w-full" /> : null}
+    <Section title={t("home.shared")}>
+      {shared.isPending ? <HomeRowsSkeleton /> : null}
       {shared.isError ? (
         <LoadError what={t("home.shared")} error={shared.error} onRetry={() => shared.refetch()} />
       ) : null}
-      {shared.data?.length === 0 ? <Empty text={t("home.noShared")} /> : null}
-      {shared.data && shared.data.length > 0 ? (
-        <ul className="flex flex-col">
-          {shared.data.slice(0, 8).map((entry) => (
-            <li key={entry.itemId}>
-              <ReferenceLink
-                item={{
-                  id: entry.itemId,
-                  kind: entry.kind === "blogPost" ? "blogPost" : "page",
-                  title: entry.title,
-                  spaceKey: entry.spaceKey,
-                  spaceName: entry.spaceName,
-                }}
-                meta={t("home.sharedMeta", {
-                  name: entry.sharedBy?.name ?? t("files.someone"),
-                  when: format.relative(entry.sharedAt),
-                })}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {shared.data?.length === 0 ? <HomeEmpty text={t("home.noShared")} /> : null}
+      {shared.data?.slice(0, 8).map((entry) => {
+        const kind = entry.kind === "blogPost" ? "blogPost" : "page";
+        const href = itemHref({ id: entry.itemId, kind, title: entry.title, link: null }, entry.spaceKey);
+        return href ? (
+          <HomeRow
+            key={entry.itemId}
+            to={href}
+            leading={<ItemIcon kind={kind} />}
+            title={entry.title}
+            meta={`${t("home.sharedMeta", {
+              name: entry.sharedBy?.name ?? t("files.someone"),
+              when: format.short(entry.sharedAt),
+            })} · ${entry.spaceName}`}
+          />
+        ) : null;
+      })}
     </Section>
   );
 }
 
-function Empty({ text }: { text: string }) {
-  return <p className="px-2 py-2 text-sm text-text-muted">{text}</p>;
+function useHasSpaces() {
+  const spaces = useQuery({
+    queryKey: ["spaces", "any"],
+    queryFn: () => request(() => api.GET("/api/v1/spaces", { params: { query: { limit: 1 } } })),
+    throwOnError: false,
+  });
+  if (spaces.isError) return true;
+  return spaces.data ? spaces.data.items.length > 0 : null;
+}
+
+function FirstStart() {
+  const { t } = useTranslation();
+  const canCreate = useCan("organization.spaces.create");
+  const [creating, setCreating] = useState(false);
+  return (
+    <>
+      <EmptyState
+        icon={Layers}
+        title={t("home.firstUseTitle")}
+        description={t("home.firstUseDescription")}
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="primary" asChild>
+              <Link to="/spaces">{t("home.openSpaces")}</Link>
+            </Button>
+            {canCreate ? (
+              <Button variant="secondary" onClick={() => setCreating(true)}>
+                {t("spaces.create.action")}
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
+      <CreateSpaceDialog open={creating} onOpenChange={setCreating} />
+    </>
+  );
+}
+
+function HomeSections() {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const home = useQuery({ ...homeQuery(), throwOnError: false });
+  const data = home.data;
+  const pending = home.isPending ? <HomeRowsSkeleton /> : null;
+  return (
+    <div className="flex flex-col gap-8">
+      {home.isError ? (
+        <LoadError what={t("home.loadFailed")} error={home.error} onRetry={() => home.refetch()} />
+      ) : null}
+      <DueForReview />
+      <div className="grid items-start gap-8 md:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-8">
+          <UpcomingMeetings />
+          <Section
+            title={t("home.tasks")}
+            actions={<SectionLink to="/tasks">{t("home.allTasks")}</SectionLink>}
+          >
+            {pending}
+            {data?.tasks.length === 0 ? <HomeEmpty text={t("home.noTasks")} /> : null}
+            {data?.tasks.map((task) => (
+              <HomeRow
+                key={task.id}
+                to={
+                  itemHref(
+                    { id: task.item.id, kind: task.item.kind, title: task.item.title, link: null },
+                    task.item.spaceKey,
+                  ) ?? "/tasks"
+                }
+                leading={<ListChecks aria-hidden="true" className="size-icon-md" />}
+                title={task.text || t("tasks.untitled")}
+                meta={`${
+                  task.dueDate
+                    ? task.overdue
+                      ? t("tasks.overdueSince", { date: format.day(`${task.dueDate}T12:00:00Z`) })
+                      : t("tasks.dueOn", { date: format.day(`${task.dueDate}T12:00:00Z`) })
+                    : t("tasks.noDueDate")
+                } · ${task.item.title}`}
+                {...(task.overdue ? { metaClassName: "text-danger" } : {})}
+              />
+            ))}
+          </Section>
+          <Section title={t("home.recent")}>
+            {pending}
+            {data?.recent.length === 0 ? <HomeEmpty text={t("home.noRecent")} /> : null}
+            {data?.recent.map((item) => {
+              const href = itemHref(
+                { id: item.id, kind: item.kind, title: item.title, link: null },
+                item.spaceKey,
+              );
+              return href ? (
+                <HomeRow
+                  key={item.id}
+                  to={href}
+                  leading={<ItemIcon kind={item.kind} />}
+                  title={item.title}
+                  meta={[referenceSpaceName(t, item), format.short(item.viewedAt)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                />
+              ) : null;
+            })}
+          </Section>
+          <SharedWithYou />
+        </div>
+        <div className="flex min-w-0 flex-col gap-8">
+          <OneOnOnes />
+          <Section title={t("home.mentions")}>
+            {pending}
+            {data?.mentions.length === 0 ? <HomeEmpty text={t("home.noMentions")} /> : null}
+            {data?.mentions.map((mention) => {
+              const item = mention.item;
+              const href = itemHref(
+                { id: item.id, kind: item.kind, title: item.title, link: null },
+                item.spaceKey,
+              );
+              return href ? (
+                <HomeRow
+                  key={mention.id}
+                  to={href}
+                  leading={<ItemIcon kind={item.kind} />}
+                  title={item.title}
+                  meta={
+                    mention.actor
+                      ? t("home.mentionedBy", { name: mention.actor.name, when: format.short(mention.at) })
+                      : format.short(mention.at)
+                  }
+                />
+              ) : null;
+            })}
+          </Section>
+          <Section title={t("home.starred")}>
+            {pending}
+            {data && data.starred.items.length === 0 && data.starred.spaces.length === 0 ? (
+              <HomeEmpty text={t("home.noStarred")} />
+            ) : null}
+            {data?.starred.spaces.map((space) => (
+              <HomeRow
+                key={space.id}
+                to={`/spaces/${space.key}`}
+                leading={<SpaceBadge space={space} size="sm" />}
+                title={space.name || (space.mySpace ? t("spaces.personal.mine") : t("spaces.personal.label"))}
+                meta={space.personal ? t("spaces.personal.label") : t("sidebar.spaceType")}
+              />
+            ))}
+            {data?.starred.items.map((item) => {
+              const href = itemHref(
+                { id: item.id, kind: item.kind, title: item.title, link: null },
+                item.spaceKey,
+              );
+              return href ? (
+                <HomeRow
+                  key={item.id}
+                  to={href}
+                  leading={<ItemIcon kind={item.kind} />}
+                  title={item.title}
+                  meta={referenceSpaceName(t, item)}
+                />
+              ) : null;
+            })}
+          </Section>
+          <Section
+            title={t("home.posts")}
+            actions={<SectionLink to="/blog">{t("home.allPosts")}</SectionLink>}
+          >
+            {pending}
+            {data?.posts.length === 0 ? <HomeEmpty text={t("home.noPosts")} /> : null}
+            {data?.posts.map((post) => (
+              <HomeRow
+                key={post.id}
+                to={postHref(post)}
+                leading={<ItemIcon kind="blogPost" />}
+                title={post.title}
+                meta={[
+                  post.spaceName,
+                  post.author?.name,
+                  post.publishedAt ? format.short(post.publishedAt) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            ))}
+          </Section>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function HomeScreen() {
   const { t } = useTranslation();
-  const format = useFormat();
-  const session = useSession();
-  const home = useQuery(homeQuery());
-  const upcoming = useQuery({ ...upcomingQuery(), throwOnError: false });
-  const oneOnOnes = useQuery({ ...oneOnOnesQuery(), throwOnError: false });
+  const shell = useShell();
+  const organization = useOrganizationState();
+  const hasSpaces = useHasSpaces();
   useDocumentTitle(t("home.title"));
-  const name = session.account?.name ?? "";
+  const withoutOrganization =
+    organization.session.account?.type === "standard" &&
+    organization.permissionsLoaded &&
+    organization.organizations.length === 0;
+  const firstStart = hasSpaces === false;
+  const { suggestCollapsedSidebar } = shell;
+  useEffect(() => {
+    suggestCollapsedSidebar(firstStart);
+    return () => suggestCollapsedSidebar(false);
+  }, [firstStart, suggestCollapsedSidebar]);
   return (
     <main
       id="main"
@@ -99,181 +282,8 @@ export function HomeScreen() {
       className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
     >
       <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
-        <PageHeader title={t("home.title")} description={t("home.greeting", { name })} icon={Sun} />
-        {home.isPending ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            <Skeleton className="h-field w-full" />
-            <Skeleton className="h-field w-full" />
-          </div>
-        ) : null}
-        {home.isError ? (
-          <LoadError what={t("home.loadFailed")} error={home.error} onRetry={() => home.refetch()} />
-        ) : null}
-        {home.data ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            <DueForReview />
-            <UpcomingMeetings />
-            <OneOnOnes />
-            <Section title={t("home.tasks")} icon={ListChecks}>
-              <div className="flex flex-col gap-2">
-                {home.data.tasks.length === 0 ? (
-                  <Empty text={t("home.noTasks")} />
-                ) : (
-                  <ul className="flex flex-col">
-                    {home.data.tasks.map((task) => (
-                      <li key={task.id}>
-                        <Link
-                          to={
-                            itemHref(
-                              { id: task.item.id, kind: task.item.kind, title: task.item.title, link: null },
-                              task.item.spaceKey,
-                            ) ?? "/"
-                          }
-                          className="flex min-h-hit items-center gap-3 rounded-sm px-2 py-1 hover:bg-hover focus-visible:focus-ring"
-                        >
-                          <ListChecks aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
-                          <span className="min-w-0 flex-1 truncate" title={task.text}>
-                            {task.text || t("tasks.untitled")}
-                          </span>
-                          <span
-                            className={`shrink-0 text-sm ${task.overdue ? "font-semibold text-danger" : "text-text-muted"}`}
-                          >
-                            {task.dueDate
-                              ? task.overdue
-                                ? t("tasks.overdueSince", { date: format.date(`${task.dueDate}T12:00:00Z`) })
-                                : t("tasks.dueOn", { date: format.date(`${task.dueDate}T12:00:00Z`) })
-                              : t("tasks.noDueDate")}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link
-                  to="/tasks"
-                  className="inline-flex min-h-hit items-center self-start px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
-                >
-                  {t("home.allTasks")}
-                </Link>
-              </div>
-            </Section>
-            <Section title={t("home.mentions")} icon={AtSign}>
-              {home.data.mentions.length === 0 ? (
-                <Empty text={t("home.noMentions")} />
-              ) : (
-                <ul className="flex flex-col">
-                  {home.data.mentions.map((mention) => (
-                    <li key={mention.id}>
-                      <ReferenceLink
-                        item={mention.item}
-                        meta={
-                          mention.actor
-                            ? t("home.mentionedBy", {
-                                name: mention.actor.name,
-                                when: format.relative(mention.at),
-                              })
-                            : format.relative(mention.at)
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-            <Section title={t("home.recent")} icon={Clock}>
-              {home.data.recent.length === 0 ? (
-                <Empty text={t("home.noRecent")} />
-              ) : (
-                <ul className="flex flex-col">
-                  {home.data.recent.map((item) => (
-                    <li key={item.id}>
-                      <ReferenceLink item={item} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-            <Section title={t("home.starred")} icon={Star}>
-              {home.data.starred.items.length === 0 && home.data.starred.spaces.length === 0 ? (
-                <Empty text={t("home.noStarred")} />
-              ) : (
-                <ul className="flex flex-col">
-                  {home.data.starred.spaces.map((space) => (
-                    <li key={space.id}>
-                      <Link
-                        to="/spaces/$spaceKey"
-                        params={{ spaceKey: space.key }}
-                        className="flex min-h-hit items-center gap-3 rounded-sm px-2 py-1 hover:bg-hover focus-visible:focus-ring"
-                      >
-                        <Layers aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
-                        <span className="min-w-0 flex-1 truncate">
-                          {space.name || t("spaces.personal.label")}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                  {home.data.starred.items.map((item) => (
-                    <li key={item.id}>
-                      <ReferenceLink item={item} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-            <SharedWithYou />
-            <div className="md:col-span-2">
-              <Section title={t("home.posts")} icon={Newspaper}>
-                <div className="flex flex-col gap-2">
-                  {home.data.posts.length === 0 ? (
-                    <Empty text={t("home.noPosts")} />
-                  ) : (
-                    <ul className="flex flex-col gap-2">
-                      {home.data.posts.map((post) => (
-                        <li key={post.id}>
-                          <Link
-                            to={postHref(post)}
-                            className="flex flex-col gap-1 rounded-sm px-2 py-2 hover:bg-hover focus-visible:focus-ring"
-                          >
-                            <span className="font-semibold">{post.title}</span>
-                            <span className="text-sm text-text-muted">
-                              {post.spaceName} · {post.publishedAt ? format.date(post.publishedAt) : ""}
-                            </span>
-                            {post.excerpt ? <span className="text-text">{post.excerpt}</span> : null}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <Link
-                    to="/blog"
-                    className="inline-flex min-h-hit items-center self-start px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
-                  >
-                    {t("home.allPosts")}
-                  </Link>
-                </div>
-              </Section>
-            </div>
-          </div>
-        ) : null}
-        {home.data &&
-        home.data.recent.length === 0 &&
-        home.data.tasks.length === 0 &&
-        home.data.mentions.length === 0 &&
-        home.data.posts.length === 0 &&
-        home.data.starred.items.length === 0 &&
-        upcoming.data?.length === 0 &&
-        oneOnOnes.data?.length === 0 ? (
-          <EmptyState
-            icon={Layers}
-            title={t("home.firstUseTitle")}
-            description={t("home.firstUseDescription")}
-            action={
-              <Link to="/spaces" className="text-accent underline focus-visible:focus-ring">
-                {t("home.openSpaces")}
-              </Link>
-            }
-          />
-        ) : null}
+        <PageHeader title={t("home.title")} />
+        {withoutOrganization ? <WithoutOrganizationNotice /> : firstStart ? <FirstStart /> : <HomeSections />}
       </div>
     </main>
   );

@@ -8,6 +8,7 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
+import { spaceDisplayName } from "./display-name.js";
 import { formerAdministratorCondition } from "./former-administrators.js";
 import { positionBetween } from "./fractional-index.js";
 import { lockSpaces } from "./items.js";
@@ -60,7 +61,7 @@ type EntryRow = {
   former_parent_entry_id: string | null;
 };
 
-const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, s.name as space_name, s.organization_id,
+const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name, s.organization_id,
   s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
   e.purging, e.deleted_at, e.deleted_by, e.stage_two_at,
   (select pe.id from tree_items root
@@ -549,24 +550,7 @@ export class TrashService {
       if (confirmation.trim() !== expected.trim()) {
         throw new SpaceError("confirmationMismatch", "Type the name of the space exactly to delete it");
       }
-      const id = uuidv7();
-      await tx.execute(sql`
-        insert into trash_entries (id, space_id, kind, title, stage, deleted_by, stage_two_at)
-        values (${id}, ${spaceId}, 'space', ${expected}, 2, ${actorIdOf(actor)}, now())`);
-      await tx.execute(sql`
-        insert into deleted_space_administrators (trash_entry_id, account_id)
-        select ${id}, a.id from accounts a join spaces s on s.id = ${spaceId}
-        where (s.personal_of = a.id and a.id = ${actorIdOf(actor)}) or (s.personal_of is null and exists (
-          select 1 from space_permissions g where g.space_id = s.id and g.role = 'admin' and (
-            (g.principal_kind = 'account' and g.principal_id = a.id)
-            or (g.principal_kind = 'group' and exists (select 1 from group_members gm
-              where gm.group_id = g.principal_id and gm.account_id = a.id
-                and (gm.expires_at is null or gm.expires_at > now())))
-            or (g.principal_kind = 'organizationMembers' and exists (select 1 from memberships m
-              where m.organization_id = s.organization_id and m.account_id = a.id and m.kind = 'member'
-                and (m.expires_at is null or m.expires_at > now())))
-            or (g.principal_kind = 'instanceUsers' and a.type = 'standard'))))`);
-      await tx.execute(sql`update spaces set deleted_at = now(), updated_at = now() where id = ${spaceId}`);
+      const id = await this.moveSpaceToTrash(tx, actor, spaceId, expected);
       await this.#audit.record(tx, {
         name: "space.deleted",
         actor,
@@ -574,13 +558,35 @@ export class TrashService {
         fields: { name: row.name, key: row.key, personal: row.personal },
         scope: auditScopeOf({ organizationId: row.organization_id }),
       });
-      await signalSpaceChange(tx, { spaceId, kind: "space", itemId: null });
-      await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
       return id;
     });
     const entry = await this.get(entryId);
     if (!entry) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
     return entry;
+  }
+
+  async moveSpaceToTrash(tx: Transaction, actor: Principal, spaceId: string, title: string): Promise<string> {
+    const id = uuidv7();
+    await tx.execute(sql`
+      insert into trash_entries (id, space_id, kind, title, stage, deleted_by, stage_two_at)
+      values (${id}, ${spaceId}, 'space', ${title}, 2, ${actorIdOf(actor)}, now())`);
+    await tx.execute(sql`
+      insert into deleted_space_administrators (trash_entry_id, account_id)
+      select ${id}, a.id from accounts a join spaces s on s.id = ${spaceId}
+      where (s.personal_of = a.id and a.id = ${actorIdOf(actor)}) or (s.personal_of is null and exists (
+        select 1 from space_permissions g where g.space_id = s.id and g.role = 'admin' and (
+          (g.principal_kind = 'account' and g.principal_id = a.id)
+          or (g.principal_kind = 'group' and exists (select 1 from group_members gm
+            where gm.group_id = g.principal_id and gm.account_id = a.id
+              and (gm.expires_at is null or gm.expires_at > now())))
+          or (g.principal_kind = 'organizationMembers' and exists (select 1 from memberships m
+            where m.organization_id = s.organization_id and m.account_id = a.id and m.kind = 'member'
+              and (m.expires_at is null or m.expires_at > now())))
+          or (g.principal_kind = 'instanceUsers' and a.type = 'standard'))))`);
+    await tx.execute(sql`update spaces set deleted_at = now(), updated_at = now() where id = ${spaceId}`);
+    await signalSpaceChange(tx, { spaceId, kind: "space", itemId: null });
+    await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
+    return id;
   }
 
   async deleteImmediately(actor: Principal, entryId: string, reason: string): Promise<void> {

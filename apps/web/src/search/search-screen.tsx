@@ -1,19 +1,18 @@
 import {
   Button,
-  Drawer,
+  Dialog,
   EmptyState,
   focusWhenShown,
   IconButton,
+  Menu,
   Notice,
-  PageHeader,
-  Popover,
   SegmentedControl,
   Skeleton,
   useToast,
 } from "@lunedo/ui";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { CircleHelp, Clock, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { Bookmark, CircleHelp, Clock, MoreHorizontal, RotateCcw, Search, SearchX, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -23,18 +22,16 @@ import { problemMessage } from "../errors/problem-message.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { useClearRecentSearches } from "./recent-searches.js";
-import { SavedSearchList, SaveSearchButton } from "./saved-searches.js";
+import { SavedSearchChips, SaveSearchDialog } from "./saved-searches.js";
 import {
   filtersOf,
   type RecentSearch,
   recentSearchesQuery,
-  type SearchResponse,
-  searchKeys,
-  searchPage,
+  searchResultsQuery,
   useForgetSearch,
   useRememberSearch,
 } from "./search-api.js";
-import { SearchFilterPanel } from "./search-filters.js";
+import { SearchFilterChips } from "./search-filters.js";
 import {
   activeFilterCount,
   clearedFilters,
@@ -58,16 +55,11 @@ const OPERATORS = [
   ["type:blog", "search.operators.type"],
 ] as const;
 
-function OperatorsHelp() {
+function OperatorsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation();
   return (
-    <Popover
-      label={t("search.operators.title")}
-      align="end"
-      trigger={<Button icon={CircleHelp}>{t("search.operators.button")}</Button>}
-    >
-      <div className="flex w-panel max-w-full flex-col gap-2">
-        <p className="font-semibold">{t("search.operators.title")}</p>
+    <Dialog open={open} onOpenChange={onOpenChange} title={t("search.operators.title")} size="sm">
+      <div className="flex flex-col gap-3">
         <table className="text-sm">
           <tbody>
             {OPERATORS.map(([example, key]) => (
@@ -80,7 +72,7 @@ function OperatorsHelp() {
         </table>
         <p className="text-sm text-text-muted">{t("search.operators.filtersHint")}</p>
       </div>
-    </Popover>
+    </Dialog>
   );
 }
 
@@ -92,7 +84,7 @@ export function SearchScreen() {
   const params = route.useSearch();
   const { query, filters } = fromSearchParams(params);
   const [text, setText] = useState(query);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [dialog, setDialog] = useState<"save" | "operators" | null>(null);
   const remember = useRememberSearch(organizationId);
   useDocumentTitle(query ? t("search.titleWithQuery", { query }) : t("search.title"));
 
@@ -105,10 +97,7 @@ export function SearchScreen() {
 
   const searchable = query.trim().length > 0 || activeFilterCount(filters) > 0;
   const results = useInfiniteQuery({
-    queryKey: searchKeys.page(organizationId ?? "", query, filters),
-    queryFn: ({ pageParam, signal }) => searchPage(organizationId ?? "", query, filters, pageParam, signal),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last: SearchResponse) => last.nextCursor,
+    ...searchResultsQuery(organizationId ?? "", query, filters),
     enabled: organizationId !== null && searchable,
     placeholderData: keepPreviousData,
     throwOnError: false,
@@ -144,55 +133,55 @@ export function SearchScreen() {
     );
   }
 
-  const panel = (
-    <SearchFilterPanel
-      facets={facets}
-      filters={filters}
-      onChange={(next) => show(query, next)}
-      footer={<SavedSearchList organizationId={organizationId} />}
-    />
-  );
-
   return (
     <SearchFrame>
-      <search>
-        <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-0 flex-1 basis-field">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-icon -translate-y-1/2 text-text-muted"
+      <search className="flex flex-col gap-3">
+        <form onSubmit={submit} className="relative">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-3 size-icon-md -translate-y-1/2 text-text-muted"
+          />
+          <input
+            type="search"
+            aria-label={t("search.field")}
+            placeholder={t("search.placeholder")}
+            title={t("search.placeholder")}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            className="h-control-lg w-full rounded-md border border-control-border bg-control pr-12 pl-10 text-content text-text placeholder:text-text-muted focus-visible:focus-ring"
+          />
+          <span className="absolute top-1/2 right-2 -translate-y-1/2">
+            <Menu
+              trigger={
+                <IconButton label={t("search.moreActions")} icon={MoreHorizontal} size="sm" variant="ghost" />
+              }
+              items={[
+                ...(searchable
+                  ? [
+                      {
+                        label: t("search.saved.saveAction"),
+                        icon: Bookmark,
+                        onSelect: () => setDialog("save"),
+                      },
+                    ]
+                  : []),
+                {
+                  label: t("search.operators.button"),
+                  icon: CircleHelp,
+                  onSelect: () => setDialog("operators"),
+                },
+              ]}
             />
-            <input
-              type="search"
-              aria-label={t("search.field")}
-              placeholder={t("search.placeholder")}
-              title={t("search.placeholder")}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              className="h-control-lg w-full rounded-md border border-control-border bg-control pr-3 pl-10 text-content text-text placeholder:text-text-muted focus-visible:focus-ring"
-            />
-          </div>
-          <Button type="submit" variant="primary">
-            {t("search.submit")}
-          </Button>
-          <OperatorsHelp />
-          {searchable ? (
-            <SaveSearchButton organizationId={organizationId} query={query} filters={filters} />
-          ) : null}
+          </span>
         </form>
+        <SavedSearchChips organizationId={organizationId} />
       </search>
-      <div className="flex items-start gap-8">
-        <aside aria-label={t("search.filters.title")} className="hidden w-field shrink-0 md:block">
-          {panel}
-        </aside>
-        <section aria-label={t("search.results")} className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-            <Button className="md:hidden" icon={SlidersHorizontal} onClick={() => setFiltersOpen(true)}>
-              {count > 0 ? t("search.filters.buttonWithCount", { count }) : t("search.filters.button")}
-            </Button>
-            <p aria-live="polite" className="min-w-0 flex-1 font-semibold">
-              {searchable && first ? t("search.total", { count: first.total }) : null}
-            </p>
+      <section aria-label={t("search.results")} className="flex min-w-0 flex-col gap-2">
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <SearchFilterChips facets={facets} filters={filters} onChange={(next) => show(query, next)} />
+          </div>
+          <span className="shrink-0">
             <SegmentedControl
               label={t("search.sort.label")}
               value={filters.sort}
@@ -202,71 +191,88 @@ export function SearchScreen() {
                 { value: "newest", label: t("search.sort.newest") },
               ]}
             />
-          </div>
-          {first?.index.building ? (
-            <div className="pt-3">
-              <Notice variant="info" title={t("search.indexBuilding")}>
-                {t("search.indexBuildingDescription")}
-              </Notice>
-            </div>
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 border-b border-border pb-2 text-sm">
+          <p aria-live="polite" className="text-text-muted">
+            {searchable && first ? t("search.total", { count: first.total }) : null}
+          </p>
+          {count > 0 ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={RotateCcw}
+              onClick={() => show(query, clearedFilters(filters))}
+            >
+              {t("search.filters.reset")}
+            </Button>
           ) : null}
-          {!searchable ? (
-            <FirstUse
-              organizationId={organizationId}
-              onSearch={(entry) => show(entry.query, filtersOf(entry.filters))}
-            />
-          ) : results.isError && !results.data ? (
-            <div className="pt-4">
-              <LoadError what={t("search.failed")} error={results.error} onRetry={() => results.refetch()} />
+        </div>
+        {first?.index.building ? (
+          <div className="pt-3">
+            <Notice variant="info" title={t("search.indexBuilding")}>
+              {t("search.indexBuildingDescription")}
+            </Notice>
+          </div>
+        ) : null}
+        {!searchable ? (
+          <FirstUse
+            organizationId={organizationId}
+            onSearch={(entry) => show(entry.query, filtersOf(entry.filters))}
+          />
+        ) : results.isError && !results.data ? (
+          <div className="pt-4">
+            <LoadError what={t("search.failed")} error={results.error} onRetry={() => results.refetch()} />
+          </div>
+        ) : results.isPending ? (
+          <ResultSkeleton />
+        ) : first && first.total === 0 ? (
+          <NoResults
+            query={query}
+            filters={filters}
+            suggestion={first.suggestion}
+            onShow={(nextQuery, nextFilters) => show(nextQuery, nextFilters)}
+          />
+        ) : (
+          <>
+            <div
+              ref={list}
+              className={results.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+            >
+              {hits.map((hit) => (
+                <SearchResult key={`${hit.type}:${hit.id}`} hit={hit} />
+              ))}
             </div>
-          ) : results.isPending ? (
-            <ResultSkeleton />
-          ) : first && first.total === 0 ? (
-            <NoResults
-              query={query}
-              filters={filters}
-              suggestion={first.suggestion}
-              onShow={(nextQuery, nextFilters) => show(nextQuery, nextFilters)}
-            />
-          ) : (
-            <>
-              <div
-                ref={list}
-                className={results.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
-              >
-                {hits.map((hit) => (
-                  <SearchResult key={`${hit.type}:${hit.id}`} hit={hit} />
-                ))}
+            {results.isFetchNextPageError ? (
+              <div className="pt-4">
+                <LoadError
+                  what={t("search.moreFailed")}
+                  error={results.error}
+                  onRetry={() => results.fetchNextPage()}
+                />
               </div>
-              {results.isFetchNextPageError ? (
-                <div className="pt-4">
-                  <LoadError
-                    what={t("search.moreFailed")}
-                    error={results.error}
-                    onRetry={() => results.fetchNextPage()}
-                  />
-                </div>
-              ) : null}
-              {results.hasNextPage ? (
-                <div className="flex justify-center pt-4">
-                  <Button loading={results.isFetchingNextPage} onClick={() => void loadMore()}>
-                    {t("search.loadMore")}
-                  </Button>
-                </div>
-              ) : null}
-            </>
-          )}
-        </section>
-      </div>
-      <Drawer
-        open={filtersOpen}
-        onOpenChange={setFiltersOpen}
-        title={t("search.filters.title")}
-        side="right"
-        size="panel"
-      >
-        {panel}
-      </Drawer>
+            ) : null}
+            {results.hasNextPage ? (
+              <div className="flex justify-center pt-4">
+                <Button loading={results.isFetchingNextPage} onClick={() => void loadMore()}>
+                  {t("search.loadMore")}
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </section>
+      <SaveSearchDialog
+        organizationId={organizationId}
+        query={query}
+        filters={filters}
+        open={dialog === "save"}
+        onOpenChange={(open) => setDialog(open ? "save" : null)}
+      />
+      <OperatorsDialog
+        open={dialog === "operators"}
+        onOpenChange={(open) => setDialog(open ? "operators" : null)}
+      />
     </SearchFrame>
   );
 }
@@ -280,8 +286,8 @@ function SearchFrame({ children }: { children: ReactNode }) {
       tabIndex={0}
       className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
     >
-      <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
-        <PageHeader title={t("search.title")} icon={Search} />
+      <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
+        <h1 className="sr-only">{t("search.title")}</h1>
         {children}
       </div>
     </main>
@@ -346,7 +352,7 @@ function FirstUse({
                   onClick={() => onSearch(entry)}
                   className="flex min-h-hit min-w-0 flex-1 items-center gap-2 rounded-sm px-2 text-left hover:bg-hover focus-visible:focus-ring"
                 >
-                  <Clock aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+                  <Clock aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
                   <span className="truncate" title={entry.query}>
                     {entry.query}
                   </span>

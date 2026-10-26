@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Outlet, useLocation, useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { useMaintenanceUpdates } from "./api/maintenance.js";
 import { setSignedOutHandler } from "./api/request.js";
 import { PreferencesProvider } from "./preferences/preferences-provider.js";
@@ -25,6 +25,7 @@ export function RootLayout() {
   const queryClient = useQueryClient();
   const location = useLocation();
   useMaintenanceUpdates();
+  useLayoutEffect(() => document.getElementById("boot-shell")?.remove(), []);
 
   useEffect(() => {
     setSignedOutHandler(() => {

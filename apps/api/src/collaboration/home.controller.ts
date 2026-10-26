@@ -28,6 +28,7 @@ const exampleReference = {
   spaceId: exampleTask.item.spaceId,
   spaceKey: exampleTask.item.spaceKey,
   spaceName: exampleTask.item.spaceName,
+  mySpace: false,
 };
 const exampleStarred = {
   items: [{ ...exampleReference, starredAt: "2026-10-06T08:00:00.000Z" }],

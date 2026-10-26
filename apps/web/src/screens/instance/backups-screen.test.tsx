@@ -120,7 +120,7 @@ function api(
       body: { instance: permissions, organization: [], grantableAreas: { instance: {}, organization: {} } },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/storage": () => ({ body: { level: 0 } }),
     "GET /api/v1/instance/backups": () => ({ body: overview() }),
     "GET /api/v1/instance/backups/files": () => ({ body: files() }),
@@ -294,5 +294,14 @@ describe("the backup settings", () => {
     await renderAt("/settings/instance/storage");
     expect(await screen.findByText("Backups are not set up")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open the backup settings" })).toBeTruthy();
+  });
+
+  it("does not repeat the warning as a banner on the backup settings", async () => {
+    api({
+      "GET /api/v1/instance/backups": () => ({ body: overview({ target: null, warning: "noTarget" }) }),
+    });
+    await renderAt("/settings/instance/backups");
+    expect(await screen.findByRole("heading", { name: "Backups", level: 1 })).toBeTruthy();
+    expect(screen.queryByText("Backups are not set up")).toBeNull();
   });
 });

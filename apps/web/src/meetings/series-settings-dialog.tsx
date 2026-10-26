@@ -1,10 +1,10 @@
 import { Button, Combobox, type ComboboxItem, Dialog, Field, Input, Select, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { peopleLoader } from "../collaboration/people.js";
+import { peopleLoaderFor } from "../collaboration/people.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { meetingKeys, type Series } from "./queries.js";
 import { choiceOf, type Rhythm } from "./rhythm.js";
@@ -44,6 +44,7 @@ export function SeriesSettingsDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const membersLoader = useMemo(() => peopleLoaderFor({ spaceId: series.spaceId }), [series.spaceId]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [name, setName] = useState(series.title);
@@ -154,7 +155,7 @@ export function SeriesSettingsDialog({
         <Field label={t("meetings.create.members")} hint={t("meetings.create.membersHint")}>
           <Combobox
             multiple
-            load={peopleLoader}
+            load={membersLoader}
             value={members.map((member) => member.value)}
             selectedItems={members}
             onValueChange={(_values, items) => setMembers(items)}
@@ -177,7 +178,11 @@ export function SeriesSettingsDialog({
             }
           />
         </Field>
-        <Field label={t("meetings.reminder.label")} hint={t("meetings.reminder.hint")}>
+        <Field
+          label={t("meetings.reminder.label")}
+          hint={t("meetings.reminder.hint")}
+          help={t("meetings.reminder.help")}
+        >
           <Select
             value={reminder}
             onValueChange={(value) => {

@@ -11,6 +11,7 @@ import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { SetupActionContext, SetupActionResult, SetupRegistry, SetupStep } from "./framework.js";
+import { probeAnswer } from "./reachability.js";
 import { setupSessions, setupSteps } from "./schema.js";
 
 const SESSION_IDLE_MS = 60 * 60 * 1000;
@@ -187,6 +188,11 @@ export class SetupService {
     return row?.origin ?? null;
   }
 
+  async probeAnswer(challenge: string): Promise<string | null> {
+    if (await this.isComplete()) return null;
+    return probeAnswer(this.#database, challenge);
+  }
+
   async #states(): Promise<Map<string, { state: Record<string, unknown>; completed: boolean }>> {
     const rows = await this.#database.select().from(setupSteps);
     return new Map(
@@ -206,7 +212,11 @@ export class SetupService {
         id: step.id,
         required: step.required,
         completed: stored?.completed ?? false,
-        details: await step.describe({ request, state: stored?.state ?? {} }),
+        details: await step.describe({
+          request,
+          state: stored?.state ?? {},
+          completed: stored?.completed ?? false,
+        }),
       });
     }
     return { steps, ready: steps.every((step) => !step.required || step.completed) };
@@ -277,8 +287,8 @@ export class SetupService {
     }
   }
 
-  async finish(): Promise<void> {
-    await this.locked(async (tx) => {
+  async finish<T>(afterComplete: (tx: Transaction) => Promise<T>): Promise<T> {
+    return this.locked(async (tx) => {
       if (await this.#completedIn(tx)) throw new SetupNotFoundError();
       const completed = new Set(
         (
@@ -289,6 +299,7 @@ export class SetupService {
         throw new SetupStepError("setupNotReady", "Required setup steps are not completed");
       }
       await this.markComplete(tx, "assistant");
+      return afterComplete(tx);
     });
   }
 

@@ -1,5 +1,9 @@
 # Data files
 
+## portal/
+
+`favicon.svg` and `favicon.ico`: the Lunedo favicon of knowledge base portals without a logo of their own, served by the instance and written into static exports. They are copies of the files in `apps/web/public`; a test keeps them identical.
+
 ## common-passwords.txt
 
 Passwords that are rejected because they are too common. The list contains the entries of at least eight characters from `xato-net-10-million-passwords-100000.txt` in [SecLists](https://github.com/danielmiessler/SecLists) (`Passwords/Common-Credentials`), lowercased and without duplicates, in their original order.

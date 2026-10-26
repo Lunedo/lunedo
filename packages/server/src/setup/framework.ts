@@ -27,6 +27,7 @@ export interface SetupStep {
   describe(context: {
     request: SetupActionContext["request"];
     state: Record<string, unknown>;
+    completed: boolean;
   }): Promise<unknown>;
   actions: Record<string, SetupAction<unknown>>;
 }

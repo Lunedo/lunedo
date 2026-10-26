@@ -102,7 +102,7 @@ export function ReferencedDiagram({
   const content = (
     <>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2 text-sm">
-        <Network aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        <Network aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         <span className="font-semibold">{t("editor.drawioReference.label")}</span>
         <span className="flex-1" />
         {data ? (

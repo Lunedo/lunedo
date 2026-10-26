@@ -70,7 +70,7 @@ test("creates a page from a template and publishes it while readers keep the pub
   await gallery.getByRole("button", { name: "Create from Meeting notes" }).click();
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
-  await expect(page.getByText("Not published yet").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
   const pagePath = new URL(page.url()).pathname;
 
   await editor(page).click();
@@ -84,7 +84,8 @@ test("creates a page from a template and publishes it while readers keep the pub
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("textbox", { name: "What changed?" }).fill("First version");
   await page.getByRole("button", { name: "Publish version 1" }).click();
-  await expect(page.getByText("Published as version 1. Readers see it now.").first()).toBeVisible();
+  await expect(page.getByText("Page published. Readers now see it as version 1.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
 
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
@@ -95,13 +96,13 @@ test("creates a page from a template and publishes it while readers keep the pub
   await expect(page.getByRole("status").getByText("Saved to draft", { exact: true })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText(/changes? since version 1/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Update", exact: true })).toBeVisible();
 
   const { page: other } = await organization.signIn(reader);
   await other.goto(pagePath);
   await expect(other.getByText("First published sentence.")).toBeVisible();
   await expect(other.getByText("Secret draft sentence.")).toHaveCount(0);
-  await expect(other.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(other.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
   await expectAccessible(other, "read view of a published page");
 });
 
@@ -114,12 +115,15 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await page.goto(`${pagePath}?edit=true`);
   await expect(editor(page)).toBeEditable();
   await expect(editor(page)).toHaveAttribute("contenteditable", "true");
-  await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await page.getByRole("button", { name: "Publish version 2" }).click();
-  await expect(page.getByText("Published as version 2. Readers see it now.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Update", exact: true }).click();
+  await expect(page.getByText("Updated · version 2").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await page.goto(`${pagePath}?edit=true`);
+  await expect(editor(page)).toHaveAttribute("contenteditable", "true");
 
-  await page.getByRole("button", { name: "Version history" }).first().click();
-  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "More editor actions" }).click();
+  await page.getByRole("menuitem", { name: "Versions" }).click();
+  await expect(page.getByRole("heading", { name: "Versions", level: 1 })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Changes" }).locator('[data-change="added"], ins').first(),
   ).toContainText("Secret draft");
@@ -128,7 +132,7 @@ test("compares versions and restores an earlier one into the draft", async ({ pa
   await expect(page.getByRole("region", { name: "Version 1" })).toBeVisible();
   await expectAccessible(page, "version comparison side by side");
   await page.getByRole("button", { name: /^Version 1/ }).click();
-  await page.getByRole("button", { name: "Restore version 1" }).click();
+  await page.getByRole("button", { name: "Restore this version" }).click();
   const dialog = page.getByRole("dialog", { name: "Restore version 1?" });
   await expectAccessible(page, "restore dialog");
   await dialog.getByRole("button", { name: "Restore version 1" }).click();
@@ -155,10 +159,10 @@ test("deletes a page to the trash, restores it and archives it", async ({ page, 
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Archive" }).click();
   await expect(page.getByText("Archived", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
   await expectAccessible(page, "archived page");
   await page.getByRole("button", { name: "Bring back from the archive" }).first().click();
-  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
 });
 
 test("passes the accessibility check on the new settings screens", async ({ page, organization }) => {
@@ -177,8 +181,9 @@ test("passes the accessibility check on the new settings screens", async ({ page
   await expectAccessible(page, "organization pages and trash");
   await page.goto(`/settings/organizations/${organization.id}/templates`);
   await expectAccessible(page, "organization templates");
-  await page.goto("/settings/instance/content");
-  await expectAccessible(page, "instance pages and trash");
+  await page.goto("/settings/instance/security");
+  await expect(page.getByRole("heading", { name: "Policies", level: 1 })).toBeVisible();
+  await expectAccessible(page, "instance policies");
   await page.goto("/settings/instance/templates");
   await expectAccessible(page, "instance templates");
 });

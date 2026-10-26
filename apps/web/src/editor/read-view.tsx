@@ -21,6 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
+import { ThreadCounters } from "../collaboration/inline-threads.js";
 import { reportFilters, TaskReport } from "../collaboration/task-report.js";
 import { ReferencedDiagram } from "../diagrams/referenced-diagram.js";
 import type { AttachmentUrl } from "../files/attachment-source.js";
@@ -69,6 +70,7 @@ import {
 } from "./tabs-behavior.js";
 import { TemplateButton, templateButtonFromAttrs } from "./template-button.js";
 import "./editor.css";
+import { MEDIA, mediaOf } from "./media.js";
 
 export const FOLLOW_PATH = "/follow-link";
 
@@ -184,6 +186,9 @@ export function applyWidths(root: HTMLElement): void {
   for (const column of Array.from(root.querySelectorAll<HTMLElement>(".ld-column[data-width]"))) {
     column.style.setProperty("--column-width", `${Number(column.dataset.width)}%`);
   }
+  for (const image of Array.from(root.querySelectorAll<HTMLElement>(".ld-image[data-width]"))) {
+    image.style.setProperty("--image-width", `${Number(image.dataset.width)}%`);
+  }
   for (const table of Array.from(root.querySelectorAll<HTMLTableElement>(".ld-table table"))) {
     const firstRow = table.rows[0];
     if (!firstRow) continue;
@@ -208,7 +213,7 @@ export function applyWidths(root: HTMLElement): void {
 
 export interface ReadViewAttachments {
   url?: AttachmentUrl;
-  onOpen?: (id: string) => void;
+  onOpen?: (id: string, siblings?: readonly string[]) => void;
 }
 
 export interface ReadViewCollaboration {
@@ -219,6 +224,7 @@ export interface ReadViewCollaboration {
   activeThread?: string | null;
   onThreadClick?: (threadId: string) => void;
   onCommentSelection?: (anchor: TextAnchor) => void;
+  onMarkedThreads?: (threadIds: string[]) => void;
   spaceId?: string | null;
 }
 
@@ -285,6 +291,25 @@ export function PageReadView({
   useLayoutEffect(() => {
     rememberReferences(references);
   }, [references]);
+
+  const canOpen = Boolean(openAttachment);
+  useLayoutEffect(() => {
+    const root = container.current;
+    if (!root || html === null || !canOpen) return;
+    for (const figure of Array.from(root.querySelectorAll<HTMLElement>(".ld-image[data-attachment-id]"))) {
+      const image = figure.querySelector("img");
+      const label = t("files.lightbox.open", { name: image?.alt || t("editor.readView.image") });
+      const link = figure.querySelector<HTMLAnchorElement>(":scope > .ld-image-full");
+      if (link) {
+        link.setAttribute("aria-label", label);
+        link.removeAttribute("title");
+      } else if (image && image.parentElement === figure) {
+        image.tabIndex = 0;
+        image.setAttribute("role", "button");
+        image.setAttribute("aria-label", label);
+      }
+    }
+  }, [html, canOpen, t]);
 
   useLayoutEffect(() => {
     const root = container.current;
@@ -372,10 +397,11 @@ export function PageReadView({
     }
     if (handleTabsClick(target)) return;
     if (target.closest(".ld-file-preview-slot")) return;
-    const file = target.closest<HTMLElement>(".ld-file[data-attachment-id]");
-    if (file && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+    const media = target.closest<HTMLElement>(MEDIA);
+    if (media && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
-      openAttachment(file.dataset.attachmentId ?? "");
+      const root = container.current;
+      openAttachment(media.dataset.attachmentId ?? "", root ? mediaOf(root) : []);
       return;
     }
     const thread = target.closest<HTMLElement>("[data-thread-id]")?.dataset.threadId;
@@ -413,6 +439,41 @@ export function PageReadView({
     }
   };
 
+  const onThreadClick = collaboration.onThreadClick;
+  const threadLabel = useRef(t);
+  threadLabel.current = t;
+  useLayoutEffect(() => {
+    const root = container.current;
+    if (!root || html === null || !onThreadClick) return;
+    const marks = Array.from(root.querySelectorAll<HTMLElement>("[data-thread-id]")).filter((mark) =>
+      openThreads.includes(mark.dataset.threadId ?? ""),
+    );
+    for (const mark of marks) {
+      mark.tabIndex = 0;
+      mark.setAttribute("role", "button");
+      mark.setAttribute(
+        "aria-label",
+        threadLabel.current("comments.openThread", { quote: mark.textContent ?? "" }),
+      );
+    }
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      const mark = (event.target as HTMLElement).closest<HTMLElement>("[data-thread-id]");
+      const id = mark?.dataset.threadId;
+      if (!id || !openThreads.includes(id) || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      onThreadClick(id);
+    };
+    root.addEventListener("keydown", onKeyDown);
+    return () => {
+      root.removeEventListener("keydown", onKeyDown);
+      for (const mark of marks) {
+        mark.removeAttribute("tabindex");
+        mark.removeAttribute("role");
+        mark.removeAttribute("aria-label");
+      }
+    };
+  }, [html, openThreads, onThreadClick]);
+
   const onCommentSelection = collaboration.onCommentSelection;
   useEffect(() => {
     if (!onCommentSelection) return;
@@ -446,16 +507,33 @@ export function PageReadView({
     <div className="relative">
       <CommentHighlights scope={`[data-comment-scope="${scope}"]`} open={openThreads} active={activeThread} />
       {/* biome-ignore lint/a11y/noStaticElementInteractions: clicks come from the links and checkboxes inside, which are keyboard operable */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the links and checkboxes inside handle their own keyboard input */}
       <div
         ref={container}
         className="ld-content ld-read-view"
         data-comment-scope={scope}
         onClick={(event) => void onClick(event)}
-        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => handleTabsKey(event)}
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+          const image = (event.target as HTMLElement).closest<HTMLElement>(
+            ".ld-image[data-attachment-id] > img",
+          );
+          if (image && openAttachment && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            const root = container.current;
+            openAttachment(image.parentElement?.dataset.attachmentId ?? "", root ? mediaOf(root) : []);
+            return;
+          }
+          handleTabsKey(event);
+        }}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
         dangerouslySetInnerHTML={{ __html: html }}
       />
+      {onThreadClick && openThreads.length > 0 ? (
+        <ThreadCounters
+          openThreads={openThreads}
+          onOpen={onThreadClick}
+          {...(collaboration.onMarkedThreads ? { onMarked: collaboration.onMarkedThreads } : {})}
+        />
+      ) : null}
       {selection && onCommentSelection ? (
         <div className="absolute z-10" style={{ top: selection.top, left: selection.left }}>
           <Button

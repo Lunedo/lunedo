@@ -72,6 +72,218 @@ const SCRIPT = `(() => {
       if (open) panel.querySelector("input")?.focus();
     });
   }
+  const themeMenu = document.querySelector("[data-theme-menu]");
+  if (themeMenu) {
+    const stored = () => { try { return localStorage.getItem("lunedo.portal.theme") || "system"; } catch { return "system"; } };
+    const mark = () => {
+      for (const choice of themeMenu.querySelectorAll("[data-theme-choice]"))
+        choice.setAttribute("aria-pressed", String(choice.dataset.themeChoice === stored()));
+    };
+    themeMenu.hidden = false;
+    mark();
+    for (const choice of themeMenu.querySelectorAll("[data-theme-choice]")) {
+      choice.addEventListener("click", () => {
+        const value = choice.dataset.themeChoice;
+        try {
+          if (value === "system") localStorage.removeItem("lunedo.portal.theme");
+          else localStorage.setItem("lunedo.portal.theme", value);
+        } catch {}
+        if (value === "system") delete document.documentElement.dataset.theme;
+        else document.documentElement.dataset.theme = value;
+        mark();
+        themeMenu.open = false;
+        themeMenu.querySelector("summary")?.focus();
+      });
+    }
+  }
+  for (const button of document.querySelectorAll("[data-tree-toggle]")) {
+    button.hidden = false;
+    button.addEventListener("click", () => {
+      const list = document.getElementById(button.getAttribute("aria-controls"));
+      if (!list) return;
+      const open = list.hidden;
+      list.hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
+      button.setAttribute("aria-label", open ? button.dataset.collapse : button.dataset.expand);
+    });
+  }
+  const drawer = document.querySelector("[data-tree-drawer]");
+  const tree = document.getElementById("ptree");
+  if (drawer && tree) {
+    drawer.hidden = false;
+    drawer.addEventListener("click", () => {
+      const open = !tree.classList.contains("open");
+      tree.classList.toggle("open", open);
+      drawer.setAttribute("aria-expanded", String(open));
+      const label = drawer.querySelector("span");
+      if (label) label.textContent = open ? drawer.dataset.closeLabel : drawer.dataset.openLabel;
+    });
+  }
+  const quick = document.querySelector("[data-quick]");
+  if (quick) {
+    const input = quick.querySelector("input");
+    const list = quick.querySelector("[role=listbox]");
+    const message = quick.querySelector(".qs-msg");
+    const all = quick.querySelector("[data-quick-all]");
+    let opener = null;
+    let options = [];
+    let active = -1;
+    let request = 0;
+    let timer;
+    const select = (index) => {
+      options.forEach((option, at) => option.setAttribute("aria-selected", String(at === index)));
+      active = index;
+      const chosen = options[index];
+      if (chosen) {
+        input.setAttribute("aria-activedescendant", chosen.id);
+        chosen.scrollIntoView({ block: "nearest" });
+      } else input.removeAttribute("aria-activedescendant");
+    };
+    const close = () => {
+      quick.hidden = true;
+      document.body.style.overflow = "";
+      opener?.focus();
+    };
+    const open = (from) => {
+      opener = from || document.activeElement;
+      quick.hidden = false;
+      document.body.style.overflow = "hidden";
+      input.focus();
+      input.select();
+    };
+    const count = () => {
+      const query = input.value.trim();
+      if (!query) return;
+      fetch(quick.dataset.endpoint + "/count", {
+        method: "POST",
+        keepalive: true,
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ q: query }),
+      }).catch(() => {});
+    };
+    const option = (entry, index) => {
+      const item = document.createElement("div");
+      item.setAttribute("role", "option");
+      item.id = "qs-" + index;
+      item.dataset.href = entry.href;
+      const text = document.createElement("span");
+      text.className = "g";
+      const title = document.createElement("b");
+      title.textContent = entry.title;
+      title.style.fontWeight = "500";
+      const detail = document.createElement("span");
+      detail.textContent = [entry.type, entry.path].filter(Boolean).join(" · ");
+      text.append(title);
+      if (detail.textContent) text.append(detail);
+      item.append(text);
+      item.addEventListener("click", () => { count(); location.href = entry.href; });
+      return item;
+    };
+    const group = (label) => {
+      const heading = document.createElement("div");
+      heading.className = "grp";
+      heading.setAttribute("role", "presentation");
+      heading.textContent = label;
+      return heading;
+    };
+    const say = (text) => {
+      message.textContent = text;
+      message.hidden = !text;
+    };
+    const render = (query, data) => {
+      const nodes = [];
+      options = [];
+      let index = 0;
+      for (const [label, entries] of [[quick.dataset.topics, data.topics], [quick.dataset.articles, data.articles]]) {
+        if (entries.length === 0) continue;
+        nodes.push(group(label));
+        for (const entry of entries) {
+          const node = option(entry, index++);
+          options.push(node);
+          nodes.push(node);
+        }
+      }
+      list.replaceChildren(...nodes);
+      input.setAttribute("aria-expanded", String(options.length > 0));
+      say(options.length === 0 ? quick.dataset.none.replace("{query}", query) : "");
+      all.hidden = data.total === 0;
+      all.href = data.all;
+      all.textContent = data.total === 1 ? quick.dataset.allOne : quick.dataset.allOther.replace("{count}", String(data.total));
+      select(options.length > 0 ? 0 : -1);
+    };
+    const run = async () => {
+      const query = input.value.trim();
+      const id = ++request;
+      if (!query) {
+        list.replaceChildren();
+        options = [];
+        all.hidden = true;
+        say("");
+        return;
+      }
+      try {
+        const response = await fetch(quick.dataset.endpoint + "?q=" + encodeURIComponent(query), {
+          credentials: "same-origin",
+          headers: { accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const data = await response.json();
+        if (id === request) render(query, data);
+      } catch {
+        if (id !== request) return;
+        list.replaceChildren();
+        options = [];
+        all.hidden = true;
+        say(quick.dataset.failed);
+      }
+    };
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(run, 150);
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown" && options.length > 0) {
+        event.preventDefault();
+        select((active + 1) % options.length);
+      } else if (event.key === "ArrowUp" && options.length > 0) {
+        event.preventDefault();
+        select((active - 1 + options.length) % options.length);
+      } else if (event.key === "Enter" && options[active]) {
+        event.preventDefault();
+        count();
+        location.href = options[active].dataset.href;
+      }
+    });
+    quick.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
+      } else if (event.key === "Tab") {
+        const focusable = [...quick.querySelectorAll("input,button,a")].filter((node) => !node.hidden);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    });
+    quick.addEventListener("click", (event) => { if (event.target === quick) close(); });
+    quick.querySelector("[data-quick-close]")?.addEventListener("click", close);
+    for (const trigger of document.querySelectorAll("[data-quick-open]")) {
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        open(trigger);
+      });
+    }
+    document.addEventListener("keydown", (event) => {
+      const typing = event.target instanceof HTMLElement && event.target.matches("input,textarea,select,[contenteditable]");
+      if ((event.key === "k" && (event.ctrlKey || event.metaKey)) || (event.key === "/" && !typing)) {
+        if (!quick.hidden) return;
+        event.preventDefault();
+        open(null);
+      }
+    });
+  }
   for (const form of document.querySelectorAll("form[data-search]")) {
     form.addEventListener("submit", (event) => {
       const input = form.querySelector("input[name=q]");
@@ -172,6 +384,15 @@ function hashed(content: string): string {
 
 export const portalCss = `${fontFaces()}\n${portalStyle}`;
 export const portalScript = SCRIPT;
+export const portalThemeScript = `(() => {
+  const root = document.documentElement;
+  root.classList.add("js");
+  try {
+    const theme = localStorage.getItem("lunedo.portal.theme");
+    if (theme === "light" || theme === "dark") root.dataset.theme = theme;
+  } catch {}
+})();
+`;
 export const staticSearchScript = `(() => {
   const root = document.querySelector("[data-static-search]");
   if (!root || typeof MiniSearch === "undefined") return;
@@ -282,4 +503,5 @@ export const staticSearchScript = `(() => {
 export const PORTAL_ASSETS = {
   style: `portal-${hashed(portalCss)}.css`,
   script: `portal-${hashed(portalScript)}.js`,
+  theme: `portal-theme-${hashed(portalThemeScript)}.js`,
 };

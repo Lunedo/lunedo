@@ -1,14 +1,18 @@
 import { Button, type CommandGroup, type CommandItem, CommandPalette, Highlighted, Kbd } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { Bookmark, Clock, Globe, History, Layers, Search, SearchX, UserRound, X } from "lucide-react";
+import { Bookmark, Clock, FilePlus, Globe, History, Layers, SearchX, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounced } from "../components/table-state.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { useFormat } from "../preferences/preferences-provider.js";
+import { useCommandGroups } from "../shell/command-groups.js";
 import { isApplePlatform } from "../shell/keyboard.js";
+import { useShell } from "../shell/shell.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { itemHref } from "../spaces/item-paths.js";
+import { useSpaceDisplayName } from "../spaces/space-badge.js";
 import { spaceByKeyQuery } from "../spaces/space-queries.js";
 import { useClearRecentSearches } from "./recent-searches.js";
 import {
@@ -68,6 +72,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const router = useRouter();
   const organization = useOrganizationState();
   const space = useCurrentSpace();
+  const spaceName = useSpaceDisplayName();
   const organizationId = space?.organizationId ?? organization.organizationId;
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<"space" | "all">("space");
@@ -76,7 +81,15 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const debounced = useDebounced(typed, QUICK_DEBOUNCE_MS);
   const settled = debounced === typed;
   const remember = useRememberSearch(organizationId);
+  const format = useFormat();
+  const commandGroups = useCommandGroups(query, () => onOpenChange(false));
+  const linkGroups = commandGroups.filter((group) =>
+    group.items.some((item) => item.id === "confluence-link"),
+  );
+  const otherCommands = commandGroups.filter((group) => !linkGroups.includes(group));
   const clearRecent = useClearRecentSearches(organizationId ?? "");
+  const createTarget = useShell().spaceCreateTarget;
+  const canCreatePage = createTarget?.kinds.includes("page") ?? false;
 
   const results = useQuery({
     ...quickSearchQuery(organizationId ?? "", debounced, inSpace ? space.id : null),
@@ -170,7 +183,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
       });
       if (items.length > 0)
         list.push({ heading: t("search.quick.recentlyViewed"), items: items.slice(0, 5) });
-      return list;
+      return [...linkGroups, ...list, ...otherCommands];
     }
 
     const hits = current?.results ?? [];
@@ -181,7 +194,11 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         {
           id: `hit:${hit.type}:${hit.id}`,
           label: hitTitle(t, hit),
-          description: withPath ? hitPath(t, hit).join(" › ") : <Highlighted parts={hit.excerpt} />,
+          description: withPath ? (
+            `${hitPath(t, hit).join(" › ")} · ${format.calendarDate(hit.updatedAt)}`
+          ) : (
+            <Highlighted parts={hit.excerpt} />
+          ),
           icon: hitIcon(hit),
           href,
           onSelect: () => go(href),
@@ -191,12 +208,37 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     const content = hits.filter((hit) => hit.type !== "comment");
     const local = inSpace ? content.filter((hit) => hit.space?.id === space.id) : content;
     const elsewhere = inSpace ? content.filter((hit) => hit.space?.id !== space.id) : [];
+    const createItems: CommandItem[] =
+      createTarget && canCreatePage
+        ? [
+            {
+              id: "create:page",
+              label: t(
+                createTarget.knowledgeBase ? "search.quick.createArticle" : "search.quick.createPage",
+                {
+                  title: typed,
+                },
+              ),
+              description: t("search.quick.createIn", { space: createTarget.name }),
+              icon: FilePlus,
+              onSelect: () => createTarget.create("page", typed),
+            },
+          ]
+        : [];
+    const commandHeading = t("commands.commands");
+    const commandList: CommandGroup[] = otherCommands.some((group) => group.heading === commandHeading)
+      ? otherCommands.map((group) =>
+          group.heading === commandHeading ? { ...group, items: [...createItems, ...group.items] } : group,
+        )
+      : [{ heading: commandHeading, items: createItems }, ...otherCommands];
     const list: CommandGroup[] = [
+      ...linkGroups,
+      ...commandList,
       {
         heading: inSpace
-          ? t("search.quick.inSpace", { space: space.name || t("spaces.personal.label") })
+          ? t("search.quick.inSpace", { space: spaceName(space) })
           : t("search.quick.pagesAndPosts"),
-        items: local.flatMap((hit) => hitItem(hit, false)),
+        items: local.flatMap((hit) => hitItem(hit, true)),
       },
       {
         heading: t("search.quick.comments"),
@@ -204,6 +246,22 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
       },
       { heading: t("search.quick.otherSpaces"), items: elsewhere.flatMap((hit) => hitItem(hit, true)) },
     ];
+    if (settled && !spaces.isPlaceholderData) {
+      list.push({
+        heading: t("search.quick.spaces"),
+        items: (spaces.data?.items ?? []).map((entry) => {
+          const href = `/spaces/${encodeURIComponent(entry.key)}`;
+          return {
+            id: `space:${entry.id}`,
+            label: entry.displayName || entry.key,
+            description: entry.key,
+            icon: Layers,
+            href,
+            onSelect: () => go(href),
+          };
+        }),
+      });
+    }
     if (settled && !people.isPlaceholderData) {
       list.push({
         heading: t("search.quick.people"),
@@ -222,23 +280,6 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
           }),
       });
     }
-    if (settled && !spaces.isPlaceholderData) {
-      list.push({
-        heading: t("search.quick.spaces"),
-        items: (spaces.data?.items ?? []).map((entry) => {
-          const href = `/spaces/${encodeURIComponent(entry.key)}`;
-          return {
-            id: `space:${entry.id}`,
-            label: entry.name || entry.key,
-            description: entry.key,
-            icon: Layers,
-            href,
-            onSelect: () => go(href),
-          };
-        }),
-      });
-    }
-    const all = searchPageHref(typed, noFilters);
     const more: CommandItem[] = [];
     if (inSpace && current && local.length === 0) {
       more.push({
@@ -249,16 +290,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         onSelect: () => setScope("all"),
       });
     }
-    more.push({
-      id: "search:all",
-      label: t("search.quick.searchAll", { query: typed }),
-      description: t("search.quick.searchAllHint"),
-      icon: Search,
-      href: all,
-      alwaysShown: true,
-      onSelect: () => go(all),
-    });
-    list.push({ heading: t("search.quick.more"), items: more });
+    if (more.length > 0) list.push({ heading: t("search.quick.more"), items: more });
     return list;
   })();
 
@@ -276,9 +308,9 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     <p className="text-sm text-text-muted">{t("search.noOrganization")}</p>
   ) : nothingFound ? (
     <p className="flex items-center gap-2 text-sm text-text-muted">
-      <SearchX aria-hidden="true" className="size-icon shrink-0" />
+      <SearchX aria-hidden="true" className="size-icon-md shrink-0" />
       {inSpace
-        ? t("search.quick.nothingInSpace", { query: typed, space: space.name || t("spaces.personal.label") })
+        ? t("search.quick.nothingInSpace", { query: typed, space: spaceName(space) })
         : t("search.quick.nothing", { query: typed })}
     </p>
   ) : null;
@@ -304,7 +336,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
           <fieldset className="flex flex-wrap gap-2">
             <legend className="sr-only">{t("search.quick.scope")}</legend>
             <ScopeButton pressed={scope === "space"} icon={Layers} onClick={() => setScope("space")}>
-              {t("search.quick.spaceFirst", { space: space.name || t("spaces.personal.label") })}
+              {t("search.quick.spaceFirst", { space: spaceName(space) })}
             </ScopeButton>
             <ScopeButton pressed={scope === "all"} icon={Globe} onClick={() => setScope("all")}>
               {t("search.quick.allSpaces")}
@@ -325,7 +357,22 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
             <Kbd>{mod}</Kbd>
             <Kbd>↵</Kbd> {t("search.quick.newTab")}
           </span>
-          <span className="sm:ml-auto">{t("search.onlyReadable")}</span>
+          {typed ? (
+            <a
+              href={searchPageHref(typed, noFilters)}
+              onClick={(event) => {
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+                event.preventDefault();
+                onOpenChange(false);
+                go(searchPageHref(typed, noFilters));
+              }}
+              className="text-accent hover:underline focus-visible:focus-ring sm:ml-auto"
+            >
+              {t("search.quick.allResults", { query: typed })}
+            </a>
+          ) : (
+            <span className="sm:ml-auto">{t("search.onlyReadable")}</span>
+          )}
         </>
       }
     />

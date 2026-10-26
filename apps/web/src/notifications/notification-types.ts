@@ -5,6 +5,7 @@ import type { NotificationItem } from "./notifications-api.js";
 export interface NotificationLink {
   to: string;
   params?: Record<string, string>;
+  search?: Record<string, string>;
 }
 
 export interface NotificationType {

@@ -246,6 +246,7 @@ function CreateSpaceForm({
       <Field
         label={t("spaces.create.key")}
         hint={t("spaces.create.keyHint")}
+        help={t("spaces.create.keyHelp")}
         {...(errors.key ? { error: errors.key } : {})}
       >
         <Input
@@ -262,7 +263,11 @@ function CreateSpaceForm({
           }}
         />
       </Field>
-      <Field label={t("spaces.create.description")} hint={t("spaces.create.descriptionHint")}>
+      <Field
+        label={t("spaces.create.description")}
+        hint={t("spaces.create.descriptionHint")}
+        help={t("spaces.create.descriptionHelp")}
+      >
         <Textarea
           rows={2}
           maxLength={1000}
@@ -271,7 +276,7 @@ function CreateSpaceForm({
         />
       </Field>
       {canCreateConfidential && !knowledgeBase ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 border-t border-border pt-4">
           <Checkbox
             label={t("confidential.createLabel")}
             description={t("confidential.createDescription")}

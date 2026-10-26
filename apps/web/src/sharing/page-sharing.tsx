@@ -17,13 +17,17 @@ export interface PageSharing {
 }
 
 export function usePageSharing(
-  page: SharedPage & { viewRestriction: "none" | "own" | "inherited"; editRestricted: boolean },
+  page: SharedPage & {
+    viewRestriction: "none" | "own" | "inherited";
+    editRestricted: boolean;
+    spaceRole?: string | null;
+  },
   enabled: boolean,
 ): PageSharing {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const mine = useQuery({ ...myAccessQuery(page.id), enabled, throwOnError: false });
-  const role = mine.data?.role ?? null;
+  const role = mine.data ? (mine.data.role ?? null) : page.editRestricted ? null : (page.spaceRole ?? null);
   const canShare = enabled && role !== null && EDITING.has(role);
   const restricted = page.viewRestriction !== "none" || page.editRestricted;
   const shareButton = canShare ? (
@@ -33,7 +37,7 @@ export function usePageSharing(
   ) : null;
   const restrictionNote = restricted ? (
     <p className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-      <Lock aria-hidden="true" className="size-icon shrink-0" />
+      <Lock aria-hidden="true" className="size-icon-md shrink-0" />
       <span>
         {page.viewRestriction === "own"
           ? t("sharing.note.view")

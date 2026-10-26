@@ -43,7 +43,7 @@ const articleSchema = z
           .object({ id: uuid("ID of the category."), title: z.string().describe("Title.") })
           .describe("A category."),
       )
-      .describe("Category and subcategory the caller can read, top level first."),
+      .describe("Folders above the article that the caller can read, top level first."),
   })
   .describe("An article the caller can read.");
 

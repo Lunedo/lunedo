@@ -1,10 +1,20 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { cp } from "node:fs/promises";
 import path from "node:path";
+import { CLIENT_BUILD_FILE, CLIENT_BUILD_META } from "@lunedo/shared";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
-import { drawioContentType, drawioFile, ensureDrawio } from "./src/dev/drawio-assets.js";
+import { collectNotices, packageDirectoryOf, renderNotices } from "../../scripts/third-party-notices.js";
+import {
+  BUILD_PLACEHOLDER,
+  type BundledChunk,
+  ICON_MODULES,
+  precompress,
+  stampBuild,
+  withLocaleChunks,
+} from "./src/dev/build-assets.js";
+import { drawioContentType, drawioFile, ensureDrawio, isServedDrawioFile } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
 import { isPreviewFrameAsset } from "./src/dev/preview-frame-assets.js";
 import { publicAddress } from "./src/dev/public-address.js";
@@ -98,8 +108,101 @@ function drawioAssets(): Plugin {
     async writeBundle(options) {
       if (!options.dir) return;
       const target = path.join(options.dir, "drawio", DRAWIO_VERSION);
-      await cp(await prepare(), target, { recursive: true, filter: (source) => !source.endsWith(".ready") });
+      const source = await prepare();
+      await cp(source, target, {
+        recursive: true,
+        filter: (file) => {
+          const name = path.relative(source, file).split(path.sep).join("/");
+          return name === "" || (name !== ".ready" && isServedDrawioFile(name));
+        },
+      });
       await cp(path.join(root, "drawio", "LICENSE"), path.join(target, "LICENSE"));
+    },
+  };
+}
+
+function thirdPartyNotices(): Plugin {
+  let root = "";
+  return {
+    name: "lunedo-third-party-notices",
+    apply: "build",
+    configResolved(config) {
+      root = config.root;
+    },
+    generateBundle() {
+      const directories = new Set<string>();
+      for (const id of this.getModuleIds()) {
+        const file = id.split("?")[0] ?? "";
+        if (file.startsWith("\0") || !file.includes("node_modules")) continue;
+        const directory = packageDirectoryOf(file);
+        if (directory) directories.add(directory);
+      }
+      const drawio = {
+        name: "draw.io",
+        version: DRAWIO_VERSION,
+        license: "Apache-2.0",
+        texts: [{ file: "LICENSE", text: readFileSync(path.join(root, "drawio", "LICENSE"), "utf8").trim() }],
+      };
+      this.emitFile({
+        type: "asset",
+        fileName: "THIRD_PARTY_NOTICES.txt",
+        source: renderNotices("Lunedo", collectNotices(directories, [drawio])),
+      });
+    },
+  };
+}
+
+function clientBuild(): Plugin {
+  return {
+    name: "lunedo-client-build",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler: (_html, context) => {
+        if (!context.bundle) return [];
+        return [
+          {
+            tag: "meta",
+            attrs: { name: CLIENT_BUILD_META, content: BUILD_PLACEHOLDER },
+            injectTo: "head",
+          },
+        ];
+      },
+    },
+    generateBundle: {
+      order: "post",
+      handler(_options, bundle) {
+        this.emitFile({
+          type: "asset",
+          fileName: CLIENT_BUILD_FILE,
+          source: `${JSON.stringify({ build: stampBuild(bundle) })}\n`,
+        });
+      },
+    },
+  };
+}
+
+function localeChunks(): Plugin {
+  return {
+    name: "lunedo-locale-chunks",
+    transformIndexHtml: {
+      order: "post",
+      handler: (html, context) =>
+        withLocaleChunks(html, context.bundle as Record<string, BundledChunk> | undefined),
+    },
+  };
+}
+
+function compressedAssets(): Plugin {
+  let outDir = "";
+  return {
+    name: "lunedo-compressed-assets",
+    apply: "build",
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      await precompress(outDir);
     },
   };
 }
@@ -108,7 +211,17 @@ const polling = process.env.LUNEDO_DEV_POLLING === "true";
 const instance = publicAddress(process.env.LUNEDO_INSTANCE_URL);
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), previewFrameAssets(), excalidrawAssets(), drawioAssets()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    previewFrameAssets(),
+    excalidrawAssets(),
+    drawioAssets(),
+    localeChunks(),
+    compressedAssets(),
+    thirdPartyNotices(),
+    clientBuild(),
+  ],
   resolve: {
     conditions: ["@lunedo/source", ...defaultClientConditions],
   },
@@ -145,6 +258,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: { main: "index.html", preview: "preview.html", print: "print.html", diagram: "diagram.html" },
+      output: { codeSplitting: { groups: [{ name: "icons", test: ICON_MODULES }] } },
     },
   },
   preview: {

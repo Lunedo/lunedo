@@ -25,9 +25,9 @@ const effect = {
     3: "Uploads are refused too. Editing pages still works. Free up space or add capacity now.",
   },
   de: {
-    1: "Noch ist nichts gesperrt. Schaffen Sie Platz oder erweitern Sie den Speicher, bevor er voll läuft.",
+    1: "Noch ist nichts gesperrt. Schaffe Platz oder erweitere den Speicher, bevor er voll läuft.",
     2: "Neue Exporte von Spaces und Teilbäumen sowie Importe werden abgelehnt, bis die Belegung sinkt. Uploads und Bearbeiten funktionieren weiter.",
-    3: "Auch Uploads werden abgelehnt. Seiten lassen sich weiter bearbeiten. Schaffen Sie jetzt Platz oder erweitern Sie den Speicher.",
+    3: "Auch Uploads werden abgelehnt. Seiten lassen sich weiter bearbeiten. Schaffe jetzt Platz oder erweitere den Speicher.",
   },
 } as const;
 

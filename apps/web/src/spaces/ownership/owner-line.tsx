@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -18,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { ActionFailure } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { spaceKeys } from "../space-queries.js";
@@ -26,6 +26,8 @@ import { ownershipKeys } from "./ownership-queries.js";
 export interface OwnerInfo {
   id: string;
   name: string | null;
+  jobTitle: string | null;
+  pictureRef: string | null;
   email: string | null;
   active: boolean;
 }
@@ -48,7 +50,7 @@ export function candidateLoader(itemId: string): ComboboxLoader {
   };
 }
 
-function PersonCard({ owner }: { owner: OwnerInfo }) {
+function PersonCard({ owner, chip = false }: { owner: OwnerInfo; chip?: boolean }) {
   const { t } = useTranslation();
   const name = owner.name ?? t("ownership.someone");
   return (
@@ -56,22 +58,39 @@ function PersonCard({ owner }: { owner: OwnerInfo }) {
       align="start"
       label={name}
       trigger={
-        <button
-          type="button"
-          className="max-w-full truncate rounded-sm font-medium text-accent hover:underline focus-visible:focus-ring"
-          title={name}
-        >
-          {name}
-        </button>
+        chip ? (
+          <button
+            type="button"
+            className="inline-flex h-control-sm max-w-full min-w-0 items-center gap-1 rounded-sm text-sm text-text-muted hover:text-text focus-visible:focus-ring"
+            title={t("ownership.ownerIs", { name })}
+            aria-label={t("ownership.ownerIs", { name })}
+          >
+            <PersonAvatar id={owner.id} name={name} pictureRef={owner.pictureRef} size="sm" decorative />
+            <span className="truncate">{name}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="max-w-full truncate rounded-sm font-medium text-accent hover:underline focus-visible:focus-ring"
+            title={name}
+          >
+            {name}
+          </button>
+        )
       }
     >
       <div className="flex min-w-field flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Avatar name={name} />
+          <PersonAvatar id={owner.id} name={name} pictureRef={owner.pictureRef} />
           <div className="flex min-w-0 flex-col">
             <span className="truncate font-medium" title={name}>
               {name}
             </span>
+            {owner.jobTitle ? (
+              <span className="truncate text-sm text-text-muted" title={owner.jobTitle}>
+                {owner.jobTitle}
+              </span>
+            ) : null}
             {owner.active ? null : (
               <span className="text-sm text-text-muted">{t("ownership.inactiveOwner")}</span>
             )}
@@ -90,6 +109,17 @@ function PersonCard({ owner }: { owner: OwnerInfo }) {
         ) : null}
       </div>
     </Popover>
+  );
+}
+
+export function OwnerChip({ owner }: { owner: OwnerInfo | null }) {
+  const { t } = useTranslation();
+  if (!owner) return <span className="text-sm text-text-muted">{t("ownership.noOwner")}</span>;
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2">
+      <PersonCard owner={owner} chip />
+      {owner.active ? null : <Badge variant="warning">{t("ownership.ownerLeft")}</Badge>}
+    </span>
   );
 }
 

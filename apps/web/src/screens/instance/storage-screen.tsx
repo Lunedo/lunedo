@@ -13,7 +13,7 @@ import {
   Textarea,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { HardDrive } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -83,7 +83,7 @@ function UsageSection({ status }: { status: StorageStatus }) {
       status.usedBytes !== null &&
       status.totalBytes !== null &&
       status.percent !== null ? (
-        <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex flex-col gap-2 py-3">
           <p className="font-medium">
             {t("storage.usage.summary", {
               used: format.bytes(status.usedBytes),
@@ -106,7 +106,7 @@ function UsageSection({ status }: { status: StorageStatus }) {
           </div>
         </div>
       ) : (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="info" title={t("storage.usage.inactiveTitle")}>
             {t("storage.usage.inactiveNoLimit")}
           </Notice>
@@ -208,13 +208,14 @@ function LevelsSection({ status, canManage }: { status: StorageStatus; canManage
   const serverError = tracker.state === "error" ? tracker.error : null;
   return (
     <Section title={t("storage.levels.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("storage.levels.description")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("storage.levels.description")}</p>
       <div className="flex flex-col gap-4 p-4">
         {LEVEL_FIELDS.map((field) => (
           <Field
             key={field}
             label={translateKey(t, `storage.levels.${field}`)}
             hint={translateKey(t, `storage.levels.${field}Hint`)}
+            {...(field === "largeWrites" ? {} : { help: translateKey(t, `storage.levels.${field}Help`) })}
             {...(errors[field] ? { error: errors[field] } : {})}
           >
             <div className="flex items-center gap-2">
@@ -312,6 +313,7 @@ function S3LimitSection({ status, canManage }: { status: StorageStatus; canManag
         <Field
           label={t("storage.s3.label")}
           hint={t("storage.s3.hint")}
+          help={t("storage.s3.help")}
           {...(shownError ? { error: shownError } : {})}
         >
           <div className="flex items-center gap-2">
@@ -347,7 +349,13 @@ function parseAddresses(text: string): string[] {
 
 const ADDRESS = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function ContactsSection({ status, canManage }: { status: StorageStatus; canManage: boolean }) {
+export function OperationsContactsSection({
+  status,
+  canManage,
+}: {
+  status: StorageStatus;
+  canManage: boolean;
+}) {
   const { t } = useTranslation();
   const save = useStorageSave();
   const tracker = useSaveState();
@@ -439,11 +447,12 @@ function ContactsSection({ status, canManage }: { status: StorageStatus; canMana
     tracker.state === "error" && !errors.addresses && !errors.webhook ? tracker.error : null;
   return (
     <Section title={t("storage.contacts.title")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("storage.contacts.description")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("storage.contacts.description")}</p>
       <div className="flex flex-col gap-4 p-4">
         <Field
           label={t("storage.contacts.addresses")}
           hint={t("storage.contacts.addressesHint")}
+          help={t("storage.contacts.addressesHelp")}
           {...(errors.addresses ? { error: errors.addresses } : {})}
         >
           <Textarea
@@ -483,6 +492,7 @@ function ContactsSection({ status, canManage }: { status: StorageStatus; canMana
             <Field
               label={t("storage.contacts.webhook")}
               hint={t("storage.contacts.webhookHint")}
+              help={t("storage.contacts.webhookHelp")}
               {...(errors.webhook ? { error: errors.webhook } : {})}
             >
               <PasswordInput
@@ -501,6 +511,7 @@ function ContactsSection({ status, canManage }: { status: StorageStatus; canMana
             <Field
               label={t("storage.contacts.webhook")}
               hint={t("storage.contacts.webhookHint")}
+              help={t("storage.contacts.webhookHelp")}
               {...(errors.webhook ? { error: errors.webhook } : {})}
             >
               <PasswordInput
@@ -570,7 +581,7 @@ export function InstanceStorageScreen() {
   const canManage = state.can("instance.settings.manage");
   const data = status.data;
   return (
-    <SettingsPage title={t("storage.title")} description={t("storage.description")} icon={HardDrive}>
+    <SettingsPage title={t("storage.title")} description={t("storage.description")}>
       {status.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {status.isError ? (
         <LoadError what={t("failures.loadStorage")} error={status.error} onRetry={() => status.refetch()} />
@@ -583,7 +594,14 @@ export function InstanceStorageScreen() {
           <Section title={t("storage.reminder.title")}>
             <SettingsList {...editor} keys={["storage.reminder"]} level="instance" />
           </Section>
-          <ContactsSection status={data} canManage={canManage} />
+          <Section title={t("storage.contacts.title")}>
+            <p className="pt-3 text-sm text-text-muted">
+              {t("storage.contacts.moved")}{" "}
+              <Link to="/settings/instance/mail" className="font-medium text-accent hover:underline">
+                {t("storage.contacts.open")}
+              </Link>
+            </p>
+          </Section>
         </>
       ) : null}
     </SettingsPage>

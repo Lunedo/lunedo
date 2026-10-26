@@ -8,8 +8,8 @@ import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 import { Tooltip } from "./tooltip.js";
 
-export type ButtonVariant = "primary" | "secondary" | "outline" | "danger" | "dangerPrimary";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "dangerPrimary";
+export type ButtonSize = "sm" | "md" | "field" | "lg";
 
 const BASE =
   "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium transition-colors focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:border-control-border disabled:bg-surface-sunken disabled:text-text-muted aria-busy:cursor-progress motion-reduce:transition-none";
@@ -19,6 +19,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
     "border-accent bg-accent font-semibold text-on-accent hover:border-accent-hover hover:bg-accent-hover",
   secondary: "border-control-border bg-control text-text hover:bg-control-hover",
   outline: "border-control-border bg-surface text-text hover:bg-control-hover",
+  ghost: "border-transparent bg-transparent text-text hover:bg-hover",
   danger: "border-transparent bg-transparent text-danger hover:bg-danger-soft",
   dangerPrimary: "border-danger bg-danger font-semibold text-on-accent hover:opacity-90 disabled:opacity-100",
 };
@@ -26,6 +27,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 const SIZES: Record<ButtonSize, string> = {
   sm: "h-control-sm px-2 text-sm",
   md: "h-control-md px-3 text-base",
+  field: "h-control-field px-3 text-base",
   lg: "h-control-lg px-4 text-content",
 };
 
@@ -124,6 +126,7 @@ const ICON_VARIANTS: Record<IconButtonVariant, string> = {
 const ICON_SIZES: Record<ButtonSize, string> = {
   sm: "size-control-sm",
   md: "size-control-md",
+  field: "size-control-field",
   lg: "size-control-lg",
 };
 

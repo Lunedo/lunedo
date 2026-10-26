@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Button,
   buttonClassName,
   Checkbox,
@@ -13,6 +12,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen, Languages, SquarePen, UserRoundX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { LoadError } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -65,7 +65,7 @@ function Owner({ row }: { row: ReviewItem }) {
     const name = row.owner.name ?? t("ownership.someone");
     return (
       <span className="inline-flex min-w-0 items-center gap-1">
-        <Avatar name={name} size="sm" decorative />
+        <PersonAvatar id={row.owner.id} name={name} pictureRef={row.owner.pictureRef} size="sm" decorative />
         <span className="truncate" title={name}>
           {name}
         </span>
@@ -77,7 +77,7 @@ function Owner({ row }: { row: ReviewItem }) {
     : t("reviews.list.noOwner");
   return (
     <span className="inline-flex min-w-0 items-center gap-1">
-      <UserRoundX aria-hidden="true" className="size-icon shrink-0" />
+      <UserRoundX aria-hidden="true" className="size-icon-md shrink-0" />
       <span className="truncate" title={text}>
         {text}
       </span>
@@ -116,7 +116,7 @@ function ReviewRow({
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <div className="flex min-w-0 flex-1 basis-field items-start gap-2">
-        <Icon aria-hidden="true" className="mt-0.5 size-icon shrink-0 text-text-muted" />
+        <Icon aria-hidden="true" className="mt-0.5 size-icon-md shrink-0 text-text-muted" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Link
             to={href}
@@ -162,7 +162,7 @@ function ReviewRow({
           className={buttonClassName({ variant: "outline", size: "sm" })}
           aria-label={t("reviews.list.editArticle", { title: row.title })}
         >
-          <SquarePen aria-hidden="true" className="size-icon" />
+          <SquarePen aria-hidden="true" className="size-icon-md" />
           {t("reviews.list.edit")}
         </Link>
       </div>

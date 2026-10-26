@@ -359,7 +359,6 @@ details.ld-expand > summary {
 
 .ld-content table {
   @apply w-full border-collapse;
-  table-layout: fixed;
 }
 
 .ld-content .ld-table,
@@ -371,6 +370,7 @@ details.ld-expand > summary {
 .ld-content td {
   @apply relative border border-border px-2 py-1 align-top;
   min-width: var(--ld-control-lg);
+  overflow-wrap: normal;
 }
 
 .ld-content th {
@@ -660,6 +660,14 @@ details.ld-expand > summary {
   --content-background: var(--ld-content-pink-background);
 }
 
+.ld-palette-swatch .ld-swatch-text[data-color] {
+  color: var(--content-text);
+}
+
+.ld-palette-swatch .ld-swatch-highlight[data-color] {
+  background-color: var(--content-background);
+}
+
 .ld-content .ld-text-color[data-color],
 .ld-content span[data-text-color] {
   color: var(--content-text);
@@ -705,6 +713,12 @@ details.ld-expand > summary {
 .ld-content mark.ld-highlight {
   color: var(--ld-color-text);
   background-color: var(--content-background, var(--ld-content-yellow-background));
+}
+
+.ld-diff-current {
+  outline: 2px solid var(--ld-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .ld-diff-added {
@@ -774,11 +788,35 @@ details.ld-expand > summary {
 }
 
 .ld-content .ld-task-meta {
-  @apply mt-1 flex flex-wrap items-center gap-2 text-sm text-text-muted no-underline;
+  @apply flex flex-wrap items-center gap-1 text-sm text-text-muted no-underline;
+}
+
+.ld-content .ld-task-body {
+  @apply flex min-w-0 flex-1 flex-wrap items-center gap-x-2;
+}
+
+.ld-content .ld-task-body > [data-node-view-content] {
+  @apply min-w-0 max-w-full;
 }
 
 .ld-content .ld-task-hint {
   @apply mt-1 text-sm text-text-muted;
+}
+
+.ld-content .ld-task-body > .ld-task-hint {
+  @apply basis-full;
+}
+
+.ld-content .ld-task-chip {
+  @apply rounded-full bg-surface-sunken px-2;
+}
+
+.ld-content .ld-task-overdue {
+  @apply bg-danger-soft text-danger;
+}
+
+.ld-task-add {
+  @apply my-1 inline-flex h-control-sm cursor-pointer items-center rounded-sm px-1 text-sm text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring;
 }
 
 .ld-content .ld-task-report-block,
@@ -1232,13 +1270,58 @@ details.ld-expand > summary {
   @apply mr-2 inline-block size-icon-md align-text-bottom text-text-muted;
 }
 
-.ld-section[data-framed] .ld-image:not([data-frame="off"]) img,
-.ld-content .ld-image[data-frame="on"] img {
-  @apply rounded-md border border-solid border-border bg-surface-sunken p-2 shadow-card;
+.ld-content .ld-image {
+  @apply relative;
 }
 
-.ld-image-controls {
-  @apply mb-1 flex justify-start;
+.ld-image-frame {
+  @apply relative inline-block max-w-full align-top;
+}
+
+/* biome-ignore lint/style/noDescendingSpecificity: file previews and image frames never contain each other */
+.ld-image-frame img {
+  @apply block h-auto max-w-full;
+}
+
+.ld-image[data-width] .ld-image-frame,
+.ld-content .ld-image[data-width] > img,
+.ld-content .ld-image[data-width] > .ld-image-full {
+  width: var(--image-width);
+}
+
+.ld-image[data-width] .ld-image-frame img,
+.ld-content .ld-image[data-width] > img,
+.ld-content .ld-image[data-width] > :where(.ld-image-full) img {
+  @apply w-full;
+}
+
+.ld-image-handle {
+  @apply absolute size-3 rounded-sm border-2 border-accent bg-surface;
+  touch-action: none;
+}
+
+.ld-image-handle[data-corner="top-left"] {
+  @apply -top-1 -left-1 cursor-nwse-resize;
+}
+
+.ld-image-handle[data-corner="top-right"] {
+  @apply -top-1 -right-1 cursor-nesw-resize;
+}
+
+.ld-image-handle[data-corner="bottom-left"] {
+  @apply -bottom-1 -left-1 cursor-nesw-resize;
+}
+
+.ld-image-handle[data-corner="bottom-right"] {
+  @apply -right-1 -bottom-1 cursor-nwse-resize;
+}
+
+.ld-image-size {
+  @apply pointer-events-none absolute right-2 bottom-2 rounded-sm bg-text px-2 text-xs font-medium text-bg;
+}
+
+.ld-image-bar {
+  @apply absolute bottom-full left-1/2 z-10 mb-2 flex w-max max-w-full -translate-x-1/2 flex-wrap items-center gap-1 rounded-md border border-solid border-border bg-surface p-1 text-text shadow-popover;
 }
 
 .ld-section-missing {
@@ -1249,4 +1332,30 @@ details.ld-expand > summary {
 
 .ld-section-required {
   @apply rounded-sm bg-warning-soft px-2 py-1 text-sm text-text;
+}
+
+.ld-table-grip {
+  @apply absolute z-10 flex;
+}
+
+.ld-table-grip[data-axis="row"] {
+  @apply -translate-x-full -translate-y-1/2 pr-1;
+}
+
+.ld-table-grip[data-axis="column"] {
+  @apply -translate-x-1/2 -translate-y-1/2;
+}
+
+.ld-table-grip-button {
+  @apply inline-flex size-control-sm items-center justify-center rounded-sm text-text-muted hover:bg-accent hover:text-on-accent focus-visible:focus-ring aria-expanded:bg-accent aria-expanded:text-on-accent;
+}
+
+.ld-read-view .ld-image[data-attachment-id] > img,
+.ld-read-view .ld-image[data-attachment-id] > .ld-image-full {
+  @apply cursor-zoom-in rounded-sm focus-visible:focus-ring;
+}
+
+.ld-content .ld-image[data-frame="on"] img,
+.ld-section[data-framed] .ld-image:not([data-frame="off"]) img {
+  @apply rounded-md border border-solid border-border bg-surface-sunken p-2 shadow-card;
 }

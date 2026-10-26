@@ -99,7 +99,7 @@ function CheckSection({ updates, canManage }: { updates: Updates; canManage: boo
       }
     >
       {check.disabledBy === "environment" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="info" title={t("updates.check.offByEnvironmentTitle")}>
             {t("updates.check.offByEnvironment")}
           </Notice>
@@ -107,7 +107,7 @@ function CheckSection({ updates, canManage }: { updates: Updates; canManage: boo
       ) : (
         <SettingsList {...editor} keys={["operations.updateCheck"]} level="instance" />
       )}
-      <p className="px-4 py-3 text-sm text-text-muted">{t("updates.check.privacy", { url: check.url })}</p>
+      <p className="py-3 text-sm text-text-muted">{t("updates.check.privacy", { url: check.url })}</p>
       {check.enabled ? (
         <SettingRow
           label={t("updates.check.last")}
@@ -126,7 +126,7 @@ function CheckSection({ updates, canManage }: { updates: Updates; canManage: boo
         />
       ) : null}
       {check.enabled && check.checkedAt && !check.succeeded && check.failure ? (
-        <div className="px-4 pb-3">
+        <div className="pb-3">
           <Notice variant="danger" title={t("updates.check.failedTitle")}>
             {translateKey(t, `updates.check.failures.${check.failure}`)}
           </Notice>
@@ -148,7 +148,7 @@ function AvailableSection({ updates }: { updates: Updates }) {
   }
   return (
     <Section title={t("updates.available.title", { version: updates.latest })} icon={ArrowUpCircle}>
-      <div className="flex flex-col gap-4 px-4 py-3">
+      <div className="flex flex-col gap-4 py-3">
         {updates.runningIsRelease ? null : (
           <Notice variant="info">{t("updates.available.notRelease", { version: updates.running })}</Notice>
         )}
@@ -222,7 +222,7 @@ function WhatsNewSection({ updates }: { updates: Updates }) {
   const whatsNew = updates.whatsNew;
   return (
     <Section title={t("updates.whatsNew.title", { version: updates.running })}>
-      <div className="px-4 py-3">
+      <div className="py-3">
         {whatsNew.notes ? (
           <NotesList notes={whatsNew.notes} />
         ) : (
@@ -241,7 +241,7 @@ export function InstanceUpdatesScreen() {
   const updates = useQuery({ ...updatesQuery, throwOnError: false });
   const data = updates.data;
   return (
-    <SettingsPage title={t("updates.title")} description={t("updates.description")} icon={ArrowUpCircle}>
+    <SettingsPage title={t("updates.title")} description={t("updates.description")}>
       {updates.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {updates.isError ? (
         <LoadError what={t("updates.loadFailed")} error={updates.error} onRetry={() => updates.refetch()} />

@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { ExternalLink, Link2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useShownLocation } from "../../shell/navigation-pending.js";
 import { shortcutHref, shortcutsQuery } from "./shortcut-queries.js";
 
 export function SidebarShortcuts({ spaceId }: { spaceId: string }) {
   const { t } = useTranslation();
-  const location = useLocation();
+  const location = useShownLocation();
   const shortcuts = useQuery({ ...shortcutsQuery(spaceId), throwOnError: false });
   const entries = (shortcuts.data ?? []).flatMap((shortcut) => {
     const target = shortcutHref(shortcut);
@@ -18,7 +19,7 @@ export function SidebarShortcuts({ spaceId }: { spaceId: string }) {
     <nav aria-labelledby={`shortcuts-${spaceId}`} className="flex flex-col">
       <h2
         id={`shortcuts-${spaceId}`}
-        className="px-2 pt-4 pb-1 text-xs font-semibold tracking-label text-text-muted uppercase"
+        className="px-2 pt-4 pb-1 text-2xs font-bold tracking-label text-text-muted uppercase"
       >
         {t("spaceShortcuts.title")}
       </h2>
@@ -33,9 +34,9 @@ export function SidebarShortcuts({ spaceId }: { spaceId: string }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   title={`${shortcut.label} · ${target.href}`}
-                  className={`${rowClass} hover:bg-hover`}
+                  className={`${rowClass} text-text hover:bg-hover`}
                 >
-                  <ExternalLink aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+                  <ExternalLink aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
                   <span className="truncate">{shortcut.label}</span>
                   <span className="sr-only"> {t("common.opensInNewTab")}</span>
                 </a>
@@ -44,9 +45,9 @@ export function SidebarShortcuts({ spaceId }: { spaceId: string }) {
                   to={target.href}
                   title={shortcut.label}
                   aria-current={active ? "page" : undefined}
-                  className={`${rowClass} ${active ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+                  className={`${rowClass} ${active ? "bg-accent font-semibold text-on-accent" : "text-text hover:bg-hover"}`}
                 >
-                  <Link2 aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+                  <Link2 aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
                   <span className="truncate">{shortcut.label}</span>
                 </Link>
               )}

@@ -23,7 +23,7 @@ function inRouter(ui: ReactNode) {
 }
 
 describe("creating a folder", () => {
-  it("speaks of categories and subcategories in a knowledge base", async () => {
+  it("speaks of areas and topics in a knowledge base", async () => {
     mockApi({});
     await renderWithProviders(
       inRouter(
@@ -34,15 +34,15 @@ describe("creating a folder", () => {
         />,
       ),
     );
-    const dialog = await screen.findByRole("dialog", { name: "New category" });
+    const dialog = await screen.findByRole("dialog", { name: "New area" });
     expect(
-      within(dialog).getByText("Optional. Readers see it at the top of the category in the portal."),
+      within(dialog).getByText("Optional. Readers see it at the top of the area in the portal."),
     ).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "Create category" })).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Create area" })).toBeTruthy();
     expect(within(dialog).queryByText(/folder/i)).toBeNull();
   });
 
-  it("names a folder below a category a subcategory", async () => {
+  it("names a folder below an area a topic", async () => {
     mockApi({});
     await renderWithProviders(
       inRouter(
@@ -53,8 +53,8 @@ describe("creating a folder", () => {
         />,
       ),
     );
-    const dialog = await screen.findByRole("dialog", { name: "New subcategory" });
-    expect(within(dialog).getByRole("button", { name: "Create subcategory" })).toBeTruthy();
+    const dialog = await screen.findByRole("dialog", { name: "New topic" });
+    expect(within(dialog).getByRole("button", { name: "Create topic" })).toBeTruthy();
   });
 
   it("keeps folders in other spaces", async () => {

@@ -105,7 +105,7 @@ export function sampleDocument(): DocumentJson {
       },
       { type: "blockquote", content: [paragraph(text("Measure twice"))] },
       { type: "horizontalRule" },
-      { type: "image", attrs: { attachmentId: SAMPLE_IMAGE, alt: "Rack", width: 120, align: "center" } },
+      { type: "image", attrs: { attachmentId: SAMPLE_IMAGE, alt: "Rack", width: 16, align: "center" } },
       { type: "file", attrs: { attachmentId: SAMPLE_FILE, name: "plan.pdf" } },
       { type: "attachmentList", attrs: { fileTypes: [] } },
       { type: "childPages", attrs: { pageId: null, depth: 1, sort: "tree", reverse: false } },

@@ -30,6 +30,7 @@ import {
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import { STORAGE_TEAMS_SECRET, storageTeamsSecretContext } from "../storage/webhook-secret.js";
 import {
   type ChatFailure,
@@ -528,7 +529,7 @@ export class ChatChannelService {
   ): Promise<ChatMessage> {
     const language = await this.#language(organizationId);
     const names = await this.#database.execute<{ space_name: string | null; organization_name: string }>(sql`
-      select s.name as space_name, o.name as organization_name from organizations o
+      select ${spaceDisplayName(sql`s`)} as space_name, o.name as organization_name from organizations o
       left join spaces s on s.id = ${spaceId} where o.id = ${organizationId}`);
     const spaceName = names.rows[0]?.space_name ?? "";
     const organizationName = names.rows[0]?.organization_name ?? "";
@@ -651,7 +652,7 @@ export class ChatChannelService {
 
   async #shareable(executor: Executor, itemId: string): Promise<ShareableItem | null> {
     const result = await executor.execute<ShareableItem>(sql`
-      select t.id, t.title, t.kind, s.id as space_id, s.key as space_key, s.name as space_name,
+      select t.id, t.title, t.kind, s.id as space_id, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name,
         s.organization_id
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId} and ${shareableItemCondition(sql`t`, sql`s`)}`);

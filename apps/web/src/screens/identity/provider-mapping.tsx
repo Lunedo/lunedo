@@ -477,6 +477,11 @@ function RuleDialog({
               ? t("identityProviders.mapping.groupHintDirectory", { provider: provider.name })
               : t("identityProviders.mapping.groupHint", { provider: provider.name })
           }
+          help={
+            directory
+              ? t("identityProviders.mapping.groupHelpDirectory")
+              : t("identityProviders.mapping.groupHelp", { provider: provider.name })
+          }
           {...(missing && group === null ? { error: t("identityProviders.mapping.chooseGroup") } : {})}
         >
           <Combobox
@@ -533,7 +538,7 @@ function RuleDialog({
         </Field>
         {target === "organization" ? (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-4">
               <Field
                 label={t("identityProviders.mapping.organization")}
                 {...(missing && organization === null

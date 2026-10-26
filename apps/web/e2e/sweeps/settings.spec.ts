@@ -21,7 +21,12 @@ for (const appearance of [
   test(`has no accessibility violations in ${appearance.name}`, async ({ page, organization }) => {
     await page.goto("/settings/preferences");
     await setAppearance(page, appearance);
-    for (const path of ["/settings/preferences", "/settings/security", "/settings/notifications"]) {
+    for (const path of [
+      "/settings/profile",
+      "/settings/preferences",
+      "/settings/security",
+      "/settings/notifications",
+    ]) {
       await page.goto(path);
       await expect(page.locator("#main h1")).toBeVisible();
       await expectAccessible(page, `${path} in ${appearance.name}`);
@@ -48,6 +53,7 @@ for (const language of ["en", "de"] as const) {
     await page.setViewportSize({ width: 375, height: 740 });
     const organizationId = organization.id;
     for (const path of [
+      "/settings/profile",
       "/settings/preferences",
       "/settings/security",
       "/settings/notifications",
@@ -89,12 +95,12 @@ for (const language of ["en", "de"] as const) {
     );
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: de ? /^Benachrichtigungen(,|$)/ : /^Notifications(,|$)/ }).click();
-    const close = page.getByRole("button", {
-      name: de ? "Benachrichtigungen schließen" : "Close notifications",
-    });
-    const closeBox = await close.boundingBox();
-    expect(closeBox && closeBox.x + closeBox.width).toBeLessThanOrEqual(width);
-    await close.click();
+    const panel = page.getByRole("dialog", { name: de ? "Benachrichtigungen" : "Notifications" });
+    const panelBox = await panel.boundingBox();
+    expect(panelBox?.x).toBeGreaterThanOrEqual(0);
+    expect((panelBox?.x ?? 0) + (panelBox?.width ?? width + 1)).toBeLessThanOrEqual(width);
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
     await setAppearance(page, { language: "en", textSize: 1 });
   });
 }

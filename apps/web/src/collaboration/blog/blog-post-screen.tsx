@@ -4,7 +4,6 @@ import {
   Field,
   type SaveState as FieldSaveState,
   IconButton,
-  Input,
   Menu,
   type MenuItem,
   Notice,
@@ -16,22 +15,13 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import {
-  CalendarClock,
-  Check,
-  History,
-  MoreHorizontal,
-  Newspaper,
-  Pencil,
-  Pin,
-  PinOff,
-  Trash2,
-  X,
-} from "lucide-react";
-import { lazy, Suspense, useRef, useState } from "react";
+import { CalendarClock, Check, History, MoreHorizontal, Pencil, Pin, PinOff, Trash2, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { AppDatePicker, AppTimePicker } from "../../components/date-fields.js";
+import { PageEditor } from "../../editor/page-editor.js";
 import { CollaborationProblemNotice } from "../../editor/save-indicator.js";
 import type { SaveState } from "../../editor/save-state.js";
 import { LoadError } from "../../errors/failure.js";
@@ -48,6 +38,7 @@ import { useDeleteItem } from "../../spaces/content-actions.js";
 import { draftQuery } from "../../spaces/content-queries.js";
 import { InlineTitle } from "../../spaces/inline-title.js";
 import { itemSlug } from "../../spaces/item-paths.js";
+import { PageBar } from "../../spaces/page-bar.js";
 import { PageLabels } from "../../spaces/page-labels.js";
 import { DraftBanner, DraftStatusLine, PublishButton } from "../../spaces/page-publishing.js";
 import { PageContent, useLostEditPermission } from "../../spaces/page-screen.js";
@@ -55,18 +46,15 @@ import { Redirect } from "../../spaces/redirect.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { blogPostPath, type ItemDetails, itemQuery, spaceKeys } from "../../spaces/space-queries.js";
-import { StarButton, useContentCollaboration } from "../content-collaboration.js";
+import { useContentCollaboration } from "../content-collaboration.js";
 import { type BlogPost, blogPostQuery, collaborationKeys } from "../queries.js";
 import { PageReactions } from "../reaction-bar.js";
+import { StarButton } from "../star.js";
 import { PostBadges, PostMeta } from "./blog-list.js";
 import { FollowBlogButton } from "./follow-blog.js";
 import { HeldNotice } from "./held-notice.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/blog/$itemId/{-$slug}");
-
-const PageEditor = lazy(() =>
-  import("../../editor/page-editor.js").then((module) => ({ default: module.PageEditor })),
-);
 
 const EXCERPT_MAX = 500;
 
@@ -137,7 +125,7 @@ function ScheduleDialog({
   const [time, setTime] = useState(post.scheduledAt ? initial.time : "08:00");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const dateInput = useRef<HTMLInputElement>(null);
+  const dateInput = useRef<HTMLButtonElement>(null);
 
   const save = async () => {
     const at = zonedToInstant(date, time, timeZone);
@@ -186,24 +174,22 @@ function ScheduleDialog({
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={t("blog.scheduleDate")} error={error}>
-          <Input
+          <AppDatePicker
             ref={dateInput}
-            type="date"
             value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
+            onValueChange={(next) => {
+              setDate(next);
               setError(null);
             }}
           />
         </Field>
         <Field label={t("blog.scheduleTime")}>
-          <Input
-            type="time"
+          <AppTimePicker
             value={time}
-            onChange={(event) => {
-              setTime(event.target.value);
+            onValueChange={(next) => {
+              setTime(next);
               setError(null);
             }}
           />
@@ -296,6 +282,8 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
     role: space.role,
     archived: space.archived,
     writable,
+    layout: "inline",
+    highlight: search.comment ?? null,
   });
 
   const setEditing = (next: boolean) =>
@@ -379,109 +367,106 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
   }
 
   return (
-    <div className="flex min-h-full">
-      <article className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
-        <PageHeader
-          title={
-            writable ? (
-              <InlineTitle
-                value={title}
-                label={t("blog.postTitle")}
-                onSave={async (next) => {
-                  await request(() =>
-                    api.PATCH("/api/v1/items/{itemId}", {
-                      params: { path: { itemId: item.id } },
-                      body: { title: next },
-                    }),
-                  );
-                  await queryClient.invalidateQueries({ queryKey: spaceKeys.item(item.id) });
-                  await queryClient.invalidateQueries({ queryKey: ["items", item.id, "draft"] });
-                  await refresh();
-                }}
-              />
-            ) : (
-              title
-            )
-          }
-          icon={Newspaper}
-          breadcrumbs={[
-            { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
-            { label: t("blog.title"), href: `/spaces/${space.key}/blog` },
-          ]}
-          actions={
-            <>
-              {writable ? (
-                editing ? (
-                  <>
-                    <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
-                      {t("page.done")}
-                    </Button>
-                    <PublishButton page={item} draft={draft.data} saveState={saveState} />
-                  </>
-                ) : (
-                  <Button
-                    variant="primary"
-                    icon={Pencil}
-                    onClick={() => setEditing(true)}
-                    aria-keyshortcuts="E"
-                  >
-                    {t("page.edit")}
-                  </Button>
-                )
-              ) : null}
-              {space.role && !editing ? (
-                <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} />
-              ) : null}
-              <StarButton target={{ itemId: item.id }} title={title} />
-              <WatchMenu target={{ type: "item", id: item.id }} name={title} />
-              {collaboration.commentsButton}
-              <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
-            </>
-          }
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <PostMeta post={post} />
-          <PostBadges post={post} level="space" />
-        </div>
-        {post.held && !post.published ? (
-          <HeldNotice post={post} canApprove={space.role === "admin" && !space.archived} />
-        ) : null}
-        {post.scheduledAt && !post.published && !post.held ? (
-          <Notice
-            variant="info"
-            title={t("blog.scheduledNotice", { date: format.dateTime(post.scheduledAt) })}
-            action={
-              writable ? (
-                <Button size="sm" variant="secondary" icon={X} onClick={() => void cancelSchedule()}>
-                  {t("blog.cancelSchedule")}
-                </Button>
-              ) : undefined
-            }
-          >
-            {t("blog.scheduledNoticeDescription")}
-          </Notice>
-        ) : null}
+    <div className="flex min-h-full flex-col">
+      <PageBar
+        breadcrumbs={[
+          { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
+          { label: t("blog.title"), href: `/spaces/${space.key}/blog` },
+        ]}
+      >
         {writable ? (
           editing ? (
-            <DraftStatusLine draft={draft.data} />
+            <>
+              <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
+                {t("page.done")}
+              </Button>
+              <PublishButton
+                page={item}
+                draft={draft.data}
+                saveState={saveState}
+                onPublished={() => setEditing(false)}
+              />
+            </>
           ) : (
-            <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
+            <Button variant="primary" icon={Pencil} onClick={() => setEditing(true)} aria-keyshortcuts="E">
+              {t("page.edit")}
+            </Button>
           )
         ) : null}
-        {editing ? (
-          <CoverEditor postId={post.id} itemId={item.id} cover={post.cover} onChanged={refresh} />
-        ) : post.cover ? (
-          <CoverImage cover={post.cover} alt="" className="aspect-video w-full rounded-md" />
+        {space.role && !editing ? (
+          <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} />
         ) : null}
-        {editing ? (
-          <ExcerptField post={post} />
-        ) : post.excerpt ? (
-          <p className="text-lg text-text-muted">{post.excerpt}</p>
-        ) : null}
-        <PageLabels pageId={item.id} />
-        {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
-        {editing ? (
-          <Suspense fallback={<Skeleton className="h-field w-full" />}>
+        <StarButton target={{ itemId: item.id }} title={title} />
+        <WatchMenu target={{ type: "item", id: item.id }} name={title} />
+        <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
+      </PageBar>
+      <div className="flex flex-1">
+        <article className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
+          <PageHeader
+            title={
+              writable ? (
+                <InlineTitle
+                  value={title}
+                  label={t("blog.postTitle")}
+                  onSave={async (next) => {
+                    await request(() =>
+                      api.PATCH("/api/v1/items/{itemId}", {
+                        params: { path: { itemId: item.id } },
+                        body: { title: next },
+                      }),
+                    );
+                    await queryClient.invalidateQueries({ queryKey: spaceKeys.item(item.id) });
+                    await queryClient.invalidateQueries({ queryKey: ["items", item.id, "draft"] });
+                    await refresh();
+                  }}
+                />
+              ) : (
+                title
+              )
+            }
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <PostMeta post={post} />
+            <PostBadges post={post} level="space" />
+          </div>
+          {post.held && !post.published ? (
+            <HeldNotice post={post} canApprove={space.role === "admin" && !space.archived} />
+          ) : null}
+          {post.scheduledAt && !post.published && !post.held ? (
+            <Notice
+              variant="info"
+              title={t("blog.scheduledNotice", { date: format.dateTime(post.scheduledAt) })}
+              action={
+                writable ? (
+                  <Button size="sm" variant="secondary" icon={X} onClick={() => void cancelSchedule()}>
+                    {t("blog.cancelSchedule")}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {t("blog.scheduledNoticeDescription")}
+            </Notice>
+          ) : null}
+          {writable ? (
+            editing ? (
+              <DraftStatusLine draft={draft.data} />
+            ) : (
+              <DraftBanner draft={draft.data} onOpen={() => setEditing(true)} />
+            )
+          ) : null}
+          {editing ? (
+            <CoverEditor postId={post.id} itemId={item.id} cover={post.cover} onChanged={refresh} />
+          ) : post.cover ? (
+            <CoverImage cover={post.cover} alt="" className="aspect-video w-full rounded-md" />
+          ) : null}
+          {editing ? (
+            <ExcerptField post={post} />
+          ) : post.excerpt ? (
+            <p className="text-lg text-text-muted">{post.excerpt}</p>
+          ) : null}
+          <PageLabels pageId={item.id} />
+          {lostEdit ? <CollaborationProblemNotice problem="permissionRevoked" /> : null}
+          {editing ? (
             <PageEditor
               pageId={item.id}
               spaceId={space.id}
@@ -492,19 +477,24 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
               }}
               {...collaboration.editor}
             />
-          </Suspense>
-        ) : writable && !post.published ? (
-          <Notice variant="info" title={t("blog.notPublishedTitle")}>
-            {t("blog.notPublishedDescription")}
-          </Notice>
-        ) : (
-          <PageContent pageId={item.id} publishMode collaboration={collaboration.readView} />
-        )}
-        <AttachmentsSection pageId={item.id} canEdit={writable} />
-        <PageReactions itemId={item.id} canReact={!space.archived} />
-        {scheduling ? <ScheduleDialog post={post} open={scheduling} onOpenChange={setScheduling} /> : null}
-      </article>
-      {collaboration.panel}
+          ) : writable && !post.published ? (
+            <Notice variant="info" title={t("blog.notPublishedTitle")}>
+              {t("blog.notPublishedDescription")}
+            </Notice>
+          ) : (
+            <PageContent pageId={item.id} publishMode collaboration={collaboration.readView} />
+          )}
+          {editing ? null : (
+            <>
+              <PageReactions itemId={item.id} canReact={!space.archived} />
+              <AttachmentsSection pageId={item.id} canEdit={writable} />
+              {collaboration.section}
+            </>
+          )}
+          {collaboration.popover}
+          {scheduling ? <ScheduleDialog post={post} open={scheduling} onOpenChange={setScheduling} /> : null}
+        </article>
+      </div>
     </div>
   );
 }

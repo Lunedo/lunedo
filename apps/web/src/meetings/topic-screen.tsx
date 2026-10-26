@@ -16,13 +16,13 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { CheckCircle2, Flag, Repeat, RotateCcw } from "lucide-react";
+import { CheckCircle2, CircleSlash, Flag, Repeat, RotateCcw } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
 import { useContentCollaboration } from "../collaboration/content-collaboration.js";
-import { peopleLoader } from "../collaboration/people.js";
+import { peopleLoaderFor } from "../collaboration/people.js";
 import { readViewContext } from "../editor/read-view.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
@@ -166,8 +166,16 @@ function TopicView({ topic }: { topic: TopicDetails }) {
                       </Button>
                     }
                     items={[
-                      { label: t("meetings.topic.closeResolved"), onSelect: () => void closeAs("resolved") },
-                      { label: t("meetings.topic.closeDropped"), onSelect: () => void closeAs("dropped") },
+                      {
+                        label: t("meetings.topic.closeResolved"),
+                        icon: CheckCircle2,
+                        onSelect: () => void closeAs("resolved"),
+                      },
+                      {
+                        label: t("meetings.topic.closeDropped"),
+                        icon: CircleSlash,
+                        onSelect: () => void closeAs("dropped"),
+                      },
                     ]}
                   />
                 </>
@@ -363,6 +371,7 @@ function EditTopicDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const ownerLoader = useMemo(() => peopleLoaderFor({ seriesId: topic.seriesId }), [topic.seriesId]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(topic.title);
@@ -440,7 +449,7 @@ function EditTopicDialog({
         </Field>
         <Field label={t("meetings.topics.owner")}>
           <Combobox
-            load={peopleLoader}
+            load={ownerLoader}
             value={owner?.value ?? null}
             selectedItem={owner}
             onValueChange={(_value, item) => setOwner(item)}

@@ -160,6 +160,7 @@ export interface SearchAdapter {
     spaceId: string,
     language?: string | null,
   ): Promise<Map<string, number>>;
+  languageCounts(executor: Executor, viewer: SearchViewer, spaceId: string): Promise<Map<string, number>>;
 }
 
 export const articleSorts = ["views", "updated", "title"] as const;
@@ -169,6 +170,7 @@ export interface ArticleListRequest {
   viewer: SearchViewer;
   spaceId: string;
   categoryId: string | null;
+  direct?: boolean;
   articleTypes: string[];
   itemIds: string[] | null;
   excludeItemIds: string[];

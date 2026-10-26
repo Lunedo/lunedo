@@ -9,7 +9,7 @@ import {
   Skeleton,
   Table,
 } from "@lunedo/ui";
-import { Info, Lock, LockOpen, MoreHorizontal } from "lucide-react";
+import { Info, Lock, LockOpen, MoreHorizontal, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
@@ -22,13 +22,23 @@ import {
   type SettingField,
   settingDescriptionKey,
   settingField,
+  settingHelpKey,
   settingLabelKey,
   toMinutes,
 } from "../settings/setting-fields.js";
 import type { SettingChange } from "../settings/setting-mutations.js";
-import { SaveIndicator, useSaveState } from "./auto-save.js";
+import { SaveIndicator, useSaveState, useUndoToast } from "./auto-save.js";
+import { FORMAT_KEYS, FormatCell, FormatsRow, formatsExample } from "./formats-row.js";
 import { SettingControl } from "./setting-control.js";
-import { disabledReason, inheritedValue, SettingSource } from "./setting-source.js";
+import {
+  BoundMark,
+  boundedField,
+  disabledReason,
+  inheritedValue,
+  instanceBound,
+  SettingMarks,
+  sameValue,
+} from "./setting-source.js";
 
 type Level = "instance" | "organization" | "space" | "user";
 
@@ -86,24 +96,44 @@ export function SettingsList({
   canManage: (key: string) => boolean;
   onChange: (key: string, change: SettingChange) => Promise<void>;
 }) {
+  const { t, i18n } = useTranslation();
   const formatValue = useSettingValueFormatter();
   if (!settings) return <Skeleton className="h-12 w-full" />;
   const entries = keys
     .map((key) => settings.find((entry) => entry.key === key))
     .filter((entry): entry is SettingEntry => entry !== undefined);
+  const isFormat = (entry: SettingEntry) => (FORMAT_KEYS as readonly string[]).includes(entry.key);
+  const formats = entries.filter(isFormat);
+  const item = (entry: SettingEntry, variant: "row" | "cell") => (
+    <SettingItem
+      key={entry.key}
+      entry={entry}
+      level={level}
+      variant={variant}
+      {...(organizationName ? { organizationName } : {})}
+      editable={entry.editable && canManage(entry.key)}
+      formatValue={(value) => formatValue(settingField(entry.key), value)}
+      onChange={(change) => onChange(entry.key, change)}
+    />
+  );
   return (
     <>
-      {entries.map((entry) => (
-        <SettingItem
-          key={entry.key}
-          entry={entry}
-          level={level}
-          {...(organizationName ? { organizationName } : {})}
-          editable={entry.editable && canManage(entry.key)}
-          formatValue={(value) => formatValue(settingField(entry.key), value)}
-          onChange={(change) => onChange(entry.key, change)}
-        />
-      ))}
+      {entries.map((entry) => {
+        if (!isFormat(entry)) return item(entry, "row");
+        if (entry !== formats[0]) return null;
+        return (
+          <FormatsRow
+            key="formats"
+            example={formatsExample(
+              t,
+              i18n.language,
+              Object.fromEntries(formats.map((format) => [format.key, format.value])),
+            )}
+          >
+            {formats.map((format) => item(format, "cell"))}
+          </FormatsRow>
+        );
+      })}
     </>
   );
 }
@@ -111,6 +141,7 @@ export function SettingsList({
 function SettingItem({
   entry,
   level,
+  variant,
   organizationName,
   editable,
   formatValue,
@@ -118,22 +149,34 @@ function SettingItem({
 }: {
   entry: SettingEntry;
   level: Level;
+  variant: "row" | "cell";
   organizationName?: string;
   editable: boolean;
   formatValue: (value: unknown) => string;
   onChange: (change: SettingChange) => Promise<void>;
 }) {
-  const { t } = useTranslation();
-  const field = settingField(entry.key);
+  const { t, i18n } = useTranslation();
+  const bound = instanceBound(entry, level);
+  const baseField = settingField(entry.key);
+  const field = baseField ? boundedField(baseField, bound) : undefined;
+  const requiredByInstance = bound?.value === true && bound.direction === "higher";
   const [explaining, setExplaining] = useState(false);
   const [confirmingLock, setConfirmingLock] = useState(false);
   const tracker = useSaveState();
-  const apply = (change: SettingChange) => tracker.run(() => onChange(change));
+  const undoToast = useUndoToast();
   const lockedAbove = entry.lockedBy !== null && entry.lockedBy !== level;
   const own = entry.source === level;
-  const canLock = entry.lockable && entry.levelsBelow.length > 0;
-  const writable = editable && !lockedAbove;
   const label = translateKey(t, settingLabelKey(entry.key));
+  const apply = async (change: SettingChange) => {
+    const revert: SettingChange =
+      "locked" in change ? { locked: !change.locked } : own ? { value: entry.value } : { clear: true };
+    return tracker.run(
+      () => onChange(change),
+      () => undoToast(label, () => onChange(revert)),
+    );
+  };
+  const canLock = entry.lockable && entry.levelsBelow.length > 0;
+  const writable = editable && !lockedAbove && !requiredByInstance;
 
   const inherited = inheritedValue(entry, level);
   const control = field ? (
@@ -147,7 +190,13 @@ function SettingItem({
       inheritedLabel={formatValue(inherited)}
       maximum={entry.maximum}
       disabled={!writable}
-      disabledReason={writable ? undefined : disabledReason(t, entry, level, editable, organizationName)}
+      disabledReason={
+        writable
+          ? undefined
+          : requiredByInstance
+            ? t("settings.bound.required")
+            : disabledReason(t, entry, level, editable, organizationName)
+      }
       onSave={async (value) => {
         await apply({ value });
       }}
@@ -165,6 +214,7 @@ function SettingItem({
       ? [
           {
             label: t("settings.resetToDefault"),
+            icon: RotateCcw,
             onSelect: () => void apply({ clear: true }),
           },
         ]
@@ -191,36 +241,58 @@ function SettingItem({
       : []),
   ];
 
+  const boundInHint = variant === "row" && bound !== null && typeof bound.value !== "boolean" && !lockedAbove;
+  const description = boundInHint
+    ? t(bound.direction === "lower" ? "settings.bound.hintAtMost" : "settings.bound.hintAtLeast", {
+        value: formatValue(bound.value),
+      })
+    : translateKey(t, settingDescriptionKey(entry.key, level));
+  const marks = (
+    <>
+      {bound && !lockedAbove && !boundInHint ? <BoundMark bound={bound} formatValue={formatValue} /> : null}
+      <SettingMarks
+        entry={entry}
+        level={level}
+        own={own}
+        differs={own && !sameValue(entry.value, inherited)}
+        writable={writable}
+        label={label}
+        {...(organizationName ? { organizationName } : {})}
+        onReset={() => void apply({ clear: true })}
+      />
+    </>
+  );
+  const menu = (
+    <Menu
+      align="end"
+      trigger={<IconButton label={t("settings.moreFor", { name: label })} icon={MoreHorizontal} />}
+      items={menuItems}
+    />
+  );
+
   return (
     <>
-      <SettingRow
-        label={label}
-        description={translateKey(t, settingDescriptionKey(entry.key))}
-        meta={
-          <span className="flex flex-wrap items-center gap-2">
-            <SettingSource
-              entry={entry}
-              level={level}
-              {...(organizationName ? { organizationName } : {})}
-              formatValue={formatValue}
-            />
-            {entry.locked && own ? (
-              <Badge variant="neutral" icon={Lock}>
-                {t("settings.locked")}
-              </Badge>
-            ) : null}
-          </span>
-        }
-        control={control}
-        status={<SaveIndicator tracker={tracker} />}
-        menu={
-          <Menu
-            align="end"
-            trigger={<IconButton label={t("settings.moreFor", { name: label })} icon={MoreHorizontal} />}
-            items={menuItems}
-          />
-        }
-      />
+      {variant === "cell" ? (
+        <FormatCell
+          label={label}
+          control={control}
+          meta={marks}
+          menu={menu}
+          status={<SaveIndicator tracker={tracker} />}
+        />
+      ) : (
+        <SettingRow
+          label={label}
+          description={description}
+          help={
+            i18n.exists(settingHelpKey(entry.key)) ? translateKey(t, settingHelpKey(entry.key)) : undefined
+          }
+          meta={marks}
+          control={control}
+          status={<SaveIndicator tracker={tracker} />}
+          menu={menu}
+        />
+      )}
       <ConfirmDialog
         open={confirmingLock}
         onOpenChange={setConfirmingLock}

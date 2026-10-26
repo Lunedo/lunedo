@@ -52,6 +52,7 @@ export async function createAuthTestApp(
     runtime = await createServerRuntime({
       role: "api",
       env: runtimeEnv,
+      restartAfterRestore: () => {},
       ...(options.captureMail === false ? {} : { mailTransport: () => mail }),
     });
     const started = runtime;

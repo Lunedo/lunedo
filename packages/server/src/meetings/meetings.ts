@@ -36,17 +36,51 @@ import {
   ScheduleError,
   validateSchedule,
 } from "./schedule.js";
-import type { Attendance, MeetingReminder, MeetingState, ScheduleSource } from "./schema.js";
+import type { Attendance, MeetingReminder, MeetingState, OverviewLayout, ScheduleSource } from "./schema.js";
 
 export const SERIES_NAME_MAX_LENGTH = 200;
 export const MAX_SERIES_MEMBERS = 100;
 export const MAX_ATTENDEES = 200;
+export const MAX_GUESTS = 50;
+export const MAX_EXTRA_MEETINGS = 10;
+export const GUEST_NAME_MAX_LENGTH = 200;
+export const GUEST_NOTE_MAX_LENGTH = 500;
+export const ATTENDANCE_WINDOW = 10;
+export const overviewModules = ["topics", "tasks", "decisions", "meetings", "attendance", "links"] as const;
+export const MAX_OVERVIEW_LINKS = 20;
+export const DEFAULT_OVERVIEW: OverviewLayout = {
+  columns: [
+    ["topics", "tasks"],
+    ["meetings", "decisions"],
+  ],
+  hidden: ["attendance", "links"],
+  links: [],
+};
+
+export function overviewLayoutOf(stored: OverviewLayout | null): OverviewLayout {
+  if (!stored) return DEFAULT_OVERVIEW;
+  const known = new Set<string>(overviewModules);
+  const seen = new Set<string>();
+  const keep = (ids: readonly string[]) =>
+    ids.filter((id) => {
+      if (!known.has(id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  const columns: [string[], string[]] = [keep(stored.columns[0] ?? []), keep(stored.columns[1] ?? [])];
+  const hidden = keep(stored.hidden ?? []);
+  return {
+    columns,
+    hidden: [...hidden, ...overviewModules.filter((id) => !seen.has(id))],
+    links: stored.links ?? [],
+  };
+}
 export const DEFAULT_TEMPLATE_ID = "builtin:team-meeting";
 export const ONE_ON_ONE_TEMPLATE_ID = "builtin:one-on-one";
 
 const SECTION_TITLES: Record<TemplateLanguage, SectionTitles & { notScheduled: string }> = {
-  en: { runningTopics: "Running topics", openTasks: "Open tasks", notScheduled: "not scheduled yet" },
-  de: { runningTopics: "Laufende Themen", openTasks: "Offene Aufgaben", notScheduled: "noch nicht geplant" },
+  en: { runningTopics: "Running topics", notScheduled: "not scheduled yet" },
+  de: { runningTopics: "Laufende Themen", notScheduled: "noch nicht geplant" },
 };
 
 export interface SeriesScheduleInput {
@@ -73,6 +107,7 @@ function activeAccount(account: SQL, organizationId: string | null): SQL {
 export interface SeriesMember {
   id: string;
   name: string | null;
+  pictureRef: string | null;
   active: boolean;
   canRead: boolean;
 }
@@ -86,6 +121,15 @@ export interface MeetingSummary {
   durationMinutes: number;
   attendees: number;
   present: number;
+  extra: boolean;
+  next: boolean;
+}
+
+export interface OverviewLink {
+  id: string;
+  title: string;
+  kind: string;
+  spaceKey: string;
 }
 
 export interface SeriesDetails {
@@ -110,16 +154,39 @@ export interface SeriesDetails {
   calendarUid: string | null;
   upcoming: MeetingSummary | null;
   openTopics: number;
+  overview: { columns: [string[], string[]]; hidden: string[]; links: OverviewLink[] };
   createdAt: Date;
+}
+
+export interface MeetingGuest {
+  id: string;
+  name: string;
+  note: string | null;
+  attendance: Attendance | null;
+}
+
+export interface AttendanceRate {
+  id: string;
+  name: string | null;
+  pictureRef: string | null;
+  present: number;
+  meetings: number;
 }
 
 export interface MeetingAttendee {
   id: string;
   name: string | null;
+  pictureRef: string | null;
   attendance: Attendance | null;
   member: boolean | null;
   active: boolean;
   canRead: boolean;
+}
+
+export interface AdjacentMeeting {
+  id: string;
+  title: string;
+  startsAt: Date | null;
 }
 
 export interface MeetingDetails {
@@ -128,6 +195,7 @@ export interface MeetingDetails {
   seriesTitle: string | null;
   title: string;
   state: MeetingState;
+  next: boolean;
   current: boolean;
   startsAt: Date | null;
   recurrenceId: Date | null;
@@ -136,8 +204,12 @@ export interface MeetingDetails {
   closedAt: Date | null;
   closedBy: { id: string; name: string | null } | null;
   nextMeetingId: string | null;
+  previousMeeting: AdjacentMeeting | null;
+  followingMeeting: AdjacentMeeting | null;
   rhythm: boolean | null;
+  extra: boolean;
   attendees: MeetingAttendee[];
+  guests: MeetingGuest[];
   calendarUid: string | null;
 }
 
@@ -171,6 +243,7 @@ type SeriesRow = {
 type MeetingRow = {
   item_id: string;
   series_id: string;
+  extra: boolean;
   recurrence_id: Date | string | null;
   starts_at: Date | string | null;
   duration_minutes: number;
@@ -300,8 +373,8 @@ export class MeetingService {
 
   async #meeting(executor: Executor, meetingId: string, lock = false): Promise<MeetingRow> {
     const result = await executor.execute<MeetingRow>(sql`
-      select m.item_id, m.series_id, m.recurrence_id, m.starts_at, m.duration_minutes, m.state, m.closed_at,
-        m.closed_by, m.next_meeting_id, m.calendar_uid, t.title
+      select m.item_id, m.series_id, m.extra, m.recurrence_id, m.starts_at, m.duration_minutes, m.state,
+        m.closed_at, m.closed_by, m.next_meeting_id, m.calendar_uid, t.title
       from meetings m join tree_items t on t.id = m.item_id
       where m.item_id = ${meetingId} and t.trash_entry_id is null ${lock ? sql`for update of m` : sql``}`);
     const row = result.rows[0];
@@ -331,6 +404,7 @@ export class MeetingService {
     actor: Principal,
     spaceId: string,
     members: readonly string[],
+    options: { seriesMembers?: boolean } = {},
   ): Promise<string[]> {
     const unique = [...new Set(members.map((id) => id.toLowerCase()))];
     if (unique.length > MAX_SERIES_MEMBERS) {
@@ -339,6 +413,12 @@ export class MeetingService {
     for (const id of unique) {
       if (!(await this.#people.canSee(actor, id, tx))) {
         throw new SpaceError("invalidMember", "Choose members among the people you can see");
+      }
+      if (
+        options.seriesMembers &&
+        (await this.#authorization.spaceRole(id, spaceId, { executor: tx, fresh: true })).role === null
+      ) {
+        throw new SpaceError("invalidMember", "Members of a series must be members of its space");
       }
     }
     const space = await tx.execute<{ confidential: boolean }>(
@@ -370,8 +450,8 @@ export class MeetingService {
   async #openTopicIds(executor: Executor, seriesId: string): Promise<string[]> {
     const result = await executor.execute<{ item_id: string }>(sql`
       select mt.item_id from meeting_topics mt join tree_items t on t.id = mt.item_id
-      where mt.series_id = ${seriesId} and mt.status = 'open' and t.trash_entry_id is null
-      order by t.created_at, t.id`);
+      where mt.series_id = ${seriesId} and mt.status = 'open' and not mt.one_off and t.trash_entry_id is null
+      order by mt.agenda_position nulls last, t.created_at, t.id`);
     return result.rows.map((row) => row.item_id);
   }
 
@@ -380,7 +460,7 @@ export class MeetingService {
     actor: Principal,
     series: SeriesRow,
     at: { recurrenceId: Date | null; startsAt: Date | null },
-    options: { carry?: DocumentJson } = {},
+    options: { carry?: DocumentJson; extra?: boolean } = {},
   ): Promise<string> {
     const language = await this.#templates.language(actor);
     const labels = SECTION_TITLES[language];
@@ -413,11 +493,12 @@ export class MeetingService {
       });
     }
     document = addTopicUpdates(document, await this.#openTopicIds(tx, series.item_id), labels);
-    document = withSeriesTaskReport(document, series.item_id, labels);
+    document = withSeriesTaskReport(document, series.item_id);
     await insertInitialDocument(tx, id, actorId, document);
     await tx.execute(sql`
-      insert into meetings (item_id, series_id, recurrence_id, starts_at, duration_minutes, state)
-      values (${id}, ${series.item_id}, ${at.recurrenceId}, ${at.startsAt}, ${series.duration_minutes}, 'upcoming')`);
+      insert into meetings (item_id, series_id, recurrence_id, starts_at, duration_minutes, state, extra)
+      values (${id}, ${series.item_id}, ${at.recurrenceId}, ${at.startsAt}, ${series.duration_minutes}, 'upcoming',
+        ${options.extra ?? false})`);
     await tx.execute(sql`
       insert into meeting_attendees (meeting_id, account_id, position, added_by)
       select ${id}, mm.account_id, mm.position, ${actorId} from meeting_series_members mm
@@ -443,7 +524,7 @@ export class MeetingService {
       await lockSpaces(tx, [spaceId]);
       if (await isKnowledgeBase(tx, spaceId)) throw knowledgeBaseKindError();
       if (input.parentId) await this.#checkParent(tx, actor, spaceId, input.parentId);
-      const members = await this.#validMembers(tx, actor, spaceId, input.members);
+      const members = await this.#validMembers(tx, actor, spaceId, input.members, { seriesMembers: true });
       const template = await this.#template(actor, spaceId, input.templateId);
       const last = await tx.execute<{ position: string | null }>(sql`
         select max(position) as position from tree_items
@@ -515,11 +596,12 @@ export class MeetingService {
       parent_id: string | null;
       one_on_one: boolean;
       open_topics: string;
+      overview_layout: OverviewLayout | null;
     }>(sql`
-      select ms.source, ms.reminder, ms.calendar_uid, ms.created_at, t.parent_id, s.one_on_one,
+      select ms.source, ms.reminder, ms.calendar_uid, ms.created_at, t.parent_id, s.one_on_one, ms.overview_layout,
         (select count(*) from meeting_topics mt join tree_items tt on tt.id = mt.item_id
           join spaces ts on ts.id = tt.space_id
-          where mt.series_id = ms.item_id and mt.status = 'open'
+          where mt.series_id = ms.item_id and mt.status = 'open' and not mt.one_off
             and ${visibleItem(this.#authorization, viewer, sql`tt`, sql`ts`)}) as open_topics
       from meeting_series ms join tree_items t on t.id = ms.item_id join spaces s on s.id = t.space_id
       where ms.item_id = ${seriesId}`);
@@ -529,7 +611,8 @@ export class MeetingService {
     const template = await this.#templates.get(series.template_id, await this.#templates.language(viewer));
     const upcoming = series.archived
       ? null
-      : ((await this.meetings(viewer, seriesId, { upcoming: true })).items[0] ?? null);
+      : ((await this.meetings(viewer, seriesId, { upcoming: true })).items.find((item) => item.next) ?? null);
+    const layout = overviewLayoutOf(row.overview_layout);
     return {
       id: series.item_id,
       spaceId: series.space_id,
@@ -552,17 +635,123 @@ export class MeetingService {
       calendarUid: row.calendar_uid,
       upcoming,
       openTopics: Number(row.open_topics),
+      overview: {
+        columns: layout.columns,
+        hidden: layout.hidden,
+        links: await this.#overviewLinks(viewer, layout.links),
+      },
       createdAt: new Date(row.created_at),
     };
+  }
+
+  async #overviewLinks(viewer: Principal, ids: readonly string[]): Promise<OverviewLink[]> {
+    if (ids.length === 0) return [];
+    const result = await this.#database.execute<{ id: string; title: string; kind: string; key: string }>(sql`
+      select t.id, t.title, t.kind, s.key from tree_items t join spaces s on s.id = t.space_id
+      where t.id = any(${sql.param([...ids])}::uuid[]) and t.trash_entry_id is null
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
+    const byId = new Map(result.rows.map((row) => [row.id, row]));
+    return ids.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [{ id: row.id, title: row.title, kind: row.kind, spaceKey: row.key }] : [];
+    });
+  }
+
+  async setOverview(
+    actor: Principal,
+    seriesId: string,
+    input: { columns: [string[], string[]]; hidden: string[]; links: string[] },
+  ): Promise<void> {
+    const known = new Set<string>(overviewModules);
+    const placed = [...input.columns[0], ...input.columns[1], ...input.hidden];
+    if (placed.some((id) => !known.has(id)) || new Set(placed).size !== placed.length) {
+      throw new SpaceError("invalidLayout", "Place every module of the overview once, in a column or hidden");
+    }
+    const links = [...new Set(input.links.map((id) => id.toLowerCase()))];
+    if (links.length > MAX_OVERVIEW_LINKS) {
+      throw new SpaceError("tooManyOverviewLinks", `An overview can link up to ${MAX_OVERVIEW_LINKS} pages`);
+    }
+    await this.#database.transaction(async (tx) => {
+      const series = await this.#writableSeries(tx, seriesId);
+      const visible = await this.#authorization.explainMany(
+        actor,
+        "item.view",
+        links.map((id) => ({ type: "item", id })),
+        { executor: tx, fresh: true },
+      );
+      const found = await tx.execute<{ id: string }>(sql`
+        select id from tree_items where id = any(${sql.param(links)}::uuid[])
+          and space_id = ${series.space_id} and trash_entry_id is null`);
+      const inSpace = new Set(found.rows.map((row) => row.id));
+      if (links.some((id, index) => !visible[index]?.allowed || !inSpace.has(id))) {
+        throw new SpaceError("invalidOverviewLink", "Link pages of the same space that you can open");
+      }
+      const layout: OverviewLayout = {
+        columns: input.columns,
+        hidden: [...input.hidden, ...overviewModules.filter((id) => !placed.includes(id))],
+        links,
+      };
+      await tx.execute(sql`update meeting_series set overview_layout = ${JSON.stringify(layout)}::jsonb,
+        updated_at = now() where item_id = ${seriesId}`);
+      await signalSpaceChange(tx, { spaceId: series.space_id, kind: "meetings", itemId: seriesId });
+    });
+  }
+
+  async attendance(viewer: Principal, seriesId: string): Promise<AttendanceRate[]> {
+    const series = await this.#series(this.#database, seriesId);
+    const result = await this.#database.execute<{
+      account_id: string;
+      name: string | null;
+      picture_ref: string | null;
+      present: string;
+      meetings: string;
+    }>(sql`
+      with recent as (
+        select m.item_id from meetings m join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
+        where m.series_id = ${seriesId} and m.state in ('closed', 'reopened') and t.trash_entry_id is null
+          and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+        order by coalesce(m.starts_at, m.closed_at) desc nulls last, m.item_id desc
+        limit ${ATTENDANCE_WINDOW})
+      select mm.account_id, ${this.#people.visibleName(viewer, sql`a`)} as name,
+        ${this.#people.visiblePictureRef(viewer, sql`a`)} as picture_ref,
+        (select count(*) from meeting_attendees x join recent r on r.item_id = x.meeting_id
+          where x.account_id = mm.account_id and x.attendance = 'present') as present,
+        (select count(*) from recent) as meetings
+      from meeting_series_members mm join accounts a on a.id = mm.account_id
+      where mm.series_id = ${series.item_id} order by mm.position, mm.account_id`);
+    return result.rows.map((row) => ({
+      id: row.account_id,
+      name: row.name,
+      pictureRef: row.picture_ref,
+      present: Number(row.present),
+      meetings: Number(row.meetings),
+    }));
+  }
+
+  async addExtra(actor: Principal, seriesId: string, startsAt: Date): Promise<string> {
+    return this.#database.transaction(async (tx) => {
+      const series = await this.#writableSeries(tx, seriesId);
+      const count = await tx.execute<{ count: string }>(sql`
+        select count(*) as count from meetings where series_id = ${seriesId} and state = 'upcoming' and extra`);
+      if (Number(count.rows[0]?.count ?? 0) >= MAX_EXTRA_MEETINGS) {
+        throw new SpaceError(
+          "tooManyExtraMeetings",
+          `A series can plan up to ${MAX_EXTRA_MEETINGS} additional meetings at a time`,
+        );
+      }
+      return this.#createMeeting(tx, actor, series, { recurrenceId: null, startsAt }, { extra: true });
+    });
   }
 
   async #members(viewer: Principal, series: SeriesRow): Promise<SeriesMember[]> {
     const result = await this.#database.execute<{
       account_id: string;
       name: string | null;
+      picture_ref: string | null;
       active: boolean;
     }>(sql`
       select mm.account_id, ${this.#people.visibleName(viewer, sql`a`)} as name,
+        ${this.#people.visiblePictureRef(viewer, sql`a`)} as picture_ref,
         ${activeAccount(sql`a`, series.organization_id)} as active
       from meeting_series_members mm join accounts a on a.id = mm.account_id
       where mm.series_id = ${series.item_id} order by mm.position, mm.account_id`);
@@ -571,6 +760,7 @@ export class MeetingService {
       members.push({
         id: row.account_id,
         name: row.name,
+        pictureRef: row.picture_ref,
         active: row.name === null || row.active,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
@@ -610,7 +800,9 @@ export class MeetingService {
           where item_id = ${seriesId}`);
       }
       if (changes.members !== undefined) {
-        const members = await this.#validMembers(tx, actor, series.space_id, changes.members);
+        const members = await this.#validMembers(tx, actor, series.space_id, changes.members, {
+          seriesMembers: true,
+        });
         await tx.execute(sql`delete from meeting_series_members where series_id = ${seriesId}
           and not (account_id = any(${sql.param(members)}::uuid[]))`);
         for (const [position, accountId] of members.entries()) {
@@ -619,17 +811,12 @@ export class MeetingService {
             values (${seriesId}, ${accountId}, ${position})
             on conflict (series_id, account_id) do update set position = excluded.position, updated_at = now()`);
         }
-        const upcoming = await tx.execute<{ item_id: string }>(
-          sql`select item_id from meetings where series_id = ${seriesId} and state = 'upcoming'`,
-        );
-        const upcomingId = upcoming.rows[0]?.item_id;
-        if (upcomingId) {
-          await tx.execute(sql`
-            insert into meeting_attendees (meeting_id, account_id, position, added_by)
-            select ${upcomingId}, account_id, position, ${actorIdOf(actor)} from meeting_series_members
-            where series_id = ${seriesId}
-            on conflict (meeting_id, account_id) do nothing`);
-        }
+        await tx.execute(sql`
+          insert into meeting_attendees (meeting_id, account_id, position, added_by)
+          select m.item_id, mm.account_id, mm.position, ${actorIdOf(actor)}
+          from meeting_series_members mm join meetings m on m.series_id = mm.series_id and m.state = 'upcoming'
+          where mm.series_id = ${seriesId}
+          on conflict (meeting_id, account_id) do nothing`);
       }
       if (changes.schedule !== undefined) {
         const durationMinutes = cleanDuration(changes.schedule.durationMinutes);
@@ -662,10 +849,10 @@ export class MeetingService {
 
   async #reschedule(tx: Transaction, actor: Principal, series: SeriesRow): Promise<void> {
     const upcoming = await tx.execute<MeetingRow>(sql`
-      select m.item_id, m.series_id, m.recurrence_id, m.starts_at, m.duration_minutes, m.state, m.closed_at,
-        m.closed_by, m.next_meeting_id, m.calendar_uid, t.title
+      select m.item_id, m.series_id, m.extra, m.recurrence_id, m.starts_at, m.duration_minutes, m.state,
+        m.closed_at, m.closed_by, m.next_meeting_id, m.calendar_uid, t.title
       from meetings m join tree_items t on t.id = m.item_id
-      where m.series_id = ${series.item_id} and m.state = 'upcoming' for update of m`);
+      where m.series_id = ${series.item_id} and m.state = 'upcoming' and not m.extra for update of m`);
     const meeting = upcoming.rows[0];
     if (!meeting) return;
     const previous = await tx.execute<{
@@ -673,7 +860,8 @@ export class MeetingService {
       starts_at: Date | string | null;
     }>(sql`
       select recurrence_id, starts_at from meetings
-      where series_id = ${series.item_id} and item_id <> ${meeting.item_id} and state in ('closed', 'skipped', 'reopened')
+      where series_id = ${series.item_id} and item_id <> ${meeting.item_id} and not extra
+        and state in ('closed', 'skipped', 'reopened')
       order by coalesce(recurrence_id, starts_at) desc nulls last limit 1`);
     const schedule = scheduleOf(series);
     const after = toDate(previous.rows[0]?.recurrence_id ?? previous.rows[0]?.starts_at ?? null);
@@ -752,8 +940,10 @@ export class MeetingService {
       attendees: string;
       present: string;
       sort_key: string;
+      extra: boolean;
     }>(sql`
-      select m.item_id, t.title, m.state, m.starts_at, m.recurrence_id, m.duration_minutes, ${sortKey}::text as sort_key,
+      select m.item_id, t.title, m.state, m.starts_at, m.recurrence_id, m.duration_minutes, m.extra,
+        ${sortKey}::text as sort_key,
         (select count(*) from meeting_attendees a where a.meeting_id = m.item_id) as attendees,
         (select count(*) from meeting_attendees a where a.meeting_id = m.item_id and a.attendance = 'present') as present
       from meetings m join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
@@ -764,16 +954,19 @@ export class MeetingService {
       limit ${limit + 1}`);
     const rows = result.rows.slice(0, limit);
     const last = rows.at(-1);
+    const nextId = await this.nextMeeting(this.#database, seriesId);
     return {
       items: rows.map((row) => ({
         id: row.item_id,
         title: row.title,
         state: row.state,
+        next: row.item_id === nextId,
         startsAt: toDate(row.starts_at),
         recurrenceId: toDate(row.recurrence_id),
         durationMinutes: row.duration_minutes,
         attendees: Number(row.attendees),
         present: Number(row.present),
+        extra: row.extra,
       })),
       next: result.rows.length > limit && last ? [last.sort_key, last.item_id] : null,
     };
@@ -789,11 +982,13 @@ export class MeetingService {
     const attendees = await this.#database.execute<{
       account_id: string;
       name: string | null;
+      picture_ref: string | null;
       attendance: Attendance | null;
       member: boolean;
       active: boolean;
     }>(sql`
-      select a.account_id, ${this.#people.visibleName(viewer, sql`p`)} as name, a.attendance,
+      select a.account_id, ${this.#people.visibleName(viewer, sql`p`)} as name,
+        ${this.#people.visiblePictureRef(viewer, sql`p`)} as picture_ref, a.attendance,
         ${activeAccount(sql`p`, series.organization_id)} as active,
         exists (select 1 from meeting_series_members mm where mm.series_id = ${meeting.series_id}
           and mm.account_id = a.account_id) as member
@@ -804,6 +999,7 @@ export class MeetingService {
       list.push({
         id: row.account_id,
         name: row.name,
+        pictureRef: row.picture_ref,
         attendance: row.attendance,
         member: seriesVisible ? row.member : null,
         active: row.name === null || row.active,
@@ -813,15 +1009,29 @@ export class MeetingService {
         }),
       });
     }
+    const guests = await this.#database.execute<{
+      id: string;
+      name: string;
+      note: string | null;
+      attendance: Attendance | null;
+    }>(sql`
+      select id, name, note, attendance from meeting_guests where meeting_id = ${meetingId}
+      order by position, created_at, id`);
     const closer = meeting.closed_by
       ? await this.#people.visibleNames(viewer, [meeting.closed_by])
       : new Map();
+    const adjacent = seriesVisible
+      ? await this.#adjacent(viewer, meeting.series_id, meeting.item_id, toDate(meeting.starts_at))
+      : { previous: null, following: null };
     return {
       id: meeting.item_id,
       seriesId: seriesVisible ? meeting.series_id : null,
       seriesTitle: seriesVisible ? series.title : null,
       title: meeting.title,
       state: meeting.state,
+      next:
+        meeting.state === "upcoming" &&
+        (await this.nextMeeting(this.#database, meeting.series_id)) === meeting.item_id,
       current:
         (!seriesVisible || !series.archived) &&
         (meeting.state === "upcoming" || meeting.state === "reopened"),
@@ -834,10 +1044,49 @@ export class MeetingService {
         ? { id: meeting.closed_by, name: closer.get(meeting.closed_by) ?? null }
         : null,
       nextMeetingId: seriesVisible ? meeting.next_meeting_id : null,
+      previousMeeting: adjacent.previous,
+      followingMeeting: adjacent.following,
       rhythm: seriesVisible ? series.recurrence !== null : null,
+      extra: meeting.extra,
       attendees: list,
+      guests: guests.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        note: row.note,
+        attendance: row.attendance,
+      })),
       calendarUid: meeting.calendar_uid,
     };
+  }
+
+  async #adjacent(
+    viewer: Principal,
+    seriesId: string,
+    meetingId: string,
+    startsAt: Date | null,
+  ): Promise<{ previous: AdjacentMeeting | null; following: AdjacentMeeting | null }> {
+    const find = async (before: boolean): Promise<AdjacentMeeting | null> => {
+      if (!startsAt && !before) return null;
+      const bound = startsAt
+        ? before
+          ? sql`and m.starts_at < ${startsAt.toISOString()}::timestamptz`
+          : sql`and m.starts_at > ${startsAt.toISOString()}::timestamptz`
+        : sql``;
+      const result = await this.#database.execute<{
+        item_id: string;
+        title: string;
+        starts_at: Date | string | null;
+      }>(sql`
+        select m.item_id, t.title, m.starts_at from meetings m
+        join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
+        where m.series_id = ${seriesId} and m.item_id <> ${meetingId} and m.state <> 'skipped'
+          and m.starts_at is not null and t.trash_entry_id is null ${bound}
+          and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+        order by m.starts_at ${before ? sql`desc` : sql`asc`}, m.item_id limit 1`);
+      const row = result.rows[0];
+      return row ? { id: row.item_id, title: row.title, startsAt: toDate(row.starts_at) } : null;
+    };
+    return { previous: await find(true), following: await find(false) };
   }
 
   async #nextAt(
@@ -876,10 +1125,21 @@ export class MeetingService {
       if (meeting.state === "closed" || meeting.state === "skipped") {
         throw new SpaceError("meetingClosed", "Someone closed this meeting already");
       }
-      const next = meeting.state === "upcoming" ? await this.#nextAt(tx, series, meeting, input) : null;
+      const startsAt = toDate(meeting.starts_at);
+      if (startsAt && localDate(startsAt, series.time_zone) > localDate(this.#clock(), series.time_zone)) {
+        throw new SpaceError("meetingInFuture", "A meeting can be closed from its day on, not before");
+      }
+      const next =
+        meeting.state === "upcoming" && !meeting.extra
+          ? await this.#nextAt(tx, series, meeting, input)
+          : null;
       await tx.execute(sql`
         update meetings set state = 'closed', closed_at = now(), closed_by = ${actorIdOf(actor)}, updated_at = now()
         where item_id = ${meetingId}`);
+      await tx.execute(sql`
+        update meeting_topics set status = 'closed', outcome = 'resolved', closed_at = now(),
+          closed_by = ${actorIdOf(actor)}, closed_in_id = ${meetingId}, updated_at = now()
+        where series_id = ${series.item_id} and one_off and status = 'open' and raised_in_id = ${meetingId}`);
       let nextMeetingId: string | null = null;
       if (next) {
         nextMeetingId = await this.#createMeeting(tx, actor, series, next);
@@ -949,6 +1209,10 @@ export class MeetingService {
         update meetings set state = ${removed ? "upcoming" : "reopened"}, closed_at = null, closed_by = null,
           next_meeting_id = ${removed ? null : next}, updated_at = now()
         where item_id = ${meetingId}`);
+      await tx.execute(sql`
+        update meeting_topics set status = 'open', outcome = null, closed_at = null, closed_by = null,
+          closed_in_id = null, updated_at = now()
+        where series_id = ${series.item_id} and one_off and closed_in_id = ${meetingId} and outcome = 'resolved'`);
       await tx.execute(sql`
         delete from notifications where type = 'meeting.notesAvailable' and target_id = ${meetingId}
           and read_at is null`);
@@ -1024,6 +1288,12 @@ export class MeetingService {
       if (meeting.state !== "upcoming") {
         throw new SpaceError("meetingNotUpcoming", "Only the upcoming meeting can be skipped");
       }
+      if (meeting.extra) {
+        throw new SpaceError(
+          "extraMeetingNotSkippable",
+          "An additional meeting has no next date to skip to; move it or delete it instead",
+        );
+      }
       const agenda = await this.#documents.snapshot(meetingId);
       const at = await this.#nextAt(tx, series, meeting, input);
       await tx.execute(sql`
@@ -1039,6 +1309,9 @@ export class MeetingService {
       await tx.execute(
         sql`update meetings set next_meeting_id = ${nextMeetingId} where item_id = ${meetingId}`,
       );
+      await tx.execute(sql`
+        update meeting_topics set raised_in_id = ${nextMeetingId}, updated_at = now()
+        where series_id = ${series.item_id} and one_off and status = 'open' and raised_in_id = ${meetingId}`);
       await signalSpaceChange(tx, { spaceId: series.space_id, kind: "meetings", itemId: series.item_id });
       return { nextMeetingId };
     });
@@ -1107,21 +1380,89 @@ export class MeetingService {
     seriesId: string,
     topicId: string,
   ): Promise<void> {
-    const upcoming = await tx.execute<{ item_id: string }>(
-      sql`select item_id from meetings where series_id = ${seriesId} and state = 'upcoming'`,
-    );
-    const meetingId = upcoming.rows[0]?.item_id;
-    if (!meetingId) return;
+    const meetings = await tx.execute<{ item_id: string }>(sql`
+      select m.item_id from meetings m join meeting_topics mt on mt.item_id = ${topicId}
+      where m.series_id = ${seriesId}
+        and (m.state = 'upcoming' or m.state = 'reopened' and m.item_id = mt.raised_in_id)
+        and (not mt.one_off or m.item_id = mt.raised_in_id)
+      order by m.item_id`);
     const labels = SECTION_TITLES[await this.#templates.language(actor)];
-    await this.#documents.editLocked(
-      tx,
-      meetingId,
-      (document) => {
-        const next = addTopicUpdates(document, [topicId], labels);
-        return next === document ? null : next;
-      },
-      actorIdOf(actor),
-    );
+    for (const row of meetings.rows) {
+      await this.#documents.editLocked(
+        tx,
+        row.item_id,
+        (document) => {
+          const next = addTopicUpdates(document, [topicId], labels);
+          return next === document ? null : next;
+        },
+        actorIdOf(actor),
+      );
+    }
+  }
+
+  async sectionTitles(actor: Principal): Promise<SectionTitles> {
+    return SECTION_TITLES[await this.#templates.language(actor)];
+  }
+
+  async addGuest(
+    actor: Principal,
+    meetingId: string,
+    input: { name: string; note?: string | null | undefined },
+  ): Promise<string> {
+    const name = input.name.replace(/\s+/g, " ").trim();
+    if (name.length === 0 || name.length > GUEST_NAME_MAX_LENGTH) {
+      throw new SpaceError("invalidGuestName", `The name needs 1 to ${GUEST_NAME_MAX_LENGTH} characters`);
+    }
+    const note = input.note?.trim() || null;
+    if (note && note.length > GUEST_NOTE_MAX_LENGTH) {
+      throw new SpaceError("invalidGuestNote", `The note can have up to ${GUEST_NOTE_MAX_LENGTH} characters`);
+    }
+    return this.#database.transaction(async (tx) => {
+      const meeting = await this.#meeting(tx, meetingId, true);
+      const count = await tx.execute<{ count: string }>(
+        sql`select count(*) as count from meeting_guests where meeting_id = ${meetingId}`,
+      );
+      const position = Number(count.rows[0]?.count ?? 0);
+      if (position >= MAX_GUESTS) {
+        throw new SpaceError("tooManyGuests", `A meeting can have up to ${MAX_GUESTS} guests`);
+      }
+      const id = uuidv7();
+      const actorId = actorIdOf(actor);
+      await tx.execute(sql`
+        insert into meeting_guests (id, meeting_id, name, note, position, added_by, updated_by)
+        values (${id}, ${meetingId}, ${name}, ${note}, ${position}, ${actorId}, ${actorId})`);
+      await this.#signalMeeting(tx, meeting);
+      return id;
+    });
+  }
+
+  async setGuestAttendance(
+    actor: Principal,
+    meetingId: string,
+    guestId: string,
+    attendance: Attendance | null,
+  ): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const meeting = await this.#meeting(tx, meetingId, true);
+      const updated = await tx.execute(sql`
+        update meeting_guests set attendance = ${attendance}, updated_by = ${actorIdOf(actor)}, updated_at = now()
+        where meeting_id = ${meetingId} and id = ${guestId} returning id`);
+      if (updated.rows.length === 0)
+        throw new SpaceError("guestNotFound", "The guest is not on this meeting");
+      await this.#signalMeeting(tx, meeting);
+    });
+  }
+
+  async removeGuest(_actor: Principal, meetingId: string, guestId: string): Promise<void> {
+    await this.#database.transaction(async (tx) => {
+      const meeting = await this.#meeting(tx, meetingId, true);
+      const removed = await tx.execute(
+        sql`delete from meeting_guests where meeting_id = ${meetingId} and id = ${guestId} returning id`,
+      );
+      if (removed.rows.length === 0)
+        throw new SpaceError("guestNotFound", "The guest is not on this meeting");
+      await this.#signalMeeting(tx, meeting);
+    });
   }
 
   async removeTopicFromLater(
@@ -1147,7 +1488,14 @@ export class MeetingService {
   async currentMeeting(executor: Executor, seriesId: string): Promise<string | null> {
     const result = await executor.execute<{ item_id: string }>(sql`
       select item_id from meetings where series_id = ${seriesId} and state in ('upcoming', 'reopened')
-      order by (state = 'reopened') desc, coalesce(starts_at, 'infinity'::timestamptz) limit 1`);
+      order by (state = 'reopened') desc, coalesce(starts_at, 'infinity'::timestamptz), item_id limit 1`);
+    return result.rows[0]?.item_id ?? null;
+  }
+
+  async nextMeeting(executor: Executor, seriesId: string): Promise<string | null> {
+    const result = await executor.execute<{ item_id: string }>(sql`
+      select item_id from meetings where series_id = ${seriesId} and state = 'upcoming'
+      order by coalesce(starts_at, 'infinity'::timestamptz), item_id limit 1`);
     return result.rows[0]?.item_id ?? null;
   }
 
@@ -1202,7 +1550,8 @@ export class MeetingService {
       upcoming_at: Date | string | null;
     }>(sql`
       select ms.item_id, t.title, t.archived_root_id is not null as archived,
-        (select m.starts_at from meetings m where m.series_id = ms.item_id and m.state = 'upcoming') as upcoming_at
+        (select min(m.starts_at) from meetings m where m.series_id = ms.item_id and m.state = 'upcoming')
+          as upcoming_at
       from meeting_series ms join tree_items t on t.id = ms.item_id join spaces s on s.id = t.space_id
       where t.space_id = ${spaceId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by t.archived_root_id is not null, lower(t.title), t.id

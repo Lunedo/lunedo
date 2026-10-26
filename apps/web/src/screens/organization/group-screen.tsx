@@ -1,6 +1,5 @@
 import { groupDescriptionSchema, groupNameSchema } from "@lunedo/shared";
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -11,7 +10,6 @@ import {
   Dialog,
   Field,
   focusFirstInvalidSoon,
-  Input,
   List,
   ListRow,
   Notice,
@@ -34,6 +32,8 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
+import { AppDatePicker } from "../../components/date-fields.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -144,12 +144,7 @@ export function GroupScreen() {
     <SettingsPage
       title={group.data?.name ?? ""}
       description={group.data?.description || t("groups.noDescription")}
-      icon={UsersRound}
-      organizationId={organizationId}
-      breadcrumbs={[
-        { label: t("groups.title"), href: `/settings/organizations/${organizationId}/groups` },
-        { label: group.data?.name ?? "" },
-      ]}
+      back={{ label: t("groups.title"), href: `/settings/organizations/${organizationId}/groups` }}
     >
       {group.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {managedBy ? (
@@ -165,7 +160,7 @@ export function GroupScreen() {
       {group.data && canManage ? <DetailsSection group={group.data} onSaved={refresh} /> : null}
       <Section title={t("groups.access")} icon={ShieldCheck}>
         {groupRoles.length === 0 ? (
-          <p className="px-4 py-3 text-text-muted">{t("groups.noAccess")}</p>
+          <p className="py-3 text-text-muted">{t("groups.noAccess")}</p>
         ) : (
           <List>
             {groupRoles.map((entry) => (
@@ -231,17 +226,29 @@ export function GroupScreen() {
         }
       >
         {members.isPending ? <Skeleton className="h-12 w-full" /> : null}
-        {members.data?.length === 0 ? (
-          <p className="px-4 py-3 text-text-muted">{t("groups.noMembers")}</p>
-        ) : null}
+        {members.data?.length === 0 ? <p className="py-3 text-text-muted">{t("groups.noMembers")}</p> : null}
         <ul className="flex flex-col">
           {members.data?.map((member) => (
             <li
               key={member.accountId}
-              className="flex items-center gap-3 border-border border-b px-4 py-2 last:border-b-0"
+              className="flex items-center gap-3 border-border border-b py-2 last:border-b-0"
             >
-              <Avatar name={member.name} size="sm" />
-              <span className="flex-1">{member.name}</span>
+              <PersonAvatar
+                id={member.accountId}
+                name={member.name}
+                pictureRef={member.pictureRef}
+                size="sm"
+              />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate" title={member.name}>
+                  {member.name}
+                </span>
+                {member.jobTitle ? (
+                  <span className="truncate text-sm text-text-muted" title={member.jobTitle}>
+                    {member.jobTitle}
+                  </span>
+                ) : null}
+              </span>
               {member.expiresAt ? (
                 <Badge variant="warning">{t("groups.until", { date: format.date(member.expiresAt) })}</Badge>
               ) : null}
@@ -324,8 +331,15 @@ export function GroupScreen() {
           people={members.data?.map((member) => member.name) ?? []}
           what={
             roleSummary
-              ? t("groups.losesRoles", { roles: roleSummary, name: group.data?.name ?? "" })
-              : t("groups.losesMembership", { name: group.data?.name ?? "" })
+              ? t("groups.losesRoles", {
+                  count: members.data?.length ?? 0,
+                  roles: roleSummary,
+                  name: group.data?.name ?? "",
+                })
+              : t("groups.losesMembership", {
+                  count: members.data?.length ?? 0,
+                  name: group.data?.name ?? "",
+                })
           }
         />
       </ConfirmDialog>
@@ -421,7 +435,7 @@ function AddPersonDialog({
         </Field>
         {manager ? null : (
           <Field label={t("groups.expires")} hint={t("roles.expiresHint")}>
-            <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+            <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
           </Field>
         )}
         {name && !manager ? (
@@ -430,8 +444,8 @@ function AddPersonDialog({
             people={[name]}
             what={
               roleSummary
-                ? t("groups.gainsRoles", { roles: roleSummary, name: groupName })
-                : t("groups.gainsMembership", { name: groupName })
+                ? t("groups.gainsRoles", { count: 1, roles: roleSummary, name: groupName })
+                : t("groups.gainsMembership", { count: 1, name: groupName })
             }
           />
         ) : null}

@@ -9,6 +9,7 @@ import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
+import { spaceDisplayName } from "./display-name.js";
 import type { PeopleService } from "./people.js";
 import type { TreeItemKind } from "./schema.js";
 import { signalSpaceChange } from "./signals.js";
@@ -22,6 +23,8 @@ export type OwnerLoss = "none" | "deactivated" | "membershipEnded";
 export interface ItemOwner {
   id: string;
   name: string | null;
+  jobTitle: string | null;
+  pictureRef: string | null;
   email: string | null;
   active: boolean;
 }
@@ -114,9 +117,15 @@ export class OwnershipService {
       where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row?.owner_id) return null;
-    const names = await this.#people.visibleNames(viewer, [row.owner_id]);
-    const name = names.get(row.owner_id) ?? null;
-    return { id: row.owner_id, name, email: name === null ? null : row.email, active: row.active };
+    const person = (await this.#people.visiblePeople(viewer, [row.owner_id])).get(row.owner_id);
+    return {
+      id: row.owner_id,
+      name: person?.name ?? null,
+      jobTitle: person?.jobTitle ?? null,
+      pictureRef: person?.pictureRef ?? null,
+      email: person ? row.email : null,
+      active: row.active,
+    };
   }
 
   async canTransfer(actor: Principal, itemId: string, executor: Executor = this.#database): Promise<boolean> {
@@ -271,7 +280,7 @@ export class OwnershipService {
       owner_state: string | null;
       sort_title: string;
     }>(sql`
-      select t.id, t.space_id, s.key, s.name as space_name, t.kind, t.title, t.owner_id, oa.state::text as owner_state,
+      select t.id, t.space_id, s.key, ${spaceDisplayName(sql`s`)} as space_name, t.kind, t.title, t.owner_id, oa.state::text as owner_state,
         lower(t.title) as sort_title
       from tree_items t join spaces s on s.id = t.space_id left join accounts oa on oa.id = t.owner_id
       where ${scope} and ${unownedCondition(sql`t`, sql`s`)} and ${visible}

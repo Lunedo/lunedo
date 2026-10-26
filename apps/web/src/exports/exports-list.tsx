@@ -115,9 +115,9 @@ function ExportRow({ entry, onRemove }: { entry: ExportEntry; onRemove: () => vo
         : t("exports.list.startedAt", { date: format.dateTime(entry.createdAt) });
   const Glyph = entry.scope === "space" ? FileArchive : FolderTree;
   return (
-    <li className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+    <li className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <Glyph aria-hidden="true" className="mt-1 size-icon shrink-0 text-text-muted" />
+        <Glyph aria-hidden="true" className="mt-1 size-icon-md shrink-0 text-text-muted" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex flex-wrap items-center gap-2 font-medium text-text">
             <span className="min-w-0 break-words">{entry.name}</span>
@@ -145,7 +145,7 @@ function ExportRow({ entry, onRemove }: { entry: ExportEntry; onRemove: () => vo
         {entry.state === "ready" && entry.format === "print" ? (
           <Button asChild variant="secondary">
             <Link to="/print" search={{ export: entry.id }}>
-              <Printer aria-hidden="true" className="size-icon" />
+              <Printer aria-hidden="true" className="size-icon-md" />
               {t("exports.list.openPrint")}
             </Link>
           </Button>
@@ -153,7 +153,7 @@ function ExportRow({ entry, onRemove }: { entry: ExportEntry; onRemove: () => vo
         {entry.state === "ready" ? (
           <Button asChild variant="secondary">
             <a href={exportDownloadUrl(entry.id)} download={entry.fileName ?? undefined}>
-              <Download aria-hidden="true" className="size-icon" />
+              <Download aria-hidden="true" className="size-icon-md" />
               {t("exports.list.download")}
             </a>
           </Button>

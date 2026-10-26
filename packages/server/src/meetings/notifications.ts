@@ -41,9 +41,45 @@ const confidentialWithoutAdministrator = defineNotificationType({
   },
 });
 
+const personalWithoutAdministrator = defineNotificationType({
+  type: "space.personalWithoutAdministrator",
+  targetType: "space",
+  params: contentNotificationParamSchemas["space.personalWithoutAdministrator"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
+  async visible(context) {
+    return (
+      context.organizationId !== null &&
+      context.can("organization.spaces.manage", { type: "organization", id: context.organizationId })
+    );
+  },
+});
+
+const memberAddedByAdministration = defineNotificationType({
+  type: "space.memberAddedByAdministration",
+  targetType: "space",
+  params: contentNotificationParamSchemas["space.memberAddedByAdministration"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
+  async visible(context) {
+    return context.targetId !== null && context.can("space.manage", { type: "space", id: context.targetId });
+  },
+});
+
+const memberRemovedByAdministration = defineNotificationType({
+  type: "space.memberRemovedByAdministration",
+  targetType: "space",
+  params: contentNotificationParamSchemas["space.memberRemovedByAdministration"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
+  async visible(context) {
+    return context.targetId !== null && context.can("space.manage", { type: "space", id: context.targetId });
+  },
+});
+
 export const meetingNotificationTypes = [
   notesAvailable,
   meetingReminder,
   oneOnOneStarted,
   confidentialWithoutAdministrator,
+  personalWithoutAdministrator,
+  memberAddedByAdministration,
+  memberRemovedByAdministration,
 ];

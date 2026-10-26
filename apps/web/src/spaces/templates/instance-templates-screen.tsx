@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -24,12 +23,7 @@ export function InstanceTemplatesScreen() {
     await queryClient.invalidateQueries({ queryKey: ["spaces"] });
   };
   return (
-    <SettingsPage
-      title={t("templates.title")}
-      description={t("templates.instanceDescription")}
-      icon={LayoutTemplate}
-      width="wide"
-    >
+    <SettingsPage title={t("templates.title")} description={t("templates.instanceDescription")}>
       <TemplatesManager
         templates={templates.data}
         loading={templates.isPending}

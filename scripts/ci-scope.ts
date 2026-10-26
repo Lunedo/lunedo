@@ -68,12 +68,16 @@ export const backupPaths = [
   "apps/worker/src/cli/",
   "docker/Dockerfile",
   "docker/start.sh",
+  "docker/runtime/",
+  "scripts/bundle-server.ts",
   "scripts/backup-roundtrip.sh",
 ];
 
 export const operationsPaths = [
   "docker/Dockerfile",
   "docker/start.sh",
+  "docker/runtime/",
+  "scripts/bundle-server.ts",
   "docker/compose.yml",
   "scripts/install.sh",
   "scripts/install-update-check.sh",

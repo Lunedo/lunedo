@@ -119,7 +119,14 @@ const spaceRefSchema = z
     id: uuid("ID of the space."),
     key: z.string().describe("Key of the space."),
     name: z.string().describe("Name of the space. Empty for personal spaces, which clients name themselves."),
+    displayName: z
+      .string()
+      .describe(
+        "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language.",
+      ),
     personal: z.boolean().describe("Whether this is a personal space."),
+    knowledgeBase: z.boolean().describe("Whether the space is a knowledge base, whose pages are articles."),
+    mine: z.boolean().describe("Whether it is the caller's own personal space."),
   })
   .describe("A space the caller can open.");
 
@@ -166,6 +173,11 @@ const resultSchema = z
       .boolean()
       .describe(
         "Whether the caller can read the page only through a share. Space and path stay hidden then.",
+      ),
+    otherCategory: z
+      .boolean()
+      .describe(
+        "Whether the article lies in a category of a knowledge base that the caller may read but not change, while the caller is responsible for other categories there.",
       ),
     path: z
       .array(
@@ -227,7 +239,12 @@ const responseSchema = z
                   .describe("ID of the space, or null for pages shared with the caller."),
                 key: z.string().nullable().describe("Key of the space, or null."),
                 name: z.string().nullable().describe("Name of the space, or null."),
+                displayName: z
+                  .string()
+                  .nullable()
+                  .describe("Name to show, as `displayName` of a space in a result, or null."),
                 personal: z.boolean().describe("Whether this is a personal space."),
+                mine: z.boolean().describe("Whether it is the caller's own personal space."),
                 count: z.number().int().describe("Number of results."),
               })
               .describe("A space."),
@@ -300,9 +317,13 @@ const exampleResponse = {
         id: "01929b1e-7c1a-7000-8000-000000000010",
         key: "ITOPS",
         name: "IT Operations",
+        displayName: "IT Operations",
         personal: false,
+        knowledgeBase: false,
+        mine: false,
       },
       sharedWithYou: false,
+      otherCategory: false,
       path: [],
       labels: ["vpn"],
       status: examplePageStatus,
@@ -323,7 +344,9 @@ const exampleResponse = {
         id: "01929b1e-7c1a-7000-8000-000000000010",
         key: "ITOPS",
         name: "IT Operations",
+        displayName: "IT Operations",
         personal: false,
+        mine: false,
         count: 1,
       },
     ],
@@ -355,7 +378,9 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
             id: facet.value,
             key: facet.key,
             name: facet.name,
+            displayName: facet.displayName,
             personal: facet.personal,
+            mine: facet.mine,
             count: facet.count,
           })),
           labels: response.facets.labels,

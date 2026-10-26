@@ -22,6 +22,7 @@ import {
 import type { MailMessage } from "../mail/transport.js";
 import { timeZoneSetting } from "../settings/builtin.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import { contentLine, excerptOf, type LineContext, mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject } from "./registry.js";
 import {
@@ -450,7 +451,7 @@ export class NotificationMailer {
       null;
     const spaceIds = [...new Set(prepared.flatMap((entry) => spaceOf(entry) ?? []))];
     const spaces = await tx.execute<{ id: string; name: string }>(
-      sql`select id, name from spaces where id = any(${sql.param(spaceIds)}::uuid[])`,
+      sql`select s.id, ${spaceDisplayName(sql`s`)} as name from spaces s where s.id = any(${sql.param(spaceIds)}::uuid[])`,
     );
     const spaceNames = new Map(spaces.rows.map((row) => [row.id, row.name]));
     const newestOfItem = new Map<string, number>();

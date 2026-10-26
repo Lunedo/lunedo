@@ -53,6 +53,16 @@ const labels: UiLabels = {
   browserTimeZone: "This browser",
   undo: "Undo",
   secondsLeft: "{seconds} s",
+  previousMonth: "Previous month",
+  nextMonth: "Next month",
+  today: "Today",
+  chooseDate: "Choose a date",
+  rowsPerPage: "Rows per page",
+  previous: "Previous",
+  next: "Next",
+  selectAll: "Select all on this page",
+  selection: "Selection",
+  moreAbout: "More about",
 };
 
 export async function renderWithProviders(

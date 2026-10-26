@@ -209,7 +209,7 @@ describe("Word rendering", () => {
     const blocks = renderWord(
       doc(
         { type: "codeBlock", attrs: { language: "bash" }, content: [text("wg-quick up wg0")] },
-        { type: "image", attrs: { attachmentId: IMAGE, alt: "Rack", width: 320, align: "left" } },
+        { type: "image", attrs: { attachmentId: IMAGE, alt: "Rack", width: 40, align: "left" } },
         {
           type: "taskList",
           content: [
@@ -229,7 +229,7 @@ describe("Word rendering", () => {
       attachmentId: IMAGE,
       href: `/api/v1/attachments/${IMAGE}/content`,
       alt: "Rack",
-      width: 320,
+      width: 40,
       align: "left",
     });
     expect(blocks[2]?.type === "list" ? blocks[2].items[0]?.checked : null).toBe(true);
@@ -324,7 +324,7 @@ describe("Word rendering", () => {
 describe("print rendering", () => {
   it("loads images at once and shows the content of expand blocks", () => {
     const document = doc(
-      { type: "image", attrs: { attachmentId: IMAGE, alt: "Rack", width: 320, align: "center" } },
+      { type: "image", attrs: { attachmentId: IMAGE, alt: "Rack", width: 40, align: "center" } },
       { type: "expand", attrs: { title: "Details" }, content: [paragraph(text("Hidden on screen"))] },
     );
     const screen = renderHtml(document, context);
@@ -332,7 +332,8 @@ describe("print rendering", () => {
     expect(screen).toContain('loading="lazy"');
     expect(screen).toContain("<details");
     expect(printed).not.toContain("loading=");
-    expect(printed).toContain('width="320"');
+    expect(printed).toContain('data-width="40"');
+    expect(printed).not.toContain(' width="40"');
     expect(printed).not.toContain("<details");
     expect(printed).toContain('<p class="ld-expand-title">Details</p><div><p>Hidden on screen</p></div>');
   });

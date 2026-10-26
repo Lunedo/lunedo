@@ -190,7 +190,10 @@ describe.skipIf(!baseUrl)("audit entries about confidential spaces", () => {
     for (const id of [alice, bob]) {
       await test.services.memberships.deactivate(accountPrincipal(org.owner), id);
     }
-    await test.services.confidentialSpaces.delete(accountPrincipal(org.owner), org.id, council.id, {
+    await test.database.execute(
+      sql`update spaces set orphaned_at = now() - interval '31 days' where id = ${council.id}`,
+    );
+    await test.services.spaceCleanup.delete(accountPrincipal(org.owner), org.id, council.id, {
       confirmation: council.key,
       reason: "No active member remains",
     });
@@ -206,7 +209,7 @@ describe.skipIf(!baseUrl)("audit entries about confidential spaces", () => {
       targetId: council.id,
     });
     expect(items.map((entry) => entry.name)).toEqual(
-      expect.arrayContaining(["space.permissionRemoved", "space.confidentialDeleted"]),
+      expect.arrayContaining(["space.permissionRemoved", "space.cleanupDeleted"]),
     );
     expect(items.every((entry) => entry.peopleHidden)).toBe(true);
     expectNoPeople(items, people);

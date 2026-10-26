@@ -25,6 +25,9 @@ const filterShape = {
   from: inputTimestamp("Only events at or after this time.").optional(),
   to: inputTimestamp("Only events before this time.").optional(),
   actorId: uuid("Only events of this account.").optional(),
+  personId: uuid(
+    "Only events about this person: those they did and those that name them as the target or the account or holder concerned.",
+  ).optional(),
   targetType: z
     .string()
     .max(100)
@@ -39,7 +42,16 @@ const filterShape = {
 };
 
 const instanceFilter = z
-  .object({ ...filterShape, organizationId: uuid("Only events of this organization.").optional() })
+  .object({
+    ...filterShape,
+    organizationId: uuid("Only events of this organization.").optional(),
+    level: z
+      .enum(["instance"])
+      .optional()
+      .describe(
+        "`instance` lists only events of the instance itself, without those of organizations. With `personId` it adds the events about that account in its organizations, such as ended sessions or a reset second factor.",
+      ),
+  })
   .strict();
 const instanceListQuery = instanceFilter.extend(pageQuery);
 const organizationFilter = z.object(filterShape).strict();
@@ -115,10 +127,15 @@ function withPresentation(entry: AuditEntry) {
   return { ...raw, ...presentAuditEntry(entry) };
 }
 
-function toFilter(query: z.output<typeof instanceFilter>, organizationId?: string): AuditFilter {
+function toFilter(
+  query: z.output<typeof organizationFilter> & Partial<z.output<typeof instanceFilter>>,
+  organizationId?: string,
+): AuditFilter {
   const scopeId = organizationId ?? query.organizationId;
   return {
     ...(scopeId ? { scope: { type: "organization" as const, id: scopeId } } : {}),
+    ...(!scopeId && query.level === "instance" ? { level: "instance" as const } : {}),
+    ...(query.personId ? { personId: query.personId } : {}),
     ...(query.from ? { from: query.from } : {}),
     ...(query.to ? { to: query.to } : {}),
     ...(query.actorId ? { actorId: query.actorId } : {}),

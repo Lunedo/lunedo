@@ -113,12 +113,14 @@ const fields: SettingField[] = [
   { key: "organizations.selfRegistration", type: { kind: "boolean" } },
   { key: "spaces.membersCreateSpaces", type: { kind: "boolean" } },
   { key: "spaces.membersCreateConfidentialSpaces", type: { kind: "boolean" } },
+  { key: "spaces.cleanupGraceDays", type: days(7, 3650, [7, 30, 90]) },
   { key: "spaces.personalSpaces", type: { kind: "boolean" } },
   { key: "organizations.guestExpiryReminderDays", type: days(1, 90, [7, 14, 30]) },
   { key: "organizations.guestInactivityDays", type: days(1, 365, [30, 90, 180]) },
   { key: "organizations.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },
   { key: "organizations.breakGlassMinutes", type: minutes(5, DAY, [30, HOUR, 4 * HOUR]) },
   { key: "audit.retentionDays", type: days(1, 36_500, [90, 365, 3650]) },
+  { key: "identityProviders.syncLogRetentionDays", type: days(7, 3650, [30, 90, 365]) },
   {
     key: "pages.defaultMode",
     type: { kind: "enum", values: ["publish", "live"], labelPrefix: "settings.values.pageMode" },
@@ -178,8 +180,27 @@ export function settingLabelKey(key: string): string {
   return `settings.keys.${key.replaceAll(".", "_")}.label`;
 }
 
-export function settingDescriptionKey(key: string): string {
-  return `settings.keys.${key.replaceAll(".", "_")}.description`;
+export function settingDescriptionKey(key: string, level?: string): string {
+  const base = `settings.keys.${key.replaceAll(".", "_")}`;
+  if (level && levelDescriptions.has(`${key}@${level}`)) return `${base}.descriptionAt.${level}`;
+  return `${base}.description`;
+}
+
+const levelDescriptions = new Set([
+  "notifications.digestTime@user",
+  "apiTokens.maxLifetimeDays@organization",
+  "sharing.anyoneLinkMaxDays@organization",
+  "auth.passwordMinLength@organization",
+  "files.maxFileSizeMegabytes@organization",
+]);
+
+export const levelDescriptionKeys = [...levelDescriptions].map((entry) => {
+  const [key = "", level = ""] = entry.split("@");
+  return settingDescriptionKey(key, level);
+});
+
+export function settingHelpKey(key: string): string {
+  return `settings.keys.${key.replaceAll(".", "_")}.help`;
 }
 
 export const knownSettingKeys = fields.map((field) => field.key);

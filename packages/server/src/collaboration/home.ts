@@ -1,5 +1,5 @@
 import { uuidv7 } from "@lunedo/shared";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
@@ -20,6 +20,7 @@ export interface ContentReference {
   spaceId: string;
   spaceKey: string;
   spaceName: string;
+  mySpace: boolean;
 }
 
 export interface StarredSpace {
@@ -27,6 +28,7 @@ export interface StarredSpace {
   key: string;
   name: string;
   personal: boolean;
+  mySpace: boolean;
 }
 
 export interface Starred {
@@ -57,6 +59,7 @@ type ReferenceRow = {
   space_id: string;
   key: string;
   space_name: string;
+  my_space: boolean;
 };
 
 function reference(row: ReferenceRow): ContentReference {
@@ -67,7 +70,13 @@ function reference(row: ReferenceRow): ContentReference {
     spaceId: row.space_id,
     spaceKey: row.key,
     spaceName: row.space_name,
+    mySpace: row.my_space,
   };
+}
+
+function mySpace(viewer: Principal): SQL {
+  const accountId = actorIdOf(viewer);
+  return accountId ? sql`coalesce(s.personal_of = ${accountId}, false)` : sql`false`;
 }
 
 export class HomeService {
@@ -141,7 +150,7 @@ export class HomeService {
     const accountId = this.#account(viewer);
     const items = await this.#database.execute<ReferenceRow & { created_at: Date | string }>(sql`
       select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
-        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, st.created_at
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space, st.created_at
       from stars st join tree_items t on t.id = st.item_id join spaces s on s.id = t.space_id
       where st.account_id = ${accountId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by st.created_at desc limit ${MAX_STARS}`);
@@ -150,9 +159,11 @@ export class HomeService {
       key: string;
       name: string;
       personal: boolean;
+      my_space: boolean;
       created_at: Date | string;
     }>(sql`
-      select s.id, s.key, s.name, s.personal_of is not null as personal, st.created_at
+      select s.id, s.key, s.name, s.personal_of is not null as personal, ${mySpace(viewer)} as my_space,
+        st.created_at
       from stars st join spaces s on s.id = st.space_id
       where st.account_id = ${accountId} and ${this.#authorization.spaceFilter(viewer, sql`s`)}
       order by st.created_at desc limit ${MAX_STARS}`);
@@ -163,6 +174,7 @@ export class HomeService {
         key: row.key,
         name: row.name,
         personal: row.personal,
+        mySpace: row.my_space,
         starredAt: new Date(row.created_at),
       })),
     };
@@ -180,7 +192,7 @@ export class HomeService {
     const accountId = this.#account(viewer);
     const result = await this.#database.execute<ReferenceRow & { viewed_at: Date | string }>(sql`
       select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
-        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, v.viewed_at
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space, v.viewed_at
       from recent_views v join tree_items t on t.id = v.item_id join spaces s on s.id = t.space_id
       where v.account_id = ${accountId}
         and v.viewed_at > now() - make_interval(days => ${RECENT_VIEW_DAYS})
@@ -208,7 +220,7 @@ export class HomeService {
     >(sql`
       select m.id as mention_id, m.comment_id, m.actor_id, ${this.#people.visibleName(viewer, sql`a`)} as actor_name, m.notified_at,
         t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
-        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space
       from content_mentions m join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
       left join accounts a on a.id = m.actor_id
       left join comments c on c.id = m.comment_id
@@ -243,7 +255,7 @@ export class HomeService {
     if (!itemId) return null;
     const result = await this.#database.execute<ReferenceRow>(sql`
       select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
-        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
+        ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId} and s.organization_id = ${organizationId} and t.archived_root_id is null
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);

@@ -1,23 +1,23 @@
 import {
-  Badge,
   Button,
   CopyButton,
   Field,
   IconButton,
-  Input,
+  Menu,
   Notice,
   PasswordInput,
-  RadioGroup,
+  Select,
   Skeleton,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Link2, Plus, X } from "lucide-react";
+import { Link2, Lock, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { AppDatePicker } from "../components/date-fields.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
@@ -190,27 +190,30 @@ function CreateLink({
       onSubmit={(event) => void submit(event)}
       noValidate
       aria-labelledby="share-link-create"
-      className="flex flex-col gap-4 rounded-md border border-border p-4"
+      className="flex flex-col gap-3 border-t border-border pt-4"
     >
       <h3 id="share-link-create" className="font-semibold">
         {t("sharing.links.createTitle")}
       </h3>
-      <RadioGroup
+      <Field
         label={t("sharing.links.scope")}
-        variant="card"
-        value={scope}
-        onValueChange={(next) => setScope(next as ShareLinkScope)}
-        options={scopes.map((value) => ({
-          value,
-          label: scopeLabel(t, value, page.organizationName),
-          description: translateKey(t, `sharing.links.scopeHints.${value}`),
-        }))}
-      />
-      {!anyoneAllowed ? (
-        <p className="text-sm text-text-muted">
-          {restricted ? t("sharing.links.restrictedOnlyPeople") : t("sharing.links.anyoneOff")}
-        </p>
-      ) : null}
+        hint={[
+          translateKey(t, `sharing.links.scopeHints.${scope}`),
+          anyoneAllowed
+            ? null
+            : restricted
+              ? t("sharing.links.restrictedOnlyPeople")
+              : t("sharing.links.anyoneOff"),
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <Select
+          value={scope}
+          onValueChange={(next) => setScope(next as ShareLinkScope)}
+          options={scopes.map((value) => ({ value, label: scopeLabel(t, value, page.organizationName) }))}
+        />
+      </Field>
       {scope === "people" ? (
         <PeoplePicker page={page} people={people} onChange={setPeople} error={errors.people ?? null} />
       ) : null}
@@ -224,15 +227,16 @@ function CreateLink({
         error={errors.expiry ?? null}
         required={scope === "anyone"}
       >
-        <Input
-          type="date"
+        <AppDatePicker
           value={expiry}
+          className="w-auto"
           min={dateInput(new Date())}
           {...(scope === "anyone"
             ? { max: dateInput(new Date(Date.now() + options.anyoneMaxDays * DAY)) }
             : {})}
+          clearable={scope !== "anyone"}
           invalid={Boolean(errors.expiry)}
-          onChange={(event) => setExpiry(event.target.value)}
+          onValueChange={setExpiry}
         />
       </Field>
       <Field label={t("sharing.links.password")} hint={t("sharing.links.passwordHint")}>
@@ -254,7 +258,7 @@ function CreateLink({
             {t("common.cancel")}
           </Button>
         ) : null}
-        <Button type="submit" variant="primary" icon={Link2} loading={busy}>
+        <Button type="submit" variant="primary" loading={busy}>
           {t("sharing.links.create")}
         </Button>
       </div>
@@ -302,12 +306,12 @@ function EditLink({ page, link, onDone }: { page: SharedPage; link: ShareLink; o
   return (
     <form onSubmit={(event) => void submit(event)} noValidate className="flex flex-col gap-3 pt-2">
       <Field label={t("sharing.links.expiry")} error={error} required={link.scope === "anyone"}>
-        <Input
-          type="date"
+        <AppDatePicker
           value={expiry}
           min={dateInput(new Date())}
+          clearable={link.scope !== "anyone"}
           invalid={error !== null}
-          onChange={(event) => setExpiry(event.target.value)}
+          onValueChange={setExpiry}
         />
       </Field>
       {link.hasPassword && !removePassword ? (
@@ -375,45 +379,66 @@ function LinkRow({ page, link }: { page: SharedPage; link: ShareLink }) {
       setBusy(false);
     }
   };
+  const meta = [
+    link.expiresAt
+      ? t("sharing.links.validUntil", { date: format.calendarDate(link.expiresAt) })
+      : t("sharing.links.noExpiry"),
+    t("sharing.links.opened", { count: link.visitors }),
+  ];
   return (
     <li className="flex flex-col gap-2 py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Link2 aria-hidden="true" className="size-icon text-text-muted" />
-        <span className="min-w-0 flex-1 truncate font-medium" title={label}>
-          {label}
-        </span>
-        {link.hasPassword ? <Badge>{t("sharing.links.passwordBadge")}</Badge> : null}
-        {link.token ? <CopyButton value={linkAddress(link.token)} label={t("sharing.links.copy")} /> : null}
-      </div>
-      <p className="text-sm text-text-muted">
-        {[
-          link.expiresAt
-            ? t("sharing.links.expires", { date: format.date(link.expiresAt) })
-            : t("sharing.links.noExpiry"),
-          t("sharing.links.visitors", { count: link.visitors }),
-          t("sharing.links.createdBy", {
-            name: link.createdBy?.name ?? t("files.someone"),
-            date: format.date(link.createdAt),
-          }),
-        ].join(" · ")}
-      </p>
-      {link.scope === "people" && link.people.length > 0 ? (
-        <p className="text-sm">
-          {t("sharing.links.forPeople", {
-            names: link.people.map((person) => person.name ?? t("spaces.holders.unknownPerson")).join(", "),
-          })}
-        </p>
-      ) : null}
-      {mode === "view" ? (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setMode("edit")}>
-            {t("sharing.links.change")}
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => setMode("revoke")}>
-            {t("sharing.links.revoke")}
-          </Button>
+      <div className="flex items-center gap-3">
+        <Link2 aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate" title={label}>
+            {label}
+          </p>
+          <p className="flex flex-wrap items-center gap-x-1 text-sm text-text-muted">
+            <span>{meta.join(" · ")}</span>
+            {link.hasPassword ? (
+              <span className="inline-flex items-center gap-1">
+                · <Lock aria-hidden="true" className="size-icon-sm" />
+                {t("sharing.links.passwordBadge")}
+              </span>
+            ) : null}
+          </p>
+          {link.scope === "people" && link.people.length > 0 ? (
+            <p className="truncate text-sm text-text-muted">
+              {t("sharing.links.forPeople", {
+                names: link.people
+                  .map((person) => person.name ?? t("spaces.holders.unknownPerson"))
+                  .join(", "),
+              })}
+            </p>
+          ) : null}
         </div>
-      ) : null}
+        {link.token ? (
+          <CopyButton value={linkAddress(link.token)} label={t("sharing.links.copyShort")} />
+        ) : null}
+        <Menu
+          trigger={
+            <IconButton label={t("sharing.links.actions", { name: label })} icon={MoreHorizontal} size="sm" />
+          }
+          items={[
+            {
+              type: "header",
+              title: label,
+              description: t("sharing.links.createdBy", {
+                name: link.createdBy?.name ?? t("files.someone"),
+                date: format.date(link.createdAt),
+              }),
+            },
+            { label: t("sharing.links.change"), icon: Pencil, onSelect: () => setMode("edit") },
+            { type: "separator" },
+            {
+              label: t("sharing.links.revoke"),
+              icon: Trash2,
+              danger: true,
+              onSelect: () => setMode("revoke"),
+            },
+          ]}
+        />
+      </div>
       {mode === "edit" ? <EditLink page={page} link={link} onDone={() => setMode("view")} /> : null}
       {mode === "revoke" ? (
         <Notice
@@ -458,12 +483,21 @@ export function ShareLinksPanel({ page }: { page: SharedPage }) {
   const list = links.data.links;
   const showForm = options.enabled && (creating || list.length === 0) && !created;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {!options.enabled ? (
         <Notice variant="info" title={t("sharing.links.disabledTitle")}>
           {t("sharing.links.disabled")}
         </Notice>
-      ) : null}
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-2">
+          <p className="min-w-0 flex-1 text-sm text-text-muted">{t("sharing.links.intro")}</p>
+          {!showForm && !created ? (
+            <Button size="sm" variant="secondary" icon={Plus} onClick={() => setCreating(true)}>
+              {t("sharing.links.new")}
+            </Button>
+          ) : null}
+        </div>
+      )}
       {created ? (
         <Notice
           variant="success"
@@ -487,6 +521,18 @@ export function ShareLinksPanel({ page }: { page: SharedPage }) {
           </span>
         </Notice>
       ) : null}
+      {list.length > 0 ? (
+        <section aria-labelledby="share-links-list">
+          <h3 id="share-links-list" className="sr-only">
+            {t("sharing.links.listTitle")}
+          </h3>
+          <ul className="flex flex-col divide-y divide-border">
+            {list.map((link) => (
+              <LinkRow key={link.id} page={page} link={link} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {showForm ? (
         <CreateLink
           page={page}
@@ -498,23 +544,6 @@ export function ShareLinksPanel({ page }: { page: SharedPage }) {
           }}
           onCancel={list.length > 0 ? () => setCreating(false) : null}
         />
-      ) : null}
-      {options.enabled && !showForm && !created ? (
-        <Button variant="primary" icon={Plus} className="self-start" onClick={() => setCreating(true)}>
-          {t("sharing.links.new")}
-        </Button>
-      ) : null}
-      {list.length > 0 ? (
-        <section aria-labelledby="share-links-list">
-          <h3 id="share-links-list" className="font-semibold">
-            {t("sharing.links.listTitle")}
-          </h3>
-          <ul className="flex flex-col divide-y divide-border">
-            {list.map((link) => (
-              <LinkRow key={link.id} page={page} link={link} />
-            ))}
-          </ul>
-        </section>
       ) : null}
     </div>
   );

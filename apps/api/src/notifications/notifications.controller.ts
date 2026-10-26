@@ -5,6 +5,7 @@ import {
   currentRequestContext,
   type ImportChangeSignal,
   type NotificationCursor,
+  notificationKinds,
   type RequestContext,
   runWithRequestContext,
   type SettingChangeSignal,
@@ -12,7 +13,7 @@ import {
   type SyncRunSignal,
   type UnsubscribeState,
 } from "@lunedo/server";
-import { idSchema } from "@lunedo/shared";
+import { idSchema, UNREAD_COUNT_CAP } from "@lunedo/shared";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -78,7 +79,27 @@ const cursorSchema = z.tuple([
   idSchema,
 ]);
 
-const listQuery = z.object({ ...pageQuery, unread: z.enum(["true", "false"]).optional() }).strict();
+const listQuery = z
+  .object({
+    ...pageQuery,
+    unread: z.enum(["true", "false"]).optional(),
+    kind: z
+      .enum(notificationKinds)
+      .optional()
+      .describe(
+        "Only `mentions`, notifications about `watched` content, or access `requests` to decide. Leave it out for all.",
+      ),
+    spaceId: idSchema
+      .optional()
+      .describe("Only notifications about content or access requests of this space."),
+    grouped: z
+      .enum(["true", "false"])
+      .optional()
+      .describe(
+        "`true` combines changes to several items of one space on one day into one entry with its members.",
+      ),
+  })
+  .strict();
 
 const notificationSchema = z.object({
   id: idSchema,
@@ -95,7 +116,42 @@ const notificationSchema = z.object({
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   readAt: z.iso.datetime().nullable(),
+  preview: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("One line of the comment, task or request text, when the caller may still read it."),
+  group: z
+    .object({
+      spaceId: idSchema,
+      spaceKey: z.string(),
+      spaceName: z.string(),
+      day: z.string().describe("The day in the time zone of the caller, as YYYY-MM-DD."),
+      actors: z
+        .array(z.object({ id: idSchema, name: z.string() }))
+        .describe("Up to three people who made changes."),
+      actorCount: z.number().int().describe("Number of different people who made changes."),
+      members: z
+        .array(
+          z.object({
+            id: idSchema,
+            itemId: z.string().nullable(),
+            itemTitle: z.string(),
+            actor: z.object({ id: idSchema.nullable(), name: z.string().nullable() }).nullable(),
+            updatedAt: z.iso.datetime(),
+            readAt: z.iso.datetime().nullable(),
+          }),
+        )
+        .describe("The combined notifications, most recent first."),
+    })
+    .nullable()
+    .optional()
+    .describe("For a combined entry: the space, the day and the notifications it combines."),
 });
+
+const readManySchema = z
+  .object({ ids: z.array(idSchema).min(1).max(100).describe("Notifications to mark as read.") })
+  .strict();
 
 const idParams = z.object({ notificationId: idSchema }).strict();
 const unsubscribeParams = z
@@ -131,7 +187,19 @@ function unsubscribeView(state: UnsubscribeState) {
   };
 }
 const readAllSchema = z.object({ before: z.iso.datetime().optional() }).strict();
-const countSchema = z.object({ count: z.number().int() });
+const countSchema = z.object({
+  count: z.number().int().min(0).max(UNREAD_COUNT_CAP).describe(`Counts up to ${UNREAD_COUNT_CAP}.`),
+  capped: z
+    .boolean()
+    .describe(
+      `True when there are more than ${UNREAD_COUNT_CAP} unread notifications; \`count\` is then ${UNREAD_COUNT_CAP}.`,
+    ),
+});
+const countQuery = z
+  .object({
+    kind: z.enum(notificationKinds).optional().describe("Count only notifications of this kind."),
+  })
+  .strict();
 const markedSchema = z.object({ marked: z.number().int() });
 
 @Controller("api/v1/notifications")
@@ -162,6 +230,9 @@ export class NotificationsController {
       after,
       limit: query.limit,
       unreadOnly: query.unread === "true",
+      kind: query.kind,
+      spaceId: query.spaceId,
+      grouped: query.grouped === "true",
     });
     return { items: page.items, nextCursor: page.next ? encodeCursor(page.next) : null };
   }
@@ -171,10 +242,11 @@ export class NotificationsController {
   @ApiRoute({
     summary: "Count unread notifications",
     tags: [TAG],
+    query: countQuery,
     response: { description: "Unread notifications the caller may still see.", schema: countSchema },
   })
-  async unreadCount(@Req() request: FastifyRequest) {
-    return { count: await this.#notifications.unreadCount(sessionOf(request).accountId) };
+  async unreadCount(@Req() request: FastifyRequest, @Query() query: z.output<typeof countQuery>) {
+    return await this.#notifications.unreadCount(sessionOf(request).accountId, query.kind);
   }
 
   @Post("read-all")
@@ -189,6 +261,23 @@ export class NotificationsController {
   async readAll(@Req() request: FastifyRequest, @Body() body: z.output<typeof readAllSchema>) {
     const before = body.before ? new Date(body.before) : undefined;
     return { marked: await this.#notifications.markAllRead(sessionOf(request).accountId, before) };
+  }
+
+  @Post("read")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Mark several notifications as read",
+    description: "Notifications that do not exist or that the caller may no longer see are skipped.",
+    tags: [TAG],
+    status: 200,
+    body: readManySchema,
+    response: { description: "Number of notifications marked as read.", schema: markedSchema },
+  })
+  async readMany(@Req() request: FastifyRequest, @Body() body: z.output<typeof readManySchema>) {
+    const accountId = sessionOf(request).accountId;
+    let marked = 0;
+    for (const id of body.ids) if (await this.#notifications.markRead(accountId, id)) marked += 1;
+    return { marked };
   }
 
   @Get("unsubscribe/:token")
@@ -254,6 +343,13 @@ export class NotificationsController {
     if (!(await this.#notifications.markRead(sessionOf(request).accountId, id))) throw notFound();
   }
 
+  @Post(":notificationId/unread")
+  @SessionRoute()
+  @ApiRoute({ summary: "Mark a notification as unread", tags: [TAG], params: idParams })
+  async unread(@Param("notificationId") id: string, @Req() request: FastifyRequest) {
+    if (!(await this.#notifications.markUnread(sessionOf(request).accountId, id))) throw notFound();
+  }
+
   @Get("stream")
   @SessionRoute()
   @ApiRoute({
@@ -262,9 +358,9 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements. The event `maintenance` says that maintenance mode was switched on or off or its message changed; reload `GET /api/v1/maintenance`.",
+        "Server-sent events. The event `notifications` carries the unread count (`unreadCount`, at most 100, with `unreadCapped` true when there are more) at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, or where someone opened or left a page in the editor, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements. The event `maintenance` says that maintenance mode was switched on or off or its message changed; reload `GET /api/v1/maintenance`.",
       example:
-        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
+        'event: notifications\ndata: {"unreadCount":2,"unreadCapped":false}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
   })
   async stream(@Req() request: FastifyRequest, @Res() reply: FastifyReply) {
@@ -291,8 +387,11 @@ export class NotificationsController {
     const send = () => {
       enqueue(async () => {
         if (closed) return;
-        const unreadCount = await services.notifications.unreadCount(session.accountId);
-        if (!closed) raw.write(`event: notifications\ndata: ${JSON.stringify({ unreadCount })}\n\n`);
+        const unread = await services.notifications.unreadCount(session.accountId);
+        if (!closed)
+          raw.write(
+            `event: notifications\ndata: ${JSON.stringify({ unreadCount: unread.count, unreadCapped: unread.capped })}\n\n`,
+          );
       }, "Sending a notification event failed");
     };
     const sendSetting = (signal: SettingChangeSignal) => {

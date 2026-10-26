@@ -10,6 +10,7 @@ export {
   type IconButtonProps,
   type IconButtonVariant,
 } from "./button.js";
+export { type FilterChipOption, FilterChips } from "./chips.js";
 export { ChoiceTable, type ChoiceTableProps, type ChoiceTableRow } from "./choice-table.js";
 export { classNames } from "./class-names.js";
 export { type ColorModePreference, resolveColorMode, useColorMode } from "./color-mode.js";
@@ -47,6 +48,15 @@ export {
   Switch,
   type SwitchProps,
 } from "./controls.js";
+export {
+  DatePicker,
+  type DatePickerProps,
+  isoDate,
+  monthGrid,
+  parseIsoDate,
+  TimePicker,
+  timeOptions,
+} from "./date-picker.js";
 export {
   ConfirmDialog,
   type ConfirmDialogProps,
@@ -88,14 +98,27 @@ export {
   Field,
   type FieldControlProps,
   FieldError,
+  FieldGrid,
+  type FieldLayout,
+  FieldLayoutProvider,
   type FieldProps,
+  InlineField,
   Input,
   type InputProps,
   PasswordInput,
   Textarea,
   type TextareaProps,
   useFieldControl,
+  useFieldLayout,
 } from "./field.js";
+export {
+  FilterMenu,
+  type FilterMenuProps,
+  type FilterOption,
+  type MultiFilterMenuProps,
+  type SingleFilterMenuProps,
+} from "./filter-menu.js";
+export { FirstAndMore, type FirstAndMoreProps, type ListedValue } from "./first-and-more.js";
 export { focusFirstInvalid, focusFirstInvalidSoon } from "./focus-invalid.js";
 export {
   type FuzzyMatch,
@@ -105,11 +128,15 @@ export {
   highlightParts,
   type MatchRange,
 } from "./fuzzy.js";
+export { HelpPopover, SettingHelp } from "./help-popover.js";
 export { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {
+  BackLink,
+  type BackLinkProps,
   type Breadcrumb,
+  CollapsibleSection,
   DangerAction,
   DangerZone,
   List,
@@ -122,6 +149,7 @@ export {
   SettingRow,
   type SettingRowProps,
 } from "./layout.js";
+export { LIGHTBOX_BUTTON, Lightbox, LightboxButton, type LightboxProps } from "./lightbox.js";
 export { cleanCode, OneTimeCodeInput, type OneTimeCodeInputProps } from "./one-time-code.js";
 export {
   Menu,
@@ -158,6 +186,8 @@ export {
 export { Sidebar, SidebarGroup, SidebarHeader, SidebarItem, type SidebarItemProps } from "./sidebar.js";
 export {
   COPIED_VISIBLE_MS,
+  CodeBlock,
+  type CodeBlockProps,
   CopyButton,
   type CopyButtonProps,
   ErrorState,
@@ -169,16 +199,22 @@ export {
 } from "./status.js";
 export { Stepper, type StepperProps } from "./stepper.js";
 export {
+  PAGE_SIZES,
   type SortDirection,
   Table,
   type TableColumn,
+  type TableGroup,
+  TablePageArrows,
+  TablePager,
   type TablePagination,
   type TableProps,
+  type TableSelection,
   type TableSort,
   TableToolbar,
   type TableToolbarProps,
 } from "./table.js";
 export {
+  shortTimeZoneOffset,
   supportedTimeZones,
   TimeZoneCombobox,
   type TimeZoneComboboxProps,

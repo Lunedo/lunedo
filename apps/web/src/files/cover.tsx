@@ -145,7 +145,7 @@ export function CoverEditor({
               className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-surface p-1 text-accent shadow-popover"
               style={{ left: `${local.focusX * 100}%`, top: `${local.focusY * 100}%` }}
             >
-              <Crosshair className="size-icon" />
+              <Crosshair className="size-icon-md" />
             </span>
           </button>
           <div className="grid grid-cols-2 gap-2">

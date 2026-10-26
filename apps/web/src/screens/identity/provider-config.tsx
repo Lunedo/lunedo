@@ -6,7 +6,7 @@ import {
   secondFactorModes,
   signInNameSources,
 } from "@lunedo/shared";
-import { Badge, CopyButton, Input, Select, SettingRow, Switch } from "@lunedo/ui";
+import { Badge, CopyButton, FieldGrid, Input, Select, SettingHelp, SettingRow, Switch } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -205,6 +205,13 @@ export function domainsHintKey(type: IdentityProvider["type"], preset: string) {
   return "identityProviders.accounts.domainsHint" as const;
 }
 
+export function domainsHelpKey(type: IdentityProvider["type"], preset: string) {
+  if (type === "ldap") return "identityProviders.accounts.domainsHelpDirectory" as const;
+  if (preset === "google") return "identityProviders.accounts.domainsHelpGoogle" as const;
+  if (preset === "entraId") return "identityProviders.accounts.domainsHelpEntraId" as const;
+  return "identityProviders.accounts.domainsHelp" as const;
+}
+
 export function providerKind(provider: IdentityProvider): "entraId" | "google" | "oidc" | "saml" | "ldap" {
   if (provider.type !== "oidc") return provider.type;
   return provider.config.preset === "generic" ? "oidc" : provider.config.preset;
@@ -214,7 +221,7 @@ export function NameRow({ provider, canManage }: { provider: IdentityProvider; c
   const { t } = useTranslation();
   const update = useProviderUpdate(provider);
   return (
-    <div className="px-4 py-3">
+    <div className="py-3">
       <AutoSaveTextField
         label={t("identityProviders.fields.name")}
         hint={t(`identityProviders.fields.nameHints.${providerKind(provider)}`)}
@@ -235,7 +242,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
   const tracker = useSaveStates();
   return (
     <>
-      <div className="flex flex-col gap-4 px-4 py-3">
+      <div className="flex flex-col gap-4 py-3">
         <ExplicitSaveTextField
           label={t("identityProviders.fields.clientId")}
           value={config.clientId}
@@ -261,6 +268,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
           <ExplicitSaveTextField
             label={t("identityProviders.fields.issuer")}
             hint={t("identityProviders.fields.issuerHint")}
+            help={t("identityProviders.fields.issuerHelp")}
             value={String(config.issuer ?? "")}
             schema={z.url({ protocol: /^https?$/ })}
             disabled={!canManage}
@@ -274,6 +282,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
       <SettingRow
         label={t("identityProviders.fields.algorithm")}
         description={t("identityProviders.fields.algorithmHint")}
+        help={t("identityProviders.fields.algorithmHelp")}
         control={
           <Select
             aria-label={t("identityProviders.fields.algorithm")}
@@ -311,6 +320,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
       <SettingRow
         label={t("identityProviders.attributes.identifier")}
         description={t("identityProviders.attributes.identifierHint")}
+        help={t("identityProviders.attributes.identifierHelp")}
         meta={t("identityProviders.attributes.fixed")}
         control={fixed}
       />
@@ -319,6 +329,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
           <SettingRow
             label={t("identityProviders.attributes.email")}
             description={t("identityProviders.attributes.emailHint")}
+            help={t("identityProviders.attributes.emailHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.attributes.email")}
@@ -344,6 +355,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
           <SettingRow
             label={t("identityProviders.attributes.signInName")}
             description={t("identityProviders.attributes.signInNameHint")}
+            help={t("identityProviders.attributes.signInNameHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.attributes.signInName")}
@@ -369,10 +381,10 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
         </>
       ) : null}
       {config.preset === "google" ? (
-        <p className="px-4 py-3 text-sm text-text-muted">{t("identityProviders.attributes.googleFixed")}</p>
+        <p className="py-3 text-sm text-text-muted">{t("identityProviders.attributes.googleFixed")}</p>
       ) : null}
       {config.preset === "generic" ? (
-        <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+        <FieldGrid className="py-3">
           {(["email", "signInName", "displayName", "groups", "groupNames"] as const).map((claim) => (
             <AutoSaveTextField
               key={claim}
@@ -401,7 +413,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
               }
             />
           ))}
-        </div>
+        </FieldGrid>
       ) : null}
     </>
   );
@@ -428,6 +440,7 @@ export function AccountFields({
       <SettingRow
         label={t("identityProviders.accounts.create")}
         description={t("identityProviders.accounts.createHint")}
+        help={t("identityProviders.accounts.createHelp")}
         control={
           <Switch
             label={t("identityProviders.accounts.create")}
@@ -448,10 +461,11 @@ export function AccountFields({
         status={<SaveIndicator tracker={tracker("create")} />}
       />
       {showDomains ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <ExplicitSaveTextField
             label={t("identityProviders.accounts.domains")}
             hint={t(domainsHintKey(provider.type, config.preset))}
+            help={t(domainsHelpKey(provider.type, config.preset))}
             value={config.domains.join(", ")}
             schema={domainList}
             invalidMessage={t("identityProviders.accounts.domainsInvalid")}
@@ -463,6 +477,7 @@ export function AccountFields({
       <SettingRow
         label={t("identityProviders.accounts.requireGroup")}
         description={t("identityProviders.accounts.requireGroupHint")}
+        help={t("identityProviders.accounts.requireGroupHelp")}
         control={
           <Switch
             label={t("identityProviders.accounts.requireGroup")}
@@ -486,10 +501,11 @@ export function AccountFields({
         status={<SaveIndicator tracker={tracker("requireGroup")} />}
       />
       {requireGroups ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <AutoSaveTextField
             label={t("identityProviders.accounts.groups")}
             hint={t("identityProviders.accounts.groupsHint")}
+            help={t("identityProviders.accounts.groupsHelp")}
             value={creation.requiredGroups.join(", ")}
             disabled={!canManage}
             className="font-mono"
@@ -544,10 +560,11 @@ export function SecondFactorFields({
         status={<SaveIndicator tracker={tracker("secondFactor")} />}
       />
       {setting.mode === "providerProof" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <AutoSaveTextField
             label={t("identityProviders.secondFactor.proofValues")}
             hint={t("identityProviders.secondFactor.proofValuesHint")}
+            help={t("identityProviders.secondFactor.proofValuesHelp")}
             value={setting.proofValues.join(", ")}
             schema={proofValueList}
             invalidMessage={t("identityProviders.secondFactor.proofValuesInvalid")}
@@ -577,6 +594,7 @@ export function LinkFields() {
     <SettingRow
       label={t("identityProviders.accounts.link")}
       description={t("identityProviders.accounts.linkHint")}
+      help={t("identityProviders.accounts.linkHelp")}
       meta={t("identityProviders.accounts.linkFixed")}
       control={
         <Badge variant="neutral" icon={Lock}>
@@ -591,16 +609,21 @@ export function CopyField({
   label,
   value,
   hint,
+  help,
   action,
 }: {
   label: string;
   value: string;
   hint?: string;
+  help?: string;
   action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-medium">{label}</span>
+      <span className="flex items-center gap-1 font-medium">
+        {label}
+        {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+      </span>
       <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
         <Input readOnly value={value} aria-label={label} className="font-mono" />
         <CopyButton value={value} />
@@ -618,6 +641,7 @@ export function RedirectUriField({ uri }: { uri: string }) {
       label={t("identityProviders.redirectUri")}
       value={uri}
       hint={t("identityProviders.redirectUriHint")}
+      help={t("identityProviders.redirectUriHelp")}
     />
   );
 }

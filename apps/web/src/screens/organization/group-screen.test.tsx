@@ -76,7 +76,7 @@ function groupApi() {
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     [`GET /api/v1/groups/${GROUP}`]: () => ({
       body: {
         id: GROUP,

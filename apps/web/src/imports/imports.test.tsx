@@ -113,7 +113,7 @@ function setup(routes: Record<string, () => Reply | Promise<Reply>>, permissions
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     [`GET /api/v1/organizations/${ORGANIZATION.id}/import-folder`]: () => ({
       body: { enabled: true, path: FOLDER_PATH, files: [], maxUploadBytes: 1024 },
     }),
@@ -168,7 +168,7 @@ describe("imports list", () => {
       ["organization.imports.manage"],
     );
     await open(`/settings/organizations/${ORGANIZATION.id}/imports`);
-    const list = await screen.findByRole("list", { name: "Imports" });
+    const list = await screen.findByRole("table", { name: "Imports" });
     expect(within(list).getByText("IT Operations")).toBeTruthy();
     expect(within(list).getByText("In review")).toBeTruthy();
     expect(within(list).getByRole("button", { name: "Open report" })).toBeTruthy();
@@ -185,6 +185,15 @@ describe("imports list", () => {
     await open(`/settings/organizations/${ORGANIZATION.id}/imports`);
     expect(await screen.findByText("No imports yet")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New import" })).toBeNull();
+  });
+
+  it("offers a new import only once while the list is empty", async () => {
+    setup({ [`GET /api/v1/organizations/${ORGANIZATION.id}/imports`]: () => ({ body: [] }) }, [
+      "organization.imports.manage",
+    ]);
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports`);
+    expect(await screen.findByText("No imports yet")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "New import" })).toHaveLength(1);
   });
 });
 

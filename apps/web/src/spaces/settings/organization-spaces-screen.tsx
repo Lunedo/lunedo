@@ -1,19 +1,38 @@
 import {
+  Badge,
   Button,
   Combobox,
   Dialog,
-  EmptyState,
   Field,
   focusFirstInvalidSoon,
   IconButton,
+  Menu,
+  type MenuItem,
   Notice,
   RadioGroup,
+  Select,
   Skeleton,
+  Table,
+  TableToolbar,
+  Tabs,
+  TruncatedText,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
-import { Layers, Plus, ShieldCheck, X } from "lucide-react";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import {
+  Archive,
+  ExternalLink,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Settings,
+  ShieldCheck,
+  ShieldPlus,
+  Trash2,
+  UserCog,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -21,8 +40,10 @@ import { organizationQuery, organizationSettingsQuery } from "../../api/organiza
 import { request } from "../../api/request.js";
 import { SaveIndicator, useSaveState } from "../../components/auto-save.js";
 import { SettingsList } from "../../components/settings-list.js";
-import { LoadError } from "../../errors/failure.js";
+import { useServerTable } from "../../components/table-state.js";
+import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { useFormat } from "../../preferences/preferences-provider.js";
 import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -35,8 +56,10 @@ import {
   RoleSelect,
 } from "../access/holders.js";
 import { type SpaceRole, type SpaceVisibility, spaceDefaultsQuery, spaceKeys } from "../space-queries.js";
+import { BecomeAdministratorDialog, type BecomeAdministratorTarget } from "./become-administrator-dialog.js";
 import { ConfidentialSpaces } from "./confidential-spaces.js";
 import { Panel } from "./panel.js";
+import { SpaceCleanup } from "./space-cleanup.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/spaces");
 const VISIBILITIES: SpaceVisibility[] = ["private", "organization", "instance"];
@@ -49,13 +72,10 @@ export function OrganizationSpacesScreen() {
   const settings = useQuery(organizationSettingsQuery(organizationId));
   const mutation = useOrganizationSettingMutation(organizationId);
   const canManage = state.can("organization.settings.manage");
-  return (
-    <SettingsPage
-      title={t("spaces.organization.title")}
-      description={t("spaces.organization.description")}
-      icon={Layers}
-      organizationId={organizationId}
-    >
+  const canView = state.can("organization.spaces.view");
+  const [tab, setTab] = useState(canView ? "all" : "defaults");
+  const defaults = (
+    <div className="flex flex-col gap-8">
       <Panel title={t("spaces.organization.creating")}>
         <SettingsList
           settings={settings.data}
@@ -73,16 +93,401 @@ export function OrganizationSpacesScreen() {
         organizationName={organization.data?.name ?? null}
         editable={canManage}
       />
-      {state.can("organization.spaces.view") ? (
-        <WithoutAdministrator organizationId={organizationId} />
-      ) : null}
-      {state.can("organization.spaces.view") ? (
-        <ConfidentialSpaces
-          organizationId={organizationId}
-          canManage={state.can("organization.spaces.manage")}
+    </div>
+  );
+  return (
+    <SettingsPage
+      wide
+      title={t("spaces.organization.title")}
+      description={t("spaces.organization.description", { name: organization.data?.name ?? "" })}
+    >
+      {canView ? (
+        <Tabs
+          label={t("spaces.organization.title")}
+          value={tab}
+          onValueChange={setTab}
+          tabs={[
+            { value: "all", label: t("spaces.organization.allSpaces") },
+            ...(state.can("organization.spaces.manage")
+              ? [{ value: "cleanup", label: t("spaces.cleanup.tab") }]
+              : []),
+            { value: "defaults", label: t("spaces.organization.defaultsTab") },
+          ]}
+        >
+          {tab === "all" ? (
+            <div className="flex flex-col gap-6">
+              <WithoutAdministrator organizationId={organizationId} />
+              <AllSpaces
+                organizationId={organizationId}
+                canManageSpaces={state.can("organization.spaces.manage")}
+              />
+              <ConfidentialSpaces
+                organizationId={organizationId}
+                canManage={state.can("organization.spaces.manage")}
+              />
+              <ConfidentialSpaces
+                organizationId={organizationId}
+                canManage={state.can("organization.spaces.manage")}
+                kind="personal"
+              />
+            </div>
+          ) : tab === "cleanup" ? (
+            <SpaceCleanup
+              organizationId={organizationId}
+              organizationName={organization.data?.name}
+              canManage={state.can("organization.spaces.manage")}
+              canChangeSetting={canManage}
+              settings={settings.data}
+              onSettingChange={async (key, change) => {
+                await mutation.mutateAsync({ key, change });
+              }}
+            />
+          ) : (
+            defaults
+          )}
+        </Tabs>
+      ) : (
+        defaults
+      )}
+    </SettingsPage>
+  );
+}
+
+type SpaceTypeFilter = "all" | "standard" | "knowledgeBase";
+type SpaceStateFilter = "all" | "active" | "archived";
+type OrganizationSpace = NonNullable<Awaited<ReturnType<typeof fetchOrganizationSpaces>>>["items"][number];
+
+function fetchOrganizationSpaces(
+  organizationId: string,
+  search: string,
+  cursor: string | null,
+  limit: number,
+  type: SpaceTypeFilter,
+  stateFilter: SpaceStateFilter,
+) {
+  return request(() =>
+    api.GET("/api/v1/organizations/{organizationId}/spaces", {
+      params: {
+        path: { organizationId },
+        query: {
+          limit,
+          ...(search ? { q: search } : {}),
+          ...(cursor ? { cursor } : {}),
+          ...(type !== "all" ? { type } : {}),
+          ...(stateFilter !== "all" ? { state: stateFilter } : {}),
+        },
+      },
+    }),
+  );
+}
+
+function SpaceStatus({ space }: { space: OrganizationSpace }) {
+  const { t } = useTranslation();
+  if (space.archived) return <Badge variant="neutral">{t("spaces.organization.status.archived")}</Badge>;
+  if (space.confidential)
+    return (
+      <Badge variant="warning" icon={Lock}>
+        {t("spaces.organization.status.confidential")}
+      </Badge>
+    );
+  return (
+    <Badge variant={space.visibility === "private" ? "neutral" : "info"}>
+      {t(`spaces.organization.status.${space.visibility === "private" ? "private" : "shared"}`)}
+    </Badge>
+  );
+}
+
+function AllSpaces({
+  organizationId,
+  canManageSpaces,
+}: {
+  organizationId: string;
+  canManageSpaces: boolean;
+}) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const showFailure = useFailureToast();
+  const [type, setType] = useState<SpaceTypeFilter>("all");
+  const [stateFilter, setStateFilter] = useState<SpaceStateFilter>("all");
+  const [appointing, setAppointing] = useState<{ id: string; name: string } | null>(null);
+  const [becoming, setBecoming] = useState<BecomeAdministratorTarget | null>(null);
+  const table = useServerTable(
+    [...spaceKeys.organizationSpaces(organizationId), type, stateFilter],
+    (search, cursor, limit) =>
+      fetchOrganizationSpaces(organizationId, search, cursor, limit, type, stateFilter),
+  );
+  const label = (space: OrganizationSpace) => space.name ?? t("spaces.organization.confidentialName");
+
+  const archive = async (space: OrganizationSpace, archived: boolean) => {
+    try {
+      await request(() =>
+        api.PUT("/api/v1/spaces/{spaceId}/archived", {
+          params: { path: { spaceId: space.id } },
+          body: { archived },
+        }),
+      );
+      await queryClient.invalidateQueries({ queryKey: spaceKeys.organizationSpaces(organizationId) });
+      toast({
+        title: t(archived ? "spaces.organization.archived" : "spaces.organization.restored", {
+          name: label(space),
+        }),
+        undo: { onUndo: () => void archive(space, !archived) },
+      });
+    } catch (failure) {
+      showFailure(
+        t("spaces.organization.archiveFailed", { name: label(space) }),
+        failure,
+        () => void archive(space, archived),
+      );
+    }
+  };
+
+  const menu = (space: OrganizationSpace): MenuItem[] => [
+    ...(space.confidential
+      ? []
+      : [
+          {
+            label: t("spaces.organization.open"),
+            icon: ExternalLink,
+            onSelect: () => void navigate({ to: "/spaces/$spaceKey", params: { spaceKey: space.key } }),
+          },
+        ]),
+    ...(space.canManage
+      ? [
+          {
+            label: t("spaces.organization.settings"),
+            icon: Settings,
+            onSelect: () =>
+              void navigate({ to: "/spaces/$spaceKey/settings/general", params: { spaceKey: space.key } }),
+          },
+          {
+            label: t("spaces.organization.changeAdmins"),
+            icon: UserCog,
+            onSelect: () =>
+              void navigate({
+                to: "/spaces/$spaceKey/settings/permissions",
+                params: { spaceKey: space.key },
+              }),
+          },
+        ]
+      : space.administrators.length === 0 && !space.confidential
+        ? [
+            {
+              label: t("spaces.organization.appoint"),
+              icon: UserCog,
+              onSelect: () => setAppointing({ id: space.id, name: label(space) }),
+            },
+          ]
+        : []),
+    ...(!space.canManage && !space.confidential && canManageSpaces
+      ? [
+          {
+            label: t("spaces.become.action"),
+            icon: ShieldPlus,
+            onSelect: () => setBecoming({ id: space.id, key: space.key, name: label(space) }),
+          },
+        ]
+      : []),
+    ...(space.canManage
+      ? [
+          { type: "separator" as const },
+          {
+            label: space.archived ? t("spaces.organization.restore") : t("spaces.organization.archive"),
+            icon: Archive,
+            onSelect: () => void archive(space, !space.archived),
+          },
+        ]
+      : []),
+    ...(space.canDelete
+      ? [
+          {
+            label: t("spaces.organization.delete"),
+            icon: Trash2,
+            danger: true,
+            onSelect: () =>
+              void navigate({ to: "/spaces/$spaceKey/settings/general", params: { spaceKey: space.key } }),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <section aria-labelledby="all-spaces" className="flex flex-col gap-3">
+      <h2 id="all-spaces" className="sr-only">
+        {t("spaces.organization.allSpaces")}
+      </h2>
+      <TableToolbar
+        search={{
+          ...table.search,
+          label: t("spaces.organization.search"),
+          placeholder: t("spaces.organization.search"),
+        }}
+        filters={
+          <>
+            <Select
+              aria-label={t("spaces.organization.typeFilter")}
+              className="w-auto"
+              value={type}
+              onValueChange={(value) => {
+                setType(value as SpaceTypeFilter);
+                table.reset();
+              }}
+              options={[
+                { value: "all", label: t("spaces.organization.types.all") },
+                { value: "standard", label: t("spaces.organization.types.standard") },
+                { value: "knowledgeBase", label: t("spaces.organization.types.knowledgeBase") },
+              ]}
+            />
+            <Select
+              aria-label={t("spaces.organization.stateFilter")}
+              className="w-auto"
+              value={stateFilter}
+              onValueChange={(value) => {
+                setStateFilter(value as SpaceStateFilter);
+                table.reset();
+              }}
+              options={[
+                { value: "all", label: t("spaces.organization.states.all") },
+                { value: "active", label: t("spaces.organization.states.active") },
+                { value: "archived", label: t("spaces.organization.states.archived") },
+              ]}
+            />
+          </>
+        }
+        pagination={table.pagination}
+      />
+      {table.query.isError ? (
+        <LoadError
+          what={t("spaces.organization.listFailed")}
+          error={table.query.error}
+          onRetry={() => table.query.refetch()}
         />
       ) : null}
-    </SettingsPage>
+      <Table
+        caption={t("spaces.organization.allSpaces")}
+        rowKey={(space) => space.id}
+        rows={table.rows}
+        loading={table.query.isPending}
+        pagination={table.pagination}
+        empty={<p className="text-text-muted">{t("spaces.organization.noSpaces")}</p>}
+        columns={[
+          {
+            key: "name",
+            header: t("spaces.organization.name"),
+            grow: true,
+            cell: (space) => (
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="inline-flex size-control-sm shrink-0 items-center justify-center rounded-sm bg-accent-soft text-xs font-semibold text-accent">
+                  {space.key.slice(0, 2)}
+                </span>
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <TruncatedText
+                    text={label(space)}
+                    className={space.name ? "font-medium" : "font-medium text-text-muted italic"}
+                  />
+                  <span className="text-xs text-text-muted">{space.key}</span>
+                </span>
+              </span>
+            ),
+          },
+          {
+            key: "type",
+            header: t("spaces.organization.type"),
+            hideBelow: "md",
+            cell: (space) => (
+              <span className="whitespace-nowrap">
+                {t(
+                  `spaces.organization.types.${space.type === "knowledgeBase" ? "knowledgeBase" : "standard"}`,
+                )}
+              </span>
+            ),
+          },
+          {
+            key: "admins",
+            header: t("spaces.organization.admins"),
+            hideBelow: "sm",
+            cell: (space) =>
+              space.confidential ? (
+                <span className="text-text-muted">{t("spaces.organization.hidden")}</span>
+              ) : space.administrators.length === 0 ? (
+                <Badge variant="warning">{t("spaces.organization.noAdmin")}</Badge>
+              ) : (
+                <TruncatedText
+                  text={space.administrators.map((holder) => holder.name).join(", ")}
+                  className="max-w-field"
+                />
+              ),
+          },
+          {
+            key: "pages",
+            header: t("spaces.organization.pages"),
+            align: "end",
+            hideBelow: "md",
+            cell: (space) => <span className="tabular-nums">{format.number(space.pages)}</span>,
+          },
+          {
+            key: "storage",
+            header: t("spaces.organization.storage"),
+            align: "end",
+            hideBelow: "md",
+            cell: (space) => (
+              <span className="whitespace-nowrap tabular-nums">{format.bytes(space.storageBytes)}</span>
+            ),
+          },
+          {
+            key: "activity",
+            header: t("spaces.organization.lastActivity"),
+            hideBelow: "md",
+            cell: (space) => (
+              <span className="whitespace-nowrap text-text-muted">
+                {format.relative(space.lastActivityAt)}
+              </span>
+            ),
+          },
+          {
+            key: "status",
+            header: t("spaces.organization.statusColumn"),
+            cell: (space) => <SpaceStatus space={space} />,
+          },
+          {
+            key: "actions",
+            sticky: true,
+            align: "end",
+            header: <span className="sr-only">{t("settings.actions")}</span>,
+            cell: (space) => {
+              const items = menu(space);
+              return items.length > 0 ? (
+                <Menu
+                  align="end"
+                  trigger={
+                    <IconButton
+                      label={t("spaces.organization.actionsFor", { name: label(space) })}
+                      icon={MoreHorizontal}
+                    />
+                  }
+                  items={items}
+                />
+              ) : null;
+            },
+          },
+        ]}
+      />
+      <AppointDialog
+        organizationId={organizationId}
+        space={appointing}
+        onOpenChange={(open) => !open && setAppointing(null)}
+      />
+      {becoming ? (
+        <BecomeAdministratorDialog
+          organizationId={organizationId}
+          space={becoming}
+          onClose={() => setBecoming(null)}
+        />
+      ) : null}
+    </section>
   );
 }
 
@@ -260,24 +665,22 @@ function WithoutAdministrator({ organizationId }: { organizationId: string }) {
       ),
   });
   const [appointing, setAppointing] = useState<{ id: string; name: string } | null>(null);
+  if (spaces.data && spaces.data.items.length === 0) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-success">
+        <ShieldCheck aria-hidden="true" className="size-icon-md shrink-0" />
+        {t("spaces.organization.allHaveAdmins")}
+      </p>
+    );
+  }
   return (
-    <Panel
-      title={t("spaces.organization.withoutAdmin")}
-      description={t("spaces.organization.withoutAdminDescription")}
-    >
+    <Panel title={t("spaces.organization.withoutAdmin")}>
       {spaces.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {spaces.isError ? (
         <LoadError
           what={t("spaces.organization.withoutAdminFailed")}
           error={spaces.error}
           onRetry={() => spaces.refetch()}
-        />
-      ) : null}
-      {spaces.data && spaces.data.items.length === 0 ? (
-        <EmptyState
-          icon={ShieldCheck}
-          title={t("spaces.organization.allHaveAdmins")}
-          description={t("spaces.organization.allHaveAdminsDescription")}
         />
       ) : null}
       {spaces.data && spaces.data.items.length > 0 ? (
@@ -342,6 +745,7 @@ function AppointDialog({
         }),
       );
       await queryClient.invalidateQueries({ queryKey: spaceKeys.withoutAdministrator(organizationId) });
+      await queryClient.invalidateQueries({ queryKey: spaceKeys.organizationSpaces(organizationId) });
       toast({
         title: t("spaces.organization.appointed", { person: person.label, space: space.name }),
         variant: "success",
@@ -377,6 +781,7 @@ function AppointDialog({
         <Field
           label={t("spaces.organization.person")}
           hint={t("spaces.organization.personHint")}
+          help={t("spaces.organization.personHelp")}
           {...(error ? { error } : {})}
         >
           <Combobox

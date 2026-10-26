@@ -16,6 +16,7 @@ export type SuggestionItem = Omit<SuggestionEntry, "select"> & { run(editor: Edi
 export interface SuggestionLabels {
   label: string;
   empty: string;
+  hints?: string;
 }
 
 export function suggestionRender(
@@ -27,6 +28,7 @@ export function suggestionRender(
     const propsOf = (props: SuggestionProps<SuggestionItem>): SuggestionListProps => ({
       label: labels().label,
       emptyText: labels().empty,
+      ...(labels().hints ? { hints: labels().hints } : {}),
       loading: props.loading,
       items: props.items.map((item) => ({ ...item, select: () => props.command(item) })),
     });

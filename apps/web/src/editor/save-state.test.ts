@@ -49,7 +49,7 @@ describe("SaveTracker", () => {
     tracker.saved(Y.encodeStateVector(doc));
     expect(tracker.state).toBe("saved");
     expect(tracker.hasUnsavedChanges).toBe(false);
-    expect(states).toEqual(["editing", "saving", "saved"]);
+    expect(states).toEqual(["saved", "editing", "saving", "saved"]);
   });
 
   it("does not count a store that happened before the server received the change", () => {
@@ -63,11 +63,24 @@ describe("SaveTracker", () => {
     expect(tracker.state).toBe("saving");
   });
 
-  it("shows offline and errors", () => {
+  it("says it is connecting until the first connection, and offline only after the connection is lost", () => {
     const tracker = new SaveTracker(new Y.Doc());
+    expect(tracker.state).toBe("connecting");
+    tracker.connection(false);
+    expect(tracker.state).toBe("connecting");
+    tracker.connection(true);
     expect(tracker.state).toBe("saved");
     tracker.connection(false);
     expect(tracker.state).toBe("offline");
+    tracker.connection(true);
+    expect(tracker.state).toBe("saved");
+    const failing = new SaveTracker(new Y.Doc());
+    failing.connectionLost();
+    expect(failing.state).toBe("offline");
+  });
+
+  it("shows errors", () => {
+    const tracker = new SaveTracker(new Y.Doc());
     tracker.connection(true);
     tracker.saveFailed();
     expect(tracker.state).toBe("error");

@@ -585,10 +585,22 @@ export async function createCollabServer(options: {
       await services.versions
         .touchPresence(itemId, node, document.getConnectionsCount())
         .catch((error: unknown) => logger.warn({ err: error }, "Recording presence failed"));
+      if (parseDocumentName(documentName)?.kind !== "whiteboard") {
+        await services.versions
+          .touchEditor(itemId, node, (connection.context as CollabContext).accountId, 1)
+          .catch((error: unknown) => logger.warn({ err: error }, "Recording an editor failed"));
+      }
     },
-    async onDisconnect({ documentName, clientsCount }) {
+    async onDisconnect({ documentName, clientsCount, context }) {
       const itemId = itemIdOf(documentName);
-      if (!itemId || clientsCount === 0) return;
+      if (!itemId) return;
+      const accountId = (context as CollabContext | undefined)?.accountId;
+      if (accountId && parseDocumentName(documentName)?.kind !== "whiteboard") {
+        await services.versions
+          .touchEditor(itemId, node, accountId, -1)
+          .catch((error: unknown) => logger.warn({ err: error }, "Recording an editor failed"));
+      }
+      if (clientsCount === 0) return;
       await services.versions
         .touchPresence(itemId, node, clientsCount)
         .catch((error: unknown) => logger.warn({ err: error }, "Recording presence failed"));

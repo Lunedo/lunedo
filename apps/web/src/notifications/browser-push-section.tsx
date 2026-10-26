@@ -63,6 +63,7 @@ export function BrowserPushSection() {
         <SettingRow
           label={t("notifications.push.thisDevice")}
           description={t("notifications.push.instanceOff")}
+          help={t("notifications.push.instanceOffHelp")}
           control={<Badge>{t("notifications.push.off")}</Badge>}
         />
       </Section>
@@ -99,7 +100,7 @@ export function BrowserPushSection() {
   return (
     <Section title={t("notifications.push.title")}>
       {failure ? (
-        <div className="px-4 pt-3">
+        <div className="pt-3">
           <Notice
             variant="danger"
             title={t("notifications.push.failed")}
@@ -116,6 +117,7 @@ export function BrowserPushSection() {
       <SettingRow
         label={t("notifications.push.thisDevice")}
         description={supported ? t("notifications.push.explanation") : t("notifications.push.unsupported")}
+        help={supported ? t("notifications.push.explanationHelp") : t("notifications.push.unsupportedHelp")}
         control={
           !supported ? null : current ? (
             <Button variant="secondary" loading={remove.isPending} onClick={() => void removeDevice(current)}>

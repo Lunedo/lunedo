@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, CircleCheck, Info, LoaderCircle, TriangleAlert } from "lucide-react";
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
 
@@ -76,12 +76,20 @@ export function Avatar({
   size?: "sm" | "md" | "lg";
   decorative?: boolean;
 }) {
+  const [failed, setFailed] = useState<string | null>(null);
   const classes = classNames(
     "inline-flex shrink-0 items-center justify-center rounded-full",
     AVATAR_SIZES[size],
   );
-  if (src)
-    return <img src={src} alt={decorative ? "" : name} className={classNames(classes, "object-cover")} />;
+  if (src && failed !== src)
+    return (
+      <img
+        src={src}
+        alt={decorative ? "" : name}
+        className={classNames(classes, "object-cover")}
+        onError={() => setFailed(src)}
+      />
+    );
   return (
     <span
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": name })}

@@ -121,9 +121,10 @@ async function create(options: { schemaVersion?: string; keys?: KeyRing; masterK
 function restoreInto(
   target: string,
   database: DatabaseArchiver,
-  options: { force?: boolean; masterKeys?: KeyRing | null } = {},
+  options: { force?: boolean; masterKeys?: KeyRing | null; onProgress?: (stage: string) => void } = {},
 ) {
   return restoreBackup({
+    onProgress: options.onProgress,
     input: archivePath,
     backupKeys,
     knownSchemaVersions,
@@ -259,7 +260,11 @@ describe("backups", () => {
     await create();
     const database = new FakeDatabase(Buffer.alloc(0));
     const target = path.join(dir, "restored-files");
-    await restoreInto(target, database);
+    const stages: string[] = [];
+    await restoreInto(target, database, {
+      onProgress: (stage) => stages.push(`${stage}:${database.restored ? "database" : "none"}`),
+    });
+    expect(stages).toEqual(["verified:none", "database:database", "files:database"]);
     expect(database.restored?.equals(databaseDump)).toBe(true);
     expect(await readFile(path.join(target, "attachments", "2026", "report.pdf"), "utf8")).toBe(
       "marker-file-content",

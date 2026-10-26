@@ -145,7 +145,13 @@ export class FileService {
 
   async write(
     body: Readable,
-    options: { name: string; maxBytes: number; executor?: Executor; attachment?: boolean },
+    options: {
+      name: string;
+      maxBytes: number;
+      executor?: Executor;
+      attachment?: boolean;
+      stripLocation?: boolean;
+    },
   ): Promise<StoredFile> {
     const executor = options.executor ?? this.#database;
     const id = uuidv7();
@@ -162,9 +168,10 @@ export class FileService {
     let keyVersion: number;
     let counted = 0;
     const stripper = new LocationStripper();
+    const stripLocation = options.stripLocation ?? options.attachment === true;
     try {
       let failure: Error | null = null;
-      const strip = options.attachment === true ? stripper : new PassThrough();
+      const strip = stripLocation ? stripper : new PassThrough();
       const encrypted = chain(body, strip, inspector, encrypt, (error) => {
         failure = error ?? null;
       });
@@ -195,7 +202,7 @@ export class FileService {
         display_version_state = ${displayVersions}, updated_at = now()
       where id = ${id}`);
     const stored = { id, size: inspector.size, digest: digest.toString("hex"), type };
-    if (options.attachment !== true || !RANDOM_ACCESS_IMAGE_TYPES.has(type.contentType)) return stored;
+    if (!stripLocation || !RANDOM_ACCESS_IMAGE_TYPES.has(type.contentType)) return stored;
     return this.#withoutLocation(stored, key, options, executor);
   }
 
@@ -231,7 +238,11 @@ export class FileService {
     if (patches.length === 0) return stored;
     try {
       const source = await this.read(stored.id, undefined, { staged: true, executor });
-      return await this.write(source.pipe(new PatchStream(patches)), { ...options, attachment: false });
+      return await this.write(source.pipe(new PatchStream(patches)), {
+        ...options,
+        attachment: false,
+        stripLocation: false,
+      });
     } finally {
       await this.#discard(executor, stored.id, key, (await this.#store.size(key)) ?? 0, "stored");
     }
@@ -392,6 +403,7 @@ export class FileService {
       where f.state = 'orphaned' and (exists (select 1 from attachment_versions v where v.file_id = f.id)
         or exists (select 1 from whiteboard_previews p where p.file_id = f.id)
         or exists (select 1 from template_files t where t.file_id = f.id)
+        or exists (select 1 from account_pictures p where p.file_id = f.id)
         or exists (select 1 from display_versions d where d.file_id = f.id))`);
     let removed = 0;
     for (const row of result.rows) {
@@ -401,6 +413,7 @@ export class FileService {
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
           and not exists (select 1 from whiteboard_previews p where p.file_id = ${row.id})
           and not exists (select 1 from template_files t where t.file_id = ${row.id})
+          and not exists (select 1 from account_pictures p where p.file_id = ${row.id})
           and not exists (select 1 from display_versions d where d.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;

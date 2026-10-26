@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { LayoutTemplate } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -8,6 +7,7 @@ import { request } from "../../api/request.js";
 import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
+import { BuiltInTemplates } from "./built-in-templates.js";
 import { templateLevelApi } from "./template-transfer-api.js";
 import { type TemplateInput, TemplatesManager } from "./templates-manager.js";
 
@@ -34,13 +34,7 @@ export function OrganizationTemplatesScreen() {
     await queryClient.invalidateQueries({ queryKey: ["spaces"] });
   };
   return (
-    <SettingsPage
-      title={t("templates.title")}
-      description={t("templates.organizationDescription")}
-      icon={LayoutTemplate}
-      organizationId={organizationId}
-      width="wide"
-    >
+    <SettingsPage title={t("templates.title")} description={t("templates.organizationDescription")}>
       <TemplatesManager
         templates={templates.data}
         loading={templates.isPending}
@@ -71,6 +65,27 @@ export function OrganizationTemplatesScreen() {
           await request(() =>
             api.DELETE("/api/v1/organizations/{organizationId}/templates/{templateId}", {
               params: { path: { organizationId, templateId } },
+            }),
+          );
+          await refresh();
+        }}
+      />
+      <BuiltInTemplates
+        organizationId={organizationId}
+        canManage={state.can("organization.templates.manage")}
+        onDuplicate={async (template) => {
+          await request(() =>
+            api.POST("/api/v1/organizations/{organizationId}/templates", {
+              params: { path: { organizationId } },
+              body: {
+                name: t("templates.builtIn.copyName", { name: template.name }),
+                description: template.description,
+                category: template.category,
+                title: template.title,
+                fields: template.fields,
+                document: template.document,
+                series: template.series,
+              } as never,
             }),
           );
           await refresh();

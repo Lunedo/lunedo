@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { DateFormat } from "@lunedo/shared";
 import {
   type AccentColor,
   accentColors,
@@ -17,8 +18,10 @@ import type { NotificationListener } from "../database/notifications.js";
 import type { ArticleLanguage } from "../knowledge-bases/translations.js";
 import { logoContentType } from "../organizations/organizations.js";
 import { supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { helpKnowledgeBaseSetting } from "./settings.js";
 
@@ -62,6 +65,7 @@ export interface PortalConfig {
   defaultLanguage: ArticleLanguage;
   languages: ArticleLanguage[];
   timeZone: string;
+  dateFormat: DateFormat;
 }
 
 export function interfaceLanguage(language: string): PortalLanguage {
@@ -189,6 +193,7 @@ export class PortalService {
     if (!row) return null;
     const chain = { organization: row.organization_id };
     const timeZone = await this.#settings.get(timeZoneSetting, chain);
+    const dateFormat = await this.#settings.get(formatSettings.dateFormat, chain);
     return {
       spaceId: row.space_id,
       organizationId: row.organization_id,
@@ -210,6 +215,7 @@ export class PortalService {
       defaultLanguage: row.default_language,
       languages: row.languages,
       timeZone,
+      dateFormat,
     };
   }
 
@@ -530,7 +536,7 @@ export class PortalService {
       space_name: string | null;
       created_at: Date;
     }>(sql`
-      select d.domain, d.organization_id, o.name as organization_name, kb.space_id, s.name as space_name, d.created_at
+      select d.domain, d.organization_id, o.name as organization_name, kb.space_id, ${spaceDisplayName(sql`s`)} as space_name, d.created_at
       from portal_domains d join organizations o on o.id = d.organization_id
       left join knowledge_bases kb on kb.portal_domain = d.domain
       left join spaces s on s.id = kb.space_id

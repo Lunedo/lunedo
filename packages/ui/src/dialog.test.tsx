@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Move } from "lucide-react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "./button.js";
@@ -264,6 +265,7 @@ describe("returning focus", () => {
           items={[
             {
               label: "Move…",
+              icon: Move,
               onSelect: () => {
                 setOpen(true);
                 onOpened?.();

@@ -2,6 +2,7 @@ import { passwordSchema, signInEmailSchema } from "@lunedo/shared";
 import { Button, Field, Input, Notice, PasswordInput } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -11,7 +12,7 @@ import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { useLinkToken } from "../../session/link-token.js";
-import { AuthCard } from "./auth-layout.js";
+import { AUTH_LINK, AuthCard } from "./auth-layout.js";
 
 const requestForm = z.object({ email: signInEmailSchema });
 const newPasswordForm = z
@@ -40,7 +41,11 @@ function RequestReset() {
     }
   });
   return (
-    <AuthCard title={t("auth.resetTitle")} description={sent ? undefined : t("auth.resetDescription")}>
+    <AuthCard
+      title={t("auth.resetTitle")}
+      description={sent ? undefined : t("auth.resetDescription")}
+      links={<BackToSignIn />}
+    >
       {sent ? (
         <Notice variant="success">{t("auth.resetSent")}</Notice>
       ) : (
@@ -58,7 +63,6 @@ function RequestReset() {
           </Button>
         </form>
       )}
-      <BackToSignIn />
     </AuthCard>
   );
 }
@@ -104,6 +108,7 @@ function NewPassword({ token }: { token: string }) {
           <Field
             label={t("auth.newPassword")}
             hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
+            help={t("auth.passwordHelp", { minimum: info.data?.passwordMinLength ?? 12 })}
             error={form.formState.errors.password?.message}
           >
             <PasswordInput autoComplete="new-password" autoFocus {...form.register("password")} />
@@ -120,10 +125,11 @@ function NewPassword({ token }: { token: string }) {
   );
 }
 
-export function BackToSignIn() {
+export function BackToSignIn({ redirect }: { redirect?: string | undefined }) {
   const { t } = useTranslation();
   return (
-    <Link to="/sign-in" className="self-center text-sm text-text-muted hover:text-text">
+    <Link to="/sign-in" search={redirect ? { redirect } : {}} className={AUTH_LINK}>
+      <ChevronLeft aria-hidden="true" className="size-icon-sm" />
       {t("auth.backToSignIn")}
     </Link>
   );

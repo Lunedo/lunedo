@@ -39,8 +39,11 @@ export interface PreferenceValues {
   density: Density;
   font: Font;
   sidebarCollapsed: boolean;
+  sidebarCollapsedWhileEditing: boolean;
   editorToolbar: boolean;
   folderView: "list" | "tiles";
+  categoryView: CategoryView;
+  tablePageSize: TablePageSize;
   startPage: "forYou" | "organizationHome";
 }
 
@@ -57,10 +60,18 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   density: "appearance.density",
   font: "appearance.font",
   sidebarCollapsed: "appearance.sidebarCollapsed",
+  sidebarCollapsedWhileEditing: "appearance.sidebarCollapsedWhileEditing",
   editorToolbar: "appearance.editorToolbar",
   folderView: "appearance.folderView",
+  categoryView: "appearance.categoryView",
+  tablePageSize: "appearance.tablePageSize",
   startPage: "appearance.startPage",
 };
+
+export const TABLE_PAGE_SIZES = [25, 50, 100] as const;
+export const CATEGORY_VIEWS = ["automatic", "mine", "all"] as const;
+export type CategoryView = (typeof CATEGORY_VIEWS)[number];
+export type TablePageSize = (typeof TABLE_PAGE_SIZES)[number];
 
 const STORAGE_KEY = "lunedo.appearance";
 
@@ -79,8 +90,11 @@ export function defaultPreferences(language: Language): PreferenceValues {
     density: "default",
     font: "default",
     sidebarCollapsed: false,
+    sidebarCollapsedWhileEditing: true,
     editorToolbar: true,
     folderView: "list",
+    categoryView: "automatic",
+    tablePageSize: 25,
     startPage: "forYou",
   };
 }
@@ -106,13 +120,19 @@ export function toPreferenceValues(
     density: oneOf(densities, value("density"), fallback.density),
     font: oneOf(fonts, value("font"), fallback.font),
     sidebarCollapsed: value("sidebarCollapsed") === true,
+    sidebarCollapsedWhileEditing: value("sidebarCollapsedWhileEditing") !== false,
     editorToolbar: value("editorToolbar") !== false,
     folderView: value("folderView") === "tiles" ? "tiles" : "list",
+    categoryView: oneOf(CATEGORY_VIEWS, value("categoryView"), fallback.categoryView),
+    tablePageSize: oneOf(TABLE_PAGE_SIZES, value("tablePageSize"), fallback.tablePageSize),
     startPage: value("startPage") === "organizationHome" ? "organizationHome" : "forYou",
   };
 }
 
-type Appearance = Pick<PreferenceValues, "colorMode" | "highContrast" | "textSize" | "density" | "font">;
+type Appearance = Pick<
+  PreferenceValues,
+  "colorMode" | "highContrast" | "textSize" | "density" | "font" | "sidebarCollapsed"
+>;
 
 export function storedAppearance(): Partial<Appearance> {
   try {
@@ -125,6 +145,7 @@ export function storedAppearance(): Partial<Appearance> {
       textSize: oneOf(textSizes, parsed.textSize, 1),
       density: oneOf(densities, parsed.density, "default"),
       font: oneOf(fonts, parsed.font, "default"),
+      sidebarCollapsed: parsed.sidebarCollapsed === true,
     };
   } catch {
     return {};
@@ -138,12 +159,41 @@ export function rememberAppearance(values: PreferenceValues): void {
     textSize: values.textSize,
     density: values.density,
     font: values.font,
+    sidebarCollapsed: values.sidebarCollapsed,
   };
   try {
     globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(appearance));
   } catch {
     return;
   }
+}
+
+const colorModeListeners = new Set<() => void>();
+let signedOutColorMode: ColorMode | null = null;
+
+function storeColorMode(colorMode: ColorMode): void {
+  try {
+    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
+    const stored = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify({ ...stored, colorMode }));
+  } catch {
+    return;
+  }
+}
+
+export function chooseSignedOutColorMode(colorMode: ColorMode): void {
+  signedOutColorMode = colorMode;
+  storeColorMode(colorMode);
+  for (const listener of colorModeListeners) listener();
+}
+
+export function subscribeSignedOutColorMode(listener: () => void): () => void {
+  colorModeListeners.add(listener);
+  return () => colorModeListeners.delete(listener);
+}
+
+export function currentSignedOutColorMode(): ColorMode {
+  return signedOutColorMode ?? storedAppearance().colorMode ?? "system";
 }
 
 export function isAccentColor(value: unknown): value is AccentColor {

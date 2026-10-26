@@ -9,7 +9,7 @@ import {
 } from "radix-ui";
 import { type ReactNode, type RefObject, useId, useLayoutEffect, useRef, useState } from "react";
 import { classNames } from "./class-names.js";
-import { controlClassName, useFieldControl } from "./field.js";
+import { controlWidth, useFieldControl } from "./field.js";
 import { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { Tooltip } from "./tooltip.js";
@@ -68,7 +68,7 @@ export function Select({
       {...(muted ? { "data-muted": "" } : {})}
       {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
       className={classNames(
-        controlClassName,
+        controlWidth(className),
         WIDE_HIT_AREA,
         "inline-flex h-control-field items-center justify-between gap-2 text-left",
         muted && "text-text-muted",
@@ -264,6 +264,7 @@ export interface ChoiceOption {
   label: ReactNode;
   description?: ReactNode;
   disabled?: boolean;
+  aside?: ReactNode;
 }
 
 export interface RadioGroupProps {
@@ -271,21 +272,29 @@ export interface RadioGroupProps {
   onValueChange: (value: string) => void;
   options: ChoiceOption[];
   label: string;
+  heading?: ReactNode;
   variant?: "default" | "card";
 }
 
-export function RadioGroup({ value, onValueChange, options, label, variant = "default" }: RadioGroupProps) {
+export function RadioGroup({
+  value,
+  onValueChange,
+  options,
+  label,
+  heading,
+  variant = "default",
+}: RadioGroupProps) {
   const id = useId();
-  return (
+  const group = (
     <RadioGroupPrimitive.Root
       value={value}
       onValueChange={onValueChange}
-      aria-label={label}
+      {...(heading ? { "aria-labelledby": `${id}-heading` } : { "aria-label": label })}
       className="flex flex-col gap-2"
     >
       {options.map((option) => {
         const itemId = `${id}-${option.value}`;
-        return (
+        const choice = (
           <label
             key={option.value}
             htmlFor={itemId}
@@ -315,8 +324,25 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
             </span>
           </label>
         );
+        return option.aside ? (
+          <div key={option.value} className="flex items-start gap-1">
+            {choice}
+            {option.aside}
+          </div>
+        ) : (
+          choice
+        );
       })}
     </RadioGroupPrimitive.Root>
+  );
+  if (!heading) return group;
+  return (
+    <div className="flex flex-col gap-2">
+      <span id={`${id}-heading`} className="font-medium text-text">
+        {heading}
+      </span>
+      {group}
+    </div>
   );
 }
 

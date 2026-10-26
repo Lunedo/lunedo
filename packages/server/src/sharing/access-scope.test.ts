@@ -236,12 +236,16 @@ describe.skipIf(!baseUrl)("access scope", () => {
       expect(await role(lead, council.id)).toBe("admin");
     });
 
-    it("lets a confidential space be deleted once no member of the organization remains in it", async () => {
+    it("marks a confidential space for clean-up once no member of the organization remains in it", async () => {
       const { other, dave } = await twoOrganizations();
       const council = await confidential(other.id, dave, []);
       await test.services.memberships.remove(accountPrincipal(other.owner), other.id, dave);
       const [summary] = (await test.services.confidentialSpaces.list(other.id)).items;
-      expect(summary).toMatchObject({ id: council.id, activeMembers: 0, deletable: true });
+      expect(summary).toMatchObject({ id: council.id, activeMembers: 0 });
+      const marked = await test.database.execute<{ marked: boolean }>(
+        sql`select orphaned_at is not null as marked from spaces where id = ${council.id}`,
+      );
+      expect(marked.rows[0]?.marked).toBe(true);
     });
 
     it("removes a one-on-one from the list of the person who left and from their partner's list", async () => {

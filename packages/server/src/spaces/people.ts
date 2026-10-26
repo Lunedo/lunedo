@@ -1,14 +1,22 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import { spaceRoleConditionFor } from "../authorization/space-access.js";
 import type { Database, Executor } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import { seriesParticipant } from "../meetings/participants.js";
 
 export interface Person {
   id: string;
   name: string;
   email: string | null;
   type: string;
+}
+
+export interface VisiblePerson {
+  name: string;
+  jobTitle: string | null;
+  pictureRef: string | null;
 }
 
 export class PeopleService {
@@ -53,7 +61,11 @@ export class PeopleService {
     return result.rows[0]?.visible === true;
   }
 
-  async search(viewer: Principal, page: PageRequest = FIRST_PAGE): Promise<Page<Person>> {
+  async search(
+    viewer: Principal,
+    page: PageRequest = FIRST_PAGE,
+    options: { spaceId?: string | undefined; seriesId?: string | undefined } = {},
+  ): Promise<Page<Person>> {
     const term = page.search?.trim() ?? "";
     const pattern = `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
     const sortName = sql`lower(a.name)`;
@@ -69,6 +81,8 @@ export class PeopleService {
       from accounts a
       where a.state = 'active' and ${this.visibleCondition(viewer, sql`a.id`)}
         ${term ? sql`and (a.name ilike ${pattern} or (a.email ilike ${pattern} and ${this.colleagueCondition(viewer, sql`a.id`)}))` : sql``}
+        ${options.spaceId ? sql`and exists (select 1 from spaces ps where ps.id = ${options.spaceId} and ${spaceRoleConditionFor(sql`a.id`, sql`ps`, "reader")})` : sql``}
+        ${options.seriesId ? sql`and ${seriesParticipant(sql`${options.seriesId}::uuid`, sql`a.id`)}` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`a.id`], page.after)}` : sql``}
       order by ${sortName}, a.id
       limit ${pageLimit(page)}`);
@@ -84,6 +98,10 @@ export class PeopleService {
     return sql`(case when ${this.visibleCondition(viewer, sql`${account}.id`)} then ${account}.name end)`;
   }
 
+  visiblePictureRef(viewer: Principal, account: SQL): SQL {
+    return sql`(case when ${this.visibleCondition(viewer, sql`${account}.id`)} then ${account}.picture_ref end)`;
+  }
+
   async visibleNames(viewer: Principal, ids: readonly string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
     const result = await this.#database.execute<{ id: string; name: string }>(sql`
@@ -91,6 +109,27 @@ export class PeopleService {
       where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
         and ${this.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`);
     return new Map(result.rows.map((row) => [row.id, row.name]));
+  }
+
+  async visiblePeople(viewer: Principal, ids: readonly string[]): Promise<Map<string, VisiblePerson>> {
+    if (ids.length === 0) return new Map();
+    const result = await this.#database.execute<{
+      id: string;
+      name: string;
+      job_title: string | null;
+      picture_ref: string | null;
+    }>(sql`
+      select a.id, coalesce(m.name, a.name) as name, case when m.id is null then a.job_title else m.job_title end as job_title,
+        case when m.id is null then a.picture_ref else m.picture_ref end as picture_ref
+      from accounts a left join accounts m on m.id = a.merged_into_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
+        and ${this.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`);
+    return new Map(
+      result.rows.map((row) => [
+        row.id,
+        { name: row.name, jobTitle: row.job_title, pictureRef: row.picture_ref },
+      ]),
+    );
   }
 
   async names(ids: readonly string[], executor: Executor = this.#database): Promise<Map<string, string>> {

@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { PreferencesProvider } from "../../preferences/preferences-provider.js";
 import { mockApi, renderWithProviders } from "../../testing/render.js";
 import { AssignRoleDialog } from "./roles.js";
 import { RoleEditorDialog } from "./roles-screen.js";
@@ -53,12 +54,14 @@ describe("AssignRoleDialog", () => {
     const { requests } = api();
     const onOpenChange = vi.fn();
     await renderWithProviders(
-      <AssignRoleDialog
-        open
-        onOpenChange={onOpenChange}
-        organizationId={ORGANIZATION_ID}
-        organizationName="Platform Team"
-      />,
+      <PreferencesProvider>
+        <AssignRoleDialog
+          open
+          onOpenChange={onOpenChange}
+          organizationId={ORGANIZATION_ID}
+          organizationName="Platform Team"
+        />
+      </PreferencesProvider>,
     );
     const dialog = screen.getByRole("dialog", { name: "Give a role" });
     expect(within(dialog).queryByText("All members of the organization")).toBeNull();
@@ -121,12 +124,14 @@ describe("AssignRoleDialog without people", () => {
   it("keeps Give role usable and marks the empty field instead", async () => {
     const { requests } = api();
     await renderWithProviders(
-      <AssignRoleDialog
-        open
-        onOpenChange={() => undefined}
-        organizationId={ORGANIZATION_ID}
-        organizationName="Platform Team"
-      />,
+      <PreferencesProvider>
+        <AssignRoleDialog
+          open
+          onOpenChange={() => undefined}
+          organizationId={ORGANIZATION_ID}
+          organizationName="Platform Team"
+        />
+      </PreferencesProvider>,
     );
     const dialog = screen.getByRole("dialog", { name: "Give a role" });
     const give = within(dialog).getByRole("button", { name: "Give role" }) as HTMLButtonElement;

@@ -2,7 +2,7 @@ import { EmptyState, Field, SegmentedControl, Select, Skeleton } from "@lunedo/u
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { GitCompareArrows, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";
@@ -55,14 +55,7 @@ export function ReimportComparisonScreen() {
     <SettingsPage
       title={title}
       description={t("imports.reimport.comparison.description")}
-      icon={GitCompareArrows}
-      organizationId={organizationId}
-      width="wide"
-      breadcrumbs={[
-        { label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` },
-        { label: t("imports.reimport.title"), href: importHref },
-        { label: t("imports.reimport.comparison.heading") },
-      ]}
+      back={{ label: t("imports.reimport.title"), href: importHref }}
     >
       {comparison.isPending ? (
         <Skeleton className="h-control-field w-full" />

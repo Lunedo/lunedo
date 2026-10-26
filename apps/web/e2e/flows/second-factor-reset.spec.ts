@@ -33,10 +33,11 @@ test("an administrator resets a member's second factor with a reason", async ({
   await page.goto("/settings/instance/accounts");
   await page.getByRole("searchbox", { name: "Search by name or e-mail" }).fill(person.name);
   await page.getByRole("table", { name: "Accounts" }).getByText(person.name).click();
-  const panel = page.getByRole("dialog", { name: person.name });
-  await panel.getByRole("button", { name: "Reset second factor" }).click();
+  await expect(page).toHaveURL(/\/settings\/instance\/accounts\/[0-9a-f-]+$/);
+  await expect(page.getByRole("heading", { level: 1, name: person.name })).toBeVisible();
+  await page.getByRole("main").getByRole("button", { name: "Reset second factor" }).click();
   const dialog = page.getByRole("dialog", { name: `Reset the second factor of ${person.name}?` });
-  await dialog.getByLabel("Reason").fill("Lost phone, confirmed by call");
+  await dialog.getByLabel("Reason", { exact: true }).fill("Lost phone, confirmed by call");
   await dialog.getByRole("button", { name: "Reset second factor" }).click();
   const confirm = page.getByRole("dialog", { name: "Confirm your identity" });
   if (await confirm.isVisible().catch(() => false)) {

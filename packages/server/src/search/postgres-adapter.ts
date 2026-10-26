@@ -354,13 +354,8 @@ export class PostgresSearchAdapter implements SearchAdapter {
     };
   }
 
-  #visibleArticles(
-    viewer: SearchViewer,
-    spaceId: string,
-    language: string | null,
-    everyLanguage = false,
-  ): SQL {
-    const visible = sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at,
+  #visibleArticleChunks(viewer: SearchViewer, spaceId: string): SQL {
+    return sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at,
         array_remove(t.path, t.translation_of) as path, t.translation_of, c.language,
         coalesce(t.article_type::text, 'none') as article_type
       from search_chunks c
@@ -370,6 +365,15 @@ export class PostgresSearchAdapter implements SearchAdapter {
       where ${sql.join(visibleChunkConditions(viewer), sql` and `)}
         and c.source = 'item' and c.content_type = 'page' and not c.archived and t.space_id = ${spaceId}::uuid
       order by c.item_id, c.position`;
+  }
+
+  #visibleArticles(
+    viewer: SearchViewer,
+    spaceId: string,
+    language: string | null,
+    everyLanguage = false,
+  ): SQL {
+    const visible = this.#visibleArticleChunks(viewer, spaceId);
     if (everyLanguage) {
       return sql`select a.item_id, a.title, a.content_updated_at, a.path, a.article_type from (${visible}) a`;
     }
@@ -385,7 +389,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
 
   async articles(executor: Executor, request: ArticleListRequest): Promise<ArticleList> {
     const scope: SQL[] = [sql`true`];
-    if (request.categoryId) scope.push(sql`${request.categoryId}::uuid = any(v.path)`);
+    if (request.categoryId) {
+      scope.push(
+        request.direct
+          ? sql`v.path[cardinality(v.path) - 1] = ${request.categoryId}::uuid`
+          : sql`${request.categoryId}::uuid = any(v.path)`,
+      );
+    }
     if (request.itemIds) scope.push(sql`v.item_id = any(${sql.param(request.itemIds)}::uuid[])`);
     if (request.excludeItemIds.length > 0) {
       scope.push(sql`v.item_id <> all(${sql.param(request.excludeItemIds)}::uuid[])`);
@@ -438,6 +448,17 @@ export class PostgresSearchAdapter implements SearchAdapter {
       select category, count(*) as n from visible v, unnest(v.path) as category
       where category <> v.item_id group by category`);
     return new Map(result.rows.map((row) => [row.category, Number(row.n)]));
+  }
+
+  async languageCounts(
+    executor: Executor,
+    viewer: SearchViewer,
+    spaceId: string,
+  ): Promise<Map<string, number>> {
+    const result = await executor.execute<{ language: string; n: string }>(sql`
+      with visible as (${this.#visibleArticleChunks(viewer, spaceId)})
+      select language, count(*) as n from visible group by language`);
+    return new Map(result.rows.map((row) => [row.language, Number(row.n)]));
   }
 
   async #queryParts(executor: Executor, request: AdapterSearch): Promise<QueryParts | "nothing"> {

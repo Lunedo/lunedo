@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { type CategoryAccess, CategoryIcons } from "../../knowledge-bases/category-access.js";
 import { contentLanguageLabel } from "../../search/content-language.js";
 import { WhiteboardPreview } from "../../whiteboards/whiteboard-preview.js";
 import { itemIcon } from "../item-icons.js";
@@ -28,6 +29,7 @@ import { MoveConfirmDialog, moveImpactOf, type PendingMove } from "./move-confir
 
 const PAGE_SIZE = 200;
 const UNDO_SECONDS = 5;
+const LISTED_ELSEWHERE: ReadonlySet<string> = new Set(["meetingSeries"]);
 
 type Zone = "before" | "after" | "inside";
 
@@ -61,6 +63,12 @@ interface TreeState {
   dragged: React.RefObject<Dragged | null>;
   drop: (target: TreeItem, zone: Zone) => void;
   loading: () => () => void;
+  categories: CategoryView | null;
+}
+
+export interface CategoryView {
+  entries: ReadonlyMap<string, CategoryAccess>;
+  shown: ((item: TreeItem) => boolean) | null;
 }
 
 const TreeContext = createContext<TreeState | null>(null);
@@ -95,6 +103,16 @@ export function useChildren(spaceId: string, parentId: string | null, enabled = 
   });
 }
 
+type Children = ReturnType<typeof useChildren>;
+
+function itemsOf(children: Children, excludedId: string | null = null): TreeItem[] {
+  return translationsFirst(
+    (children.data?.pages.flatMap((page) => page.items) ?? []).filter(
+      (item) => item.id !== excludedId && !LISTED_ELSEWHERE.has(item.kind),
+    ),
+  );
+}
+
 function indent(depth: number): string {
   return `calc(var(--spacing-3) * ${depth - 1} + var(--spacing-1))`;
 }
@@ -112,10 +130,12 @@ export function PageTree({
   space,
   currentId,
   ancestors,
+  categories = null,
 }: {
   space: SpaceWithRole;
   currentId: string | null;
   ancestors: readonly string[];
+  categories?: CategoryView | null;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -126,7 +146,12 @@ export function PageTree({
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const dragged = useRef<Dragged | null>(null);
   const container = useRef<HTMLDivElement>(null);
+  const homeId = space.overviewItemId ?? null;
   const root = useChildren(space.id, null);
+  const home = useChildren(space.id, homeId, homeId !== null);
+  const levels = homeId === null ? [root] : [home, root];
+  const rootPending = levels.some((level) => level.isPending);
+  const rootFailed = levels.filter((level) => level.isError);
   const [loadingLevels, setLoadingLevels] = useState(0);
   const loading = useCallback(() => {
     setLoadingLevels((count) => count + 1);
@@ -229,8 +254,9 @@ export function PageTree({
       dragged,
       drop,
       loading,
+      categories,
     }),
-    [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop, loading],
+    [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop, loading, categories],
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -282,17 +308,27 @@ export function PageTree({
 
   return (
     <TreeContext value={state}>
-      {root.isPending ? <LevelLoading depth={1} /> : null}
-      {root.isError ? <LevelLoadFailed onRetry={() => void root.refetch()} /> : null}
+      {rootPending && rootFailed.length === 0 ? <LevelLoading depth={1} /> : null}
+      {rootFailed.length > 0 ? (
+        <LevelLoadFailed onRetry={() => rootFailed.forEach((level) => void level.refetch())} />
+      ) : null}
       <div
         ref={container}
         role="tree"
         aria-label={t("tree.label")}
-        aria-busy={root.isPending || loadingLevels > 0 || undefined}
+        aria-busy={rootPending || loadingLevels > 0 || undefined}
         onKeyDown={onKeyDown}
         className="flex flex-col"
       >
-        {root.isSuccess ? <TreeLevel parentId={null} depth={1} /> : null}
+        {levels.every((level) => level.isSuccess) ? (
+          <LevelNodes
+            items={(homeId === null ? itemsOf(root) : [...itemsOf(home), ...itemsOf(root, homeId)]).filter(
+              (item) => categories?.shown?.(item) ?? true,
+            )}
+            depth={1}
+            sources={levels}
+          />
+        ) : null}
       </div>
       <MoveConfirmDialog pending={pendingMove} onChange={setPendingMove} />
     </TreeContext>
@@ -343,14 +379,25 @@ function translationsFirst(items: TreeItem[]): TreeItem[] {
 }
 
 function TreeLevel({ parentId, depth }: { parentId: string | null; depth: number }) {
-  const { t } = useTranslation();
   const tree = useTree();
   const children = useChildren(tree.space.id, parentId);
-  const items = translationsFirst(children.data?.pages.flatMap((page) => page.items) ?? []);
   const { loading } = tree;
   useLayoutEffect(() => (children.isPending ? loading() : undefined), [children.isPending, loading]);
   if (children.isPending) return <LevelLoading depth={depth} hidden />;
   if (children.isError) return <LevelLoadFailed depth={depth} onRetry={() => void children.refetch()} />;
+  return <LevelNodes items={itemsOf(children)} depth={depth} sources={[children]} />;
+}
+
+function LevelNodes({
+  items,
+  depth,
+  sources,
+}: {
+  items: TreeItem[];
+  depth: number;
+  sources: readonly Children[];
+}) {
+  const { t } = useTranslation();
   return (
     <>
       {items.map((item, index) => (
@@ -364,26 +411,30 @@ function TreeLevel({ parentId, depth }: { parentId: string | null; depth: number
           nextId={items[index + 1]?.id ?? null}
         />
       ))}
-      {children.hasNextPage ? (
-        <div
-          role="treeitem"
-          aria-level={depth}
-          aria-label={children.isFetchingNextPage ? t("tree.loading") : t("tree.showMore")}
-          tabIndex={-1}
-          data-tree-action=""
-          className="rounded-sm outline-none focus-visible:focus-ring"
-          style={{ paddingInlineStart: indent(depth + 1) }}
-        >
-          <button
-            type="button"
+      {sources.map((children, index) =>
+        children.hasNextPage ? (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: the sources of a level never change their order
+            key={index}
+            role="treeitem"
+            aria-level={depth}
+            aria-label={children.isFetchingNextPage ? t("tree.loading") : t("tree.showMore")}
             tabIndex={-1}
-            className="h-row rounded-sm px-2 text-sm text-accent hover:underline"
-            onClick={() => void children.fetchNextPage()}
+            data-tree-action=""
+            className="rounded-sm outline-none focus-visible:focus-ring"
+            style={{ paddingInlineStart: indent(depth + 1) }}
           >
-            {children.isFetchingNextPage ? t("tree.loading") : t("tree.showMore")}
-          </button>
-        </div>
-      ) : null}
+            <button
+              type="button"
+              tabIndex={-1}
+              className="h-row rounded-sm px-2 text-sm text-accent hover:underline"
+              onClick={() => void children.fetchNextPage()}
+            >
+              {children.isFetchingNextPage ? t("tree.loading") : t("tree.showMore")}
+            </button>
+          </div>
+        ) : null,
+      )}
     </>
   );
 }
@@ -468,6 +519,15 @@ function TreeNode({
           tree.drop(item, target ?? "after");
         }}
         onDragEnd={() => tree.setDropTarget(null)}
+        onClick={(event) => {
+          const clicked = event.target as HTMLElement;
+          if (!href || !event.currentTarget.contains(clicked) || clicked.closest("a, button")) return;
+          if (external) {
+            window.open(href, "_blank", "noopener,noreferrer");
+            return;
+          }
+          void navigate({ to: href });
+        }}
         onKeyDown={(event) => {
           if ((event.key === "F10" && event.shiftKey) || event.key === "ContextMenu") {
             event.preventDefault();
@@ -476,7 +536,8 @@ function TreeNode({
         }}
         className={classNames(
           "group/row relative flex h-row items-center gap-1 rounded-sm pe-1 outline-none focus-visible:focus-ring",
-          current ? "bg-selected text-selected-text" : "hover:bg-hover",
+          href && "cursor-pointer",
+          current ? "bg-accent text-on-accent [&_svg]:text-on-accent" : "hover:bg-hover",
           target === "inside" && "bg-accent-soft",
         )}
         style={{ paddingInlineStart: indent(depth) }}
@@ -498,7 +559,12 @@ function TreeNode({
             type="button"
             tabIndex={-1}
             aria-hidden="true"
-            className="flex size-6 shrink-0 items-center justify-center rounded-sm text-text-muted hover:bg-hover"
+            className={classNames(
+              "flex size-6 shrink-0 items-center justify-center rounded-sm focus-visible:focus-ring",
+              current
+                ? "text-on-accent hover:ring-1 hover:ring-on-accent hover:ring-inset"
+                : "text-text-muted hover:bg-hover",
+            )}
             onClick={() => tree.toggle(item.id)}
           >
             {open ? <ChevronDown className="size-icon-sm" /> : <ChevronRight className="size-icon-sm" />}
@@ -517,10 +583,10 @@ function TreeNode({
               />
             }
           >
-            <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+            <Glyph aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
           </Tooltip>
         ) : (
-          <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+          <Glyph aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         )}
         {href ? (
           <a
@@ -533,7 +599,7 @@ function TreeNode({
               event.preventDefault();
               void navigate({ to: href });
             }}
-            className={classNames("min-w-0 flex-1 truncate", current && "font-semibold")}
+            className={classNames("min-w-0 flex-1 truncate text-inherit", current && "font-semibold")}
           >
             {title}
           </a>
@@ -559,6 +625,9 @@ function TreeNode({
               {item.viewRestriction === "own" ? t("tree.viewRestricted") : t("tree.editRestricted")}
             </VisuallyHidden>
           </span>
+        ) : null}
+        {item.kind === "folder" ? (
+          <CategoryIcons entry={tree.categories?.entries.get(item.id)} canEdit={tree.canEdit} />
         ) : null}
         {draft ? " " : null}
         {draft ? <Badge variant="warning">{t("versions.draftBadge")}</Badge> : null}

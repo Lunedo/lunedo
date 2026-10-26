@@ -1,29 +1,25 @@
-export interface FitOptions {
-  essential?: readonly boolean[];
-  alwaysMore?: boolean;
+export interface GroupSize {
+  width: number;
+  movable: boolean;
 }
 
-export function fitItems(
-  widths: readonly number[],
+export function fitGroups(
+  groups: readonly GroupSize[],
   available: number,
   moreWidth: number,
   gap = 0,
-  options: FitOptions = {},
 ): boolean[] {
-  const total = widths.reduce((sum, width, index) => sum + width + (index > 0 ? gap : 0), 0);
-  if (total <= available && !options.alwaysMore) return widths.map(() => true);
-  const indices = widths.map((_, index) => index);
-  const ranked = [
-    ...indices.filter((index) => options.essential?.[index]),
-    ...indices.filter((index) => !options.essential?.[index]),
-  ];
-  const shown = widths.map(() => false);
-  let used = moreWidth;
-  for (const index of ranked) {
-    const next = used + (widths[index] ?? 0) + gap;
-    if (next > available) break;
-    used = next;
-    shown[index] = true;
+  const total = (shown: readonly boolean[], withMore: boolean) =>
+    groups.reduce(
+      (sum, group, index) => (shown[index] ? sum + group.width + gap : sum),
+      withMore ? moreWidth : 0,
+    );
+  const shown = groups.map(() => true);
+  if (total(shown, false) <= available) return shown;
+  for (let index = groups.length - 1; index >= 0; index -= 1) {
+    if (!groups[index]?.movable) continue;
+    shown[index] = false;
+    if (total(shown, true) <= available) break;
   }
   return shown;
 }

@@ -19,10 +19,11 @@ export type SetupStep =
   | "instance"
   | "owner account"
   | "second factor"
-  | "recovery codes"
   | "owner ready"
   | "key backup"
-  | "organization";
+  | "organization"
+  | "summary"
+  | "ready";
 
 interface SetupStage {
   name: SetupStep;
@@ -33,7 +34,7 @@ interface SetupStage {
 const STAGES: SetupStage[] = [
   {
     name: "system check",
-    shown: (page) => page.getByRole("heading", { name: "System check" }),
+    shown: (page) => page.getByRole("heading", { name: "System check", level: 1 }),
     run: async (page) => {
       await expectAccessible(page, "system check");
       await page.getByRole("button", { name: "Continue" }).click();
@@ -41,7 +42,7 @@ const STAGES: SetupStage[] = [
   },
   {
     name: "instance",
-    shown: (page) => page.getByRole("heading", { name: "Your instance" }),
+    shown: (page) => page.getByRole("heading", { name: "Your instance", level: 1 }),
     run: async (page) => {
       await page.getByLabel("Instance name").fill("Example Wiki");
       await page.getByRole("button", { name: "Continue" }).click();
@@ -77,18 +78,6 @@ const STAGES: SetupStage[] = [
     },
   },
   {
-    name: "recovery codes",
-    shown: (page) => page.getByRole("list", { name: "Recovery codes" }),
-    run: async (page) => {
-      const codes = await page
-        .getByRole("list", { name: "Recovery codes" })
-        .getByRole("listitem")
-        .allTextContents();
-      expect(codes.length).toBeGreaterThanOrEqual(8);
-      await page.getByRole("button", { name: "Continue" }).click();
-    },
-  },
-  {
     name: "owner ready",
     shown: (page) => page.getByText("The owner account is ready"),
     run: async (page) => {
@@ -97,24 +86,40 @@ const STAGES: SetupStage[] = [
   },
   {
     name: "key backup",
-    shown: (page) => page.getByRole("heading", { name: "Back up your keys" }),
+    shown: (page) => page.getByRole("heading", { name: "Save the emergency kit", level: 1 }),
     run: async (page) => {
       const download = page.waitForEvent("download");
-      await page.getByRole("button", { name: "Download keys" }).click();
-      expect((await download).suggestedFilename()).toBe("lunedo-keys.env");
-      await expect(page.getByRole("figure", { name: "Master key and backup key" })).toContainText(
-        "LUNEDO_MASTER_KEYS=",
-      );
-      await page.getByRole("checkbox", { name: /I stored both keys/ }).check();
+      await page.getByRole("button", { name: "Download emergency kit" }).click();
+      expect((await download).suggestedFilename()).toMatch(/^lunedo-emergency-kit-[\w.-]+\.txt$/);
+      const kit = page.getByRole("figure", { name: "Lunedo emergency kit" });
+      await expect(kit).toContainText("LUNEDO_MASTER_KEYS");
+      await expect(kit).toContainText("LUNEDO_BACKUP_KEY");
+      await page.getByRole("checkbox", { name: /I stored the emergency kit/ }).check();
       await page.getByRole("button", { name: "Continue" }).click();
     },
   },
   {
     name: "organization",
-    shown: (page) => page.getByRole("heading", { name: "First organization" }),
+    shown: (page) => page.getByRole("heading", { name: "First organization", level: 1 }),
     run: async (page) => {
       await page.getByLabel("Name", { exact: true }).fill(ORGANIZATION_NAME);
+      await page.getByRole("button", { name: "Continue" }).click();
+    },
+  },
+  {
+    name: "summary",
+    shown: (page) => page.getByRole("heading", { name: "Summary", level: 1 }),
+    run: async (page) => {
+      await expectAccessible(page, "setup summary");
+      await expect(page.getByRole("region", { name: "Organization" })).toContainText(ORGANIZATION_NAME);
       await page.getByRole("button", { name: "Finish setup" }).click();
+    },
+  },
+  {
+    name: "ready",
+    shown: (page) => page.getByRole("heading", { name: "Lunedo is ready", level: 1 }),
+    run: async (page) => {
+      await page.getByRole("button", { name: "Go to For you" }).click();
     },
   },
 ];
@@ -133,18 +138,18 @@ export async function enterSetupCode(page: Page, shown: StepShown = ignore): Pro
   expect(setupCode).toBeTruthy();
   await page.goto("/");
   await expect(page).toHaveURL(/\/setup$/);
-  await expect(page.getByRole("heading", { name: "Set up Lunedo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome", level: 1 })).toBeVisible();
   await expectAccessible(page, "setup code");
   await shown("setup code", page);
   await page.getByLabel("Setup code").fill("WRONG-CODE-0000");
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Set up a new instance" }).click();
   await expect(page.getByText(/^The setup code is not correct or was already used\./)).toBeVisible();
   await page.goto("about:blank");
   await page.goto(`/setup#code=${setupCode ?? ""}`);
   await expect(page.getByLabel("Setup code")).toHaveValue(setupCode ?? "");
   await expect(page).toHaveURL(/\/setup$/);
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByRole("heading", { name: "Set up Lunedo" })).toBeHidden();
+  await page.getByRole("button", { name: "Set up a new instance" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome", level: 1 })).toBeHidden();
   await page.context().storageState({ path: SETUP_STORAGE });
 }
 
@@ -161,12 +166,12 @@ export async function runSetupSteps(
   shown: StepShown = ignore,
   ownerName: string = OWNER.name,
 ): Promise<void> {
-  const signIn = page.getByRole("heading", { name: `Sign in to ${ORGANIZATION_NAME}` });
+  const forYou = page.getByRole("heading", { name: "For you", level: 1 });
   const done: string[] = [];
-  while (!(await signIn.isVisible())) {
-    const any = STAGES.reduce((found, stage) => found.or(stage.shown(page)), signIn);
+  while (!(await forYou.isVisible())) {
+    const any = STAGES.reduce((found, stage) => found.or(stage.shown(page)), forYou);
     await expect(any.first()).toBeVisible();
-    if (await signIn.isVisible()) break;
+    if (await forYou.isVisible()) break;
     let stage: SetupStage | undefined;
     for (const candidate of STAGES) {
       if (!stage && (await candidate.shown(page).isVisible())) stage = candidate;
@@ -184,7 +189,7 @@ export async function signInOwner(page: Page): Promise<void> {
   const { ownerSecret } = readState();
   expect(ownerSecret).toBeTruthy();
   await page.goto("/sign-in");
-  await expect(page.getByRole("heading", { name: `Sign in to ${ORGANIZATION_NAME}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await expectAccessible(page, "sign-in");
   await signInWithPassword(page, OWNER.email, OWNER.password);
   await expect(page.getByRole("heading", { name: "Confirm it's you" })).toBeVisible();
@@ -210,7 +215,13 @@ export async function setUpMail(page: Page): Promise<void> {
     await page.getByRole("link", { name: "Set up e-mail" }).click();
     await page.getByLabel("Server", { exact: true }).fill(SMTP_HOST);
     await page.getByLabel("Port").fill(String(SMTP_PORT));
-    await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
+    const security = page.getByRole("radiogroup", { name: "Security" });
+    if (await security.isVisible()) {
+      await security.getByRole("radio", { name: /None/ }).click();
+    } else {
+      await page.getByRole("combobox", { name: "Security" }).click();
+      await page.getByRole("option", { name: /None/ }).click();
+    }
     await page.getByLabel("Sender address").fill("wiki@lunedo.test");
     const recipient = `test.mail.${unique().toLowerCase()}@lunedo.test`;
     await page.getByLabel("Send a test mail to").fill(recipient);

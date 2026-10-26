@@ -118,7 +118,6 @@ function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): stri
         src: display ?? href,
         alt: attrOf<string>(node, "alt"),
         loading: lazy ? "lazy" : null,
-        width: lazy ? null : width,
       })}>`
     : "";
   const full =
@@ -157,7 +156,7 @@ export const imageModule = defineModule({
       attrs: {
         attachmentId: optional(uuidValue.nullable(), null),
         alt: optional(z.string().max(1000), ""),
-        width: optional(z.number().int().min(1).max(10_000).nullable(), null),
+        width: optional(z.number().int().min(1).max(100).nullable(), null),
         align: optional(z.enum(imageAlignments), "center"),
         frame: optional(z.boolean().nullable(), null),
       },

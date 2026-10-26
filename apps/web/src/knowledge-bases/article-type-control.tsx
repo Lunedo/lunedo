@@ -72,7 +72,7 @@ export function ArticleTypeControl({
           icon: articleTypeIcon(value),
           onSelect: () => void change(value),
         })),
-        { label: articleTypeLabel(t, null), onSelect: () => void change(null) },
+        { label: articleTypeLabel(t, null), icon: articleTypeIcon(null), onSelect: () => void change(null) },
       ]}
     />
   );

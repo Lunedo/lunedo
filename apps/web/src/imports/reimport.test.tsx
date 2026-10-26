@@ -154,7 +154,7 @@ function setup(
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     ...routes,
   });
 }
@@ -220,7 +220,7 @@ describe("re-import changes", () => {
     });
     await open(DETAIL);
     expect(await screen.findByRole("heading", { name: "Changes since the last import" })).toBeTruthy();
-    const tabs = screen.getByRole("tablist", { name: "Changes" });
+    const tabs = await screen.findByRole("tablist", { name: "Changes" });
     expect(within(tabs).getByRole("tab", { name: /Changed on both sides/ }).textContent).toContain("2");
     expect(within(tabs).getByRole("tab", { name: /New and updated/ }).textContent).toContain("21");
     expect(await screen.findByText("Being edited")).toBeTruthy();

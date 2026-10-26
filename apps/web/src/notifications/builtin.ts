@@ -25,6 +25,8 @@ import {
   Share2,
   ShieldAlert,
   ShieldCheck,
+  UserCog,
+  UserMinus,
   UserPlus,
   UserRound,
   UserRoundX,
@@ -37,11 +39,19 @@ import type { NotificationItem } from "./notifications-api.js";
 const ORGANIZATION = "/settings/organizations/$organizationId";
 
 function contentLink(item: NotificationItem) {
-  const params = item.params as { itemKind?: string; itemTitle?: string; spaceKey?: string };
+  const params = item.params as {
+    itemKind?: string;
+    itemTitle?: string;
+    spaceKey?: string;
+    commentId?: string;
+  };
   if (!item.target.id) return null;
   const slug = slugify(params.itemTitle ?? "");
   const spaceKey = params.spaceKey ?? "";
   return {
+    ...(params.commentId && params.itemKind !== "whiteboard"
+      ? { search: { comment: params.commentId } }
+      : {}),
     to:
       params.itemKind === "blogPost"
         ? blogPostPath(spaceKey, item.target.id, slug)
@@ -90,7 +100,14 @@ notificationTypes.register(
   { id: "breakGlass.started", icon: ShieldAlert, link: (item) => inOrganization(item, "/audit-log") },
   { id: "signIn.newBrowser", icon: KeyRound, link: () => ({ to: "/settings/security" }) },
   { id: "auth.emergencySignIn", icon: ShieldAlert, link: () => ({ to: "/settings/instance/audit-log" }) },
-  { id: "account.withoutOrganization", icon: UserRound, link: () => ({ to: "/settings/instance/accounts" }) },
+  {
+    id: "account.withoutOrganization",
+    icon: UserRound,
+    link: (item) =>
+      item.target.id
+        ? { to: "/settings/instance/accounts/$accountId", params: { accountId: item.target.id } }
+        : { to: "/settings/instance/accounts" },
+  },
   {
     id: "account.rolesWithheld",
     icon: ShieldAlert,
@@ -222,8 +239,45 @@ notificationTypes.register(
     link: () => ({ to: "/settings/exports" }),
   },
   {
+    id: "space.administratorAppointed",
+    icon: UserCog,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
+    id: "space.memberAddedByAdministration",
+    icon: UserPlus,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
+    id: "space.memberRemovedByAdministration",
+    icon: UserMinus,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
+    id: "space.administratorTaken",
+    icon: ShieldAlert,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
     id: "space.confidentialWithoutAdministrator",
     icon: Lock,
+    link: (item) => inOrganization(item, "/spaces"),
+  },
+  {
+    id: "space.personalWithoutAdministrator",
+    icon: UserRoundX,
     link: (item) => inOrganization(item, "/spaces"),
   },
   {

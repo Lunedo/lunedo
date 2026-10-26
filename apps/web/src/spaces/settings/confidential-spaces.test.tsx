@@ -19,7 +19,6 @@ function summary(overrides: Record<string, unknown> = {}) {
     pages: 12,
     lastChangedAt: "2026-10-08T15:00:00.000Z",
     needsAdministrator: true,
-    deletable: false,
     ...overrides,
   };
 }
@@ -37,9 +36,6 @@ async function show(items: unknown[], canManage = true) {
       body: [{ id: REMAINING, name: "Anna Berger" }],
     }),
     [`POST /api/v1/organizations/${ORGANIZATION}/confidential-spaces/${SPACE}/administrator`]: () => ({
-      status: 204,
-    }),
-    [`POST /api/v1/organizations/${ORGANIZATION}/confidential-spaces/${SPACE}/delete`]: () => ({
       status: 204,
     }),
   });
@@ -71,29 +67,58 @@ describe("confidential spaces in the organization settings", () => {
     );
   });
 
-  it("delete a space without members only after typing its key and giving a reason", async () => {
-    const api = await show([summary({ needsAdministrator: false, deletable: true, activeMembers: 0 })]);
-    await userEvent.click(await screen.findByRole("button", { name: "Delete space" }));
-    const dialog = await screen.findByRole("dialog", { name: "Delete the confidential space MSAB" });
-    await userEvent.type(within(dialog).getByLabelText("Type MSAB to confirm"), "MSAB");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Delete space permanently" }));
-    expect(await within(dialog).findByText(/Name the reason/)).toBeTruthy();
-    expect(api.requests.some((request) => request.method === "POST")).toBe(false);
-    await userEvent.type(within(dialog).getByLabelText("Reason"), "Both people left");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Delete space permanently" }));
-    await waitFor(() =>
-      expect(api.requests.find((request) => request.method === "POST")?.body).toEqual({
-        confirmation: "MSAB",
-        reason: "Both people left",
+  it("offer no actions to people who may only view", async () => {
+    await show([summary()], false);
+    expect(await screen.findByText("MSAB")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Appoint space admin" })).toBeNull();
+  });
+});
+
+describe("personal spaces of deactivated people in the organization settings", () => {
+  it("offer an appointment from the remaining members through the personal space routes", async () => {
+    const api = mockApi({
+      [`GET /api/v1/organizations/${ORGANIZATION}/personal-spaces`]: () => ({
+        body: { items: [summary({ key: "P7K2M9QX" })], nextCursor: null },
       }),
+      [`GET /api/v1/organizations/${ORGANIZATION}/personal-spaces/${SPACE}/remaining-members`]: () => ({
+        body: [{ id: REMAINING, name: "Anna Berger" }],
+      }),
+      [`POST /api/v1/organizations/${ORGANIZATION}/personal-spaces/${SPACE}/administrator`]: () => ({
+        status: 204,
+      }),
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <ConfidentialSpaces organizationId={ORGANIZATION} canManage kind="personal" />
+      </PreferencesProvider>,
+    );
+    expect(await screen.findByText("Personal spaces of deactivated people")).toBeTruthy();
+    await userEvent.click(await screen.findByRole("button", { name: "Appoint space admin" }));
+    const dialog = await screen.findByRole("dialog", { name: "Appoint a space admin for P7K2M9QX" });
+    await userEvent.click(await within(dialog).findByRole("radio", { name: "Anna Berger" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Appoint as space admin" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "POST")?.path).toBe(
+        `/api/v1/organizations/${ORGANIZATION}/personal-spaces/${SPACE}/administrator`,
+      ),
     );
   });
 
-  it("offer no actions to people who may only view", async () => {
-    await show([summary({ deletable: true })], false);
-    expect(await screen.findByText("MSAB")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Appoint space admin" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Delete space" })).toBeNull();
+  it("stay out of the way while there are none", async () => {
+    const api = mockApi({
+      [`GET /api/v1/organizations/${ORGANIZATION}/personal-spaces`]: () => ({
+        body: { items: [], nextCursor: null },
+      }),
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <ConfidentialSpaces organizationId={ORGANIZATION} canManage kind="personal" />
+      </PreferencesProvider>,
+    );
+    await waitFor(() =>
+      expect(api.requests.some((request) => request.path.includes("/personal-spaces"))).toBe(true),
+    );
+    expect(screen.queryByText("Personal spaces of deactivated people")).toBeNull();
   });
 });
 

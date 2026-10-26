@@ -19,7 +19,7 @@ docker compose run --rm lunedo backup restore --input /var/lib/lunedo/backups/lu
 - `verify` checks the header, decrypts the whole backup and checks the manifest and every checksum without restoring anything.
 - `restore` restores into an empty instance: an empty database and an empty file store. It verifies the backup first. It refuses to overwrite existing data unless `--force` is given, which replaces all database schemas and the content of the file store. See [How a restore changes the instance](#how-a-restore-changes-the-instance). `--config-dir <dir>` writes the configuration files from the backup to a directory for review; they are never applied automatically.
 
-Stop the application before restoring. After the restore, start Lunedo; it applies migrations if the backup is from an older version.
+Stop the application before restoring. After the restore, start Lunedo; it applies migrations if the backup is from an older version. A new, empty instance can also restore a backup in the browser, from the first page of the setup; see [setup.md](setup.md#restore-during-the-setup).
 
 Exit codes: 0 success, 1 failure, 64 invalid command, 78 invalid configuration.
 
@@ -178,7 +178,7 @@ If the worker is killed during a test restore, the temporary database and direct
 
 ## Warnings
 
-Warnings go to the instance administrators (notification center, e-mail and push by their preferences) and to the operations contacts of the storage settings (e-mail and Teams), with the same rules as the storage warnings:
+Warnings go to the instance administrators (notification center, e-mail and push by their preferences) and to the operations contacts set under Settings > Instance > Notifications (e-mail and Teams), with the same rules as the storage warnings:
 
 | Warning | When | Repeated |
 |---|---|---|
@@ -245,7 +245,7 @@ The header JSON:
 }
 ```
 
-A backup without the file store adds `"scope": "database"`; a backup with everything leaves the field out, so older versions read it unchanged.
+A backup without the file store adds `"scope": "database"`; a backup with everything leaves the field out, so older versions read it unchanged. Backups name the address of the instance that made them in `"instanceUrl"`, so that a restore during the setup can show where a backup comes from; backups of older versions lack the field.
 
 The header is readable without the key, so a backup can be identified and checked before decryption. It is authenticated: the first 10 + n bytes are part of the authenticated data of every encrypted chunk, so any change to the header makes decryption fail.
 
@@ -282,6 +282,8 @@ Because the whole backup is verified before anything is written, a rejected back
 Deleting a backup, starting a test restore and **Back up now** answer with the problem `backupTargetFailed` (status 502) when the target cannot be used: `problem` names the cause (`notFound`, `permission`, `connection`, `credentials`, `missingSecret` and the other causes of **Test connection**), and the detail says what to do.
 
 ## How a restore changes the instance
+
+A restore during the setup ends with a restart of every process, so that the restored data and keys are loaded. Lunedo ends itself and relies on a supervisor to start it again: Docker with `restart: unless-stopped` (as in the Compose file of the setup script) or a systemd unit with `Restart=always`. Without one, start Lunedo again by hand. `pnpm dev:apps` during development does not restart a process that ended; start it again yourself.
 
 A restore runs in three phases, so that a failure leaves either the old instance or a clearly marked incomplete one, never a silent mix:
 

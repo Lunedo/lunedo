@@ -84,12 +84,12 @@ export function OwnIdentities() {
     );
   }
   if (identities.data.length === 0) {
-    return <p className="px-4 py-3 text-sm text-text-muted">{t("identities.noneOwn")}</p>;
+    return <p className="py-3 text-sm text-text-muted">{t("identities.noneOwn")}</p>;
   }
   return (
     <>
       <IdentityRows identities={identities.data} onUnlink={setUnlinking} />
-      <p className="px-4 py-3 text-sm text-text-muted">{t("identities.ownHint")}</p>
+      <p className="py-3 text-sm text-text-muted">{t("identities.ownHint")}</p>
       <ConfirmDialog
         open={unlinking !== null}
         onOpenChange={(next) => (next ? undefined : setUnlinking(null))}
@@ -277,6 +277,7 @@ function LinkIdentityDialog({
       <Field
         label={t("identities.subject")}
         hint={t("identities.subjectHint")}
+        help={t("identities.subjectHelp")}
         {...(invalid === "subject" ? { error: t("validation.required") } : {})}
       >
         <Input className="font-mono" value={subject} onChange={(event) => setSubject(event.target.value)} />

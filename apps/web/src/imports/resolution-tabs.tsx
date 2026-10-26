@@ -555,7 +555,7 @@ function GroupRow({
     }
   };
   return (
-    <li className="flex flex-wrap items-start gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-start gap-3 py-3">
       <div className="flex min-w-0 flex-1 basis-field flex-col">
         <span className="truncate font-medium" title={group.name}>
           {t("imports.permissions.group", { name: group.name })}

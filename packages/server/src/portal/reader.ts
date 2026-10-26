@@ -3,7 +3,6 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { lastReviewedAt } from "../knowledge-bases/reviews.js";
-import { CATEGORY_LEVELS } from "../knowledge-bases/service.js";
 import type { ArticleSort, ListedArticle } from "../search/adapter.js";
 import type { SearchCursor, SearchService } from "../search/service.js";
 import type { ArticleType } from "../spaces/schema.js";
@@ -28,6 +27,7 @@ export interface PortalCategory {
   description: string;
   icon: string | null;
   contactEmail: string | null;
+  restricted: boolean;
   articles: number;
 }
 
@@ -38,8 +38,7 @@ export interface PortalArticleSummary {
   language: string;
   title: string;
   type: ArticleType | null;
-  categoryId: string | null;
-  subcategoryId: string | null;
+  folderIds: string[];
   updatedAt: Date;
   reviewedAt: Date | null;
   views: number;
@@ -149,30 +148,41 @@ export class PortalReader {
       description: string;
       icon: string | null;
       contact_email: string | null;
+      restricted: boolean;
     }>(sql`
-      select c.id, c.parent_id, cardinality(c.path) as level, c.title, c.description, kc.icon, kc.contact_email
+      select c.id, c.parent_id, cardinality(c.path) as level, c.title, c.description, kc.icon, kc.contact_email,
+        exists (select 1 from page_restrictions r where r.item_id = c.id and r.kind = 'view') as restricted
       from tree_items c join spaces s on s.id = c.space_id
       left join knowledge_base_categories kc on kc.item_id = c.id
-      where c.space_id = ${config.spaceId} and c.kind = 'folder' and cardinality(c.path) <= ${CATEGORY_LEVELS}
+      where c.space_id = ${config.spaceId} and c.kind = 'folder'
         and c.id = any(${sql.param([...counted.keys()])}::uuid[])
         and ${this.#authorization.portalFilter(principal, sql`c`, sql`s`)}
       order by cardinality(c.path), c.position, c.id`);
-    const byId = new Map(result.rows.map((row) => [row.id, row]));
-    return result.rows
-      .filter((row) => row.parent_id === null || byId.has(row.parent_id))
-      .map((row) => {
-        const parent = row.parent_id ? byId.get(row.parent_id) : undefined;
-        return {
-          id: row.id,
-          parentId: row.parent_id,
-          level: Number(row.level),
-          title: row.title,
-          description: row.description,
-          icon: row.icon,
-          contactEmail: row.contact_email ?? parent?.contact_email ?? config.contactEmail,
-          articles: counted.get(row.id) ?? 0,
-        };
-      });
+    const shown = new Map<string, PortalCategory>();
+    const categories: PortalCategory[] = [];
+    for (const row of result.rows) {
+      const parent = row.parent_id ? shown.get(row.parent_id) : undefined;
+      if (row.parent_id !== null && !parent) continue;
+      const category: PortalCategory = {
+        id: row.id,
+        parentId: row.parent_id,
+        level: Number(row.level),
+        title: row.title,
+        description: row.description,
+        icon: row.icon,
+        contactEmail: row.contact_email ?? parent?.contactEmail ?? config.contactEmail,
+        restricted: row.restricted,
+        articles: counted.get(row.id) ?? 0,
+      };
+      shown.set(row.id, category);
+      categories.push(category);
+    }
+    return categories;
+  }
+
+  async languageCoverage(principal: Principal, config: PortalConfig): Promise<Map<string, number>> {
+    if (config.languages.length < 2) return new Map();
+    return this.#search.portalLanguageCounts(principal, config.organizationId, config.spaceId);
   }
 
   async articles(
@@ -180,6 +190,7 @@ export class PortalReader {
     config: PortalConfig,
     options: {
       categoryId?: string | null;
+      direct?: boolean;
       type?: PortalArticleFilter | null;
       sort?: ArticleSort;
       limit?: number;
@@ -192,6 +203,7 @@ export class PortalReader {
     const list = await this.#search.portalArticles(principal, config.organizationId, {
       spaceId: config.spaceId,
       categoryId: options.categoryId ?? null,
+      direct: options.direct ?? false,
       articleTypes: options.type ? [options.type] : [],
       itemIds: options.itemIds ?? null,
       excludeItemIds: options.exclude ?? [],
@@ -257,8 +269,7 @@ export class PortalReader {
           language: address.language,
           title: article.title,
           type: typeOf(article.articleType),
-          categoryId: ancestors[0] ?? null,
-          subcategoryId: ancestors[1] ?? null,
+          folderIds: ancestors,
           updatedAt: new Date(article.updatedAt),
           reviewedAt: address.reviewedAt,
           views: article.views,
@@ -349,8 +360,7 @@ export class PortalReader {
         language: chosen.language,
         title: chosen.title,
         type: chosen.article_type,
-        categoryId: ancestors[0] ?? null,
-        subcategoryId: ancestors[1] ?? null,
+        folderIds: ancestors,
         updatedAt: new Date(chosen.updated_at),
         reviewedAt: chosen.reviewed_at ? new Date(chosen.reviewed_at) : null,
         views: 0,
@@ -369,13 +379,12 @@ export class PortalReader {
   }
 
   async #contact(config: PortalConfig, ancestors: string[]): Promise<string | null> {
-    const categories = ancestors.slice(0, CATEGORY_LEVELS);
-    if (categories.length === 0) return config.contactEmail;
+    if (ancestors.length === 0) return config.contactEmail;
     const result = await this.#database.execute<{ item_id: string; contact_email: string | null }>(sql`
       select item_id, contact_email from knowledge_base_categories
-      where item_id = any(${sql.param(categories)}::uuid[]) and contact_email is not null`);
+      where item_id = any(${sql.param(ancestors)}::uuid[]) and contact_email is not null`);
     const byId = new Map(result.rows.map((row) => [row.item_id, row.contact_email]));
-    for (const id of [...categories].reverse()) {
+    for (const id of [...ancestors].reverse()) {
       const email = byId.get(id);
       if (email) return email;
     }
@@ -413,6 +422,7 @@ export class PortalReader {
             await this.#search.portalArticles(principal, config.organizationId, {
               spaceId: config.spaceId,
               categoryId: null,
+              direct: false,
               articleTypes: [],
               itemIds: ids,
               excludeItemIds: [],

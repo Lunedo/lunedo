@@ -20,6 +20,7 @@ import {
   MissingTargetSecretError,
   OrganizationError,
   PasswordPolicyError,
+  ProfileError,
   ProviderResponseError,
   PushSubscriptionError,
   RelyingPartyError,
@@ -34,6 +35,7 @@ import {
   SettingError,
   SettingLockedError,
   SetupNotFoundError,
+  SetupRestoreError,
   SetupStepError,
   ShareLinkRateLimitedError,
   SignInBlockedError,
@@ -247,6 +249,8 @@ function map(error: unknown): Mapped | null {
   if (error instanceof ExportError) {
     return { code: error.code === "exportNotFound" ? "notFound" : error.code, detail: error.message };
   }
+  if (error instanceof ProfileError)
+    return { code: error.code === "accountNotFound" ? "notFound" : error.code, detail: error.message };
   if (error instanceof OrganizationError)
     return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
   if (error instanceof ImportError) {
@@ -332,6 +336,8 @@ function map(error: unknown): Mapped | null {
       extensions: { fields: zodFields(error) },
     };
   }
+  if (error instanceof SetupRestoreError)
+    return { code: codeOf(error.code, "invalidInput"), detail: error.message };
   if (error instanceof SetupStepError)
     return { code: codeOf(error.code, "setupNotReady"), detail: error.message };
   if (error instanceof HttpException) return { code: problemForStatus(error.getStatus()) };

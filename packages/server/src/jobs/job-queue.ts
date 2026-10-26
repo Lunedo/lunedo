@@ -91,6 +91,7 @@ export interface QueueCounts {
   active: number;
   deferred: number;
   failed: number;
+  oldestQueuedAt?: Date | null;
 }
 
 export interface JobFinishedEvent {

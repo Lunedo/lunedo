@@ -163,7 +163,15 @@ export class TokensController {
     status: 201,
     body: createSchema,
     response: { description: "The new token.", schema: createdSchema },
-    errors: ["invalidScopes", "invalidKnowledgeBases", "expiryRequired", "expiryInPast", "expiryTooLate"],
+    errors: [
+      "invalidScopes",
+      "organizationTokenInstanceScopes",
+      "contentLevelNeedsSpacesManage",
+      "invalidKnowledgeBases",
+      "expiryRequired",
+      "expiryInPast",
+      "expiryTooLate",
+    ],
   })
   async create(@Body() body: z.output<typeof createSchema>, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
@@ -187,7 +195,7 @@ export class TokensController {
     params: tokenParams,
     body: contentAccessSchema,
     response: { description: "The changed token.", schema: apiTokenSchema },
-    errors: ["invalidScopes", "invalidKnowledgeBases"],
+    errors: ["invalidScopes", "contentLevelNeedsSpacesManage", "invalidKnowledgeBases"],
   })
   async changeContentAccess(
     @Param("tokenId") tokenId: string,
@@ -265,6 +273,9 @@ export class TokensController {
     response: { description: "The new token.", schema: createdSchema },
     errors: [
       "invalidScopes",
+      "serviceAccountInstanceScopes",
+      "organizationTokenInstanceScopes",
+      "contentLevelNeedsSpacesManage",
       "invalidKnowledgeBases",
       "invalidOwner",
       "expiryRequired",
@@ -297,7 +308,7 @@ export class TokensController {
     params: serviceAccountParams.extend({ tokenId: uuid("ID of the token.") }),
     body: contentAccessSchema,
     response: { description: "The changed token.", schema: apiTokenSchema },
-    errors: ["invalidScopes", "invalidKnowledgeBases"],
+    errors: ["invalidScopes", "contentLevelNeedsSpacesManage", "invalidKnowledgeBases"],
   })
   async changeServiceAccountContentAccess(
     @Param("serviceAccountId") serviceAccountId: string,

@@ -540,6 +540,29 @@ export const auditCatalog = {
     visibility: "organization",
     personal: { previousEmail: "target", newEmail: "target" },
   }),
+  "account.profileChanged": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({
+      name: z.string(),
+      previousName: z.string(),
+      jobTitle: z.string().nullable(),
+      previousJobTitle: z.string().nullable(),
+    }),
+    visibility: "organization",
+    personal: {
+      name: "target",
+      previousName: "target",
+      jobTitle: "target",
+      previousJobTitle: "target",
+    },
+  }),
+  "account.pictureChanged": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({ removed: z.boolean() }),
+    visibility: "organization",
+  }),
   "twoFactor.totpAdded": event({
     actor: ["account", "anonymous"],
     target: "account",
@@ -1007,7 +1030,7 @@ export const auditCatalog = {
     visibility: "organization",
   }),
   "instance.addressChanged": event({
-    actor: ["account"],
+    actor: ["account", "system"],
     target: "instance",
     fields: z.object({
       url: z.string(),
@@ -1168,6 +1191,19 @@ export const auditCatalog = {
     }),
     visibility: "organization",
   }),
+  "knowledgeBase.categoryAccessChanged": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({
+      responsibleGroupIds: z.array(z.uuid()).max(50),
+      previousResponsibleGroupIds: z.array(z.uuid()).max(500),
+      visibleGroupIds: z.array(z.uuid()).max(50).nullable(),
+      previousVisibleGroupIds: z.array(z.uuid()).max(500).nullable(),
+      widened: z.boolean(),
+      articles: z.number().int().min(0),
+    }),
+    visibility: "organization",
+  }),
   "knowledgeBase.reviewSettingsChanged": event({
     actor: ["account"],
     target: "space",
@@ -1265,10 +1301,44 @@ export const auditCatalog = {
     fields: z.object({ key: z.string(), accountId: z.uuid() }),
     visibility: "organization",
   }),
+  "space.personalAdministratorAppointed": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ key: z.string(), accountId: z.uuid() }),
+    visibility: "organization",
+  }),
   "space.confidentialDeleted": event({
     actor: ["account"],
     target: "space",
     fields: z.object({ key: z.string(), reason: z.string() }),
+    visibility: "organization",
+  }),
+  "space.administratorTaken": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), reason: z.string() }),
+    visibility: "organization",
+  }),
+  "space.memberAddedByAdministration": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), accountId: z.uuid(), role: z.string() }),
+    visibility: "organization",
+  }),
+  "space.memberRemovedByAdministration": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), accountId: z.uuid(), role: z.string() }),
+    visibility: "organization",
+  }),
+  "space.cleanupDeleted": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({
+      key: z.string(),
+      kind: z.enum(["personal", "oneOnOne", "confidential"]),
+      reason: z.string(),
+    }),
     visibility: "organization",
   }),
   "space.personalTransferred": event({
@@ -1280,7 +1350,11 @@ export const auditCatalog = {
   "page.published": event({
     actor: ["account", "system"],
     target: "page",
-    fields: pageFields.extend({ version: z.number().int().positive(), note: z.string() }),
+    fields: pageFields.extend({
+      version: z.number().int().positive(),
+      note: z.string(),
+      credentialId: z.uuid().optional(),
+    }),
     visibility: "organization",
   }),
   "page.publishedWithToken": event({

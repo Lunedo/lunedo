@@ -13,6 +13,7 @@ const baseUrl = testDatabaseBaseUrl();
 const logger = createLogger({ service: "test", level: "silent" });
 const migrations = fileURLToPath(new URL("../../drizzle", import.meta.url));
 const MIGRATION = "0012_concrete_formats";
+const SETTINGS_CLEANUP = "0101_settings_cleanup";
 const INSTANCE = "00000000-0000-0000-0000-000000000000";
 
 function foldersBefore(tag: string): string {
@@ -75,7 +76,9 @@ describe.skipIf(!baseUrl)("the migration to concrete formats", () => {
     await set("user", keepsAuto, "locale.timeFormat", "auto");
     await set("user", chooseOwn, "locale.dateFormat", "YYYY-MM-DD");
 
-    await runMigrations(pool, { logger });
+    rmSync(folder, { recursive: true, force: true });
+    folder = foldersBefore(SETTINGS_CLEANUP);
+    await runMigrations(pool, { logger, folder });
 
     const value = async (level: string, scope: string, key: string) => {
       const result = await pool?.query<{ value: unknown }>(
@@ -124,7 +127,9 @@ describe.skipIf(!baseUrl)("the migration to concrete formats", () => {
       [randomUUID(), randomUUID(), INSTANCE, person],
     );
 
-    await runMigrations(pool, { logger });
+    rmSync(folder, { recursive: true, force: true });
+    folder = foldersBefore(SETTINGS_CLEANUP);
+    await runMigrations(pool, { logger, folder });
 
     const rows = await pool.query<{ level: string; value: unknown }>(
       "select level, value from setting_values where key = 'locale.dateFormat' order by level",

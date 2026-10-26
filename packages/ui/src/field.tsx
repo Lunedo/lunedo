@@ -2,6 +2,7 @@ import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import { type ComponentProps, createContext, type ReactNode, useContext, useId, useState } from "react";
 import { IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
+import { SettingHelp } from "./help-popover.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -13,6 +14,18 @@ interface FieldContextValue {
 }
 
 const FieldContext = createContext<FieldContextValue | null>(null);
+
+export type FieldLayout = "stacked" | "row";
+
+const FieldLayoutContext = createContext<FieldLayout>("stacked");
+
+export function FieldLayoutProvider({ layout, children }: { layout: FieldLayout; children: ReactNode }) {
+  return <FieldLayoutContext.Provider value={layout}>{children}</FieldLayoutContext.Provider>;
+}
+
+export function useFieldLayout(): FieldLayout {
+  return useContext(FieldLayoutContext);
+}
 
 export function OutsideField({ children }: { children: ReactNode }) {
   return <FieldContext.Provider value={null}>{children}</FieldContext.Provider>;
@@ -39,6 +52,7 @@ export function useFieldControl(): FieldControlProps {
 export interface FieldProps {
   label: ReactNode;
   hint?: ReactNode;
+  help?: ReactNode;
   error?: ReactNode;
   required?: boolean;
   id?: string;
@@ -55,28 +69,67 @@ export function FieldError({ id, children }: { id?: string; children: ReactNode 
   );
 }
 
-export function Field({ label, hint, error, required = false, id, labelAction, children }: FieldProps) {
+export function Field({ label, hint, help, error, required = false, id, labelAction, children }: FieldProps) {
   const generated = useId();
   const controlId = id ?? `field-${generated}`;
   const hintId = hint ? `${controlId}-hint` : undefined;
   const errorId = error ? `${controlId}-error` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
+  const layout = useFieldLayout();
+  const errorLine = error && (
+    <p id={errorId} className="text-sm text-danger">
+      <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
+      {error}
+    </p>
+  );
+  if (layout === "row") {
+    return (
+      <FieldContext.Provider value={{ id: controlId, describedBy, invalid: Boolean(error), required }}>
+        <div
+          data-setting-row=""
+          data-field-row=""
+          className="grid grid-cols-1 items-center gap-x-4 gap-y-2 py-3 sm:grid-cols-setting-row"
+        >
+          <div data-setting-label="" className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 items-center gap-1">
+              <label htmlFor={controlId} className="font-medium text-text">
+                {label}
+              </label>
+              {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+            </div>
+            {hint && (
+              <p id={hintId} data-setting-hint="" className="text-sm text-text-muted">
+                {hint}
+              </p>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex min-w-0 items-center gap-3">
+              <div data-setting-control="" className="flex min-w-0 flex-1 flex-col sm:max-w-card">
+                <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
+              </div>
+              {labelAction && <div className="flex shrink-0 items-center">{labelAction}</div>}
+            </div>
+            {errorLine}
+          </div>
+        </div>
+      </FieldContext.Provider>
+    );
+  }
   return (
     <FieldContext.Provider value={{ id: controlId, describedBy, invalid: Boolean(error), required }}>
-      <div className="flex flex-col gap-1">
+      <div data-field-stacked="" className="flex w-full max-w-card-wide flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor={controlId} className="font-medium text-text">
-            {label}
-          </label>
+          <div className="flex min-w-0 items-center gap-1">
+            <label htmlFor={controlId} className="font-medium text-text">
+              {label}
+            </label>
+            {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+          </div>
           {labelAction}
         </div>
         {children}
-        {error && (
-          <p id={errorId} className="text-sm text-danger">
-            <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
-            {error}
-          </p>
-        )}
+        {errorLine}
         {hint && (
           <p id={hintId} className="text-sm text-text-muted">
             {hint}
@@ -85,6 +138,10 @@ export function Field({ label, hint, error, required = false, id, labelAction, c
       </div>
     </FieldContext.Provider>
   );
+}
+
+export function controlWidth(className: string | undefined): string {
+  return className && /(^|s)w-/.test(className) ? controlClassName.replace("w-full ", "") : controlClassName;
 }
 
 export const controlClassName =
@@ -100,7 +157,7 @@ export function Input({ invalid, className, ...props }: InputProps) {
     <input
       {...field}
       {...(invalid ? { "aria-invalid": true } : {})}
-      className={classNames(controlClassName, "h-control-field", className)}
+      className={classNames(controlWidth(className), "h-control-field", className)}
       {...props}
     />
   );
@@ -140,5 +197,25 @@ export function Textarea({ invalid, className, rows = 4, ...props }: TextareaPro
       className={classNames(controlClassName, "py-2", className)}
       {...props}
     />
+  );
+}
+
+export function FieldGrid({ className, children }: { className?: string; children: ReactNode }) {
+  const layout = useFieldLayout();
+  if (layout === "row") return <>{children}</>;
+  return (
+    <div data-field-grid="" className={classNames("flex flex-col gap-4", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function InlineField({ children }: { children: ReactNode }) {
+  return (
+    <FieldLayoutProvider layout="stacked">
+      <div data-inline-field="" className="w-field max-w-full">
+        {children}
+      </div>
+    </FieldLayoutProvider>
   );
 }

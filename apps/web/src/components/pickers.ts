@@ -138,7 +138,11 @@ export function knowledgeBaseLoader(organizationId: string): ComboboxLoader {
       }),
     );
     return {
-      items: page.items.map((space) => ({ value: space.id, label: space.name, description: space.key })),
+      items: page.items.map((space) => ({
+        value: space.id,
+        label: space.displayName,
+        description: space.key,
+      })),
       nextCursor: page.nextCursor,
     };
   };

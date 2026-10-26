@@ -70,6 +70,14 @@ export {
   type TokenGrant,
   type TokenScopes,
 } from "./accounts/principal.js";
+export {
+  PICTURE_MAX_BYTES,
+  type Profile,
+  type ProfileChange,
+  ProfileError,
+  type ProfileErrorCode,
+  ProfileService,
+} from "./accounts/profile.js";
 export { accountScopeChain } from "./accounts/scope.js";
 export {
   ANNOUNCEMENT_LINK_LABEL_MAX_LENGTH,
@@ -250,7 +258,9 @@ export {
   type TaskFilter,
   type TaskList,
   TaskService,
+  type TaskSort,
   type TaskStatus,
+  taskSorts,
 } from "./collaboration/tasks.js";
 export { configurationForBackup } from "./config/backup-view.js";
 export { clientAddress, trustedProxyList } from "./config/client-address.js";
@@ -524,6 +534,14 @@ export {
   TOMBSTONE_DAYS,
 } from "./knowledge-bases/article-api.js";
 export {
+  type CategoryAccess,
+  type CategoryAccessChange,
+  type CategoryAccessEffect,
+  CategoryAccessService,
+  type CategoryGroup,
+  MAX_CATEGORY_GROUPS,
+} from "./knowledge-bases/category-access.js";
+export {
   type PortalAccount,
   PortalAccountService,
   type PortalAccounts,
@@ -597,17 +615,34 @@ export {
   smtpSetting,
 } from "./mail/mail-service.js";
 export type { MailMessage, MailTransport, SmtpOptions } from "./mail/transport.js";
+export {
+  AGENDA_TASK_TEXT_MAX_LENGTH,
+  type Agenda,
+  AgendaService,
+  type AgendaTask,
+  type AgendaTopic,
+  UPDATE_TEXT_MAX_LENGTH,
+} from "./meetings/agenda.js";
 export { type DecisionEntry, type DecisionFilter, DecisionService } from "./meetings/decisions.js";
 export {
+  ATTENDANCE_WINDOW,
+  type AttendanceRate,
   type CreateSeriesInput,
   DEFAULT_TEMPLATE_ID,
+  GUEST_NAME_MAX_LENGTH,
+  GUEST_NOTE_MAX_LENGTH,
   MAX_ATTENDEES,
+  MAX_EXTRA_MEETINGS,
+  MAX_GUESTS,
+  MAX_OVERVIEW_LINKS,
   MAX_SERIES_MEMBERS,
   type MeetingAttendee,
   type MeetingDetails,
+  type MeetingGuest,
   MeetingService,
   type MeetingSummary,
   ONE_ON_ONE_TEMPLATE_ID,
+  overviewModules,
   SERIES_NAME_MAX_LENGTH,
   type SeriesDetails,
   type SeriesScheduleInput,
@@ -663,9 +698,12 @@ export {
   NOTIFICATIONS_CHANNEL,
   type NotificationCursor,
   type NotificationItem,
+  type NotificationKind,
   type NotificationPage,
   NotificationService,
   type NotifyInput,
+  notificationKinds,
+  type UnreadCount,
 } from "./notifications/service.js";
 export {
   browserPushSetting,
@@ -754,6 +792,13 @@ export { breakGlassReasonSchema } from "./organizations/break-glass.js";
 export type { Group, GroupDetails, GroupMember } from "./organizations/groups.js";
 export { groupDescriptionSchema, groupNameSchema } from "./organizations/groups.js";
 export type { Invitation } from "./organizations/invitations.js";
+export type {
+  MemberDetails,
+  MemberGroup,
+  MemberSpace,
+  MemberSpaceSource,
+  ProviderReference,
+} from "./organizations/member-details.js";
 export type { Member } from "./organizations/memberships.js";
 export { LastOwnerError } from "./organizations/memberships.js";
 export type { Organization } from "./organizations/organizations.js";
@@ -811,7 +856,8 @@ export {
 export type { RenderedHeading } from "./portal/schema.js";
 export { HANDOFF_SECONDS, PortalSessionService } from "./portal/sessions.js";
 export { helpKnowledgeBaseSetting, portalAppLinkNameSetting } from "./portal/settings.js";
-export { fontFile, PORTAL_ASSETS, portalCss, portalScript } from "./portal/site/assets.js";
+export { fontFile, PORTAL_ASSETS, portalCss, portalScript, portalThemeScript } from "./portal/site/assets.js";
+export { PORTAL_ICONS, portalIconByName } from "./portal/site/brand-icon.js";
 export { escapeHtml, type Html, html, raw, when } from "./portal/site/html.js";
 export { hasIcon, icon } from "./portal/site/icons.js";
 export { languageName, messagesFor, type PortalMessages } from "./portal/site/messages.js";
@@ -906,6 +952,20 @@ export {
   SettingsService,
 } from "./settings/service.js";
 export { applyConfiguredSetup } from "./setup/configured.js";
+export { checkReachability, type ProbeFetch, type ProbeOptions } from "./setup/reachability.js";
+export {
+  type BackupEntry,
+  parseKeyInput,
+  RESTART_CHANNEL,
+  type RestoreStatus,
+  type S3SourceInput,
+  SetupRestoreError,
+  type SetupRestoreOptions,
+  SetupRestoreService,
+  type StartRestoreInput,
+  UPLOAD_CHUNK_MAX_BYTES,
+  type UploadState,
+} from "./setup/restore.js";
 export { SetupNotFoundError, type SetupStatus, SetupStepError } from "./setup/setup-service.js";
 export {
   type AccessExplanation,
@@ -949,6 +1009,12 @@ export { accessRequestStatuses, restrictionKinds, shareLinkScopes, shareRoles } 
 export * from "./sharing/settings.js";
 export { ValueSigner } from "./sharing/signer.js";
 export { type ArchivedItem, ArchiveService } from "./spaces/archive.js";
+export {
+  type FormerMember,
+  type OrphanedSpace,
+  type ProtectedSpaceKind,
+  SpaceCleanupService,
+} from "./spaces/cleanup.js";
 export { auditScopeOf, SpaceError } from "./spaces/common.js";
 export { ConfidentialSpaceService, type ConfidentialSpaceSummary } from "./spaces/confidential.js";
 export {
@@ -972,6 +1038,7 @@ export {
 } from "./spaces/documents.js";
 export { type IncludedPage, IncludeService, type Inclusion } from "./spaces/includes.js";
 export {
+  type ChildItem,
   cleanLinkUrl,
   ITEM_DESCRIPTION_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
@@ -989,6 +1056,11 @@ export {
   trashRetentionJob,
 } from "./spaces/jobs.js";
 export { isValidSpaceKey, normalizeSpaceKey, SPACE_KEY_PATTERN, suggestSpaceKey } from "./spaces/keys.js";
+export type {
+  OrganizationSpaceAdministrator,
+  OrganizationSpaceFilter,
+  OrganizationSpaceRow,
+} from "./spaces/organization-overview.js";
 export {
   MAX_OWNER_CANDIDATES,
   MAX_UNOWNED_PAGE,
@@ -1000,7 +1072,7 @@ export {
 } from "./spaces/ownership.js";
 export type { Person } from "./spaces/people.js";
 export type { PermissionChange, SpacePermissionEntry } from "./spaces/permissions.js";
-export type { PersonalSpaceForReview } from "./spaces/personal.js";
+export type { PersonalSpaceForReview, PersonalSpaceSummary } from "./spaces/personal.js";
 export {
   type DecisionReportPage,
   type LabeledItem,
@@ -1036,6 +1108,8 @@ export {
   versionReasons,
 } from "./spaces/schema.js";
 export {
+  CLEANUP_GRACE_MINIMUM_DAYS,
+  cleanupGraceDaysSetting,
   type DefaultSpacePermissions,
   defaultPageModeSetting,
   defaultSpacePermissionsSchema,

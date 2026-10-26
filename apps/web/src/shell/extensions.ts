@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
+import type { SpaceWithRole } from "../spaces/space-queries.js";
 import { createRegistry } from "./registry.js";
 
 export type NavigationSection = "account" | "organization" | "instance";
@@ -16,10 +17,9 @@ export interface ShellContext {
   signOut(): void;
 }
 
-export interface RailItem {
+export interface TopBarItem {
   id: string;
   order: number;
-  placement: "main" | "footer";
   component: ComponentType;
 }
 
@@ -29,10 +29,21 @@ export interface NavigationItem {
   section: NavigationSection;
   icon: LucideIcon;
   labelKey: string;
+  groupKey?: string;
   to: string;
   permission?: string;
   shortcut?: string[];
   visible?: (context: ShellContext) => boolean;
+}
+
+export interface SpaceSettingsItem {
+  id: string;
+  order: number;
+  labelKey: string;
+  groupKey?: string;
+  to: string;
+  visible?: (space: SpaceWithRole) => boolean;
+  notApplicable?: (space: SpaceWithRole) => string | undefined;
 }
 
 export interface Command {
@@ -57,8 +68,9 @@ export interface Shortcut {
   run: (context: ShellContext) => void;
 }
 
-export const railItems = createRegistry<RailItem>();
+export const topBarItems = createRegistry<TopBarItem>();
 export const navigationItems = createRegistry<NavigationItem>();
+export const spaceSettingsItems = createRegistry<SpaceSettingsItem>();
 export const commands = createRegistry<Command>();
 export const shortcuts = createRegistry<Shortcut>();
 

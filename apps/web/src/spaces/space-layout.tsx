@@ -1,49 +1,53 @@
-import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@lunedo/ui";
+import { Button, IconButton, Menu, type MenuItem, Notice, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { getRouteApi, Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import {
   BookOpen,
+  CalendarDays,
   ChartColumn,
   FileArchive,
-  FileInput,
   FilePlus,
   Folder,
-  Home,
+  Layers,
+  LayoutGrid,
   LayoutTemplate,
   Link2,
-  ListTree,
-  Lock,
-  MoreVertical,
+  MoreHorizontal,
   Newspaper,
-  PanelLeftClose,
-  PanelLeftOpen,
   Plus,
   Presentation,
-  Repeat,
   Settings,
   Shield,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
-import { StarButton } from "../collaboration/content-collaboration.js";
+import { CreatePostDialog } from "../collaboration/blog/space-blog-screen.js";
+import { useStar } from "../collaboration/star.js";
 import { LoadError } from "../errors/failure.js";
 import { SpaceExportDialog } from "../exports/space-export.js";
+import { CategoryAccessDialog, useCategoryAccess } from "../knowledge-bases/category-access.js";
+import { CategoryTree } from "../knowledge-bases/category-tree.js";
 import { KnowledgeBaseScreen } from "../knowledge-bases/knowledge-base-screen.js";
 import { PortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ReviewNavLink } from "../knowledge-bases/reviews/home-reviews.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
-import { WatchMenu } from "../notifications/watch-menu.js";
+import { useWatchEntries } from "../notifications/watch-menu.js";
+import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
-import { useShell } from "../shell/shell.js";
+import { SidebarEntry } from "../shell/app-sidebar.js";
+import { ContentPending, useShownLocation } from "../shell/navigation-pending.js";
+import { type CreateKind, useShell } from "../shell/shell.js";
+import { SidebarContent } from "../shell/sidebar-slot.js";
 import { ArchiveSection } from "./archive/archive-section.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { Redirect } from "./redirect.js";
 import { SidebarShortcuts } from "./shortcuts/sidebar-shortcuts.js";
-import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
+import { SpaceBadge, useSpaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
 import { type CreatableKind, creatableKinds } from "./space-types.js";
@@ -63,9 +67,9 @@ function isUuid(value: string | undefined): value is string {
 export function SpaceLayout() {
   const { t } = useTranslation();
   const { spaceKey } = route.useParams();
-  const location = useLocation();
-  const [, root, pathKey = "", ...rest] = location.pathname.split("/");
-  const currentKey = root === "spaces" ? pathKey : spaceKey;
+  const location = useShownLocation();
+  const [, , , ...rest] = location.pathname.split("/");
+  const currentKey = spaceKey;
   const urlItemId =
     (rest[0] === "pages" || rest[0] === "folders" || rest[0] === "blog") && isUuid(rest[1]) ? rest[1] : null;
   const addressed = useQuery({
@@ -75,8 +79,7 @@ export function SpaceLayout() {
     throwOnError: false,
   });
   const redirectByItem =
-    urlItemId !== null &&
-    (addressed.isPending || (addressed.data !== undefined && addressed.data.spaceKey !== currentKey));
+    urlItemId !== null && addressed.data !== undefined && addressed.data.spaceKey !== currentKey;
   const resolved = useQuery({
     ...spaceByKeyQuery(spaceKey),
     retry: false,
@@ -94,22 +97,7 @@ export function SpaceLayout() {
       <Redirect to={["", "spaces", addressed.data.spaceKey, ...rest].join("/")} search={location.search} />
     );
   }
-  if (redirectByItem) {
-    return (
-      <div className="flex flex-1 gap-4 p-6">
-        <Skeleton className="hidden h-field w-sidebar md:block" />
-        <Skeleton className="h-field flex-1" />
-      </div>
-    );
-  }
-  if (resolved.isPending) {
-    return (
-      <div className="flex flex-1 gap-4 p-6">
-        <Skeleton className="hidden h-field w-sidebar md:block" />
-        <Skeleton className="h-field flex-1" />
-      </div>
-    );
-  }
+  if (redirectByItem || resolved.isPending) return <SpaceLoading />;
   if (resolved.isError) {
     if (isApiError(resolved.error, "notFound") && urlItemId && rest[0] !== "folders") {
       return <NoPageAccess pageId={urlItemId} />;
@@ -117,14 +105,7 @@ export function SpaceLayout() {
     return (
       <main id="main" tabIndex={-1} className="flex-1 p-6 outline-none">
         {isApiError(resolved.error, "notFound") ? (
-          <Notice variant="warning" title={t("spaces.notFound.title")}>
-            <p>{t("spaces.notFound.description", { key: spaceKey })}</p>
-            <p className="mt-2">
-              <Link to="/spaces" className="text-accent underline">
-                {t("spaces.notFound.back")}
-              </Link>
-            </p>
-          </Notice>
+          <SpaceNotFound spaceKey={spaceKey} />
         ) : (
           <LoadError
             what={t("spaces.loadFailed")}
@@ -143,9 +124,40 @@ export function SpaceLayout() {
   return <SpaceFrame space={space} />;
 }
 
-function SpaceFrame({ space }: { space: SpaceWithRole }) {
-  const { t } = useTranslation();
+const TREE_PLACEHOLDERS = ["w-3/4", "w-2/3", "w-4/5", "w-1/2", "w-3/5"];
+
+export function SpaceLoading() {
   const shell = useShell();
+  const collapsed = shell.sidebarCollapsed && !shell.mobileSidebarOpen;
+  const middle = collapsed ? (
+    <Skeleton className="size-8 rounded-md" />
+  ) : (
+    <div aria-hidden="true" className="flex flex-col gap-2 pt-3">
+      <div className="flex items-center gap-2 pb-2">
+        <Skeleton className="size-8 rounded-md" />
+        <div className="flex flex-1 flex-col gap-1">
+          <Skeleton className="w-2/3" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
+      </div>
+      {TREE_PLACEHOLDERS.map((width) => (
+        <Skeleton key={width} className={`my-1 ${width}`} />
+      ))}
+    </div>
+  );
+  return (
+    <>
+      <SidebarContent middle={middle} bottom={null} />
+      <ContentPending />
+    </>
+  );
+}
+
+function SpaceFrame({ space }: { space: SpaceWithRole }) {
+  const shell = useShell();
+  const location = useShownLocation();
+  const settingsPath = `/spaces/${space.key}/settings`;
+  const inSettings = location.pathname === settingsPath || location.pathname.startsWith(`${settingsPath}/`);
   const params = useParams({ strict: false }) as { itemId?: string };
   const currentId = params.itemId ?? null;
   const current = useQuery({ ...itemQuery(currentId ?? ""), enabled: currentId !== null });
@@ -154,89 +166,118 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
     [current.data],
   );
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
+  const knowledgeBase = isKnowledgeBase(space);
   const [moving, setMoving] = useState<Parameters<SpaceContextValue["openMove"]>[0] | null>(null);
+  const [accessFor, setAccessFor] = useState<string | null>(null);
+  const categoryAccess = useCategoryAccess(space.id, knowledgeBase && space.role === "admin");
+  const accessEntry = categoryAccess.data?.find((entry) => entry.itemId === accessFor) ?? null;
   const [copying, setCopying] = useState<Parameters<SpaceContextValue["openCopy"]>[0] | null>(null);
   const [creating, setCreating] = useState<{ kind: CreatedKind; parentId: string | null } | null>(null);
-  const [treeOpen, setTreeOpen] = useState(false);
   const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
   const [galleryTitle, setGalleryTitle] = useState("");
   const [seriesTemplate, setSeriesTemplate] = useState<string | null>(null);
+  const [creatingSeries, setCreatingSeries] = useState(false);
+  const [writingPost, setWritingPost] = useState(false);
   const context = useMemo<SpaceContextValue>(
     () => ({
       space,
       canEdit,
       openMove: (item) => setMoving(item),
       openCopy: (item) => setCopying(item),
-      openCreate: (kind, parentId, title) => {
+      ...(knowledgeBase && space.role === "admin"
+        ? { openCategoryAccess: (itemId: string) => setAccessFor(itemId) }
+        : {}),
+      openCreate: (kind, requestedParent, title) => {
+        const parentId = requestedParent ?? space.overviewItemId;
         if (kind === "page") {
           setGalleryTitle(title ?? "");
           setGalleryParent(parentId);
         } else setCreating({ kind, parentId });
       },
     }),
-    [space, canEdit],
+    [space, canEdit, knowledgeBase],
   );
-  const navigation = (
-    <SpaceNavigation
-      space={space}
-      currentId={currentId}
-      ancestors={ancestors}
-      onCreate={context.openCreate}
-      onNavigate={() => setTreeOpen(false)}
-    />
+  const create = useCallback(
+    (kind: CreateKind, title?: string) => {
+      if (kind === "blogPost") setWritingPost(true);
+      else if (kind === "meeting") setCreatingSeries(true);
+      else context.openCreate(kind, null, title);
+    },
+    [context],
   );
+  const name = useSpaceDisplayName()(space);
+  const kinds = useMemo<CreateKind[]>(
+    () =>
+      canEdit ? [...creatableKinds(space), ...(knowledgeBase ? [] : (["blogPost", "meeting"] as const))] : [],
+    [canEdit, space, knowledgeBase],
+  );
+  const { setSpaceCreateTarget, pendingCreate, clearPendingCreate } = shell;
+  useEffect(() => {
+    setSpaceCreateTarget({ spaceKey: space.key, name, knowledgeBase, kinds, create });
+    return () => setSpaceCreateTarget(null);
+  }, [setSpaceCreateTarget, space.key, name, knowledgeBase, kinds, create]);
+  const pendingHere = pendingCreate?.spaceKey === space.key ? pendingCreate.kind : null;
+  useEffect(() => {
+    if (!pendingHere) return;
+    if (kinds.includes(pendingHere)) create(pendingHere);
+    else clearPendingCreate();
+  }, [pendingHere, clearPendingCreate, kinds, create]);
+  const finishPending = () => {
+    if (pendingHere) clearPendingCreate();
+  };
   return (
     <SpaceContext value={context}>
-      <div className="flex min-w-0 flex-1">
-        {shell.sidebarCollapsed ? null : (
-          <nav
-            aria-label={t("spaces.navigation", { space: spaceDisplayName(t, space) })}
-            className="hidden w-sidebar shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar md:flex"
+      {inSettings ? (
+        <Outlet />
+      ) : (
+        <>
+          <SpaceNavigation
+            space={space}
+            currentId={currentId}
+            ancestors={ancestors}
+            onCreate={context.openCreate}
+            collapsed={shell.sidebarCollapsed && !shell.mobileSidebarOpen}
+          />
+          <main
+            id="main"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
+            tabIndex={0}
+            className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
           >
-            {navigation}
-          </nav>
-        )}
-        <main
-          id="main"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
-          tabIndex={0}
-          className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
-        >
-          <div className="flex items-center gap-2 border-b border-border px-4 py-2 md:hidden">
-            <Button variant="secondary" size="sm" icon={ListTree} onClick={() => setTreeOpen(true)}>
-              {isKnowledgeBase(space) ? t("spaces.articlesButton") : t("spaces.pagesButton")}
-            </Button>
-            <span className="min-w-0 flex-1 truncate text-sm text-text-muted">
-              {spaceDisplayName(t, space)}
-            </span>
-          </div>
-          {shell.sidebarCollapsed ? (
-            <div className="hidden px-4 pt-3 md:block">
-              <IconButton
-                label={t("navigation.expandSidebar")}
-                icon={PanelLeftOpen}
-                onClick={shell.toggleSidebar}
-              />
-            </div>
-          ) : null}
-          <Outlet />
-        </main>
-      </div>
-      <Drawer open={treeOpen} onOpenChange={setTreeOpen} title={spaceDisplayName(t, space)} side="left">
-        {navigation}
-      </Drawer>
+            <SpaceNotices space={space} />
+            <Outlet />
+          </main>
+        </>
+      )}
       <MoveDialog space={space} item={moving} onOpenChange={(open) => !open && setMoving(null)} />
+      {accessEntry ? (
+        <CategoryAccessDialog
+          key={accessEntry.itemId}
+          space={space}
+          entry={accessEntry}
+          open
+          onOpenChange={(open) => !open && setAccessFor(null)}
+        />
+      ) : null}
       <CopyDialog space={space} item={copying} onOpenChange={(open) => !open && setCopying(null)} />
       <CreateItemDialog
         space={space}
         request={creating}
-        onOpenChange={(open) => !open && setCreating(null)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setCreating(null);
+          finishPending();
+        }}
       />
       <TemplateGallery
         space={space}
         parentId={galleryParent}
         title={galleryTitle}
-        onOpenChange={(open) => !open && setGalleryParent(undefined)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setGalleryParent(undefined);
+          finishPending();
+        }}
         onSeriesTemplate={setSeriesTemplate}
       />
       {seriesTemplate ? (
@@ -247,7 +288,134 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
           onOpenChange={(open) => !open && setSeriesTemplate(null)}
         />
       ) : null}
+      {creatingSeries ? (
+        <CreateSeriesDialog
+          space={space}
+          open
+          onOpenChange={(open) => {
+            setCreatingSeries(open);
+            if (!open) finishPending();
+          }}
+        />
+      ) : null}
+      {knowledgeBase ? null : (
+        <CreatePostDialog
+          open={writingPost}
+          onOpenChange={(open) => {
+            setWritingPost(open);
+            if (!open) finishPending();
+          }}
+        />
+      )}
     </SpaceContext>
+  );
+}
+
+function SpaceNotices({ space }: { space: SpaceWithRole }) {
+  const { t } = useTranslation();
+  if (!space.quarantined && !space.confidential) return null;
+  return (
+    <div className="mx-auto flex w-full max-w-page flex-col gap-3 px-4 pt-4 md:px-8">
+      {space.quarantined ? (
+        <Notice variant="warning" title={t("imports.quarantine.title")}>
+          {t("imports.quarantine.description")}{" "}
+          {space.organizationId ? (
+            <Link
+              to="/settings/organizations/$organizationId/imports"
+              params={{ organizationId: space.organizationId }}
+              className="font-medium text-accent hover:underline focus-visible:focus-ring"
+            >
+              {t("imports.quarantine.open")}
+            </Link>
+          ) : null}
+        </Notice>
+      ) : null}
+      {space.confidential ? (
+        <Notice variant="info" title={t("confidential.badge")}>
+          {t("confidential.headerNote")}
+        </Notice>
+      ) : null}
+    </div>
+  );
+}
+
+function SpaceHeader({ space, collapsed }: { space: SpaceWithRole; collapsed: boolean }) {
+  const { t } = useTranslation();
+  const shell = useShell();
+  const name = useSpaceDisplayName()(space);
+  const [exporting, setExporting] = useState(false);
+  const star = useStar({ spaceId: space.id }, name);
+  const watch = useWatchEntries({ type: "space", id: space.id }, name);
+  const settings = (path: string) => () =>
+    shell.navigate(`/spaces/$spaceKey/settings/${path}`, { spaceKey: space.key });
+  const items: MenuItem[] = [
+    star.menuItem,
+    ...watch.items,
+    { type: "separator" },
+    ...(space.role === "admin"
+      ? [
+          { label: t("spaces.settings.general"), icon: SlidersHorizontal, onSelect: settings("general") },
+          { label: t("spaces.settings.permissions"), icon: Shield, onSelect: settings("permissions") },
+          { label: t("content.title"), icon: Trash2, onSelect: settings("content") },
+          { label: t("templates.title"), icon: LayoutTemplate, onSelect: settings("templates") },
+          { type: "separator" as const },
+        ]
+      : []),
+    ...(space.mayExport
+      ? [{ label: t("exports.space.menu"), icon: FileArchive, onSelect: () => setExporting(true) }]
+      : []),
+    ...(space.role === "admin"
+      ? [{ label: t("spaces.settings.title"), icon: Settings, onSelect: settings("general") }]
+      : []),
+  ];
+  while (items.at(-1)?.type === "separator") items.pop();
+  if (collapsed) {
+    return (
+      <ul className="flex flex-col items-center gap-px pb-2">
+        <SidebarEntry
+          to="/spaces/$spaceKey"
+          params={{ spaceKey: space.key }}
+          icon={Layers}
+          label={name}
+          current={false}
+          collapsed
+        />
+      </ul>
+    );
+  }
+  return (
+    <div className="sticky top-0 z-10 -mx-3 flex items-center gap-2 bg-sidebar px-3 pt-3 pb-2">
+      <SpaceBadge space={space} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate font-semibold" title={name}>
+          {name}
+        </span>
+        <span className="truncate text-xs text-text-muted">
+          {space.personal
+            ? t("spaces.personal.label")
+            : isKnowledgeBase(space)
+              ? t("knowledgeBase.create.knowledgeBase")
+              : t("sidebar.spaceType")}
+        </span>
+      </div>
+      <Menu
+        trigger={<IconButton label={t("spaces.options")} icon={MoreHorizontal} size="sm" />}
+        items={items}
+      />
+      {watch.dialog}
+      <SpaceExportDialog
+        space={{
+          id: space.id,
+          key: space.key,
+          name,
+          exportEnabled: space.exportEnabled,
+          admin: space.role === "admin",
+          knowledgeBase: isKnowledgeBase(space),
+        }}
+        open={exporting}
+        onOpenChange={setExporting}
+      />
+    </div>
   );
 }
 
@@ -256,34 +424,28 @@ function SpaceNavigation({
   currentId,
   ancestors,
   onCreate,
-  onNavigate,
+  collapsed,
 }: {
   space: SpaceWithRole;
   currentId: string | null;
   ancestors: readonly string[];
   onCreate: SpaceContextValue["openCreate"];
-  onNavigate: () => void;
+  collapsed: boolean;
 }) {
   const { t } = useTranslation();
-  const shell = useShell();
-  const location = useLocation();
+  const location = useShownLocation();
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
-  const name = spaceDisplayName(t, space);
+  const name = useSpaceDisplayName()(space);
+  const path = location.pathname.replace(/\/$/, "");
+  const base = `/spaces/${space.key}`;
+  const knowledgeBase = isKnowledgeBase(space);
+  const overviewActive = space.overviewItemId !== null && currentId === space.overviewItemId;
+  const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false, enabled: !knowledgeBase });
+  const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
   const overviewHref = space.overviewItemId
     ? itemHref({ id: space.overviewItemId, kind: "page", title: name, link: null }, space.key)
     : null;
-  const settingsActive = location.pathname.startsWith(`/spaces/${space.key}/settings`);
-  const trashActive = location.pathname === `/spaces/${space.key}/trash`;
-  const blogActive = location.pathname.startsWith(`/spaces/${space.key}/blog`);
-  const meetingsActive = location.pathname === `/spaces/${space.key}/meetings`;
-  const knowledgeBase = isKnowledgeBase(space);
-  const articlesActive = knowledgeBase && location.pathname.replace(/\/$/, "") === `/spaces/${space.key}`;
-  const reviewsActive = location.pathname === `/spaces/${space.key}/reviews`;
-  const statisticsActive = location.pathname === `/spaces/${space.key}/statistics`;
-  const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false, enabled: !knowledgeBase });
-  const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
-  const [exporting, setExporting] = useState(false);
-  const createItem = (kind: CreatableKind) => {
+  const createItem = (kind: CreatableKind): MenuItem => {
     const entries = {
       page: { label: knowledgeBase ? t("knowledgeBase.newArticle") : t("tree.newPage"), icon: FilePlus },
       folder: { label: knowledgeBase ? t("knowledgeBase.newCategory") : t("tree.newFolder"), icon: Folder },
@@ -292,189 +454,80 @@ function SpaceNavigation({
     } as const;
     return { ...entries[kind], onSelect: () => onCreate(kind, null) };
   };
-  return (
-    <div
-      className="flex flex-col gap-1 px-2 py-4"
-      onClickCapture={(event) => {
-        if ((event.target as HTMLElement).closest("a")) onNavigate();
-      }}
-    >
-      <div className="flex items-center gap-2 px-2 pb-2">
-        <SpaceBadge space={space} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-semibold" title={name}>
-            {name}
-          </span>
-          <span className="truncate text-xs text-text-muted">
-            {space.personal
-              ? t("spaces.personal.label")
-              : t("spaces.inOrganization", { organization: space.organizationName ?? "" })}
-          </span>
-        </div>
-        <Menu
-          trigger={<IconButton label={t("spaces.options")} icon={MoreVertical} size="sm" />}
-          items={[
-            ...(space.role === "admin"
-              ? [
-                  {
-                    label: t("spaces.settings.general"),
-                    icon: Settings,
-                    onSelect: () =>
-                      shell.navigate("/spaces/$spaceKey/settings/general", { spaceKey: space.key }),
-                  },
-                  {
-                    label: t("spaces.settings.permissions"),
-                    icon: Shield,
-                    onSelect: () =>
-                      shell.navigate("/spaces/$spaceKey/settings/permissions", { spaceKey: space.key }),
-                  },
-                  {
-                    label: t("content.title"),
-                    icon: Trash2,
-                    onSelect: () =>
-                      shell.navigate("/spaces/$spaceKey/settings/content", { spaceKey: space.key }),
-                  },
-                  {
-                    label: t("templates.title"),
-                    icon: LayoutTemplate,
-                    onSelect: () =>
-                      shell.navigate("/spaces/$spaceKey/settings/templates", { spaceKey: space.key }),
-                  },
-                  { type: "separator" as const },
-                ]
-              : []),
-            ...(space.mayExport
-              ? [{ label: t("exports.space.menu"), icon: FileArchive, onSelect: () => setExporting(true) }]
-              : []),
-          ]}
-        />
-        <SpaceExportDialog
-          space={{
-            id: space.id,
-            key: space.key,
-            name,
-            exportEnabled: space.exportEnabled,
-            admin: space.role === "admin",
-            knowledgeBase: isKnowledgeBase(space),
-          }}
-          open={exporting}
-          onOpenChange={setExporting}
-        />
-        <StarButton target={{ spaceId: space.id }} title={name} />
-        <WatchMenu target={{ type: "space", id: space.id }} name={name} />
-        <IconButton
-          className="hidden md:inline-flex"
-          label={t("navigation.collapseSidebar")}
-          icon={PanelLeftClose}
-          size="sm"
-          onClick={shell.toggleSidebar}
-        />
-      </div>
-      {space.quarantined ? (
-        <div className="mx-2 mb-2 flex items-start gap-2 rounded-sm bg-warning-soft px-2 py-1 text-xs">
-          <FileInput aria-hidden="true" className="size-icon-sm shrink-0" />
-          <span className="flex flex-col gap-1">
-            <span>
-              <span className="font-semibold">{t("imports.quarantine.title")}</span> ·{" "}
-              {t("imports.quarantine.description")}
-            </span>
-            {space.organizationId ? (
-              <Link
-                to="/settings/organizations/$organizationId/imports"
-                params={{ organizationId: space.organizationId }}
-                className="font-medium text-accent hover:underline focus-visible:focus-ring"
-              >
-                {t("imports.quarantine.open")}
-              </Link>
-            ) : null}
-          </span>
-        </div>
-      ) : null}
-      {space.confidential ? (
-        <p className="mx-2 mb-2 flex items-start gap-2 rounded-sm bg-accent-soft px-2 py-1 text-xs">
-          <Lock aria-hidden="true" className="size-icon-sm shrink-0" />
-          <span>
-            <span className="font-semibold">{t("confidential.badge")}</span> · {t("confidential.headerNote")}
-          </span>
-        </p>
-      ) : null}
-      <ul className="flex flex-col gap-px">
+  const listClass = collapsed ? "flex flex-col items-center gap-px" : "flex flex-col gap-px";
+  const middle = (
+    <>
+      <SpaceHeader space={space} collapsed={collapsed} />
+      <ul className={listClass}>
         {overviewHref ? (
-          <li>
-            <Link
-              to={overviewHref}
-              className="flex h-row items-center gap-2 rounded-sm px-2 hover:bg-hover focus-visible:focus-ring"
-            >
-              <Home aria-hidden="true" className="size-icon text-text-muted" />
-              {t("spaces.overview")}
-            </Link>
-          </li>
+          <SidebarEntry
+            to={overviewHref}
+            icon={LayoutGrid}
+            label={t("spaces.overview")}
+            current={overviewActive}
+            collapsed={collapsed}
+          />
         ) : null}
         {knowledgeBase ? (
-          <li className="flex flex-col gap-2">
-            <Link
+          <>
+            <SidebarEntry
               to="/spaces/$spaceKey"
               params={{ spaceKey: space.key }}
-              aria-current={articlesActive ? "page" : undefined}
-              className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${articlesActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-            >
-              <BookOpen aria-hidden="true" className="size-icon text-text-muted" />
-              {t("knowledgeBase.articles")}
-            </Link>
+              icon={BookOpen}
+              label={t("knowledgeBase.articles")}
+              current={path === base}
+              collapsed={collapsed}
+            />
             {canEdit ? (
               <>
-                <ReviewNavLink spaceId={space.id} spaceKey={space.key} active={reviewsActive} />
-                <Link
+                <ReviewNavLink
+                  spaceId={space.id}
+                  spaceKey={space.key}
+                  active={path === `${base}/reviews`}
+                  collapsed={collapsed}
+                />
+                <SidebarEntry
                   to="/spaces/$spaceKey/statistics"
                   params={{ spaceKey: space.key }}
-                  aria-current={statisticsActive ? "page" : undefined}
-                  className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${statisticsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-                >
-                  <ChartColumn aria-hidden="true" className="size-icon text-text-muted" />
-                  <span className="min-w-0 flex-1 truncate">{t("statistics.title")}</span>
-                </Link>
+                  icon={ChartColumn}
+                  label={t("statistics.title")}
+                  current={path === `${base}/statistics`}
+                  collapsed={collapsed}
+                />
               </>
             ) : null}
-            <span className="px-2">
-              <PortalLink compact />
-            </span>
-          </li>
-        ) : null}
-        {knowledgeBase ? null : (
+          </>
+        ) : (
           <>
-            <li>
-              <Link
-                to="/spaces/$spaceKey/blog"
-                params={{ spaceKey: space.key }}
-                aria-current={blogActive ? "page" : undefined}
-                className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${blogActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-              >
-                <Newspaper aria-hidden="true" className="size-icon text-text-muted" />
-                {t("blog.title")}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/spaces/$spaceKey/meetings"
-                params={{ spaceKey: space.key }}
-                aria-current={meetingsActive ? "page" : undefined}
-                className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${meetingsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-              >
-                <Repeat aria-hidden="true" className="size-icon text-text-muted" />
-                {t("meetings.title")}
-              </Link>
-              {runningSeries.length > 0 ? (
+            <SidebarEntry
+              to="/spaces/$spaceKey/blog"
+              params={{ spaceKey: space.key }}
+              icon={Newspaper}
+              label={t("blog.title")}
+              current={path.startsWith(`${base}/blog`)}
+              collapsed={collapsed}
+            />
+            <SidebarEntry
+              to="/spaces/$spaceKey/meetings"
+              params={{ spaceKey: space.key }}
+              icon={CalendarDays}
+              label={t("meetings.title")}
+              current={path === `${base}/meetings`}
+              collapsed={collapsed}
+            />
+            {!collapsed && runningSeries.length > 0 ? (
+              <li>
                 <ul aria-label={t("meetings.sidebar.series")} className="flex flex-col gap-px pl-6">
                   {runningSeries.map((entry) => {
                     const href = seriesPath(space.key, entry.id);
-                    const active = location.pathname === href;
+                    const active = path === href;
                     return (
                       <li key={entry.id}>
                         <Link
                           to={href}
                           aria-current={active ? "page" : undefined}
                           title={entry.title}
-                          className={`flex h-row items-center rounded-sm px-2 text-sm focus-visible:focus-ring ${active ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+                          className={`flex h-row items-center rounded-sm px-2 focus-visible:focus-ring ${active ? "bg-accent font-semibold text-on-accent" : "text-text hover:bg-hover"}`}
                         >
                           <span className="truncate">{entry.title}</span>
                         </Link>
@@ -482,53 +535,65 @@ function SpaceNavigation({
                     );
                   })}
                 </ul>
-              ) : null}
-            </li>
+              </li>
+            ) : null}
           </>
         )}
-        {canEdit ? (
-          <li>
-            <Link
-              to="/spaces/$spaceKey/trash"
-              params={{ spaceKey: space.key }}
-              aria-current={trashActive ? "page" : undefined}
-              className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${trashActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-            >
-              <Trash2 aria-hidden="true" className="size-icon text-text-muted" />
-              {t("trash.sidebarLink")}
-            </Link>
-          </li>
-        ) : null}
-        {space.role === "admin" ? (
-          <li>
-            <Link
-              to="/spaces/$spaceKey/settings/general"
-              params={{ spaceKey: space.key }}
-              aria-current={settingsActive ? "page" : undefined}
-              className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${settingsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-            >
-              <Settings aria-hidden="true" className="size-icon text-text-muted" />
-              {t("spaces.settings.title")}
-            </Link>
-          </li>
-        ) : null}
       </ul>
-      <SidebarShortcuts spaceId={space.id} />
-      <div className="flex items-center gap-1 px-2 pt-4 pb-1">
-        <h2 className="flex-1 text-xs font-semibold tracking-label text-text-muted uppercase">
-          {knowledgeBase ? t("knowledgeBase.treeTitle") : t("tree.title")}
-        </h2>
-        {canEdit ? (
-          <Menu
-            trigger={<IconButton label={t("tree.create")} icon={Plus} size="sm" />}
-            items={creatableKinds(space).map((kind) => createItem(kind))}
-          />
-        ) : null}
-      </div>
-      <PageTree space={space} currentId={currentId} ancestors={ancestors} />
-      <ArchiveSection space={space} currentId={currentId} />
-    </div>
+      {collapsed ? null : (
+        <>
+          {knowledgeBase ? (
+            <div className="px-2 pt-2">
+              <PortalLink compact />
+            </div>
+          ) : null}
+          <SidebarShortcuts spaceId={space.id} />
+          <div className="flex items-center gap-1 px-2 pt-4 pb-1">
+            <h2 className="flex-1 text-2xs font-bold tracking-label text-text-muted uppercase">
+              {knowledgeBase ? t("knowledgeBase.treeTitle") : t("tree.title")}
+            </h2>
+            {canEdit ? (
+              <Menu
+                trigger={<IconButton label={t("tree.create")} icon={Plus} size="sm" />}
+                items={creatableKinds(space).map((kind) => createItem(kind))}
+              />
+            ) : null}
+          </div>
+          {knowledgeBase ? (
+            <CategoryTree space={space} currentId={currentId} ancestors={ancestors} />
+          ) : (
+            <PageTree space={space} currentId={currentId} ancestors={ancestors} />
+          )}
+          <ArchiveSection space={space} currentId={currentId} />
+        </>
+      )}
+    </>
   );
+  const bottom = (
+    <ul className={listClass}>
+      {canEdit ? (
+        <SidebarEntry
+          to="/spaces/$spaceKey/trash"
+          params={{ spaceKey: space.key }}
+          icon={Trash2}
+          label={t("trash.sidebarLink")}
+          current={path === `${base}/trash`}
+          collapsed={collapsed}
+        />
+      ) : null}
+      {space.role === "admin" ? (
+        <SidebarEntry
+          to="/spaces/$spaceKey/settings/general"
+          params={{ spaceKey: space.key }}
+          icon={Settings}
+          label={t("spaces.settings.title")}
+          current={path.startsWith(`${base}/settings`)}
+          collapsed={collapsed}
+        />
+      ) : null}
+    </ul>
+  );
+  return <SidebarContent middle={middle} bottom={bottom} />;
 }
 
 export function SpaceOverviewRedirect() {
@@ -555,5 +620,20 @@ export function SpaceOverviewRedirect() {
         </Button>
       </Notice>
     </div>
+  );
+}
+
+function SpaceNotFound({ spaceKey }: { spaceKey: string }) {
+  const { t } = useTranslation();
+  useDocumentTitle(t("spaces.notFound.title"));
+  return (
+    <Notice variant="warning" title={t("spaces.notFound.title")}>
+      <p>{t("spaces.notFound.description", { key: spaceKey })}</p>
+      <p className="mt-2">
+        <Link to="/spaces" className="text-accent underline">
+          {t("spaces.notFound.back")}
+        </Link>
+      </p>
+    </Notice>
   );
 }

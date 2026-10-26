@@ -4,3 +4,12 @@ export function clockTime(time: string, language: string): string {
     Date.UTC(2000, 0, 1, hours, minutes),
   );
 }
+
+export function timeFormatSample(twelveHour: boolean, value: Date): string {
+  return new Intl.DateTimeFormat("en", {
+    timeZone: "UTC",
+    hour: twelveHour ? "numeric" : "2-digit",
+    minute: "2-digit",
+    hour12: twelveHour,
+  }).format(value);
+}

@@ -1,7 +1,7 @@
 import { Badge, Button, ConfirmDialog, EmptyState, Field, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Lock, ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -14,7 +14,7 @@ import { ExplanationView } from "../../sharing/explanation.js";
 import { GiveAccessButton } from "../../sharing/give-access.js";
 import { type RestrictedPage, sharingKeys } from "../../sharing/sharing-api.js";
 import { HolderPicker } from "../access/holders.js";
-import { itemSlug } from "../item-paths.js";
+import { itemHref, itemSlug } from "../item-paths.js";
 import { useSpace } from "../space-context.js";
 import { pagePath } from "../space-queries.js";
 import { Panel } from "./panel.js";
@@ -62,9 +62,12 @@ function RestrictedPages() {
         {pages.data.map((page) => (
           <li key={page.itemId} className="flex flex-col gap-2 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Lock aria-hidden="true" className="size-icon text-text-muted" />
+              <Lock aria-hidden="true" className="size-icon-md text-text-muted" />
               <Link
-                to={pagePath(space.key, page.itemId, itemSlug(page.title))}
+                to={
+                  itemHref({ id: page.itemId, kind: page.kind, title: page.title, link: null }, space.key) ??
+                  pagePath(space.key, page.itemId, itemSlug(page.title))
+                }
                 className="min-w-0 flex-1 truncate font-medium text-accent hover:underline focus-visible:focus-ring"
                 title={page.title}
               >
@@ -187,24 +190,15 @@ export function SpaceAccessScreen() {
   const { space } = useSpace();
   const admin = space.role === "admin";
   return (
-    <SpaceSettingsPage
-      tab="access"
-      title={t("spaces.access.title")}
-      description={t("spaces.access.description")}
-      icon={ShieldCheck}
-    >
+    <SpaceSettingsPage title={t("spaces.access.title")} description={t("spaces.access.description")}>
       <div className="flex flex-col gap-8">
         {admin ? (
-          <Panel
-            title={t("spaces.access.giveTitle")}
-            description={t("spaces.access.giveDescription")}
-            actions={<GiveAccessButton spaceId={space.id} />}
-          >
+          <Panel title={t("spaces.access.giveTitle")} actions={<GiveAccessButton spaceId={space.id} />}>
             <p className="text-sm text-text-muted">{t("spaces.access.giveHint")}</p>
           </Panel>
         ) : null}
         {admin ? (
-          <Panel title={t("sharing.why.toggle")} description={t("spaces.access.whyDescription")}>
+          <Panel title={t("sharing.why.toggle")}>
             <WhyAccess />
           </Panel>
         ) : null}

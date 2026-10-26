@@ -1,5 +1,15 @@
 import { ADFS_GROUP_CLAIMS, type SamlGroupValues, samlGroupValues } from "@lunedo/shared";
-import { Badge, Button, buttonClassName, Notice, Section, Select, SettingRow, Switch } from "@lunedo/ui";
+import {
+  Badge,
+  Button,
+  buttonClassName,
+  FieldGrid,
+  Notice,
+  Section,
+  Select,
+  SettingRow,
+  Switch,
+} from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, FileUp, Lock, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -49,16 +59,19 @@ export function SamlServiceProviderFields({ provider }: { provider: SamlProvider
         label={t("identityProviders.saml.entityId")}
         value={provider.saml.entityId}
         hint={t("identityProviders.saml.entityIdHint")}
+        help={t("identityProviders.saml.entityIdHelp")}
       />
       <CopyField
         label={t("identityProviders.saml.acsUrl")}
         value={provider.redirectUri}
         hint={t("identityProviders.saml.acsUrlHint")}
+        help={t("identityProviders.saml.acsUrlHelp")}
       />
       <CopyField
         label={t("identityProviders.saml.metadataUrl")}
         value={provider.saml.metadataUrl}
         hint={t("identityProviders.saml.metadataUrlHint")}
+        help={t("identityProviders.saml.metadataUrlHelp")}
         action={
           <a
             href={provider.saml.metadataUrl}
@@ -113,7 +126,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
   return (
     <Section title={t("identityProviders.saml.metadataTitle")}>
       {metadata === null ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="warning" title={t("identityProviders.saml.noMetadataTitle")}>
             {source.source === "url"
               ? t("identityProviders.saml.noMetadataUrl")
@@ -122,7 +135,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
         </div>
       ) : null}
       {metadata?.refreshFailedAt ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="danger" title={t("identityProviders.saml.refreshFailedTitle")}>
             {t("identityProviders.warnings.metadataRefreshFailed", {
               name: provider.name,
@@ -155,6 +168,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
           <SettingRow
             label={t("identityProviders.saml.certificates")}
             description={t("identityProviders.saml.certificatesHint")}
+            help={t("identityProviders.saml.certificatesHelp")}
             control={
               <ul className="flex flex-col gap-1 text-sm">
                 {metadata.certificates.map((certificate) => (
@@ -177,7 +191,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
         </>
       ) : null}
       {canManage ? (
-        <div className="flex flex-wrap gap-2 px-4 py-3">
+        <div className="flex flex-wrap gap-2 py-3">
           {source.source === "url" ? (
             <Button
               variant="secondary"
@@ -254,7 +268,7 @@ export function SamlConnectionFields({
   return (
     <>
       {config.preset === "entraId" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <ExplicitSaveTextField
             label={t("identityProviders.fields.tenantId")}
             hint={t("identityProviders.fields.tenantIdHint")}
@@ -272,6 +286,7 @@ export function SamlConnectionFields({
       <SettingRow
         label={t("identityProviders.saml.source")}
         description={t("identityProviders.saml.sourceHint")}
+        help={t("identityProviders.saml.sourceHelp")}
         control={
           <Select
             aria-label={t("identityProviders.saml.source")}
@@ -295,10 +310,11 @@ export function SamlConnectionFields({
         status={<SaveIndicator tracker={tracker("source")} />}
       />
       {source === "url" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <ExplicitSaveTextField
             label={t("identityProviders.saml.metadataAddress")}
             hint={t("identityProviders.saml.metadataAddressHint")}
+            help={t("identityProviders.saml.metadataAddressHelp")}
             value={config.metadata.source === "url" ? config.metadata.url : ""}
             schema={metadataUrlSchema}
             invalidMessage={t("validation.url")}
@@ -351,10 +367,11 @@ export function SamlGraphClientField({
   const config = provider.config;
   if (config.preset !== "entraId") return null;
   return (
-    <div className="px-4 py-3">
+    <div className="py-3">
       <AutoSaveTextField
         label={t("identityProviders.saml.graphClientId")}
         hint={t("identityProviders.saml.graphClientIdHint")}
+        help={t("identityProviders.saml.graphClientIdHelp")}
         value={config.graphClientId ?? ""}
         schema={z.union([z.literal(""), z.string().trim().min(1).max(500)])}
         disabled={!canManage}
@@ -383,6 +400,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           <SettingRow
             label={t("identityProviders.attributes.identifier")}
             description={t("identityProviders.attributes.identifierHint")}
+            help={t("identityProviders.attributes.identifierHelp")}
             meta={t("identityProviders.attributes.fixed")}
             control={
               <Badge variant="neutral" icon={Lock}>
@@ -393,6 +411,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           <SettingRow
             label={t("identityProviders.attributes.email")}
             description={t("identityProviders.attributes.emailHint")}
+            help={t("identityProviders.attributes.emailHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.attributes.email")}
@@ -417,7 +436,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           />
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+        <FieldGrid className="py-3">
           <AutoSaveTextField
             label={t("identityProviders.attributes.saml.identifier")}
             hint={
@@ -468,7 +487,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
               }
             />
           ))}
-        </div>
+        </FieldGrid>
       )}
       {config.preset !== "entraId" ? (
         <SettingRow
@@ -507,7 +526,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
         />
       ) : null}
       {config.preset !== "entraId" && config.groupValues === "names" ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="warning">{t("identityProviders.attributes.saml.namesWarning")}</Notice>
         </div>
       ) : null}

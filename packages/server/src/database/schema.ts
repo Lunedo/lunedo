@@ -1,3 +1,4 @@
+export { accountPictures } from "../accounts/picture-schema.js";
 export {
   accountState,
   accounts,
@@ -134,6 +135,8 @@ export {
   articleSlugs,
   articleSources,
   articleSync,
+  categoryResponsibilities,
+  categoryResponsibleGroups,
   knowledgeBaseCategories,
   knowledgeBaseLogos,
   knowledgeBasePaths,
@@ -158,6 +161,7 @@ export {
   attendance,
   decisions,
   meetingAttendees,
+  meetingGuests,
   meetingOccurrenceOverrides,
   meetingPrivateNotes,
   meetingReminder,
@@ -238,6 +242,7 @@ export {
 export {
   articleType,
   collaborationClients,
+  collaborationEditors,
   collaborationPresence,
   deletedSpaceAdministrators,
   discardedDrafts,

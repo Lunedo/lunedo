@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
-import { AuditLog } from "./audit-log.js";
+import { AuditLog, periodStart } from "./audit-log.js";
 import type { AuditItem } from "./audit-presentation.js";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
@@ -49,7 +49,7 @@ const ROLE_ASSIGNED = event({
   targetId: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
   labelKey: "audit.events.role.assigned",
   changeKind: "fields",
-  actor: { type: "account", id: GONE, name: null, former: false },
+  actor: { type: "account", id: GONE, name: null, former: false, serviceAccount: false, token: null },
   target: { type: "roleAssignment", id: "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d", name: null, former: false },
   scope: { type: "organization", id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f", name: "Platform Team" },
   changes: [
@@ -152,7 +152,7 @@ describe("the audit log", () => {
     expect(within(table).queryByText("Deleted account")).toBeNull();
   });
 
-  it("opens every detail of an event in a side panel", async () => {
+  it("opens every detail of an event in a centered dialog", async () => {
     const table = await renderLog();
     await userEvent.click(await within(table).findByText("Platform Team"));
     const panel = await screen.findByRole("dialog", { name: "Role given" });
@@ -163,6 +163,39 @@ describe("the audit log", () => {
     expect(within(panel).getByText("6f1c2b0e-5d4a-4c3b-9a2f-1e0d9c8b7a6f")).toBeTruthy();
     const raw = within(panel).getByText("Raw event").closest("details") as HTMLDetailsElement;
     expect(raw.open).toBe(false);
+  });
+
+  it("steps through the filtered list in the dialog, across pages", async () => {
+    const third = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2f0",
+      name: "auth.signedIn",
+      labelKey: "audit.events.auth.signedIn",
+      changeKind: "fields",
+      changes: [],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": (request) => ({
+        body: request.path.includes("cursor=page-2")
+          ? { items: [third], nextCursor: null }
+          : { items: [event({}), ROLE_ASSIGNED], nextCursor: "page-2" },
+      }),
+    });
+    const table = await renderLog();
+    await userEvent.click(await within(table).findByText("Violet → Blue"));
+    let dialog = await screen.findByRole("dialog", { name: "Setting changed" });
+    expect(within(dialog).getByText("This is the first event in the list.")).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    dialog = await screen.findByRole("dialog", { name: "Role given" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    dialog = await screen.findByRole("dialog", { name: "Signed in" });
+    expect(within(dialog).getByText("This is the last event in the list.")).toBeTruthy();
+    expect((within(dialog).getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Previous" }));
+    expect(await screen.findByRole("dialog", { name: "Role given" })).toBeTruthy();
   });
 
   it("labels the date filters and names targets and fields in words", async () => {
@@ -191,8 +224,12 @@ describe("the audit log", () => {
       "GET /api/v1/instance/audit-events": () => ({ body: { items: [rule, signIn], nextCursor: null } }),
     });
     const table = await renderLog();
-    expect(screen.getByText("From", { selector: "label" })).toBeTruthy();
-    expect(screen.getByText("To", { selector: "label" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^From/ })).toBeNull();
+    await userEvent.click(screen.getByRole("combobox", { name: "Period" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Custom period …" }));
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+    expect(screen.getByRole("button", { name: "From" }).textContent).toContain("From");
+    expect(screen.getByRole("button", { name: "To" })).toBeTruthy();
     expect(await within(table).findByText("Mapping rule")).toBeTruthy();
     expect(within(table).queryByText("mappingRule")).toBeNull();
     await userEvent.click(within(table).getAllByText("Olivia Owner").at(-1) as HTMLElement);
@@ -277,5 +314,45 @@ describe("audit presentation of personal and notification settings", () => {
     expect(within(notification as HTMLElement).getByText(/^Notifications · /)).toBeTruthy();
     expect(within(notification as HTMLElement).getByText("Immediately → In the daily digest")).toBeTruthy();
     expect(table.textContent).not.toMatch(/appearance\.|notifications\.guest|\{/);
+  });
+});
+
+describe("who acted", () => {
+  it("names the service account and the token in the actor column", async () => {
+    const published = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e9",
+      name: "page.published",
+      targetType: "page",
+      targetId: OLIVIA,
+      labelKey: "audit.events.page.published",
+      changeKind: "fields",
+      actor: {
+        type: "account",
+        id: OLIVIA,
+        name: "Sync bot",
+        former: false,
+        serviceAccount: true,
+        token: "Publishing",
+      },
+      target: { type: "page", id: OLIVIA, name: "Guide", former: false },
+      changes: [],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [published], nextCursor: null } }),
+    });
+    const table = await renderLog();
+    expect(await within(table).findByText("Sync bot (service account) · token “Publishing”")).toBeTruthy();
+  });
+});
+
+describe("audit periods", () => {
+  it("start the period the chosen number of days before now and leave any time and custom open", () => {
+    const now = new Date("2026-10-25T12:00:00.000Z");
+    expect(periodStart("day", now)).toBe("2026-10-24T12:00:00.000Z");
+    expect(periodStart("week", now)).toBe("2026-10-18T12:00:00.000Z");
+    expect(periodStart("month", now)).toBe("2026-09-25T12:00:00.000Z");
+    expect(periodStart("all", now)).toBeUndefined();
+    expect(periodStart("custom", now)).toBeUndefined();
   });
 });

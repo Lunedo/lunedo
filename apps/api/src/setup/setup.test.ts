@@ -1,4 +1,4 @@
-import { createLogger } from "@lunedo/server";
+import { checkReachability, createLogger, type ProbeFetch } from "@lunedo/server";
 import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -28,6 +28,7 @@ async function issueCode(test: AuthTestApp): Promise<string> {
 describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
   let test: AuthTestApp;
   let client: TestClient;
+  let recoveryCodes: string[] = [];
 
   beforeAll(async () => {
     test = await createAuthTestApp({ LUNEDO_TRUSTED_PROXIES: CLIENT_IP });
@@ -65,31 +66,34 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
 
     const status = (await get("/api/v1/setup/steps")).json();
     expect(status.steps.map((step: { id: string }) => step.id)).toEqual([
-      "systemCheck",
       "instance",
+      "systemCheck",
       "owner",
       "keyBackup",
       "organization",
     ]);
     expect(status.ready).toBe(false);
-    expect(status.steps[0].details.checks).toMatchObject({
+    const checks = async () =>
+      (await get("/api/v1/setup/steps"))
+        .json()
+        .steps.find((step: { id: string }) => step.id === "systemCheck").details.checks;
+    expect(status.steps[1].details.checks).toMatchObject({
       database: { status: "ok", migrationsUpToDate: true },
       fileStorage: { writable: true },
       instanceUrl: { status: "warning", configured: false },
+      reachability: { status: "warning", cause: "notSet", url: null },
       clock: { status: "ok" },
     });
     expect((await post("/api/v1/setup/complete")).json()).toMatchObject({ code: "setupNotReady" });
 
-    expect((await post("/api/v1/setup/steps/systemCheck/acknowledge")).statusCode).toBe(200);
     expect(
       (await post("/api/v1/setup/steps/instance/save", { url: "not a url", name: "x" })).statusCode,
     ).toBe(400);
     expect(
       (await post("/api/v1/setup/steps/instance/save", { url: TEST_ORIGIN, name: "Test wiki" })).statusCode,
     ).toBe(200);
-    expect((await get("/api/v1/setup/steps")).json().steps[0].details.checks.https).toMatchObject({
-      status: "ok",
-    });
+    expect((await checks()).https).toMatchObject({ status: "ok" });
+    expect((await post("/api/v1/setup/steps/systemCheck/acknowledge")).statusCode).toBe(200);
 
     expect(
       (
@@ -116,7 +120,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         )
       ).rowCount,
     ).toBe(0);
-    expect((await post("/api/v1/setup/steps/owner/renewRecoveryCodes")).json()).toMatchObject({
+    expect((await post("/api/v1/setup/steps/keyBackup/download")).json()).toMatchObject({
       code: "totpMissing",
     });
     const totp = (await post("/api/v1/setup/steps/owner/beginTotp")).json();
@@ -126,19 +130,13 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       code: TOTP.generate({ secret: Secret.fromBase32(totp.secret) }),
     });
     expect(confirmed.statusCode).toBe(200);
-    expect(confirmed.json().recoveryCodes).toHaveLength(10);
-    const ownerStep = async () =>
-      (await get("/api/v1/setup/steps")).json().steps.find((step: { id: string }) => step.id === "owner");
-    expect(await ownerStep()).toMatchObject({
-      completed: false,
-      details: { totpConfirmed: true },
+    expect(confirmed.json()).toEqual({});
+    const stepOf = async (id: string) =>
+      (await get("/api/v1/setup/steps")).json().steps.find((step: { id: string }) => step.id === id);
+    expect(await stepOf("owner")).toMatchObject({ completed: true, details: { totpConfirmed: true } });
+    expect((await post("/api/v1/setup/steps/owner/renewRecoveryCodes")).json()).toMatchObject({
+      code: "unknownSetupAction",
     });
-    const renewed = (await post("/api/v1/setup/steps/owner/renewRecoveryCodes")).json().recoveryCodes;
-    expect(renewed).toHaveLength(10);
-    expect(renewed).not.toContain(confirmed.json().recoveryCodes[0]);
-    expect((await ownerStep()).completed).toBe(false);
-    expect((await post("/api/v1/setup/steps/owner/acknowledgeRecoveryCodes")).statusCode).toBe(200);
-    expect((await ownerStep()).completed).toBe(true);
 
     const mail = await post("/api/v1/setup/steps/mail/save", {
       host: "smtp.lunedo.test",
@@ -154,14 +152,26 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     });
     const download = await post("/api/v1/setup/steps/keyBackup/download");
     expect(download.statusCode).toBe(200);
-    expect(download.headers["content-disposition"]).toBe('attachment; filename="lunedo-keys.env"');
-    expect(download.body).toMatch(/^LUNEDO_MASTER_KEYS=1:[A-Za-z0-9+/=]{44}$/m);
-    expect(download.body).toMatch(/^LUNEDO_BACKUP_KEY=1:[A-Za-z0-9+/=]{44}$/m);
+    expect(download.headers["cache-control"]).toBe("no-store");
+    const kit = download.json();
+    expect(kit).toEqual({
+      instanceUrl: TEST_ORIGIN,
+      createdAt: expect.any(String),
+      recoveryCodes: expect.any(Array),
+      masterKeys: expect.stringMatching(/^1:[A-Za-z0-9+/=]{44}$/),
+      backupKey: expect.stringMatching(/^1:[A-Za-z0-9+/=]{44}$/),
+    });
+    expect(kit.recoveryCodes).toHaveLength(10);
     expect((await post("/api/v1/setup/steps/keyBackup/download")).json()).toMatchObject({
       code: "keysAlreadyDownloaded",
     });
     expect((await post("/api/v1/setup/steps/keyBackup/confirm")).statusCode).toBe(200);
     expect((await get("/api/v1/setup/steps")).json().ready).toBe(false);
+    const keyConfirmation = await test.runtime.pool.query(
+      "select b.key_confirmed_at is not null as confirmed, a.email from backup_configuration b join accounts a on a.id = b.key_confirmed_by",
+    );
+    expect(keyConfirmation.rows).toEqual([{ confirmed: true, email: "Owner@Example.org" }]);
+    recoveryCodes = kit.recoveryCodes;
 
     const organization = await post("/api/v1/setup/steps/organization/save", {
       name: "Platform Team",
@@ -216,6 +226,16 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     ]);
     expect(
       (
+        await test.runtime.pool.query(
+          "select key, value from setting_values where level = 'instance' and key like 'locale.%' order by key",
+        )
+      ).rows,
+    ).toEqual([
+      { key: "locale.language", value: "de" },
+      { key: "locale.timeZone", value: "Europe/Vienna" },
+    ]);
+    expect(
+      (
         await post("/api/v1/setup/steps/organization/save", {
           name: "Platform Team",
           language: "de",
@@ -248,8 +268,18 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     expect(ownerRow.rows).toEqual([{ home_organization_id: organizationId, built_in_role: "owner" }]);
     expect((await get("/api/v1/setup/steps")).json().ready).toBe(true);
 
-    expect((await post("/api/v1/setup/complete")).statusCode).toBe(204);
+    expect(client.cookies.has("__Host-lunedo-session")).toBe(false);
+    const completed = await post("/api/v1/setup/complete");
+    expect(completed.statusCode).toBe(200);
+    expect(completed.json()).toEqual({ mailConfigured: false });
     expect(client.cookies.has("__Host-lunedo-setup")).toBe(false);
+    const session = await get("/api/v1/auth/session");
+    expect(session.statusCode).toBe(200);
+    expect(session.json()).toMatchObject({ sessionKind: "full", account: { email: "Owner@Example.org" } });
+    const signedIn = await test.runtime.pool.query<{ fields: { methods: string[] } }>(
+      "select fields from audit_events where name = 'auth.signedIn'",
+    );
+    expect(signedIn.rows.map((row) => row.fields.methods)).toEqual([["password", "totp"]]);
   });
 
   it("answers as if the setup endpoints did not exist afterwards", async () => {
@@ -319,6 +349,62 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
     });
     expect(first.json()).toEqual({ status: "secondFactorRequired", factors: ["totp", "recoveryCode"] });
   });
+
+  it("accepts a recovery code from the emergency kit", async () => {
+    const owner = new TestClient(test.app);
+    await owner.post("/api/v1/auth/sign-in", {
+      email: "owner@example.org",
+      password: "violet tram umbrella",
+    });
+    const signedIn = await owner.post("/api/v1/auth/sign-in/second-factor", {
+      type: "recoveryCode",
+      code: recoveryCodes[0],
+    });
+    expect(signedIn.json()).toMatchObject({ status: "signedIn" });
+  });
+});
+
+describe.skipIf(!databaseBaseUrl)("changing the owner after the emergency kit was downloaded", () => {
+  let test: AuthTestApp;
+  let client: TestClient;
+
+  beforeAll(async () => {
+    test = await createAuthTestApp({ LUNEDO_TRUSTED_PROXIES: CLIENT_IP });
+    client = new TestClient(test.app, { remoteAddress: CLIENT_IP });
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  const post = (url: string, body?: unknown) => client.post(url, body, behindProxy);
+  const get = (url: string) => client.get(url, behindProxy);
+
+  it("asks for a new kit, because the codes in the first one no longer work", async () => {
+    await post("/api/v1/setup/session", { code: await issueCode(test) });
+    await post("/api/v1/setup/steps/instance/save", { url: TEST_ORIGIN, name: "Test wiki" });
+    const owner = { email: "owner@example.org", name: "Olivia Owner", password: "violet tram umbrella" };
+    const confirmOwner = async () => {
+      expect((await post("/api/v1/setup/steps/owner/createAccount", owner)).statusCode).toBe(200);
+      const totp = (await post("/api/v1/setup/steps/owner/beginTotp")).json();
+      await post("/api/v1/setup/steps/owner/confirmTotp", {
+        code: TOTP.generate({ secret: Secret.fromBase32(totp.secret) }),
+      });
+    };
+    await confirmOwner();
+    const first = (await post("/api/v1/setup/steps/keyBackup/download")).json();
+    expect((await post("/api/v1/setup/steps/keyBackup/confirm")).statusCode).toBe(200);
+
+    await confirmOwner();
+    const keyBackup = (await get("/api/v1/setup/steps"))
+      .json()
+      .steps.find((step: { id: string }) => step.id === "keyBackup");
+    expect(keyBackup).toMatchObject({ completed: false, details: { downloaded: false } });
+    const second = (await post("/api/v1/setup/steps/keyBackup/download")).json();
+    expect(second.recoveryCodes).toHaveLength(10);
+    expect(second.recoveryCodes).not.toContain(first.recoveryCodes[0]);
+    expect(second.masterKeys).toBe(first.masterKeys);
+  });
 });
 
 describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from the origin in use", () => {
@@ -330,6 +416,94 @@ describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from 
 
   afterAll(async () => {
     await test?.close();
+  });
+
+  it("confirms that the address of the instance leads to this instance", async () => {
+    const resolve = async () => ["203.0.113.20"];
+    const throughThisInstance: ProbeFetch = async (url) => {
+      const answered = await test.app.inject({ method: "GET", url: new URL(url).pathname });
+      return new Response(answered.body, { status: answered.statusCode });
+    };
+    expect(
+      await checkReachability(test.runtime.database, `${TEST_ORIGIN}/`, {
+        fetch: throughThisInstance,
+        resolve,
+      }),
+    ).toMatchObject({ status: "ok", cause: null, url: `${TEST_ORIGIN}/` });
+
+    const elsewhere: ProbeFetch = async () => new Response(JSON.stringify({ answer: "guessed" }));
+    expect(
+      await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: elsewhere, resolve }),
+    ).toMatchObject({ status: "warning", cause: "otherServer" });
+
+    const flooding: ProbeFetch = async () => new Response(`{"answer":"${"x".repeat(10_000)}"}`);
+    expect(
+      await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: flooding, resolve }),
+    ).toMatchObject({ status: "warning", cause: "otherServer" });
+
+    const nothing: ProbeFetch = async () => {
+      throw new TypeError("fetch failed");
+    };
+    expect(
+      await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: nothing, resolve }),
+    ).toMatchObject({ status: "warning", cause: "unreachable" });
+
+    let replayed = "";
+    const recording: ProbeFetch = async (url, init) => {
+      replayed = new URL(url).pathname;
+      return throughThisInstance(url, init);
+    };
+    await checkReachability(test.runtime.database, TEST_ORIGIN, { fetch: recording, resolve });
+    expect((await test.app.inject({ method: "GET", url: replayed })).statusCode).toBe(404);
+    expect(
+      (await test.app.inject({ method: "GET", url: `/api/v1/setup/probe/${"A".repeat(43)}` })).statusCode,
+    ).toBe(404);
+  });
+
+  it("follows redirects of the probe only on the same host and never to link-local addresses", async () => {
+    const requested: string[] = [];
+    const redirecting =
+      (location: (url: URL) => string): ProbeFetch =>
+      async (url, init) => {
+        requested.push(url);
+        expect(init.redirect).toBe("manual");
+        const target = new URL(url);
+        if (target.protocol === "http:")
+          return new Response(null, { status: 308, headers: { location: location(target) } });
+        const answered = await test.app.inject({ method: "GET", url: target.pathname });
+        return new Response(answered.body, { status: answered.statusCode });
+      };
+    const resolve = async () => ["203.0.113.20"];
+    const httpOrigin = TEST_ORIGIN.replace(/^https:/, "http:");
+
+    const sameHost = redirecting((url) => `https://${url.host}${url.pathname}`);
+    expect(
+      await checkReachability(test.runtime.database, httpOrigin, { fetch: sameHost, resolve }),
+    ).toMatchObject({
+      cause: null,
+    });
+    expect(requested.map((url) => new URL(url).protocol)).toEqual(["http:", "https:"]);
+
+    requested.length = 0;
+    const otherHost = redirecting((url) => `https://other.example${url.pathname}`);
+    expect(
+      await checkReachability(test.runtime.database, httpOrigin, { fetch: otherHost, resolve }),
+    ).toMatchObject({
+      cause: "otherServer",
+    });
+    expect(requested).toHaveLength(1);
+
+    requested.length = 0;
+    expect(
+      await checkReachability(test.runtime.database, "http://metadata.example", {
+        fetch: sameHost,
+        resolve: async () => ["169.254.169.254"],
+      }),
+    ).toMatchObject({ cause: "unreachable" });
+    expect(
+      await checkReachability(test.runtime.database, "http://[fe80::1]", { fetch: sameHost, resolve }),
+    ).toMatchObject({ cause: "unreachable" });
+    expect(requested).toEqual([]);
   });
 
   it("keeps accepting the origin of the setup session until setup is complete", async () => {

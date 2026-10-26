@@ -1,8 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { queryKeys } from "../api/queries.js";
 import { App, createQueryClient } from "../app.js";
 import { initI18n } from "../i18n/index.js";
+import { PENDING_MS, PROGRESS_DELAY_MS } from "../shell/navigation-pending.js";
 import { mockApi, problem, type RecordedRequest } from "../testing/render.js";
 
 const OLIVIA = {
@@ -179,7 +181,7 @@ function baseRoutes(permissions: string[] = ["organization.view", "organization.
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
   };
 }
 
@@ -191,16 +193,18 @@ function spaceRoutes(role: "reader" | "editor" | "admin" = "admin") {
       const parent = new URL(request.path, "http://localhost").searchParams.get("parentId");
       if (parent === RUNBOOKS)
         return { body: { items: [item(VPN, "VPN access", "page", RUNBOOKS)], nextCursor: null } };
-      return {
-        body: {
-          items: [
-            item(OVERVIEW, "IT Operations", "page", null),
-            item(RUNBOOKS, "Runbooks", "folder", null, true),
-            item(NETWORK, "Network", "page", null),
-          ],
-          nextCursor: null,
-        },
-      };
+      if (parent === OVERVIEW) {
+        return {
+          body: {
+            items: [
+              item(RUNBOOKS, "Runbooks", "folder", OVERVIEW, true),
+              item(NETWORK, "Network", "page", OVERVIEW),
+            ],
+            nextCursor: null,
+          },
+        };
+      }
+      return { body: { items: [item(OVERVIEW, "IT Operations", "page", null, true)], nextCursor: null } };
     },
     [`GET /api/v1/items/${RUNBOOKS}`]: () => ({
       body: {
@@ -227,6 +231,25 @@ async function renderAt(path: string) {
   render(<App i18n={i18n} queryClient={createQueryClient()} />);
 }
 
+function overviewContent() {
+  return {
+    body: {
+      itemId: OVERVIEW,
+      title: "IT Operations",
+      version: 1,
+      document: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Welcome" }] }],
+      },
+      schemaVersion: 2,
+      revision: 1,
+      updatedAt: "2026-10-05T08:10:00.000Z",
+      updatedBy: null,
+      references: { people: {}, pages: {} },
+    },
+  };
+}
+
 describe("spaces", () => {
   it("lists readable spaces, filters them and offers to clear a filter without results", async () => {
     const { requests } = mockApi({
@@ -243,6 +266,44 @@ describe("spaces", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByRole("link", { name: /IT Operations/ })).toBeTruthy();
     expect(requests.some((request) => request.path.includes("q=nothing"))).toBe(true);
+  });
+
+  it("shows the spaces as a list on narrow screens and hides the visibility column first in a narrow table", async () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    mockApi({
+      ...baseRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+    });
+    await renderAt("/spaces");
+    const table = await screen.findByRole("table", { name: "Spaces" });
+    expect(within(table).getByRole("columnheader", { name: "Who can read" }).className).toContain(
+      "hidden @column:table-cell",
+    );
+    expect(within(table).getByRole("columnheader", { name: "Key" }).className).not.toContain("hidden");
+    cleanup();
+
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    mockApi({
+      ...baseRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+    });
+    await renderAt("/spaces");
+    const list = await screen.findByRole("list", { name: "Spaces" });
+    expect(screen.queryByRole("table")).toBeNull();
+    const entry = within(list).getByRole("listitem");
+    expect(within(entry).getByRole("link", { name: "IT Operations" }).getAttribute("href")).toBe(
+      "/spaces/ITOPS",
+    );
+    expect(within(entry).getByText("ITOPS · Runbooks of the IT team")).toBeTruthy();
+    expect(within(entry).getByRole("button", { name: "Star IT Operations" })).toBeTruthy();
   });
 
   it("lists the deleted spaces the person was space admin of and restores one", async () => {
@@ -406,7 +467,7 @@ describe("spaces", () => {
           redirected: false,
         },
       }),
-      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
     });
@@ -422,7 +483,7 @@ describe("spaces", () => {
       ...baseRoutes(),
       ...spaceRoutes(),
       "GET /api/v1/space-keys/OLDKEY": () => problem(404, "notFound"),
-      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
     });
@@ -431,6 +492,131 @@ describe("spaces", () => {
       expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`),
     );
     expect(screen.queryByText("Space not found")).toBeNull();
+  });
+
+  it("leaves the settings to the page the person came from, whatever settings pages they visit", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      [`GET /api/v1/spaces/${SPACE_ID}/settings`]: () => ({ body: [] }),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("link", { name: "Space settings" });
+    await userEvent.click(screen.getByRole("link", { name: "Space settings" }));
+    let navigation = await screen.findByRole("navigation", { name: "Space settings" });
+    expect(screen.queryByRole("navigation", { name: "Main navigation" })).toBeNull();
+    const back = () => within(navigation).getAllByRole("link")[0] as HTMLElement;
+    expect(back().textContent).toBe("Back to IT Operations");
+    expect(back().getAttribute("href")).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+
+    await userEvent.click(within(navigation).getByRole("link", { name: "Pages and trash" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/ITOPS/settings/content"));
+    navigation = screen.getByRole("navigation", { name: "Space settings" });
+    expect(back().getAttribute("href")).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+
+    await userEvent.click(screen.getByRole("button", { name: /sidebar|navigation/i }));
+    await userEvent.click(back());
+    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`));
+    expect(await screen.findByRole("navigation", { name: "Main navigation" })).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("/account/preferences/"))).toBe(false);
+  });
+
+  it("hides only the settings navigation with the top bar toggle and keeps the stored sidebar state", async () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const { requests } = mockApi({ ...baseRoutes(), ...spaceRoutes() });
+    await renderAt("/spaces/ITOPS/settings/general");
+    await screen.findByRole("navigation", { name: "Space settings" });
+    await userEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
+    await waitFor(() => expect(screen.queryByRole("navigation", { name: "Space settings" })).toBeNull());
+    expect(screen.getByRole("button", { name: "Show sidebar" })).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("/account/preferences/"))).toBe(false);
+  });
+
+  it("replaces the space navigation with grouped settings and a way back to the space", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes() });
+    await renderAt("/spaces/ITOPS/settings/general");
+    const navigation = await screen.findByRole("navigation", { name: "Space settings" });
+    expect(within(navigation).getByRole("heading", { name: "IT Operations" })).toBeTruthy();
+    expect(within(navigation).getByRole("link", { name: "Back to IT Operations" }).getAttribute("href")).toBe(
+      "/spaces/ITOPS",
+    );
+    expect(within(navigation).getByRole("link", { name: "General" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    const content = within(navigation).getByRole("list", { name: "Content" });
+    expect(
+      within(content)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Pages and trash", "Page status", "Templates", "Export"]);
+    expect(within(navigation).getByRole("list", { name: "Access" })).toBeTruthy();
+    expect(within(navigation).getByRole("list", { name: "Connections" })).toBeTruthy();
+    expect(within(navigation).queryByRole("list", { name: "Publishing" })).toBeNull();
+    expect(within(navigation).queryByRole("link", { name: "Categories" })).toBeNull();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Navigation of IT Operations" })).toBeNull();
+  });
+
+  it("shows the publishing settings for a knowledge base and sends article templates to Templates", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      "GET /api/v1/space-keys/ITOPS": () => ({
+        body: { space: { ...space(), type: "knowledgeBase" }, redirected: false },
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/article-templates");
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/ITOPS/settings/templates"));
+    const navigation = await screen.findByRole("navigation", { name: "Space settings" });
+    const publishing = within(navigation).getByRole("list", { name: "Publishing" });
+    expect(
+      within(publishing)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Address", "Appearance and start page", "Visibility", "Languages", "Portal accounts"]);
+    const portalAccounts = within(publishing).getByRole("link", { name: "Portal accounts" });
+    expect(portalAccounts.getAttribute("title")).toMatch(/^Does not apply: portal accounts read only/);
+    expect(portalAccounts.className).toContain("text-text-muted");
+    expect(within(publishing).getByRole("link", { name: "Visibility" }).getAttribute("title")).toBeNull();
+    const content = within(navigation).getByRole("list", { name: "Content" });
+    expect(
+      within(content)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Areas and topics", "Templates", "Review", "Pages and trash", "Page status", "Export"]);
+    expect(within(content).getByRole("link", { name: "Templates" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+  });
+
+  it("ends the general space settings with the danger zone and keeps it off pages and trash", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      [`GET /api/v1/spaces/${SPACE_ID}/settings`]: () => ({ body: [] }),
+    });
+    await renderAt("/spaces/ITOPS/settings/general");
+    const zone = await screen.findByRole("region", { name: "Danger zone" });
+    expect(within(zone).getByRole("button", { name: "Archive space" })).toBeTruthy();
+    expect(within(zone).getByRole("button", { name: "Delete space" })).toBeTruthy();
+    const main = screen.getByRole("main");
+    const regions = within(main).getAllByRole("region");
+    expect(regions.at(-1)).toBe(zone);
+    cleanup();
+
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      [`GET /api/v1/spaces/${SPACE_ID}/settings`]: () => ({ body: [] }),
+    });
+    await renderAt("/spaces/ITOPS/settings/content");
+    await screen.findByRole("heading", { name: "Pages and trash", level: 1 });
+    expect(screen.queryByRole("region", { name: "Danger zone" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete space" })).toBeNull();
   });
 
   it("says that the old key keeps leading to the space until another space takes it", async () => {
@@ -448,11 +634,87 @@ describe("spaces", () => {
     ).toBeTruthy();
   });
 
+  it("lists what changed last in the space on its overview page, once per page and without the overview", async () => {
+    const hit = (itemId: string, title: string, type: string, heading = "") => ({
+      type,
+      id: heading ? `${itemId}:${heading}` : itemId,
+      itemId,
+      itemType: type,
+      title,
+      heading,
+      anchor: heading ? heading.toLowerCase() : null,
+      excerpt: [],
+      space: { id: SPACE_ID, key: "ITOPS", name: "IT Operations", personal: false },
+      sharedWithYou: false,
+      otherCategory: false,
+      path: [],
+      labels: [],
+      status: null,
+      author: { id: "01929b1e-0000-7000-8000-0000000000c1", name: "Anna Berger" },
+      archived: false,
+      attachment: null,
+      topic: null,
+      series: null,
+      updatedAt: "2026-10-05T08:00:00.000Z",
+    });
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("reader"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => ({
+        body: {
+          itemId: OVERVIEW,
+          title: "IT Operations",
+          version: 1,
+          document: {
+            type: "doc",
+            content: [{ type: "paragraph", content: [{ type: "text", text: "Welcome" }] }],
+          },
+          schemaVersion: 2,
+          revision: 1,
+          updatedAt: "2026-10-05T08:10:00.000Z",
+          updatedBy: null,
+          references: { people: {}, pages: {} },
+        },
+      }),
+      [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/search`]: () => ({
+        body: {
+          results: [
+            hit(NETWORK, "Network", "page", "Firewall"),
+            hit(OVERVIEW, "IT Operations", "page"),
+            hit(NETWORK, "Network", "page"),
+            hit(VPN, "Winter maintenance", "blogPost"),
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    const section = await screen.findByRole("region", { name: "New in this space" });
+    expect(
+      within(section)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      [expect.stringMatching(/^NetworkAnna Berger · /), `/spaces/ITOPS/pages/${NETWORK}/network`],
+      [expect.stringMatching(/^Winter maintenanceBlog post · Anna Berger · /), expect.stringContaining(VPN)],
+    ]);
+    const search = new URL(
+      requests.find((request) => request.path.includes("/search"))?.path ?? "",
+      "http://localhost",
+    ).searchParams;
+    expect(Object.fromEntries(search)).toMatchObject({ spaceIds: SPACE_ID, sort: "newest" });
+    expect(search.has("q")).toBe(false);
+    expect(screen.queryByRole("heading", { name: /^Comments/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /comment/i })).toBeNull();
+  });
+
   it("leads an outdated title in the address to the current one and keeps the edit mode", async () => {
     mockApi({
       ...baseRoutes(),
       ...spaceRoutes("reader"),
-      [`GET /api/v1/pages/${OVERVIEW}/content`]: () => problem(404, "notFound"),
+      [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
     });
@@ -479,10 +741,12 @@ describe("page tree", () => {
 
   it("moves focus with the arrow keys and opens and closes levels", async () => {
     const { tree } = await renderTree();
-    const overview = within(tree).getByRole("treeitem", { name: "IT Operations" });
-    overview.focus();
-    fireEvent.keyDown(overview, { key: "ArrowDown" });
+    expect(within(tree).queryByRole("treeitem", { name: "IT Operations" })).toBeNull();
     const runbooks = within(tree).getByRole("treeitem", { name: "Runbooks" });
+    expect(runbooks.getAttribute("aria-level")).toBe("1");
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    network.focus();
+    fireEvent.keyDown(network, { key: "ArrowUp" });
     expect(document.activeElement).toBe(runbooks);
     fireEvent.keyDown(runbooks, { key: "ArrowRight" });
     expect(await within(tree).findByRole("treeitem", { name: "VPN access" })).toBeTruthy();
@@ -497,7 +761,38 @@ describe("page tree", () => {
     fireEvent.keyDown(runbooks, { key: "End" });
     expect(document.activeElement).toBe(within(tree).getByRole("treeitem", { name: "Network" }));
     fireEvent.keyDown(document.activeElement as Element, { key: "Home" });
-    expect(document.activeElement).toBe(overview);
+    expect(document.activeElement).toBe(runbooks);
+  });
+
+  it("keeps the space part of the sidebar while the space loads instead of the navigation outside spaces", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      "GET /api/v1/space-keys/ITOPS": () => new Promise(() => {}),
+    });
+    await renderAt("/spaces/ITOPS");
+    await screen.findByRole("link", { name: "For you" });
+    expect(screen.queryByRole("link", { name: "All spaces" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).toBeNull();
+  });
+
+  it("creates items at the top level of the tree below the home page", async () => {
+    const { requests } = await renderTree({
+      [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+        status: 201,
+        body: item("01929b1e-0000-7000-8000-0000000000e9", "Contracts", "folder", OVERVIEW),
+      }),
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Create in this space" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "New folder" }));
+    const dialog = await screen.findByRole("dialog", { name: "New folder" });
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Title" }), "Contracts");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create folder" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "POST" && request.path.endsWith("/items"))?.body,
+      ).toMatchObject({ kind: "folder", title: "Contracts", parentId: OVERVIEW }),
+    );
   });
 
   it("moves an item by drag and drop, shows where it lands and undoes the move", async () => {
@@ -528,7 +823,7 @@ describe("page tree", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await waitFor(() =>
       expect(requests.filter((request) => request.method === "POST").at(-1)?.body).toEqual({
-        parentId: null,
+        parentId: OVERVIEW,
         afterId: RUNBOOKS,
       }),
     );
@@ -593,7 +888,7 @@ describe("page tree", () => {
     await waitFor(() =>
       expect(requests.find((request) => request.path.endsWith(`/items/${NETWORK}/move`))?.body).toMatchObject(
         {
-          parentId: null,
+          parentId: OVERVIEW,
           confirmation: "confirmed-impact",
         },
       ),
@@ -632,7 +927,7 @@ describe("page tree", () => {
     await waitFor(() =>
       expect(requests.find((request) => request.path.endsWith(`/items/${NETWORK}/copy`))?.body).toEqual({
         spaceId: SPACE_ID,
-        parentId: null,
+        parentId: OVERVIEW,
         descendants: false,
         confirmation: "confirmed-copy",
       }),
@@ -728,7 +1023,14 @@ describe("page tree", () => {
       const user = userEvent.setup();
       await user.click(await screen.findByRole("button", { name: "Space options" }));
       const menu = await screen.findByRole("menu");
-      expect(within(menu).queryByRole("menuitem", { name: "Export space" }) !== null).toBe(role === "admin");
+      expect(within(menu).getByRole("menuitem", { name: "Add to starred" })).toBeTruthy();
+      if (role === "reader") {
+        expect(within(menu).queryByRole("menuitem", { name: "Export space" })).toBeNull();
+        expect(within(menu).queryByRole("menuitem", { name: "Space settings" })).toBeNull();
+      } else {
+        expect(within(menu).getByRole("menuitem", { name: "Export space" })).toBeTruthy();
+        expect(within(menu).getByRole("menuitem", { name: "Space settings" })).toBeTruthy();
+      }
       cleanup();
     }
   });
@@ -798,7 +1100,7 @@ describe("space permissions", () => {
       [`GET /api/v1/organizations/${ORGANIZATION.id}/groups`]: () => ({
         body: { items: [], nextCursor: null },
       }),
-      [`POST /api/v1/spaces/${SPACE_ID}/permissions/preview`]: () => ({
+      [`POST /api/v1/spaces/${SPACE_ID}/permissions/grants/preview`]: () => ({
         body: {
           gaining: 1,
           losing: 0,
@@ -809,28 +1111,34 @@ describe("space permissions", () => {
           changes: [{ accountId: ANNA, name: "Anna Berger", before: null, after: "reader" }],
         },
       }),
-      [`POST /api/v1/spaces/${SPACE_ID}/permissions`]: () => ({ body: [] }),
+      [`POST /api/v1/spaces/${SPACE_ID}/permissions/grants`]: () => ({ body: [] }),
     });
     await renderAt("/spaces/ITOPS/settings/permissions");
-    const picker = await screen.findByRole("combobox", { name: "Add people or groups" });
-    await userEvent.click(picker);
+    await userEvent.click(await screen.findByRole("button", { name: "Add people" }));
+    const adding = await screen.findByRole("dialog", { name: "Add people and groups" });
+    await userEvent.click(within(adding).getByRole("button", { name: "Continue" }));
+    expect(await within(adding).findByText("Choose a person or group first.")).toBeTruthy();
+    await userEvent.click(within(adding).getByRole("combobox", { name: "Add people or groups" }));
     await userEvent.click(await screen.findByRole("option", { name: /Anna Berger/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Give role" }));
+    expect(within(adding).getByRole("list", { name: "Chosen" }).textContent).toContain("Anna Berger");
+    await userEvent.click(within(adding).getByRole("button", { name: "Continue" }));
     const dialog = await screen.findByRole("dialog", { name: "Give Anna Berger the role Reader?" });
     expect(await within(dialog).findByText("1 person gets access")).toBeTruthy();
     expect(within(dialog).getByText("Anna Berger · Reader")).toBeTruthy();
     expect(
       requests.some(
-        (request) => request.path === `/api/v1/spaces/${SPACE_ID}/permissions` && request.method === "POST",
+        (request) =>
+          request.path === `/api/v1/spaces/${SPACE_ID}/permissions/grants` && request.method === "POST",
       ),
     ).toBe(false);
     await userEvent.click(within(dialog).getByRole("button", { name: "Give role" }));
     await waitFor(() =>
       expect(
         requests.find(
-          (request) => request.path === `/api/v1/spaces/${SPACE_ID}/permissions` && request.method === "POST",
+          (request) =>
+            request.path === `/api/v1/spaces/${SPACE_ID}/permissions/grants` && request.method === "POST",
         )?.body,
-      ).toEqual({ action: "grant", principalKind: "account", principalId: ANNA, role: "reader" }),
+      ).toEqual({ holders: [{ principalKind: "account", principalId: ANNA }], role: "reader" }),
     );
   });
 
@@ -927,6 +1235,25 @@ describe("space access", () => {
       ).toBe(true),
     );
     expect(stored.draft).toBeNull();
+  });
+
+  it("links a restricted folder to the folder, not to a page", async () => {
+    const folderId = "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a77";
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      ...draftRoutes({ draft: null }),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({
+        body: [
+          { itemId: folderId, title: "Payroll", kind: "folder", view: null, edit: null, orphaned: false },
+        ],
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    expect((await screen.findByRole("link", { name: "Payroll" })).getAttribute("href")).toBe(
+      `/spaces/ITOPS/folders/${folderId}/payroll`,
+    );
   });
 
   it("keeps an unfinished assistant as a draft on the server", async () => {
@@ -1087,17 +1414,613 @@ describe("finding spaces and restricted pages", () => {
     mockApi({
       ...baseRoutes(),
       ...spaceRoutes("editor"),
-      [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+      [`GET /api/v1/spaces/${SPACE_ID}/items`]: (request: RecordedRequest) => ({
         body: {
-          items: [
-            item(OVERVIEW, "IT Operations", "page", null),
-            { ...item(NETWORK, "Network", "page", null), viewRestriction: "own", editRestricted: false },
-          ],
+          items: request.path.includes(`parentId=${OVERVIEW}`)
+            ? [
+                {
+                  ...item(NETWORK, "Network", "page", OVERVIEW),
+                  viewRestriction: "own",
+                  editRestricted: false,
+                },
+              ]
+            : [item(OVERVIEW, "IT Operations", "page", null, true)],
           nextCursor: null,
         },
       }),
     });
     await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
     expect(await screen.findByText("Restricted: only the access list can view it")).toBeTruthy();
+  });
+});
+
+describe("folder and label pages", () => {
+  it("list the folder contents in a flat table with New and more actions in the page bar", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("editor"),
+      [`GET /api/v1/spaces/${SPACE_ID}/items`]: (request: RecordedRequest) => {
+        const parent = new URL(request.path, "http://localhost").searchParams.get("parentId");
+        return {
+          body: {
+            items:
+              parent === RUNBOOKS
+                ? [
+                    {
+                      ...item(VPN, "VPN access", "page", RUNBOOKS),
+                      updatedBy: { id: ANNA, name: "Anna Berger" },
+                    },
+                  ]
+                : [item(RUNBOOKS, "Runbooks", "folder", null, true)],
+            nextCursor: null,
+          },
+        };
+      },
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const table = await screen.findByRole("table", { name: "Contents" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["Name", "Type", "Edited by", "Changed"]);
+    expect(within(table).getByText("Anna Berger")).toBeTruthy();
+    expect(within(table).getByRole("link", { name: "VPN access" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Runbooks");
+    await userEvent.click(screen.getByRole("button", { name: "New" }));
+    expect(await screen.findByRole("menuitem", { name: "New page" })).toBeTruthy();
+  });
+
+  it("switch the label list between this space and everywhere", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("reader"),
+      [`GET /api/v1/spaces/${SPACE_ID}/labels/network/pages`]: () => ({
+        body: [
+          {
+            itemId: VPN,
+            title: "VPN access",
+            parents: ["Network"],
+            contentUpdatedAt: "2026-10-05T08:00:00.000Z",
+          },
+        ],
+      }),
+      "GET /api/v1/reports/content-by-label": () => ({
+        body: [
+          {
+            id: NETWORK,
+            title: "Network plan",
+            kind: "page",
+            path: `/spaces/OTHER/pages/${NETWORK}/network-plan`,
+            space: { id: "01929b1e-0000-7000-8000-0000000000a9", name: "Facilities" },
+            labels: ["network"],
+            excerpt: null,
+            parents: ["Plans"],
+            contentUpdatedAt: "2026-10-05T08:00:00.000Z",
+          },
+        ],
+      }),
+    });
+    await renderAt("/spaces/ITOPS/labels/network");
+    expect(await screen.findByText("1 page with this label.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /VPN access/ })).toBeTruthy();
+    expect(screen.getByText(/^IT Operations › Network ·/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "In this space" }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: "Everywhere" }));
+    expect(await screen.findByRole("link", { name: /Network plan/ })).toBeTruthy();
+    expect(screen.getByText(/^Facilities › Plans ·/)).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("labels=network"))).toBe(true);
+  });
+});
+
+describe("app shell", () => {
+  const MARKETING_ID = "01929b1e-0000-7000-8000-0000000000a2";
+
+  function shellRoutes() {
+    return {
+      "GET /api/v1/starred": () => ({
+        body: {
+          items: [],
+          spaces: [
+            {
+              id: SPACE_ID,
+              key: "ITOPS",
+              name: "IT Operations",
+              personal: false,
+              starredAt: space().createdAt,
+            },
+          ],
+        },
+      }),
+      "GET /api/v1/recent": () => ({
+        body: [
+          {
+            id: VPN,
+            kind: "page",
+            title: "VPN access",
+            spaceId: SPACE_ID,
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            viewedAt: space().createdAt,
+          },
+          {
+            id: NETWORK,
+            kind: "page",
+            title: "Campaigns",
+            spaceId: MARKETING_ID,
+            spaceKey: "MKT",
+            spaceName: "Marketing",
+            viewedAt: space().createdAt,
+          },
+        ],
+      }),
+    };
+  }
+
+  it("lists favorite and recently visited spaces outside a space and the space itself inside one", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    const favorites = await within(navigation).findByRole("list", { name: "Favorites" });
+    expect(within(favorites).getByRole("link", { name: "IT Operations" })).toBeTruthy();
+    const recent = within(navigation).getByRole("list", { name: "Recently visited" });
+    expect(
+      within(recent)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("title")),
+    ).toEqual(["Marketing"]);
+    expect(within(navigation).queryByRole("link", { name: "All spaces" })).toBeNull();
+    expect(within(navigation).getByRole("button", { name: "Spaces" })).toBeTruthy();
+    expect(within(navigation).queryByRole("button", { name: "Collapse sidebar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
+    cleanup();
+
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const inside = await screen.findByRole("navigation", { name: "Main navigation" });
+    expect(await within(inside).findByRole("link", { name: "Space settings" })).toBeTruthy();
+    expect(within(inside).getByRole("link", { name: "Trash" })).toBeTruthy();
+    expect(within(inside).queryByRole("link", { name: "All spaces" })).toBeNull();
+    expect(within(inside).getByRole("link", { name: "For you" })).toBeTruthy();
+  });
+
+  it("shows only icons with names when the sidebar is collapsed", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/account/preferences": () => ({
+        body: [
+          {
+            key: "appearance.sidebarCollapsed",
+            value: true,
+            defaultValue: false,
+            source: "own",
+            lockedBy: null,
+            locked: false,
+            lockable: false,
+            levelsBelow: [],
+            editable: true,
+            levels: [],
+          },
+        ],
+      }),
+    });
+    await renderAt("/spaces");
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    await waitFor(() => expect(navigation.hasAttribute("data-collapsed")).toBe(true));
+    for (const name of ["For you", "My tasks", "My space"]) {
+      const link = within(navigation).getByRole("link", { name });
+      expect(link.getAttribute("aria-label")).toBe(name);
+      expect(link.textContent).toBe("");
+    }
+    const spaces = within(navigation).getByRole("button", { name: "Spaces" });
+    expect(spaces.textContent).toBe("");
+    await userEvent.click(spaces);
+    expect(await screen.findByRole("dialog", { name: "Spaces" })).toBeTruthy();
+    expect(within(navigation).queryByRole("list", { name: "Favorites" })).toBeNull();
+  });
+
+  it("offers My space below My tasks only to people who may have a personal space", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    const mySpace = await within(navigation).findByRole("link", { name: "My space" });
+    expect(mySpace.getAttribute("href")).toBe("/personal-space");
+    const entries = within(navigation)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(entries.indexOf("My space")).toBe(entries.indexOf("My tasks") + 1);
+    cleanup();
+
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.content.view"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+    });
+    await renderAt("/spaces");
+    const without = await screen.findByRole("navigation", { name: "Main navigation" });
+    await within(without).findByRole("link", { name: "My tasks" });
+    expect(within(without).queryByRole("link", { name: "My space" })).toBeNull();
+  });
+
+  it("marks My space as the current entry anywhere in the own personal space", async () => {
+    const personal = { ...space("admin"), key: "PERSONAL1", name: "", personal: true, ownerId: OLIVIA.id };
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/space-keys/PERSONAL1": () => ({ body: { space: personal, redirected: false } }),
+      [`GET /api/v1/items/${RUNBOOKS}`]: () => ({
+        body: {
+          ...item(RUNBOOKS, "Runbooks", "folder", null, true),
+          spaceKey: "PERSONAL1",
+          spaceName: "",
+          ancestors: [],
+        },
+      }),
+    });
+    await renderAt(`/spaces/PERSONAL1/folders/${RUNBOOKS}/runbooks`);
+    const navigation = await screen.findByRole("navigation", { name: "Main navigation" });
+    await waitFor(() =>
+      expect(within(navigation).getByRole("link", { name: "My space" }).getAttribute("aria-current")).toBe(
+        "page",
+      ),
+    );
+    cleanup();
+
+    mockApi({ ...baseRoutes(), ...spaceRoutes(), ...shellRoutes() });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const other = await screen.findByRole("navigation", { name: "Main navigation" });
+    await within(other).findByRole("link", { name: "Space settings" });
+    expect(within(other).getByRole("link", { name: "My space" }).getAttribute("aria-current")).toBeNull();
+  });
+
+  describe("the spaces panel", () => {
+    const knowledgeBase = {
+      ...space("admin"),
+      id: MARKETING_ID,
+      key: "HELP",
+      name: "Help center",
+      type: "knowledgeBase",
+    };
+
+    function panelRoutes(
+      extra: Record<string, (request: RecordedRequest) => { status?: number; body?: unknown }> = {},
+    ) {
+      return {
+        ...baseRoutes(),
+        ...spaceRoutes(),
+        ...shellRoutes(),
+        "GET /api/v1/spaces": (request: RecordedRequest) => {
+          const url = new URL(request.path, "http://localhost");
+          const q = url.searchParams.get("q");
+          const cursor = url.searchParams.get("cursor");
+          if (q) return { body: { items: q === "help" ? [knowledgeBase] : [], nextCursor: null } };
+          return cursor
+            ? { body: { items: [knowledgeBase], nextCursor: null } }
+            : { body: { items: [{ ...space("admin"), type: "standard" }], nextCursor: "next" } };
+        },
+        [`PUT /api/v1/starred/spaces/${MARKETING_ID}`]: () => ({ status: 204 }),
+        "GET /api/v1/space-keys/MKT": () => ({
+          body: {
+            space: { ...space("reader"), id: MARKETING_ID, key: "MKT", name: "Marketing" },
+            redirected: false,
+          },
+        }),
+        ...extra,
+      };
+    }
+
+    it("opens from the sidebar with the search focused, lists the groups and closes with Escape", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("min-width"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      mockApi(panelRoutes());
+      await renderAt("/spaces");
+      const entry = await screen.findByRole("button", { name: "Spaces" });
+      await userEvent.click(entry);
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      expect(entry.getAttribute("aria-expanded")).toBe("true");
+      await waitFor(() =>
+        expect(document.activeElement).toBe(within(panel).getByRole("searchbox", { name: "Search spaces" })),
+      );
+      const favorites = within(panel).getByRole("region", { name: "Favorites" });
+      expect(within(favorites).getByRole("link", { name: /IT Operations/ })).toBeTruthy();
+      const recent = within(panel).getByRole("region", { name: "Recently visited" });
+      expect(within(recent).getByRole("link", { name: /Marketing/ })).toBeTruthy();
+      const all = await within(panel).findByRole("region", { name: "All spaces" });
+      expect(within(all).getByText("Space")).toBeTruthy();
+      await userEvent.click(within(panel).getByRole("button", { name: "Load more" }));
+      expect(await within(all).findByRole("link", { name: /Help center/ })).toBeTruthy();
+      expect(within(all).getByText("Knowledge base")).toBeTruthy();
+      expect(within(panel).getByRole("button", { name: "Show all spaces" })).toBeTruthy();
+      expect(within(panel).getByRole("button", { name: "Create space" })).toBeTruthy();
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Spaces" })).toBeNull());
+      expect(document.activeElement).toBe(entry);
+    });
+
+    it("opens another space from a page in the current space instead of staying there", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("min-width"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      mockApi(
+        panelRoutes({
+          "GET /api/v1/space-keys/MKT": () => ({
+            body: {
+              space: {
+                ...space("reader"),
+                id: MARKETING_ID,
+                key: "MKT",
+                name: "Marketing",
+                overviewItemId: null,
+              },
+              redirected: false,
+            },
+          }),
+          [`GET /api/v1/spaces/${MARKETING_ID}/items`]: () => ({ body: { items: [], nextCursor: null } }),
+          [`GET /api/v1/pages/${OVERVIEW}/content`]: overviewContent,
+          [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
+          [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
+          [`GET /api/v1/pages/${OVERVIEW}/tasks`]: () => ({ body: [] }),
+        }),
+      );
+      await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+      await screen.findByRole("heading", { name: "IT Operations", level: 1 });
+      await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      const recent = within(panel).getByRole("region", { name: "Recently visited" });
+      await userEvent.click(within(recent).getByRole("link", { name: /Marketing/ }));
+      expect(await screen.findByText("This space has no overview page")).toBeTruthy();
+      expect(window.location.pathname).toBe("/spaces/MKT");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(window.location.pathname).toBe("/spaces/MKT");
+    });
+
+    it("searches all spaces, stars one and closes when clicking outside", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("min-width"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+      const { requests } = mockApi(panelRoutes());
+      await renderAt("/spaces");
+      await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      await userEvent.type(within(panel).getByRole("searchbox", { name: "Search spaces" }), "help");
+      await within(panel).findByRole("link", { name: /Help center/ });
+      const all = within(panel).getByRole("region", { name: "All spaces" });
+      await waitFor(() => expect(within(panel).queryByRole("region", { name: "Favorites" })).toBeNull());
+      await userEvent.click(within(all).getByRole("button", { name: /^Star Help center/ }));
+      await waitFor(() =>
+        expect(
+          requests.some(
+            (request) => request.method === "PUT" && request.path.endsWith(`/starred/spaces/${MARKETING_ID}`),
+          ),
+        ).toBe(true),
+      );
+      await userEvent.click(screen.getByRole("heading", { level: 1 }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Spaces" })).toBeNull());
+    });
+
+    it("becomes a full-screen sheet with a close button on narrow screens", async () => {
+      mockApi(panelRoutes());
+      await renderAt("/spaces");
+      await userEvent.click(await screen.findByRole("button", { name: "Open navigation" }));
+      await userEvent.click(await screen.findByRole("button", { name: "Spaces" }));
+      const panel = await screen.findByRole("dialog", { name: "Spaces" });
+      expect(panel.className).toContain("fixed inset-0");
+      await userEvent.click(within(panel).getByRole("button", { name: "Close spaces" }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Spaces" })).toBeNull());
+    });
+  });
+
+  it("offers the kinds of the current space in the Create menu", async () => {
+    mockApi({ ...baseRoutes(), ...spaceRoutes("editor"), ...shellRoutes() });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("link", { name: "Trash" });
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("In IT Operations")).toBeTruthy();
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((entry) => entry.textContent),
+    ).toEqual(["Page", "Blog post", "Whiteboard", "Folder", "Link", "Meeting", "New one-on-one", "Space"]);
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Folder" }));
+    expect(await screen.findByRole("dialog", { name: "New folder" })).toBeTruthy();
+  });
+
+  it("offers no content kinds in the Create menu of a space the person cannot edit", async () => {
+    mockApi({ ...baseRoutes(["organization.view"]), ...spaceRoutes("reader"), ...shellRoutes() });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("button", { name: "Space options" });
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((entry) => entry.textContent),
+    ).toEqual(["New one-on-one"]);
+  });
+
+  it("asks for the space first outside a space, validates the choice and opens the creation there", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("editor"),
+      ...shellRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [space("editor")], nextCursor: null } }),
+    });
+    await renderAt("/spaces");
+    await userEvent.click(await screen.findByRole("button", { name: "Create" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("In a space")).toBeTruthy();
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Folder" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Folder" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+    expect(await within(dialog).findByText("Choose a space.")).toBeTruthy();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await userEvent.click(within(dialog).getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("option", { name: /IT Operations/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("dialog", { name: "New folder" })).toBeTruthy();
+    expect(window.location.pathname.startsWith("/spaces/ITOPS")).toBe(true);
+    expect(
+      requests.some(
+        (request) => request.path.startsWith("/api/v1/spaces?") && request.path.includes("role=editor"),
+      ),
+    ).toBe(true);
+  });
+
+  it("switches the organization from the top bar only when there are several", async () => {
+    const second = { ...ORGANIZATION, id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60", name: "Field Team" };
+    mockApi({
+      ...baseRoutes(),
+      ...shellRoutes(),
+      "GET /api/v1/organizations": () => ({ body: { items: [ORGANIZATION, second], nextCursor: null } }),
+    });
+    await renderAt("/spaces");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Switch organization, currently Platform Team" }),
+    );
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu).getByRole("menuitemcheckbox", { name: "Platform Team" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "Field Team" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/home"));
+    expect(
+      await screen.findByRole("button", { name: "Switch organization, currently Field Team" }),
+    ).toBeTruthy();
+    expect(localStorage.getItem(`lunedo.organization.${OLIVIA.id}`)).toBe(second.id);
+    cleanup();
+    localStorage.clear();
+
+    mockApi({ ...baseRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    await screen.findByRole("button", { name: "Create" });
+    expect(screen.queryByRole("button", { name: /Switch organization/ })).toBeNull();
+  });
+
+  it("keeps the skip link and lists documentation, shortcuts and the API reference in the help menu", async () => {
+    mockApi({ ...baseRoutes(), ...shellRoutes() });
+    await renderAt("/spaces");
+    expect((await screen.findByRole("link", { name: "Skip to content" })).getAttribute("href")).toBe("#main");
+    await userEvent.click(screen.getByRole("button", { name: "Help" }));
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((entry) => entry.textContent),
+    ).toEqual(["Lunedo documentation", "Keyboard shortcuts?", "API reference"]);
+  });
+});
+
+describe("navigation between screens", () => {
+  function networkRoutes(item: () => Promise<{ body: unknown }>) {
+    return {
+      [`GET /api/v1/items/${NETWORK}`]: item,
+      [`GET /api/v1/pages/${NETWORK}/content`]: () => ({
+        body: { ...overviewContent().body, itemId: NETWORK, title: "Network" },
+      }),
+      [`GET /api/v1/pages/${NETWORK}/labels`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${NETWORK}/backlinks`]: () => ({ body: [] }),
+      [`GET /api/v1/pages/${NETWORK}/tasks`]: () => ({ body: [] }),
+    };
+  }
+  const networkItem = () => ({
+    body: {
+      ...item(NETWORK, "Network", "page", OVERVIEW),
+      spaceKey: "ITOPS",
+      spaceName: "IT Operations",
+      ancestors: [],
+    },
+  });
+
+  async function openNetwork() {
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    const network = await within(tree).findByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("link"));
+  }
+
+  it("keeps the shell and the current screen while the next one loads, then shows progress and a placeholder", async () => {
+    const gate = { release: () => {} };
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...networkRoutes(
+        () =>
+          new Promise((resolve) => {
+            gate.release = () => resolve(networkItem());
+          }),
+      ),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("heading", { name: "Runbooks", level: 1 });
+    const started = Date.now();
+    await openNetwork();
+    expect(screen.getByRole("heading", { name: "Runbooks", level: 1 })).toBeTruthy();
+    expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull();
+
+    await screen.findByRole("progressbar", { name: "Loading" });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(PROGRESS_DELAY_MS);
+    expect(screen.getByRole("heading", { name: "Runbooks", level: 1 })).toBeTruthy();
+    expect(document.querySelector("[data-content-pending]")).toBeNull();
+
+    await waitFor(() => expect(document.querySelector("[data-content-pending]")).not.toBeNull(), {
+      timeout: 2_000,
+    });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(PENDING_MS);
+    expect(document.querySelector("header")).not.toBeNull();
+    expect(screen.getByRole("tree", { name: "Page tree" })).toBeTruthy();
+
+    gate.release();
+    expect(await screen.findByRole("heading", { name: "Network", level: 1 })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull());
+  });
+
+  it("reuses the checked session while it is fresh instead of asking the server on every navigation", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      ...networkRoutes(async () => networkItem()),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    await screen.findByRole("heading", { name: "Runbooks", level: 1 });
+    const checks = () => requests.filter((request) => request.path === "/api/v1/auth/session").length;
+    const before = checks();
+    await openNetwork();
+    expect(await screen.findByRole("heading", { name: "Network", level: 1 })).toBeTruthy();
+    expect(checks()).toBe(before);
+  });
+
+  it("navigates with the cached session and checks a stale one in the background", async () => {
+    const routes = baseRoutes();
+    let checked = 0;
+    mockApi({
+      ...routes,
+      ...spaceRoutes(),
+      ...networkRoutes(async () => networkItem()),
+      "GET /api/v1/auth/session": () =>
+        checked++ === 0 ? routes["GET /api/v1/auth/session"]() : new Promise(() => {}),
+    });
+    window.history.replaceState(null, "", `/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const queryClient = createQueryClient();
+    render(<App i18n={await initI18n(["en"])} queryClient={queryClient} />);
+    await screen.findByRole("heading", { name: "Runbooks", level: 1 });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.session });
+    await openNetwork();
+    expect(await screen.findByRole("heading", { name: "Network", level: 1 })).toBeTruthy();
+    expect(checked).toBeGreaterThan(1);
   });
 });

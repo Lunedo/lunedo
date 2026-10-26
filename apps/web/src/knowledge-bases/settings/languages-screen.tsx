@@ -87,10 +87,8 @@ export function LanguagesScreen() {
   const value: LanguageSettings | undefined = settings.data;
   return (
     <SpaceSettingsPage
-      tab="languages"
       title={t("knowledgeBase.languages.title")}
       description={t("knowledgeBase.languages.description")}
-      icon={Languages}
     >
       <div className="flex flex-col gap-6">
         {settings.isPending ? <Skeleton className="h-field w-full" /> : null}
@@ -142,6 +140,7 @@ export function LanguagesScreen() {
                 <SettingRow
                   label={t("knowledgeBase.languages.default")}
                   description={t("knowledgeBase.languages.defaultDescription")}
+                  help={t("knowledgeBase.languages.defaultHelp")}
                   control={
                     <Select
                       aria-label={t("knowledgeBase.languages.default")}
@@ -160,6 +159,9 @@ export function LanguagesScreen() {
                 <SettingRow
                   label={t("knowledgeBase.languages.enabled")}
                   description={t("knowledgeBase.languages.enabledDescription", {
+                    language: label(value.defaultLanguage),
+                  })}
+                  help={t("knowledgeBase.languages.enabledHelp", {
                     language: label(value.defaultLanguage),
                   })}
                   control={

@@ -282,4 +282,56 @@ describe.skipIf(!databaseBaseUrl)("knowledge bases through the API", () => {
     });
     expect(visibility.json().code).toBe("knowledgeBaseVisibility");
   });
+
+  it("sets who maintains and who reads a category, for space admins only", async () => {
+    const author = await person();
+    const colleague = await person();
+    const kb = await knowledgeBase(author.client);
+    const folder = await author.client.post(`/api/v1/spaces/${kb.id}/items`, {
+      kind: "folder",
+      title: "IT and devices",
+      parentId: null,
+    });
+    expect(folder.statusCode, folder.body).toBe(201);
+    const folderId = (folder.json() as { id: string }).id;
+    const group = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
+      name: `IT ${counter}`,
+    });
+    const groupId = (group.json() as { id: string }).id;
+    const path = `/api/v1/spaces/${kb.id}/knowledge-base/categories/${folderId}/access`;
+    const body = { responsibleGroupIds: [groupId], visibleGroupIds: [groupId] };
+
+    expect((await colleague.client.put(path, body)).statusCode).toBe(403);
+    const preview = await author.client.post(`${path}/preview`, body);
+    expect(preview.statusCode, preview.body).toBe(200);
+    expect(preview.json()).toMatchObject({ widening: false, articles: 0 });
+    const changed = await author.client.put(path, body);
+    expect(changed.statusCode, changed.body).toBe(200);
+    expect(changed.json()).toMatchObject({
+      itemId: folderId,
+      readable: false,
+      responsibleGroups: [{ id: groupId }],
+      visibleTo: [{ id: groupId }],
+    });
+    const listed = await author.client.get(`/api/v1/spaces/${kb.id}/knowledge-base/category-access`);
+    expect(listed.json()).toEqual([expect.objectContaining({ itemId: folderId, readable: false })]);
+    const hidden = await colleague.client.get(`/api/v1/spaces/${kb.id}/knowledge-base/category-access`);
+    expect(hidden.json()).toEqual([]);
+
+    const widening = await author.client.put(path, { responsibleGroupIds: [groupId], visibleGroupIds: null });
+    expect(widening.statusCode).toBe(409);
+    expect(widening.json()).toMatchObject({ code: "categoryVisibilityWidening", articles: 0 });
+    const confirmed = await author.client.put(path, {
+      responsibleGroupIds: [groupId],
+      visibleGroupIds: null,
+      confirmWidening: true,
+    });
+    expect(confirmed.json()).toMatchObject({ readable: true, visibleTo: null });
+
+    const shared = await author.client.post(`/api/v1/pages/${folderId}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(shared.statusCode).toBe(409);
+    expect(shared.json()).toMatchObject({ code: "categoryAccessManaged" });
+  });
 });

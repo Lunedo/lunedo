@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileArchive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import type { SettingEntry } from "../../api/organization-queries.js";
@@ -45,12 +44,10 @@ export function SpaceExportScreen() {
   });
   return (
     <SpaceSettingsPage
-      tab="export"
       title={t("exports.settings.title")}
       description={
         isKnowledgeBase(space) ? t("exports.settings.descriptionArticles") : t("exports.settings.description")
       }
-      icon={FileArchive}
     >
       <div className="flex flex-col gap-8">
         {admin ? (

@@ -170,7 +170,13 @@ function DeleteNowForm({
           <li>{t("trash.consequenceAudit")}</li>
         </ul>
       </div>
-      <Field label={t("trash.reason")} hint={t("trash.reasonHint")} error={errors.reason} required>
+      <Field
+        label={t("trash.reason")}
+        hint={t("trash.reasonHint")}
+        help={t("trash.reasonHelp")}
+        error={errors.reason}
+        required
+      >
         <Textarea
           value={reason}
           rows={3}

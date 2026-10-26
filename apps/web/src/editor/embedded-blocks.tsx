@@ -6,19 +6,22 @@ import {
   type EmbedReferrerPolicy,
   type EmbedService,
 } from "@lunedo/editor-schema";
-import { Skeleton } from "@lunedo/ui";
+import { IconButton, Menu, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Presentation } from "lucide-react";
+import { Download, ExternalLink, Maximize2, MoreHorizontal, Presentation } from "lucide-react";
 import { type CSSProperties, type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { LoadError } from "../errors/failure.js";
+import { contentUrl } from "../files/attachments-api.js";
 import { attachmentSource, PreviewBody } from "../files/file-preview.js";
+import { useAttachmentPreview } from "../files/preview-host.js";
 import { useCurrentOrganizationId } from "../shell/shell-context.js";
 import { previewUrl } from "../whiteboards/whiteboard-api.js";
 import { useOpenPath } from "./context.js";
 import { notFound } from "./includes.js";
+import { mediaOf } from "./media.js";
 
 export const DEFAULT_EMBED_HEIGHT = 420;
 export const DEFAULT_PREVIEW_HEIGHT = 480;
@@ -147,6 +150,7 @@ export function InlineFilePreview({
 }) {
   const { t } = useTranslation();
   const [target, visible] = useVisible<HTMLDivElement>();
+  const preview = useAttachmentPreview();
   const attachment = useQuery({ ...attachmentQuery(attachmentId, visible), throwOnError: false });
   const hidden = attachment.isError && notFound(attachment.error);
   useEffect(() => {
@@ -178,13 +182,46 @@ export function InlineFilePreview({
       />
     );
   }
+  const name = attachment.data?.name ?? "";
   return (
     <div
       ref={target}
-      className="ld-file-preview-box"
+      className="ld-file-preview-box relative"
       style={heightStyle("--preview-height", height, DEFAULT_PREVIEW_HEIGHT)}
     >
       {body}
+      {attachment.data ? (
+        <span className="absolute top-2 right-2">
+          <Menu
+            align="end"
+            trigger={<IconButton label={t("files.lightbox.more", { name })} icon={MoreHorizontal} />}
+            items={[
+              ...(preview
+                ? [
+                    {
+                      label: t("files.lightbox.open", { name }),
+                      icon: Maximize2,
+                      onSelect: () => {
+                        const root = target.current?.closest(".ld-read-view");
+                        preview.open(attachmentId, root ? mediaOf(root) : []);
+                      },
+                    },
+                  ]
+                : []),
+              {
+                label: t("files.download"),
+                icon: Download,
+                onSelect: () => window.open(contentUrl(attachmentId, { download: true }), "_self"),
+              },
+              {
+                label: t("files.lightbox.newTab"),
+                icon: ExternalLink,
+                onSelect: () => window.open(contentUrl(attachmentId, {}), "_blank", "noopener,noreferrer"),
+              },
+            ]}
+          />
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -255,7 +292,7 @@ export function WhiteboardBlock({
         <span className="truncate" title={title}>
           {title || t("editor.whiteboard.label")}
         </span>
-        <ExternalLink aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        <ExternalLink aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         <span className="sr-only">{t("editor.whiteboard.open")}</span>
       </span>
     </a>

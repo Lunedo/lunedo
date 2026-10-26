@@ -13,11 +13,8 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <Section title={title} {...(actions ? { actions } : {})}>
-      <div className="flex flex-col gap-4 p-4">
-        {description ? <p className="text-sm text-text-muted">{description}</p> : null}
-        {children}
-      </div>
+    <Section title={title} {...(description ? { description } : {})} {...(actions ? { actions } : {})}>
+      <div className="flex flex-col gap-4 py-4">{children}</div>
     </Section>
   );
 }

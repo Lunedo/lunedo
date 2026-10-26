@@ -16,13 +16,23 @@ import { migrated } from "../../spaces/documents.js";
 import type { ArticleAddresses, ArticleRenderer } from "../articles.js";
 import { brandValues, interfaceLanguage, type PortalConfig, type PortalService } from "../portals.js";
 import type { PortalArticle, PortalArticleSummary, PortalCategory, PortalReader } from "../reader.js";
-import { fontFile, fontFiles, portalCss, portalScript, staticSearchScript } from "./assets.js";
+import {
+  fontFile,
+  fontFiles,
+  portalCss,
+  portalScript,
+  portalThemeScript,
+  staticSearchScript,
+} from "./assets.js";
+import { PORTAL_ICONS, portalIconByName } from "./brand-icon.js";
 import { escapeHtml } from "./html.js";
 import { languageName, messagesFor } from "./messages.js";
 import {
   articlePage,
+  brandStyle,
   categoryPage,
   contactPage,
+  folderTrail,
   type LanguageLink,
   notFoundPage,
   type PortalLinks,
@@ -48,8 +58,7 @@ interface SiteArticle {
   language: string;
   title: string;
   type: PortalArticleSummary["type"];
-  categoryId: string | null;
-  subcategoryId: string | null;
+  folderIds: string[];
   oldSlugs: string[];
   document: DocumentJson;
   found: PortalArticle;
@@ -189,8 +198,7 @@ export class StaticSiteBuilder {
         language: row.language,
         title: row.title,
         type: row.article_type,
-        categoryId: found.article.categoryId,
-        subcategoryId: found.article.subcategoryId,
+        folderIds: found.article.folderIds,
         oldSlugs: row.old_slugs,
         document: migrated(row.document, row.schema_version),
         found: found.article,
@@ -247,8 +255,7 @@ export class StaticSiteBuilder {
       language: article.language,
       title: article.title,
       type: article.type,
-      categoryId: article.categoryId,
-      subcategoryId: article.subcategoryId,
+      folderIds: article.folderIds,
       updatedAt: article.found.updatedAt,
       reviewedAt: article.found.reviewedAt,
       views: 0,
@@ -317,14 +324,19 @@ export class StaticSiteBuilder {
         frameSources: [],
         origin: "",
         nonce: "",
-        assets: { style: `${root}/_assets/portal.css`, script: `${root}/_assets/portal.js` },
-        brandStyle: `:root{--kb:${brand.light}}@media (prefers-color-scheme:dark){:root{--kb:${brand.dark}}}`,
+        assets: {
+          style: `${root}/_assets/portal.css`,
+          script: `${root}/_assets/portal.js`,
+          theme: `${root}/_assets/portal-theme.js`,
+        },
+        brandStyle: brandStyle(brand.light, brand.dark),
         logoUrl: logoPath ? `${root}/${logoPath}` : null,
         account: null,
         appLink: null,
         accountLink: null,
         signInUrl: null,
         signOutUrl: "",
+        quickSearch: null,
         categories,
       };
     };
@@ -371,17 +383,12 @@ export class StaticSiteBuilder {
         .sort((left, right) => left.title.localeCompare(right.title, language));
       const counted = new Map<string, number>();
       for (const summary of shown) {
-        for (const id of [summary.categoryId, summary.subcategoryId]) {
-          if (id) counted.set(id, (counted.get(id) ?? 0) + 1);
-        }
+        for (const id of summary.folderIds) counted.set(id, (counted.get(id) ?? 0) + 1);
       }
       const categories = await this.#reader.countedCategories(ANONYMOUS, config, counted);
       categoriesOf.set(language, categories);
       const listed = (categoryId: string | null) => {
-        const list = shown.filter(
-          (summary) =>
-            categoryId === null || summary.categoryId === categoryId || summary.subcategoryId === categoryId,
-        );
+        const list = shown.filter((summary) => categoryId === null || summary.folderIds.includes(categoryId));
         const howTo = list.filter((summary) => summary.type === "howTo").length;
         const troubleshooting = list.filter((summary) => summary.type === "troubleshooting").length;
         return {
@@ -415,6 +422,7 @@ export class StaticSiteBuilder {
               type: null,
               sort: "title",
               page: 1,
+              deep: true,
             },
             Math.max(list.total, 1),
           ),
@@ -441,16 +449,14 @@ export class StaticSiteBuilder {
           const article = byNumber.get(summary.number)?.get(summary.language);
           if (!article || article.language !== language) return [];
           const body = plainText(article.document).slice(0, MAX_INDEXED_TEXT);
-          const category = categories.find(
-            (entry) => entry.id === (summary.subcategoryId ?? summary.categoryId),
-          );
+          const trail = folderTrail(categories, summary.folderIds);
           return [
             {
               id: `${summary.language}:${summary.number}`,
               number: summary.number,
               title: summary.title,
               text: body,
-              category: category?.title ?? "",
+              category: trail.map((entry) => entry.title).join(" › "),
               type: summary.type ?? "",
               url: articleFile(article),
               excerpt: excerptOf(article),
@@ -536,6 +542,12 @@ export class StaticSiteBuilder {
     }
     text("_assets/portal.css", portalCss);
     text("_assets/portal.js", portalScript);
+    text("_assets/portal-theme.js", portalThemeScript);
+    for (const name of Object.values(PORTAL_ICONS)) {
+      const icon = portalIconByName(name);
+      if (icon)
+        entries.push({ path: `_assets/${name}`, mtime, compress: false, content: async () => icon.data });
+    }
     text("_assets/static-search.js", staticSearchScript);
     text(
       "_assets/minisearch.js",

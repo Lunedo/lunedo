@@ -1,4 +1,11 @@
-import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import type { paths } from "../api/generated/schema.js";
 import { request } from "../api/request.js";
@@ -30,9 +37,28 @@ export const searchKeys = {
     ["search", organizationId, "page", query, filters] as const,
   recent: (organizationId: string) => ["search", organizationId, "recent"] as const,
   saved: (organizationId: string) => ["search", organizationId, "saved"] as const,
-  people: (query: string) => ["search", "people", query] as const,
-  spaces: (organizationId: string, query: string) => ["search", organizationId, "spaces", query] as const,
+  people: (query: string, limit: number) => ["search", "people", query, limit] as const,
+  spaces: (organizationId: string, query: string, limit: number) =>
+    ["search", organizationId, "spaces", query, limit] as const,
+  newest: (organizationId: string, spaceId: string) => ["search", organizationId, "newest", spaceId] as const,
 };
+
+export function newestInSpaceQuery(organizationId: string, spaceId: string, limit: number) {
+  return queryOptions({
+    queryKey: searchKeys.newest(organizationId, spaceId),
+    queryFn: ({ signal }) =>
+      request(() =>
+        api.GET("/api/v1/organizations/{organizationId}/search", {
+          params: {
+            path: { organizationId },
+            query: { spaceIds: spaceId, types: "page,blogPost", sort: "newest", limit },
+          },
+          signal,
+        }),
+      ),
+    staleTime: 30_000,
+  });
+}
 
 export function quickSearchQuery(organizationId: string, query: string, spaceId: string | null) {
   return queryOptions({
@@ -75,22 +101,31 @@ export function searchPage(
   );
 }
 
-export function peopleQuery(query: string) {
+export function searchResultsQuery(organizationId: string, query: string, filters: SearchFilters) {
+  return infiniteQueryOptions({
+    queryKey: searchKeys.page(organizationId, query, filters),
+    queryFn: ({ pageParam, signal }) => searchPage(organizationId, query, filters, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: SearchResponse) => last.nextCursor,
+  });
+}
+
+export function peopleQuery(query: string, limit = 3) {
   return queryOptions({
-    queryKey: searchKeys.people(query),
+    queryKey: searchKeys.people(query, limit),
     queryFn: ({ signal }) =>
-      request(() => api.GET("/api/v1/people", { params: { query: { q: query, limit: 3 } }, signal })),
+      request(() => api.GET("/api/v1/people", { params: { query: { q: query, limit } }, signal })),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
   });
 }
 
-export function spacesQuery(organizationId: string, query: string) {
+export function spacesQuery(organizationId: string, query: string, limit = 3) {
   return queryOptions({
-    queryKey: searchKeys.spaces(organizationId, query),
+    queryKey: searchKeys.spaces(organizationId, query, limit),
     queryFn: ({ signal }) =>
       request(() =>
-        api.GET("/api/v1/spaces", { params: { query: { q: query, organizationId, limit: 3 } }, signal }),
+        api.GET("/api/v1/spaces", { params: { query: { q: query, organizationId, limit } }, signal }),
       ),
     staleTime: 30_000,
     placeholderData: keepPreviousData,

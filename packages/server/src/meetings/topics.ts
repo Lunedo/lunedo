@@ -11,8 +11,10 @@ import { positionBetween } from "../spaces/fractional-index.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
-import { addDecision } from "./meeting-document.js";
+import { mapUpdate, UPDATE_TEXT_MAX_LENGTH, withUpdateText } from "./agenda.js";
+import { addDecision, addTopicUpdates } from "./meeting-document.js";
 import type { MeetingService } from "./meetings.js";
+import { seriesParticipant } from "./participants.js";
 import type { TopicOutcome, TopicStatus } from "./schema.js";
 
 export const TOPIC_TITLE_MAX_LENGTH = 255;
@@ -25,11 +27,14 @@ export interface TopicSummary {
   title: string;
   status: TopicStatus;
   outcome: TopicOutcome | null;
+  oneOff: boolean;
   owner: { id: string; name: string | null } | null;
   labels: string[];
   raisedIn: { id: string; title: string; startsAt: Date | null } | null;
   updates: number;
+  openTasks: number;
   lastUpdateAt: Date | null;
+  lastUpdateText: string | null;
   createdAt: Date;
   closedAt: Date | null;
   decisionId: string | null;
@@ -66,6 +71,7 @@ type TopicRow = {
   title: string;
   status: TopicStatus;
   outcome: TopicOutcome | null;
+  one_off: boolean;
   owner_id: string | null;
   owner_name: string | null;
   labels: string[] | null;
@@ -73,7 +79,9 @@ type TopicRow = {
   raised_in_title: string | null;
   raised_in_starts_at: Date | string | null;
   updates: string;
+  open_tasks: string;
   last_update_at: Date | string | null;
+  last_update_text: string | null;
   created_at: Date | string;
   closed_at: Date | string | null;
   decision_id: string | null;
@@ -133,7 +141,7 @@ export class TopicService {
   }
 
   #select(viewer: Principal): SQL {
-    return sql`select mt.item_id, mt.series_id, t.title, mt.status, mt.outcome, t.owner_id,
+    return sql`select mt.item_id, mt.series_id, t.title, mt.status, mt.outcome, mt.one_off, t.owner_id,
         ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         case when ${visibleItem(this.#authorization, viewer, sql`rt`, sql`s`)} then mt.raised_in_id end as raised_in_id,
@@ -143,6 +151,17 @@ export class TopicService {
           join tree_items ut on ut.id = u.item_id
           where u.topic_id = mt.item_id and um.state <> 'skipped'
             and ${visibleItem(this.#authorization, viewer, sql`ut`, sql`s`)}) as updates,
+        (select count(distinct k.id) from meeting_topic_updates u join meetings um on um.item_id = u.item_id
+          join tree_items ut on ut.id = u.item_id
+          cross join lateral jsonb_path_query(u.content, '$.** ? (@.type == "taskItem").attrs.id') as found(id)
+          join tasks k on k.id::text = found.id #>> '{}' and k.published and not k.done
+          where u.topic_id = mt.item_id and um.state <> 'skipped'
+            and ${visibleItem(this.#authorization, viewer, sql`ut`, sql`s`)}) as open_tasks,
+        (select u.text from meeting_topic_updates u join meetings um on um.item_id = u.item_id
+          join tree_items ut on ut.id = u.item_id
+          where u.topic_id = mt.item_id and um.state <> 'skipped' and btrim(u.text) <> ''
+            and ${visibleItem(this.#authorization, viewer, sql`ut`, sql`s`)}
+          order by coalesce(um.starts_at, u.updated_at) desc, u.updated_at desc limit 1) as last_update_text,
         mt.last_update_at, t.created_at, mt.closed_at, mt.decision_id, t.space_id
       from meeting_topics mt join tree_items t on t.id = mt.item_id join spaces s on s.id = t.space_id
       left join accounts o on o.id = t.owner_id
@@ -157,6 +176,7 @@ export class TopicService {
       title: row.title,
       status: row.status,
       outcome: row.outcome,
+      oneOff: row.one_off,
       owner: row.owner_id ? { id: row.owner_id, name: row.owner_name } : null,
       labels: row.labels ?? [],
       raisedIn: row.raised_in_id
@@ -167,7 +187,9 @@ export class TopicService {
           }
         : null,
       updates: Number(row.updates),
+      openTasks: Number(row.open_tasks),
       lastUpdateAt: toDate(row.last_update_at),
+      lastUpdateText: row.last_update_text?.replace(/\s+/g, " ").trim() || null,
       createdAt: new Date(row.created_at),
       closedAt: toDate(row.closed_at),
       decisionId: row.decision_id,
@@ -269,9 +291,15 @@ export class TopicService {
       ownerId?: string | null | undefined;
       labels?: string[] | undefined;
       meetingId?: string | undefined;
+      oneOff?: boolean | undefined;
+      description?: string | undefined;
     },
   ): Promise<string> {
     const title = cleanTitle(input.title);
+    const description = input.description?.trim() ?? "";
+    if (description.length > UPDATE_TEXT_MAX_LENGTH) {
+      throw new SpaceError("invalidUpdate", `An update can have up to ${UPDATE_TEXT_MAX_LENGTH} characters`);
+    }
     const labels = cleanLabels(input.labels ?? []);
     const actorId = actorIdOf(actor);
     return this.#database.transaction(async (tx) => {
@@ -282,13 +310,32 @@ export class TopicService {
       const row = series.rows[0];
       if (!row) throw new SpaceError("seriesNotFound", "The meeting series does not exist");
       if (row.archived) throw new SpaceError("seriesEnded", "The series has ended");
-      const ownerId = input.ownerId === undefined ? actorId : input.ownerId;
-      if (ownerId && !(await this.#people.canSee(actor, ownerId, tx))) {
-        throw new SpaceError("invalidMember", "Choose an owner among the people you can see");
-      }
+      const ownerId =
+        input.ownerId !== undefined
+          ? input.ownerId
+          : actorId && (await this.#participates(tx, seriesId, actorId))
+            ? actorId
+            : null;
+      if (input.ownerId) await this.#checkOwner(tx, actor, seriesId, input.ownerId);
       const raisedIn = input.meetingId ?? (await this.#meetings.currentMeeting(tx, seriesId));
       if (input.meetingId && (await this.#meetings.seriesOfMeeting(input.meetingId, tx)) !== seriesId) {
         throw new SpaceError("meetingNotFound", "The meeting does not belong to this series");
+      }
+      const raisedState = raisedIn
+        ? (await tx.execute<{ state: string }>(sql`select state from meetings where item_id = ${raisedIn}`))
+            .rows[0]?.state
+        : undefined;
+      const raisedOpen = raisedState === "upcoming" || raisedState === "reopened";
+      if (description && !raisedOpen) {
+        throw new SpaceError("meetingRequired", "A description needs a meeting that has not been closed");
+      }
+      if (input.oneOff) {
+        if (!input.meetingId || !raisedOpen) {
+          throw new SpaceError(
+            "meetingRequired",
+            "A topic for one meeting only needs a meeting that has not been closed",
+          );
+        }
       }
       const last = await tx.execute<{ position: string | null }>(sql`
         select max(position) as position from tree_items where parent_id = ${seriesId}`);
@@ -298,7 +345,8 @@ export class TopicService {
         values (${id}, ${row.space_id}, ${seriesId}, 'meetingTopic', ${positionBetween(last.rows[0]?.position ?? null, null)},
           ${title}, 'live', ${actorId}, ${ownerId})`);
       await tx.execute(sql`
-        insert into meeting_topics (item_id, series_id, raised_in_id) values (${id}, ${seriesId}, ${raisedIn})`);
+        insert into meeting_topics (item_id, series_id, raised_in_id, one_off)
+        values (${id}, ${seriesId}, ${raisedIn}, ${input.oneOff ?? false})`);
       for (const label of labels) {
         await tx.execute(
           sql`insert into page_labels (item_id, label, created_by) values (${id}, ${label}, ${actorId})`,
@@ -307,9 +355,46 @@ export class TopicService {
       await refreshReaderVisibility(tx, [id]);
       await this.#activity.created(tx, id, actorId);
       await this.#meetings.addTopicToUpcoming(tx, actor, seriesId, id);
+      if (description && raisedIn) {
+        const titles = await this.#meetings.sectionTitles(actor);
+        await this.#documents.editLocked(
+          tx,
+          raisedIn,
+          (document) =>
+            mapUpdate(addTopicUpdates(document, [id], titles), id, (block) =>
+              withUpdateText(block, description),
+            ),
+          actorId,
+        );
+      }
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "meetings", itemId: seriesId });
       return id;
     });
+  }
+
+  async #lockNotes(tx: Transaction, topicId: string, meetingId?: string): Promise<void> {
+    await tx.execute(sql`
+      select d.item_id from page_documents d
+      where d.item_id in (
+        select m.item_id from meetings m join meeting_topics mt on mt.series_id = m.series_id
+        where mt.item_id = ${topicId} and (m.state in ('upcoming', 'reopened') or m.item_id = ${meetingId ?? null}))
+      order by d.item_id for update`);
+  }
+
+  async #checkOwner(tx: Transaction, actor: Principal, seriesId: string, ownerId: string): Promise<void> {
+    if (
+      !(await this.#people.canSee(actor, ownerId, tx)) ||
+      !(await this.#participates(tx, seriesId, ownerId))
+    ) {
+      throw new SpaceError("invalidMember", "Choose an owner among the participants of the meetings");
+    }
+  }
+
+  async #participates(tx: Transaction, seriesId: string, accountId: string): Promise<boolean> {
+    const result = await tx.execute<{ participant: boolean }>(
+      sql`select ${seriesParticipant(sql`${seriesId}::uuid`, sql`${accountId}::uuid`)} as participant`,
+    );
+    return result.rows[0]?.participant === true;
   }
 
   async #lock(tx: Transaction, topicId: string) {
@@ -344,8 +429,8 @@ export class TopicService {
           where id = ${topicId}`);
       }
       if (changes.ownerId !== undefined) {
-        if (changes.ownerId && !(await this.#people.canSee(actor, changes.ownerId, tx))) {
-          throw new SpaceError("invalidMember", "Choose an owner among the people you can see");
+        if (changes.ownerId) {
+          await this.#checkOwner(tx, actor, topic.series_id, changes.ownerId);
         }
         await tx.execute(
           sql`update tree_items set owner_id = ${changes.ownerId}, updated_at = now() where id = ${topicId}`,
@@ -370,6 +455,7 @@ export class TopicService {
     input: { outcome: Exclude<TopicOutcome, "decided">; meetingId?: string | undefined },
   ): Promise<void> {
     await this.#database.transaction(async (tx) => {
+      await this.#lockNotes(tx, topicId, input.meetingId);
       const topic = await this.#lock(tx, topicId);
       if (topic.status === "closed") throw new SpaceError("topicClosed", "The topic is closed already");
       if (
@@ -390,6 +476,7 @@ export class TopicService {
 
   async reopen(actor: Principal, topicId: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
+      await this.#lockNotes(tx, topicId);
       const topic = await this.#lock(tx, topicId);
       if (topic.status === "open") return;
       await tx.execute(sql`
@@ -408,6 +495,7 @@ export class TopicService {
   ): Promise<{ decisionId: string; meetingId: string }> {
     const statement = statementOf(input.statement);
     return this.#database.transaction(async (tx) => {
+      await this.#lockNotes(tx, topicId, input.meetingId);
       const topic = await this.#lock(tx, topicId);
       if (topic.status === "closed") throw new SpaceError("topicClosed", "The topic is closed already");
       const meetingId = input.meetingId ?? (await this.#meetings.currentMeeting(tx, topic.series_id));
@@ -427,10 +515,12 @@ export class TopicService {
       await tx.execute(
         sql`insert into decisions (id, item_id, topic_id) values (${decisionId}, ${meetingId}, ${topicId})`,
       );
+      const titles = await this.#meetings.sectionTitles(actor);
       await this.#documents.editLocked(
         tx,
         meetingId,
-        (document) => addDecision(document, { id: decisionId, topicId, statement }),
+        (document) =>
+          addDecision(addTopicUpdates(document, [topicId], titles), { id: decisionId, topicId, statement }),
         actorIdOf(actor),
       );
       await tx.execute(sql`

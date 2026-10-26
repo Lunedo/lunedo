@@ -1,9 +1,16 @@
 import type { TFunction } from "i18next";
 import { ApiError } from "../api/request.js";
-import en from "../i18n/locales/en.json" with { type: "json" };
 import { translateKey } from "../i18n/translate.js";
 
-const KNOWN = new Set(Object.keys(en.problems));
+let organization = "";
+
+export function setProblemOrganization(name: string): void {
+  organization = name;
+}
+
+function organizationValues(t: TFunction): { organization: string } {
+  return { organization: organization || t("brand.name") };
+}
 
 const DIRECTORY_PROBLEMS: Record<string, string> = {
   invalidCredentials: "problems.directoryInvalidCredentials",
@@ -12,11 +19,6 @@ const DIRECTORY_PROBLEMS: Record<string, string> = {
 
 function megabytes(bytes: number): string {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024)} MB`;
-}
-
-export function problemKey(error: unknown): string {
-  if (error instanceof ApiError && KNOWN.has(error.code)) return `problems.${error.code}`;
-  return "problems.unknown";
 }
 
 export function problemMessage(t: TFunction, error: unknown): string {
@@ -72,10 +74,12 @@ export function problemMessage(t: TFunction, error: unknown): string {
   if (error.code === "settingLocked" && problem.lockedBy) {
     return t("problems.settingLockedBy", { level: translateKey(t, `settings.levels.${problem.lockedBy}`) });
   }
-  return translateKey(t, problemKey(error));
+  const key = `problems.${error.code}`;
+  const text = translateKey(t, key, organizationValues(t));
+  return text === key ? translateKey(t, "problems.unknown", organizationValues(t)) : text;
 }
 
 export function directoryProblemMessage(t: TFunction, error: unknown): string {
   const key = error instanceof ApiError ? DIRECTORY_PROBLEMS[error.code] : undefined;
-  return key ? translateKey(t, key) : problemMessage(t, error);
+  return key ? translateKey(t, key, organizationValues(t)) : problemMessage(t, error);
 }

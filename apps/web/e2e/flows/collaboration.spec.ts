@@ -19,24 +19,36 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await other.goto(pagePath);
   const paragraph = other.getByText("Hotel Wi-Fi blocks UDP on port 51820.");
   await paragraph.selectText();
-  await other.getByRole("button", { name: "Comment", exact: true }).click();
-  const pending = other.getByRole("region", { name: "Comment on the selected text" });
-  await pending.getByRole("textbox", { name: "Comment on the selected text" }).click();
+  await other.getByRole("button", { name: "Comment", exact: true }).first().click();
+  const popover = other.getByRole("dialog", { name: "Comments" });
+  await popover.getByRole("textbox", { name: "Comment on the selected text" }).click();
   await other.keyboard.type("Happened twice this week.");
-  await pending.getByRole("button", { name: "Comment", exact: true }).click();
-  const panel = other.getByRole("complementary", { name: "Comments" });
-  await expect(panel.getByText("Happened twice this week.")).toBeVisible();
-  await expectAccessible(other, "comments panel");
+  await popover.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(popover.getByText("Happened twice this week.")).toBeVisible();
+  await expectAccessible(other, "comment popover");
+  await other.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
 
   await page.goto(pagePath);
-  await page.getByRole("button", { name: /Comments/ }).click();
-  const ownerPanel = page.getByRole("complementary", { name: "Comments" });
-  await expect(ownerPanel.getByText("Happened twice this week.")).toBeVisible();
-  await ownerPanel.getByRole("button", { name: "Reply", exact: true }).click();
-  await ownerPanel.getByRole("textbox", { name: "Reply" }).click();
+  await page.getByRole("button", { name: "1 open comment in this paragraph" }).click();
+  const thread = page.getByRole("dialog", { name: "Comments" });
+  await expect(thread.getByText("Happened twice this week.")).toBeVisible();
+  await thread.getByRole("textbox", { name: "Reply" }).click();
   await page.keyboard.type("Let us document the fallback.");
-  await ownerPanel.getByRole("button", { name: "Reply", exact: true }).last().click();
-  await expect(panel.getByText("Let us document the fallback.")).toBeVisible();
+  await thread.getByRole("button", { name: "Reply", exact: true }).last().click();
+  await expect(thread.getByText("Let us document the fallback.")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("textbox", { name: "New comment on the page" }).click();
+  await page.keyboard.type("Thanks for the overview.");
+  await page
+    .getByRole("region", { name: /^Comments/ })
+    .getByRole("button", { name: "Comment", exact: true })
+    .click();
+  await other.reload();
+  await expect(
+    other.getByRole("region", { name: /^Comments/ }).getByText("Thanks for the overview."),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Add reaction" }).first().click();
   await page.getByRole("button", { name: "React with 🎉" }).click();
@@ -46,7 +58,7 @@ test("two people discuss a page with comments, reactions, a mention and a task",
   await expect(other.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Mark as open: Test the TCP fallback/ })).toBeChecked();
 
-  await other.goto("/tasks?filter=done");
+  await other.goto("/tasks?view=done");
   await expect(other.getByText("Test the TCP fallback")).toBeVisible();
   await expectAccessible(other, "my tasks");
 });
@@ -144,7 +156,7 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
 }) => {
   const space = await collaborationSpace(page, organization);
   await page.goto(`/spaces/${space.key}/blog`);
-  await page.getByRole("button", { name: "Write a post" }).first().click();
+  await page.getByRole("button", { name: "New post" }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Title" }).fill("New VPN client from Monday");
   await dialog.getByRole("textbox", { name: "Excerpt" }).fill("Existing tunnels keep working.");
@@ -155,6 +167,7 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
     "contenteditable",
     "true",
   );
+  await expect(page.locator("[data-page-bar]").getByRole("button", { name: "Done" })).toBeVisible();
   const postId = /\/blog\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
   await page.getByRole("textbox", { name: "Page content" }).click();
   await page.keyboard.type("The company portal ships the new client on Monday.");
@@ -194,7 +207,9 @@ test("shows recent pages, starred items, tasks, mentions and new posts on For yo
   await publishedPost(page, space);
   const { page: other } = await organization.signIn(space.colleague);
   await other.goto(pagePath);
-  await other.getByRole("button", { name: "Star VPN access" }).click();
+  await other.getByRole("button", { name: "More actions" }).click();
+  await other.getByRole("menuitem", { name: "Add to starred" }).click();
+  await expect(other.getByText("VPN access starred", { exact: true })).toBeVisible();
   await other.goto("/home");
   const main = other.getByRole("main");
   await expect(main.getByRole("link", { name: /VPN access/ }).first()).toBeVisible();

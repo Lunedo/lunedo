@@ -11,7 +11,6 @@ import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } 
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import { signalSpaceChange } from "./signals.js";
-import { ERASURE_REASON_MAX_LENGTH } from "./trash.js";
 
 export interface ConfidentialSpaceSummary {
   id: string;
@@ -22,7 +21,6 @@ export interface ConfidentialSpaceSummary {
   pages: number;
   lastChangedAt: Date;
   needsAdministrator: boolean;
-  deletable: boolean;
 }
 
 type SummaryRow = {
@@ -56,19 +54,22 @@ function toSummary(row: SummaryRow): ConfidentialSpaceSummary {
     pages: Number(row.pages),
     lastChangedAt: new Date(row.last_changed_at),
     needsAdministrator: !row.has_administrator && activeMembers > 0,
-    deletable: activeMembers === 0,
   };
 }
 
-function cleanReason(reason: string): string {
-  const value = reason.replace(/\s+/g, " ").trim();
-  if (value.length === 0 || value.length > ERASURE_REASON_MAX_LENGTH) {
-    throw new SpaceError(
-      "reasonRequired",
-      `Name the reason for deleting the space in 1 to ${ERASURE_REASON_MAX_LENGTH} characters`,
-    );
-  }
-  return value;
+export async function organizationSpaceManagers(tx: Transaction, organizationId: string): Promise<string[]> {
+  const result = await tx.execute<{ account_id: string }>(sql`
+    select distinct a.id as account_id from role_assignments ra
+    left join custom_roles cr on cr.id = ra.custom_role_id
+    join accounts a on a.state = 'active' and (
+      (ra.principal_kind = 'account' and a.id = ra.principal_id)
+      or (ra.principal_kind = 'group' and exists (select 1 from group_members gm
+        where gm.group_id = ra.principal_id and gm.account_id = a.id
+          and (gm.expires_at is null or gm.expires_at > now()))))
+    where ra.scope = 'organization' and ra.organization_id = ${organizationId}
+      and (ra.expires_at is null or ra.expires_at > now())
+      and (ra.built_in_role in ('owner', 'administrator') or cr.areas ->> 'spaces' = 'manage')`);
+  return result.rows.map((row) => row.account_id);
 }
 
 export class ConfidentialSpaceService {
@@ -201,39 +202,16 @@ export class ConfidentialSpaceService {
           scope,
         });
       }
-      await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
-    });
-  }
-
-  async delete(
-    actor: Principal,
-    organizationId: string,
-    spaceId: string,
-    input: { confirmation: string; reason: string },
-  ): Promise<void> {
-    const reason = cleanReason(input.reason);
-    await this.#database.transaction(async (tx) => {
-      const summary = await this.#summary(tx, organizationId, spaceId);
-      if (!summary.deletable) {
-        throw new SpaceError(
-          "spaceHasMembers",
-          "Active members remain; only they can decide about the space",
-        );
-      }
-      if (input.confirmation.trim().toUpperCase() !== summary.key) {
-        throw new SpaceError("confirmationMismatch", "Type the key of the space exactly to delete it");
-      }
-      await this.#audit.record(tx, {
-        name: "space.confidentialDeleted",
-        actor,
+      const named = await tx.execute<{ name: string }>(sql`select name from spaces where id = ${spaceId}`);
+      await this.#notifications.notify(tx, {
+        type: "space.administratorAppointed",
+        recipients: [accountId],
+        organizationId,
         targetId: spaceId,
-        fields: { key: summary.key, reason },
-        scope: auditScopeOf({ organizationId }),
+        actor,
+        params: { spaceName: named.rows[0]?.name ?? "", spaceKey: summary.key },
       });
-      await signalSpaceChange(tx, { spaceId, kind: "space", itemId: null });
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
-      await tx.execute(sql`delete from setting_values where level = 'space' and scope_id = ${spaceId}`);
-      await tx.execute(sql`delete from spaces where id = ${spaceId}`);
     });
   }
 
@@ -255,21 +233,11 @@ export class ConfidentialSpaceService {
         and not ${activeAdministratorCondition(storedGrants(sql`s.id`), sql`s.organization_id`)}
         and ${activeHolder(sql`s`)}`);
     for (const space of orphaned.rows) {
-      const administrators = await tx.execute<{ account_id: string }>(sql`
-        select distinct a.id as account_id from role_assignments ra
-        left join custom_roles cr on cr.id = ra.custom_role_id
-        join accounts a on a.state = 'active' and (
-          (ra.principal_kind = 'account' and a.id = ra.principal_id)
-          or (ra.principal_kind = 'group' and exists (select 1 from group_members gm
-            where gm.group_id = ra.principal_id and gm.account_id = a.id
-              and (gm.expires_at is null or gm.expires_at > now()))))
-        where ra.scope = 'organization' and ra.organization_id = ${space.organization_id}
-          and (ra.expires_at is null or ra.expires_at > now())
-          and (ra.built_in_role in ('owner', 'administrator') or cr.areas ->> 'spaces' = 'manage')`);
-      if (administrators.rows.length === 0) continue;
+      const recipients = await organizationSpaceManagers(tx, space.organization_id);
+      if (recipients.length === 0) continue;
       await this.#notifications.notify(tx, {
         type: "space.confidentialWithoutAdministrator",
-        recipients: administrators.rows.map((row) => row.account_id),
+        recipients,
         organizationId: space.organization_id,
         targetId: space.id,
         params: { spaceKey: space.key },

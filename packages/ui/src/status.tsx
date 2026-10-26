@@ -100,6 +100,29 @@ export function CopyButton({ value, label }: CopyButtonProps) {
   );
 }
 
+export interface CodeBlockProps {
+  value: string;
+  copyLabel?: string;
+  label?: string;
+  children?: ReactNode;
+}
+
+export function CodeBlock({ value, copyLabel, label, children }: CodeBlockProps) {
+  return (
+    <figure
+      className="relative min-w-0 rounded-md border border-border bg-surface-sunken"
+      {...(label ? { "aria-label": label } : {})}
+    >
+      <pre className="min-w-0 whitespace-pre-wrap break-all py-2 pr-control-lg pl-3 font-mono text-sm">
+        {children ?? value}
+      </pre>
+      <span className="absolute top-0 right-0 p-1">
+        <CopyButton value={value} {...(copyLabel ? { label: copyLabel } : {})} />
+      </span>
+    </figure>
+  );
+}
+
 export interface ErrorStateProps {
   title: ReactNode;
   cause?: ReactNode;
@@ -107,6 +130,7 @@ export interface ErrorStateProps {
   details?: ReactNode;
   command?: string;
   documentationUrl?: string;
+  documentationLabel?: string;
   onRetry?: () => void;
   retryLabel?: string;
   variant?: "danger" | "warning";
@@ -119,6 +143,7 @@ export function ErrorState({
   details,
   command,
   documentationUrl,
+  documentationLabel,
   onRetry,
   retryLabel,
   variant = "danger",
@@ -140,14 +165,7 @@ export function ErrorState({
         {cause && <p>{cause}</p>}
         {action && <p>{action}</p>}
         {details && <p className="font-mono text-sm text-text-muted">{details}</p>}
-        {command && (
-          <div className="flex items-start gap-1 rounded-md border border-border bg-surface-sunken">
-            <pre className="min-w-0 flex-1 overflow-x-auto p-2 font-mono text-sm whitespace-pre-wrap break-all">
-              {command}
-            </pre>
-            <CopyButton value={command} />
-          </div>
-        )}
+        {command && <CodeBlock value={command} />}
         {documentationUrl && (
           <a
             href={documentationUrl}
@@ -155,7 +173,7 @@ export function ErrorState({
             rel="noreferrer"
             className="inline-flex w-fit items-center gap-1 rounded-sm text-accent underline-offset-2 hover:underline focus-visible:focus-ring"
           >
-            {labels.documentation}
+            {documentationLabel ?? labels.documentation}
             <Icon icon={ExternalLink} size="sm" />
           </a>
         )}

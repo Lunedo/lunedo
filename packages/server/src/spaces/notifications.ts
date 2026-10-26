@@ -29,4 +29,19 @@ const statusChanged = defineNotificationType({
   },
 });
 
-export const spaceNotificationTypes = [ownershipOrphaned, ownershipTransferred, statusChanged];
+const administratorAppointed = defineNotificationType({
+  type: "space.administratorAppointed",
+  targetType: "space",
+  params: contentNotificationParamSchemas["space.administratorAppointed"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
+  async visible(context) {
+    return context.targetId !== null && context.can("space.manage", { type: "space", id: context.targetId });
+  },
+});
+
+export const spaceNotificationTypes = [
+  ownershipOrphaned,
+  ownershipTransferred,
+  statusChanged,
+  administratorAppointed,
+];

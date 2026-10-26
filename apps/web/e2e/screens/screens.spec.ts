@@ -175,18 +175,16 @@ shot(
 shot(
   {
     number: "06",
-    name: "comments-panel",
-    title: "Comments panel",
-    state: "panel open with a page comment and an inline thread",
+    name: "page-comments",
+    title: "Page comments",
+    state: "comments below the content with replies and the input",
   },
   "owner",
   async (page) => {
     await openRich(page);
-    await page
-      .getByRole("button", { name: /^(Kommentare|Comments)/ })
-      .first()
-      .click();
-    await expect(page.getByRole("complementary", { name: /^(Kommentare|Comments)$/ })).toBeVisible();
+    const comments = page.getByRole("region", { name: /^(Kommentare|Comments)/ });
+    await comments.scrollIntoViewIfNeeded();
+    await expect(comments).toBeVisible();
   },
 );
 
@@ -204,7 +202,7 @@ shot(
     const mark = page.locator("[data-thread-id]").first();
     await mark.scrollIntoViewIfNeeded();
     await mark.click();
-    await expect(page.getByRole("complementary", { name: /^(Kommentare|Comments)$/ })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: /^(Kommentare|Comments)$/ })).toBeVisible();
   },
 );
 
@@ -269,7 +267,7 @@ shot(
     number: "09",
     name: "notifications",
     title: "Notifications",
-    state: "panel open with mentions, a task, comments, a share and meeting notes",
+    state: "popover open with mentions, a task, comments, a share and meeting notes",
     phone: true,
     fullPage: false,
   },
@@ -280,7 +278,7 @@ shot(
       .getByRole("button", { name: /^(Benachrichtigungen|Notifications)/ })
       .first()
       .click();
-    const panel = page.getByRole("complementary", { name: /^(Benachrichtigungen|Notifications)$/ });
+    const panel = page.getByRole("dialog", { name: /^(Benachrichtigungen|Notifications)$/ });
     await expect(panel.getByRole("listitem").first()).toBeVisible({ timeout: 20_000 });
   },
 );
@@ -449,7 +447,7 @@ shot(
   "owner",
   async (page) => {
     await visit(page, world().personal.salary.path);
-    await page.getByRole("button", { name: /^(Freigeben|Share)$/ }).click();
+    await page.getByRole("button", { name: /^(Teilen|Share)$/ }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
   },
 );

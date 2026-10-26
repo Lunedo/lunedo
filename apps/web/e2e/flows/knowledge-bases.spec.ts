@@ -4,7 +4,6 @@ import { unique } from "../support/people.js";
 
 test("creates a knowledge base and publishes a how-to only once its required section has content", async ({
   page,
-  organization,
 }) => {
   const name = `Help ${unique()}`;
   await page.goto("/spaces");
@@ -16,7 +15,8 @@ test("creates a knowledge base and publishes a how-to only once its required sec
   await expectAccessible(page, "create knowledge base");
   await dialog.getByRole("button", { name: "Create space" }).click();
 
-  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Articles", level: 1 })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main navigation" }).getByText(name)).toBeVisible();
   await expect(page.getByRole("link", { name: "View in portal" }).first()).toHaveAttribute(
     "href",
     /\/help\/[a-z0-9-]+\/$/,
@@ -58,10 +58,12 @@ test("creates a knowledge base and publishes a how-to only once its required sec
   });
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: "Publish version 1" }).click();
-  await expect(page.getByText("Published as version 1. Readers see it now.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Page published. Readers now see it as version 1.", { exact: true }),
+  ).toBeVisible();
 
   await page.goto(`/spaces/${spaceKey}`);
   await expect(
-    page.getByRole("region", { name: "Without category" }).getByRole("link", { name: "How-to" }),
+    page.getByRole("region", { name: "Without area" }).getByRole("link", { name: "How-to" }),
   ).toBeVisible();
 });

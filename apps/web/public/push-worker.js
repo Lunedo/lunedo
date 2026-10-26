@@ -13,7 +13,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: typeof message.body === "string" ? message.body : "",
       tag: typeof message.tag === "string" ? message.tag : undefined,
-      icon: "/lunedo-app-icon.svg",
+      icon: "/icon-192.png",
       data: { url: sameOriginPath(message.url) },
     }),
   );

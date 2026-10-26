@@ -1,6 +1,7 @@
 .lunedo-mark {
   display: inline-flex;
   flex-shrink: 0;
+  aspect-ratio: 72.38 / 91.86;
 }
 
 .lunedo-mark > img {
@@ -9,8 +10,9 @@
   height: 100%;
 }
 
-:root:not([data-theme="dark"]):not([data-contrast="high"]) .lunedo-mark > [data-variant="petrol"],
-:root[data-contrast="high"]:not([data-theme="dark"]) .lunedo-mark > [data-variant="black"],
-:root[data-theme="dark"] .lunedo-mark > [data-variant="white"] {
+:root:not([data-theme="dark"]):not([data-contrast="high"]) .lunedo-mark > [data-variant="light"],
+:root[data-theme="dark"]:not([data-contrast="high"]) .lunedo-mark > [data-variant="dark"],
+:root[data-contrast="high"]:not([data-theme="dark"]) .lunedo-mark > [data-variant="mono-black"],
+:root[data-contrast="high"][data-theme="dark"] .lunedo-mark > [data-variant="mono-white"] {
   display: block;
 }

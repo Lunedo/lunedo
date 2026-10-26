@@ -61,7 +61,7 @@ test("import screens pass the accessibility check in English and German, light a
 
   await sweepAppearances(page, "imports-list", async () => {
     await page.goto(base);
-    await expect(page.getByRole("list", { name: /Imports|Importe/ })).toBeVisible();
+    await expect(page.getByRole("table", { name: /Imports|Importe/ })).toBeVisible();
   });
   for (const step of [0, 1, 2, 3]) {
     await sweepAppearances(page, `import-wizard-step-${step + 1}`, async () => {

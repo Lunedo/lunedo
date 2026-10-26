@@ -191,26 +191,44 @@ const audienceImpactSchema = z
 const categorySchema = z
   .object({
     id: uuid("ID of the category, a folder in the knowledge base."),
-    parentId: uuid("Parent category, or null for a top-level category.").nullable(),
-    level: z.number().int().describe("1 for a category, 2 for a subcategory."),
-    title: z.string().describe("Title of the category."),
-    description: z.string().describe("Short introduction text."),
+    parentId: uuid("Parent folder, or null for a top-level folder (an area of the portal).").nullable(),
+    level: z
+      .number()
+      .int()
+      .min(1)
+      .describe("Depth of the folder: 1 at the top level, 2 inside it, and so on."),
+    title: z.string().describe("Title of the folder."),
+    description: z
+      .string()
+      .describe(
+        "Short introduction. Supports `**bold**`, `*italic*`, links as `[text](https://…)` and one callout as lines starting with `>`.",
+      ),
     icon: z.string().nullable().describe("Name of a Lucide icon, or null."),
     contactEmail: contactSchema.describe("Contact address set on the category itself, or null."),
     effectiveContactEmail: contactSchema.describe(
-      "Contact address that applies: of the category, else of its parent category, else of the knowledge base.",
+      "Contact address that applies: of the folder, else of the nearest parent folder with one, else of the knowledge base.",
     ),
     contactSource: z
       .enum(["category", "parentCategory", "knowledgeBase"])
       .nullable()
-      .describe("Where the contact address that applies comes from, or null when none is set."),
+      .describe(
+        "Where the contact address that applies comes from: the folder itself, a parent folder or the knowledge base; null when none is set.",
+      ),
     position: z.string().describe("Sort key among the siblings. Categories sort by it in binary order."),
     articles: z
       .number()
       .int()
-      .describe("Number of articles in the category and below that the caller can read."),
+      .describe(
+        "Number of articles in the folder and below that the caller can read: published or live, in the default language, neither archived nor in the trash.",
+      ),
+    drafts: z
+      .number()
+      .int()
+      .describe(
+        "Number of articles in the folder and below that the caller can read and that were never published.",
+      ),
   })
-  .describe("A category of a knowledge base.");
+  .describe("A folder of a knowledge base, at any depth.");
 
 const exampleCategory = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
@@ -224,6 +242,7 @@ const exampleCategory = {
   contactSource: "category" as const,
   position: "a0",
   articles: 12,
+  drafts: 2,
 };
 
 const categoryUpdateSchema = z
@@ -262,7 +281,7 @@ const articleSummaryShape = {
   categoryPath: z
     .array(categoryReferenceSchema)
     .describe(
-      "Category and subcategory of the article, as far as the caller can see them. Empty at the top level.",
+      "Folders above the article from the top level down, as far as the caller can see them. Empty at the top level.",
     ),
   ownerId: uuid("Owner of the article, or null.").nullable(),
   ownerName: z.string().nullable().describe("Name of the owner, or null when the caller may not see it."),
@@ -585,12 +604,12 @@ export class KnowledgeBasesController {
   @ApiRoute({
     summary: "List the categories of a knowledge base",
     description:
-      "Lists the folders on the first two levels of the knowledge base, which are its categories and subcategories, in tree order. Deeper folders belong to their subcategory.",
+      "Lists every folder of the knowledge base the caller can read, at any depth, top level first and then by position. Top-level folders are the areas of the portal, deeper folders its topics.",
     tags: [TAG],
     params: spaceParams,
     response: {
-      description: "Categories the caller can read.",
-      schema: z.array(categorySchema).describe("Categories, top level first."),
+      description: "Folders the caller can read.",
+      schema: z.array(categorySchema).describe("Folders, top level first."),
       example: [exampleCategory],
     },
     errors: ["notKnowledgeBase"],
@@ -604,7 +623,7 @@ export class KnowledgeBasesController {
   @ApiRoute({
     summary: "Change a category",
     description:
-      "Sets the icon of a category. Title, introduction text and order change like for every folder; the contact address has its own route for space admins.",
+      "Sets the icon of a folder at any depth. Title, introduction and order change like for every folder; the contact address has its own route for space admins.",
     tags: [TAG],
     params: categoryParams,
     body: categoryUpdateSchema,
@@ -621,7 +640,7 @@ export class KnowledgeBasesController {
   @ApiRoute({
     summary: "Set the contact address of a category",
     description:
-      "Sets the address readers write to from articles of the category and its subcategories, or null to inherit it. Only space admins of the knowledge base can change it.",
+      "Sets the address readers write to from articles of the folder and every folder below it without an address of its own, or null to inherit it. Works at any depth. Only space admins of the knowledge base can change it.",
     tags: [TAG],
     params: categoryParams,
     body: contactBodySchema,

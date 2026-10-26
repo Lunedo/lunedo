@@ -395,7 +395,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   await mermaid.getByRole("button", { name: "Save diagram" }).click();
   await expect(mermaid.getByLabel("Source of the Mermaid diagram")).toBeHidden({ timeout: 20_000 });
   await expect(page.getByRole("status").getByText(/^Saved/)).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
 
   const lena = await asPerson(browser, "lena");
   const jonas = await asPerson(browser, "jonas");
@@ -452,7 +452,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   });
 
   const monday = new Date();
-  monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
   const series = (await callApi(page, "POST", `/api/v1/spaces/${it.id}/meeting-series`, {
     name: "Jour fixe IT-Betrieb",
     members: [people.lena.id, people.jonas.id, people.mateo.id],

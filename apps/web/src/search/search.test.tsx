@@ -6,7 +6,7 @@ import { initI18n } from "../i18n/index.js";
 import { mockApi, type RecordedRequest } from "../testing/render.js";
 import { filtersOf } from "./search-api.js";
 import { fromSearchParams, noFilters, toSearchParams } from "./search-params.js";
-import { hitHref, hitPath, hitTitle, typeLabel } from "./search-results.js";
+import { hitHref, hitPath, hitTitle, hitTypeLabel, typeLabel } from "./search-results.js";
 
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const SPACE = "01929b1e-0000-7000-8000-000000000010";
@@ -29,9 +29,13 @@ function hit(id: string, title: string, spaceId = SPACE) {
       id: spaceId,
       key: spaceId === SPACE ? "OPS" : "SEC",
       name: spaceId === SPACE ? "Operations" : "Security",
+      displayName: spaceId === SPACE ? "Operations" : "Security",
       personal: false,
+      knowledgeBase: false,
+      mine: false,
     },
     sharedWithYou: false,
+    otherCategory: false,
     path: [],
     labels: [],
     status: null,
@@ -112,7 +116,7 @@ function shellRoutes(search: (request: RecordedRequest) => { status?: number; bo
       body: { instance: [], organization: ["organization.view", "organization.search"] },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/recent": () => ({
       body: [
         {
@@ -209,6 +213,11 @@ describe("results of attachments, running topics and decisions", () => {
     );
     expect(hitTitle(t, file)).toBe("handbook.docx on “Gateway”");
     expect(typeLabel(t, "attachment")).toBe("Attachment");
+    const page = hit("01929b1e-0000-7000-8000-0000000000aa", "Gateway");
+    expect(hitTypeLabel(t, page)).toBe("Page");
+    expect(hitTypeLabel(t, { ...page, space: page.space && { ...page.space, knowledgeBase: true } })).toBe(
+      "Article",
+    );
 
     const topic = {
       ...base,
@@ -390,17 +399,22 @@ describe("the search page", () => {
     expect(sent.get("spaceIds")).toBe(SPACE);
     expect(sent.get("sort")).toBe("newest");
     expect(Date.now() - Date.parse(sent.get("updatedAfter") ?? "")).toBeGreaterThan(6 * 86_400_000);
-    const filters = screen.getByRole("complementary", { name: "Filters" });
-    expect(
-      within(filters)
-        .getByRole("checkbox", { name: /Operations/ })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
-    await userEvent.click(within(filters).getByRole("checkbox", { name: /Security/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Space: Operations" }));
+    expect(screen.getByRole("button", { name: /^Operations/ }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: /^Security/ }));
     await waitFor(() =>
       expect(new URL(window.location.href).searchParams.get("spaces")).toBe(`${SPACE},${OTHER_SPACE}`),
     );
     expect(new URL(window.location.href).searchParams.get("sort")).toBe("newest");
+  });
+
+  it("keeps the language filter under More, so the filter row fits one line", async () => {
+    await renderApp("/search?q=gateway", () => ({ body: response([hit(ids(5), "Gateway restart")]) }));
+    expect(await screen.findByText("1 result")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Language/ })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^English/ }));
+    await waitFor(() => expect(new URL(window.location.href).searchParams.get("languages")).toBe("en"));
   });
 
   it("explains the first use and offers ways out when nothing is found", async () => {
@@ -409,9 +423,15 @@ describe("the search page", () => {
     const promise = field.getAttribute("placeholder");
     expect(promise).toBe("Search pages, blog posts, comments, attachments and meetings");
     expect(await screen.findByText(promise ?? "")).toBeTruthy();
-    const filters = screen.getByRole("complementary", { name: "Filters" });
-    expect(within(filters).getByRole("checkbox", { name: "Page" })).toBeTruthy();
-    expect(within(filters).getByRole("radio", { name: "Last 7 days" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Type" }));
+    expect(screen.getByRole("button", { name: "Page" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "Updated" }));
+    expect(screen.getByRole("button", { name: "Last 7 days" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "More search actions" }));
+    expect(screen.getByRole("menuitem", { name: "Operators" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(await screen.findByRole("button", { name: "tls certificate" })).toBeTruthy();
     window.history.replaceState(null, "", "/");
   });

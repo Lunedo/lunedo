@@ -4,12 +4,76 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" type="image/svg+xml" href="/lunedo-app-icon.svg" />
-    <link rel="icon" type="image/svg+xml" href="/lunedo-app-icon-light.svg" media="(prefers-color-scheme: dark)" />
-    <link rel="icon" type="image/svg+xml" href="/lunedo-app-icon-black.svg" media="(prefers-contrast: more)" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Lunedo</title>
   </head>
   <body>
+    <div id="boot-shell" hidden aria-hidden="true" class="fixed inset-0 flex flex-col bg-bg">
+      <div class="h-toolbar shrink-0 border-b border-border bg-bg"></div>
+      <div class="flex min-h-0 flex-1">
+        <div id="boot-sidebar" class="hidden w-sidebar shrink-0 border-r border-border bg-sidebar md:block"></div>
+      </div>
+    </div>
+    <script>
+      (() => {
+        var languages = ["en", "de"];
+        var signedOutPaths = /^\/(sign-in|setup|reset-password|confirm-email|accept-invitation|register|complete-registration|second-factor-setup|unsubscribe|s|print|help|dev)(\/|$)/;
+        var localeChunks = "__LUNEDO_LOCALE_CHUNKS__";
+        var root = document.documentElement;
+        var read = (key) => {
+          try {
+            return window.localStorage.getItem(key);
+          } catch {
+            return null;
+          }
+        };
+        var appearance = {};
+        try {
+          appearance = JSON.parse(read("lunedo.appearance") || "{}") || {};
+        } catch {
+          appearance = {};
+        }
+        var mode = appearance.colorMode;
+        var dark = mode === "dark" || (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        root.setAttribute("data-theme", dark ? "dark" : "light");
+        root.style.colorScheme = dark ? "dark" : "light";
+        if (appearance.highContrast === true) root.setAttribute("data-contrast", "high");
+        if (appearance.density === "compact") root.setAttribute("data-density", "compact");
+        if (appearance.font === "readable") root.setAttribute("data-font", "readable");
+        if (typeof appearance.textSize === "number") root.style.setProperty("--ld-text-scale", String(appearance.textSize));
+
+        var language = read("lunedo.language");
+        if (languages.indexOf(language) < 0) {
+          language = "en";
+          const preferred = navigator.languages || [navigator.language];
+          for (let index = 0; index < preferred.length; index++) {
+            const base = String(preferred[index]).toLowerCase().split("-")[0];
+            if (languages.indexOf(base) >= 0) {
+              language = base;
+              break;
+            }
+          }
+        }
+        root.lang = language;
+        var chunk = typeof localeChunks === "object" ? localeChunks[language] : null;
+        if (chunk) {
+          const preload = document.createElement("link");
+          preload.rel = "modulepreload";
+          preload.crossOrigin = "";
+          preload.href = chunk;
+          document.head.appendChild(preload);
+        }
+
+        if (!signedOutPaths.test(window.location.pathname)) {
+          if (appearance.sidebarCollapsed === true) {
+            document.getElementById("boot-sidebar").className = "hidden w-rail shrink-0 border-r border-border bg-sidebar md:block";
+          }
+          document.getElementById("boot-shell").hidden = false;
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

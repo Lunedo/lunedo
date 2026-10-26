@@ -1,9 +1,10 @@
-import { Button, Checkbox, Dialog, Field, Input, useToast } from "@lunedo/ui";
+import { Button, Checkbox, Dialog, Field, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
+import { AppDatePicker, AppTimePicker } from "../components/date-fields.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { instantInZone, localDateInZone, localTimeInZone } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
@@ -92,7 +93,7 @@ export function useReopenMeeting() {
   };
 }
 
-type DateDialogPurpose = "close" | "skip" | "move";
+type DateDialogPurpose = "close" | "skip";
 
 export function MeetingDateDialog({
   meeting,
@@ -115,8 +116,8 @@ export function MeetingDateDialog({
   const [unscheduled, setUnscheduled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const dateInput = useRef<HTMLInputElement>(null);
-  const needsDate = purpose === "move" || !meeting.rhythm;
+  const dateInput = useRef<HTMLButtonElement>(null);
+  const needsDate = !meeting.rhythm;
   const allowUnscheduled = !meeting.rhythm;
 
   const submit = async () => {
@@ -135,23 +136,13 @@ export function MeetingDateDialog({
         if (await close(meeting, needsDate ? startsAt : undefined)) onOpenChange(false);
         return;
       }
-      if (purpose === "skip") {
-        await request(() =>
-          api.POST("/api/v1/meetings/{meetingId}/skip", {
-            params: { path: { meetingId: meeting.id } },
-            body: needsDate ? { nextStartsAt: startsAt } : {},
-          }),
-        );
-        toast({ variant: "success", title: t("meetings.skip.done", { title: meeting.title }) });
-      } else {
-        await request(() =>
-          api.PUT("/api/v1/meetings/{meetingId}/start", {
-            params: { path: { meetingId: meeting.id } },
-            body: { startsAt },
-          }),
-        );
-        toast({ variant: "success", title: t("meetings.move.done") });
-      }
+      await request(() =>
+        api.POST("/api/v1/meetings/{meetingId}/skip", {
+          params: { path: { meetingId: meeting.id } },
+          body: needsDate ? { nextStartsAt: startsAt } : {},
+        }),
+      );
+      toast({ variant: "success", title: t("meetings.skip.done", { title: meeting.title }) });
       await refresh(meeting.id);
       onOpenChange(false);
     } catch (failure) {
@@ -186,26 +177,20 @@ export function MeetingDateDialog({
     >
       {needsDate ? (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             <Field label={t("meetings.schedule.date")} error={error ?? undefined}>
-              <Input
+              <AppDatePicker
                 ref={dateInput}
-                type="date"
                 value={date}
                 disabled={unscheduled}
-                onChange={(event) => {
-                  setDate(event.target.value);
+                onValueChange={(next) => {
+                  setDate(next);
                   setError(null);
                 }}
               />
             </Field>
             <Field label={t("meetings.schedule.time")}>
-              <Input
-                type="time"
-                value={time}
-                disabled={unscheduled}
-                onChange={(event) => setTime(event.target.value)}
-              />
+              <AppTimePicker value={time} disabled={unscheduled} onValueChange={setTime} />
             </Field>
           </div>
           {allowUnscheduled ? (

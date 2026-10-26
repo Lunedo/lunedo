@@ -21,7 +21,8 @@ describe("AutoSaveTextField", () => {
     expect(onSave).not.toHaveBeenCalled();
     await userEvent.type(input, " Team{Enter}");
     await waitFor(() => expect(onSave).toHaveBeenCalledWith("Platform Team"));
-    expect(await screen.findByText("Saved")).toBeTruthy();
+    expect(await screen.findByText("Saved “Name”")).toBeTruthy();
+    expect(screen.queryByText("Saved", { exact: true })).toBeNull();
   });
 
   it("shows validation errors at the field without saving", async () => {

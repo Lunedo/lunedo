@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { NotificationListener } from "../database/notifications.js";
@@ -131,10 +131,10 @@ describe.skipIf(!baseUrl)("notifications", () => {
       principal: { kind: "account", id: administrator.id },
     });
     await notify(guestNotice(org.id, [administrator.id]));
-    expect(await test.services.notifications.unreadCount(administrator.id)).toBe(1);
+    expect((await test.services.notifications.unreadCount(administrator.id)).count).toBe(1);
 
     await test.services.roles.unassign(SYSTEM, "organization", org.id, assignment.id);
-    expect(await test.services.notifications.unreadCount(administrator.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(administrator.id)).count).toBe(0);
     expect((await test.services.notifications.list(administrator.id, { limit: 10 })).items).toEqual([]);
   });
 
@@ -268,13 +268,13 @@ describe.skipIf(!baseUrl)("notifications", () => {
     ]);
   });
 
-  it("sends e-mail only when a mail server is configured, with the organization's logo and color", async () => {
+  it("sends e-mail only when a mail server is configured, with the organization's logo and the instance color", async () => {
     const org = await organization();
     const quiet = await notify(guestNotice(org.id, [org.owner.id]));
     expect(quiet.mailIds).toEqual([]);
 
     await test.settings.set(smtpSetting, {}, "instance", SMTP);
-    await test.settings.set(accentColorSetting, { organization: org.id }, "organization", "violet");
+    await test.settings.set(accentColorSetting, {}, "instance", "violet");
     const updated = await test.services.organizations.setLogo(SYSTEM, org.id, {
       contentType: "image/png",
       data: PNG,
@@ -291,7 +291,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect(mail?.html).toContain("#6B4FB3");
     expect(mail?.html).toContain('href="https://wiki.example.org/settings/notifications"');
     expect(mail?.text).toContain("https://wiki.example.org/settings/notifications");
-    expect(mail?.text).toContain("10/20/2026");
+    expect(mail?.text).toContain("20 Oct 2026");
 
     await test.settings.set(dateFormatSetting, { user: org.owner.id }, "user", "DD.MM.YYYY");
     await notify(guestNotice(org.id, [org.owner.id]));
@@ -299,6 +299,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     const own = test.mail.sent.filter((entry) => entry.to === org.owner.email).at(-1);
     expect(own?.text).toContain("20.10.2026");
     await test.settings.set(smtpSetting, {}, "instance", null);
+    await test.settings.clear(accentColorSetting, {}, "instance");
   });
 
   it("offers a one-click unsubscribe in administration mails and none in security mails", async () => {
@@ -358,14 +359,113 @@ describe.skipIf(!baseUrl)("notifications", () => {
     const [newest] = (await test.services.notifications.list(org.owner.id, { limit: 10 })).items;
     expect(await test.services.notifications.markRead(stranger.id, newest?.id ?? "")).toBe(false);
     expect(await test.services.notifications.markRead(org.owner.id, newest?.id ?? "")).toBe(true);
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(1);
 
     const before = new Date(Date.now() - 60_000);
     expect(await test.services.notifications.markAllRead(org.owner.id, before)).toBe(0);
     expect(await test.services.notifications.markAllRead(org.owner.id)).toBe(1);
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(0);
     const unread = await test.services.notifications.list(org.owner.id, { limit: 10, unreadOnly: true });
     expect(unread.items).toEqual([]);
+  });
+
+  it("counts unread notifications the recipient may see, without read, in-app disabled, hidden or deleted ones", async () => {
+    const org = await organization();
+    const other = await organization();
+    for (let index = 0; index < 4; index += 1) await notify(guestNotice(org.id, [org.owner.id]));
+    await notify(guestNotice(other.id, [org.owner.id]));
+    const [newest, second, third] = (await test.services.notifications.list(org.owner.id, { limit: 10 }))
+      .items;
+    await test.services.notifications.markRead(org.owner.id, newest?.id ?? "");
+    await test.pool.query("update notifications set in_app = false where id = $1", [second?.id]);
+    await test.pool.query("delete from notifications where id = $1", [third?.id]);
+
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(1);
+    expect((await test.services.notifications.unreadCount(org.owner.id, "requests")).count).toBe(0);
+    expect((await test.services.notifications.unreadCount(other.owner.id)).count).toBe(0);
+  });
+
+  it("counts a notification that combines several events once", async () => {
+    const org = await organization();
+    const target = randomUUID();
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    await notify(guestNotice(org.id, [org.owner.id], target));
+    await notify(guestNotice(org.id, [org.owner.id]));
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(2);
+  });
+
+  it("stops counting at 100, so a large backlog costs a bounded amount of work", async () => {
+    const org = await organization();
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key,
+         in_app, email_status, count, created_at, updated_at)
+       select gen_random_uuid(), recipient_id, organization_id, type, target_type, gen_random_uuid()::text, params,
+         group_key || n, in_app, email_status, count, created_at, updated_at - make_interval(secs => n)
+       from notifications, generate_series(1, 1000) as n where recipient_id = $1`,
+      [org.owner.id],
+    );
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toEqual({ count: 100, capped: true });
+  });
+
+  it("reports exactly 100 unread notifications as not capped", async () => {
+    const org = await organization();
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key,
+         in_app, email_status, count, created_at, updated_at)
+       select gen_random_uuid(), recipient_id, organization_id, type, target_type, gen_random_uuid()::text, params,
+         group_key || n, in_app, email_status, count, created_at, updated_at - make_interval(secs => n)
+       from notifications, generate_series(1, 99) as n where recipient_id = $1`,
+      [org.owner.id],
+    );
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toEqual({
+      count: 100,
+      capped: false,
+    });
+  });
+
+  it("counts visible notifications behind more than 100 hidden ones", async () => {
+    const org = await organization();
+    for (let index = 0; index < 3; index += 1) await notify(guestNotice(org.id, [org.owner.id]));
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key,
+         in_app, count, created_at, updated_at)
+       select gen_random_uuid(), $1, $2, 'content.changed', 'item', gen_random_uuid()::text, '{}'::jsonb,
+         'hidden-' || n, true, 1, now(), now() + make_interval(secs => n)
+       from generate_series(1, 150) as n`,
+      [org.owner.id, org.id],
+    );
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(3);
+  });
+
+  it("asks the authorization service once per decision, however many notifications share it", async () => {
+    const org = await organization();
+    const administrator = await standard(org.id);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    for (let index = 0; index < 12; index += 1) {
+      await notify({
+        ...guestNotice(org.id, [administrator.id]),
+        params: {
+          organizationName: "Org",
+          guestName: `Guest ${index}`,
+          expiresAt: "2026-10-20T10:00:00.000Z",
+        },
+      });
+    }
+    const explain = vi.spyOn(test.services.authorization, "explainMany");
+    try {
+      expect((await test.services.notifications.unreadCount(administrator.id)).count).toBe(12);
+      expect(explain).toHaveBeenCalledTimes(1);
+      expect(explain.mock.calls[0]?.[2]).toHaveLength(1);
+    } finally {
+      explain.mockRestore();
+    }
   });
 
   it("removes notifications older than the retention period", async () => {
@@ -444,8 +544,8 @@ describe.skipIf(!baseUrl)("notifications", () => {
         minutes: 60,
       },
     });
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
-    expect(await test.services.notifications.unreadCount(outsider.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(1);
+    expect((await test.services.notifications.unreadCount(outsider.id)).count).toBe(0);
     const [item] = (await test.services.notifications.list(org.owner.id, { limit: 1 })).items;
     expect(item?.actor).toEqual({ type: "account", id: outsider.id, name: "Person" });
   });

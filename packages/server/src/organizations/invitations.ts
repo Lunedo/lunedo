@@ -3,7 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { type AccountService, emailSchema } from "../accounts/accounts.js";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
-import { ANONYMOUS, type Principal, SYSTEM } from "../accounts/principal.js";
+import { ANONYMOUS, accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import { InvalidTokenError, RateLimitedError } from "../auth/errors.js";
@@ -465,14 +465,22 @@ export class InvitationService {
           on conflict do nothing`);
       }
       for (const listener of this.#acceptListeners) await listener(tx, invitation.id, accountId);
+      const accepting = accountPrincipal(accountId);
       events.push({
         name: "invitation.accepted",
-        actor: ANONYMOUS,
+        actor: accepting,
         targetId: invitation.id,
         fields: { accountId, accountCreated: !existing },
         scope: scopeOf(invitation.organizationId),
       });
-      await this.#audit.recordMany(tx, events);
+      await this.#audit.recordMany(
+        tx,
+        events.map((event) =>
+          event.actor === undefined || event.actor.type === "anonymous"
+            ? { ...event, actor: accepting }
+            : event,
+        ),
+      );
       await this.#audit.sealer?.linkSubject(tx, invitation.id, accountId);
       return {
         accountId,

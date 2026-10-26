@@ -84,6 +84,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
   writeState({ databaseUrl: databaseUrl(database) });
   const dataDir = mkdtempSync(path.join(STATE_DIR, "data-"));
+  writeState({ dataDir });
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     LUNEDO_DATABASE_URL: databaseUrl(database),

@@ -1,18 +1,19 @@
 import { Notice, Section, SegmentedControl, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { instanceKeys, mailQuery } from "../../api/instance-queries.js";
+import { instanceKeys, instanceSettingsQuery, mailQuery, storageQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { GraphMailForm } from "../../components/graph-mail-form.js";
 import { mailFailure } from "../../components/mail-failure.js";
 import { SmtpForm } from "../../components/smtp-form.js";
 import { LoadError } from "../../errors/failure.js";
+import { BrowserPushSetting } from "../../notifications/browser-push-setting.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
+import { OperationsContactsSection } from "./storage-screen.js";
 
 type Method = "smtp" | "graph";
 
@@ -24,6 +25,8 @@ export function InstanceMailScreen() {
   const session = useSession();
   const state = useOrganizationState();
   const mail = useQuery({ ...mailQuery, throwOnError: false });
+  const settings = useQuery({ ...instanceSettingsQuery, throwOnError: false });
+  const storage = useQuery({ ...storageQuery, throwOnError: false });
   const manage = state.can("instance.settings.manage");
   const [shown, setShown] = useState<Method | null>(null);
   const data = mail.data;
@@ -31,7 +34,7 @@ export function InstanceMailScreen() {
   const configured = data ? (data.method === "graph" ? data.graph !== null : data.smtp !== null) : true;
 
   return (
-    <SettingsPage title={t("mail.title")} description={t("mail.description")} icon={Mail}>
+    <SettingsPage title={t("mail.title")} description={t("mail.description")}>
       {mail.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {mail.isError ? (
         <LoadError what={t("failures.loadMail")} error={mail.error} onRetry={() => mail.refetch()} />
@@ -42,6 +45,7 @@ export function InstanceMailScreen() {
           <SettingRow
             label={t("mail.method")}
             description={t("mail.methodHint", { method: t(`mail.methods.${data.method}`) })}
+            help={t("mail.methodHelp", { method: t(`mail.methods.${data.method}`) })}
             control={
               <SegmentedControl
                 label={t("mail.method")}
@@ -109,6 +113,7 @@ export function InstanceMailScreen() {
           <SettingRow
             label={t("mail.delivery.lastFailure")}
             description={data.delivery.lastFailure ? t("mail.delivery.retry") : undefined}
+            help={data.delivery.lastFailure ? t("mail.delivery.retryHelp") : undefined}
             control={
               <span className="text-sm">
                 {data.delivery.lastFailure
@@ -139,6 +144,16 @@ export function InstanceMailScreen() {
           />
         </Section>
       ) : null}
+      <BrowserPushSetting settings={settings.data} editable={manage} />
+      {storage.isPending ? <Skeleton className="h-32 w-full" /> : null}
+      {storage.isError ? (
+        <LoadError
+          what={t("storage.contacts.loadFailed")}
+          error={storage.error}
+          onRetry={() => storage.refetch()}
+        />
+      ) : null}
+      {storage.data ? <OperationsContactsSection status={storage.data} canManage={manage} /> : null}
     </SettingsPage>
   );
 }

@@ -1,5 +1,6 @@
 import { HocuspocusProvider, WebSocketStatus } from "@hocuspocus/provider";
 import * as Y from "yjs";
+import { registerUnsavedChanges } from "../app-update/app-update.js";
 import { onSignOut } from "../session/sign-out.js";
 import { coversOwnChanges, decodeBase64, type SaveState, SaveTracker } from "./save-state.js";
 
@@ -69,7 +70,7 @@ export class PageCollaboration {
     synced: false,
     loaded: false,
     problem: null,
-    saveState: "offline",
+    saveState: "connecting",
   };
   #reattachAttempts = 0;
   #reattachTimer: ReturnType<typeof setTimeout> | null = null;
@@ -86,7 +87,8 @@ export class PageCollaboration {
       token: "session",
       onStatus: ({ status }) => {
         const connected = status === WebSocketStatus.Connected;
-        this.tracker.connection(connected);
+        if (status === WebSocketStatus.Disconnected) this.tracker.connectionLost();
+        else this.tracker.connection(connected);
         this.#set({ connected });
       },
       onSynced: ({ state }) => {
@@ -103,7 +105,7 @@ export class PageCollaboration {
       },
       onClose: ({ event }) => {
         if (event.reason === "unavailable") {
-          this.tracker.connection(false);
+          this.tracker.connectionLost();
           this.#set({ connected: false, synced: false });
           this.#scheduleReattach();
           return;
@@ -123,7 +125,7 @@ export class PageCollaboration {
   }
 
   #wentOffline = (): void => {
-    this.tracker.connection(false);
+    this.tracker.connectionLost();
     this.#set({ connected: false, synced: false });
     this.provider.disconnect();
   };
@@ -272,6 +274,29 @@ export function closeCollaboration(collaboration: PageCollaboration): void {
   globalThis.addEventListener("beforeunload", warnBeforeUnload);
   finish();
 }
+
+function anyUnsavedChanges(): boolean {
+  for (const entry of openCollaborations.values()) if (entry.collaboration.hasUnsavedChanges) return true;
+  return false;
+}
+
+function saved(collaboration: PageCollaboration): Promise<void> {
+  return new Promise((resolve) => {
+    if (!collaboration.hasUnsavedChanges) {
+      resolve();
+      return;
+    }
+    const unsubscribe = collaboration.subscribe(() => {
+      if (collaboration.hasUnsavedChanges) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
+registerUnsavedChanges(anyUnsavedChanges, async () => {
+  await Promise.all([...openCollaborations.values()].map((entry) => saved(entry.collaboration)));
+});
 
 export function discardOpenCollaborations(): void {
   for (const entry of openCollaborations.values()) {

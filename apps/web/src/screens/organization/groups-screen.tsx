@@ -13,7 +13,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { Lock, Plus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,7 @@ import { useServerTable } from "../../components/table-state.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
+import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
@@ -37,40 +38,54 @@ export function GroupsScreen() {
   const { organizationId } = route.useParams();
   const state = useOrganizationState();
   const navigate = useNavigate();
-  const table = useServerTable([...organizationKeys.groups(organizationId)], (search, cursor) =>
+  const table = useServerTable([...organizationKeys.groups(organizationId)], (search, cursor, limit) =>
     request(() =>
       api.GET("/api/v1/organizations/{organizationId}/groups", {
         params: {
           path: { organizationId },
-          query: { limit: 25, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) },
+          query: { limit, ...(search ? { q: search } : {}), ...(cursor ? { cursor } : {}) },
         },
       }),
     ),
   );
   const [creating, setCreating] = useState(false);
+  const format = useFormat();
   const canCreate = state.can("organization.groups.create");
+  const empty = table.query.isSuccess && table.rows.length === 0 && !table.search.value;
 
   return (
     <SettingsPage
-      width="wide"
+      wide
       title={t("groups.title")}
       description={t("groups.description")}
-      icon={UsersRound}
-      organizationId={organizationId}
       actions={
-        canCreate ? (
+        canCreate && !empty ? (
           <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
             {t("groups.create")}
           </Button>
         ) : null
       }
     >
-      {table.query.isSuccess && table.rows.length === 0 && !table.search.value ? (
-        <EmptyState icon={UsersRound} title={t("groups.none")} description={t("groups.noneDescription")} />
+      {empty ? (
+        <EmptyState
+          icon={UsersRound}
+          title={t("groups.none")}
+          description={t("groups.noneDescription")}
+          {...(canCreate
+            ? {
+                action: (
+                  <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                    {t("groups.create")}
+                  </Button>
+                ),
+              }
+            : {})}
+        />
       ) : (
         <>
           <TableToolbar
             search={{ ...table.search, label: t("groups.search"), placeholder: t("groups.search") }}
+            pagination={table.pagination}
           />
           {table.query.isError ? (
             <LoadError
@@ -84,7 +99,7 @@ export function GroupsScreen() {
             rowKey={(group) => group.id}
             rows={table.rows}
             loading={table.query.isPending}
-            {...(table.pagination ? { pagination: table.pagination } : {})}
+            pagination={table.pagination}
             onRowClick={(group) =>
               void navigate({
                 to: "/settings/organizations/$organizationId/groups/$groupId",
@@ -100,6 +115,14 @@ export function GroupsScreen() {
                 cell: (group) => <span className="font-medium">{group.name}</span>,
               },
               {
+                key: "members",
+                header: t("groups.memberCount"),
+                align: "end",
+                cell: (group) => (
+                  <span className="tabular-nums">{format.number(group.memberCount ?? 0)}</span>
+                ),
+              },
+              {
                 key: "description",
                 header: t("groups.descriptionLabel"),
                 hideBelow: "sm",
@@ -110,9 +133,22 @@ export function GroupsScreen() {
                 header: t("groups.managedBy"),
                 cell: (group) =>
                   group.managedBy ? (
-                    <Badge variant="info" icon={Lock}>
-                      {group.managedBy.providerName}
-                    </Badge>
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <Badge variant="info" icon={Lock}>
+                        {t("groups.synchronizedReadOnly", { provider: group.managedBy.providerName })}
+                      </Badge>
+                      {state.can("instance.signIn.view") ? (
+                        <Link
+                          to="/settings/instance/sign-in-providers/$providerId"
+                          params={{ providerId: group.managedBy.providerId }}
+                          search={{ tab: "mapping" }}
+                          onClick={(event) => event.stopPropagation()}
+                          className="text-sm text-accent hover:underline focus-visible:focus-ring"
+                        >
+                          {t("groups.mappingRule")}
+                        </Link>
+                      ) : null}
+                    </span>
                   ) : group.formerlySynchronizedFrom ? (
                     t("groups.formerlySynchronized", { provider: group.formerlySynchronizedFrom })
                   ) : (

@@ -7,7 +7,7 @@ import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import { defineJob, type JobDefinition, type JobFinishedEvent } from "./job-queue.js";
-import { PgBossQueue } from "./pg-boss-queue.js";
+import { PgBossQueue, queueCounts } from "./pg-boss-queue.js";
 
 const databaseUrl = inject("databaseUrl");
 const logger = createLogger({ service: "test", level: "silent" });
@@ -226,8 +226,25 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
     const job = define("counts");
     await producer.register(job);
     const counts = await producer.counts();
-    expect(Object.keys(counts[job.name] ?? {}).sort()).toEqual(["active", "deferred", "failed", "queued"]);
+    expect(Object.keys(counts[job.name] ?? {}).sort()).toEqual([
+      "active",
+      "deferred",
+      "failed",
+      "oldestQueuedAt",
+      "queued",
+    ]);
+    expect(counts[job.name]?.oldestQueuedAt).toBeNull();
     expect(Object.keys(counts).filter((name) => name.startsWith("__pgboss__"))).toEqual([]);
+  });
+
+  it("names when the oldest waiting job of a queue was queued", async () => {
+    const job = define("oldest");
+    await producer.register(job);
+    const before = Date.now();
+    await producer.enqueue(job, { value: 1 });
+    const oldest = (await producer.counts())[job.name]?.oldestQueuedAt;
+    expect(oldest).toBeInstanceOf(Date);
+    expect(Math.abs((oldest?.getTime() ?? 0) - before)).toBeLessThan(60_000);
   });
 });
 
@@ -301,5 +318,13 @@ describe.skipIf(!databaseUrl)("graceful shutdown", () => {
     expect(aborted).toBe(true);
     expect(info?.state).toBe("retry");
     await check.stop({ timeoutSeconds: 1 });
+  });
+});
+
+describe("queue counts", () => {
+  it("counts jobs planned for later as planned, not as waiting", () => {
+    expect(
+      queueCounts({ readyCount: 2, blockedCount: 1, activeCount: 1, deferredCount: 518, failedCount: 0 }),
+    ).toEqual({ queued: 3, active: 1, deferred: 518, failed: 0 });
   });
 });

@@ -114,7 +114,7 @@ export function defaultContentLevel(scopes: TokenScopes): ContentLevel {
 function checkContentLevel(scopes: TokenScopes, level: ContentLevel): void {
   if (level !== "read" && scopes.organization?.spaces !== "manage") {
     throw new OrganizationError(
-      "invalidScopes",
+      "contentLevelNeedsSpacesManage",
       "A token that writes content needs the spaces area with manage",
     );
   }
@@ -224,7 +224,10 @@ export class ApiTokenService {
     }
     const service = owner.serviceOrganization ?? null;
     if (service && scopes.instance) {
-      throw new OrganizationError("invalidScopes", "Service accounts have no instance permissions");
+      throw new OrganizationError(
+        "serviceAccountInstanceScopes",
+        "Service accounts have no instance permissions",
+      );
     }
     if (service && input.organizationId && input.organizationId !== service) {
       throw new OrganizationError("invalidScopes", "A service account token is limited to its organization");
@@ -234,7 +237,7 @@ export class ApiTokenService {
     }
     if (input.organizationId && scopes.instance) {
       throw new OrganizationError(
-        "invalidScopes",
+        "organizationTokenInstanceScopes",
         "A token limited to an organization has no instance scopes",
       );
     }

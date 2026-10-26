@@ -28,7 +28,7 @@ export const membersCreateSpacesSetting = defineSetting({
   key: "spaces.membersCreateSpaces",
   schema: z.boolean(),
   default: true,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -36,8 +36,18 @@ export const membersCreateConfidentialSpacesSetting = defineSetting({
   key: "spaces.membersCreateConfidentialSpaces",
   schema: z.boolean(),
   default: true,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
+});
+
+export const CLEANUP_GRACE_MINIMUM_DAYS = 7;
+
+export const cleanupGraceDaysSetting = defineSetting({
+  key: "spaces.cleanupGraceDays",
+  schema: z.number().int().min(CLEANUP_GRACE_MINIMUM_DAYS).max(3650),
+  default: 30,
+  levels: ["organization"],
+  lockable: false,
 });
 
 export const defaultSpacePermissionsSetting = defineSetting<DefaultSpacePermissions>({
@@ -71,7 +81,7 @@ export const liveVersionIdleMinutesSetting = defineSetting({
   key: "pages.liveVersionIdleMinutes",
   schema: z.number().int().min(1).max(1440),
   default: 10,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
 });
 
@@ -113,7 +123,7 @@ export const trashFirstStageDaysSetting = defineSetting({
   key: "trash.firstStageDays",
   schema: retentionDays,
   default: 90,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
   minimum: trashFirstStageMinimumSetting,
 });
@@ -122,7 +132,7 @@ export const trashSecondStageDaysSetting = defineSetting({
   key: "trash.secondStageDays",
   schema: retentionDays,
   default: 45,
-  levels: ["instance", "organization", "space"],
+  levels: ["organization", "space"],
   lockable: true,
   minimum: trashSecondStageMinimumSetting,
 });
@@ -130,6 +140,7 @@ export const trashSecondStageDaysSetting = defineSetting({
 export const spaceSettings = [
   membersCreateSpacesSetting,
   membersCreateConfidentialSpacesSetting,
+  cleanupGraceDaysSetting,
   defaultSpacePermissionsSetting,
   personalSpacesSetting,
   defaultPageModeSetting,

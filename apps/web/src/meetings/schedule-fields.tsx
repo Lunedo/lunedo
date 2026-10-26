@@ -1,6 +1,7 @@
 import { Checkbox, Field, Input, Select, TimeZoneCombobox } from "@lunedo/ui";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { AppDatePicker, AppTimePicker } from "../components/date-fields.js";
 import { dayInZone } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -125,20 +126,12 @@ export function ScheduleFields({
           </div>
         </fieldset>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         <Field label={firstMeetingLabel ?? t("meetings.schedule.firstDate")} error={errors.startsOn} required>
-          <Input
-            type="date"
-            value={value.startsOn}
-            onChange={(event) => set({ startsOn: event.target.value })}
-          />
+          <AppDatePicker value={value.startsOn} onValueChange={(startsOn) => set({ startsOn })} />
         </Field>
         <Field label={t("meetings.schedule.time")} error={errors.startTime} required>
-          <Input
-            type="time"
-            value={value.startTime}
-            onChange={(event) => set({ startTime: event.target.value })}
-          />
+          <AppTimePicker value={value.startTime} onValueChange={(startTime) => set({ startTime })} />
         </Field>
         <Field
           label={t("meetings.schedule.duration")}

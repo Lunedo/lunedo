@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
@@ -55,13 +54,7 @@ export function OrganizationContentScreen() {
   const change = (key: string, value: Parameters<typeof mutation.mutateAsync>[0]["change"]) =>
     mutation.mutateAsync({ key, change: value }).then(() => undefined);
   return (
-    <SettingsPage
-      title={t("content.title")}
-      description={t("content.organizationDescription")}
-      icon={Trash2}
-      organizationId={organizationId}
-      width="wide"
-    >
+    <SettingsPage title={t("content.title")} description={t("content.organizationDescription")}>
       <Panel title={t("content.pagesSection")}>
         <SettingsList
           settings={settings.data}
@@ -134,7 +127,7 @@ export function OrganizationContentScreen() {
         />
       </Panel>
       {canManageTrash ? (
-        <Panel title={t("trash.deletedContent")} description={t("trash.deletedContentDescription")}>
+        <Panel title={t("trash.deletedContent")}>
           <DeletedConfidentialNotice organizationId={organizationId} />
           <DeletedContent
             entries={trash.data}

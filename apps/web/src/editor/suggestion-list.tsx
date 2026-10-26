@@ -17,6 +17,7 @@ export interface SuggestionListProps {
   label: string;
   emptyText: string;
   loading?: boolean;
+  hints?: string;
 }
 
 export interface SuggestionListHandle {
@@ -29,7 +30,7 @@ export function moveIndex(current: number, delta: number, length: number): numbe
 }
 
 export const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(function SuggestionList(
-  { items, label, emptyText, loading = false },
+  { items, label, emptyText, loading = false, hints },
   ref,
 ) {
   const [active, setActive] = useState(0);
@@ -131,6 +132,11 @@ export const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListPro
           );
         })}
       </div>
+      {hints && items.length > 0 ? (
+        <p aria-hidden="true" className="mt-1 border-t border-border px-2 pt-1 text-xs text-text-muted">
+          {hints}
+        </p>
+      ) : null}
     </div>
   );
 });

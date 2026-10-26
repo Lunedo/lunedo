@@ -38,9 +38,7 @@ describe("browser push on the personal settings", () => {
       "GET /api/v1/account/push": () => ({ body: { enabled: false, publicKey: null, devices: [] } }),
     });
     await renderWithProviders(section());
-    expect(
-      await screen.findByText("Turned off for this instance. Instance administrators can turn it on."),
-    ).toBeTruthy();
+    expect(await screen.findByText("Turned off for this instance.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Turn on for this device" })).toBeNull();
   });
 

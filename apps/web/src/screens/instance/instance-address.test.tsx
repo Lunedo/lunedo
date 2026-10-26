@@ -27,7 +27,7 @@ describe("InstanceAddressRow", () => {
     });
     await renderWithProviders(<InstanceAddressRow canManage />);
     expect(await screen.findByText("https://wiki.example.org")).toBeTruthy();
-    expect(screen.getByText(/Set by LUNEDO_INSTANCE_URL in the server environment/)).toBeTruthy();
+    expect(screen.getByText(/Set in the server environment/)).toBeTruthy();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 

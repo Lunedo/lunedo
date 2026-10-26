@@ -46,7 +46,7 @@ test("adds a passkey and uses it as second factor and for sign-in", async ({ bro
   const keyName = `Test key ${unique()}`;
   await page.getByLabel("Name", { exact: true }).fill(keyName);
   await page.getByRole("dialog").getByRole("button", { name: "Add passkey" }).click();
-  const confirm = page.getByRole("dialog", { name: "Confirm your identity" });
+  const confirm = page.getByRole("region", { name: "Confirm your identity" });
   const added = page.getByText(keyName, { exact: true });
   await expect(confirm.or(added)).toBeVisible();
   if (await confirm.isVisible()) {
@@ -78,7 +78,7 @@ test("returns to the page that was open when the session ended", async ({ browse
   const context = await forwardFrom(await browser.newContext({ storageState: organization.adminState }));
   const page = await context.newPage();
   await page.goto("/settings/security");
-  await expect(page.getByRole("heading", { name: "Security", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign-in and security", level: 1 })).toBeVisible();
   await context.clearCookies({ name: "__Host-lunedo-session" });
   await page.reload();
   await expect(page).toHaveURL(/\/sign-in\?/);

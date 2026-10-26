@@ -68,7 +68,7 @@ function adminApi(overrides: Record<string, Handler> = {}) {
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }),
     "POST /api/v1/instance/identity-provider-connection-checks": (request) => ({
       body: {
@@ -380,9 +380,14 @@ describe("adding an LDAP directory", () => {
     await userEvent.click(await screen.findByRole("button", { name: /LDAP or Active Directory/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { name: "Connect a directory" })).toBeTruthy();
+    expect(screen.getByText("For example ldaps://dc01.example.org.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "More about: Server address" }));
     expect(
-      screen.getByText(/^The address of your directory server, for example ldaps:\/\/dc01\.example\.org\./),
+      await screen.findByText(
+        /^The address of your directory server, for example ldaps:\/\/dc01\.example\.org\./,
+      ),
     ).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(
       screen.getByText(/^The part of the directory that holds the people who may sign in, for example/),
     ).toBeTruthy();
@@ -1016,15 +1021,11 @@ describe("SAML and LDAP providers in the list and the details", () => {
       }),
     });
     await renderPath(`/settings/instance/sign-in-providers/new?providerId=${LDAP}&step=2`);
-    expect(
-      (await screen.findAllByText(/Read the attributes of a test person to choose/)).length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Read a test person to choose attributes/)).length).toBeGreaterThan(0);
     await userEvent.type(screen.getByLabelText("Test person"), "alice@lunedo.lab");
     await userEvent.click(screen.getByRole("button", { name: "Read attributes" }));
     expect(await screen.findByText("The directory returned 3 attributes for Alice Admin.")).toBeTruthy();
-    expect(
-      screen.getAllByText(/The directory returned no value of this attribute for the test person/),
-    ).toHaveLength(2);
+    expect(screen.getAllByText(/No value for the test person/)).toHaveLength(2);
     await userEvent.click(screen.getByRole("combobox", { name: "Attribute for the e-mail address" }));
     await userEvent.click(await screen.findByRole("option", { name: /userPrincipalName/ }));
     await waitFor(() =>

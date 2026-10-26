@@ -56,6 +56,7 @@ function signedOutApi(options: Record<string, unknown>, overrides: Record<string
     "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
+        providers: [],
         emailStep: true,
         directProvider: null,
         lastProvider: null,
@@ -199,13 +200,13 @@ describe("signing in with a directory password", () => {
   it.each([
     [401, "invalidCredentials", /The sign-in name or the password is not correct/],
     [403, "passwordExpired", /Your directory password has expired.*Lunedo never changes directory passwords/],
-    [403, "passwordMustChange", /must be changed before you can sign in.*contact IT/],
+    [403, "passwordMustChange", /must be changed before you can sign in.*contact the administrators of/],
     [403, "accountLocked", /Your directory account is locked/],
     [403, "accountDisabled", /Your directory account is disabled/],
     [403, "outsideSignInHours", /may not sign in at this time/],
     [429, "locked", /Too many failed attempts/],
     [429, "rateLimited", /Too many requests/],
-    [502, "providerUnavailable", /The directory could not be reached.*contact IT/],
+    [502, "providerUnavailable", /The directory could not be reached.*contact the administrators of/],
   ])("explains %s %s and clears the password", async (status, code, message) => {
     directoryApi("email", () => problem(status, code));
     await renderPath("/sign-in");
@@ -248,12 +249,11 @@ describe("signing in with a directory password", () => {
     });
   });
 
-  it("shows the password form for a directory used last instead of a redirect", async () => {
-    const { requests } = signedOutApi({
-      lastProvider: { id: LDAP, type: "ldap", name: "Verlag AD", preset: "activeDirectory", logoRef: null },
-    });
+  it("shows the password form for a directory chosen above the e-mail address instead of a redirect", async () => {
+    const directory = { id: LDAP, type: "ldap", name: "Verlag AD", preset: "activeDirectory", logoRef: null };
+    const { requests } = signedOutApi({ providers: [directory], lastProvider: directory });
     await renderPath("/sign-in");
-    await userEvent.click(await screen.findByRole("button", { name: "Verlag AD" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Continue with Verlag AD" }));
     expect(await screen.findByLabelText("Sign-in name at Verlag AD")).toBeTruthy();
     expect(requests.some((request) => request.path.endsWith("/start"))).toBe(false);
     await userEvent.click(screen.getByRole("button", { name: "Change" }));
@@ -297,7 +297,10 @@ describe("confirming the identity with a directory password", () => {
         body: { instance: [], organization: [], grantableAreas: { instance: {}, organization: {} } },
       }),
       "GET /api/v1/account/preferences": () => ({ body: [] }),
-      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
+      "GET /api/v1/account/profile": () => ({
+        body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
+      }),
       "GET /api/v1/account/identities": () => ({
         body: [identity],
       }),
@@ -322,7 +325,7 @@ describe("confirming the identity with a directory password", () => {
       [`DELETE /api/v1/account/identities/${identity.id}`]: () =>
         confirmed ? { status: 204 } : problem(403, "reauthenticationRequired"),
     });
-    await renderPath("/settings/security");
+    await renderPath("/settings/profile");
     await userEvent.click(await screen.findByRole("button", { name: "Unlink" }));
     const confirm = await screen.findByRole("dialog", { name: "Unlink Verlag AD?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));

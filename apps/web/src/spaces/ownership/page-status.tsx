@@ -70,16 +70,18 @@ export function PageStatusControl({
   );
 }
 
-function StatusChoices({
+export function StatusChoices({
   itemId,
   spaceId,
   status,
   onDone,
+  heading = true,
 }: {
   itemId: string;
   spaceId: string;
   status: PageStatus | null;
   onDone: () => void;
+  heading?: boolean;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -110,7 +112,7 @@ function StatusChoices({
 
   return (
     <div className="flex min-w-field max-w-full flex-col gap-2">
-      <p className="text-sm font-semibold">{t("pageStatus.title")}</p>
+      {heading ? <p className="text-sm font-semibold">{t("pageStatus.title")}</p> : null}
       {values.isPending ? <Skeleton className="h-control w-full" /> : null}
       {values.isError ? (
         <LoadError what={t("pageStatus.loadFailed")} error={values.error} onRetry={() => values.refetch()} />

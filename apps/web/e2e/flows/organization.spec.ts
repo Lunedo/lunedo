@@ -1,12 +1,19 @@
 import { expect, test } from "../support/fixtures.js";
-import { expectAccessible, linkFrom, signInWithPassword, waitForMail } from "../support/helpers.js";
+import {
+  callApi,
+  expectAccessible,
+  linkFrom,
+  openSettingsArea,
+  signInWithPassword,
+  waitForMail,
+} from "../support/helpers.js";
 import { forwardFrom, unique } from "../support/people.js";
 
 function pattern(text: string): RegExp {
   return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
-test("invites a member who accepts and signs in", async ({ page, browser, organization }) => {
+test("invites a member who accepts and signs in", async ({ page, browser }) => {
   const suffix = unique();
   const member = {
     name: `Max Member ${suffix}`,
@@ -14,7 +21,8 @@ test("invites a member who accepts and signs in", async ({ page, browser, organi
     password: "member passphrase for testing",
   };
   await page.goto("/settings/preferences");
-  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Members" }).click();
+  await openSettingsArea(page, "Organization");
+  await page.getByRole("list", { name: "People and access" }).getByRole("link", { name: "Members" }).click();
   await expect(page.getByRole("heading", { name: "Members" })).toBeVisible();
   await expectAccessible(page, "members");
 
@@ -56,7 +64,8 @@ test("creates a group, adds a member and gives the group a custom role", async (
   await page.goto("/settings/preferences");
   const member = await organization.invite("Greta");
 
-  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Groups" }).click();
+  await openSettingsArea(page, "Organization");
+  await page.getByRole("list", { name: "People and access" }).getByRole("link", { name: "Groups" }).click();
   await page.getByRole("button", { name: "Create group" }).click();
   const create = page.getByRole("dialog", { name: "Create group" });
   await create.getByLabel("Name", { exact: true }).fill(groupName);
@@ -72,7 +81,7 @@ test("creates a group, adds a member and gives the group a custom role", async (
   await add.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText("The member was added.").first()).toBeVisible();
 
-  await page.getByRole("list", { name: organization.name }).getByRole("link", { name: "Roles" }).click();
+  await page.getByRole("list", { name: "People and access" }).getByRole("link", { name: "Roles" }).click();
   await page.getByRole("button", { name: "Create role" }).click();
   const role = page.getByRole("dialog", { name: "Create role" });
   await role.getByLabel("Name", { exact: true }).fill(roleName);
@@ -100,16 +109,17 @@ test("creates a personal API token and revokes it", async ({ page, organization 
   await page.getByRole("button", { name: "Create token" }).click();
   const dialog = page.getByRole("dialog", { name: "Create API token" });
   await dialog.getByLabel("Name", { exact: true }).fill(tokenName);
+  await dialog.getByRole("button", { name: /^Rights in detail/ }).click();
   await dialog
     .getByRole("radiogroup", { name: "Members and groups" })
-    .getByRole("radio", { name: "View" })
+    .getByRole("radio", { name: "Read" })
     .click();
   await dialog.getByRole("button", { name: "Create token" }).click();
   const secret =
     (await page.getByRole("dialog", { name: "Your new token" }).locator("code").textContent()) ?? "";
   expect(secret).toMatch(/^ld_/);
   await page.getByRole("button", { name: "Done" }).click();
-  const row = page.getByRole("listitem").filter({ hasText: tokenName });
+  const row = page.getByRole("row").filter({ hasText: tokenName });
   await expect(row).toBeVisible();
 
   const allowed = await page.request.fetch(`/api/v1/organizations/${organization.id}/members`, {
@@ -117,7 +127,8 @@ test("creates a personal API token and revokes it", async ({ page, organization 
   });
   expect(allowed.status()).toBe(200);
 
-  await row.getByRole("button", { name: "Revoke" }).click();
+  await row.getByRole("button", { name: `Actions for ${tokenName}` }).click();
+  await page.getByRole("menuitem", { name: "Revoke" }).click();
   const confirm = page.getByRole("alertdialog").or(page.getByRole("dialog", { name: /Revoke/ }));
   await expect(confirm.getByText("Who loses access")).toBeVisible();
   await confirm.getByRole("button", { name: "Revoke" }).click();
@@ -126,4 +137,42 @@ test("creates a personal API token and revokes it", async ({ page, organization 
     headers: { authorization: `Bearer ${secret}`, cookie: "" },
   });
   expect(refused.status()).toBe(401);
+});
+
+test("opens the page of a member and adds them to a group and a space", async ({ page, organization }) => {
+  const suffix = unique();
+  await page.goto("/settings/preferences");
+  const member = await organization.invite("Felix");
+  await callApi(page, "POST", `/api/v1/organizations/${organization.id}/groups`, {
+    name: `Field team ${suffix}`,
+  });
+  const key = `MP${suffix}`.slice(0, 10).toUpperCase();
+  await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: `Store north ${suffix}`,
+    key,
+    visibility: "private",
+    grants: [],
+  });
+
+  await page.goto(`/settings/organizations/${organization.id}/members`);
+  await page.getByRole("row", { name: pattern(member.name) }).click();
+  await expect(page.getByRole("heading", { name: member.name, level: 1 })).toBeVisible();
+  await expectAccessible(page, "member page");
+
+  await page.getByRole("button", { name: "Add to groups" }).click();
+  const groups = page.getByRole("dialog", { name: `Add ${member.name} to groups` });
+  await groups.getByRole("checkbox", { name: `Field team ${suffix}` }).click();
+  await groups.getByRole("button", { name: "Next" }).click();
+  await expect(groups.getByText("Who gains access")).toBeVisible();
+  await groups.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("tab", { name: /Groups/ }).click();
+  await expect(page.getByRole("link", { name: `Field team ${suffix}` })).toBeVisible();
+
+  await page.getByRole("tab", { name: /Spaces/ }).click();
+  await page.getByRole("button", { name: "Add to spaces" }).click();
+  const spaces = page.getByRole("dialog", { name: `Add ${member.name} to spaces` });
+  await spaces.getByRole("checkbox", { name: `Store north ${suffix}` }).click();
+  await spaces.getByRole("button", { name: "Next" }).click();
+  await spaces.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByRole("link", { name: `Store north ${suffix}` })).toBeVisible();
 });

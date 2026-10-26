@@ -1,10 +1,11 @@
-import { Badge, Button, EmptyState, List, ListRow, Notice, Section, Skeleton } from "@lunedo/ui";
+import { Badge, Button, EmptyState, Notice, Section, Skeleton, Table, TruncatedText } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { FileInput, Import, Plus } from "lucide-react";
+import { Import, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePaged } from "../components/table-state.js";
 import { LoadError, useFailureToast } from "../errors/failure.js";
 import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -83,6 +84,66 @@ function detail(t: TFunction, format: Formatter, entry: ImportView): string {
   }
 }
 
+function ImportsTable({
+  rows,
+  onOpen,
+  actionLabel,
+}: {
+  rows: ImportView[];
+  onOpen: (entry: ImportView) => void;
+  actionLabel: (entry: ImportView) => string;
+}) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const paged = usePaged(rows);
+  return (
+    <Table
+      caption={t("imports.list.title")}
+      rowKey={(entry) => entry.id}
+      rows={paged.rows}
+      pagination={paged.pagination}
+      onRowClick={onOpen}
+      rowLabel={actionLabel}
+      columns={[
+        {
+          key: "name",
+          header: t("imports.list.name"),
+          grow: true,
+          cell: (entry) => (
+            <span className="flex min-w-0 flex-col leading-tight">
+              <TruncatedText
+                className="font-medium"
+                text={
+                  entry.targetSpace
+                    ? t("imports.list.reimportTitle", { space: entry.targetSpace.name })
+                    : importTitle(t, entry)
+                }
+              />
+              <TruncatedText className="text-xs text-text-muted" text={detail(t, format, entry)} />
+            </span>
+          ),
+        },
+        {
+          key: "state",
+          header: t("imports.list.state"),
+          cell: (entry) => <Badge variant={stateBadge(entry.state)}>{stateLabel(t, entry.state)}</Badge>,
+        },
+        {
+          key: "actions",
+          sticky: true,
+          align: "end",
+          header: <span className="sr-only">{t("settings.actions")}</span>,
+          cell: (entry) => (
+            <Button size="sm" variant="secondary" onClick={() => onOpen(entry)}>
+              {actionLabel(entry)}
+            </Button>
+          ),
+        },
+      ]}
+    />
+  );
+}
+
 export function ImportsScreen() {
   const { t } = useTranslation();
   const format = useFormat();
@@ -137,11 +198,8 @@ export function ImportsScreen() {
     <SettingsPage
       title={t("imports.title")}
       description={t("imports.description")}
-      icon={Import}
-      organizationId={organizationId}
-      width="wide"
       actions={
-        canImport ? (
+        canImport && (imports.data?.length ?? 0) > 0 ? (
           <Button variant="primary" icon={Plus} loading={creating} onClick={() => void start()}>
             {t("imports.list.new")}
           </Button>
@@ -170,30 +228,7 @@ export function ImportsScreen() {
           />
         </Section>
       ) : (
-        <Section title={t("imports.list.title")}>
-          <List label={t("imports.list.title")}>
-            {imports.data.map((entry) => (
-              <ListRow
-                key={entry.id}
-                icon={FileInput}
-                title={
-                  entry.targetSpace
-                    ? t("imports.list.reimportTitle", { space: entry.targetSpace.name })
-                    : importTitle(t, entry)
-                }
-                description={detail(t, format, entry)}
-                actions={
-                  <>
-                    <Badge variant={stateBadge(entry.state)}>{stateLabel(t, entry.state)}</Badge>
-                    <Button variant="secondary" onClick={() => void open(entry)}>
-                      {actionLabel(entry)}
-                    </Button>
-                  </>
-                }
-              />
-            ))}
-          </List>
-        </Section>
+        <ImportsTable rows={imports.data} onOpen={(entry) => void open(entry)} actionLabel={actionLabel} />
       )}
       {canImport && folder.data ? (
         <Notice variant="info" title={t("imports.list.largeTitle")}>

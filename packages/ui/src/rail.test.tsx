@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Bell, House } from "lucide-react";
 import type { ComponentProps } from "react";
@@ -69,9 +69,38 @@ describe("Sidebar", () => {
     expect(screen.getByRole("list", { name: "My account" })).toBeDefined();
     const current = screen.getByRole("link", { name: "Preferences" });
     expect(current.getAttribute("aria-current")).toBe("page");
-    expect(current.className).toContain("text-selected-text");
-    expect(current.querySelector("svg")?.getAttribute("class")).toContain("text-accent");
-    expect(screen.getByRole("link", { name: "Security" }).getAttribute("href")).toBe("/settings/security");
+    expect(current.className).toContain("bg-accent");
+    expect(current.className).toContain("text-on-accent");
+    expect(current.className.split(" ")).not.toContain("text-text");
+    expect(current.querySelector("svg")?.getAttribute("class")).toContain("text-on-accent");
+    const other = screen.getByRole("link", { name: "Security" });
+    expect(other.getAttribute("href")).toBe("/settings/security");
+    expect(other.className).not.toContain("bg-accent");
+  });
+
+  it("lists ungrouped items first and separates groups with a heading line", () => {
+    renderUi(
+      <Sidebar label="Organization settings">
+        <SidebarHeader eyebrow="Settings">Organization</SidebarHeader>
+        <SidebarGroup>
+          <SidebarItem label="General" href="/general" />
+        </SidebarGroup>
+        <SidebarGroup label="People and access" variant="divided">
+          <SidebarItem label="Members" href="/members" />
+        </SidebarGroup>
+      </Sidebar>,
+    );
+    expect(screen.getByText("Settings")).toBeDefined();
+    expect(screen.getByRole("heading", { level: 2, name: "Organization" })).toBeDefined();
+    const lists = screen.getAllByRole("list");
+    expect(within(lists[0] as HTMLElement).getByRole("link", { name: "General" })).toBeDefined();
+    const group = screen.getByRole("list", { name: "People and access" });
+    expect(within(group).getByRole("link", { name: "Members" })).toBeDefined();
+    const heading = screen.getByRole("heading", { level: 3, name: "People and access" });
+    expect(heading.className).toContain("text-2xs");
+    expect(heading.className).toContain("font-bold");
+    expect(heading.className).toContain("uppercase");
+    expect(heading.parentElement?.className).toContain("border-t");
   });
 
   it("hides itself when collapsed", () => {

@@ -13,7 +13,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ImageUp, KeyRound, Pause, Play, Trash2 } from "lucide-react";
+import { ImageUp, Pause, Play, Trash2 } from "lucide-react";
 import { type ComponentType, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -30,6 +30,7 @@ import {
   syncRunsQuery,
   uploadProviderLogo,
 } from "../../api/identity-queries.js";
+import { IMAGE_MAX_BYTES, IMAGE_TYPES, toBase64 } from "../../components/image-upload.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -67,9 +68,6 @@ import { continueSetupPath } from "./providers-screen.js";
 
 const route = getRouteApi("/app/settings/instance/sign-in-providers/$providerId");
 
-const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
-const LOGO_MAX_BYTES = 256 * 1024;
-
 export interface ProviderTab {
   value: string;
   labelKey: string;
@@ -88,13 +86,6 @@ export const providerTabs: ProviderTab[] = [
   { value: "scim", labelKey: "identityProviders.tabs.scim", component: ScimTab, available: () => true },
 ];
 
-async function toBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
 export function InstanceProviderScreen() {
   const { t } = useTranslation();
   const { providerId } = route.useParams();
@@ -108,7 +99,6 @@ export function InstanceProviderScreen() {
 
   return (
     <SettingsPage
-      width="wide"
       title={data?.name ?? t("identityProviders.details")}
       {...(data
         ? {
@@ -117,11 +107,7 @@ export function InstanceProviderScreen() {
               .join(" · "),
           }
         : {})}
-      icon={KeyRound}
-      breadcrumbs={[
-        { label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" },
-        { label: data?.name ?? t("identityProviders.details") },
-      ]}
+      back={{ label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" }}
       actions={
         data && data.type !== "ldap" ? (
           <StartTestButton provider={data} returnTo={() => `${globalThis.location.pathname}?tab=overview`} />
@@ -235,7 +221,7 @@ function Overview({
             control={<span className="break-all font-mono text-sm">{provider.config.url}</span>}
           />
         ) : (
-          <div className="px-4 py-3">
+          <div className="py-3">
             {provider.type === "saml" ? (
               <SamlServiceProviderFields provider={provider} />
             ) : (
@@ -246,7 +232,7 @@ function Overview({
       </Section>
       {provider.type === "ldap" ? (
         <Section title={t("identityProviders.directoryTest.title")}>
-          <div className="px-4 py-3">
+          <div className="py-3">
             <DirectoryTest provider={provider} />
           </div>
         </Section>
@@ -254,7 +240,7 @@ function Overview({
       {provider.type === "saml" ? (
         <>
           <Section title={t("identityProviders.credentials.groupTitles.signing")}>
-            <div className="px-4 py-3">
+            <div className="py-3">
               <CredentialsList
                 provider={provider}
                 canManage={canManage}
@@ -265,7 +251,7 @@ function Overview({
           </Section>
           {provider.config.preset === "entraId" ? (
             <Section title={t("identityProviders.credentials.groupTitles.graph")}>
-              <div className="px-4 py-3">
+              <div className="py-3">
                 <CredentialsList
                   provider={provider}
                   canManage={canManage}
@@ -278,7 +264,7 @@ function Overview({
         </>
       ) : (
         <Section title={t("identityProviders.credentials.title")}>
-          <div className="px-4 py-3">
+          <div className="py-3">
             <CredentialsList provider={provider} canManage={canManage} removeInline={false} />
           </div>
         </Section>
@@ -405,14 +391,14 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
     await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
   };
   const upload = async (file: File) => {
-    if (!(LOGO_TYPES as readonly string[]).includes(file.type) || file.size > LOGO_MAX_BYTES) {
+    if (!(IMAGE_TYPES as readonly string[]).includes(file.type) || file.size > IMAGE_MAX_BYTES) {
       toast({ title: t("failures.uploadLogo"), description: t("problems.invalidLogo"), variant: "error" });
       return;
     }
     setBusy(true);
     try {
       await uploadProviderLogo(provider.id, {
-        contentType: file.type as (typeof LOGO_TYPES)[number],
+        contentType: file.type as (typeof IMAGE_TYPES)[number],
         data: await toBase64(file),
       });
       await refresh();
@@ -427,6 +413,7 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
     <SettingRow
       label={t("identityProviders.logo.label")}
       description={t("identityProviders.logo.hint")}
+      help={t("identityProviders.logo.help")}
       control={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {logo ? (
@@ -443,7 +430,7 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
               <input
                 ref={input}
                 type="file"
-                accept={LOGO_TYPES.join(",")}
+                accept={IMAGE_TYPES.join(",")}
                 className="sr-only"
                 aria-label={t("identityProviders.logo.upload")}
                 tabIndex={-1}
@@ -516,6 +503,7 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
           <SettingRow
             label={t("identityProviders.status.activateTitle", { name: provider.name })}
             description={t("identityProviders.status.activateDescription")}
+            help={t("identityProviders.status.activateHelp")}
             control={
               <Button variant="primary" icon={Play} loading={busy} onClick={() => void activate()}>
                 {t("identityProviders.status.activate")}

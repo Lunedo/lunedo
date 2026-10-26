@@ -24,13 +24,11 @@ import { z } from "zod";
 import { defineSetting, type SettingLevel } from "./definition.js";
 import type { ScopeChain, SettingsService, WriteOptions } from "./service.js";
 
-const localeLevels = ["instance", "organization", "user"] as const;
-
 export const dateFormatSetting = defineSetting<DateFormat>({
   key: "locale.dateFormat",
   schema: z.enum(dateFormats),
   default: defaultFormats.dateFormat,
-  levels: localeLevels,
+  levels: ["organization", "user"],
   lockable: false,
 });
 
@@ -38,7 +36,7 @@ export const timeFormatSetting = defineSetting<TimeFormat>({
   key: "locale.timeFormat",
   schema: z.enum(timeFormats),
   default: defaultFormats.timeFormat,
-  levels: localeLevels,
+  levels: ["organization", "user"],
   lockable: false,
 });
 
@@ -46,7 +44,7 @@ export const numberFormatSetting = defineSetting<NumberFormat>({
   key: "locale.numberFormat",
   schema: z.enum(numberFormats),
   default: defaultFormats.numberFormat,
-  levels: localeLevels,
+  levels: ["organization", "user"],
   lockable: false,
 });
 
@@ -54,7 +52,7 @@ export const firstDayOfWeekSetting = defineSetting<WeekStart>({
   key: "locale.firstDayOfWeek",
   schema: z.enum(weekStarts),
   default: defaultFormats.firstDayOfWeek,
-  levels: localeLevels,
+  levels: ["organization", "user"],
   lockable: false,
 });
 
@@ -106,6 +104,14 @@ export const sidebarCollapsedSetting = defineSetting({
   lockable: false,
 });
 
+export const sidebarCollapsedWhileEditingSetting = defineSetting({
+  key: "appearance.sidebarCollapsedWhileEditing",
+  schema: z.boolean(),
+  default: true,
+  levels: ["user"],
+  lockable: false,
+});
+
 export const editorToolbarSetting = defineSetting({
   key: "appearance.editorToolbar",
   schema: z.boolean(),
@@ -122,11 +128,31 @@ export const folderViewSetting = defineSetting({
   lockable: false,
 });
 
+export const categoryViews = ["automatic", "mine", "all"] as const;
+
+export const categoryViewSetting = defineSetting({
+  key: "appearance.categoryView",
+  schema: z.enum(categoryViews),
+  default: "automatic",
+  levels: ["user"],
+  lockable: false,
+});
+
+export const tablePageSizes = [25, 50, 100] as const;
+
+export const tablePageSizeSetting = defineSetting({
+  key: "appearance.tablePageSize",
+  schema: z.union([z.literal(25), z.literal(50), z.literal(100)]),
+  default: 25,
+  levels: ["user"],
+  lockable: false,
+});
+
 export const accentColorSetting = defineSetting<AccentColor>({
   key: "branding.accentColor",
   schema: z.enum(accentColors),
   default: "petrol",
-  levels: ["instance", "organization"],
+  levels: ["instance"],
   lockable: false,
 });
 
@@ -161,7 +187,10 @@ export const preferenceSettings = [
   densitySetting,
   fontSetting,
   sidebarCollapsedSetting,
+  sidebarCollapsedWhileEditingSetting,
   editorToolbarSetting,
   folderViewSetting,
+  categoryViewSetting,
+  tablePageSizeSetting,
   accentColorSetting,
 ];

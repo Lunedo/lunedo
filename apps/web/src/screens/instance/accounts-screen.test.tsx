@@ -13,6 +13,7 @@ const OLIVIA = {
 const MAX = "01929b1e-0000-7000-8000-0000000000cc";
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const RESEARCH = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60";
+const LIAM = "01929b1e-0000-7000-8000-0000000000cd";
 
 function account(id: string, name: string, email: string) {
   const own = id === OLIVIA.id;
@@ -32,6 +33,7 @@ function account(id: string, name: string, email: string) {
     createdAt: "2026-09-01T08:00:00.000Z",
     lastSignInAt: "2026-10-01T09:00:00.000Z",
     twoFactorActive: true,
+    secondFactorRequired: false,
     instanceRoles: id === OLIVIA.id ? [{ builtInRole: "owner", customRoleId: null, name: null }] : [],
   };
 }
@@ -89,7 +91,7 @@ function api(
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/accounts": (request) => ({
       body: {
         items: request.path.includes("q=max")
@@ -107,6 +109,7 @@ function api(
             name: "Platform Team",
             kind: "member",
             expiresAt: null,
+            since: "2026-08-21T09:58:00.000Z",
             home: true,
             roles: [
               {
@@ -125,6 +128,7 @@ function api(
             name: "Research",
             kind: "member",
             expiresAt: null,
+            since: "2026-08-21T09:58:00.000Z",
             home: false,
             roles: [],
           },
@@ -148,7 +152,17 @@ function api(
     [`GET /api/v1/instance/accounts/${OLIVIA.id}`]: () => ({
       body: {
         account: account(OLIVIA.id, OLIVIA.name, OLIVIA.email),
-        memberships: [],
+        memberships: [
+          {
+            organizationId: ORGANIZATION,
+            name: "Platform Team",
+            kind: "member",
+            expiresAt: null,
+            since: "2026-08-21T09:58:00.000Z",
+            home: true,
+            roles: [],
+          },
+        ],
         sessions: [],
         tokens: [],
         twoFactor: { totp: true, passkeys: 0, recoveryCodes: 10 },
@@ -182,8 +196,111 @@ async function renderAccounts() {
   return screen.findByRole("table", { name: "Accounts" });
 }
 
+async function accountPage(name: string) {
+  const heading = await screen.findByRole("heading", { level: 1, name });
+  return heading.closest("main") as HTMLElement;
+}
+
 describe("the accounts page", () => {
-  it("searches on the server and opens an account in a side panel", async () => {
+  it("ends one session after naming its effect and lists the activity of the account", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 1 } }), {
+      [`POST /api/v1/accounts/${MAX}/sessions/01929b1e-0000-7000-8000-0000000000ff/end`]: () => ({
+        status: 204,
+      }),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.accounts.view", "instance.accounts.manage", "instance.audit.view"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await accountPage("Max Member");
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "End the session on Firefox · Linux" }));
+    const dialog = await screen.findByRole("dialog", { name: "End the session on Firefox · Linux?" });
+    expect(within(dialog).getByText(/Other sessions stay/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "End session" }));
+    await waitFor(() =>
+      expect(
+        requests.some((request) => request.method === "POST" && request.path.endsWith("0000000000ff/end")),
+      ).toBe(true),
+    );
+    await userEvent.click(within(panel).getByRole("tab", { name: "Activity" }));
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) =>
+            request.path.startsWith("/api/v1/instance/audit-events?") &&
+            request.path.includes(`personId=${MAX}`) &&
+            request.path.includes("level=instance"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("changes the instance role of the account from its page and keeps the tab in the address", async () => {
+    const { requests } = api(() => ({ status: 204 }), {
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.accounts.view", "instance.accounts.manage", "instance.roles.manage"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+      "GET /api/v1/instance/roles": () => ({ body: [] }),
+      "GET /api/v1/instance/role-assignments": () => ({ body: { items: [], nextCursor: null } }),
+      "POST /api/v1/instance/role-assignments/batch": () => ({ status: 201, body: [] }),
+    });
+    window.history.replaceState(null, "", `/settings/instance/accounts/${MAX}?tab=security`);
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const panel = await accountPage("Max Member");
+    expect(
+      within(panel).getByRole("tab", { name: "Sign-in and security" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    await userEvent.click(within(panel).getByRole("button", { name: "Change instance role" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change the instance role of Max Member" });
+    expect(await within(dialog).findByText("No instance role.")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Give role" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/instance/role-assignments/batch")?.body,
+      ).toMatchObject({
+        role: { builtIn: "administrator" },
+        principals: [{ kind: "account", id: MAX }],
+      }),
+    );
+  });
+
+  it("lists the owner role among the held instance roles, without removing it", async () => {
+    api(() => ({ status: 204 }), {
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.accounts.view", "instance.accounts.manage", "instance.roles.manage"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+      "GET /api/v1/instance/roles": () => ({ body: [] }),
+      "GET /api/v1/instance/role-assignments": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    window.history.replaceState(null, "", `/settings/instance/accounts/${OLIVIA.id}`);
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const panel = await accountPage("Olivia Owner");
+    await userEvent.click(within(panel).getByRole("button", { name: "Change instance role" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change the instance role of Olivia Owner" });
+    expect(await within(dialog).findByText("Owner")).toBeTruthy();
+    expect(within(dialog).getByText("Changes only when another account becomes owner")).toBeTruthy();
+    expect(within(dialog).queryByText("No instance role.")).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Remove" })).toBeNull();
+  });
+
+  it("searches on the server and opens an account on its own page", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 1 } }));
     const table = await renderAccounts();
     expect(await within(table).findByText("Olivia Owner")).toBeTruthy();
@@ -193,10 +310,34 @@ describe("the accounts page", () => {
     await waitFor(() => expect(within(table).queryByText("Olivia Owner")).toBeNull());
 
     await userEvent.click(within(table).getByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
-    expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
-    expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
+    const panel = await accountPage("Max Member");
+    expect(await within(panel).findByText("Security at a glance")).toBeTruthy();
     expect(within(panel).getByText("One passkey")).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("tab", { name: /Organizations/ }));
+    expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
+    expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
+    expect(window.location.pathname).toBe(`/settings/instance/accounts/${MAX}`);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const back = within(panel).getByRole("link", { name: "Accounts" });
+    expect(back.getAttribute("aria-current")).toBeNull();
+    const navigation = screen.getByRole("link", { name: "Accounts", current: "page" });
+    expect(navigation.getAttribute("href")).toBe("/settings/instance/accounts");
+    await userEvent.click(back);
+    expect(await screen.findByRole("table", { name: "Accounts" })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/instance/accounts");
+  });
+
+  it("opens an account from its address and reports when it cannot be loaded", async () => {
+    api(() => ({ body: {} }), {
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => problem(404, "notFound"),
+    });
+    window.history.replaceState(null, "", `/settings/instance/accounts/${MAX}`);
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const page = await accountPage("Account");
+    expect(await within(page).findByText("The account details could not be loaded")).toBeTruthy();
+    expect(within(page).getByRole("link", { name: "Accounts" })).toBeTruthy();
   });
 
   it("lists the organizations of each account, marks the home organization and names who manages it", async () => {
@@ -207,18 +348,23 @@ describe("the accounts page", () => {
     if (!olivia || !max) throw new Error("Rows not found");
     expect(within(table).getByRole("columnheader", { name: "Organizations" })).toBeTruthy();
     expect(within(olivia).getByText("Platform Team")).toBeTruthy();
-    expect(within(olivia).getByText("Research")).toBeTruthy();
+    expect(within(olivia).queryByText("Research")).toBeNull();
     const marks = within(olivia).getAllByRole("img", { name: /^Home organization:/ });
     expect(marks).toHaveLength(1);
-    expect(marks[0]?.closest("li")?.textContent).toBe("Platform Team");
+    expect(marks[0]?.closest("[data-first-and-more]")?.textContent).toMatch(/^Platform Team\+1$/);
+    await userEvent.click(within(olivia).getByRole("button", { name: "Show 1 more organization" }));
+    const all = await screen.findByRole("dialog", { name: "Organizations of Olivia Owner" });
+    expect(within(all).getByText("Research")).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(within(max).getByText("Without organization")).toBeTruthy();
 
     await userEvent.click(within(table).getByText("Olivia Owner"));
-    const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
-    expect(within(panel).getByText("Managed by: Platform Team")).toBeTruthy();
+    const panel = await accountPage("Olivia Owner");
+    const home = within(panel).getAllByRole("img", { name: /^Home organization:/ });
+    expect(home.some((mark) => mark.closest("li")?.textContent?.includes("Platform Team"))).toBe(true);
   });
 
-  it("shows no two-factor status for accounts that cannot have a second factor", async () => {
+  it("shows the second factor neutrally and warns only where one is required and missing", async () => {
     api(() => ({ body: {} }), {
       "GET /api/v1/instance/accounts": () => ({
         body: {
@@ -226,6 +372,11 @@ describe("the accounts page", () => {
             { ...account(MAX, "CI pipeline", ""), type: "service", email: null, twoFactorActive: false },
             { ...account(OLIVIA.id, "Imported Author", ""), state: "placeholder", twoFactorActive: false },
             { ...account(RESEARCH, "Lena Lind", "lena@example.org"), twoFactorActive: false },
+            {
+              ...account(LIAM, "Liam Lane", "liam@example.org"),
+              twoFactorActive: false,
+              secondFactorRequired: true,
+            },
           ],
           nextCursor: null,
         },
@@ -234,9 +385,11 @@ describe("the accounts page", () => {
     const table = await renderAccounts();
     const row = (name: string) => within(table).getByText(name).closest("tr") as HTMLElement;
     await within(table).findByText("CI pipeline");
-    expect(within(row("CI pipeline")).queryByText("Not set up")).toBeNull();
-    expect(within(row("Imported Author")).queryByText("Not set up")).toBeNull();
-    expect(within(row("Lena Lind")).getByText("Not set up")).toBeTruthy();
+    expect(within(row("CI pipeline")).queryByText("No")).toBeNull();
+    expect(within(row("Imported Author")).queryByText("Missing")).toBeNull();
+    expect(within(row("Lena Lind")).getByText("No")).toBeTruthy();
+    expect(within(row("Lena Lind")).queryByText("Missing")).toBeNull();
+    expect(within(row("Liam Lane")).getByText("Missing")).toBeTruthy();
   });
 
   it("shows the home organization also when the account belongs to one organization only", async () => {
@@ -262,7 +415,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     const home = (await within(panel).findByRole("heading", { name: "Home organization" })).closest(
       "section",
     ) as HTMLElement;
@@ -279,7 +432,7 @@ describe("the accounts page", () => {
       expect(requests.some((request) => request.path.includes("withoutOrganization=true"))).toBe(true),
     );
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await userEvent.click(within(panel).getByRole("combobox", { name: "Organization" }));
     await userEvent.click(await screen.findByRole("option", { name: "Platform Team" }));
     await userEvent.click(within(panel).getByRole("button", { name: "Assign organization" }));
@@ -296,7 +449,7 @@ describe("the accounts page", () => {
     const { requests } = api(() => ({ body: { endedSessions: 2 } }));
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await userEvent.click(within(panel).getByRole("button", { name: "Reset second factor" }));
     const dialog = await screen.findByRole("dialog", { name: "Reset the second factor of Max Member?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Reset second factor" }));
@@ -316,7 +469,7 @@ describe("the accounts page", () => {
     const { requests } = api(() => ({ body: { endedSessions: 0 } }));
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     await userEvent.click(within(panel).getByRole("button", { name: "Anonymize account…" }));
     const dialog = await screen.findByRole("dialog", { name: "Anonymize account" });
     expect(within(dialog).getByText(/exported or streamed to other systems are outside Lunedo/)).toBeTruthy();
@@ -342,8 +495,8 @@ describe("the accounts page", () => {
   it("adds a placeholder with a name and an e-mail address", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 0 } }));
     await renderAccounts();
-    await userEvent.click(await screen.findByRole("button", { name: "Add placeholder" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add placeholder" });
+    await userEvent.click(await screen.findByRole("button", { name: "Add a person without an account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Placeholder for a person without an account" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Create placeholder" }));
     expect(requests.some((request) => request.path.endsWith("/placeholders"))).toBe(false);
     await userEvent.type(within(dialog).getByLabelText("Name"), "Imported Author");
@@ -393,7 +546,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
+    const panel = await accountPage("Max Member");
     const change = (await within(panel).findByRole("button", {
       name: "Change home organization",
     })) as HTMLButtonElement;
@@ -443,7 +596,7 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Imported Author"));
-    const panel = await screen.findByRole("dialog", { name: "Imported Author" });
+    const panel = await accountPage("Imported Author");
     const field = await within(panel).findByRole("combobox", { name: "Account" });
     await userEvent.type(field, "o");
     await userEvent.click(await screen.findByRole("option", { name: /Olivia Owner/ }));
@@ -466,8 +619,10 @@ describe("the accounts page", () => {
     api(() => problem(409, "resetOwnSecondFactor"));
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Olivia Owner"));
-    const panel = await screen.findByRole("dialog", { name: "Olivia Owner" });
-    expect(within(panel).getByText("You manage your own account on the Security page.")).toBeTruthy();
+    const panel = await accountPage("Olivia Owner");
+    expect(
+      within(panel).getByText("You manage your own account on the Sign-in and security page."),
+    ).toBeTruthy();
     expect(within(panel).queryByRole("button", { name: "Reset second factor" })).toBeNull();
     expect(within(panel).queryByRole("region", { name: "Danger zone" })).toBeNull();
   });
@@ -478,8 +633,8 @@ describe("the accounts page", () => {
     });
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
-    const panel = await screen.findByRole("dialog", { name: "Max Member" });
-    await within(panel).findByText("Audit readers through Auditors", { exact: false });
+    const panel = await accountPage("Max Member");
+    await within(panel).findByText("Security at a glance");
     const zone = within(panel).getByRole("region", { name: "Danger zone" });
     const sections = within(panel).getAllByRole("region");
     expect(sections.at(-1)).toBe(zone);

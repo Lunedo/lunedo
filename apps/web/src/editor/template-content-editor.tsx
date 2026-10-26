@@ -179,6 +179,7 @@ export function TemplateContentEditor({
                 ? [{ type: "label", label: t("templates.noFieldsYet") }]
                 : fields.map((field) => ({
                     label: field.label || field.key,
+                    icon: Braces,
                     onSelect: () =>
                       editor
                         .chain()

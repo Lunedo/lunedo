@@ -13,7 +13,17 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, EyeOff, FileText, Link2, X } from "lucide-react";
+import {
+  Ban,
+  CalendarClock,
+  Check,
+  ChevronDown,
+  CornerLeftUp,
+  EyeOff,
+  FileText,
+  Link2,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -102,12 +112,13 @@ function IntervalControl({
         </button>
       }
       items={[
-        { label: t("reviews.article.inherit"), onSelect: () => void change("inherit") },
+        { label: t("reviews.article.inherit"), icon: CornerLeftUp, onSelect: () => void change("inherit") },
         ...(["3", "6", "12"] as const).map((months) => ({
           label: t("reviews.interval.months", { count: Number(months) }),
+          icon: CalendarClock,
           onSelect: () => void change(months),
         })),
-        { label: t("reviews.interval.none"), onSelect: () => void change("0") },
+        { label: t("reviews.interval.none"), icon: Ban, onSelect: () => void change("0") },
       ]}
     />
   );

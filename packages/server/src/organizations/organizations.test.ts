@@ -1,16 +1,23 @@
 import { randomUUID } from "node:crypto";
+import { proposeFormats } from "@lunedo/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { InvalidTokenError } from "../auth/errors.js";
+import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { languageSetting } from "../settings/builtin.js";
+import { formatSettings } from "../settings/preferences.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { deliverPendingMail, testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { LastOwnerError } from "./memberships.js";
 import { OrganizationError } from "./organizations.js";
-import { guestInactivityDaysSetting, selfRegistrationSetting } from "./settings.js";
+import {
+  guestInactivityDaysSetting,
+  organizationSettingsChain,
+  selfRegistrationSetting,
+} from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -93,6 +100,34 @@ describe.skipIf(!baseUrl)("organizations", () => {
     expect(account?.homeOrganizationId).toBe(first.id);
   });
 
+  it("gives a new organization the formats that fit its language and time zone", async () => {
+    const owner = await standard(null);
+    const vienna = await test.services.organizations.createAsActor(SYSTEM, {
+      name: "Formats Vienna",
+      language: "de",
+      timeZone: "Europe/Vienna",
+      ownerAccountId: owner,
+    });
+    const zurich = await test.services.organizations.createAsActor(SYSTEM, {
+      name: "Formats Zurich",
+      language: "de",
+      timeZone: "Europe/Zurich",
+      ownerAccountId: owner,
+    });
+    const formatsOf = async (organizationId: string) =>
+      Object.fromEntries(
+        await Promise.all(
+          Object.entries(formatSettings).map(async ([name, setting]) => [
+            name,
+            await test.settings.get(setting, organizationSettingsChain(organizationId)),
+          ]),
+        ),
+      );
+    expect(await formatsOf(vienna.id)).toEqual(proposeFormats("de", "Europe/Vienna"));
+    expect(await formatsOf(zurich.id)).toEqual(proposeFormats("de", "Europe/Zurich"));
+    expect((await formatsOf(vienna.id)).timeFormat).toBe("24h");
+  });
+
   it("writes mails in the language of the home organization unless the account chose one", async () => {
     const owner = await standard(null);
     const german = await test.services.organizations.createAsActor(SYSTEM, {
@@ -154,6 +189,18 @@ describe.skipIf(!baseUrl)("organizations", () => {
         [accepted.accountId],
       );
       expect(account.rows).toEqual([{ type: "standard", home_organization_id: org.id, verified: true }]);
+      const actors = await test.pool.query<{ name: string; actor_type: string; actor_id: string | null }>(
+        `select name, actor_type, actor_id from audit_events
+         where name in ('invitation.accepted', 'account.created', 'membership.added')
+           and (target_id = $1 or target_id = $2) order by sequence`,
+        [accepted.accountId, invitation.id],
+      );
+      expect(actors.rows.map((row) => row.name).sort()).toEqual(
+        ["account.created", "invitation.accepted", "membership.added"].sort(),
+      );
+      expect(
+        actors.rows.every((row) => row.actor_type === "account" && row.actor_id === accepted.accountId),
+      ).toBe(true);
       expect(
         await test.services.authorization.authorize(
           accountPrincipal(accepted.accountId),
@@ -280,6 +327,19 @@ describe.skipIf(!baseUrl)("organizations", () => {
         }),
       ).rejects.toThrow(ForbiddenError);
     });
+  });
+
+  it("says per account whether its home organization or the instance requires a second factor it lacks", async () => {
+    const strict = await organization();
+    const relaxed = await organization();
+    const required = await standard(strict.id);
+    const optional = await standard(relaxed.id);
+    await test.settings.set(twoFactorRequiredSetting, { organization: strict.id }, "organization", true);
+    const listed = (await test.services.overview.listAccounts({ limit: 500 })).items;
+    expect(listed.find((item) => item.id === required)?.secondFactorRequired).toBe(true);
+    expect(listed.find((item) => item.id === optional)?.secondFactorRequired).toBe(false);
+    const detail = await test.services.overview.accountDetail(required);
+    expect(detail?.account.secondFactorRequired).toBe(true);
   });
 
   it("makes the first standard membership the home organization, never a guest or collaborator one", async () => {

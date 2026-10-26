@@ -280,3 +280,52 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
     expect(JSON.stringify(audit.json())).toContain(saved.json().id);
   });
 });
+
+describe.skipIf(!databaseBaseUrl)("built-in templates of an organization", () => {
+  let test: AuthTestApp;
+  let owner: TestClient;
+  let organizationId: string;
+
+  beforeAll(async () => {
+    test = await createAuthTestApp(configuredSetupEnv);
+    await completeConfiguredSetup(test);
+    owner = new TestClient(test.app);
+    await owner.post("/api/v1/auth/sign-in", OWNER);
+    await addTotp(owner);
+    organizationId = await firstOrganizationId(test);
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  it("lists them read-only for template managers and lets them be duplicated", async () => {
+    const listed = await owner.get(`/api/v1/organizations/${organizationId}/templates/built-in`);
+    expect(listed.statusCode).toBe(200);
+    const builtIn = listed.json() as { id: string; level: string; series: unknown; document: unknown }[];
+    expect(builtIn.every((template) => template.level === "builtIn")).toBe(true);
+    expect(builtIn.map((template) => template.id)).toContain("builtin:team-meeting");
+    expect(builtIn.map((template) => template.id)).not.toContain("builtin:article-how-to");
+    const meeting = builtIn.find((template) => template.id === "builtin:team-meeting");
+
+    const duplicated = await owner.post(`/api/v1/organizations/${organizationId}/templates`, {
+      ...(meeting as object),
+      id: undefined,
+      level: undefined,
+      organizationId: undefined,
+      spaceId: undefined,
+      articleType: undefined,
+      knowledgeBase: undefined,
+      updatedAt: undefined,
+      name: "Team meeting (copy)",
+    });
+    expect(duplicated.statusCode).toBe(201);
+    expect(duplicated.json()).toMatchObject({ level: "organization", series: meeting?.series });
+
+    const reader = await createAccount(test, "builtin-reader@lunedo.test");
+    const client = await signedInClient(test, reader.email, reader.password);
+    expect((await client.get(`/api/v1/organizations/${organizationId}/templates/built-in`)).statusCode).toBe(
+      403,
+    );
+  });
+});

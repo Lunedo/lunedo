@@ -37,7 +37,14 @@ export function OpenNotificationScreen() {
     if (!item || opened.current) return;
     opened.current = true;
     if (item.readAt === null) markRead.mutate(item.id);
-    if (link) void navigate({ to: link.to as never, params: link.params as never, replace: true });
+    if (link) {
+      void navigate({
+        to: link.to as never,
+        params: link.params as never,
+        search: link.search as never,
+        replace: true,
+      });
+    }
   }, [item, link, markRead, navigate]);
 
   const gone = notification.isError && isApiError(notification.error, "notFound");

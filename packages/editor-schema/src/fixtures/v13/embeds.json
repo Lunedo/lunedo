@@ -1,0 +1,50 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "embed",
+      "attrs": {
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "title": "Neues WLAN-Login",
+        "height": 360,
+        "thumbnailId": "01929b1e-0000-7000-8000-000000000101"
+      }
+    },
+    {
+      "type": "embed",
+      "attrs": { "url": "https://videos.example.net/w/8812" }
+    },
+    {
+      "type": "file",
+      "attrs": {
+        "attachmentId": "01929b1e-0000-7000-8000-000000000102",
+        "name": "Mietvertrag.pdf",
+        "preview": true,
+        "height": 600,
+        "zoom": 125
+      }
+    },
+    {
+      "type": "tabs",
+      "content": [
+        {
+          "type": "tab",
+          "attrs": { "title": "Windows" },
+          "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Open the settings." }] }]
+        },
+        {
+          "type": "tab",
+          "attrs": { "title": "macOS" },
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Open the system settings." }] }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "whiteboard",
+      "attrs": { "whiteboardId": "01929b1e-0000-7000-8000-000000000103" }
+    },
+    { "type": "whiteboard" }
+  ]
+}

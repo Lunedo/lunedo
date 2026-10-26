@@ -3,17 +3,18 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { type ReactNode, useRef, useState } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
-import { Field, Input } from "./field.js";
+import { Field, FieldLayoutProvider, Input } from "./field.js";
 import { focusInitial } from "./initial-focus.js";
 import { useUiLabels } from "./labels.js";
 import { useReturnFocus } from "./return-focus.js";
 
-export type DialogSize = "sm" | "md" | "lg" | "full";
+export type DialogSize = "sm" | "md" | "lg" | "xl" | "full";
 
 const SIZES: Record<DialogSize, string> = {
   sm: "max-w-dialog-sm",
   md: "max-w-dialog-md",
   lg: "max-w-dialog-lg",
+  xl: "max-w-dialog-xl",
   full: "h-full max-w-none",
 };
 
@@ -77,7 +78,7 @@ export function Dialog({
                 <IconButton label={labels.close} icon={X} tooltip={false} />
               </DialogPrimitive.Close>
             </div>
-            {children}
+            <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
             {footer && <div className="flex flex-wrap justify-end gap-2">{footer}</div>}
           </DialogPrimitive.Content>
         </DialogPrimitive.Overlay>
@@ -213,7 +214,7 @@ export interface DrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
-  side?: "left" | "right";
+  side?: "left" | "right" | "bottom";
   size?: "sidebar" | "panel";
   children?: ReactNode;
 }
@@ -239,10 +240,16 @@ export function Drawer({
           onOpenAutoFocus={(event) => focusInitial(event, content, header)}
           onCloseAutoFocus={returnFocus}
           aria-describedby={undefined}
+          {...(side === "bottom" ? { style: { maxHeight: "80dvh" } } : {})}
           className={classNames(
-            "fixed inset-y-0 z-50 flex max-w-full flex-col bg-sidebar text-text shadow-dialog focus-visible:focus-ring",
-            size === "panel" ? "w-panel" : "w-sidebar",
-            side === "left" ? "left-0 border-r border-border" : "right-0 border-l border-border",
+            "fixed z-50 flex max-w-full flex-col text-text shadow-dialog focus-visible:focus-ring",
+            side === "bottom"
+              ? "inset-x-0 bottom-0 rounded-t-lg border-t border-border bg-surface"
+              : classNames(
+                  "inset-y-0 bg-sidebar",
+                  size === "panel" ? "w-panel" : "w-sidebar",
+                  side === "left" ? "left-0 border-r border-border" : "right-0 border-l border-border",
+                ),
           )}
         >
           <div ref={header} className="flex items-center gap-2 border-b border-border px-4 py-3">
@@ -251,7 +258,9 @@ export function Drawer({
               <IconButton label={labels.close} icon={X} tooltip={false} />
             </DialogPrimitive.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <FieldLayoutProvider layout="stacked">{children}</FieldLayoutProvider>
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

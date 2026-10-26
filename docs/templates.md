@@ -9,6 +9,10 @@ Templates give new pages a starting point: a title pattern, input fields asked f
 | Organization | organization administrators | editors in the organization's spaces |
 | Space | space administrators | editors of the space |
 
+The template screen of an organization lists the built-in templates below its own ones, in the language of the reader. They cannot be changed there; **Duplicate** copies one into the organization, including the rhythm and duration of a series template, where it can be adapted.
+
+The built-in meeting templates (Team meeting and One-on-one) hold only the notes of a meeting. Topics, decisions, new tasks and open tasks are sections of the meeting page itself and are not repeated in the notes. Meetings created earlier keep their notes as they are.
+
 ## Images and files of templates
 
 A template owns its files: the images it shows and the files that drawing and diagram blocks use. They are stored like attachments, encrypted, counted in the storage of the organization or space, and refused with the usual message when the storage is almost full.

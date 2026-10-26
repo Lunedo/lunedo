@@ -240,6 +240,7 @@ describe("generateThemeCss", () => {
     }
     expect(theme).toContain("--spacing-rail: 3.75rem;");
     expect(theme).toContain("--text-base: 0.875rem;");
+    expect(theme).toContain("--text-2xs: 0.6875rem;");
     expect(theme).toContain("--shadow-popover: 0 10px 30px rgba(0, 0, 0, 0.12);");
   });
 
@@ -280,7 +281,7 @@ describe("generateThemeCss", () => {
     const theme = ruleBody(css, "@theme inline");
     expect(theme).toContain("--spacing-select-trigger: var(--radix-select-trigger-width);");
     expect(theme).toContain("--spacing-popover-trigger: var(--radix-popover-trigger-width);");
-    expect(css).toContain("@utility grid-cols-setting-row {\n  grid-template-columns: minmax(0, 1fr) auto;");
+    expect(css).toContain("@utility grid-cols-setting-row {\n  grid-template-columns: 20rem minmax(0, 1fr);");
   });
 
   it("switches the font for the reading-friendly option", () => {
@@ -304,7 +305,16 @@ describe("generateThemeCss", () => {
 
   it("maps layout widths for maximum widths and sizes", () => {
     const theme = ruleBody(css, "@theme inline");
-    for (const name of ["card", "card-wide", "page", "panel", "dialog-sm", "dialog-md", "dialog-lg"]) {
+    for (const name of [
+      "card",
+      "card-wide",
+      "column",
+      "page",
+      "panel",
+      "dialog-sm",
+      "dialog-md",
+      "dialog-lg",
+    ]) {
       expect(theme).toContain(`--spacing-${name}:`);
       expect(theme).toContain(`--container-${name}:`);
     }

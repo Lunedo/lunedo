@@ -44,7 +44,7 @@ test("sets up the instance and captures the setup assistant", async ({ page, bro
   };
   await enterSetupCode(page, shown);
   await runSetupSteps(page, shown, "Olivia Brandt");
-  await expect(page).toHaveURL(/\/sign-in/);
+  await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
 });
 
 test("signs in the owner", async ({ page }) => {

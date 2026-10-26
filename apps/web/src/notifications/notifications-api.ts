@@ -1,4 +1,6 @@
+import { UNREAD_COUNT_CAP } from "@lunedo/shared";
 import {
+  infiniteQueryOptions,
   type QueryClient,
   useInfiniteQuery,
   useMutation,
@@ -20,22 +22,51 @@ import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spa
 export const notificationKeys = {
   all: ["notifications"] as const,
   unread: ["notifications", "unread"] as const,
-  list: (unreadOnly: boolean) => ["notifications", "list", unreadOnly] as const,
+  list: (filter: NotificationFilter) => ["notifications", "list", filter] as const,
+  unreadOf: (kind: NotificationKind) => ["notifications", "unread", kind] as const,
 };
+
+export interface UnreadCount {
+  count: number;
+  capped: boolean;
+}
+
+export function unreadCountLabel(unread: UnreadCount): string {
+  return unread.capped ? `${UNREAD_COUNT_CAP - 1}+` : String(unread.count);
+}
+
+export function useUnreadCountOf(kind: NotificationKind, enabled = true) {
+  return useQuery({
+    queryKey: notificationKeys.unreadOf(kind),
+    queryFn: async () =>
+      await request(() => api.GET("/api/v1/notifications/unread-count", { params: { query: { kind } } })),
+    staleTime: 60_000,
+    enabled,
+    throwOnError: false,
+  });
+}
 
 export function useUnreadCount() {
   return useQuery({
     queryKey: notificationKeys.unread,
-    queryFn: async () => (await request(() => api.GET("/api/v1/notifications/unread-count"))).count,
+    queryFn: () => request(() => api.GET("/api/v1/notifications/unread-count")),
     staleTime: 60_000,
     throwOnError: false,
   });
 }
 
-export function useNotificationList(unreadOnly: boolean) {
-  return useInfiniteQuery({
-    queryKey: notificationKeys.list(unreadOnly),
-    throwOnError: false,
+export type NotificationKind = "mentions" | "watched" | "requests";
+
+export interface NotificationFilter {
+  unreadOnly: boolean;
+  kind?: NotificationKind;
+  spaceId?: string;
+  grouped?: boolean;
+}
+
+export function notificationListQuery(filter: NotificationFilter) {
+  return infiniteQueryOptions({
+    queryKey: notificationKeys.list(filter),
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       request(() =>
@@ -44,13 +75,20 @@ export function useNotificationList(unreadOnly: boolean) {
             query: {
               limit: 30,
               ...(pageParam ? { cursor: pageParam } : {}),
-              ...(unreadOnly ? { unread: "true" as const } : {}),
+              ...(filter.unreadOnly ? { unread: "true" as const } : {}),
+              ...(filter.kind ? { kind: filter.kind } : {}),
+              ...(filter.spaceId ? { spaceId: filter.spaceId } : {}),
+              ...(filter.grouped ? { grouped: "true" as const } : {}),
             },
           },
         }),
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
+}
+
+export function useNotificationList(filter: NotificationFilter) {
+  return useInfiniteQuery({ ...notificationListQuery(filter), throwOnError: false });
 }
 
 export type NotificationItem = NonNullable<
@@ -64,6 +102,27 @@ export function useMarkRead() {
       request(() =>
         api.POST("/api/v1/notifications/{notificationId}/read", { params: { path: { notificationId: id } } }),
       ),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+  });
+}
+
+export function useMarkUnread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      request(() =>
+        api.POST("/api/v1/notifications/{notificationId}/unread", {
+          params: { path: { notificationId: id } },
+        }),
+      ),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+  });
+}
+
+export function useMarkManyRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => request(() => api.POST("/api/v1/notifications/read", { body: { ids } })),
     onSettled: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
   });
 }
@@ -174,9 +233,12 @@ export function useNotificationStream(enabled: boolean): void {
     const source = new EventSource("/api/v1/notifications/stream", { withCredentials: true });
     const onChange = (event: MessageEvent<string>) => {
       try {
-        const data = JSON.parse(event.data) as { unreadCount?: number };
+        const data = JSON.parse(event.data) as { unreadCount?: number; unreadCapped?: boolean };
         if (typeof data.unreadCount === "number")
-          queryClient.setQueryData(notificationKeys.unread, data.unreadCount);
+          queryClient.setQueryData<UnreadCount>(notificationKeys.unread, {
+            count: data.unreadCount,
+            capped: data.unreadCapped === true,
+          });
       } catch {
         return;
       }

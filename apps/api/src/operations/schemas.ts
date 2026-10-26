@@ -44,6 +44,11 @@ export const operationsStatusSchema = z
           active: z.number().int().describe("Jobs running now."),
           deferred: z.number().int().describe("Jobs scheduled for later."),
           failed: z.number().int().describe("Jobs that failed after all attempts and are still kept."),
+          oldestQueuedAt: z.iso
+            .datetime()
+            .nullable()
+            .optional()
+            .describe("When the oldest waiting job was queued, or null when none waits."),
         }),
       )
       .describe("Job queues that have jobs in any state."),
@@ -92,7 +97,16 @@ export const exampleOperationsStatus: z.input<typeof operationsStatusSchema> = {
       docs: "storage.md",
     },
   ],
-  queues: [{ queue: "mail.deliver", queued: 2, active: 1, deferred: 0, failed: 0 }],
+  queues: [
+    {
+      queue: "mail.deliver",
+      queued: 2,
+      active: 1,
+      deferred: 0,
+      failed: 0,
+      oldestQueuedAt: "2026-10-24T08:14:00.000Z",
+    },
+  ],
   recentErrors: [
     {
       type: "Request failed",

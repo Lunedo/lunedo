@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  CollapsibleSection,
   classNames,
   ErrorState,
   Field,
@@ -137,7 +138,7 @@ function AllowedSitesHint() {
   const { t } = useTranslation();
   const administrator = useOrganizationState().can("instance.settings.manage");
   return administrator ? (
-    <Link to="/settings/instance/content" className="text-sm text-accent underline">
+    <Link to="/settings/instance/security" className="text-sm text-accent underline">
       {t("imports.connection.allowSites")}
     </Link>
   ) : (
@@ -270,7 +271,7 @@ export function ConnectionStep({
             }}
           >
             {cloud ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <Field
                   label={t("imports.connection.site")}
                   hint={t("imports.connection.siteHint")}
@@ -305,6 +306,7 @@ export function ConnectionStep({
               <Field
                 label={t("imports.connection.baseUrl")}
                 hint={t("imports.connection.baseUrlHint")}
+                help={t("imports.connection.baseUrlHelp")}
                 {...(errors.baseUrl ? { error: errors.baseUrl } : {})}
               >
                 <Input
@@ -333,31 +335,29 @@ export function ConnectionStep({
               />
             </Field>
             {cloud ? null : (
-              <details
-                className="rounded-md border border-border"
+              <CollapsibleSection
+                title={t("imports.connection.advanced")}
+                level={3}
+                layout="fields"
                 open={advanced}
-                onToggle={(event) => setAdvanced(event.currentTarget.open)}
+                onOpenChange={setAdvanced}
               >
-                <summary className="flex min-h-hit cursor-pointer items-center rounded-md px-4 py-2 font-medium focus-visible:focus-ring">
-                  {t("imports.connection.advanced")}
-                </summary>
-                <div className="border-t border-border p-4">
-                  <Field
-                    label={t("imports.connection.certificates")}
-                    hint={t("imports.connection.certificatesHint")}
-                    {...(errors.certificates ? { error: errors.certificates } : {})}
-                  >
-                    <Textarea
-                      rows={6}
-                      value={certificates}
-                      spellCheck={false}
-                      className="font-mono"
-                      placeholder={t("imports.connection.certificatesPlaceholder")}
-                      onChange={(event) => setCertificates(event.target.value)}
-                    />
-                  </Field>
-                </div>
-              </details>
+                <Field
+                  label={t("imports.connection.certificates")}
+                  hint={t("imports.connection.certificatesHint")}
+                  help={t("imports.connection.certificatesHelp")}
+                  {...(errors.certificates ? { error: errors.certificates } : {})}
+                >
+                  <Textarea
+                    rows={6}
+                    value={certificates}
+                    spellCheck={false}
+                    className="font-mono"
+                    placeholder={t("imports.connection.certificatesPlaceholder")}
+                    onChange={(event) => setCertificates(event.target.value)}
+                  />
+                </Field>
+              </CollapsibleSection>
             )}
             <p className="text-sm text-text-muted">{t("imports.connection.readOnly")}</p>
             {failure ? (

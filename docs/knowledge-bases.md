@@ -1,12 +1,12 @@
 # Knowledge bases
 
-A knowledge base is a space of the type **knowledge base**. It holds articles, such as how-tos and troubleshooting articles, sorted into categories. Authors write in the normal Lunedo interface with the same editor, versions, comments, permissions and search as in every other space. Readers use the **portal**, a lean site of its own without the navigation, page tree or editor of the app (see [The portal](#the-portal)).
+A knowledge base is a space of the type **knowledge base**. It holds articles, such as how-tos and troubleshooting articles, sorted into areas and topics. Authors write in the normal Lunedo interface with the same editor, versions, comments, permissions and search as in every other space. Readers use the **portal**, a lean site of its own without the navigation, page tree or editor of the app (see [The portal](#the-portal)).
 
 ## Creating a knowledge base
 
 In the create dialog, choose **Knowledge base** as the type of space. The type cannot be changed later, and every existing space is a standard space.
 
-- A knowledge base has no overview page. Its start page lists the articles by category.
+- A knowledge base has no overview page. Its start page lists the articles by area.
 - It cannot be confidential, and personal spaces are never knowledge bases.
 - The creator becomes space admin. The dialog suggests no other roles for a knowledge base; add editors there or later under **Space settings → Permissions**. Who may edit is set with these roles; who may read is set with the audience.
 
@@ -39,7 +39,7 @@ Portal accounts are for readers without an account of the organization, for exam
 
 API: `GET` and `POST /api/v1/spaces/{spaceId}/portal-accounts`, `DELETE /api/v1/spaces/{spaceId}/portal-invitations/{invitationId}`, `POST /api/v1/spaces/{spaceId}/portal-accounts/{accountId}/deactivate` and `DELETE /api/v1/spaces/{spaceId}/portal-accounts/{accountId}`, all with the permission to manage the organization's members; `GET /api/v1/account/portals` for the portal account itself.
 
-Categories and articles can narrow the audience with view restrictions, as pages can in every space. They can never widen it. Shares of single articles and share links work as in every other space.
+Areas, topics and articles can narrow the audience with view restrictions, as pages can in every space. They can never widen it. Shares of single articles and share links work as in every other space.
 
 Space admins change the audience under **Space settings → Visibility**. The change is saved with **Save visibility**. A change that lets more people read, for example from groups to all signed-in people or to public, or adding a group, asks for confirmation first and names the number of articles without a view restriction that become readable. Narrowing saves without asking. Every change is recorded in the audit log as `knowledgeBase.audienceChanged`, with the old and new audience, the groups, whether it widened and the number of articles; the reader roles of groups are recorded as permission changes.
 
@@ -47,11 +47,11 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base`, `POST …/knowledge-base/aud
 
 ## Content
 
-A knowledge base contains only articles and categories:
+A knowledge base contains only articles, areas and topics:
 
 - **Articles** are pages. They always use publish mode: readers see the last published version while authors work on a draft. Live mode is not offered.
-- **Categories** are folders. A folder at the top level is a category, a folder inside a category is a subcategory. Deeper folders belong to their subcategory.
-- Articles are placed in categories or at the top level, never below another article. Articles and categories keep their kind; they cannot be converted.
+- **Areas and topics** are folders, nested to any depth, for example IT › Microsoft › Outlook › Web App. The top-level folders are **areas** and the folders below them **topics**, in the app and in the portal; it is one kind of folder in every other respect. The API calls them categories.
+- Articles are placed in an area, in a topic or at the top level, never below another article. Articles and folders keep their kind; they cannot be converted.
 
 Blog posts, meeting series, whiteboards and links are refused, through the interface, the API, moves, copies and every other path, with `knowledgeBaseContent`. A page in live mode or a page with subpages cannot be moved or copied into a knowledge base (`knowledgeBaseMode`, `knowledgeBasePlacement`); switch it to publish mode or move its subpages first.
 
@@ -84,13 +84,28 @@ Images in the sections **Steps**, **What you see** and **Solution** are framed b
 
 Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. Only titles that were published in this knowledge base count: working titles before the first publication never become addresses, and an article moved into another knowledge base starts there without the short forms of its old knowledge base. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
 
-## Categories
+## Areas and topics
 
-Under **Space settings → Categories**, editors set the icon and the introduction of a category and change the order of categories. The portal shows the categories in this order. Without an icon, it shows the name when it has at most three characters, otherwise its first letter.
+Every folder, at every depth, has an icon, an introduction and a contact address. The portal shows the folders in their order. Without an icon, it shows the name when it has at most three characters, otherwise its first letter.
 
-Each category can have a contact address, which readers use when an article did not help. A subcategory without its own address uses the address of its category; a category without one uses the address of the knowledge base. Space admins set the addresses. Lunedo sends nothing itself and creates no tickets.
+The introduction is short formatted text of up to 1,000 characters, not a page: `**bold**`, `*italic*`, links as `[text](https://…)` or `[text](mailto:…)`, and one callout as lines starting with `>`. Links with other schemes stay plain text, and further quoted blocks are shown as normal paragraphs.
 
-API: `GET /api/v1/spaces/{spaceId}/categories`, `PUT /api/v1/categories/{itemId}` for the icon, `PUT /api/v1/categories/{itemId}/contact` and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact`. Title, introduction and order change like for every folder.
+A folder's contact address is what readers use when an article did not help. A folder without its own address uses the address of the nearest folder above it that has one, and finally the address of the knowledge base. Space admins set the addresses. Lunedo sends nothing itself and creates no tickets.
+
+API: `GET /api/v1/spaces/{spaceId}/categories` lists every folder the caller can read, with its depth (`level`), introduction (`description`), icon and the contact address that applies. `PUT /api/v1/categories/{itemId}` sets the icon, `PUT /api/v1/categories/{itemId}/contact` the contact address, both at any depth, and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact` the address of the knowledge base. Title, introduction and order change like for every folder. Articles carry the whole folder path above them as `categoryPath`.
+
+### Who maintains and who reads an area
+
+Every folder has two access settings, set in its **Access** dialog (menu **···** in the tree or the button on the folder page). Only space admins of the knowledge base change them; organization admins first become space admin of it.
+
+- **Responsible** names one or more groups. They create, edit, publish, move and delete the articles in the folder and everything below it. Space admins always can. Without groups, everyone with the editor role can. A folder below can only name groups of the folder above it. When every group of a folder is deleted, only space admins write there until new groups are set.
+- **Visible to** is either like the knowledge base or only certain groups. It is a view restriction of the folder, so it applies wherever content is read: the portal with its pages, search, area lists, counts and feedback, the app with its tree, search, **For you** and notifications, the article API for external readers and tokens, includes and exports. A restricted folder is never part of the static website. Space admins see that it exists and can change or remove the restriction without reading the content. A folder below can only name groups of the folder above it.
+
+The sharing dialog of pages does not change folders of a knowledge base; it answers `409` with `categoryAccessManaged`. Before saving, the dialog shows who can no longer change articles, how many people lose or gain read access and how many articles are affected; a change that lets more people read asks for confirmation with the number of articles. Every change is recorded as `knowledgeBase.categoryAccessChanged`. Moving an article between folders with different responsible groups asks for confirmation like any move that changes access.
+
+People responsible for at least one area see **Mine · All** above the tree: **Mine** shows only the areas that contain their folders, with the number of further areas to read. The choice is stored with the person's preferences (`appearance.categoryView`); it filters the view and grants nothing. Search in the app finds every article the person may read and marks articles in areas they cannot change as **other category · read only** (`otherCategory`).
+
+API: `GET /api/v1/spaces/{spaceId}/knowledge-base/category-access` lists the folders with their settings and whether the caller belongs to them (`mine`) or may change their articles (`writable`). `POST …/knowledge-base/categories/{itemId}/access/preview` returns the effect of a change, `PUT …/knowledge-base/categories/{itemId}/access` saves it (`responsibleGroupIds`, `visibleGroupIds`, `confirmWidening`).
 
 ## Languages
 
@@ -104,9 +119,9 @@ A knowledge base has a default language and can enable further languages under *
 
 In the portal:
 
-- The default language has the addresses without prefix; every other language is under `/<language>/`, for example `/help/help/en/`. From two enabled languages on, the top bar shows a language choice that leads to the same page in the other language.
+- The default language has the addresses without prefix; every other language is under `/<language>/`, for example `/help/help/en/`. From two enabled languages on, the top bar shows a language choice that leads to the same page in the other language and says how much is translated, such as "English · 14 of 46 translated", counted for the reader. Lists mark articles that are shown in the default language with "only German" (in the reader's language), and an article with a translation links to it with "Also in …".
 - A reader who opens an article in a language without a published translation sees the article in the default language with a short note in the reader's language.
-- The texts of the portal (buttons, headings, dates) follow the language of the shown article, so that a page is never mixed. Lunedo has portal texts in English and German; other languages use the English texts.
+- The texts of the portal (buttons, headings, dates) always follow the chosen language, also on an article shown in the default language; the article itself is marked with its own language. Lunedo has portal texts in English and German; other languages use the English texts.
 - The search looks in the reader's language first. When it finds nothing there, it shows the results in the default language with a note. Category pages and lists show the translation where one exists and the original otherwise.
 - Public knowledge bases name the other languages of a page with `hreflang` links for search engines, plus `x-default` for the default language.
 
@@ -141,7 +156,7 @@ Each reminder is scheduled for the moment it is due when the due date is set, an
 
 ### Review list
 
-**Review** in the sidebar of the knowledge base lists the articles that are due or overdue, due within 30 days, whose source page changed, or that have no owner. Everyone with edit rights in the knowledge base sees it, each person only with the articles they may edit. The list shows title, category, owner, interval, last review and the state, both as text and as a ring that fills up as the interval passes. Filters show due articles, articles due within 30 days or articles without an owner, and **Only my articles** shows the articles you own.
+**Review** in the sidebar of the knowledge base lists the articles that are due or overdue, due within 30 days, whose source page changed, or that have no owner. Everyone with edit rights in the knowledge base sees it, each person only with the articles they may edit. The list shows title, area or topic, owner, interval, last review and the state, both as text and as a ring that fills up as the interval passes. Filters show due articles, articles due within 30 days or articles without an owner, and **Only my articles** shows the articles you own.
 
 Articles without an owner show **Set owner** to space admins, who choose a person with edit rights by name. When an owner's account is deactivated, the space admins are notified, as for every space.
 
@@ -184,12 +199,22 @@ The portal shows "Last reviewed on" with the date of the last review while a rev
 
 ## The portal
 
-Readers open a knowledge base in its portal: a start page with the search and the categories, a page per category, the articles, the search and a contact page. The portal has no navigation, page tree, editor, notifications or settings of the app, and follows the light or dark mode of the reader's system. Which one people see depends only on the address they open; nobody is redirected between portal and app.
+Readers open a knowledge base in its portal: a start page with the search and the areas, a page per folder, the articles, the search and a contact page. The portal has no navigation, page tree or editor, notifications or settings of the app. Which one people see depends only on the address they open; nobody is redirected between portal and app.
+
+### Layout
+
+- The top bar shows the logo and name, **Areas** with a menu of all top-level folders and their article counts, a search icon, the language and appearance choices and **Sign in** or the account menu. The search icon, `Ctrl`+`K` and `/` open a search window with matching topics and articles, each with its folder path; `↑`/`↓` choose, `Enter` opens, and **All results** leads to the search page. Without JavaScript the icon leads to the search page.
+- The appearance follows the reader's system until the reader chooses light or dark in the top bar; the choice is kept in the browser. In dark mode the brand color uses its dark shade, so buttons stay readable.
+- The start page shows the heading, the search with frequent searches, the areas as a compact grid, **Most read** and **Recently updated** with the folder path of each article (shortened in the middle when long) and **Didn't find an answer?**.
+- Every folder page, at every depth, shows the tree of its area on the left (collapsible, with counts and a lock on folders with a view restriction), the breadcrumb, icon, title, introduction and contact line, its subfolders as tiles and its own articles with type filters and sorting. **Include subtopics** adds the articles of all folders below. A folder that only holds subfolders says so.
+- Articles show the tree on the left and **On this page** on the right, **Was this helpful?**, **Write to us**, **Copy link** and related articles.
+- At phone width the top bar becomes a menu, and the tree opens behind a **Topics** button.
+- The footer is one line: name, **Contact** and, when switched on, "Made with Lunedo".
 
 ### Addresses
 
 - Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way.
-- Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Categories are at `topics/<id>`, the search at `search?q=…`.
+- Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Every folder, at any depth, is at `topics/<id>`, the search at `search?q=…`.
 - An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404. A signed-in person who can read nothing in a knowledge base that is not public gets the same answer as for a portal that does not exist, without its name or welcome text.
 - The change of a path or domain is recorded in the audit log as `knowledgeBase.portalAddressChanged`.
 
@@ -206,7 +231,8 @@ On its own domain only the portal answers; the app and `/api/` are not reachable
 ### Signing in
 
 - Under `/help/<path>/` the portal uses the session of the app.
-- Anonymous visitors of a knowledge base that is not public see the sign-in page of the portal on every address, with one button per identity provider of the instance and "Sign in with an e-mail address", which leads to the normal sign-in and back to the requested address.
+- Anonymous visitors of a knowledge base that is not public see the sign-in as a dialog over the portal on every address: the top bar stays, no content is shown behind it, and there is one button per identity provider of the instance and "Sign in with an e-mail address", which leads to the normal sign-in and back to the requested address.
+- In a public knowledge base, an anonymous visitor who opens the address of a folder or article they cannot read gets a page that offers to sign in and continue there. Hidden and missing addresses get the same page, so it reveals nothing; after signing in, a page the reader still cannot read is "We can't find this page".
 - On an own domain the portal has a session of its own. A visitor without one is sent to the instance; when they are already signed in there, they come back at once with a session for the domain, otherwise they sign in first. People who do not belong to the organization of the domain are asked once per account and domain ("Sign in to <domain> with your account?", **Continue**); the answer is remembered and recorded in the audit log as `portalHandoff.consented`. Members of the organization are not asked. The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain, and can be used once. The cookie of the domain (`__Host-lunedo-portal`) is host-only, `Secure`, `HttpOnly` and `SameSite=Lax`.
 - The session of a domain belongs to the session of the instance. Signing out in the portal signs out everywhere; when the instance session ends (sign-out, expiry, deactivation, "sign out everywhere"), the session of the domain ends too.
 - Requests that change something in the portal (rating, notes, sign-out) must come from the portal's own origin.
@@ -214,14 +240,14 @@ On its own domain only the portal answers; the app and `/api/` are not reachable
 ### Who sees what
 
 - The portal shows only published versions. Drafts and articles that were never published are not shown, also not to editors.
-- Category lists and article counts are computed for each reader from the search index. A category the reader cannot read, and every article in it, is neither shown nor counted.
+- Folder lists and article counts are computed for each reader from the search index, for every folder at every depth. A folder the reader cannot read, and every article in it, is neither shown nor counted.
 - People who may edit an article see **Edit**, which opens the article in the editor of the app. In the app, **View in portal** opens the knowledge base and, on a published article, the article in the portal.
 - The account menu shows the name, the e-mail address, a link to the app and **Sign out**. The link to the app appears only for people who can see at least one space and never for portal accounts. Its name is set by instance administrators under **Instance settings → Knowledge base portals**; empty means "Go to the wiki".
 - Frequent searches on the start page are the most searched terms of the last 90 days that had results, each searched at least three times. A reader sees only terms with which they find something themselves.
 
 ### Contact
 
-- "Didn't help? Write to us" under an article opens the reader's mail program with the contact address of the article's category (inherited from the category above, then from the knowledge base), the article title as subject and the link to the article in the body. "Copy address" helps readers without a mail program.
+- "Didn't help? Write to us" under an article opens the reader's mail program with the contact address of the article's folder (inherited from the folders above, then from the knowledge base), the article title as subject and the link to the article in the body. "Copy address" helps readers without a mail program.
 - On a search without results, and on the contact page, the reader chooses the area: each top-level category with a contact address, and "Something else" for the address of the knowledge base.
 - Lunedo sends nothing itself and creates no tickets.
 
@@ -232,8 +258,7 @@ Space admins set the appearance under **Space settings → Appearance and start 
 - **Logo**: PNG, JPEG or WebP up to 256 KiB. Without one, the portal shows the organization's logo or the first letter of its name.
 - **Brand color**: a color of the fixed palette, or an own color for light and dark mode. An own color must reach a contrast of 4.5:1 as text on the background and for text on it, in both modes. Otherwise Lunedo proposes the nearest shade that passes and saves it only after confirmation (`brandContrast` with `light` and `dark`, then `confirmProposal`).
 - **Start page**: heading and a short text above the search.
-- **Categories in the top bar**: the top bar shows up to five categories in their order and the rest under "All topics". From the set number of categories on (default 10), it shows only "Topics" with a menu of all categories.
-- **"Provided with Lunedo"** in the footer, on by default.
+- **"Made with Lunedo"** in the footer, on by default.
 - **Notes of readers** are kept for 1 to 60 months (default 12). Shortening the period deletes older notes at once, after confirmation.
 
 The help icon of the app can open a knowledge base of the organization instead of the Lunedo documentation: **Organization settings → General → Help**. Only knowledge bases that everyone signed in may read can be chosen.

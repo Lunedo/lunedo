@@ -20,7 +20,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, FileInput, X } from "lucide-react";
+import { ArrowLeft, Check, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -32,7 +32,7 @@ import { SettingsPage } from "../screens/settings/settings-page.js";
 import { useOrganizationState } from "../shell/shell-context.js";
 import { HolderPicker } from "../spaces/access/holders.js";
 import { FolderPath } from "./folder-path.js";
-import { errorText, importTitle } from "./import-labels.js";
+import { errorText } from "./import-labels.js";
 import {
   folderQuery,
   type ImportUpdate,
@@ -106,14 +106,14 @@ export function ImportWizardScreen() {
   const query = useQuery(importQuery(importId));
   if (query.isPending) {
     return (
-      <SettingsPage title={t("imports.wizard.title")} icon={FileInput} organizationId={organizationId}>
+      <SettingsPage title={t("imports.wizard.title")}>
         <Skeleton className="h-control-field w-full" />
       </SettingsPage>
     );
   }
   if (query.isError) {
     return (
-      <SettingsPage title={t("imports.wizard.title")} icon={FileInput} organizationId={organizationId}>
+      <SettingsPage title={t("imports.wizard.title")}>
         <LoadError what={t("imports.wizard.loadFailed")} error={query.error} onRetry={query.refetch} />
       </SettingsPage>
     );
@@ -458,6 +458,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
 
   return (
     <SettingsPage
+      steps
       title={t(`imports.wizard.stepNames.${step}`)}
       description={
         reimport
@@ -468,16 +469,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
             })
           : t("imports.wizard.progress", { step: index + 1, total: stepNames.length })
       }
-      icon={FileInput}
-      organizationId={organizationId}
-      breadcrumbs={[
-        { label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` },
-        {
-          label: reimport
-            ? t("imports.reimport.wizardTitle", { space: reimport.name })
-            : importTitle(t, entry),
-        },
-      ]}
+      back={{ label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` }}
       actions={
         <Button
           variant="secondary"
@@ -995,7 +987,7 @@ function SpaceStep({
     <>
       {entry.state === "analyzing" ? <Reading entry={entry} /> : null}
       <Section title={t("imports.wizard.space.title")}>
-        <div className="grid gap-4 p-4 md:grid-cols-2">
+        <div className="flex flex-col gap-4 p-4">
           <Field
             label={t("imports.wizard.space.name")}
             {...(errors.spaceName ? { error: errors.spaceName } : {})}
@@ -1035,6 +1027,7 @@ function SpaceStep({
               <Field
                 label={t("imports.wizard.space.sourceUrl")}
                 hint={t("imports.wizard.space.sourceUrlHint")}
+                help={t("imports.wizard.space.sourceUrlHelp")}
                 {...(errors.sourceUrl ? { error: errors.sourceUrl } : {})}
               >
                 <Input
@@ -1184,7 +1177,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
     }),
   );
   const space = (
-    <li className="flex flex-col gap-1 px-4 py-3">
+    <li className="flex flex-col gap-1 py-3">
       <span className="font-medium">
         {t("imports.wizard.check.spaceTitle", { name: form.spaceName, key: form.spaceKey })}
       </span>
@@ -1212,7 +1205,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
         </div>
         <Section title={t("imports.wizard.check.foundTitle")}>
           <ul className="flex flex-col divide-y divide-border">
-            <li className="flex flex-col gap-1 px-4 py-3">
+            <li className="flex flex-col gap-1 py-3">
               <span className="font-medium">
                 {t(
                   input === "archive"
@@ -1252,7 +1245,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
       </div>
       <Section title={t("imports.wizard.check.foundTitle")}>
         <ul className="flex flex-col divide-y divide-border">
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">
               {t("imports.wizard.check.peopleTitle", { count: found.people })}
             </span>
@@ -1262,7 +1255,7 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
               )}
             </span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">
               {t(history ? "imports.wizard.check.historyFull" : "imports.wizard.check.historyCurrent", {
                 count: found.versions,
@@ -1272,13 +1265,13 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
               {t("imports.wizard.check.extras", { likes: found.likes, watchers: found.watchers })}
             </span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">{t("imports.wizard.check.permissionsTitle")}</span>
             <span className="text-sm text-text-muted">
               {t("imports.wizard.check.permissionsDescription")}
             </span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
+          <li className="flex flex-col gap-1 py-3">
             <span className="font-medium">
               {t("imports.wizard.check.macrosTitle", { count: found.macroKinds })}
             </span>

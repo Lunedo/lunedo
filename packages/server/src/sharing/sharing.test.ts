@@ -93,6 +93,34 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(await test.services.documents.backlinks(context.outsider, context.root.id)).toEqual([]);
     });
 
+    it("names only the parents a person can read in label lists", async () => {
+      const context = await setup();
+      await share(context);
+      const label = `path-${randomUUID().slice(0, 6)}`;
+      await test.services.documents.addLabel(context.editor, context.shared.id, label);
+      const request = {
+        labels: [label],
+        matchAll: false,
+        spaceIds: [],
+        kinds: ["page" as const],
+        sort: "modified" as const,
+        reverse: false,
+        limit: 10,
+        excerpts: false,
+      };
+      expect(
+        (await test.services.reports.labeledContent(context.editor, request)).map((entry) => entry.parents),
+      ).toEqual([["Roadmap"]]);
+      const forOutsider = await test.services.reports.labeledContent(context.outsider, request);
+      expect(forOutsider.map((entry) => [entry.id, entry.parents])).toEqual([[context.shared.id, []]]);
+      expect(forOutsider[0]?.contentUpdatedAt).toBeInstanceOf(Date);
+      expect(
+        (await test.services.documents.pagesWithLabel(context.editor, context.space.id, label)).map(
+          (page) => page.parents,
+        ),
+      ).toEqual([["Roadmap"]]);
+    });
+
     it("lists the pages shared with someone, without the space they cannot see", async () => {
       const context = await setup();
       await share(context);

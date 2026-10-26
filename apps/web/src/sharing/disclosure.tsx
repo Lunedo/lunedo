@@ -22,7 +22,7 @@ export function DisclosureButton({
     >
       <ChevronRight
         aria-hidden="true"
-        className={`size-icon shrink-0 transition-transform motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
+        className={`size-icon-md shrink-0 transition-transform motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
       />
       {children}
     </button>

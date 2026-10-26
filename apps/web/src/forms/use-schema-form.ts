@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
 import { ApiError } from "../api/request.js";
+import { registerUnsavedChanges } from "../app-update/app-update.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { type FieldMessages, issueMessage, issuePath } from "./validation.js";
 
@@ -53,6 +54,9 @@ export function useSchemaForm<TInput extends FieldValues, TOutput>(
     reValidateMode: "onChange",
     ...(options.defaultValues ? { defaultValues: options.defaultValues } : {}),
   });
+  const dirty = useRef(false);
+  dirty.current = form.formState.isDirty && !form.formState.isSubmitSuccessful;
+  useEffect(() => registerUnsavedChanges(() => dirty.current), []);
   const language = useRef(i18n.language);
   useEffect(() => {
     if (language.current === i18n.language) return;

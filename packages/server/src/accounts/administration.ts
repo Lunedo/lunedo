@@ -57,6 +57,7 @@ export class AccountAdministrationService {
   readonly #mapping: GroupMappingService;
   readonly #settings: SettingsService;
   readonly #memberships: MembershipService;
+  readonly #reactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
 
   constructor(options: {
     database: Database;
@@ -349,6 +350,39 @@ export class AccountAdministrationService {
     });
   }
 
+  async endSession(actor: Principal, accountId: string, sessionId: string): Promise<boolean> {
+    return this.#database.transaction(async (tx) => {
+      const target = await this.#lockActive(tx, accountId);
+      if (actor.type === "account" && actor.id === target.id) {
+        throw new OrganizationError("endOwnSessions", "Own sessions are ended on the security page");
+      }
+      await this.#authorization.require(
+        actor,
+        END_SESSIONS_ACTION,
+        { type: "account", id: accountId },
+        { executor: tx },
+      );
+      await this.#checkRank(tx, actor, target, END_SESSIONS_ACTION);
+      const ended = await tx
+        .delete(sessions)
+        .where(and(eq(sessions.accountId, accountId), eq(sessions.id, sessionId)))
+        .returning({ id: sessions.id });
+      if (ended.length === 0) return false;
+      await this.#audit.record(tx, {
+        name: "account.sessionsEnded",
+        actor,
+        targetId: accountId,
+        fields: { endedSessions: 1 },
+        ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
+      });
+      return true;
+    });
+  }
+
+  onReactivated(listener: (tx: Transaction, accountId: string) => Promise<void>): void {
+    this.#reactivationListeners.push(listener);
+  }
+
   async reactivate(
     actor: Principal,
     accountId: string,
@@ -393,6 +427,7 @@ export class AccountAdministrationService {
         .set({ state: "active", updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
       await this.#checkRank(tx, actor, target, REACTIVATE_ACTION);
+      for (const listener of this.#reactivationListeners) await listener(tx, accountId);
       await this.#audit.record(tx, {
         name: "account.reactivated",
         actor,

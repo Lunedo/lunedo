@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { type Clock, type Job, PgBoss } from "pg-boss";
+import { type Clock, type Job, PgBoss, type QueueResult } from "pg-boss";
 import type { Database } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
@@ -335,17 +335,23 @@ export class PgBossQueue implements JobQueue {
   async counts(): Promise<Record<string, QueueCounts>> {
     await this.start();
     const queues = await this.#boss.getQueues();
+    const oldest = await this.#boss
+      .getDb()
+      .executeSql(
+        `select name, min(created_on) as oldest from ${SCHEMA}.job where state in ('created', 'retry') and start_after <= now() group by name`,
+      );
+    const oldestByQueue = new Map(
+      (oldest.rows as { name: string; oldest: Date | string }[]).map((row) => [
+        row.name,
+        new Date(row.oldest),
+      ]),
+    );
     return Object.fromEntries(
       queues
         .filter((queue) => !queue.name.startsWith("__pgboss__"))
         .map((queue) => [
           queue.name,
-          {
-            queued: queue.queuedCount,
-            active: queue.activeCount,
-            deferred: queue.deferredCount,
-            failed: queue.failedCount,
-          },
+          { ...queueCounts(queue), oldestQueuedAt: oldestByQueue.get(queue.name) ?? null },
         ]),
     );
   }
@@ -354,4 +360,15 @@ export class PgBossQueue implements JobQueue {
     if (!this.#started) return;
     await this.#boss.stop({ graceful: true, timeout: options.timeoutSeconds * 1000 });
   }
+}
+
+export function queueCounts(
+  queue: Pick<QueueResult, "readyCount" | "blockedCount" | "activeCount" | "deferredCount" | "failedCount">,
+): QueueCounts {
+  return {
+    queued: queue.readyCount + queue.blockedCount,
+    active: queue.activeCount,
+    deferred: queue.deferredCount,
+    failed: queue.failedCount,
+  };
 }

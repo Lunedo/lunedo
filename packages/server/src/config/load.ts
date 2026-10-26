@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { instanceUrlSchema } from "../accounts/instance-settings.js";
 import type { LogLevel } from "../logging/logger.js";
+import { resourcePath } from "../resources.js";
 
 function isTimeZone(value: string): boolean {
   try {
@@ -25,7 +25,7 @@ export class ConfigError extends Error {
 }
 
 export function changelogFileOf(configured: string | undefined): string {
-  return configured?.trim() || fileURLToPath(new URL("../../../../CHANGELOG.md", import.meta.url));
+  return configured?.trim() || resourcePath("..", "..", "CHANGELOG.md");
 }
 
 export interface ServerConfig {

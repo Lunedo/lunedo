@@ -525,12 +525,13 @@ export class PageExportRenderer {
   }
 
   async exportable(ids: Iterable<string>): Promise<Set<string>> {
-    const result = new Set<string>();
-    for (const id of await this.#readerVisible(ids)) {
-      if (await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))
-        result.add(id);
-    }
-    return result;
+    const visible = [...(await this.#readerVisible(ids))];
+    const decisions = await this.#authorization.explainMany(
+      this.#viewer,
+      "item.export",
+      visible.map((id) => ({ type: "item", id })),
+    );
+    return new Set(visible.filter((_, index) => decisions[index]?.allowed));
   }
 
   async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
@@ -716,9 +717,14 @@ export class PageExportRenderer {
       select account_id from meeting_attendees where meeting_id = ${pageId} order by position, account_id`);
     const ids = attendees.rows.map((attendee) => attendee.account_id);
     const names = await this.#people.visibleNames(this.#viewer, ids);
+    const guests = await this.#database.execute<{ name: string }>(sql`
+      select name from meeting_guests where meeting_id = ${pageId} order by position, created_at, id`);
     return {
       startsAt: row.starts_at === null ? null : new Date(row.starts_at),
-      attendees: ids.map((id) => names.get(id)).filter((name): name is string => name !== undefined),
+      attendees: [
+        ...ids.map((id) => names.get(id)).filter((name): name is string => name !== undefined),
+        ...guests.rows.map((guest) => guest.name),
+      ],
     };
   }
 

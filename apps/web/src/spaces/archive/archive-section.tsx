@@ -28,7 +28,7 @@ export function ArchiveSection({ space, currentId }: { space: SpaceWithRole; cur
           aria-hidden="true"
           className={`size-icon-sm shrink-0 text-text-muted transition-transform motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
         />
-        <Archive aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        <Archive aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
         <span className="min-w-0 flex-1 truncate text-xs font-semibold tracking-label text-text-muted uppercase">
           {t("archive.sectionTitle")}
         </span>
@@ -49,7 +49,7 @@ export function ArchiveSection({ space, currentId }: { space: SpaceWithRole; cur
                     title={item.title}
                     className={`flex h-row items-center gap-2 rounded-sm pr-2 pl-8 focus-visible:focus-ring ${current ? "bg-selected font-semibold text-selected-text" : "text-text-muted hover:bg-hover"}`}
                   >
-                    <Icon aria-hidden="true" className="size-icon shrink-0" />
+                    <Icon aria-hidden="true" className="size-icon-md shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{item.title}</span>
                   </Link>
                 ) : null}

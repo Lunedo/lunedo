@@ -18,7 +18,7 @@ export const membersCreateGroupsSetting = defineSetting({
   key: "organizations.membersCreateGroups",
   schema: z.boolean(),
   default: false,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -26,7 +26,7 @@ export const selfRegistrationSetting = defineSetting({
   key: "organizations.selfRegistration",
   schema: z.boolean(),
   default: false,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -34,7 +34,7 @@ export const guestExpiryReminderDaysSetting = defineSetting({
   key: "organizations.guestExpiryReminderDays",
   schema: z.number().int().min(1).max(90),
   default: 7,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -42,7 +42,7 @@ export const guestInactivityDaysSetting = defineSetting({
   key: "organizations.guestInactivityDays",
   schema: z.number().int().min(1).max(365),
   default: 30,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -50,7 +50,7 @@ export const expiryReminderDaysSetting = defineSetting({
   key: "organizations.expiryReminderDays",
   schema: z.number().int().min(1).max(90),
   default: 7,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 

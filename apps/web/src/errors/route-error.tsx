@@ -2,15 +2,30 @@ import { Button, EmptyState, ErrorState } from "@lunedo/ui";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { Compass, Lock } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, isApiError } from "../api/request.js";
+import { isChunkLoadError, reloadAfterChunkError } from "../app-update/app-update.js";
+import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { isRetryable } from "./failure.js";
 import { problemMessage } from "./problem-message.js";
 
-export function NotFoundScreen() {
+export function AppNotFoundScreen() {
+  return <NotFoundScreen inShell />;
+}
+
+export function NotFoundScreen({ inShell = false }: { inShell?: boolean }) {
   const { t } = useTranslation();
+  useDocumentTitle(t("errors.notFoundTitle"));
   return (
-    <main className="flex min-h-full items-center justify-center p-6">
+    <main
+      {...(inShell ? { id: "main" } : {})}
+      className={
+        inShell
+          ? "flex min-w-0 flex-1 items-center justify-center overflow-y-auto p-6"
+          : "flex min-h-full items-center justify-center p-6"
+      }
+    >
       <EmptyState
         icon={Compass}
         title={t("errors.notFoundTitle")}
@@ -27,6 +42,7 @@ export function NotFoundScreen() {
 
 function ForbiddenScreen() {
   const { t } = useTranslation();
+  useDocumentTitle(t("errors.forbiddenTitle"));
   return (
     <div className="flex min-h-full items-center justify-center p-6">
       <EmptyState
@@ -51,6 +67,8 @@ function useRetry(reset: () => void) {
 export function ScreenErrorScreen({ error, reset }: ErrorComponentProps) {
   const { t } = useTranslation();
   const retry = useRetry(reset);
+  const [reloading] = useState(() => isChunkLoadError(error) && reloadAfterChunkError());
+  if (reloading) return null;
   if (isApiError(error, "notFound")) return <NotFoundScreen />;
   if (isApiError(error, "forbidden")) return <ForbiddenScreen />;
   if (!(error instanceof ApiError)) {

@@ -30,6 +30,6 @@ The three levels are instance settings and must rise from one to the next. A new
 
 ## Interface
 
-The section **Settings > Instance > Storage** shows the usage, the three levels (saved together), the S3 limit, the reminder, the operations contacts and a button to send a test message to them. Changing the operations contacts is audited as `storage.contactsChanged`.
+The section **Settings > Instance > Storage** shows the usage, the three levels (saved together), the S3 limit and the reminder. The operations contacts and the button to send a test message to them are under **Settings > Instance > Notifications**, because backup warnings use them too. Changing the operations contacts is audited as `storage.contactsChanged`.
 
 The API is `GET` and `PUT /api/v1/instance/storage` and `POST /api/v1/instance/storage/test`. Refused uploads and imports answer `507` with the problem `storageFull`; refused exports keep `notEnoughStorage`.

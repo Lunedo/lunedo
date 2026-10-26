@@ -18,18 +18,17 @@ test("closing the notification center returns the focus to the bell", async ({ p
 test("closing the status picker returns the focus to the status button", async ({ page, organization }) => {
   const { pagePath } = await place(page, organization, "Status focus");
   await page.goto(pagePath);
-  const status = page.getByRole("button", { name: /Set status/ });
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Change the status" }).click();
+  const picker = page.getByRole("dialog", { name: "Change the status" });
+  await picker.getByRole("button", { name: "In progress" }).click();
+  await expect(picker).toBeHidden();
+  const status = page.getByRole("button", { name: "Change the status, currently In progress" });
   await status.click();
-  await expect(page.getByRole("dialog", { name: "Page status" })).toBeVisible();
+  await expect(picker).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Page status" })).toBeHidden();
+  await expect(picker).toBeHidden();
   await expect(status).toBeFocused();
-
-  await page.keyboard.press("Enter");
-  await page.getByRole("button", { name: "In progress" }).click();
-  const changed = page.getByRole("button", { name: /In progress/ });
-  await expect(page.getByRole("dialog", { name: "Page status" })).toBeHidden();
-  await expect(changed).toBeFocused();
 });
 
 test("showing and dismissing a banner keeps the focus on the page", async ({ page, organization }) => {

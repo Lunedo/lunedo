@@ -44,10 +44,29 @@ const WEEKLY: Rhythm = { frequency: "weekly", interval: 1, weekdays: ["MO"] };
 
 describe.skipIf(!baseUrl)("meeting series", () => {
   let test: TestServices;
+
+  let meetingNow: Date | null = null;
+
+  async function meetingStart(meetingId: string): Promise<Date | null> {
+    const result = await test.pool.query<{ starts_at: Date | null }>(
+      "select starts_at from meetings where item_id = $1",
+      [meetingId],
+    );
+    return result.rows[0]?.starts_at ?? null;
+  }
+
+  async function closeMeeting(...args: Parameters<TestServices["services"]["meetings"]["close"]>) {
+    meetingNow = await meetingStart(args[1]);
+    try {
+      return await test.services.meetings.close(...args);
+    } finally {
+      meetingNow = null;
+    }
+  }
   const { organization, member, space } = spaceFixtures(() => test);
 
   beforeAll(async () => {
-    test = await createTestServices(baseUrl ?? "");
+    test = await createTestServices(baseUrl ?? "", { meetingClock: () => meetingNow ?? new Date() });
     await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
   });
 
@@ -147,8 +166,78 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     });
   });
 
+  describe("who can take part", () => {
+    it("accepts only members of the space as members of a series, also when the members change", async () => {
+      const context = await setup();
+      const input = {
+        name: "Jour fixe IT",
+        parentId: null,
+        templateId: "builtin:team-meeting",
+        rhythm: WEEKLY,
+        startsOn: "2030-03-18",
+        startTime: "09:30",
+        timeZone: "Europe/Vienna",
+        durationMinutes: 45,
+      };
+      await expect(
+        test.services.meetings.createSeries(context.lead, context.space.id, {
+          ...input,
+          members: [context.leadId, context.outsiderId],
+        }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      const created = await series(context);
+      await expect(
+        test.services.meetings.updateSeries(context.lead, created.id, {
+          members: [context.leadId, context.outsiderId],
+        }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      await test.services.meetings.updateSeries(context.lead, created.id, {
+        members: [context.leadId, context.readerId],
+      });
+      const details = await test.services.meetings.details(context.lead, created.id);
+      expect(details.members.map((entry) => entry.id)).toEqual([context.leadId, context.readerId]);
+    });
+
+    it("accepts only participants who can open the space as owners of a topic", async () => {
+      const context = await setup();
+      const created = await series(context);
+      await test.services.meetings.addAttendee(context.lead, created.firstMeetingId, context.outsiderId);
+      const topics = test.services.topics;
+      await expect(
+        topics.create(context.lead, created.id, { title: "Budget", ownerId: context.outsiderId }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      await expect(
+        topics.create(context.lead, created.id, { title: "Budget", ownerId: context.readerId }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      const topic = await topics.create(context.lead, created.id, {
+        title: "Budget",
+        ownerId: context.editorId,
+      });
+      await expect(topics.update(context.lead, topic, { ownerId: context.outsiderId })).rejects.toMatchObject(
+        {
+          code: "invalidMember",
+        },
+      );
+      await test.services.meetings.addAttendee(context.lead, created.firstMeetingId, context.readerId);
+      await topics.update(context.lead, topic, { ownerId: context.readerId });
+      const owner = await test.database.execute<{ owner_id: string }>(
+        sql`select owner_id from tree_items where id = ${topic}`,
+      );
+      expect(owner.rows[0]?.owner_id).toBe(context.readerId);
+      const choices = await test.services.people.search(context.lead, undefined, { seriesId: created.id });
+      expect(choices.items.map((person) => person.id).sort()).toEqual(
+        [context.leadId, context.editorId, context.readerId].sort(),
+      );
+      const own = await topics.create(context.editor, created.id, { title: "Network" });
+      const owned = await test.database.execute<{ owner_id: string | null }>(
+        sql`select owner_id from tree_items where id = ${own}`,
+      );
+      expect(owned.rows[0]?.owner_id).toBe(context.editorId);
+    });
+  });
+
   describe("schedules", () => {
-    it("create the first meeting from the template with the date, the members and the series' tasks", async () => {
+    it("create the first meeting from the built-in template with notes only and the members", async () => {
       const context = await setup();
       const created = await series(context);
       const meeting = await test.services.meetings.meeting(context.lead, created.firstMeetingId);
@@ -157,14 +246,16 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       expect(meeting.attendees.map((attendee) => attendee.id).sort()).toEqual(
         [context.leadId, context.editorId].sort(),
       );
-      const reports = find(await content(created.firstMeetingId), (node) => node.type === "taskReport");
-      expect(reports.map((node) => node.attrs?.seriesId)).toEqual([created.id]);
+      const document = await content(created.firstMeetingId);
+      expect(find(document, (node) => node.type === "taskReport")).toEqual([]);
+      expect(find(document, (node) => node.type === "section").map((node) => node.attrs?.key)).toEqual([]);
+      expect(find(document, (node) => node.type === "templateField")).toEqual([]);
     });
 
     it("continue weekly across the change to summer time at the same local time", async () => {
       const context = await setup();
       const created = await series(context, { startsOn: "2030-03-25" });
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       const next = await test.services.meetings.meeting(context.lead, nextMeetingId ?? "");
       expect(next.startsAt?.toISOString()).toBe("2030-04-01T07:30:00.000Z");
     });
@@ -176,7 +267,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
         startsOn: "2030-03-14",
         startTime: "14:00",
       });
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       const next = await test.services.meetings.meeting(context.lead, nextMeetingId ?? "");
       expect(next.startsAt?.toISOString()).toBe("2030-03-28T13:00:00.000Z");
     });
@@ -189,7 +280,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       });
       const firstMonthly = await test.services.meetings.meeting(context.lead, monthly.firstMeetingId);
       expect(firstMonthly.startsAt?.toISOString()).toBe("2030-03-05T08:30:00.000Z");
-      const monthlyNext = await test.services.meetings.close(context.lead, monthly.firstMeetingId);
+      const monthlyNext = await closeMeeting(context.lead, monthly.firstMeetingId);
       expect(
         (
           await test.services.meetings.meeting(context.lead, monthlyNext.nextMeetingId ?? "")
@@ -199,7 +290,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
         rhythm: { frequency: "monthly", interval: 3, monthDay: 6 },
         startsOn: "2030-01-06",
       });
-      const quarterlyNext = await test.services.meetings.close(context.lead, quarterly.firstMeetingId);
+      const quarterlyNext = await closeMeeting(context.lead, quarterly.firstMeetingId);
       expect(
         (
           await test.services.meetings.meeting(context.lead, quarterlyNext.nextMeetingId ?? "")
@@ -223,7 +314,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
         sql`select starts_at from meeting_occurrence_overrides where series_id = ${created.id}`,
       );
       expect(overrides.rows).toHaveLength(1);
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       expect(
         (await test.services.meetings.meeting(context.lead, nextMeetingId ?? "")).startsAt?.toISOString(),
       ).toBe("2030-03-25T08:30:00.000Z");
@@ -260,10 +351,10 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     it("ask for the next date without a fixed rhythm and allow not scheduled yet", async () => {
       const context = await setup();
       const created = await series(context, { rhythm: { frequency: "none", interval: 1 } });
-      await expect(test.services.meetings.close(context.lead, created.firstMeetingId)).rejects.toMatchObject({
+      await expect(closeMeeting(context.lead, created.firstMeetingId)).rejects.toMatchObject({
         code: "nextDateRequired",
       });
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId, {
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId, {
         nextStartsAt: null,
       });
       const next = await test.services.meetings.meeting(context.lead, nextMeetingId ?? "");
@@ -281,11 +372,13 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       const context = await setup();
       const created = await series(context);
       const other = test.anotherNode();
+      meetingNow = await meetingStart(created.firstMeetingId);
       const results = await Promise.allSettled([
         test.services.meetings.close(context.lead, created.firstMeetingId),
         other.meetings.close(context.editor, created.firstMeetingId),
         test.services.meetings.close(context.editor, created.firstMeetingId),
       ]);
+      meetingNow = null;
       expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
       for (const result of results) {
         if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "meetingClosed" });
@@ -302,7 +395,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       const context = await setup();
       const created = await series(context);
       await test.services.meetings.addAttendee(context.lead, created.firstMeetingId, context.outsiderId);
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       const editorNotes = await test.services.notifications.list(context.editorId, { limit: 20 });
       expect(editorNotes.items.map((item) => item.type)).toContain("meeting.notesAvailable");
       const outsiderNotes = await test.services.notifications.list(context.outsiderId, { limit: 20 });
@@ -321,7 +414,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     it("keeps a next meeting someone already used when the close is undone, as with reopening", async () => {
       const context = await setup();
       const created = await series(context);
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       await test.services.meetings.setAttendance(
         context.lead,
         nextMeetingId ?? "",
@@ -334,9 +427,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       expect(reopened.state).toBe("reopened");
       expect(reopened.current).toBe(true);
       expect((await upcomingOf(context, created.id))?.id).toBe(nextMeetingId);
-      expect(
-        (await test.services.meetings.close(context.lead, created.firstMeetingId)).nextMeetingId,
-      ).toBeNull();
+      expect((await closeMeeting(context.lead, created.firstMeetingId)).nextMeetingId).toBeNull();
     });
 
     it("records attendance apart from the notes", async () => {
@@ -371,14 +462,14 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       await edit(context.lead, created.firstMeetingId, (document) =>
         writeUpdate(document, topicId, "Draft is with HR."),
       );
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       const carried = find(await content(nextMeetingId ?? ""), (node) => node.type === "topicUpdate");
       expect(carried.map((node) => node.attrs?.topicId)).toEqual([topicId]);
       await test.services.topics.close(context.lead, topicId, {
         outcome: "resolved",
         meetingId: nextMeetingId ?? "",
       });
-      const third = await test.services.meetings.close(context.lead, nextMeetingId ?? "");
+      const third = await closeMeeting(context.lead, nextMeetingId ?? "");
       expect(find(await content(third.nextMeetingId ?? ""), (node) => node.type === "topicUpdate")).toEqual(
         [],
       );
@@ -397,7 +488,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       await edit(context.lead, created.firstMeetingId, (document) =>
         writeUpdate(document, topicId, "Started."),
       );
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       await test.services.meetings.reopen(context.lead, created.firstMeetingId);
       await test.services.topics.close(context.lead, topicId, {
         outcome: "dropped",
@@ -487,7 +578,7 @@ describe.skipIf(!baseUrl)("meeting series", () => {
         content: [paragraph("Keep it.")],
       };
       await edit(context.lead, created.firstMeetingId, (document) => append(document, block));
-      const { nextMeetingId } = await test.services.meetings.close(context.lead, created.firstMeetingId);
+      const { nextMeetingId } = await closeMeeting(context.lead, created.firstMeetingId);
       await edit(context.lead, nextMeetingId ?? "", (document) => append(document, block));
       const copied = find(await content(nextMeetingId ?? ""), (node) => node.type === "decision");
       expect(copied[0]?.attrs?.id).not.toBe(decisionId);

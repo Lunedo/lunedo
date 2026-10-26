@@ -30,7 +30,7 @@ function railClassName(variant: "default" | "primary", current: boolean): string
     variant === "primary" &&
       "my-1 size-control-field bg-accent text-on-accent after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2 hover:bg-accent-hover",
     variant === "default" && !current && "hover:bg-hover hover:text-text",
-    variant === "default" && current && "bg-selected text-selected-text",
+    variant === "default" && current && "bg-accent text-on-accent",
   );
 }
 

@@ -1,0 +1,15 @@
+{
+  "name": "@lunedo/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Packages the bundled API, collaboration server and worker load at runtime: native modules and packages whose files are read at runtime",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "dependencies": {
+    "@fontsource/geist": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "minisearch": "^7.2.0",
+    "pdfjs-dist": "^6.4.299",
+    "sharp": "^0.35.5"
+  }
+}

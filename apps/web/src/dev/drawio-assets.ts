@@ -5,7 +5,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import yauzl from "yauzl";
-import { DRAWIO_PATH, DRAWIO_VERSION } from "../diagrams/drawio-version.js";
+import { DRAWIO_LANGUAGES, DRAWIO_PATH, DRAWIO_VERSION } from "../diagrams/drawio-version.js";
 
 export const DRAWIO_ARCHIVE = {
   url: `https://github.com/jgraph/drawio/releases/download/v${DRAWIO_VERSION}/draw.war`,
@@ -39,9 +39,15 @@ const EXCLUDED_FILES = new Set([
 
 export const DRAWIO_OVERRIDES = ["js/PreConfig.js", "js/PostConfig.js"] as const;
 
+const SHIPPED_TRANSLATIONS: ReadonlySet<string> = new Set(
+  DRAWIO_LANGUAGES.filter((language) => language !== "en"),
+);
+
 export function isShippedDrawioFile(name: string): boolean {
   if (name.endsWith("/") || name.includes("..") || name.startsWith("/")) return false;
   if (EXCLUDED_DIRECTORIES.some((directory) => name.startsWith(directory))) return false;
+  const translation = /^resources\/dia_(.+)\.txt$/.exec(name)?.[1];
+  if (translation !== undefined && !SHIPPED_TRANSLATIONS.has(translation)) return false;
   if (EXCLUDED_FILES.has(name) || name.endsWith(".map") || /^workbox-[^/]+\.js$/.test(name)) return false;
   return !name.endsWith(".html") || name === "index.html";
 }
@@ -51,7 +57,11 @@ export function drawioFile(url: string | undefined): string | null {
   const pathname = decodeURIComponent(new URL(url, "http://localhost").pathname);
   if (!pathname.startsWith(DRAWIO_PATH)) return null;
   const name = pathname.slice(DRAWIO_PATH.length) || "index.html";
-  return isShippedDrawioFile(name) || (DRAWIO_OVERRIDES as readonly string[]).includes(name) ? name : null;
+  return isServedDrawioFile(name) ? name : null;
+}
+
+export function isServedDrawioFile(name: string): boolean {
+  return isShippedDrawioFile(name) || (DRAWIO_OVERRIDES as readonly string[]).includes(name);
 }
 
 async function exists(file: string): Promise<boolean> {

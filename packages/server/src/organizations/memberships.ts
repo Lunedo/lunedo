@@ -38,12 +38,17 @@ export class LastOwnerError extends OrganizationError {
 export interface Member {
   accountId: string;
   name: string;
+  jobTitle: string | null;
+  pictureRef: string | null;
   email: string | null;
   accountType: string;
   kind: MembershipKind;
   expiresAt: Date | null;
   responsibleAccountId: string | null;
   roles: { assignmentId: string; role: string; customRoleId: string | null; expiresAt: Date | null }[];
+  groups: { id: string; name: string }[];
+  twoFactorActive: boolean;
+  lastActiveAt: Date | null;
 }
 
 type Event = AuditEventInput<AuditEventName>;
@@ -109,6 +114,8 @@ export class MembershipService {
   readonly #deactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
   readonly #endListeners: ((tx: Transaction, organizationId: string, accountId: string) => Promise<void>)[] =
     [];
+  readonly #addListeners: ((tx: Transaction, organizationId: string, accountId: string) => Promise<void>)[] =
+    [];
 
   constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
     this.#database = options.database;
@@ -126,28 +133,49 @@ export class MembershipService {
     this.#endListeners.push(listener);
   }
 
+  onMembershipAdded(
+    listener: (tx: Transaction, organizationId: string, accountId: string) => Promise<void>,
+  ): void {
+    this.#addListeners.push(listener);
+  }
+
   async #ended(tx: Transaction, organizationId: string, accountId: string): Promise<void> {
     for (const listener of this.#endListeners) await listener(tx, organizationId, accountId);
   }
 
-  async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Member>> {
+  async member(organizationId: string, accountId: string): Promise<Member | null> {
+    return (await this.list(organizationId, FIRST_PAGE, accountId)).items[0] ?? null;
+  }
+
+  async list(
+    organizationId: string,
+    page: PageRequest = FIRST_PAGE,
+    accountId?: string,
+  ): Promise<Page<Member>> {
     const sortName = sql<string>`lower(${accounts.name})`;
     const rows = await this.#database
       .select({
         sortName,
         accountId: memberships.accountId,
         name: accounts.name,
+        jobTitle: accounts.jobTitle,
+        pictureRef: accounts.pictureRef,
         email: accounts.email,
         accountType: accounts.type,
         kind: memberships.kind,
         expiresAt: memberships.expiresAt,
         responsibleAccountId: memberships.responsibleAccountId,
+        lastActiveAt: accounts.lastActiveAt,
+        twoFactorActive: sql<boolean>`(
+          exists (select 1 from totp_credentials t where t.account_id = ${accounts.id} and t.confirmed_at is not null)
+          or exists (select 1 from webauthn_credentials w where w.account_id = ${accounts.id}))`,
       })
       .from(memberships)
       .innerJoin(accounts, eq(accounts.id, memberships.accountId))
       .where(
         and(
           eq(memberships.organizationId, organizationId),
+          accountId ? eq(memberships.accountId, accountId) : undefined,
           eq(accounts.state, "active"),
           or(isNull(memberships.expiresAt), sql`${memberships.expiresAt} > now()`),
           afterKey([sortName, accounts.id], page.after),
@@ -184,10 +212,26 @@ export class MembershipService {
         ),
       )
       .orderBy(roleAssignments.id);
+    const groupRows = await this.#database
+      .select({ accountId: groupMembers.accountId, id: groups.id, name: groups.name })
+      .from(groupMembers)
+      .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+      .where(
+        and(
+          eq(groups.organizationId, organizationId),
+          inArray(groupMembers.accountId, accountIds),
+          or(isNull(groupMembers.expiresAt), sql`${groupMembers.expiresAt} > now()`),
+        ),
+      )
+      .orderBy(sql`lower(${groups.name})`, groups.id);
     return {
       next: result.next,
       items: result.items.map((row) => ({
         ...row,
+        twoFactorActive: row.twoFactorActive === true,
+        groups: groupRows
+          .filter((group) => group.accountId === row.accountId)
+          .map((group) => ({ id: group.id, name: group.name })),
         roles: assignments
           .filter((assignment) => assignment.accountId === row.accountId)
           .map((assignment) => ({
@@ -253,6 +297,7 @@ export class MembershipService {
     }
     if (options.collect) options.collect.push(...events);
     else await this.#audit.recordMany(tx, events);
+    for (const listener of this.#addListeners) await listener(tx, input.organizationId, input.accountId);
   }
 
   async #checkRank(

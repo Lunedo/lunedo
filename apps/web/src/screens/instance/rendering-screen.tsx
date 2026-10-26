@@ -1,6 +1,15 @@
-import { Badge, type BadgeVariant, Button, Notice, Section, SettingRow, Skeleton } from "@lunedo/ui";
+import {
+  Badge,
+  type BadgeVariant,
+  Button,
+  CodeBlock,
+  Notice,
+  Section,
+  SettingRow,
+  Skeleton,
+} from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type RenderingStatus, renderingQuery } from "../../api/instance-queries.js";
 import { DRAWIO_VERSION } from "../../diagrams/drawio-version.js";
@@ -16,8 +25,10 @@ const STATE_BADGES: Record<string, BadgeVariant> = {
   unreachable: "danger",
 };
 
-const COMPOSE_SNIPPET = `  lunedo-render:
-    image: ghcr.io/lunedo/render:latest
+const LATEST_RENDER_IMAGE = "ghcr.io/lunedo/render:latest";
+
+const composeSnippet = (image: string) => `  lunedo-render:
+    image: ${image}
     restart: unless-stopped
     environment:
       RENDER_TOKEN: \${LUNEDO_RENDER_TOKEN}
@@ -61,7 +72,7 @@ function PdfSection({
         }
       />
       {state === "unreachable" && pdf.reason ? (
-        <div className="px-4 py-3">
+        <div className="py-3">
           <Notice variant="danger" title={translateKey(t, `rendering.pdf.states.${state}`)}>
             {translateKey(t, `rendering.pdf.reasons.${pdf.reason}`)}
           </Notice>
@@ -80,6 +91,7 @@ function PdfSection({
           <SettingRow
             label={t("rendering.pdf.concurrency")}
             description={t("rendering.pdf.concurrencyHint")}
+            help={t("rendering.pdf.concurrencyHelp")}
             control={<span>{pdf.concurrency}</span>}
           />
           <SettingRow
@@ -101,18 +113,21 @@ function PdfSection({
               </span>
             }
           />
-          <p className="px-4 py-3 text-sm text-text-muted">{t("rendering.pdf.usedFor")}</p>
+          <p className="py-3 text-sm text-text-muted">{t("rendering.pdf.usedFor")}</p>
         </>
       ) : null}
       {state === "notConfigured" ? (
-        <div className="flex flex-col gap-3 px-4 py-3">
+        <div className="flex flex-col gap-3 py-3">
           <Notice variant="info" title={t("rendering.pdf.notConfiguredTitle")}>
             {t("rendering.pdf.notConfigured")}
           </Notice>
           <p className="text-sm">{t("rendering.pdf.setup")}</p>
-          <pre className="overflow-x-auto rounded-md border border-border bg-surface-sunken p-3 font-mono text-sm">
-            {COMPOSE_SNIPPET}
-          </pre>
+          <CodeBlock
+            value={composeSnippet(pdf.image ?? LATEST_RENDER_IMAGE)}
+            label={t("rendering.pdf.snippet")}
+            copyLabel={t("rendering.pdf.copySnippet")}
+          />
+          {pdf.image ? null : <p className="text-sm text-text-muted">{t("rendering.pdf.notRelease")}</p>}
           <a
             href={docsUrl("rendering.md")}
             target="_blank"
@@ -131,7 +146,7 @@ export function InstanceRenderingScreen() {
   const { t } = useTranslation();
   const status = useQuery({ ...renderingQuery, throwOnError: false });
   return (
-    <SettingsPage title={t("rendering.title")} description={t("rendering.description")} icon={Printer}>
+    <SettingsPage title={t("rendering.title")} description={t("rendering.description")}>
       {status.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {status.isError ? (
         <LoadError
@@ -156,11 +171,13 @@ export function InstanceRenderingScreen() {
             <SettingRow
               label={t("rendering.other.diagrams")}
               description={t("rendering.other.diagramsDescription")}
+              help={t("rendering.other.diagramsHelp")}
               control={<Badge variant="success">{t("rendering.other.available")}</Badge>}
             />
             <SettingRow
               label={t("rendering.other.drawio")}
               description={t("rendering.other.drawioDescription", { version: DRAWIO_VERSION })}
+              help={t("rendering.other.drawioHelp", { version: DRAWIO_VERSION })}
               control={<Badge variant="success">{t("rendering.other.servedLocally")}</Badge>}
             />
           </Section>

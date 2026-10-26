@@ -1,16 +1,29 @@
-import { Badge, Button, Combobox, Field, Notice, Section, Table } from "@lunedo/ui";
+import {
+  Badge,
+  Button,
+  Combobox,
+  Field,
+  InlineField,
+  Notice,
+  Section,
+  Table,
+  TruncatedText,
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { breakGlassQuery, instanceKeys, instanceOrganizationsQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
+import { SettingsList } from "../../components/settings-list.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { BreakGlassDialog } from "./break-glass-dialog.js";
+import { useInstanceSettingsEditor } from "./general-screen.js";
 
 type Entry = Awaited<ReturnType<NonNullable<(typeof breakGlassQuery)["queryFn"]>>>[number];
 
@@ -26,6 +39,7 @@ export function BreakGlassScreen() {
   const session = useSession();
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
+  const editor = useInstanceSettingsEditor();
   const entries = useQuery(breakGlassQuery);
   const organizations = useQuery(instanceOrganizationsQuery);
   const [organizationId, setOrganizationId] = useState("");
@@ -49,11 +63,20 @@ export function BreakGlassScreen() {
   };
 
   return (
-    <SettingsPage title={t("breakGlass.title")} description={t("breakGlass.description")} icon={ShieldAlert}>
+    <SettingsPage title={t("breakGlass.title")} description={t("breakGlass.description")}>
+      <p className="text-sm text-text-muted">
+        {t("breakGlass.otherEmergency")}{" "}
+        <Link to="/settings/instance/sign-in-providers" className="font-medium text-accent hover:underline">
+          {t("emergencyRecipients.title")}
+        </Link>
+      </p>
+      <Section title={t("breakGlass.duration")}>
+        <SettingsList {...editor} keys={["organizations.breakGlassMinutes"]} level="instance" />
+      </Section>
       {canRequest ? (
         <Section title={t("breakGlass.request")}>
           <div className="flex flex-wrap items-end gap-3 p-4">
-            <div className="w-field max-w-full">
+            <InlineField>
               <Field label={t("breakGlass.organization")}>
                 <Combobox
                   aria-label={t("breakGlass.organization")}
@@ -63,7 +86,7 @@ export function BreakGlassScreen() {
                   items={candidates.map((entry) => ({ value: entry.id, label: entry.name }))}
                 />
               </Field>
-            </div>
+            </InlineField>
             <Button
               variant="outline"
               icon={ShieldAlert}
@@ -77,7 +100,7 @@ export function BreakGlassScreen() {
             </Button>
           </div>
           {candidates.length === 0 && organizations.isSuccess ? (
-            <div className="px-4 pb-4">
+            <div className="pb-4">
               <Notice variant="info">{t("breakGlass.noCandidates")}</Notice>
             </div>
           ) : null}
@@ -94,7 +117,9 @@ export function BreakGlassScreen() {
             {
               key: "organization",
               header: t("breakGlass.organization"),
-              cell: (entry) => <span className="font-medium">{entry.organizationName}</span>,
+              cell: (entry) => (
+                <TruncatedText text={entry.organizationName} className="max-w-field font-medium" />
+              ),
             },
             { key: "account", header: t("breakGlass.requestedBy"), cell: (entry) => entry.accountName },
             { key: "reason", header: t("breakGlass.reason"), hideBelow: "md", cell: (entry) => entry.reason },

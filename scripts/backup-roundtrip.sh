@@ -196,22 +196,12 @@ done
 subnet="$(docker network inspect -f '{{(index .IPAM.Config 0).Subnet}}' "$network")"
 # The schedule fires at the next full minute but one, in UTC, the default time zone of an instance.
 daily_time="$(date -u -d '+2 minutes' +%H:%M)"
+printf 's3.bucket.create -name roundtrip\n' | docker exec -i "$s3" weed shell >/dev/null
 docker run "${label[@]}" --rm --network "$network" -e LUNEDO_DATABASE_URL="$(url source)" \
-  -v "$source_data:/var/lib/lunedo" -w /app/worker --entrypoint node "$image" --input-type=module -e '
-import { createRequire } from "node:module";
+  -v "$source_data:/var/lib/lunedo" --entrypoint node "$image" --input-type=module -e '
 const { backupS3SecretContext, createDatabasePool, createKeyProvider, Encryption, loadConfig } =
-  await import("@lunedo/server");
-const require = createRequire(createRequire(import.meta.url).resolve("@lunedo/server"));
-const { CreateBucketCommand, S3Client } = require("@aws-sdk/client-s3");
+  await import("/app/server/server.js");
 const [endpoint, secret, dailyTime] = process.argv.slice(1);
-const s3 = new S3Client({
-  region: "us-east-1",
-  endpoint,
-  forcePathStyle: true,
-  credentials: { accessKeyId: "lunedo", secretAccessKey: secret },
-});
-await s3.send(new CreateBucketCommand({ Bucket: "roundtrip" }));
-s3.destroy();
 const config = loadConfig(process.env);
 const ring = await createKeyProvider(config).load();
 const value = new Encryption(() => ring).encrypt(secret, backupS3SecretContext());
@@ -244,23 +234,9 @@ fi
 name="$(psql_in source -c "select name from backup_runs where trigger = 'scheduled' and state = 'succeeded' limit 1")"
 docker rm -f "$worker" >/dev/null
 content_summary "$postgres" source > "$work/s3-source.txt"
-docker run "${label[@]}" --rm --network "$network" -v "$backups:/var/lib/lunedo/backups" -w /app/worker \
-  --entrypoint node "$image" --input-type=module -e '
-import { createWriteStream } from "node:fs";
-import { createRequire } from "node:module";
-import { pipeline } from "node:stream/promises";
-const require = createRequire(createRequire(import.meta.url).resolve("@lunedo/server"));
-const { GetObjectCommand, S3Client } = require("@aws-sdk/client-s3");
-const [endpoint, secret, key, output] = process.argv.slice(1);
-const client = new S3Client({
-  region: "us-east-1",
-  endpoint,
-  forcePathStyle: true,
-  credentials: { accessKeyId: "lunedo", secretAccessKey: secret },
-});
-const object = await client.send(new GetObjectCommand({ Bucket: "roundtrip", Key: key }));
-await pipeline(object.Body, createWriteStream(output));
-' "http://${s3}:8333" "$s3_secret" "scheduled/${name}" "/var/lib/lunedo/backups/${name}"
+docker exec "$s3" wget -qO- "http://127.0.0.1:8888/buckets/roundtrip/scheduled/${name}" |
+  docker run "${label[@]}" --rm -i -v "$backups:/var/lib/lunedo/backups" --entrypoint sh "$image" \
+    -c 'cat > "/var/lib/lunedo/backups/$1"' sh "$name"
 
 echo "Restoring the scheduled backup from S3 into a fresh instance"
 copy_secrets "$s3_data"

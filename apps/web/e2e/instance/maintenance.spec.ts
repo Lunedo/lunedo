@@ -63,6 +63,7 @@ test("an administrator switches maintenance on, a colleague can only read, and i
 
     await page.goto("/settings/instance/status");
     await expect(page.getByRole("heading", { name: "System status", level: 1 })).toBeVisible();
+    await page.locator("summary", { hasText: "In order" }).click();
     for (const check of [
       "Version",
       "Maintenance mode",
@@ -92,11 +93,12 @@ test("an administrator switches maintenance on, a colleague can only read, and i
 test("the status page shows each check with its state and where it is fixed", async ({ page }) => {
   await page.goto("/settings/instance/status");
   await expect(page.getByRole("heading", { name: "System status", level: 1 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Checks" })).toBeVisible();
+  await expect(page.getByText("Need attention", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Database", { exact: true })).toBeHidden();
+  await page.locator("summary", { hasText: "In order" }).click();
   await expect(page.getByText("Database", { exact: true })).toBeVisible();
   await expect(page.getByText(/^PostgreSQL /)).toBeVisible();
   await expect(page.getByRole("table", { name: "Job queues" })).toBeVisible();
-  await expect(page.getByRole("table", { name: "Recent errors" })).toBeVisible();
   await page.getByRole("button", { name: "Check again" }).click();
   await expect(page.getByText(/^Checked /)).toBeVisible();
 });

@@ -1,14 +1,34 @@
+import { introductionText } from "@lunedo/shared";
 import { Field, Textarea } from "@lunedo/ui";
+import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SaveIndicator, useSaveState } from "../components/auto-save.js";
+import { IntroductionPreview } from "../knowledge-bases/settings/introduction-editor.js";
+
+export function folderDescriptionText(value: string, formatted: boolean): string {
+  return formatted ? introductionText(value) : value;
+}
+
+export function ReadOnlyFolderDescription({ value, formatted }: { value: string; formatted: boolean }) {
+  if (value === "") return null;
+  return formatted ? (
+    <div className="text-text-muted">
+      <IntroductionPreview source={value} />
+    </div>
+  ) : (
+    <p className="text-text-muted">{value}</p>
+  );
+}
 
 export function FolderDescription({
   value,
   onSave,
+  formatted = false,
 }: {
   value: string;
   onSave: (value: string) => Promise<unknown>;
+  formatted?: boolean;
 }) {
   const { t } = useTranslation();
   const tracker = useSaveState();
@@ -40,20 +60,25 @@ export function FolderDescription({
   };
 
   if (!editing) {
+    const shown = folderDescriptionText(value, formatted);
     return (
       <div className="flex flex-col gap-1">
         <button
           ref={opener}
           type="button"
-          {...(value === "" ? {} : { "aria-label": t("folder.editDescription", { description: value }) })}
-          className="-mx-2 rounded-md px-2 py-1 text-start whitespace-pre-wrap hover:bg-hover focus-visible:focus-ring"
+          {...(value === "" ? {} : { "aria-label": t("folder.editDescription", { description: shown }) })}
+          className="group -mx-2 inline-flex items-baseline gap-2 self-start rounded-md px-2 py-1 text-start whitespace-pre-wrap hover:bg-hover focus-visible:focus-ring"
           onClick={() => setEditing(true)}
         >
           {value === "" ? (
             <span className="text-text-muted">{t("folder.addDescription")}</span>
           ) : (
-            <span className="text-text-muted">{value}</span>
+            <span className="text-text-muted">{shown}</span>
           )}
+          <Pencil
+            aria-hidden="true"
+            className="size-icon-sm shrink-0 text-text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+          />
         </button>
         {tracker.state === "saved" ? <SaveIndicator tracker={tracker} /> : null}
       </div>

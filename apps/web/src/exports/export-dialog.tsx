@@ -275,6 +275,7 @@ export function ExportForm({
     >
       <RadioGroup
         label={t("exports.dialog.format")}
+        heading={t("exports.dialog.format")}
         variant="card"
         value={choice}
         onValueChange={(value) => chooseFormat(value as Choice)}

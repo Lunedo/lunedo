@@ -12,7 +12,6 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Construction } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -137,7 +136,7 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
           }
         />
         {details.enabled && details.blockSignIn ? (
-          <div className="px-4 pb-3">
+          <div className="pb-3">
             <Notice variant="warning">{t("maintenance.state.signInPaused")}</Notice>
           </div>
         ) : null}
@@ -153,10 +152,11 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
       </Section>
       {canManage ? (
         <Section title={details.enabled ? t("maintenance.form.changeTitle") : t("maintenance.form.title")}>
-          <div ref={form} className="flex flex-col gap-4 px-4 py-3">
+          <div ref={form} className="flex flex-col gap-4 py-3">
             <Field
               label={t("maintenance.form.message")}
               hint={t("maintenance.form.messageHint", { max: MESSAGE_MAX })}
+              help={t("maintenance.form.messageHelp", { max: MESSAGE_MAX })}
               {...(error ? { error } : {})}
             >
               <Textarea
@@ -217,11 +217,7 @@ export function InstanceMaintenanceScreen() {
   const state = useOrganizationState();
   const details = useQuery({ ...detailsQuery, throwOnError: false });
   return (
-    <SettingsPage
-      title={t("maintenance.title")}
-      description={t("maintenance.description")}
-      icon={Construction}
-    >
+    <SettingsPage title={t("maintenance.title")} description={t("maintenance.description")}>
       {details.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {details.isError ? (
         <LoadError

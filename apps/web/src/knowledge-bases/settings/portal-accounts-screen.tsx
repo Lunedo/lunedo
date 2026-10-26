@@ -21,6 +21,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { isApiError, request } from "../../api/request.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -58,7 +59,7 @@ function InviteDialog({
   const [errors, setErrors] = useState<{ email?: string; expires?: string; form?: string }>({});
   const [saving, setSaving] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
-  const expiryRef = useRef<HTMLInputElement>(null);
+  const expiryRef = useRef<HTMLButtonElement>(null);
   const close = (next: boolean) => {
     if (!next) {
       setEmail("");
@@ -131,12 +132,13 @@ function InviteDialog({
           hint={t("portalAccounts.invite.expiryDescription")}
           error={errors.expires}
         >
-          <Input
+          <AppDatePicker
             ref={expiryRef}
-            type="date"
             min={new Date(Date.now() + DAY_MS).toISOString().slice(0, 10)}
             value={expires}
-            onChange={(event) => setExpires(event.target.value)}
+            clearable
+            invalid={Boolean(errors.expires)}
+            onValueChange={setExpires}
           />
         </Field>
         <div className="flex justify-end gap-2">
@@ -170,20 +172,15 @@ export function PortalAccountsScreen() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: query.queryKey });
   const forPortal = space.audience === "portal";
   return (
-    <SpaceSettingsPage
-      tab="portalAccounts"
-      title={t("portalAccounts.title")}
-      description={t("portalAccounts.description")}
-      icon={Users}
-    >
+    <SpaceSettingsPage title={t("portalAccounts.title")} description={t("portalAccounts.description")}>
       <div className="flex flex-col gap-6">
         {forPortal ? null : (
-          <Notice variant="info" title={t("portalAccounts.notForPortalTitle")}>
-            <p>{t("portalAccounts.notForPortal")}</p>
+          <Notice variant="info">
+            {t("portalAccounts.notApplicable")}{" "}
             <Link
               to="/spaces/$spaceKey/settings/visibility"
               params={{ spaceKey: space.key }}
-              className="mt-2 inline-flex min-h-hit items-center text-accent hover:underline focus-visible:focus-ring"
+              className="text-accent hover:underline focus-visible:focus-ring"
             >
               {t("portalAccounts.toVisibility")}
             </Link>

@@ -104,9 +104,12 @@ describe("languages of a knowledge base", () => {
       }),
     });
     await renderWithProviders(inSpace(<LanguagesScreen />));
+    expect(await screen.findByText("For new articles and as fallback.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "More about: Default language" }));
     expect(
       await screen.findByText(/A change updates the search of all articles in the background/),
     ).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(screen.getByText(/Search is being updated: 2 of 140 articles left/)).toBeTruthy();
     expect(screen.getByRole("progressbar", { name: "Search update" }).getAttribute("aria-valuenow")).toBe(
       "138",

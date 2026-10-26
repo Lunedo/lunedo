@@ -95,7 +95,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
       </Notice>
       {entra ? (
         <Section title={t("identityProviders.scim.entraMappings")}>
-          <p className="px-4 pt-3 text-sm text-text-muted">{t("identityProviders.scim.entraMappingsHint")}</p>
+          <p className="pt-3 text-sm text-text-muted">{t("identityProviders.scim.entraMappingsHint")}</p>
           <Table
             caption={t("identityProviders.scim.entraMappings")}
             rowKey={(row) => row.target}
@@ -121,7 +121,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
         </Section>
       ) : null}
       <Section title={t("identityProviders.scim.connection")}>
-        <div className="flex flex-col gap-4 px-4 py-3">
+        <div className="flex flex-col gap-4 py-3">
           <CopyField
             label={t("identityProviders.scim.url")}
             value={data.url}
@@ -226,7 +226,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
           }
         />
         {tokens.length > 0 ? (
-          <p className="px-4 pb-3 text-sm text-text-muted">{t("identityProviders.scim.leads")}</p>
+          <p className="pb-3 text-sm text-text-muted">{t("identityProviders.scim.leads")}</p>
         ) : null}
       </Section>
       {created ? (

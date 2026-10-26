@@ -22,6 +22,12 @@ export type TextAlignment = (typeof textAlignments)[number];
 
 export const imageAlignments = ["left", "center", "right"] as const;
 
+export const IMAGE_REFERENCE_PIXELS = 760;
+
+export function imageWidthPercent(pixels: number): number {
+  return Math.min(100, Math.max(1, Math.round((pixels * 100) / IMAGE_REFERENCE_PIXELS)));
+}
+
 export const codeLanguages: readonly string[] = [...Object.keys(common), "powershell"].sort();
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

@@ -77,10 +77,24 @@ export const exampleOrganization = {
   createdAt: "2026-10-01T08:00:00.000Z",
 };
 
+export const pictureRefField = z
+  .string()
+  .nullable()
+  .describe(
+    "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+  );
+
+export const jobTitleField = z
+  .string()
+  .nullable()
+  .describe("Job title the person entered on their profile, or null.");
+
 export const memberSchema = z
   .object({
     accountId: uuid("ID of the account."),
     name: z.string().describe("Display name of the account."),
+    jobTitle: jobTitleField,
+    pictureRef: pictureRefField,
     email: z.string().nullable().describe("E-mail address, or null for service accounts."),
     accountType: z.string().describe("`standard`, `guest`, `portal` or `service`."),
     kind: z.enum(["member", "collaborator", "guest"]).describe("Kind of membership in the organization."),
@@ -98,12 +112,25 @@ export const memberSchema = z
           .describe("A role assigned directly to the account."),
       )
       .describe("Roles assigned directly to the account in this organization."),
+    groups: z
+      .array(
+        z
+          .object({ id: uuid("ID of the group."), name: z.string().describe("Name of the group.") })
+          .describe("A group of the organization the account belongs to."),
+      )
+      .describe("Groups of this organization the account belongs to, ordered by name."),
+    twoFactorActive: z
+      .boolean()
+      .describe("Whether the account has a confirmed authenticator app or a passkey."),
+    lastActiveAt: timestamp("When the account was last active in Lunedo, or null.").nullable(),
   })
   .describe("A member of an organization.");
 
 export const exampleMember = {
   accountId: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
   name: "Ada Lovelace",
+  jobTitle: "Head of Engineering",
+  pictureRef: "5f2b8c1d9a0e4b7c",
   email: "ada@example.org",
   accountType: "standard",
   kind: "member",
@@ -117,6 +144,9 @@ export const exampleMember = {
       expiresAt: null,
     },
   ],
+  groups: [{ id: "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f", name: "Engineering" }],
+  twoFactorActive: true,
+  lastActiveAt: "2026-10-24T08:15:00.000Z",
 };
 
 export const groupSchema = z
@@ -142,6 +172,16 @@ export const groupSchema = z
       .describe(
         "Name of the removed identity provider this group was synchronized from, or null. Such a group is an ordinary group now.",
       ),
+    memberCount: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of active accounts in the group. Only in lists of groups."),
+    spaceCount: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of spaces that give the group a role. Only in lists of groups."),
   })
   .describe("A group of accounts.");
 
@@ -156,6 +196,8 @@ export const groupMemberSchema = z
   .object({
     accountId: uuid("ID of the member."),
     name: z.string().describe("Display name of the member."),
+    jobTitle: jobTitleField,
+    pictureRef: pictureRefField,
     expiresAt: timestamp("When the group membership ends, or null.").nullable(),
   })
   .describe("A member of the group.");
@@ -163,6 +205,8 @@ export const groupMemberSchema = z
 export const exampleGroupMember = {
   accountId: exampleMember.accountId,
   name: exampleMember.name,
+  jobTitle: exampleMember.jobTitle,
+  pictureRef: exampleMember.pictureRef,
   expiresAt: null,
 };
 
@@ -296,11 +340,21 @@ export const settingSchema = z
       .array(z.string())
       .describe("Lower levels where the setting can be set. A lock at this level applies to them."),
     editable: z.boolean().describe("Whether the setting can be changed through the settings endpoint."),
+    stricterOnly: z
+      .enum(["lower", "higher"])
+      .nullable()
+      .describe(
+        "For a limit: `lower` when lower levels may only choose a lower value, `higher` when only a higher one, null otherwise. The value inherited from above is the bound.",
+      ),
     maximum: z
       .json()
       .describe(
         "Highest value allowed, set for the instance, or null when the setting has no maximum. `unlimited` allows any value.",
       ),
+    minimum: z
+      .number()
+      .nullable()
+      .describe("Lowest value allowed, set for the instance, or null when the setting has no minimum."),
     levels: z
       .array(
         z
@@ -321,18 +375,20 @@ export const settingSchema = z
   .describe("A setting with its effective value and where it comes from.");
 
 export const exampleSetting = {
-  key: "organizations.membersCreateGroups",
-  value: false,
-  defaultValue: false,
-  source: "default",
+  key: "auth.passwordMinLength",
+  value: 14,
+  defaultValue: 12,
+  source: "instance",
   lockedBy: null,
   locked: false,
   lockable: true,
   levelsBelow: ["organization"],
   editable: true,
+  stricterOnly: "higher",
   maximum: null,
+  minimum: null,
   levels: [
-    { level: "instance", value: null, locked: false, effective: true },
+    { level: "instance", value: 14, locked: false, effective: true },
     { level: "organization", value: null, locked: false, effective: true },
   ],
 };
@@ -454,6 +510,11 @@ export const auditEntrySchema = z
         former: z
           .boolean()
           .describe("Whether the account was anonymized; its name and other personal data are gone."),
+        serviceAccount: z.boolean().describe("Whether the account is a service account."),
+        token: z
+          .string()
+          .nullable()
+          .describe("Name of the API token the account acted with, or null when it acted without one."),
       })
       .describe("Who acted."),
     target: z
@@ -522,7 +583,14 @@ export const exampleAuditEntry = {
   userAgent: "curl/8.9.1",
   labelKey: "audit.events.role.assigned",
   changeKind: "fields",
-  actor: { type: "account", id: exampleMember.accountId, name: "Olivia Owner", former: false },
+  actor: {
+    type: "account",
+    id: exampleMember.accountId,
+    name: "Olivia Owner",
+    former: false,
+    serviceAccount: false,
+    token: null,
+  },
   target: { type: "roleAssignment", id: exampleRoleAssignment.id, name: null, former: false },
   scope: { type: "organization", id: exampleOrganization.id, name: "Platform Team" },
   changes: [

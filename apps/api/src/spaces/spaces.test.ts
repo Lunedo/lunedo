@@ -720,6 +720,20 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       personal.json().id,
     );
     const successor = await person();
+    const outsider = await person();
+    await test.runtime.pool.query(
+      `insert into space_permissions (id, space_id, principal_kind, principal_id, role)
+       values (gen_random_uuid(), $1, 'account', $2, 'reader')`,
+      [personal.json().id, successor.id],
+    );
+    const candidates = await owner.get(
+      `/api/v1/instance/personal-spaces/${personal.json().id}/remaining-members`,
+    );
+    expect(candidates.json().map((member: { id: string }) => member.id)).toEqual([successor.id]);
+    const refused = await owner.post(`/api/v1/instance/personal-spaces/${personal.json().id}/transfer`, {
+      accountId: outsider.id,
+    });
+    expect(refused.json()).toMatchObject({ code: "invalidHolder" });
     const transfer = await owner.post(`/api/v1/instance/personal-spaces/${personal.json().id}/transfer`, {
       accountId: successor.id,
     });
@@ -728,6 +742,86 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       role: "admin",
     });
     expect((await owner.get(`/api/v1/spaces/${personal.json().id}`)).statusCode).toBe(404);
+  });
+
+  it("lets administrators of the home organization appoint a remaining member of a personal space", async () => {
+    const leaving = await person();
+    const remaining = await person();
+    const ordinary = await person();
+    const personal = (
+      await leaving.client.post("/api/v1/account/personal-space", { overviewTitle: "Personal space" })
+    ).json();
+    await test.runtime.pool.query("update accounts set home_organization_id = $1 where id = $2", [
+      organizationId,
+      leaving.id,
+    ]);
+    await test.runtime.pool.query(
+      `insert into space_permissions (id, space_id, principal_kind, principal_id, role)
+       values (gen_random_uuid(), $1, 'account', $2, 'editor')`,
+      [personal.id, remaining.id],
+    );
+    await test.runtime.pool.query("update accounts set state = 'deactivated' where id = $1", [leaving.id]);
+    const base = `/api/v1/organizations/${organizationId}/personal-spaces`;
+    expect((await ordinary.client.get(base)).statusCode).toBe(403);
+    expect(
+      (await ordinary.client.post(`${base}/${personal.id}/administrator`, { accountId: ordinary.id }))
+        .statusCode,
+    ).toBe(403);
+    const listed = await owner.get(base);
+    expect(listed.json().items).toEqual([
+      expect.objectContaining({ id: personal.id, activeMembers: 1, needsAdministrator: true }),
+    ]);
+    const members = await owner.get(`${base}/${personal.id}/remaining-members`);
+    expect(members.json()).toEqual([{ id: remaining.id, name: expect.any(String) }]);
+    const appointed = await owner.post(`${base}/${personal.id}/administrator`, { accountId: remaining.id });
+    expect(appointed.statusCode, appointed.body).toBe(204);
+    expect((await remaining.client.get(`/api/v1/spaces/${personal.id}`)).json()).toMatchObject({
+      role: "admin",
+    });
+  });
+
+  it("gives several people one role together, or none of them", async () => {
+    const lead = await person();
+    const first = await person();
+    const second = await person();
+    const outsider = await person();
+    const created = await createSpace(lead.client, [
+      { principalKind: "account", principalId: second.id, role: "reader" },
+    ]);
+    const base = `/api/v1/spaces/${created.id}/permissions/grants`;
+    const both = { principalKind: "account", principalId: first.id };
+    const already = { principalKind: "account", principalId: second.id };
+    const refused = await lead.client.post(base, { holders: [both, already], role: "editor" });
+    expect(refused.json()).toMatchObject({ code: "alreadyGranted" });
+    const unchanged = await lead.client.get(`/api/v1/spaces/${created.id}/permissions`);
+    expect(unchanged.json().map((entry: { principalId: string }) => entry.principalId)).not.toContain(
+      first.id,
+    );
+    expect((await lead.client.post(base, { holders: [both, both], role: "editor" })).statusCode).toBe(400);
+    const third = { principalKind: "account", principalId: outsider.id };
+    const preview = await lead.client.post(`${base}/preview`, { holders: [both, third], role: "editor" });
+    expect(preview.statusCode, preview.body).toBe(200);
+    const granted = await lead.client.post(base, { holders: [both, third], role: "editor" });
+    expect(granted.statusCode, granted.body).toBe(200);
+    const roles = Object.fromEntries(
+      granted.json().map((entry: { principalId: string; role: string }) => [entry.principalId, entry.role]),
+    );
+    expect(roles).toMatchObject({ [first.id]: "editor", [outsider.id]: "editor", [second.id]: "reader" });
+    expect((await first.client.post(base, { holders: [third], role: "admin" })).statusCode).toBe(403);
+  });
+
+  it("limits the people search to members of a space the caller can open", async () => {
+    const lead = await person();
+    const colleague = await person();
+    const bystander = await person();
+    const created = await createSpace(lead.client, [
+      { principalKind: "account", principalId: colleague.id, role: "reader" },
+    ]);
+    const found = await lead.client.get(`/api/v1/people?spaceId=${created.id}`);
+    const ids = found.json().items.map((item: { id: string }) => item.id);
+    expect(ids).toEqual(expect.arrayContaining([lead.id, colleague.id]));
+    expect(ids).not.toContain(bystander.id);
+    expect((await bystander.client.get(`/api/v1/people?spaceId=${created.id}`)).statusCode).toBe(404);
   });
 
   it("finds people the caller may see", async () => {

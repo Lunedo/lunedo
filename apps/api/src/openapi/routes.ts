@@ -36,11 +36,13 @@ import { OrganizationsController } from "../organizations/organizations.controll
 import { PortalController } from "../portal/portal.controller.js";
 import { SavedSearchesController } from "../search/saved-searches.controller.js";
 import { SearchController } from "../search/search.controller.js";
+import { SetupRestoreController } from "../setup/restore.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
 import { ShareLinksController } from "../sharing/links.controller.js";
 import { PageAccessController } from "../sharing/page-access.controller.js";
 import { AccessRequestsController } from "../sharing/requests.controller.js";
 import { ArticleApiController } from "../spaces/article-api.controller.js";
+import { CategoryAccessController } from "../spaces/category-access.controller.js";
 import { ConfidentialSpacesController } from "../spaces/confidential-spaces.controller.js";
 import { CopiesController } from "../spaces/copies.controller.js";
 import { ItemsController } from "../spaces/items.controller.js";
@@ -51,6 +53,7 @@ import { PersonalSpacesController } from "../spaces/personal-spaces.controller.j
 import { PortalAccountsController } from "../spaces/portal-accounts.controller.js";
 import { ReviewsController } from "../spaces/reviews.controller.js";
 import { ShortcutsController } from "../spaces/shortcuts.controller.js";
+import { SpaceCleanupController } from "../spaces/space-cleanup.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
 import { StatisticsController } from "../spaces/statistics.controller.js";
 import { TemplateFilesController } from "../spaces/template-files.controller.js";
@@ -66,6 +69,7 @@ export const apiControllers = (): Type[] => [
   AuthController,
   AccountController,
   SetupController,
+  SetupRestoreController,
   OrganizationsController,
   GroupsController,
   InstanceController,
@@ -86,6 +90,7 @@ export const apiControllers = (): Type[] => [
   SpacesController,
   OrganizationSpacesController,
   ConfidentialSpacesController,
+  SpaceCleanupController,
   ItemsController,
   KnowledgeBasesController,
   ArticleApiController,
@@ -115,6 +120,7 @@ export const apiControllers = (): Type[] => [
   PageAccessController,
   ShareLinksController,
   AccessRequestsController,
+  CategoryAccessController,
   ImportsController,
   ExportsController,
   RenderingController,

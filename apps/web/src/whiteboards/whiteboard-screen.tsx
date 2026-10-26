@@ -66,6 +66,7 @@ function SpaceWhiteboard({ board }: { board: ItemDetails }) {
       confidential: space.confidential,
       viewRestriction: board.viewRestriction,
       editRestricted: board.editRestricted,
+      spaceRole: space.role,
     },
     true,
   );
@@ -97,6 +98,7 @@ function SpaceWhiteboard({ board }: { board: ItemDetails }) {
         )
       }
       breadcrumbs={breadcrumbs}
+      editedAt={board.contentUpdatedAt}
       role={space.role}
       mayEdit={mayEdit}
       spaceArchived={space.archived}

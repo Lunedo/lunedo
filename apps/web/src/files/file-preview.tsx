@@ -1,8 +1,8 @@
-import { Badge, Button, Drawer, EmptyState, Notice, Skeleton, useToast } from "@lunedo/ui";
+import { Badge, Button, EmptyState, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Download, FileQuestion, History, ImageOff, Maximize2, Pin, PinOff, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Download, FileQuestion, ImageOff, Maximize2, Pin, PinOff, RotateCcw } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -133,7 +133,7 @@ export function PreviewBody({
         return (
           <div className="flex flex-col items-start gap-2 rounded-md border border-border p-4">
             <p className="flex items-center gap-2 text-sm text-text-muted">
-              <ImageOff aria-hidden="true" className="size-icon shrink-0" />
+              <ImageOff aria-hidden="true" className="size-icon-md shrink-0" />
               {t("files.preview.imageTooLarge")}
             </p>
             <a
@@ -142,7 +142,7 @@ export function PreviewBody({
               rel="noopener noreferrer"
               className="inline-flex min-h-hit items-center gap-2 font-medium text-accent underline focus-visible:focus-ring"
             >
-              <Maximize2 aria-hidden="true" className="size-icon" />
+              <Maximize2 aria-hidden="true" className="size-icon-md" />
               {t("files.preview.openFullSize")}
             </a>
           </div>
@@ -189,7 +189,7 @@ export function PreviewBody({
   }
 }
 
-function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: boolean }) {
+export function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: boolean }) {
   const { t } = useTranslation();
   const format = useFormat();
   const { toast } = useToast();
@@ -290,7 +290,7 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
               className="inline-flex min-h-hit items-center gap-1 text-accent underline"
               download={version.name}
             >
-              <Download aria-hidden="true" className="size-icon" />
+              <Download aria-hidden="true" className="size-icon-md" />
               {t("files.download")}
             </a>
             {canEdit ? (
@@ -319,75 +319,5 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
         ))}
       </ul>
     </section>
-  );
-}
-
-export function FilePreviewDrawer({
-  open,
-  attachment,
-  error = null,
-  onRetry,
-  canEdit,
-  onClose,
-}: {
-  open: boolean;
-  attachment: Attachment | null;
-  error?: unknown;
-  onRetry?: () => void;
-  canEdit: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const format = useFormat();
-  const [showVersions, setShowVersions] = useState(false);
-  useEffect(() => {
-    if (!open) setShowVersions(false);
-  }, [open]);
-  return (
-    <Drawer
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      title={attachment?.name ?? t("files.preview.open")}
-      size="panel"
-    >
-      <div className="flex flex-col gap-4 p-4">
-        {error ? (
-          <LoadError what={t("files.preview.fileFailed")} error={error} onRetry={() => onRetry?.()} />
-        ) : null}
-        {!attachment && !error ? <Skeleton className="h-card w-full" /> : null}
-        {attachment ? (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-text-muted">
-              {t("files.summary", {
-                type: typeLabel(t, attachment),
-                size: format.bytes(attachment.size),
-                version: attachment.version,
-              })}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={contentUrl(attachment.id, { download: true })}
-                download={attachment.name}
-                className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
-              >
-                <Download aria-hidden="true" className="size-icon" />
-                {t("files.download")}
-              </a>
-              {attachment.versions > 1 || canEdit ? (
-                <Button variant="secondary" icon={History} onClick={() => setShowVersions((value) => !value)}>
-                  {showVersions
-                    ? t("files.versions.hide")
-                    : t("files.versions.show", { count: attachment.versions })}
-                </Button>
-              ) : null}
-            </div>
-            {showVersions ? <Versions attachment={attachment} canEdit={canEdit} /> : null}
-            <PreviewBody attachment={attachment} source={attachmentSource(attachment.id)} />
-          </div>
-        ) : null}
-      </div>
-    </Drawer>
   );
 }

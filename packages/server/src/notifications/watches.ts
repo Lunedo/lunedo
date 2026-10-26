@@ -36,7 +36,14 @@ export interface WatchedEntry {
   spaceId: string;
   spaceKey: string;
   spaceName: string;
+  spaceType: string;
   updatedAt: Date;
+}
+
+export interface WatchChange {
+  target: WatchTarget;
+  state: WatchState | null;
+  keepActionable?: boolean | undefined;
 }
 
 const LIST_LIMIT = 500;
@@ -147,27 +154,44 @@ export class WatchService {
     target: WatchTarget,
     input: { state: WatchState | null; keepActionable?: boolean | undefined },
   ): Promise<WatchStatus> {
-    await this.#database.transaction(async (tx) => {
-      if (input.state === null) {
-        await tx.execute(
-          sql`delete from watches where account_id = ${accountId} and ${targetCondition(target)}`,
-        );
-        return;
-      }
-      const columns = targetColumns(target);
-      const keepActionable = input.keepActionable ?? true;
-      const conflict =
-        target.type === "space"
-          ? sql`(account_id, space_id) where item_id is null`
-          : sql`(account_id, item_id) where item_id is not null`;
-      await tx.execute(sql`
-        insert into watches (id, account_id, space_id, item_id, state, keep_actionable, automatic)
-        values (gen_random_uuid(), ${accountId}, ${columns.spaceId}, ${columns.itemId}, ${input.state},
-          ${keepActionable}, false)
-        on conflict ${conflict} do update set state = excluded.state, keep_actionable = excluded.keep_actionable,
-          automatic = false, updated_at = now()`);
-    });
+    await this.#database.transaction((tx) => this.#write(tx, accountId, { target, ...input }));
     return this.status(accountId, target);
+  }
+
+  async setMany(accountId: string, changes: readonly WatchChange[]): Promise<number> {
+    const decide = this.#authorization.batch(accountPrincipal(accountId));
+    const decisions = await Promise.all(
+      changes.map((change) =>
+        decide(change.target.type === "item" ? "item.view" : "space.view", change.target),
+      ),
+    );
+    const allowed = changes.filter((_, index) => decisions[index]?.allowed);
+    await this.#database.transaction(async (tx) => {
+      for (const change of allowed) await this.#write(tx, accountId, change);
+    });
+    return allowed.length;
+  }
+
+  async #write(tx: Transaction, accountId: string, change: WatchChange): Promise<void> {
+    const { target } = change;
+    if (change.state === null) {
+      await tx.execute(
+        sql`delete from watches where account_id = ${accountId} and ${targetCondition(target)}`,
+      );
+      return;
+    }
+    const columns = targetColumns(target);
+    const keepActionable = change.keepActionable ?? true;
+    const conflict =
+      target.type === "space"
+        ? sql`(account_id, space_id) where item_id is null`
+        : sql`(account_id, item_id) where item_id is not null`;
+    await tx.execute(sql`
+      insert into watches (id, account_id, space_id, item_id, state, keep_actionable, automatic)
+      values (gen_random_uuid(), ${accountId}, ${columns.spaceId}, ${columns.itemId}, ${change.state},
+        ${keepActionable}, false)
+      on conflict ${conflict} do update set state = excluded.state, keep_actionable = excluded.keep_actionable,
+        automatic = false, updated_at = now()`);
   }
 
   async watchAutomatically(
@@ -243,11 +267,12 @@ export class WatchService {
       target_space_id: string;
       key: string;
       name: string;
+      space_type: string;
       updated_at: Date;
     }>(sql`
       select w.space_id, w.item_id, w.state, w.keep_actionable, w.automatic, w.updated_at,
         coalesce(t.title, s.name) as title, coalesce(t.kind::text, 'space') as kind, s.id as target_space_id,
-        s.key, s.name
+        s.key, s.name, s.type::text as space_type
       from watches w
       left join tree_items t on t.id = w.item_id
       join spaces s on s.id = coalesce(t.space_id, w.space_id)
@@ -255,14 +280,20 @@ export class WatchService {
         and (t.id is null or t.trash_entry_id is null) and s.deleted_at is null
       order by w.updated_at desc, w.id desc
       limit ${LIST_LIMIT}`);
-    const principal = accountPrincipal(accountId);
+    const decide = this.#authorization.batch(accountPrincipal(accountId));
+    const targets = rows.rows.map(
+      (row): WatchTarget =>
+        row.item_id
+          ? { type: "item", id: row.item_id }
+          : { type: "space", id: row.space_id ?? row.target_space_id },
+    );
+    const decisions = await Promise.all(
+      targets.map((target) => decide(target.type === "item" ? "item.view" : "space.view", target)),
+    );
     const entries: WatchedEntry[] = [];
-    for (const row of rows.rows) {
-      const target: WatchTarget = row.item_id
-        ? { type: "item", id: row.item_id }
-        : { type: "space", id: row.space_id ?? row.target_space_id };
-      const action = target.type === "item" ? "item.view" : "space.view";
-      if (!(await this.#authorization.explain(principal, action, target)).allowed) continue;
+    for (const [index, row] of rows.rows.entries()) {
+      const target = targets[index];
+      if (!target || !decisions[index]?.allowed) continue;
       entries.push({
         target,
         state: row.state,
@@ -273,6 +304,7 @@ export class WatchService {
         spaceId: row.target_space_id,
         spaceKey: row.key,
         spaceName: row.name,
+        spaceType: row.space_type,
         updatedAt: new Date(row.updated_at),
       });
     }

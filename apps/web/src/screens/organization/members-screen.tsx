@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Badge,
   Button,
   Combobox,
@@ -7,18 +6,30 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  FirstAndMore,
   focusFirstInvalidSoon,
   IconButton,
-  Input,
   Menu,
+  Select,
   Table,
   TableToolbar,
   Tabs,
+  TruncatedText,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
-import { MoreHorizontal, Plus, Users } from "lucide-react";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import {
+  CalendarClock,
+  Info,
+  MoreHorizontal,
+  Plus,
+  ShieldMinus,
+  ShieldPlus,
+  UserCog,
+  UserMinus,
+  UserX,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -29,9 +40,12 @@ import {
   membersQuery,
   organizationKeys,
   organizationQuery,
+  organizationSettingsQuery,
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
+import { AppDatePicker } from "../../components/date-fields.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { useUnassignWithUndo } from "../../components/role-undo.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
@@ -46,7 +60,7 @@ import { AssignRoleDialog } from "./roles.js";
 const route = getRouteApi("/app/settings/organizations/$organizationId/members");
 
 type Tab = "all" | "member" | "collaborator" | "guest" | "invitations";
-type Action =
+export type MemberAction =
   | { kind: "roles"; member: Member }
   | { kind: "expiry"; member: Member }
   | { kind: "responsible"; member: Member }
@@ -54,8 +68,6 @@ type Action =
   | { kind: "remove"; member: Member }
   | { kind: "deactivate"; member: Member }
   | { kind: "unassign"; member: Member; assignmentId: string; role: string };
-
-const KIND_BADGES = { member: "neutral", collaborator: "info", guest: "warning" } as const;
 
 export function MembersScreen() {
   const { t } = useTranslation();
@@ -68,9 +80,20 @@ export function MembersScreen() {
   const invitations = useQuery({ ...invitationsQuery(organizationId), enabled: manage });
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [factorFilter, setFactorFilter] = useState<"all" | "on" | "off">("all");
   const [inviting, setInviting] = useState(false);
-  const [action, setAction] = useState<Action | null>(null);
+  const [action, setAction] = useState<MemberAction | null>(null);
   const organizationName = organization.data?.name ?? "";
+  const navigate = useNavigate();
+  const settings = useQuery({
+    ...organizationSettingsQuery(organizationId),
+    enabled: state.can("organization.settings.view"),
+    throwOnError: false,
+  });
+  const factorRequired =
+    settings.data?.find((setting) => setting.key === "auth.twoFactorRequired")?.value === true;
 
   const people = (members.data ?? []).filter((member) => member.accountType !== "service");
   const counts = {
@@ -81,96 +104,40 @@ export function MembersScreen() {
     invitations: invitations.data?.length ?? 0,
   };
   const needle = search.trim().toLowerCase();
+  const roleName = (role: Member["roles"][number]) =>
+    role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`);
+  const groupOptions = [
+    ...new Map(people.flatMap((member) => member.groups).map((group) => [group.id, group])),
+  ]
+    .map(([, group]) => group)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const roleOptions = [...new Set(people.flatMap((member) => member.roles.map(roleName)))].sort();
   const filtered = people.filter(
     (member) =>
       (tab === "all" || member.kind === tab) &&
+      (groupFilter === "all" || member.groups.some((group) => group.id === groupFilter)) &&
+      (roleFilter === "all" || member.roles.some((role) => roleName(role) === roleFilter)) &&
+      (factorFilter === "all" || member.twoFactorActive === (factorFilter === "on")) &&
       (!needle ||
         member.name.toLowerCase().includes(needle) ||
         (member.email ?? "").toLowerCase().includes(needle)),
   );
   const sorted = useSorted(filtered, { key: "name", direction: "asc" }, (member, key) =>
-    key === "expires"
-      ? (member.expiresAt ?? "9999")
+    key === "lastActive"
+      ? (member.lastActiveAt ?? "")
       : key === "kind"
         ? member.kind
         : member.name.toLowerCase(),
   );
-  const paged = usePaged(sorted.rows, 25);
-  const queryClient = useQueryClient();
-  const unassign = useUnassignWithUndo({ organizationId }, async () => {
-    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
-    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
-  });
-  const nameOf = useMemo(() => new Map(people.map((member) => [member.accountId, member.name])), [people]);
-
-  const memberMenu = (member: Member) => [
-    {
-      label: t("members.actions.roles"),
-      onSelect: () => setAction({ kind: "roles", member }),
-      disabled: member.kind !== "member",
-    },
-    ...member.roles.map((role) => ({
-      label: t("members.actions.removeRole", {
-        role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
-      }),
-      onSelect: () => {
-        if (!role.customRoleId && role.role === "owner") {
-          setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
-          return;
-        }
-        void unassign(
-          {
-            id: role.assignmentId,
-            builtInRole: role.customRoleId ? null : role.role,
-            customRoleId: role.customRoleId,
-            principalKind: "account",
-            principalId: member.accountId,
-            expiresAt: role.expiresAt,
-          },
-          t("roles.unassignedNamed", {
-            name: member.name,
-            role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
-          }),
-        );
-      },
-    })),
-    { type: "separator" as const },
-    ...(member.kind !== "member"
-      ? [{ label: t("members.actions.expiry"), onSelect: () => setAction({ kind: "expiry", member }) }]
-      : []),
-    ...(member.kind === "guest"
-      ? [
-          {
-            label: t("members.actions.responsible"),
-            onSelect: () => setAction({ kind: "responsible", member }),
-          },
-        ]
-      : []),
-    { label: t("members.actions.permissions"), onSelect: () => setAction({ kind: "permissions", member }) },
-    { type: "separator" as const },
-    {
-      label: t("members.actions.remove"),
-      danger: true,
-      onSelect: () => setAction({ kind: "remove", member }),
-    },
-    ...(state.can("instance.accounts.manage") || member.kind === "member" || member.accountType === "portal"
-      ? [
-          {
-            label: t("members.actions.deactivate"),
-            danger: true,
-            onSelect: () => setAction({ kind: "deactivate", member }),
-          },
-        ]
-      : []),
-  ];
+  const paged = usePaged(sorted.rows);
+  const filtersActive = groupFilter !== "all" || roleFilter !== "all" || factorFilter !== "all";
+  const memberMenu = useMemberMenu(organizationId, setAction);
 
   return (
     <SettingsPage
-      width="wide"
+      wide
       title={t("members.title")}
       description={t("members.description", { name: organizationName })}
-      icon={Users}
-      organizationId={organizationId}
       actions={
         manage ? (
           <Button variant="primary" icon={Plus} onClick={() => setInviting(true)}>
@@ -210,14 +177,76 @@ export function MembersScreen() {
                 label: t("members.search"),
                 placeholder: t("members.search"),
               }}
+              filters={
+                <>
+                  {groupOptions.length > 0 ? (
+                    <Select
+                      aria-label={t("members.filters.group")}
+                      className="w-auto max-w-field"
+                      value={groupFilter}
+                      onValueChange={(value) => {
+                        setGroupFilter(value);
+                        paged.reset();
+                      }}
+                      options={[
+                        { value: "all", label: t("members.filters.allGroups") },
+                        ...groupOptions.map((group) => ({ value: group.id, label: group.name })),
+                      ]}
+                    />
+                  ) : null}
+                  <Select
+                    aria-label={t("members.filters.role")}
+                    className="w-auto max-w-field"
+                    value={roleFilter}
+                    onValueChange={(value) => {
+                      setRoleFilter(value);
+                      paged.reset();
+                    }}
+                    options={[
+                      { value: "all", label: t("members.filters.allRoles") },
+                      ...roleOptions.map((role) => ({ value: role, label: role })),
+                    ]}
+                  />
+                  <Select
+                    aria-label={t("members.twoFactor")}
+                    className="w-auto max-w-field"
+                    value={factorFilter}
+                    onValueChange={(value) => {
+                      setFactorFilter(value as "all" | "on" | "off");
+                      paged.reset();
+                    }}
+                    options={[
+                      { value: "all", label: t("members.filters.anyTwoFactor") },
+                      { value: "on", label: t("members.filters.twoFactorOn") },
+                      { value: "off", label: t("members.filters.twoFactorOff") },
+                    ]}
+                  />
+                </>
+              }
+              filtersActive={filtersActive}
+              onResetFilters={() => {
+                setGroupFilter("all");
+                setRoleFilter("all");
+                setFactorFilter("all");
+                paged.reset();
+              }}
+              pagination={paged.pagination}
             />
             <Table
               caption={t("members.title")}
               rowKey={(member) => member.accountId}
               rows={paged.rows}
               loading={members.isPending}
-              onRowClick={(member) => setAction({ kind: "permissions", member })}
-              rowLabel={(member) => t("members.openPermissions", { name: member.name })}
+              {...(manage
+                ? {
+                    onRowClick: (member: Member) =>
+                      void navigate({
+                        to: "/settings/organizations/$organizationId/members/$accountId",
+                        params: { organizationId, accountId: member.accountId },
+                      }),
+                    rowLabel: (member: Member) => t("members.openMember", { name: member.name }),
+                  }
+                : {})}
               sort={sorted.sort}
               onSortChange={sorted.setSort}
               pagination={paged.pagination}
@@ -231,48 +260,69 @@ export function MembersScreen() {
                   sortable: true,
                   cell: (member) => (
                     <div className="flex items-center gap-3">
-                      <Avatar name={member.name} size="sm" />
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate font-medium">{member.name}</span>
-                        <span className="truncate text-sm text-text-muted">{member.email}</span>
+                      <PersonAvatar
+                        id={member.accountId}
+                        name={member.name}
+                        pictureRef={member.pictureRef}
+                        size="sm"
+                      />
+                      <div className="flex min-w-0 flex-col leading-tight">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate font-medium" title={member.name}>
+                            {member.name}
+                          </span>
+                          {member.kind === "member" ? null : (
+                            <Badge variant="neutral">{t(`members.kinds.${member.kind}`)}</Badge>
+                          )}
+                        </span>
+                        <span className="truncate text-xs text-text-muted" title={member.email ?? ""}>
+                          {member.email}
+                        </span>
                       </div>
                     </div>
                   ),
                 },
                 {
-                  key: "kind",
-                  header: t("members.kind"),
-                  sortable: true,
-                  cell: (member) => (
-                    <Badge variant={KIND_BADGES[member.kind]}>{t(`members.kinds.${member.kind}`)}</Badge>
-                  ),
+                  key: "groups",
+                  header: t("members.groups"),
+                  hideBelow: "md",
+                  cell: (member) => <GroupNames name={member.name} groups={member.groups} />,
                 },
                 {
                   key: "roles",
-                  header: t("members.roles"),
+                  header: t("members.role"),
+                  hideBelow: "sm",
+                  cell: (member) => {
+                    const roles = member.roles.map(roleName).join(", ");
+                    return (
+                      <TruncatedText
+                        text={roles || t(`members.kinds.${member.kind}`)}
+                        className={roles ? "max-w-field" : "max-w-field text-text-muted"}
+                      />
+                    );
+                  },
+                },
+                {
+                  key: "twoFactor",
+                  header: t("members.twoFactor"),
                   hideBelow: "md",
                   cell: (member) =>
-                    member.roles.length === 0 ? (
-                      <span className="text-text-muted">{t(`members.kinds.${member.kind}`)}</span>
+                    member.twoFactorActive ? (
+                      <span className="whitespace-nowrap">{t("common.yes")}</span>
+                    ) : factorRequired ? (
+                      <Badge variant="warning">{t("members.twoFactorMissing")}</Badge>
                     ) : (
-                      member.roles
-                        .map((role) =>
-                          role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
-                        )
-                        .join(", ")
+                      <span className="whitespace-nowrap text-text-muted">{t("common.no")}</span>
                     ),
                 },
                 {
-                  key: "expires",
-                  header: t("members.expires"),
+                  key: "lastActive",
+                  header: t("members.lastActive"),
                   sortable: true,
                   hideBelow: "md",
                   cell: (member) => (
-                    <span className="text-text-muted">
-                      {member.expiresAt ? format.date(member.expiresAt) : t("members.noExpiry")}
-                      {member.responsibleAccountId
-                        ? ` · ${t("members.responsibleIs", { name: nameOf.get(member.responsibleAccountId) ?? "" })}`
-                        : ""}
+                    <span className="whitespace-nowrap text-text-muted">
+                      {member.lastActiveAt ? format.relative(member.lastActiveAt) : t("members.never")}
                     </span>
                   ),
                 },
@@ -329,14 +379,123 @@ export function MembersScreen() {
   );
 }
 
-function MemberActionDialogs({
+export function GroupNames({
+  name,
+  groups,
+}: {
+  name: string;
+  groups: readonly { id: string; name: string }[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <FirstAndMore
+      title={t("members.groupsOf", { name })}
+      moreLabel={(count) => t("members.moreGroupsLabel", { count })}
+      values={groups.map((group) => ({ id: group.id, label: group.name }))}
+      empty={<span className="text-text-muted">{t("members.noGroups")}</span>}
+    />
+  );
+}
+
+export function useMemberMenu(organizationId: string, setAction: (action: MemberAction) => void) {
+  const { t } = useTranslation();
+  const state = useOrganizationState();
+  const queryClient = useQueryClient();
+  const unassign = useUnassignWithUndo({ organizationId }, async () => {
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
+  });
+  return (member: Member, options: { permissions?: boolean } = {}) => [
+    {
+      label: t("members.actions.roles"),
+      icon: ShieldPlus,
+      onSelect: () => setAction({ kind: "roles", member }),
+      disabled: member.kind !== "member",
+    },
+    ...member.roles.map((role) => ({
+      label: t("members.actions.removeRole", {
+        role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
+      }),
+      icon: ShieldMinus,
+      onSelect: () => {
+        if (!role.customRoleId && role.role === "owner") {
+          setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
+          return;
+        }
+        void unassign(
+          {
+            id: role.assignmentId,
+            builtInRole: role.customRoleId ? null : role.role,
+            customRoleId: role.customRoleId,
+            principalKind: "account",
+            principalId: member.accountId,
+            expiresAt: role.expiresAt,
+          },
+          t("roles.unassignedNamed", {
+            name: member.name,
+            role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
+          }),
+        );
+      },
+    })),
+    { type: "separator" as const },
+    ...(member.kind !== "member"
+      ? [
+          {
+            label: t("members.actions.expiry"),
+            icon: CalendarClock,
+            onSelect: () => setAction({ kind: "expiry", member }),
+          },
+        ]
+      : []),
+    ...(member.kind === "guest"
+      ? [
+          {
+            label: t("members.actions.responsible"),
+            icon: UserCog,
+            onSelect: () => setAction({ kind: "responsible", member }),
+          },
+        ]
+      : []),
+    ...(options.permissions === false
+      ? []
+      : [
+          {
+            label: t("members.actions.permissions"),
+            icon: Info,
+            onSelect: () => setAction({ kind: "permissions", member }),
+          },
+        ]),
+    { type: "separator" as const },
+    {
+      label: t("members.actions.remove"),
+      icon: UserMinus,
+      danger: true,
+      onSelect: () => setAction({ kind: "remove", member }),
+    },
+    ...(state.can("instance.accounts.manage") || member.kind === "member" || member.accountType === "portal"
+      ? [
+          {
+            label: t("members.actions.deactivate"),
+            icon: UserX,
+            danger: true,
+            onSelect: () => setAction({ kind: "deactivate", member }),
+          },
+        ]
+      : []),
+  ];
+}
+
+export function MemberActionDialogs({
   action,
   onClose,
   organizationId,
   organizationName,
   people,
+  onDone,
 }: {
-  action: Action | null;
+  onDone?: () => void;
+  action: MemberAction | null;
   onClose: () => void;
   organizationId: string;
   organizationName: string;
@@ -358,6 +517,7 @@ function MemberActionDialogs({
       await refresh();
       toast({ title: success, variant: "success" });
       onClose();
+      onDone?.();
     } catch (failure) {
       showFailure(t("failures.changeMember"), failure);
     }
@@ -396,7 +556,7 @@ function MemberActionDialogs({
         <AccessImpact
           change="loses"
           people={[member.name]}
-          what={t("roles.losesWhat", { role: action.role, name: organizationName })}
+          what={t("roles.losesWhat", { count: 1, role: action.role, name: organizationName })}
         />
       </ConfirmDialog>
     );
@@ -427,7 +587,7 @@ function MemberActionDialogs({
         <AccessImpact
           change="loses"
           people={[member.name]}
-          what={t("members.removeImpact", { name: organizationName })}
+          what={t("members.removeImpact", { count: 1, name: organizationName })}
         />
       </ConfirmDialog>
     );
@@ -455,7 +615,11 @@ function MemberActionDialogs({
           )
         }
       >
-        <AccessImpact change="loses" people={[member.name]} what={t("members.deactivateImpact")} />
+        <AccessImpact
+          change="loses"
+          people={[member.name]}
+          what={t("members.deactivateImpact", { count: 1 })}
+        />
       </ConfirmDialog>
     );
   }
@@ -467,15 +631,16 @@ function MemberActionDialogs({
           <Field
             label={t("members.expires")}
             hint={t("members.expiryHint")}
+            help={t("members.expiryHelp")}
             {...(expiryMissing && !expiry ? { error: t("members.chooseDate") } : {})}
           >
-            <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+            <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
           </Field>
           {expiry ? (
             <AccessImpact
               change="loses"
               people={[member.name]}
-              what={t("members.expiryImpact", { name: organizationName, date: expiry })}
+              what={t("members.expiryImpact", { count: 1, name: organizationName, date: expiry })}
             />
           ) : null}
           <div className="flex justify-end gap-2">
@@ -579,10 +744,6 @@ function PermissionsDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const decisions = useQuery({
-    ...memberPermissionsQuery(organizationId, member.accountId),
-    throwOnError: false,
-  });
   return (
     <Dialog
       open
@@ -593,6 +754,19 @@ function PermissionsDialog({
       description={t("members.permissionsDescription")}
       size="lg"
     >
+      <PermissionsTable organizationId={organizationId} member={member} />
+    </Dialog>
+  );
+}
+
+export function PermissionsTable({ organizationId, member }: { organizationId: string; member: Member }) {
+  const { t } = useTranslation();
+  const decisions = useQuery({
+    ...memberPermissionsQuery(organizationId, member.accountId),
+    throwOnError: false,
+  });
+  return (
+    <>
       {decisions.isError ? (
         <LoadError
           what={t("failures.loadPermissions")}
@@ -624,14 +798,18 @@ function PermissionsDialog({
           {
             key: "why",
             header: t("members.why"),
-            cell: (decision) =>
-              decision.allowed
-                ? decision.grants.map((grant) => grantText(t, grant)).join("; ")
-                : decision.denials.map((denial) => translateKey(t, `denials.${denial}`)).join("; "),
+            grow: true,
+            cell: (decision) => (
+              <span className="text-text-muted">
+                {decision.allowed
+                  ? decision.grants.map((grant) => grantText(t, grant)).join("; ")
+                  : decision.denials.map((denial) => translateKey(t, `denials.${denial}`)).join("; ")}
+              </span>
+            ),
           },
         ]}
       />
-    </Dialog>
+    </>
   );
 }
 

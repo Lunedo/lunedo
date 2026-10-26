@@ -22,6 +22,14 @@
 
 Every changing request carries the header `X-Lunedo-Request: 1`. `request()` turns Problem Details into an `ApiError`, asks for reauthentication when the server answers `reauthenticationRequired` and repeats the request once, and sends the browser to the sign-in page with the current address when the session ended.
 
+## Updates
+
+A production build writes an identity of its chunks into `build.json` and into the `lunedo-build` meta tag of its pages. The API reads `build.json` from `LUNEDO_WEB_ROOT` and names it in the header `X-Lunedo-Build` of every response. When a response names a different build than the one running in the tab, the client loads the target of the next route change in full instead of rendering it, and a hidden tab reloads at once. Neither happens while the editor or a form has unsaved changes; the client waits until the person leaves them. There is no polling: only responses the client asks for anyway carry the header.
+
+Every API request carries `X-Lunedo-Client-Api` with the API level of the client (`CLIENT_API_LEVEL` in `@lunedo/shared`). Raise the level when the API changes in a way an open tab of the previous version cannot handle; the server then answers older clients with `409` and the code `clientOutdated`, and the client shows a notice with **Reload**, or **Save and reload** while the editor has unsaved changes. Requests without the header, such as those of API tokens, are not affected.
+
+When a lazily loaded part of the client is gone after an update, the client reloads once instead of showing an error. A second failure within a minute shows the error, so a broken build cannot reload in a loop.
+
 ## Forms and errors
 
 Forms use React Hook Form with the Zod schemas from `@lunedo/shared`, which the server uses for the same fields. Validation messages come from the issue codes, not from the schema's English text, so they appear in the user's language; fields with special formats name their own message. Field errors reported by the server mark the matching fields.

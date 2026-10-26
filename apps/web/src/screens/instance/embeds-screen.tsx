@@ -1,7 +1,6 @@
 import type { EmbedService } from "@lunedo/editor-schema";
 import { Section, Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
-import { AppWindow } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery } from "../../api/instance-queries.js";
 import { InstanceEmbedAllowlist } from "../../embeds/embed-allowlist.js";
@@ -44,11 +43,7 @@ function EmbedSection() {
 export function InstanceEmbedsScreen() {
   const { t } = useTranslation();
   return (
-    <SettingsPage
-      title={t("embeds.settings.title")}
-      description={t("embeds.settings.description")}
-      icon={AppWindow}
-    >
+    <SettingsPage title={t("embeds.settings.title")} description={t("embeds.settings.description")}>
       <EmbedSection />
     </SettingsPage>
   );

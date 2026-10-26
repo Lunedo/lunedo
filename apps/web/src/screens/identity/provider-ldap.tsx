@@ -10,6 +10,7 @@ import {
   Button,
   ConfirmDialog,
   Field,
+  FieldGrid,
   Input,
   Notice,
   Section,
@@ -76,11 +77,13 @@ export function serviceAccountField(preset: LdapConfigInput["preset"]) {
     ? ({
         schema: activeDirectoryServiceAccountSchema,
         hint: "identityProviders.ldap.bindDnHintActiveDirectory",
+        help: "identityProviders.ldap.bindDnHelpActiveDirectory",
         invalid: "identityProviders.ldap.serviceAccountInvalid",
       } as const)
     : ({
         schema: distinguishedNameSchema,
         hint: "identityProviders.ldap.bindDnHint",
+        help: "identityProviders.ldap.bindDnHelp",
         invalid: "identityProviders.ldap.dnInvalid",
       } as const);
 }
@@ -109,10 +112,11 @@ export function LdapConnectionFields({
   const serviceAccount = serviceAccountField(config.preset);
   return (
     <>
-      <div className="px-4 py-3">
+      <div className="py-3">
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.url")}
           hint={t("identityProviders.ldap.urlHint")}
+          help={t("identityProviders.ldap.urlHelp")}
           value={config.url}
           schema={config.startTls ? ldapUrlSchema.refine(isPlainLdap) : ldapUrlSchema}
           invalidMessage={
@@ -156,10 +160,11 @@ export function LdapConnectionFields({
         }
         status={<SaveIndicator tracker={tracker("startTls")} />}
       />
-      <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+      <FieldGrid className="py-3">
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.bindDn")}
           hint={t(serviceAccount.hint)}
+          help={t(serviceAccount.help)}
           value={config.bindDn}
           schema={serviceAccount.schema}
           invalidMessage={t(serviceAccount.invalid)}
@@ -193,7 +198,7 @@ export function LdapConnectionFields({
             onSave={(value) => checked((current) => ({ ...current, [field]: value }))}
           />
         ))}
-      </div>
+      </FieldGrid>
     </>
   );
 }
@@ -275,7 +280,7 @@ export function CaCertificateSection({
   const certificate = provider.ldap.caCertificate;
   return (
     <Section title={t("identityProviders.ldap.caTitle")}>
-      <p className="px-4 pt-3 text-sm text-text-muted">{t("identityProviders.ldap.caDescription")}</p>
+      <p className="pt-3 text-sm text-text-muted">{t("identityProviders.ldap.caDescription")}</p>
       {certificate ? (
         <>
           <SettingRow
@@ -299,11 +304,12 @@ export function CaCertificateSection({
         <SettingRow
           label={t("identityProviders.ldap.caNone")}
           description={t("identityProviders.ldap.caNoneHint")}
+          help={t("identityProviders.ldap.caNoneHelp")}
           control={<span className="text-text-muted">{t("identityProviders.ldap.caSystem")}</span>}
         />
       )}
       {canManage ? (
-        <div className="flex flex-wrap items-start gap-2 px-4 py-3">
+        <div className="flex flex-wrap items-start gap-2 py-3">
           <CaCertificateUpload provider={provider} />
           {certificate ? (
             <Button variant="danger" icon={Trash2} onClick={() => setRemoving(true)}>
@@ -353,6 +359,7 @@ export function LdapAttributeFields({
       <SettingRow
         label={t("identityProviders.attributes.identifier")}
         description={t("identityProviders.attributes.identifierHint")}
+        help={t("identityProviders.attributes.identifierHelp")}
         meta={t("identityProviders.attributes.fixed")}
         control={
           <Badge variant="neutral" icon={Lock}>
@@ -363,6 +370,7 @@ export function LdapAttributeFields({
       <SettingRow
         label={t("identityProviders.ldap.signInAttribute")}
         description={t("identityProviders.ldap.signInAttributeHint")}
+        help={t("identityProviders.ldap.signInAttributeHelp")}
         control={
           <Select
             aria-label={t("identityProviders.ldap.signInAttribute")}
@@ -381,7 +389,7 @@ export function LdapAttributeFields({
         }
         status={<SaveIndicator tracker={tracker("signInAttribute")} />}
       />
-      <div className="px-4 py-3">
+      <div className="py-3">
         <TestPersonLookup provider={provider} onFound={setFound} onUploadCertificate={onUploadCertificate} />
       </div>
       {config.preset === "activeDirectory"
@@ -422,7 +430,7 @@ export function LdapAttributeFields({
               }
             />
           ))}
-          <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+          <FieldGrid className="py-3">
             <AutoSaveTextField
               label={t("identityProviders.ldap.attributes.groupName")}
               value={config.attributes.groupName}
@@ -438,10 +446,11 @@ export function LdapAttributeFields({
                 )
               }
             />
-          </div>
+          </FieldGrid>
           <SettingRow
             label={t("identityProviders.ldap.groupMembership")}
             description={t("identityProviders.ldap.groupMembershipHint")}
+            help={t("identityProviders.ldap.groupMembershipHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.ldap.groupMembership")}
@@ -508,6 +517,13 @@ function AttributeSelect({
           : fromDirectory
             ? t("identityProviders.ldap.attributeExample", { value: fromDirectory.example ?? "" })
             : t("identityProviders.ldap.attributeNotReturned")
+      }
+      help={
+        found.length === 0
+          ? t("identityProviders.ldap.attributeChoiceHelp")
+          : fromDirectory
+            ? undefined
+            : t("identityProviders.ldap.attributeNotReturnedHelp")
       }
       control={
         <Select
@@ -609,6 +625,7 @@ function TestPersonLookup({
           <Field
             label={t("identityProviders.ldap.testPerson")}
             hint={t("identityProviders.ldap.testPersonHint")}
+            help={t("identityProviders.ldap.testPersonHelp")}
           >
             <Input value={signInName} onChange={(event) => setSignInName(event.target.value)} />
           </Field>
@@ -666,10 +683,11 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
   const save = (next: { attribute: string; values: string[] } | null) =>
     update((current) => (current.preset === "generic" ? { ...current, disabled: next } : current));
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
+    <FieldGrid className="py-3">
       <AutoSaveTextField
         label={t("identityProviders.ldap.disabledAttribute")}
         hint={t("identityProviders.ldap.disabledAttributeHint")}
+        help={t("identityProviders.ldap.disabledAttributeHelp")}
         value={disabled?.attribute ?? ""}
         schema={z.union([z.literal(""), ldapAttribute])}
         invalidMessage={t("identityProviders.ldap.attributeInvalid")}
@@ -681,6 +699,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
         <AutoSaveTextField
           label={t("identityProviders.ldap.disabledValues")}
           hint={t("identityProviders.ldap.disabledValuesHint")}
+          help={t("identityProviders.ldap.disabledValuesHelp")}
           value={disabled.values.join(", ")}
           schema={valueList}
           invalidMessage={t("identityProviders.ldap.disabledValuesInvalid")}
@@ -697,7 +716,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
           }
         />
       ) : null}
-    </div>
+    </FieldGrid>
   );
 }
 
@@ -767,6 +786,7 @@ export function DirectoryTest({ provider }: { provider: LdapProvider }) {
           <Field
             label={t("identityProviders.directoryTest.signInName")}
             hint={t("identityProviders.directoryTest.signInNameHint")}
+            help={t("identityProviders.directoryTest.signInNameHelp")}
           >
             <Input value={signInName} onChange={(event) => setSignInName(event.target.value)} />
           </Field>
@@ -848,7 +868,7 @@ function DirectoryTestOutcome({
       </ul>
       {sample ? (
         <Section title={t("identityProviders.directoryTest.sample")}>
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 px-4 py-3 text-sm sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 py-3 text-sm sm:grid-cols-2">
             <Entry label={t("identityProviders.test.subject")} value={sample.subject} mono />
             <Entry label={t("identityProviders.test.email")} value={sample.email ?? t("common.unknown")} />
             <Entry

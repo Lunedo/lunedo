@@ -5,6 +5,7 @@ import {
   Dialog,
   ErrorState,
   Field,
+  FieldGrid,
   focusFirstInvalidSoon,
   Input,
   List,
@@ -28,6 +29,7 @@ import { problemMessage } from "../errors/problem-message.js";
 import { isLanguage } from "../i18n/index.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { AppDatePicker } from "./date-fields.js";
 import { downloadText } from "./download.js";
 
 export interface GraphMailSettings {
@@ -184,7 +186,7 @@ export function GraphMailForm({
           {error}
         </Notice>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <FieldGrid>
         <Field
           label={t("identityProviders.fields.tenantId")}
           {...(errors.tenantId ? { error: errors.tenantId } : {})}
@@ -216,10 +218,14 @@ export function GraphMailForm({
             onChange={(event) => set({ sender: event.target.value })}
           />
         </Field>
-        <Field label={t("mail.graph.senderName")} hint={t("mail.graph.senderNameHint")}>
+        <Field
+          label={t("mail.graph.senderName")}
+          hint={t("mail.graph.senderNameHint")}
+          help={t("mail.graph.senderNameHelp")}
+        >
           <Input value={values.senderName} onChange={(event) => set({ senderName: event.target.value })} />
         </Field>
-      </div>
+      </FieldGrid>
       <p className="text-sm text-text-muted">{t("mail.graph.sentItems")}</p>
       <div className="flex flex-col gap-2">
         <span className="font-medium">{t("mail.graph.credentials")}</span>
@@ -276,7 +282,7 @@ export function GraphMailForm({
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-3 rounded-md border border-border p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
         <Field label={t("mail.testRecipient")} {...(errors.recipient ? { error: errors.recipient } : {})}>
           <Input type="email" value={recipient} onChange={(event) => setRecipient(event.target.value)} />
         </Field>
@@ -428,7 +434,7 @@ function AddCredentialDialog({
           </Notice>
         ) : null}
         {mode === "clientSecret" ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <FieldGrid>
             <Field label={t("identityProviders.credentials.secret")}>
               <PasswordInput
                 autoComplete="off"
@@ -436,12 +442,20 @@ function AddCredentialDialog({
                 onChange={(event) => setSecret(event.target.value)}
               />
             </Field>
-            <Field label={t("identityProviders.credentials.expiresOn")} hint={t("mail.graph.expiresHint")}>
-              <Input type="date" value={expiresOn} onChange={(event) => setExpiresOn(event.target.value)} />
+            <Field
+              label={t("identityProviders.credentials.expiresOn")}
+              hint={t("mail.graph.expiresHint")}
+              help={t("mail.graph.expiresHelp")}
+            >
+              <AppDatePicker value={expiresOn} clearable onValueChange={setExpiresOn} />
             </Field>
-          </div>
+          </FieldGrid>
         ) : (
-          <Field label={t("mail.graph.validity")} hint={t("mail.graph.certificateHint")}>
+          <Field
+            label={t("mail.graph.validity")}
+            hint={t("mail.graph.certificateHint")}
+            help={t("mail.graph.certificateHelp")}
+          >
             <Select
               aria-label={t("mail.graph.validity")}
               value={validDays}

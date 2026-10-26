@@ -1,32 +1,50 @@
-import { Notice, Rail } from "@lunedo/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, Link, Outlet, useRouter } from "@tanstack/react-router";
+import { Notice } from "@lunedo/ui";
+import { queryOptions, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRouteApi, Outlet, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { providersQuery, signInSecurityQuery } from "../api/identity-queries.js";
 import { request } from "../api/request.js";
-import { NotificationPanel } from "../notifications/notification-panel.js";
 import { useNotificationStream } from "../notifications/notifications-api.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { useFormat, usePreferences } from "../preferences/preferences-provider.js";
 import "../notifications/browser-push.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
+import { maintenanceQuery } from "../api/maintenance.js";
+import { UpdateBanner } from "../app-update/update-banner.js";
 import { PortalAccountHome } from "../knowledge-bases/portal-account-home.js";
 import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
-import { AnnouncementBanners } from "./announcement-banners.js";
-import { CommandPaletteHost } from "./command-palette.js";
-import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
+import { AnnouncementBanners, shownAnnouncementsQuery } from "./announcement-banners.js";
+import { AppSidebar } from "./app-sidebar.js";
+import { type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
-import { LunedoMark } from "./lunedo-mark.js";
 import { MaintenanceBanner } from "./maintenance-banner.js";
 import { useNavigationFocus } from "./navigation-focus.js";
+import { NavigationProgress, useShownLocation } from "./navigation-pending.js";
 import { useRegistry } from "./registry.js";
-import { type ShellState, ShellStateContext } from "./shell.js";
+import {
+  type CreateKind,
+  type SettingsReturn,
+  type ShellState,
+  ShellStateContext,
+  type SpaceCreateTarget,
+} from "./shell.js";
+import { ShellBanner } from "./shell-banner.js";
 import { OrganizationProvider, useOrganizationState } from "./shell-context.js";
 import { ShortcutsDialog } from "./shortcuts-dialog.js";
+import { SidebarSlotProvider, useSidebarSlotState } from "./sidebar-slot.js";
+import { DESKTOP_QUERY, TopBar } from "./top-bar.js";
+
+const SETTINGS_PATH = /^\/(settings|spaces\/[^/]+\/settings)(\/|$)/;
+const SPACE_PATH = /^\/spaces\/([^/?#]+)/;
+const HOME_RETURN: SettingsReturn = { href: "/home", spaceKey: null };
+
+function isDesktop(): boolean {
+  return globalThis.matchMedia?.(DESKTOP_QUERY).matches ?? true;
+}
 
 const route = getRouteApi("/app");
 
@@ -47,7 +65,6 @@ function ShellFrame() {
   const organization = useOrganizationState();
   const preferences = usePreferences();
   const updatePreference = useUpdatePreference();
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -56,7 +73,35 @@ function ShellFrame() {
     () => allShortcuts.filter((shortcut) => !shortcut.listOnly),
     [allShortcuts],
   );
-  const items = useRegistry(railItems);
+  const location = useShownLocation();
+  const sidebarSlots = useSidebarSlotState();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [collapseSuggested, setCollapseSuggested] = useState(false);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [spaceCreateTarget, setSpaceCreateTarget] = useState<SpaceCreateTarget | null>(null);
+  const [pendingCreate, setPendingCreate] = useState<{ spaceKey: string; kind: CreateKind } | null>(null);
+  const suggestionApplies = collapseSuggested && !suggestionDismissed && !preferences.sidebarCollapsed;
+  const inSettings = SETTINGS_PATH.test(location.pathname);
+  const [settingsNavigationHidden, setSettingsNavigationHidden] = useState(false);
+  const [settingsReturn, setSettingsReturn] = useState<SettingsReturn>(HOME_RETURN);
+  const sidebarCollapsed = inSettings
+    ? settingsNavigationHidden
+    : editMode
+      ? preferences.sidebarCollapsedWhileEditing
+      : preferences.sidebarCollapsed || suggestionApplies;
+  const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
+  const suggestCollapsedSidebar = useCallback((suggested: boolean) => {
+    setCollapseSuggested(suggested);
+    if (!suggested) setSuggestionDismissed(false);
+  }, []);
+  const appHref = inSettings ? null : location.href;
+  useEffect(() => {
+    if (appHref === null) return;
+    setSettingsNavigationHidden(false);
+    const key = SPACE_PATH.exec(appHref)?.[1];
+    setSettingsReturn({ href: appHref, spaceKey: key ? decodeURIComponent(key) : null });
+  }, [appHref]);
 
   const signOut = useCallback(() => {
     void request(() => api.POST("/api/v1/auth/sign-out"), { sessionHandling: false })
@@ -73,83 +118,153 @@ function ShellFrame() {
       organizationId: organization.organizationId,
       can: organization.can,
       navigate: (to, params) => void router.navigate({ to: to as never, params: params as never }),
-      openCommandPalette: () => {
-        setSearchOpen(false);
-        setPaletteOpen(true);
-      },
-      openSearch: () => {
-        setPaletteOpen(false);
-        setSearchOpen(true);
-      },
+      openCommandPalette: () => setSearchOpen(true),
+      openSearch: () => setSearchOpen(true),
       openShortcuts: () => setShortcutsOpen(true),
       toggleNotifications: () => setNotificationsOpen((open) => !open),
-      toggleSidebar: () =>
+      toggleSidebar: () => {
+        if (!isDesktop()) {
+          setMobileSidebarOpen((open) => !open);
+          return;
+        }
+        if (inSettings) {
+          setSettingsNavigationHidden((hidden) => !hidden);
+          return;
+        }
+        if (editMode) {
+          updatePreference.mutate({
+            key: preferenceKeys.sidebarCollapsedWhileEditing,
+            value: !preferences.sidebarCollapsedWhileEditing,
+          });
+          return;
+        }
+        if (suggestionApplies) {
+          setSuggestionDismissed(true);
+          return;
+        }
         updatePreference.mutate({
           key: preferenceKeys.sidebarCollapsed,
           value: !preferences.sidebarCollapsed,
-        }),
+        });
+      },
       signOut,
       notificationsOpen,
-      sidebarCollapsed: preferences.sidebarCollapsed,
+      sidebarCollapsed,
+      settingsReturn,
+      mobileSidebarOpen,
+      closeMobileSidebar,
+      suggestCollapsedSidebar,
+      editMode,
+      setEditMode,
+      spaceCreateTarget,
+      setSpaceCreateTarget,
+      pendingCreate,
+      requestCreate: (spaceKey, kind) => setPendingCreate({ spaceKey, kind }),
+      clearPendingCreate: () => setPendingCreate(null),
     }),
-    [organization, router, updatePreference, preferences.sidebarCollapsed, signOut, notificationsOpen],
+    [
+      organization,
+      router,
+      updatePreference,
+      preferences.sidebarCollapsed,
+      preferences.sidebarCollapsedWhileEditing,
+      editMode,
+      signOut,
+      notificationsOpen,
+      sidebarCollapsed,
+      settingsReturn,
+      inSettings,
+      suggestionApplies,
+      mobileSidebarOpen,
+      closeMobileSidebar,
+      suggestCollapsedSidebar,
+      spaceCreateTarget,
+      pendingCreate,
+    ],
   );
 
   useGlobalShortcuts(state, registeredShortcuts);
   useNavigationFocus();
   useNotificationStream(true);
+  const settled = useShellSettled();
+  if (!settled) return <ShellPlaceholder collapsed={sidebarCollapsed} />;
 
   return (
     <ShellStateContext value={state}>
-      <div className="relative flex h-full overflow-hidden bg-bg text-text">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:p-2 focus:shadow-popover"
-        >
-          {t("shell.skipToContent")}
-        </a>
-        <Rail
-          label={t("rail.label")}
-          logo={
-            <Link
-              to="/"
-              aria-label={t("rail.home")}
-              className="flex size-10 items-center justify-center rounded-md text-accent focus-visible:outline-2 focus-visible:outline-accent"
-            >
-              <LunedoMark className="size-8" />
-            </Link>
-          }
-          footer={items
-            .filter((item) => item.placement === "footer")
-            .map((item) => <item.component key={item.id} />)}
-        >
-          {items
-            .filter((item) => item.placement === "main")
-            .map((item) => (
-              <item.component key={item.id} />
-            ))}
-        </Rail>
-        {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <SidebarSlotProvider value={sidebarSlots}>
+        <div className="relative flex h-full flex-col overflow-hidden bg-bg text-text">
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:p-2 focus:shadow-popover"
+          >
+            {t("shell.skipToContent")}
+          </a>
+          <TopBar />
+          <UpdateBanner />
           <MaintenanceBanner />
           <AnnouncementBanners />
           <InsecureProvidersBanner />
           <MissingGroupsBanner />
-          <WithoutOrganizationBanner />
           <WithheldRolesBanner />
-          <div className="flex min-h-0 min-w-0 flex-1">
-            <Outlet />
+          <div className="relative flex min-h-0 min-w-0 flex-1">
+            {inSettings ? null : <AppSidebar />}
+            <div data-content-area="" className="relative flex min-h-0 min-w-0 flex-1">
+              <NavigationProgress />
+              <Outlet />
+            </div>
           </div>
         </div>
-      </div>
-      <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <QuickSearchHost open={searchOpen} onOpenChange={setSearchOpen} />
-      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+        <QuickSearchHost open={searchOpen} onOpenChange={setSearchOpen} />
+        <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      </SidebarSlotProvider>
     </ShellStateContext>
   );
 }
 
-function WithoutOrganizationBanner() {
+export const withheldRolesQuery = queryOptions({
+  queryKey: ["account", "withheldRoles"],
+  queryFn: () => request(() => api.GET("/api/v1/account/withheld-roles")),
+  staleTime: 60_000,
+});
+
+function useShellSettled(): boolean {
+  const organization = useOrganizationState();
+  const adminBanners = organization.can("instance.signIn.view");
+  const banners = useQueries({
+    queries: [
+      { ...maintenanceQuery, retry: false },
+      shownAnnouncementsQuery,
+      withheldRolesQuery,
+      { ...providersQuery, enabled: adminBanners },
+      { ...signInSecurityQuery, enabled: adminBanners },
+    ].map((query) => ({ ...query, throwOnError: false })),
+  });
+  const settled =
+    organization.settled && banners.every((banner) => banner.fetchStatus === "idle" || !banner.isPending);
+  const [shown, setShown] = useState(settled);
+  if (settled && !shown) setShown(true);
+  return shown || settled;
+}
+
+export function ShellPending() {
+  const preferences = usePreferences();
+  return <ShellPlaceholder collapsed={preferences.sidebarCollapsed} />;
+}
+
+function ShellPlaceholder({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div aria-busy="true" className="flex h-full flex-col bg-bg">
+      <div className="h-toolbar shrink-0 border-b border-border" />
+      <div className="flex min-h-0 flex-1">
+        <div
+          className={`hidden shrink-0 border-r border-border bg-sidebar md:block ${collapsed ? "w-rail" : "w-sidebar"}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function WithoutOrganizationNotice() {
   const { t } = useTranslation();
   const state = useOrganizationState();
   const account = state.session.account;
@@ -157,30 +272,24 @@ function WithoutOrganizationBanner() {
     return null;
   }
   return (
-    <div className="px-4 pt-3">
-      <Notice variant="info" title={t("shell.withoutOrganization.title")}>
-        {t("shell.withoutOrganization.description")}
-      </Notice>
-    </div>
+    <Notice variant="info" title={t("shell.withoutOrganization.title")}>
+      {t("shell.withoutOrganization.description")}
+    </Notice>
   );
 }
 
 function WithheldRolesBanner() {
   const { t } = useTranslation();
-  const withheld = useQuery({
-    queryKey: ["account", "withheldRoles"],
-    queryFn: () => request(() => api.GET("/api/v1/account/withheld-roles")),
-    throwOnError: false,
-    staleTime: 60_000,
-  });
+  const withheld = useQuery({ ...withheldRolesQuery, throwOnError: false });
   const first = withheld.data?.[0];
   if (!first) return null;
   return (
-    <div className="px-4 pt-3">
-      <Notice variant="warning" title={t("shell.withheldRoles.title", { count: withheld.data?.length ?? 0 })}>
-        {t("shell.withheldRoles.description", { provider: first.providerName })}
-      </Notice>
-    </div>
+    <ShellBanner
+      variant="warning"
+      title={t("shell.withheldRoles.title", { count: withheld.data?.length ?? 0 })}
+    >
+      {t("shell.withheldRoles.description", { provider: first.providerName })}
+    </ShellBanner>
   );
 }
 
@@ -196,20 +305,20 @@ function MissingGroupsBanner() {
   );
   if (!allowed || affected.length === 0) return null;
   return (
-    <div className="px-4 pt-3">
+    <>
       {affected.map((provider) => (
-        <Notice
+        <ShellBanner
           key={provider.id}
           variant="warning"
           title={t("shell.groupsClaimMissing.title", {
             provider: provider.name,
-            since: format.dateTime(provider.groupsClaimMissingSince ?? ""),
+            since: format.shortDateTime(provider.groupsClaimMissingSince ?? ""),
           })}
         >
           {t("shell.groupsClaimMissing.description")}
-        </Notice>
+        </ShellBanner>
       ))}
-    </div>
+    </>
   );
 }
 
@@ -220,11 +329,9 @@ function InsecureProvidersBanner() {
   const security = useQuery({ ...signInSecurityQuery, enabled: allowed, throwOnError: false });
   if (!allowed || !security.data?.insecureIdentityProviders) return null;
   return (
-    <div className="px-4 pt-3">
-      <Notice variant="warning" title={t("shell.insecureProviders.title")}>
-        {t("shell.insecureProviders.description")}
-      </Notice>
-    </div>
+    <ShellBanner variant="warning" title={t("shell.insecureProviders.title")}>
+      {t("shell.insecureProviders.description")}
+    </ShellBanner>
   );
 }
 

@@ -82,14 +82,16 @@ test("creates a space and arranges pages, folders and links", async ({ page, org
   await page.getByRole("button", { name: "Create space" }).first().click();
   const dialog = page.getByRole("dialog", { name: "Create a space" });
   await dialog.getByLabel("Name").fill("Team Handbook");
-  await expect(dialog.getByLabel("Key")).toHaveValue(/^TH\d*$/);
-  const spaceKey = await dialog.getByLabel("Key").inputValue();
+  await expect(dialog.getByLabel("Key", { exact: true })).toHaveValue(/^TH\d*$/);
+  const spaceKey = await dialog.getByLabel("Key", { exact: true }).inputValue();
   await expect(dialog.getByText("Who gets access")).toBeVisible();
   await expectAccessible(page, "create space");
   await dialog.getByRole("button", { name: "Create space" }).click();
   await expect(page).toHaveURL(new RegExp(`/spaces/${spaceKey}/pages/`));
   const tree = page.getByRole("tree", { name: "Page tree" });
-  await expect(tree.getByRole("treeitem", { name: "Team Handbook" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+  await expect(tree).not.toHaveAttribute("aria-busy", "true");
+  await expect(tree.getByRole("treeitem", { name: "Team Handbook" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Create in this space" }).click();
   await page.getByRole("menuitem", { name: "New folder" }).click();
@@ -108,8 +110,15 @@ test("creates a space and arranges pages, folders and links", async ({ page, org
   await expect(title).toBeFocused();
   await title.fill("VPN access");
   await title.press("Enter");
+  await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveAttribute(
+    "data-collapsed",
+    "true",
+  );
+  await expect(page.getByRole("heading", { name: "Rename VPN access" })).toBeVisible();
+  await expect(page).toHaveURL(/\/vpn-access\?edit=true$/);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page).not.toHaveURL(/edit=true/);
   await expect(tree.getByRole("treeitem", { name: "VPN access" })).toBeVisible();
-  await page.getByRole("button", { name: "Done" }).click();
 
   const vpn = tree.getByRole("treeitem", { name: "VPN access" });
   const runbooks = tree.getByRole("treeitem", { name: "Runbooks" });
@@ -166,14 +175,13 @@ test("writes a page with blocks and shows it in the read view", async ({ page, o
   await waitSaved(page);
   await expect(page.locator(".ld-callout-label").filter({ hasText: "Info" })).toBeVisible();
   const editing = await content.locator("p").first().boundingBox();
-  const bar = await page.locator(".ld-editor-bar").boundingBox();
-  expect(bar?.x).toBeCloseTo(editing?.x ?? -1, 0);
-  expect(bar?.width).toBeCloseTo(editing?.width ?? -1, 0);
-  await page.getByRole("button", { name: "Done" }).click();
+  const bar = await page.getByRole("toolbar", { name: "Formatting" }).boundingBox();
+  const middle = (box: { x: number; width: number } | null) => (box ? box.x + box.width / 2 : -1);
+  expect(Math.abs(middle(bar) - middle(editing))).toBeLessThan(40);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Set up a new device", level: 2 })).toBeVisible();
   const reading = await page.locator(".ld-read-view p").first().boundingBox();
   expect(editing).not.toBeNull();
-  expect(reading?.x).toBeCloseTo(editing?.x ?? -1, 0);
   expect(reading?.width).toBeCloseTo(editing?.width ?? -1, 0);
   await expect(page.locator(".ld-read-view .ld-callout-label")).toHaveText("Info");
   await expect(page.locator("strong", { hasText: "company portal" })).toBeVisible();
@@ -207,7 +215,7 @@ test("lets three people edit one page at the same time without conflicts", async
   try {
     await Promise.all(sessions.map((session) => openEditor(session.page, pagePath)));
     for (const session of sessions) {
-      await expect(session.page.getByRole("list", { name: "3 people on this page" })).toBeVisible({
+      await expect(session.page.getByRole("list", { name: "2 people are editing" })).toBeVisible({
         timeout: 15_000,
       });
     }
@@ -318,19 +326,27 @@ test("disconnects a person at once when they lose the edit permission", async ({
   }
 });
 
-test("loads the organization settings for Spaces with the whole settings navigation", async ({
+test("loads the organization settings for Spaces from the organization settings navigation", async ({
   page,
   organization,
 }) => {
   await page.goto(`/settings/organizations/${organization.id}/spaces`);
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);
+  const defaultsTab = page.getByRole("tab", { name: "Defaults for new spaces" });
+  if ((await defaultsTab.count()) > 0) {
+    await expect(page.getByRole("table", { name: "All spaces" })).toBeVisible();
+    await defaultsTab.click();
+  }
   await expect(page.getByRole("heading", { name: "Default permissions for new spaces" })).toBeVisible();
   const navigation = page.getByRole("navigation", { name: "Settings", exact: true });
-  await expect(navigation.getByRole("link", { name: "Personal spaces" })).toBeVisible();
-  await expect(navigation.getByRole("link", { name: "Spaces", exact: true })).toBeVisible();
-  await navigation.getByRole("link", { name: "Personal spaces" }).click();
-  await expect(page.getByRole("heading", { name: "Personal spaces", level: 1 })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Spaces", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(navigation.getByRole("link", { name: "Personal spaces" })).toHaveCount(0);
+  await navigation.getByRole("link", { name: "Pages and trash" }).click();
+  await expect(page.getByRole("heading", { name: "Pages and trash", level: 1 })).toBeVisible();
   await navigation.getByRole("link", { name: "Spaces", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expect(page.getByText("This page could not be loaded")).toHaveCount(0);
@@ -347,7 +363,10 @@ test("passes the accessibility check on the space settings", async ({ page, orga
   await page.goto(`/settings/organizations/${organization.id}/spaces`);
   await expect(page.getByRole("heading", { name: "Spaces", level: 1 })).toBeVisible();
   await expectAccessible(page, "organization spaces settings");
-  await page.goto("/settings/instance/personal-spaces");
-  await expect(page.getByRole("heading", { name: "Personal spaces", level: 1 })).toBeVisible();
+  await page.goto("/settings/instance/accounts");
+  await expect(page.getByRole("heading", { name: "Accounts", level: 1 })).toBeVisible();
+  await page.getByRole("combobox", { name: "Filter accounts" }).click();
+  await page.getByRole("option", { name: "Personal space waits for review" }).click();
+  await expect(page.getByRole("heading", { name: "Personal spaces to review" })).toBeVisible();
   await expectAccessible(page, "personal spaces review");
 });

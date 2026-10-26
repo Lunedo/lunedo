@@ -18,7 +18,7 @@ import {
 } from "@lunedo/server";
 import { contentLanguages } from "@lunedo/shared";
 import { z } from "zod";
-import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, jobTitleField, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 
 export const visibilitySchema = z
   .enum(spaceVisibilities)
@@ -62,6 +62,11 @@ export const spaceSchema = z
       .nullable()
       .describe("Who may read the knowledge base, or null for other spaces."),
     name: z.string().describe("Name of the space. Empty for a personal space that has no name of its own."),
+    displayName: z
+      .string()
+      .describe(
+        "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language.",
+      ),
     description: z.string().describe("Short description, up to 1000 characters."),
     visibility: visibilitySchema,
     discoverable: z
@@ -117,6 +122,7 @@ export const exampleSpace = {
   type: "standard",
   audience: null,
   name: "IT Operations",
+  displayName: "IT Operations",
   description: "Runbooks and how-tos of the IT team",
   visibility: "organization",
   discoverable: false,
@@ -318,6 +324,36 @@ export const examplePermission = {
   organizationName: null,
   role: "admin",
 };
+
+export const MAX_GRANTS = 50;
+
+export const grantsSchema = z
+  .object({
+    holders: z
+      .array(
+        z
+          .object({
+            principalKind: holderKindSchema,
+            principalId: uuid(
+              "ID of the account or group; null for all members and all internal users.",
+            ).nullable(),
+          })
+          .strict()
+          .describe("A person, group or everyone of a kind."),
+      )
+      .min(1)
+      .max(MAX_GRANTS)
+      .refine(
+        (holders) =>
+          new Set(holders.map((holder) => `${holder.principalKind}:${holder.principalId}`)).size ===
+          holders.length,
+        "Name every holder once.",
+      )
+      .describe(`Holders who get the role, up to ${MAX_GRANTS}.`),
+    role: roleSchema,
+  })
+  .strict()
+  .describe("Several holders who get the same role.");
 
 export const permissionChangeSchema = z
   .discriminatedUnion("action", [
@@ -537,6 +573,8 @@ export const itemDetailsSchema = treeItemSchema
           .string()
           .nullable()
           .describe("Name of the owner, or null when the caller may not see the person."),
+        jobTitle: jobTitleField,
+        pictureRef: pictureRefField,
         email: z
           .string()
           .nullable()

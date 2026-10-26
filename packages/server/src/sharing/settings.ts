@@ -5,7 +5,7 @@ export const shareLinksSetting = defineSetting({
   key: "sharing.shareLinks",
   schema: z.boolean(),
   default: true,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 
@@ -30,7 +30,7 @@ export const membersInviteGuestsSetting = defineSetting({
   key: "sharing.membersInviteGuests",
   schema: z.boolean(),
   default: false,
-  levels: ["instance", "organization"],
+  levels: ["organization"],
   lockable: true,
 });
 

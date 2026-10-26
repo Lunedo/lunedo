@@ -156,7 +156,7 @@ function adminApi(overrides: Record<string, Handler> = {}) {
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
     [`GET ${BASE}`]: () => ({ body: provider() }),
     [`GET ${BASE}/sync-runs`]: () => ({ body: { items: [], nextCursor: null } }),
@@ -191,7 +191,7 @@ describe("group mapping", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     const table = await screen.findByRole("table", { name: "Mapping rules" });
-    expect(within(table).getByText(`Member · group "Engineering"`)).toBeTruthy();
+    expect(await within(table).findByText(`Member · group "Engineering"`)).toBeTruthy();
     expect(within(table).getByText("Platform Team")).toBeTruthy();
     expect(within(table).getByText("Group not found")).toBeTruthy();
     expect(within(table).getAllByText("Instance role")).toHaveLength(1);
@@ -230,7 +230,7 @@ describe("group mapping", () => {
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
-    expect(within(dialog).getByText(/Suggests the groups Lunedo has seen at sign-ins/)).toBeTruthy();
+    expect(within(dialog).getByText(/Groups Lunedo has seen from/)).toBeTruthy();
     await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "lunedo-users");
     expect(await screen.findByRole("option", { name: /Lunedo staff/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Use this text as group value/ })).toBeTruthy();
@@ -244,7 +244,7 @@ describe("group mapping", () => {
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
-    expect(within(dialog).getByText(/Lunedo stores the ID of the group/)).toBeTruthy();
+    expect(within(dialog).getByText(/Searches the groups of/)).toBeTruthy();
     await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "lunedo-users");
     expect(await screen.findByText(/No group with this name found/)).toBeTruthy();
     expect(screen.queryByRole("option", { name: /Use this text as group value/ })).toBeNull();
@@ -259,7 +259,7 @@ describe("group mapping", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     const table = await screen.findByRole("table", { name: "Mapping rules" });
-    expect(within(table).getAllByText("Engineering").length).toBeGreaterThan(0);
+    expect((await within(table).findAllByText("Engineering")).length).toBeGreaterThan(0);
     name = "Platform Engineering";
     emitStream("syncRuns", { providerId: PROVIDER, runId: RUN });
     expect(await within(table).findByText("Platform Engineering")).toBeTruthy();
@@ -289,7 +289,7 @@ describe("group mapping", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await screen.findByRole("table", { name: "Mapping rules" });
-    await userEvent.click(screen.getByRole("button", { name: "More for Engineering" }));
+    await userEvent.click(await screen.findByRole("button", { name: "More for Engineering" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Remove rule" }));
     expect(screen.queryByRole("dialog", { name: "Remove mapping rule" })).toBeNull();
     expect(requests.some((request) => request.method === "DELETE")).toBe(true);
@@ -318,7 +318,7 @@ describe("group mapping", () => {
     adminApi({ [`GET ${BASE}/mapping-rules`]: () => ({ body: rules }) });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     const table = await screen.findByRole("table", { name: "Mapping rules" });
-    expect(within(table).getAllByText("Engineering").length).toBeGreaterThan(0);
+    expect((await within(table).findAllByText("Engineering")).length).toBeGreaterThan(0);
     rules = [];
     emitStream("changes", { scope: "instance", organizationId: null, target: "mappingRule" });
     await waitFor(() => expect(within(table).queryByText("Engineering")).toBeNull());
@@ -514,7 +514,7 @@ describe("the sync log", () => {
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=sync`);
     const table = await screen.findByRole("table", { name: "Synchronization runs" });
-    expect(within(table).getByText("Completed with warnings")).toBeTruthy();
+    expect(await within(table).findByText("Completed with warnings")).toBeTruthy();
     expect(within(table).getByText("2 changes, 1 warning")).toBeTruthy();
     expect(within(table).getByText("38 s")).toBeTruthy();
 
@@ -664,8 +664,10 @@ describe("the sync log", () => {
     expect(await within(panel).findByText("Too many deactivations at once")).toBeTruthy();
     expect(within(panel).getByText(/would have deactivated 40 accounts at once/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Confirm deactivations" }));
-    const dialog = await screen.findByRole("dialog", { name: "Deactivate these accounts?" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Confirm deactivations" }));
+    const confirmation = within(panel).getByRole("group", { name: "Deactivate these accounts?" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/confirm`)).toBe(false);
+    await userEvent.click(within(confirmation).getByRole("button", { name: "Confirm deactivations" }));
     await waitFor(() =>
       expect(requests.some((entry) => entry.path === `${BASE}/sync-runs/${RUN}/confirm`)).toBe(true),
     );
@@ -793,8 +795,8 @@ describe("synchronized groups", () => {
     organizationApi();
     await renderPath(`/settings/organizations/${ORGANIZATION}/groups`);
     const table = await screen.findByRole("table");
-    expect(await within(table).findByText("Entra ID")).toBeTruthy();
-    expect(within(table).getByText("Lunedo")).toBeTruthy();
+    expect(await within(table).findByText("synchronized from Entra ID · not editable")).toBeTruthy();
+    expect(within(table).getByText("In Lunedo")).toBeTruthy();
   });
 
   it("keeps the members of a synchronized group read-only", async () => {

@@ -64,7 +64,7 @@ export function PrivateNotesPanel({
       className="flex h-full w-full flex-col border-l border-border bg-surface md:w-panel md:shrink-0"
     >
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Lock aria-hidden className="size-icon text-text-muted" />
+        <Lock aria-hidden className="size-icon-md text-text-muted" />
         <h2 className="flex-1 font-semibold">{t("meetings.notes.title")}</h2>
         <IconButton label={t("meetings.notes.close")} icon={X} size="sm" onClick={onClose} />
       </div>

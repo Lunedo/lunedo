@@ -45,6 +45,14 @@ export interface MailTemplates {
     reason: string;
     minutes: number;
   };
+  spaceAdministratorTaken: {
+    instanceName: string;
+    organizationName: string;
+    spaceName: string;
+    actorName: string;
+    reason: string;
+    takenAt: string;
+  };
   guestExpiring: { instanceName: string; organizationName: string; guestName: string; date: string };
   guestInactive: { instanceName: string; organizationName: string; guestName: string; days: number };
   tokenExpiring: { instanceName: string; tokenName: string; date: string };
@@ -152,9 +160,9 @@ function describeBrowser(
 type Catalog = { [K in MailTemplate]: (params: MailTemplates[K]) => Content };
 
 const IGNORE_EN = "If you did not ask for this, you can ignore this e-mail.";
-const IGNORE_DE = "Wenn Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren.";
+const IGNORE_DE = "Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren.";
 const NOT_YOU_EN = "If this was not you, contact your administrator immediately.";
-const NOT_YOU_DE = "Wenn Sie das nicht waren, wenden Sie sich sofort an Ihre Administration.";
+const NOT_YOU_DE = "Wenn du das nicht warst, wende dich sofort an deine Administration.";
 
 const catalogs: Record<Language, Catalog> = {
   en: {
@@ -242,6 +250,14 @@ const catalogs: Record<Language, Catalog> = {
         `${requesterName} started emergency access to ${organizationName} with administrator rights for ${minutes} minutes.`,
         `Reason: ${reason}`,
         "Every action during the access is recorded in the audit log.",
+      ],
+    }),
+    spaceAdministratorTaken: ({ instanceName, organizationName, spaceName, actorName, reason, takenAt }) => ({
+      subject: `${actorName} made themselves space admin of ${spaceName} on ${instanceName}`,
+      paragraphs: [
+        `${actorName} made themselves space admin of ${spaceName} on ${takenAt}, as an organization admin of ${organizationName}. You receive this because you are a space admin there.`,
+        `Reason: ${reason}`,
+        "The role gives full access to the content of the space. If you did not expect this, remove it in the permissions of the space and talk to the administrators of the organization. The step is recorded in the audit log.",
       ],
     }),
     guestExpiring: ({ instanceName, organizationName, guestName, date }) => ({
@@ -365,7 +381,7 @@ const catalogs: Record<Language, Catalog> = {
     passwordReset: ({ instanceName, link, minutes }) => ({
       subject: `Passwort für ${instanceName} zurücksetzen`,
       paragraphs: [
-        `Für Ihr Konto auf ${instanceName} wurde das Zurücksetzen des Passworts angefordert.`,
+        `Für dein Konto auf ${instanceName} wurde das Zurücksetzen des Passworts angefordert.`,
         `Der Link funktioniert einmal und läuft in ${minutes} Minuten ab.`,
         IGNORE_DE,
       ],
@@ -374,7 +390,7 @@ const catalogs: Record<Language, Catalog> = {
     emailChangeConfirmation: ({ instanceName, link, hours }) => ({
       subject: `Neue E-Mail-Adresse für ${instanceName} bestätigen`,
       paragraphs: [
-        `Bestätigen Sie, dass diese Adresse für Ihr Konto auf ${instanceName} verwendet werden soll.`,
+        `Bestätige, dass diese Adresse für dein Konto auf ${instanceName} verwendet werden soll.`,
         `Der Link funktioniert einmal und läuft in ${hours} Stunden ab.`,
         IGNORE_DE,
       ],
@@ -388,24 +404,24 @@ const catalogs: Record<Language, Catalog> = {
       ],
     }),
     emailChangeNotice: ({ instanceName, newEmail }) => ({
-      subject: `Ihre E-Mail-Adresse auf ${instanceName} wurde geändert`,
+      subject: `Deine E-Mail-Adresse auf ${instanceName} wurde geändert`,
       paragraphs: [
-        `Die E-Mail-Adresse Ihres Kontos auf ${instanceName} wurde in ${newEmail} geändert. Diese Adresse erhält keine E-Mails für das Konto mehr.`,
+        `Die E-Mail-Adresse deines Kontos auf ${instanceName} wurde in ${newEmail} geändert. Diese Adresse erhält keine E-Mails für das Konto mehr.`,
         NOT_YOU_DE,
       ],
     }),
     secondFactorReset: ({ instanceName, reason }) => ({
-      subject: `Ihr zweiter Faktor auf ${instanceName} wurde zurückgesetzt`,
+      subject: `Dein zweiter Faktor auf ${instanceName} wurde zurückgesetzt`,
       paragraphs: [
-        `Ein Administrator hat den zweiten Faktor Ihres Kontos auf ${instanceName} zurückgesetzt und alle Ihre Sitzungen beendet. Grund: ${reason}`,
-        "Richten Sie bei der nächsten Anmeldung eine Authenticator-App oder einen Passkey ein, bevor Sie fortfahren.",
-        "Wenn Sie das nicht veranlasst haben, wenden Sie sich sofort an Ihre Administration.",
+        `Ein Administrator hat den zweiten Faktor deines Kontos auf ${instanceName} zurückgesetzt und alle deine Sitzungen beendet. Grund: ${reason}`,
+        "Richte bei der nächsten Anmeldung eine Authenticator-App oder einen Passkey ein, bevor du fortfährst.",
+        "Wenn du das nicht veranlasst hast, wende dich sofort an deine Administration.",
       ],
     }),
     recoveryCodeUsed: ({ instanceName, remaining }) => ({
       subject: `Ein Wiederherstellungscode wurde für ${instanceName} verwendet`,
       paragraphs: [
-        `Mit einem Wiederherstellungscode wurde sich bei Ihrem Konto auf ${instanceName} angemeldet. Es sind noch ${remaining} unbenutzte Codes übrig.`,
+        `Mit einem Wiederherstellungscode wurde sich bei deinem Konto auf ${instanceName} angemeldet. Es sind noch ${remaining} unbenutzte Codes übrig.`,
         NOT_YOU_DE,
       ],
     }),
@@ -414,18 +430,18 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [`${instanceName} kann mit diesen Einstellungen E-Mails versenden.`],
     }),
     invitation: ({ instanceName, organizationName, inviterName, link, days }) => ({
-      subject: `${inviterName} hat Sie zu ${organizationName} auf ${instanceName} eingeladen`,
+      subject: `${inviterName} hat dich zu ${organizationName} auf ${instanceName} eingeladen`,
       paragraphs: [
-        `${inviterName} hat Sie eingeladen, ${organizationName} auf ${instanceName} beizutreten.`,
+        `${inviterName} hat dich eingeladen, ${organizationName} auf ${instanceName} beizutreten.`,
         `Der Link funktioniert einmal und läuft in ${days} Tagen ab.`,
         IGNORE_DE,
       ],
       action: { label: "Einladung annehmen", url: link },
     }),
     portalInvitation: ({ knowledgeBaseName, inviterName, link, days }) => ({
-      subject: `${inviterName} hat Sie eingeladen, ${knowledgeBaseName} zu lesen`,
+      subject: `${inviterName} hat dich eingeladen, ${knowledgeBaseName} zu lesen`,
       paragraphs: [
-        `${inviterName} hat Sie eingeladen, die Hilfe ${knowledgeBaseName} zu lesen. Wählen Sie ein Passwort, um Ihr Lesekonto anzulegen; danach können Sie auch einen Passkey hinzufügen.`,
+        `${inviterName} hat dich eingeladen, die Hilfe ${knowledgeBaseName} zu lesen. Wähle ein Passwort, um dein Lesekonto anzulegen; danach kannst du auch einen Passkey hinzufügen.`,
         `Der Link funktioniert einmal und läuft in ${days} Tagen ab.`,
         IGNORE_DE,
       ],
@@ -434,7 +450,7 @@ const catalogs: Record<Language, Catalog> = {
     registration: ({ instanceName, organizationName, link, hours }) => ({
       subject: `Registrierung für ${organizationName} auf ${instanceName} bestätigen`,
       paragraphs: [
-        `Bestätigen Sie diese Adresse, um Ihr Konto in ${organizationName} auf ${instanceName} anzulegen.`,
+        `Bestätige diese Adresse, um dein Konto in ${organizationName} auf ${instanceName} anzulegen.`,
         `Der Link funktioniert einmal und läuft in ${hours} Stunden ab.`,
         IGNORE_DE,
       ],
@@ -448,55 +464,63 @@ const catalogs: Record<Language, Catalog> = {
         "Jede Aktion während des Zugriffs wird im Audit-Log festgehalten.",
       ],
     }),
+    spaceAdministratorTaken: ({ instanceName, organizationName, spaceName, actorName, reason, takenAt }) => ({
+      subject: `${actorName} hat sich zum Space-Admin von ${spaceName} auf ${instanceName} gemacht`,
+      paragraphs: [
+        `${actorName} hat sich am ${takenAt} als Organisations-Admin von ${organizationName} zum Space-Admin von ${spaceName} gemacht. Du bekommst diese Nachricht, weil du dort Space-Admin bist.`,
+        `Grund: ${reason}`,
+        "Die Rolle gibt vollen Zugriff auf die Inhalte des Space. Wenn du das nicht erwartet hast, entferne sie in den Berechtigungen des Space und sprich mit der Administration der Organisation. Der Schritt steht im Audit-Log.",
+      ],
+    }),
     guestExpiring: ({ instanceName, organizationName, guestName, date }) => ({
       subject: `Gastzugang von ${guestName} zu ${organizationName} läuft bald ab`,
       paragraphs: [
-        `Der Gastzugang von ${guestName} zu ${organizationName} auf ${instanceName} läuft am ${date} ab. Sie sind für diesen Gast verantwortlich.`,
+        `Der Gastzugang von ${guestName} zu ${organizationName} auf ${instanceName} läuft am ${date} ab. Du bist für diesen Gast verantwortlich.`,
       ],
     }),
     guestInactive: ({ instanceName, organizationName, guestName, days }) => ({
       subject: `Gast ${guestName} ist in ${organizationName} inaktiv`,
       paragraphs: [
-        `${guestName} hat ${instanceName} seit ${days} Tagen nicht verwendet. Sie sind für diesen Gast in ${organizationName} verantwortlich; entfernen Sie den Gast, wenn der Zugang nicht mehr gebraucht wird.`,
+        `${guestName} hat ${instanceName} seit ${days} Tagen nicht verwendet. Du bist für diesen Gast in ${organizationName} verantwortlich; entferne den Gast, wenn der Zugang nicht mehr gebraucht wird.`,
       ],
     }),
     serviceAccountUnattended: ({ instanceName, serviceAccountName, organizationName }) => ({
       subject: `Servicekonto ${serviceAccountName} in ${organizationName} hat keine verantwortliche Person`,
       paragraphs: [
-        `Die letzte verantwortliche Person des Servicekontos ${serviceAccountName} in ${organizationName} auf ${instanceName} hat die Organisation verlassen oder wurde deaktiviert. Das Servicekonto behält seine Berechtigungen. Benennen Sie eine neue verantwortliche Person oder deaktivieren Sie es.`,
+        `Die letzte verantwortliche Person des Servicekontos ${serviceAccountName} in ${organizationName} auf ${instanceName} hat die Organisation verlassen oder wurde deaktiviert. Das Servicekonto behält seine Berechtigungen. Benenne eine neue verantwortliche Person oder deaktiviere es.`,
       ],
     }),
     tokenUnused: ({ instanceName, tokenName, days }) => ({
       subject: `API-Token ${tokenName} auf ${instanceName} wurde seit ${days} Tagen nicht verwendet`,
       paragraphs: [
-        `Das API-Token ${tokenName} auf ${instanceName} wurde seit ${days} Tagen nicht verwendet. Es funktioniert weiterhin. Wenn es nicht mehr gebraucht wird, widerrufen Sie es, damit es nicht missbraucht werden kann.`,
+        `Das API-Token ${tokenName} auf ${instanceName} wurde seit ${days} Tagen nicht verwendet. Es funktioniert weiterhin. Wenn es nicht mehr gebraucht wird, widerrufe es, damit es nicht missbraucht werden kann.`,
       ],
     }),
     tokenExpiring: ({ instanceName, tokenName, date }) => ({
       subject: `API-Token ${tokenName} auf ${instanceName} läuft bald ab`,
       paragraphs: [
-        `Das API-Token ${tokenName} auf ${instanceName} läuft am ${date} ab. Erstellen Sie vorher ein neues Token, sonst funktionieren Skripte, die es verwenden, nicht mehr.`,
+        `Das API-Token ${tokenName} auf ${instanceName} läuft am ${date} ab. Erstelle vorher ein neues Token, sonst funktionieren Skripte, die es verwenden, nicht mehr.`,
       ],
     }),
     emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
       subject: `Notfallanmeldung bei ${instanceName}`,
       paragraphs: [
         `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
-        "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfen Sie das Audit-Log, wenn Sie sie nicht erwartet haben.",
+        "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfe das Audit-Log, wenn du sie nicht erwartet hast.",
       ],
     }),
     accountRolesWithheld: ({ instanceName, accountName, providerName, roles }) => ({
       subject: `Administrative Rollen von ${accountName} auf ${instanceName} sind ausgesetzt`,
       paragraphs: [
         `Lunedo konnte die Gruppen von ${accountName} länger als das doppelte Synchronisierungsintervall nicht aus ${providerName} lesen. ${roles === 1 ? "Eine administrative Rolle" : `${roles} administrative Rollen`} aus Zuordnungsregeln ${roles === 1 ? "ist" : "sind"} ausgesetzt, bis die Gruppen wieder gelesen werden können. Mitgliedschaften bleiben wie zuletzt bekannt.`,
-        "Prüfen Sie die Verbindung zum Anbieter und sein Sync-Protokoll.",
+        "Prüfe die Verbindung zum Anbieter und sein Sync-Protokoll.",
       ],
     }),
     accountWithoutOrganization: ({ instanceName, accountName, email, providerName }) => ({
       subject: `${accountName} ist auf ${instanceName} in keiner Organisation Mitglied`,
       paragraphs: [
         `${accountName}${email ? ` (${email})` : ""} hat sich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet. Weder eine Zuordnungsregel noch eine Domain einer Organisation hat das Konto zum Mitglied einer Organisation gemacht.`,
-        "Weisen Sie in der Kontenliste der Instanz-Einstellungen eine Organisation zu, gefiltert nach Konten ohne Organisation.",
+        "Weise in der Kontenliste der Instanz-Einstellungen eine Organisation zu, gefiltert nach Konten ohne Organisation.",
       ],
     }),
     homeOrganizationChanged: ({
@@ -522,8 +546,8 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `${instanceName} läuft mit Lunedo ${current}. Version ${version} ist verfügbar.`,
         breaking
-          ? "Die Versionshinweise nennen inkompatible Änderungen oder manuelle Schritte. Lesen Sie sie vor dem Update."
-          : "Der Administrationsbereich zeigt, was sich geändert hat, und die Befehle für Ihre Installation. Das Update legt vorher ein Backup an.",
+          ? "Die Versionshinweise nennen inkompatible Änderungen oder manuelle Schritte. Lies sie vor dem Update."
+          : "Der Administrationsbereich zeigt, was sich geändert hat, und die Befehle für deine Installation. Das Update legt vorher ein Backup an.",
       ],
       ...(link ? { action: { label: "Update anzeigen", url: link } } : {}),
     }),
@@ -535,26 +559,26 @@ const catalogs: Record<Language, Catalog> = {
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-Mail-Versand auf ${instanceName} endet am ${date}`,
       paragraphs: [
-        `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Fügen Sie vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Lunedo keine E-Mails mehr senden.`,
+        `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Füge vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Lunedo keine E-Mails mehr senden.`,
       ],
     }),
     providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
       subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
       paragraphs: [
-        `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Fügen Sie vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlegen Sie sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
+        `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Füge vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlege sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
       ],
     }),
     providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
       subject: `Synchronisierung von ${providerName} auf ${instanceName} angehalten`,
       paragraphs: [
         `Die Synchronisierung mit ${providerName} hätte ${deactivations} von ${accounts} Konten auf einmal deaktiviert. Sie wurde angehalten und hat niemanden deaktiviert, denn eine geänderte Suchbasis, eine verschobene Organisationseinheit oder fehlende Leserechte sehen genauso aus wie ausgeschiedene Personen.`,
-        "Prüfen Sie die Einstellungen des Anbieters und das Verzeichnis. Wenn die Personen wirklich ausgeschieden sind, bestätigen Sie den Lauf im Sync-Protokoll des Anbieters.",
+        "Prüfe die Einstellungen des Anbieters und das Verzeichnis. Wenn die Personen wirklich ausgeschieden sind, bestätige den Lauf im Sync-Protokoll des Anbieters.",
       ],
     }),
     signInNewBrowser: ({ instanceName, browser, operatingSystem, clientIp }) => ({
       subject: `Neue Anmeldung bei ${instanceName}`,
       paragraphs: [
-        `Mit Ihrem Konto auf ${instanceName} wurde sich in einem Browser angemeldet, der bisher nicht verwendet wurde: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
+        `Mit deinem Konto auf ${instanceName} wurde sich in einem Browser angemeldet, der bisher nicht verwendet wurde: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
         NOT_YOU_DE,
       ],
     }),
@@ -600,9 +624,9 @@ const FOOTER: Record<
   },
   de: {
     sentBy: (instanceName) => `Gesendet von ${instanceName}.`,
-    preferences: "Wählen Sie, welche Benachrichtigungen Sie erhalten",
-    security: "Sie erhalten diese E-Mail zur Sicherheit Ihres Kontos.",
-    operations: "Sie erhalten diese E-Mail als Instanzadministration oder Betriebskontakt.",
+    preferences: "Wähle, welche Benachrichtigungen du erhältst",
+    security: "Du erhältst diese E-Mail zur Sicherheit deines Kontos.",
+    operations: "Du erhältst diese E-Mail als Instanzadministration oder Betriebskontakt.",
   },
 };
 

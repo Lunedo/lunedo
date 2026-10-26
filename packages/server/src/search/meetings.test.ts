@@ -34,10 +34,29 @@ function word(): string {
 
 describe.skipIf(!baseUrl)("search over meetings", () => {
   let test: TestServices;
+
+  let meetingNow: Date | null = null;
+
+  async function meetingStart(meetingId: string): Promise<Date | null> {
+    const result = await test.pool.query<{ starts_at: Date | null }>(
+      "select starts_at from meetings where item_id = $1",
+      [meetingId],
+    );
+    return result.rows[0]?.starts_at ?? null;
+  }
+
+  async function closeMeeting(...args: Parameters<TestServices["services"]["meetings"]["close"]>) {
+    meetingNow = await meetingStart(args[1]);
+    try {
+      return await test.services.meetings.close(...args);
+    } finally {
+      meetingNow = null;
+    }
+  }
   const fixtures = spaceFixtures(() => test);
 
   beforeAll(async () => {
-    test = await createTestServices(baseUrl ?? "");
+    test = await createTestServices(baseUrl ?? "", { meetingClock: () => meetingNow ?? new Date() });
     await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
   });
 
@@ -227,7 +246,7 @@ describe.skipIf(!baseUrl)("search over meetings", () => {
   it("drops updates of a skipped meeting from the index", async () => {
     const context = await setup();
     const fresh = word();
-    const { nextMeetingId } = await test.services.meetings.close(context.lead, context.meetingId);
+    const { nextMeetingId } = await closeMeeting(context.lead, context.meetingId);
     const topicId = await test.services.topics.create(context.lead, context.seriesId, { title: "Printers" });
     const snapshot = await test.services.documents.snapshot(nextMeetingId ?? "");
     await test.services.documents.replace(

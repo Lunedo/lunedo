@@ -42,3 +42,15 @@
     content: attr(data-initials);
   }
 }
+
+.ld-meeting-notes [data-section="runningTopics"] {
+  display: none;
+}
+
+.ld-split-button > :first-child {
+  @apply rounded-r-none;
+}
+
+.ld-split-button > :last-child {
+  @apply rounded-l-none border-l-on-accent;
+}

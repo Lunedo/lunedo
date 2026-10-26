@@ -20,7 +20,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, nameCursor, pageQuery } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
-import { timestamp, uuid } from "../http/schemas.js";
+import { pictureRefField, timestamp, uuid } from "../http/schemas.js";
 import { articleTypeSchema, exampleSpace } from "./schemas.js";
 
 const TAG = "Knowledge base reviews";
@@ -40,10 +40,11 @@ const personSchema = z
       .string()
       .nullable()
       .describe("Name of the person, or null when the caller may not see the person."),
+    pictureRef: pictureRefField,
   })
   .describe("A person.");
 
-const examplePerson = { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Weber" };
+const examplePerson = { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Weber", pictureRef: null };
 const exampleArticleId = "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50";
 
 const stateSchema = z
@@ -163,7 +164,7 @@ const reviewItemSchema = z
           .object({ id: uuid("ID of the category."), title: z.string().describe("Title.") })
           .describe("A category."),
       )
-      .describe("Category and subcategory the caller can read, top level first."),
+      .describe("Folders above the article that the caller can read, top level first."),
     owner: personSchema.nullable().describe("The owner, or null when the article has no active owner."),
     ownerActive: z.boolean().describe("Whether the article has an active owner."),
     formerOwner: personSchema

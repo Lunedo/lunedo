@@ -1,4 +1,4 @@
-import { Avatar, Button, Combobox, Field, Input, Popover, useToast } from "@lunedo/ui";
+import { Avatar, Button, Combobox, Field, Popover, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { CalendarDays, UserRound, X } from "lucide-react";
@@ -7,10 +7,17 @@ import { useTranslation } from "react-i18next";
 import { checkMentionAccess, peopleLoader } from "../../collaboration/people.js";
 import { taskStatusesQuery } from "../../collaboration/queries.js";
 import { useSetTaskStatus } from "../../collaboration/task-actions.js";
+import { AppDatePicker } from "../../components/date-fields.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useEditable, usePageContext } from "../context.js";
 import { takeTaskStatus } from "../extensions/pasted-tasks.js";
 import { rememberReferences, usePersonName } from "../references.js";
+
+function todayIso(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
 
 export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) {
   const { t } = useTranslation();
@@ -35,6 +42,8 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
   const [dating, setDating] = useState(false);
   const text = node.textContent.trim() || t("tasks.untitled");
   const known = status !== undefined;
+  const overdue = dueDate !== null && !done && dueDate < todayIso();
+  const dueClass = `ld-inline-button ld-task-chip${overdue ? " ld-task-overdue" : ""}`;
   const { mutate } = setStatus;
 
   useEffect(() => {
@@ -84,7 +93,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
           onChange={toggle}
         />
       </label>
-      <div className={`min-w-0 flex-1${done ? " ld-task-done" : ""}`}>
+      <div className={`ld-task-body${done ? " ld-task-done" : ""}`}>
         <NodeViewContent as="div" />
         {!page ? (
           <p id={hintId} contentEditable={false} suppressContentEditableWarning className="ld-task-hint">
@@ -103,7 +112,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 onOpenChange={setAssigning}
                 label={t("tasks.assignee")}
                 trigger={
-                  <button type="button" className="ld-inline-button">
+                  <button type="button" className="ld-inline-button ld-task-chip">
                     {assignee ? (
                       <Avatar name={assigneeName ?? "?"} size="sm" decorative />
                     ) : (
@@ -137,7 +146,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 onOpenChange={setDating}
                 label={t("tasks.dueDate")}
                 trigger={
-                  <button type="button" className="ld-inline-button">
+                  <button type="button" className={dueClass}>
                     <CalendarDays aria-hidden="true" className="size-icon-sm" />
                     {dueDate
                       ? t("tasks.dueOn", { date: format.date(`${dueDate}T12:00:00Z`) })
@@ -147,10 +156,9 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
               >
                 <div className="flex w-field max-w-full flex-col gap-2 p-1">
                   <Field label={t("tasks.dueDate")}>
-                    <Input
-                      type="date"
+                    <AppDatePicker
                       value={dueDate ?? ""}
-                      onChange={(event) => updateAttributes({ dueDate: event.target.value || null })}
+                      onValueChange={(next) => updateAttributes({ dueDate: next || null })}
                     />
                   </Field>
                   {dueDate ? (
@@ -169,7 +177,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 </div>
               </Popover>
             ) : dueDate ? (
-              <time className="ld-task-due" dateTime={dueDate}>
+              <time className={`ld-task-due${overdue ? " ld-task-overdue" : ""}`} dateTime={dueDate}>
                 {t("tasks.dueOn", { date: format.date(`${dueDate}T12:00:00Z`) })}
               </time>
             ) : null}

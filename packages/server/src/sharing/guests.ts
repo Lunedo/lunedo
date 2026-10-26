@@ -8,6 +8,7 @@ import type { NotificationService } from "../notifications/service.js";
 import type { Invitation, InvitationService } from "../organizations/invitations.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { PageAccessService } from "./page-access.js";
 import type { AccessRequestService } from "./requests.js";
 import type { ShareRole } from "./schema.js";
@@ -180,7 +181,7 @@ export class GuestShareService {
       title: string;
       organization_id: string | null;
     }>(sql`
-      select a.name as requester, s.name as space_name, s.key as space_key, t.title, s.organization_id
+      select a.name as requester, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.title, s.organization_id
       from accounts a cross join tree_items t join spaces s on s.id = t.space_id
       where a.id = ${accountId} and t.id = ${itemId}`);
     const row = details.rows[0];

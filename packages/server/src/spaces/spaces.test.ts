@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { spaceRoleCondition } from "../authorization/space-access.js";
+import { languageSetting } from "../settings/builtin.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
@@ -29,6 +30,12 @@ describe.skipIf(!baseUrl)("spaces", () => {
   afterAll(async () => {
     await test?.close();
   });
+
+  async function grant(spaceId: string, accountId: string, spaceRole: string) {
+    await test.database.execute(sql`
+      insert into space_permissions (id, space_id, principal_kind, principal_id, role)
+      values (gen_random_uuid(), ${spaceId}, 'account', ${accountId}, ${spaceRole}::space_role)`);
+  }
 
   async function auditNames(targetId: string): Promise<string[]> {
     const result = await test.database.execute<{ name: string }>(
@@ -560,6 +567,24 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(Number(count.rows[0]?.count)).toBe(1);
     });
 
+    it("names a personal space without a name of its own after its owner, in the owner's language", async () => {
+      const owner = await account();
+      const personal = await test.services.personalSpaces.ensure(accountPrincipal(owner), "Personal space");
+      if (!personal) throw new Error("no personal space");
+      const ownerName = (
+        await test.database.execute<{ name: string }>(sql`select name from accounts where id = ${owner}`)
+      ).rows[0]?.name;
+      const shown = async () => (await test.services.spaces.get(personal.id))?.displayName;
+      expect(await shown()).toBe(`Personal space of ${ownerName}`);
+      await test.settings.set(languageSetting, { user: owner }, "user", "de");
+      expect(await shown()).toBe(`Persönlicher Space von ${ownerName}`);
+      await test.services.spaces.update(accountPrincipal(owner), personal.id, { name: "Notizen" });
+      expect(await shown()).toBe("Notizen");
+      const org = await organization();
+      const other = await space(org.id, org.owner);
+      expect(other.displayName).toBe(other.name);
+    });
+
     it("follows the instance setting and is only for standard accounts", async () => {
       const guest = await account({ type: "guest" });
       await expect(
@@ -631,6 +656,14 @@ describe.skipIf(!baseUrl)("spaces", () => {
         test.services.personalSpaces.transfer(accountPrincipal(administrator), personal.id, administrator),
       ).rejects.toMatchObject({ code: "selfAppointment" });
       const successor = await account();
+      await expect(
+        test.services.personalSpaces.transfer(accountPrincipal(administrator), personal.id, successor),
+      ).rejects.toMatchObject({ code: "invalidHolder" });
+      expect(entry?.remainingMembers).toBe(0);
+      await grant(personal.id, successor, "reader");
+      expect(
+        await test.services.personalSpaces.remainingMembers(accountPrincipal(administrator), personal.id),
+      ).toEqual([{ id: successor, name: expect.any(String) }]);
       await test.services.personalSpaces.transfer(accountPrincipal(administrator), personal.id, successor);
       expect(await role(successor, personal.id)).toBe("admin");
       expect(
@@ -638,6 +671,149 @@ describe.skipIf(!baseUrl)("spaces", () => {
       ).not.toContain(personal.id);
       expect(await auditNames(personal.id)).toContain("space.personalTransferred");
       expect(await test.services.personalSpaces.find(successor)).toBeNull();
+    });
+  });
+
+  describe("personal spaces of deactivated owners", () => {
+    async function leftBehind() {
+      const org = await organization();
+      const owner = await member(org.id);
+      await test.database.execute(
+        sql`update accounts set home_organization_id = ${org.id} where id = ${owner}`,
+      );
+      const personal = await test.services.personalSpaces.ensure(accountPrincipal(owner), "Plans");
+      const colleague = await member(org.id);
+      const other = await member(org.id);
+      await grant(personal.id, colleague, "editor");
+      await grant(personal.id, other, "reader");
+      await deactivate(owner);
+      return { org, owner, personal, colleague, other };
+    }
+
+    const ids = (members: { id: string }[]) => members.map((entry) => entry.id).sort();
+
+    it("lets administrators of the owner's home organization appoint a remaining member", async () => {
+      const { org, personal, colleague, other } = await leftBehind();
+      const admin = accountPrincipal(org.owner);
+      const listed = await test.services.personalSpaces.forOrganization(org.id);
+      expect(listed.items).toEqual([
+        expect.objectContaining({ id: personal.id, activeMembers: 2, needsAdministrator: true }),
+      ]);
+      expect(JSON.stringify(listed.items)).not.toContain("Plans");
+      expect(ids(await test.services.personalSpaces.remainingMembers(admin, personal.id, org.id))).toEqual(
+        [colleague, other].sort(),
+      );
+      await test.services.personalSpaces.appointAdministrator(admin, org.id, personal.id, colleague);
+      expect(await role(colleague, personal.id)).toBe("admin");
+      expect(await role(org.owner, personal.id)).toBeNull();
+      expect(await auditNames(personal.id)).toEqual(
+        expect.arrayContaining(["space.personalAdministratorAppointed", "space.permissionChanged"]),
+      );
+      const notified = await test.database.execute<{ recipient_id: string }>(sql`
+        select recipient_id from notifications
+        where type = 'space.administratorAppointed' and target_id = ${personal.id}`);
+      expect(notified.rows.map((row) => row.recipient_id)).toEqual([colleague]);
+      await expect(
+        test.services.personalSpaces.appointAdministrator(admin, org.id, personal.id, other),
+      ).rejects.toMatchObject({ code: "spaceHasAdministrator" });
+      expect(await test.services.personalSpaces.remainingMembers(admin, personal.id, org.id)).toEqual([]);
+    });
+
+    it("refuses appointing oneself, people outside the space and spaces of another home organization", async () => {
+      const { org, personal, other } = await leftBehind();
+      const stranger = await member(org.id);
+      await grant(personal.id, org.owner, "reader");
+      const admin = accountPrincipal(org.owner);
+      await expect(
+        test.services.personalSpaces.appointAdministrator(admin, org.id, personal.id, org.owner),
+      ).rejects.toMatchObject({ code: "selfAppointment" });
+      expect(
+        ids(await test.services.personalSpaces.remainingMembers(admin, personal.id, org.id)),
+      ).not.toContain(org.owner);
+      await expect(
+        test.services.personalSpaces.appointAdministrator(admin, org.id, personal.id, stranger),
+      ).rejects.toMatchObject({ code: "invalidHolder" });
+      const elsewhere = await organization();
+      await expect(
+        test.services.personalSpaces.appointAdministrator(
+          accountPrincipal(elsewhere.owner),
+          elsewhere.id,
+          personal.id,
+          other,
+        ),
+      ).rejects.toMatchObject({ code: "spaceNotFound" });
+      expect((await test.services.personalSpaces.forOrganization(elsewhere.id)).items).toEqual([]);
+      expect(await role(stranger, personal.id)).toBeNull();
+      expect(await role(other, personal.id)).toBe("reader");
+    });
+
+    it("transfers only to remaining members and never to the caller", async () => {
+      const { personal, colleague } = await leftBehind();
+      const administrator = await account();
+      await test.database.execute(sql`
+        insert into role_assignments (id, scope, principal_kind, principal_id, built_in_role)
+        values (gen_random_uuid(), 'instance', 'account', ${administrator}, 'administrator')`);
+      await grant(personal.id, administrator, "reader");
+      const as = accountPrincipal(administrator);
+      await expect(
+        test.services.personalSpaces.transfer(as, personal.id, administrator),
+      ).rejects.toMatchObject({
+        code: "selfAppointment",
+      });
+      expect(ids(await test.services.personalSpaces.remainingMembers(as, personal.id))).not.toContain(
+        administrator,
+      );
+      await expect(
+        test.services.personalSpaces.transfer(as, personal.id, await account()),
+      ).rejects.toMatchObject({
+        code: "invalidHolder",
+      });
+      await test.services.personalSpaces.transfer(as, personal.id, colleague);
+      expect(await role(colleague, personal.id)).toBe("admin");
+    });
+
+    it("notifies the administrators of the home organization only while members remain", async () => {
+      const org = await organization();
+      const elsewhere = await organization();
+      const owner = await member(org.id);
+      const lonely = await member(org.id);
+      await test.database.execute(
+        sql`update accounts set home_organization_id = ${org.id} where id in (${owner}, ${lonely})`,
+      );
+      const personal = await test.services.personalSpaces.ensure(accountPrincipal(owner), "Plans");
+      const empty = await test.services.personalSpaces.ensure(accountPrincipal(lonely), "Alone");
+      await grant(personal.id, await member(org.id), "editor");
+      await test.services.memberships.deactivate(accountPrincipal(org.owner), owner);
+      await test.services.memberships.deactivate(accountPrincipal(org.owner), lonely);
+      const notified = await test.database.execute<{
+        recipient_id: string;
+        target_id: string;
+        params: unknown;
+      }>(sql`
+        select recipient_id, target_id, params from notifications
+        where type = 'space.personalWithoutAdministrator'
+          and target_id in (${personal.id}, ${empty.id})`);
+      expect(notified.rows).toEqual([
+        { recipient_id: org.owner, target_id: personal.id, params: { spaceKey: personal.key } },
+      ]);
+      expect(notified.rows.map((row) => row.recipient_id)).not.toContain(elsewhere.owner);
+      expect(JSON.stringify(notified.rows)).not.toContain("Plans");
+    });
+
+    it("leaves only the clean-up when nobody remains", async () => {
+      const org = await organization();
+      const owner = await member(org.id);
+      await test.database.execute(
+        sql`update accounts set home_organization_id = ${org.id} where id = ${owner}`,
+      );
+      const personal = await test.services.personalSpaces.ensure(accountPrincipal(owner), "Plans");
+      await deactivate(owner);
+      expect((await test.services.personalSpaces.forOrganization(org.id)).items).toEqual([]);
+      const review = await test.services.personalSpaces.forReview();
+      expect(review.items.find((item) => item.spaceId === personal.id)?.remainingMembers).toBe(0);
+      await expect(
+        test.services.personalSpaces.transfer(accountPrincipal(org.owner), personal.id, await account()),
+      ).rejects.toMatchObject({ code: "invalidHolder" });
     });
   });
 

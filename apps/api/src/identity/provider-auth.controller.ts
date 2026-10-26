@@ -89,6 +89,7 @@ export class ProviderAuthController {
           id: found.id,
           email: found.email,
           name: found.name,
+          pictureRef: found.pictureRef,
           type: found.type,
           homeOrganizationId: found.homeOrganizationId,
         }

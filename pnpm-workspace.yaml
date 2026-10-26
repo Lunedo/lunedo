@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - docker/runtime
 
 # Packages whose install scripts may run. esbuild ships its binary through optional
 # platform packages, so its install script is not needed.
@@ -28,6 +29,7 @@ overrides:
   "@excalidraw/mermaid-to-excalidraw>nanoid": ^5.1.11
   "@excalidraw/excalidraw>sass": "-"
   lodash-es: ^4.18.1
+  lowlight>highlight.js: ~11.12.0
   # GHSA-67mh-4wv8-2f99: drizzle-kit's loader pins esbuild ~0.18 and has no release with a fixed range.
   "@esbuild-kit/core-utils>esbuild": ^0.25.12
   # GHSA-238p-pmpm-9mq7: mermaid 11 pins katex ^0.16, which has no fixed release; mermaid 12 uses katex 0.18.

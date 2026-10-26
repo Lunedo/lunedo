@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { detectLanguage, initI18n, resources } from "./index.js";
+import { detectLanguage, initI18n } from "./index.js";
+import { resources } from "./resources.js";
 
 function keys(value: object, prefix = ""): string[] {
   return Object.entries(value).flatMap(([key, child]) =>
@@ -46,6 +47,6 @@ describe("initI18n", () => {
   it("sets the document language", async () => {
     const instance = await initI18n(["de-DE"]);
     expect(document.documentElement.lang).toBe("de");
-    expect(instance.t("rail.search")).toBe("Suche");
+    expect(instance.t("topBar.search")).toBe("Suchen");
   });
 });

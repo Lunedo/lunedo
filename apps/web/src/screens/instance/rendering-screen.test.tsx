@@ -24,6 +24,7 @@ const EMPTY = {
   waiting: null,
   maxBytes: null,
   timeoutSeconds: null,
+  image: null,
 };
 
 function rendering(pdf: Record<string, unknown>) {
@@ -75,7 +76,7 @@ function api(status: unknown, overrides: Record<string, Handler> = {}) {
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/rendering": () => ({ body: status }),
     ...overrides,
   });
@@ -94,11 +95,22 @@ describe("the rendering settings", () => {
     expect(await screen.findByText("Not configured")).toBeTruthy();
     expect(screen.getByText("Interactive export works without it.")).toBeTruthy();
     expect(screen.getByText(/LUNEDO_RENDER_URL: http:\/\/lunedo-render:3000/)).toBeTruthy();
+    expect(screen.getByText(/image: ghcr\.io\/lunedo\/render:latest/)).toBeTruthy();
+    expect(screen.getByText(/does not run a release/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy the Docker Compose entries" })).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "How to set up the render container" }).getAttribute("href"),
     ).toContain("docs/rendering.md");
     expect(screen.getByText("Created by Lunedo itself. Always available.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Check again" })).toBeNull();
+  });
+
+  it("names the render image of the release this instance runs", async () => {
+    api(rendering({ state: "notConfigured", image: "ghcr.io/lunedo/render:1.4.2" }));
+    await renderScreen();
+    expect(await screen.findByText(/image: ghcr\.io\/lunedo\/render:1\.4\.2/)).toBeTruthy();
+    expect(screen.queryByText(/render:latest/)).toBeNull();
+    expect(screen.queryByText(/does not run a release/)).toBeNull();
   });
 
   it("shows a healthy container with its version, browser and jobs, and checks it again", async () => {

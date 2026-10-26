@@ -136,6 +136,7 @@ const task = (id: string, text: string, extra: Record<string, unknown> = {}) => 
   dueDate: null,
   overdue: false,
   assignee: { id: OLIVIA.id, name: OLIVIA.name },
+  assignedBy: null,
   item: {
     id: VPN,
     kind: "page",
@@ -147,7 +148,8 @@ const task = (id: string, text: string, extra: Record<string, unknown> = {}) => 
   ...extra,
 });
 
-type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
+type Reply = { status?: number; body?: unknown };
+type Handler = (request: RecordedRequest) => Reply | Promise<Reply>;
 
 function routes(role: Role, extra: Record<string, Handler> = {}): Record<string, Handler> {
   return {
@@ -175,7 +177,7 @@ function routes(role: Role, extra: Record<string, Handler> = {}): Record<string,
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
     [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
       body: { items: [item(VPN, "VPN access")], nextCursor: null },
@@ -237,8 +239,16 @@ async function renderAt(path: string) {
   render(<App i18n={i18n} queryClient={createQueryClient()} />);
 }
 
+function wideScreen() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query.includes("min-width"),
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
 describe("comments on a page", () => {
-  it("open from the marked text, show the quote and let readers react but not reply", async () => {
+  it("open from the marked text in a sheet and let readers react but not reply", async () => {
     const { requests } = mockApi(
       routes("reader", {
         [`PUT /api/v1/comments/${THREAD}/reactions/${encodeURIComponent("👍")}`]: () => ({ status: 204 }),
@@ -246,11 +256,11 @@ describe("comments on a page", () => {
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     await userEvent.click(await screen.findByText("blocks UDP"));
-    const panel = await screen.findByRole("complementary", { name: "Comments" });
-    expect(within(panel).getByRole("button", { name: "“blocks UDP”" })).toBeTruthy();
-    expect(within(panel).getByText("Happened twice")).toBeTruthy();
-    expect(within(panel).queryByRole("button", { name: "Reply" })).toBeNull();
-    await userEvent.click(within(panel).getByRole("button", { name: /👍 1/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(sheet).getByText("Happened twice")).toBeTruthy();
+    expect(within(sheet).queryByRole("textbox", { name: "Reply" })).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: "Resolve" })).toBeNull();
+    await userEvent.click(within(sheet).getByRole("button", { name: /👍 1/ }));
     await waitFor(() =>
       expect(
         requests.some((request) => request.method === "PUT" && request.path.includes("/reactions/")),
@@ -258,23 +268,49 @@ describe("comments on a page", () => {
     );
   });
 
-  it("keep the focus inside the panel on narrow screens and return it when closed", async () => {
-    mockApi(routes("reader"));
+  it("open by keyboard in a popover at the mark and return the focus to the mark on Escape", async () => {
+    wideScreen();
+    mockApi(routes("commenter"));
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    const toggle = await screen.findByRole("button", { name: /^Comments/ });
-    await userEvent.click(toggle);
-    const panel = await screen.findByRole("complementary", { name: "Comments" });
-    await waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
-    for (let step = 0; step < 12; step += 1) {
-      await userEvent.tab();
-      expect(panel.contains(document.activeElement)).toBe(true);
-    }
+    const mark = await screen.findByRole("button", { name: "Open comment on “blocks UDP”" });
+    mark.focus();
+    await userEvent.keyboard("{Enter}");
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("1 comment")).toBeTruthy();
+    expect(within(popover).getByRole("button", { name: "Resolve" })).toBeTruthy();
+    expect(screen.queryByRole("complementary", { name: "Comments" })).toBeNull();
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("complementary", { name: "Comments" })).toBeNull());
-    expect(document.activeElement).toBe(toggle);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Comments" })).toBeNull());
+    expect(document.activeElement).toBe(mark);
   });
 
-  it("let commenters comment on selected text of the published version", async () => {
+  it("open the first thread of a paragraph from the counter at the edge", async () => {
+    wideScreen();
+    mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await userEvent.click(await screen.findByRole("button", { name: "1 open comment in this paragraph" }));
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("Happened twice")).toBeTruthy();
+  });
+
+  it("resolve a thread from the popover", async () => {
+    wideScreen();
+    const { requests } = mockApi(
+      routes("commenter", { [`PUT /api/v1/comments/${THREAD}/resolved`]: () => ({ status: 204 }) }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await userEvent.click(await screen.findByText("blocks UDP"));
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    await userEvent.click(within(popover).getByRole("button", { name: "Resolve" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "PUT" && request.path.endsWith("/resolved"))?.body,
+      ).toEqual({ resolved: true }),
+    );
+  });
+
+  it("let commenters comment on selected text of the published version in the same popover", async () => {
+    wideScreen();
     mockApi(routes("commenter"));
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     const text = await screen.findByText(/on port 51820/);
@@ -286,11 +322,141 @@ describe("comments on a page", () => {
     document.getSelection()?.addRange(range);
     Range.prototype.getBoundingClientRect = () => new DOMRect(10, 10, 40, 16);
     fireEvent(document, new Event("selectionchange"));
-    await userEvent.click(await screen.findByRole("button", { name: "Comment" }));
-    const pending = await screen.findByRole("region", { name: "Comment on the selected text" });
-    expect(within(pending).getByText("“on p”")).toBeTruthy();
-    await userEvent.click(within(pending).getByRole("button", { name: "Comment" }));
-    expect(await within(pending).findByText("Write a comment first.")).toBeTruthy();
+    const [onSelection] = await screen.findAllByRole("button", { name: "Comment" });
+    if (!onSelection) throw new Error("No button to comment on the selection");
+    await userEvent.click(onSelection);
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("Comment on the selected text")).toBeTruthy();
+    await userEvent.click(within(popover).getByRole("button", { name: "Comment" }));
+    expect(await within(popover).findByText("Write a comment first.")).toBeTruthy();
+  });
+
+  it("list page comments below the content with resolved inline threads collapsed", async () => {
+    const pageThread = {
+      ...thread,
+      id: "01929b1e-0000-7000-8000-0000000000c2",
+      quote: null,
+      anchor: "page",
+      reactions: [],
+      body: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Looks good" }] }],
+      },
+      replies: [
+        {
+          ...thread,
+          id: "01929b1e-0000-7000-8000-0000000000c3",
+          quote: null,
+          anchor: "page",
+          reactions: [],
+          author: { id: OLIVIA.id, name: OLIVIA.name },
+          body: {
+            type: "doc",
+            content: [{ type: "paragraph", content: [{ type: "text", text: "Thanks" }] }],
+          },
+        },
+      ],
+    };
+    const resolved = { ...thread, resolvedAt: "2026-10-08T08:00:00.000Z" };
+    mockApi(
+      routes("commenter", {
+        [`GET /api/v1/pages/${VPN}/comments`]: () => ({
+          body: { threads: [pageThread, resolved], people: {} },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?comment=${pageThread.id}`);
+    const section = await screen.findByRole("region", { name: "Comments 2" });
+    expect(within(section).getByText("Looks good")).toBeTruthy();
+    expect(within(section).getByText("Thanks")).toBeTruthy();
+    const highlighted = within(section).getByRole("article", { name: "Comment on the page" });
+    await waitFor(() => expect(document.activeElement).toBe(highlighted));
+    expect(highlighted.dataset.highlighted).toBeDefined();
+    expect(within(section).queryByText("Happened twice")).toBeNull();
+    await userEvent.click(within(section).getByRole("button", { name: "Show 1 resolved comment" }));
+    expect(within(section).getByText("Happened twice")).toBeTruthy();
+    expect(within(section).getByRole("button", { name: "Reopen" })).toBeTruthy();
+    expect(within(section).getByRole("textbox", { name: "New comment on the page" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Comments/ })).toBeNull();
+  });
+
+  it("list open inline threads below the content when the published text has no mark for them", async () => {
+    const { requests } = mockApi(
+      routes("commenter", {
+        [`GET /api/v1/pages/${VPN}/content`]: () => ({
+          body: {
+            itemId: VPN,
+            title: "VPN access",
+            version: 2,
+            document: {
+              type: "doc",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "Hotel Wi-Fi blocks UDP." }] }],
+            },
+            schemaVersion: 3,
+            revision: 4,
+            updatedAt: "2026-10-05T08:10:00.000Z",
+            updatedBy: OLIVIA.id,
+            references: { people: {}, pages: {} },
+          },
+        }),
+        [`PUT /api/v1/comments/${THREAD}/resolved`]: () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const section = await screen.findByRole("region", { name: "Comments 1" });
+    const thread = within(section).getByRole("article", { name: "Comment on “blocks UDP”" });
+    expect(within(thread).getByText("Happened twice")).toBeTruthy();
+    await userEvent.click(within(thread).getByRole("button", { name: "Resolve" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith("/resolved"))?.body).toEqual({
+        resolved: true,
+      }),
+    );
+  });
+
+  it("resolve a page comment and move it to the resolved list", async () => {
+    const pageThread = { ...thread, id: "01929b1e-0000-7000-8000-0000000000c4", quote: null, anchor: "page" };
+    const { requests } = mockApi(
+      routes("commenter", {
+        [`GET /api/v1/pages/${VPN}/comments`]: () => ({ body: { threads: [pageThread], people: {} } }),
+        [`PUT /api/v1/comments/${pageThread.id}/resolved`]: () => ({ status: 204 }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const section = await screen.findByRole("region", { name: "Comments 1" });
+    await userEvent.click(within(section).getByRole("button", { name: "Resolve" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/${pageThread.id}/resolved`))?.body).toEqual({
+        resolved: true,
+      }),
+    );
+  });
+
+  it("show the people editing the page before the edit info, without the viewer", async () => {
+    mockApi(
+      routes("reader", {
+        [`GET /api/v1/pages/${VPN}/editors`]: () => ({
+          body: {
+            editors: [
+              { id: LUKAS, name: "Lukas Hofer", pictureRef: null },
+              { id: OLIVIA.id, name: OLIVIA.name, pictureRef: null },
+            ],
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    const editors = await screen.findByRole("list", { name: "1 person is editing" });
+    expect(within(editors).getByText("Lukas Hofer is editing")).toBeTruthy();
+    expect(within(editors).queryByText("Olivia Owner is editing")).toBeNull();
+  });
+
+  it("open an inline thread from a deep link", async () => {
+    wideScreen();
+    mockApi(routes("reader"));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?comment=${THREAD}`);
+    const popover = await screen.findByRole("dialog", { name: "Comments" });
+    expect(within(popover).getByText("Happened twice")).toBeTruthy();
   });
 });
 
@@ -325,7 +491,7 @@ describe("tasks in the read view", () => {
 });
 
 describe("My tasks", () => {
-  it("lists my tasks with counts, marks overdue ones and filters by overdue", async () => {
+  it("groups my tasks by due date, sorts by a column and filters by due date", async () => {
     const { requests } = mockApi(
       routes("reader", {
         "GET /api/v1/tasks": (request) => ({
@@ -333,8 +499,8 @@ describe("My tasks", () => {
             items: request.path.includes("due=overdue")
               ? [task(MY_TASK, "Test the fallback", { dueDate: "2026-10-01", overdue: true })]
               : [
+                  task(OTHER_TASK, "Rotate the key", { assignedBy: { id: OLIVIA.id, name: OLIVIA.name } }),
                   task(MY_TASK, "Test the fallback", { dueDate: "2026-10-01", overdue: true }),
-                  task(OTHER_TASK, "Rotate the key"),
                 ],
             counts: { open: 2, done: 0, overdue: 1 },
             nextCursor: null,
@@ -344,11 +510,53 @@ describe("My tasks", () => {
     );
     await renderAt("/tasks");
     expect(await screen.findByRole("heading", { name: "My tasks" })).toBeTruthy();
-    expect(await screen.findByText("Rotate the key")).toBeTruthy();
-    expect(screen.getByText("2 open")).toBeTruthy();
-    expect(screen.getAllByText(/Overdue since/).length).toBeGreaterThan(0);
-    await userEvent.click(screen.getByRole("radio", { name: "Overdue" }));
+    const table = await screen.findByRole("table", { name: "Tasks" });
+    await within(table).findByText("Rotate the key");
+    const filters = document.querySelector("[data-filter-row]") as HTMLElement;
+    for (const control of filters.children) expect(control.className).toContain("shrink-0");
+    const groups = within(table)
+      .getAllByRole("columnheader")
+      .filter((cell) => cell.getAttribute("scope") === "colgroup")
+      .map((cell) => cell.textContent);
+    expect(groups).toEqual(["Overdue1", "No date1"]);
+    await userEvent.click(within(table).getByRole("button", { name: /^Task/ }));
+    await waitFor(() => expect(requests.some((request) => request.path.includes("sort=text"))).toBe(true));
+    await userEvent.click(screen.getByRole("button", { name: "Due: All" }));
+    await userEvent.click(screen.getByRole("button", { name: "Overdue" }));
     await waitFor(() => expect(requests.some((request) => request.path.includes("due=overdue"))).toBe(true));
+  });
+
+  it("lists the tasks I assigned to others and checks one off in the list", async () => {
+    const { requests } = mockApi(
+      routes("reader", {
+        "GET /api/v1/tasks": () => ({
+          body: {
+            items: [task(MY_TASK, "Test the fallback")],
+            counts: { open: 1, done: 0, overdue: 0 },
+            nextCursor: null,
+          },
+        }),
+        [`PUT /api/v1/tasks/${MY_TASK}/status`]: () => ({
+          body: { id: MY_TASK, done: true, changedAt: null, changedBy: null },
+        }),
+      }),
+    );
+    await renderAt("/tasks");
+    await userEvent.click(await screen.findByRole("radio", { name: "Created by me" }));
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.path.includes("assignedBy=me") && !request.path.includes("assignee="),
+        ),
+      ).toBe(true),
+    );
+    expect(await screen.findByRole("columnheader", { name: "For" })).toBeTruthy();
+    await userEvent.click(await screen.findByRole("checkbox", { name: /Test the fallback/ }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/tasks/${MY_TASK}/status`))?.body).toEqual({
+        done: true,
+      }),
+    );
   });
 });
 
@@ -374,6 +582,7 @@ describe("blog of a space", () => {
                 scheduledTimeZone: "Europe/Vienna",
                 pinnedInSpace: false,
                 pinnedInOrganization: false,
+                commentCount: 2,
                 createdAt: "2026-10-07T08:00:00.000Z",
               },
             ],
@@ -383,9 +592,11 @@ describe("blog of a space", () => {
       }),
     );
     await renderAt("/spaces/ITOPS/blog");
+    expect(await screen.findByText("2 comments")).toBeTruthy();
     expect(await screen.findByText("Printer maintenance")).toBeTruthy();
     expect(screen.getByText("Scheduled")).toBeTruthy();
-    await userEvent.click(screen.getAllByRole("button", { name: "Write a post" })[0] as HTMLElement);
+    expect(screen.getByRole("link", { name: "Printer maintenance" }).className).toContain("text-lg");
+    await userEvent.click(screen.getByRole("button", { name: "New post" }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Create post" }));
     expect(await within(dialog).findByText("Enter a title.")).toBeTruthy();
@@ -461,6 +672,7 @@ describe("For you", () => {
       spaceId: SPACE_ID,
       spaceKey: "ITOPS",
       spaceName: "IT Operations",
+      mySpace: false,
     };
     mockApi(
       routes("reader", {
@@ -486,38 +698,91 @@ describe("For you", () => {
     await renderAt("/home");
     expect(await screen.findByText("Test the fallback")).toBeTruthy();
     expect(screen.getByText(/Lukas Hofer/)).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: /VPN access/ }).length).toBe(3);
+    expect(screen.getAllByRole("link", { name: /VPN access/ }).length).toBe(4);
+    expect(screen.queryByText(/Hello/)).toBeNull();
     expect(screen.getByText("No blog posts were published in your spaces in the last 30 days.")).toBeTruthy();
   });
 
-  it("welcomes people only while nothing at all is there, upcoming meetings included", async () => {
-    const empty = { recent: [], starred: { items: [], spaces: [] }, tasks: [], mentions: [], posts: [] };
-    const meeting = {
+  it("names pages in the own personal space Mein Space and never starts the line with a dot", async () => {
+    const mine = {
       id: VPN,
-      title: "Jour fixe",
-      startsAt: "2030-03-18T08:30:00.000Z",
-      durationMinutes: 45,
-      seriesId: SPACE_ID,
-      seriesTitle: "Jour fixe IT",
+      kind: "page",
+      title: "Private draft",
       spaceId: SPACE_ID,
-      spaceKey: "ITOPS",
-      oneOnOne: false,
+      spaceKey: "P0001",
+      spaceName: "",
+      mySpace: true,
     };
-    const upcoming: unknown[] = [];
+    const hidden = { ...mine, id: THREAD, title: "Shared page", spaceName: "", mySpace: false };
+    mockApi(
+      routes("reader", {
+        "GET /api/v1/home": () => ({
+          body: {
+            recent: [
+              { ...mine, viewedAt: new Date(Date.now() - 8 * 60_000).toISOString() },
+              { ...hidden, viewedAt: new Date(Date.now() - 9 * 60_000).toISOString() },
+            ],
+            starred: { items: [], spaces: [] },
+            tasks: [],
+            mentions: [],
+            posts: [],
+          },
+        }),
+        "GET /api/v1/meetings/upcoming": () => ({ body: [] }),
+        "GET /api/v1/one-on-ones": () => ({ body: [] }),
+      }),
+    );
+    await renderAt("/home");
+    const row = await screen.findByRole("link", { name: /Private draft/ });
+    expect(row.textContent).toMatch(/My space · 8 min. ago$/);
+    const shared = screen.getByRole("link", { name: /Shared page/ });
+    expect(shared.textContent).not.toMatch(/Shared pages*·/);
+    expect(shared.textContent).toMatch(/9 min. ago$/);
+  });
+
+  it("welcomes people without spaces with a collapsed sidebar and shows the sections once a space exists", async () => {
+    const empty = { recent: [], starred: { items: [], spaces: [] }, tasks: [], mentions: [], posts: [] };
+    const spaces: unknown[] = [];
     mockApi(
       routes("reader", {
         "GET /api/v1/home": () => ({ body: empty }),
-        "GET /api/v1/meetings/upcoming": () => ({ body: upcoming }),
+        "GET /api/v1/spaces": () => ({ body: { items: spaces, nextCursor: null } }),
+        "GET /api/v1/meetings/upcoming": () => ({ body: [] }),
         "GET /api/v1/one-on-ones": () => ({ body: [] }),
       }),
     );
     await renderAt("/home");
     expect(await screen.findByText("Welcome to Lunedo")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open the spaces" }).getAttribute("href")).toBe("/spaces");
+    await waitFor(() =>
+      expect(screen.getByRole("navigation", { name: "Main navigation" }).hasAttribute("data-collapsed")).toBe(
+        true,
+      ),
+    );
     cleanup();
-    upcoming.push(meeting);
+    spaces.push({ id: SPACE_ID, key: "ITOPS", name: "IT Operations" });
     await renderAt("/home");
-    expect(await screen.findByText("Jour fixe IT")).toBeTruthy();
+    expect(await screen.findByText("No upcoming meetings.")).toBeTruthy();
     expect(screen.queryByText("Welcome to Lunedo")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Main navigation" }).hasAttribute("data-collapsed")).toBe(
+      false,
+    );
+  });
+
+  it("shows each section with its own placeholder rows and leaves one-on-ones to their own section", async () => {
+    const { requests } = mockApi(
+      routes("reader", {
+        "GET /api/v1/home": () => new Promise<Reply>(() => {}),
+        "GET /api/v1/meetings/upcoming": () => ({ body: [] }),
+        "GET /api/v1/one-on-ones": () => ({ body: [] }),
+      }),
+    );
+    await renderAt("/home");
+    expect(await screen.findByRole("heading", { name: "My tasks, due soon" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Mentions" })).toBeTruthy();
+    expect(await screen.findByText("No upcoming meetings.")).toBeTruthy();
+    const upcoming = requests.find((request) => request.path.startsWith("/api/v1/meetings/upcoming"));
+    expect(upcoming?.path).toContain("oneOnOne=false");
   });
 
   it("names an upcoming meeting by its own title when the series stays hidden", async () => {
