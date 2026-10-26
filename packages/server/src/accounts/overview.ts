@@ -41,6 +41,7 @@ export interface AccountMembership {
   name: string;
   kind: MembershipKind;
   expiresAt: Date | null;
+  since: Date;
   home: boolean;
   roles: {
     assignmentId: string | null;
@@ -76,6 +77,7 @@ export interface AccountDetail {
     createdAt: Date;
   }[];
   twoFactor: SecondFactors;
+  personalSpaceKey: string | null;
 }
 
 function idList(ids: readonly string[]): SQL {
@@ -225,8 +227,9 @@ export class AccountOverviewService {
       name: string;
       kind: MembershipKind;
       expires_at: Date | string | null;
+      created_at: Date | string;
     }>(sql`
-      select m.organization_id, o.name, m.kind, m.expires_at
+      select m.organization_id, o.name, m.kind, m.expires_at, m.created_at
       from memberships m join organizations o on o.id = m.organization_id
       where m.account_id = ${accountId} and (m.expires_at is null or m.expires_at > now())
       order by lower(o.name), o.id`);
@@ -240,6 +243,7 @@ export class AccountOverviewService {
         name: membership.name,
         kind: membership.kind,
         expiresAt: date(membership.expires_at),
+        since: new Date(membership.created_at),
         home: account.homeOrganizationId === membership.organization_id,
         roles: facts.roles.map((role) => ({
           assignmentId: role.assignmentId,
@@ -291,6 +295,12 @@ export class AccountOverviewService {
       sessions: activeSessions,
       tokens,
       twoFactor: await secondFactorsOf(this.#database, accountId),
+      personalSpaceKey:
+        (
+          await this.#database.execute<{ key: string }>(
+            sql`select key from spaces where personal_of = ${accountId} and deleted_at is null`,
+          )
+        ).rows[0]?.key ?? null,
     };
   }
 }

@@ -97,7 +97,6 @@ export {
   AuditLog,
   type AuditScope,
   type AuditVerification,
-  INSTANCE_AUDIT_SCOPE,
   parseAuditChangeSignal,
 } from "./audit/audit-log.js";
 export {

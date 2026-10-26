@@ -78,6 +78,7 @@ export const accountDetailSchema = z
             name: z.string().describe("Name of the organization."),
             kind: z.enum(["member", "collaborator", "guest"]).describe("Kind of membership."),
             expiresAt: timestamp("When the membership ends, or null.").nullable(),
+            since: timestamp("When the account joined the organization."),
             home: z.boolean().describe("Whether this is the home organization of the account."),
             roles: z
               .array(
@@ -152,5 +153,6 @@ export const accountDetailSchema = z
         recoveryCodes: z.number().int().describe("Number of unused recovery codes."),
       })
       .describe("Second factors of the account."),
+    personalSpaceKey: z.string().nullable().describe("Key of the personal space of the account, or null."),
   })
   .describe("An account with its memberships, roles, sessions, tokens and second factors.");

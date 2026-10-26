@@ -170,4 +170,42 @@ describe.skipIf(!databaseBaseUrl)("account administration", () => {
     );
     expect(events.rows.map((row) => row.name)).toEqual(["account.sessionsEnded", "account.reactivated"]);
   });
+
+  it("ends a single session of another account and keeps the others", async () => {
+    const { account, client } = await member("one-session@example.org");
+    const second = await signedInClient(test, account.email, account.password);
+    const detail = await owner.get(`/api/v1/instance/accounts/${account.id}`);
+    const sessions = detail.json().sessions as { id: string }[];
+    expect(sessions).toHaveLength(2);
+    const [first, rest] = sessions;
+    expect((await owner.post(`/api/v1/accounts/${account.id}/sessions/${first?.id}/end`)).statusCode).toBe(
+      204,
+    );
+    const alive = [
+      (await client.get("/api/v1/auth/session")).statusCode,
+      (await second.get("/api/v1/auth/session")).statusCode,
+    ].sort();
+    expect(alive).toEqual([200, 401]);
+    expect((await owner.post(`/api/v1/accounts/${account.id}/sessions/${first?.id}/end`)).statusCode).toBe(
+      404,
+    );
+    const other = await member("other-session@example.org");
+    expect(
+      (await owner.post(`/api/v1/accounts/${other.account.id}/sessions/${rest?.id}/end`)).statusCode,
+    ).toBe(404);
+    expect(
+      (await other.client.post(`/api/v1/accounts/${account.id}/sessions/${rest?.id}/end`)).statusCode,
+    ).toBe(403);
+    const ownSession = (await owner.get(`/api/v1/instance/accounts/${ownerId}`)).json().sessions[0]?.id;
+    expect((await owner.post(`/api/v1/accounts/${ownerId}/sessions/${ownSession}/end`)).json()).toMatchObject(
+      {
+        code: "endOwnSessions",
+      },
+    );
+    const activity = await owner.get(`/api/v1/instance/audit-events?personId=${account.id}&level=instance`);
+    expect(activity.statusCode, activity.body).toBe(200);
+    const items = activity.json().items as { name: string; scopeType: string; targetId: string }[];
+    expect(items.map((item) => item.name)).toContain("account.sessionsEnded");
+    expect(items.every((item) => item.scopeType === "instance" || item.targetId === account.id)).toBe(true);
+  });
 });

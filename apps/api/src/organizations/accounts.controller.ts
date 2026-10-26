@@ -157,6 +157,26 @@ export class AccountsController {
     return this.#services.administration.endSessions(actorOf(request), accountId);
   }
 
+  @Post("accounts/:accountId/sessions/:sessionId/end")
+  @Permission("account.sessions.end", { type: "account", param: "accountId" }, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "End one session of another account",
+    description: "Signs the account out on one device. Owners can only be signed out by owners.",
+    tags: ["Accounts"],
+    status: 204,
+    params: z.object({ accountId: idSchema, sessionId: idSchema }).strict(),
+    errors: ["endOwnSessions", "notFound"],
+  })
+  async endSession(
+    @Param("accountId") accountId: string,
+    @Param("sessionId") sessionId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    if (!(await this.#services.administration.endSession(actorOf(request), accountId, sessionId))) {
+      throw notFound();
+    }
+  }
+
   @Post("accounts/:accountId/second-factor/reset")
   @Permission(
     "account.secondFactor.reset",

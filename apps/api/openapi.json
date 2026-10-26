@@ -11685,6 +11685,197 @@
         }
       }
     },
+    "/api/v1/accounts/{accountId}/sessions/{sessionId}/end": {
+      "post": {
+        "operationId": "accounts.endSession",
+        "summary": "End one session of another account",
+        "description": "Signs the account out on one device. Owners can only be signed out by owners.\n\nRequires the permission `account.sessions.end` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Accounts"
+        ],
+        "x-lunedo-permission": {
+          "action": "account.sessions.end",
+          "resource": "account",
+          "parameter": "accountId"
+        },
+        "x-lunedo-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "reauthenticationRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:reauthenticationRequired",
+                      "title": "Confirm your identity first",
+                      "status": 403,
+                      "code": "reauthenticationRequired"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`endOwnSessions`: Own sessions are ended on the security page.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "endOwnSessions": {
+                    "value": {
+                      "type": "urn:lunedo:problem:endOwnSessions",
+                      "title": "Own sessions are ended on the security page",
+                      "status": 409,
+                      "code": "endOwnSessions"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{accountId}/sessions/end": {
       "post": {
         "operationId": "accounts.endSessions",
@@ -60200,6 +60391,11 @@
                             ],
                             "description": "When the membership ends, or null. ISO 8601 timestamp in UTC."
                           },
+                          "since": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the account joined the organization. ISO 8601 timestamp in UTC."
+                          },
                           "home": {
                             "type": "boolean",
                             "description": "Whether this is the home organization of the account."
@@ -60309,6 +60505,7 @@
                           "name",
                           "kind",
                           "expiresAt",
+                          "since",
                           "home",
                           "roles"
                         ],
@@ -60490,6 +60687,13 @@
                       ],
                       "additionalProperties": false,
                       "description": "Second factors of the account."
+                    },
+                    "personalSpaceKey": {
+                      "description": "Key of the personal space of the account, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
@@ -60497,7 +60701,8 @@
                     "memberships",
                     "sessions",
                     "tokens",
-                    "twoFactor"
+                    "twoFactor",
+                    "personalSpaceKey"
                   ],
                   "additionalProperties": false,
                   "description": "An account with its memberships, roles, sessions, tokens and second factors."
@@ -62942,7 +63147,7 @@
             "name": "level",
             "in": "query",
             "required": false,
-            "description": "`instance` lists only events of the instance itself, without those of organizations.",
+            "description": "`instance` lists only events of the instance itself, without those of organizations. With `personId` it adds the events about that account in its organizations, such as ended sessions or a reset second factor.",
             "schema": {
               "type": "string",
               "enum": [
@@ -63571,7 +63776,7 @@
             "name": "level",
             "in": "query",
             "required": false,
-            "description": "`instance` lists only events of the instance itself, without those of organizations.",
+            "description": "`instance` lists only events of the instance itself, without those of organizations. With `personId` it adds the events about that account in its organizations, such as ended sessions or a reset second factor.",
             "schema": {
               "type": "string",
               "enum": [

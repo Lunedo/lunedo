@@ -248,7 +248,10 @@ describe.skipIf(!databaseBaseUrl)("the page of a member", () => {
     const instance = await owner.get(`/api/v1/instance/audit-events?personId=${member.id}&level=instance`);
     expect(instance.statusCode, instance.body).toBe(200);
     expect(
-      (instance.json().items as { scopeType: string }[]).every((item) => item.scopeType === "instance"),
+      (instance.json().items as { scopeType: string; name: string; targetId: string }[]).every(
+        (item) =>
+          item.scopeType === "instance" || (item.targetId === member.id && item.name !== "group.memberAdded"),
+      ),
     ).toBe(true);
   });
 });

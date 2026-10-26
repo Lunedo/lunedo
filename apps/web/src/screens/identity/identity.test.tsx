@@ -1127,6 +1127,7 @@ describe("linked identities", () => {
           sessions: [],
           tokens: [],
           twoFactor: { totp: false, passkeys: 0, recoveryCodes: 0 },
+          personalSpaceKey: null,
         },
       }),
       [`GET /api/v1/accounts/${MAX}/identities`]: () => ({
@@ -1153,6 +1154,7 @@ describe("linked identities", () => {
     await userEvent.click(await within(table).findByText("Max Member"));
     const heading = await screen.findByRole("heading", { level: 1, name: "Max Member" });
     const panel = heading.closest("main") as HTMLElement;
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
     expect(await within(panel).findByText(/Signs in as mmember@example.org/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Unlink" }));
     const confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });

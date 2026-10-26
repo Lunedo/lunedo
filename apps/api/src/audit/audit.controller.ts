@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { type AuditEntry, type AuditFilter, INSTANCE_AUDIT_SCOPE, presentAuditEntry } from "@lunedo/server";
+import { type AuditEntry, type AuditFilter, presentAuditEntry } from "@lunedo/server";
 import { idSchema } from "@lunedo/shared";
 import { Controller, Get, Inject, Param, Query, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -48,7 +48,9 @@ const instanceFilter = z
     level: z
       .enum(["instance"])
       .optional()
-      .describe("`instance` lists only events of the instance itself, without those of organizations."),
+      .describe(
+        "`instance` lists only events of the instance itself, without those of organizations. With `personId` it adds the events about that account in its organizations, such as ended sessions or a reset second factor.",
+      ),
   })
   .strict();
 const instanceListQuery = instanceFilter.extend(pageQuery);
@@ -131,11 +133,8 @@ function toFilter(
 ): AuditFilter {
   const scopeId = organizationId ?? query.organizationId;
   return {
-    ...(scopeId
-      ? { scope: { type: "organization" as const, id: scopeId } }
-      : query.level === "instance"
-        ? { scope: INSTANCE_AUDIT_SCOPE }
-        : {}),
+    ...(scopeId ? { scope: { type: "organization" as const, id: scopeId } } : {}),
+    ...(!scopeId && query.level === "instance" ? { level: "instance" as const } : {}),
     ...(query.personId ? { personId: query.personId } : {}),
     ...(query.from ? { from: query.from } : {}),
     ...(query.to ? { to: query.to } : {}),

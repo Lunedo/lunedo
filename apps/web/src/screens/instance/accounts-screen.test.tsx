@@ -107,6 +107,7 @@ function api(
             name: "Platform Team",
             kind: "member",
             expiresAt: null,
+            since: "2026-08-21T09:58:00.000Z",
             home: true,
             roles: [
               {
@@ -125,6 +126,7 @@ function api(
             name: "Research",
             kind: "member",
             expiresAt: null,
+            since: "2026-08-21T09:58:00.000Z",
             home: false,
             roles: [],
           },
@@ -148,7 +150,17 @@ function api(
     [`GET /api/v1/instance/accounts/${OLIVIA.id}`]: () => ({
       body: {
         account: account(OLIVIA.id, OLIVIA.name, OLIVIA.email),
-        memberships: [],
+        memberships: [
+          {
+            organizationId: ORGANIZATION,
+            name: "Platform Team",
+            kind: "member",
+            expiresAt: null,
+            since: "2026-08-21T09:58:00.000Z",
+            home: true,
+            roles: [],
+          },
+        ],
         sessions: [],
         tokens: [],
         twoFactor: { totp: true, passkeys: 0, recoveryCodes: 10 },
@@ -188,6 +200,46 @@ async function accountPage(name: string) {
 }
 
 describe("the accounts page", () => {
+  it("ends one session after naming its effect and lists the activity of the account", async () => {
+    const { requests } = api(() => ({ body: { endedSessions: 1 } }), {
+      [`POST /api/v1/accounts/${MAX}/sessions/01929b1e-0000-7000-8000-0000000000ff/end`]: () => ({
+        status: 204,
+      }),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.accounts.view", "instance.accounts.manage", "instance.audit.view"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    const table = await renderAccounts();
+    await userEvent.click(await within(table).findByText("Max Member"));
+    const panel = await accountPage("Max Member");
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "End the session on Firefox · Linux" }));
+    const dialog = await screen.findByRole("dialog", { name: "End the session on Firefox · Linux?" });
+    expect(within(dialog).getByText(/Other sessions stay/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "End session" }));
+    await waitFor(() =>
+      expect(
+        requests.some((request) => request.method === "POST" && request.path.endsWith("0000000000ff/end")),
+      ).toBe(true),
+    );
+    await userEvent.click(within(panel).getByRole("tab", { name: "Activity" }));
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) =>
+            request.path.startsWith("/api/v1/instance/audit-events?") &&
+            request.path.includes(`personId=${MAX}`) &&
+            request.path.includes("level=instance"),
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("searches on the server and opens an account on its own page", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 1 } }));
     const table = await renderAccounts();
@@ -199,9 +251,12 @@ describe("the accounts page", () => {
 
     await userEvent.click(within(table).getByText("Max Member"));
     const panel = await accountPage("Max Member");
-    expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
-    expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
+    expect(await within(panel).findByText("Security at a glance")).toBeTruthy();
     expect(within(panel).getByText("One passkey")).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("tab", { name: /Organizations/ }));
+    expect(await within(panel).findByText("Audit readers through Auditors", { exact: false })).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
+    expect(within(panel).getByText("Firefox · Linux")).toBeTruthy();
     expect(window.location.pathname).toBe(`/settings/instance/accounts/${MAX}`);
     expect(screen.queryByRole("dialog")).toBeNull();
     const back = within(panel).getByRole("link", { name: "Accounts" });
@@ -241,7 +296,8 @@ describe("the accounts page", () => {
 
     await userEvent.click(within(table).getByText("Olivia Owner"));
     const panel = await accountPage("Olivia Owner");
-    expect(within(panel).getByText("Managed by: Platform Team")).toBeTruthy();
+    const home = within(panel).getAllByRole("img", { name: /^Home organization:/ });
+    expect(home.some((mark) => mark.closest("li")?.textContent?.includes("Platform Team"))).toBe(true);
   });
 
   it("shows no two-factor status for accounts that cannot have a second factor", async () => {
@@ -507,7 +563,7 @@ describe("the accounts page", () => {
     const table = await renderAccounts();
     await userEvent.click(await within(table).findByText("Max Member"));
     const panel = await accountPage("Max Member");
-    await within(panel).findByText("Audit readers through Auditors", { exact: false });
+    await within(panel).findByText("Security at a glance");
     const zone = within(panel).getByRole("region", { name: "Danger zone" });
     const sections = within(panel).getAllByRole("region");
     expect(sections.at(-1)).toBe(zone);
