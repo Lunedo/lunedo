@@ -63,7 +63,7 @@ function api(status: unknown, permissions = ["instance.operations.view", "instan
       body: { instance: permissions, organization: [], grantableAreas: { instance: {}, organization: {} } },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/storage": () => ({ body: { level: 0 } }),
     "GET /api/v1/instance/operations/status": () => ({ body: status }),
   });

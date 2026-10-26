@@ -130,7 +130,7 @@ function routes(
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
     [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
       body: { items: [page(OVERVIEW, "IT Operations"), page(VPN, "VPN access")], nextCursor: null },

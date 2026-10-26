@@ -41,9 +41,23 @@ const confidentialWithoutAdministrator = defineNotificationType({
   },
 });
 
+const personalWithoutAdministrator = defineNotificationType({
+  type: "space.personalWithoutAdministrator",
+  targetType: "space",
+  params: contentNotificationParamSchemas["space.personalWithoutAdministrator"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
+  async visible(context) {
+    return (
+      context.organizationId !== null &&
+      context.can("organization.spaces.manage", { type: "organization", id: context.organizationId })
+    );
+  },
+});
+
 export const meetingNotificationTypes = [
   notesAvailable,
   meetingReminder,
   oneOnOneStarted,
   confidentialWithoutAdministrator,
+  personalWithoutAdministrator,
 ];

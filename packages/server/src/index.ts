@@ -695,6 +695,7 @@ export {
   NotificationService,
   type NotifyInput,
   notificationKinds,
+  type UnreadCount,
 } from "./notifications/service.js";
 export {
   browserPushSetting,

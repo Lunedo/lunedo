@@ -181,7 +181,7 @@ function baseRoutes(permissions: string[] = ["organization.view", "organization.
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
   };
 }
 

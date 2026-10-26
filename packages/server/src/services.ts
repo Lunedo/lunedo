@@ -992,6 +992,7 @@ export function createAccountServices(options: {
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   const confidentialSpaces = new ConfidentialSpaceService({ database, audit, notifications });
   memberships.onDeactivated((tx, accountId) => confidentialSpaces.afterDeactivation(tx, accountId));
+  memberships.onDeactivated((tx, accountId) => personalSpaces.afterDeactivation(tx, accountId));
   const spaceCleanup = new SpaceCleanupService({ database, audit, settings, trash });
   spacePermissions.onAccessChange((tx, spaceId) => spaceCleanup.afterAccessChange(tx, spaceId));
   administration.onReactivated((tx, accountId) => spaceCleanup.afterActivity(tx, accountId));

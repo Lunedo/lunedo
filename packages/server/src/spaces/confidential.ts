@@ -57,6 +57,21 @@ function toSummary(row: SummaryRow): ConfidentialSpaceSummary {
   };
 }
 
+export async function organizationSpaceManagers(tx: Transaction, organizationId: string): Promise<string[]> {
+  const result = await tx.execute<{ account_id: string }>(sql`
+    select distinct a.id as account_id from role_assignments ra
+    left join custom_roles cr on cr.id = ra.custom_role_id
+    join accounts a on a.state = 'active' and (
+      (ra.principal_kind = 'account' and a.id = ra.principal_id)
+      or (ra.principal_kind = 'group' and exists (select 1 from group_members gm
+        where gm.group_id = ra.principal_id and gm.account_id = a.id
+          and (gm.expires_at is null or gm.expires_at > now()))))
+    where ra.scope = 'organization' and ra.organization_id = ${organizationId}
+      and (ra.expires_at is null or ra.expires_at > now())
+      and (ra.built_in_role in ('owner', 'administrator') or cr.areas ->> 'spaces' = 'manage')`);
+  return result.rows.map((row) => row.account_id);
+}
+
 export class ConfidentialSpaceService {
   readonly #database: Database;
   readonly #audit: AuditLog;
@@ -218,21 +233,11 @@ export class ConfidentialSpaceService {
         and not ${activeAdministratorCondition(storedGrants(sql`s.id`), sql`s.organization_id`)}
         and ${activeHolder(sql`s`)}`);
     for (const space of orphaned.rows) {
-      const administrators = await tx.execute<{ account_id: string }>(sql`
-        select distinct a.id as account_id from role_assignments ra
-        left join custom_roles cr on cr.id = ra.custom_role_id
-        join accounts a on a.state = 'active' and (
-          (ra.principal_kind = 'account' and a.id = ra.principal_id)
-          or (ra.principal_kind = 'group' and exists (select 1 from group_members gm
-            where gm.group_id = ra.principal_id and gm.account_id = a.id
-              and (gm.expires_at is null or gm.expires_at > now()))))
-        where ra.scope = 'organization' and ra.organization_id = ${space.organization_id}
-          and (ra.expires_at is null or ra.expires_at > now())
-          and (ra.built_in_role in ('owner', 'administrator') or cr.areas ->> 'spaces' = 'manage')`);
-      if (administrators.rows.length === 0) continue;
+      const recipients = await organizationSpaceManagers(tx, space.organization_id);
+      if (recipients.length === 0) continue;
       await this.#notifications.notify(tx, {
         type: "space.confidentialWithoutAdministrator",
-        recipients: administrators.rows.map((row) => row.account_id),
+        recipients,
         organizationId: space.organization_id,
         targetId: space.id,
         params: { spaceKey: space.key },

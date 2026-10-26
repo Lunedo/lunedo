@@ -53,6 +53,11 @@ export interface NotifyResult {
   recipients: number;
 }
 
+export interface UnreadCount {
+  count: number;
+  capped: boolean;
+}
+
 export interface NotificationItem {
   id: string;
   type: string;
@@ -657,7 +662,7 @@ export class NotificationService {
     return toItem(row);
   }
 
-  async unreadCount(recipientId: string, kind?: NotificationKind): Promise<number> {
+  async unreadCount(recipientId: string, kind?: NotificationKind): Promise<UnreadCount> {
     const visible = this.visibility(recipientId);
     const groups = await this.#database
       .select({
@@ -680,12 +685,12 @@ export class NotificationService {
       .orderBy(sql`max(${notifications.updatedAt}) desc`)
       .limit(UNREAD_LIMIT);
     let count = 0;
-    for (let start = 0; start < groups.length && count < UNREAD_COUNT_CAP; start += UNREAD_COUNT_CAP) {
+    for (let start = 0; start < groups.length && count <= UNREAD_COUNT_CAP; start += UNREAD_COUNT_CAP) {
       const chunk = groups.slice(start, start + UNREAD_COUNT_CAP);
       const shown = await Promise.all(chunk.map(visible));
       for (const [index, group] of chunk.entries()) if (shown[index]) count += group.count;
     }
-    return Math.min(count, UNREAD_COUNT_CAP);
+    return { count: Math.min(count, UNREAD_COUNT_CAP), capped: count > UNREAD_COUNT_CAP };
   }
 
   async markRead(recipientId: string, id: string): Promise<boolean> {

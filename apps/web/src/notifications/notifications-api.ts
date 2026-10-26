@@ -26,16 +26,20 @@ export const notificationKeys = {
   unreadOf: (kind: NotificationKind) => ["notifications", "unread", kind] as const,
 };
 
-export function unreadCountLabel(count: number): string {
-  return count >= UNREAD_COUNT_CAP ? `${UNREAD_COUNT_CAP - 1}+` : String(count);
+export interface UnreadCount {
+  count: number;
+  capped: boolean;
+}
+
+export function unreadCountLabel(unread: UnreadCount): string {
+  return unread.capped ? `${UNREAD_COUNT_CAP - 1}+` : String(unread.count);
 }
 
 export function useUnreadCountOf(kind: NotificationKind, enabled = true) {
   return useQuery({
     queryKey: notificationKeys.unreadOf(kind),
     queryFn: async () =>
-      (await request(() => api.GET("/api/v1/notifications/unread-count", { params: { query: { kind } } })))
-        .count,
+      await request(() => api.GET("/api/v1/notifications/unread-count", { params: { query: { kind } } })),
     staleTime: 60_000,
     enabled,
     throwOnError: false,
@@ -45,7 +49,7 @@ export function useUnreadCountOf(kind: NotificationKind, enabled = true) {
 export function useUnreadCount() {
   return useQuery({
     queryKey: notificationKeys.unread,
-    queryFn: async () => (await request(() => api.GET("/api/v1/notifications/unread-count"))).count,
+    queryFn: () => request(() => api.GET("/api/v1/notifications/unread-count")),
     staleTime: 60_000,
     throwOnError: false,
   });
@@ -229,9 +233,12 @@ export function useNotificationStream(enabled: boolean): void {
     const source = new EventSource("/api/v1/notifications/stream", { withCredentials: true });
     const onChange = (event: MessageEvent<string>) => {
       try {
-        const data = JSON.parse(event.data) as { unreadCount?: number };
+        const data = JSON.parse(event.data) as { unreadCount?: number; unreadCapped?: boolean };
         if (typeof data.unreadCount === "number")
-          queryClient.setQueryData(notificationKeys.unread, data.unreadCount);
+          queryClient.setQueryData<UnreadCount>(notificationKeys.unread, {
+            count: data.unreadCount,
+            capped: data.unreadCapped === true,
+          });
       } catch {
         return;
       }

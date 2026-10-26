@@ -753,6 +753,34 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(await role(colleague, personal.id)).toBe("admin");
     });
 
+    it("notifies the administrators of the home organization only while members remain", async () => {
+      const org = await organization();
+      const elsewhere = await organization();
+      const owner = await member(org.id);
+      const lonely = await member(org.id);
+      await test.database.execute(
+        sql`update accounts set home_organization_id = ${org.id} where id in (${owner}, ${lonely})`,
+      );
+      const personal = await test.services.personalSpaces.ensure(accountPrincipal(owner), "Plans");
+      const empty = await test.services.personalSpaces.ensure(accountPrincipal(lonely), "Alone");
+      await grant(personal.id, await member(org.id), "editor");
+      await test.services.memberships.deactivate(accountPrincipal(org.owner), owner);
+      await test.services.memberships.deactivate(accountPrincipal(org.owner), lonely);
+      const notified = await test.database.execute<{
+        recipient_id: string;
+        target_id: string;
+        params: unknown;
+      }>(sql`
+        select recipient_id, target_id, params from notifications
+        where type = 'space.personalWithoutAdministrator'
+          and target_id in (${personal.id}, ${empty.id})`);
+      expect(notified.rows).toEqual([
+        { recipient_id: org.owner, target_id: personal.id, params: { spaceKey: personal.key } },
+      ]);
+      expect(notified.rows.map((row) => row.recipient_id)).not.toContain(elsewhere.owner);
+      expect(JSON.stringify(notified.rows)).not.toContain("Plans");
+    });
+
     it("leaves only the clean-up when nobody remains", async () => {
       const org = await organization();
       const owner = await member(org.id);

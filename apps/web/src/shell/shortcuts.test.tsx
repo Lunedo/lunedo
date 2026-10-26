@@ -137,7 +137,7 @@ describe("single-key shortcuts", () => {
         body: { instance: [], organization: ["organization.view", "organization.audit.view"] },
       }),
       "GET /api/v1/account/preferences": () => ({ body: [] }),
-      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     });
     window.history.replaceState(null, "", "/settings/preferences");
     const i18n = await initI18n(["en"]);

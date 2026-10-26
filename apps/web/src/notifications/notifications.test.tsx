@@ -273,7 +273,7 @@ describe("the notification panel", () => {
       "GET /api/v1/organizations": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
       "GET /api/v1/account/preferences": () => ({ body: [] }),
-      "GET /api/v1/notifications/unread-count": () => ({ body: { count: unread } }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: unread, capped: false } }),
       "GET /api/v1/notifications": () => ({ body: { items, nextCursor: null } }),
       "POST /api/v1/notifications/read-all": () => {
         unread = 0;
@@ -290,7 +290,9 @@ describe("the notification panel", () => {
       await screen.findByRole("button", { name: "Notifications, 1 unread" }, { timeout: 5000 }),
     ).toBeTruthy();
     expect(FakeEventSource.last?.url).toBe("/api/v1/notifications/stream");
-    FakeEventSource.last?.emit("notifications", { unreadCount: 100 });
+    FakeEventSource.last?.emit("notifications", { unreadCount: 100, unreadCapped: false });
+    expect(await screen.findByRole("button", { name: "Notifications, 100 unread" })).toBeTruthy();
+    FakeEventSource.last?.emit("notifications", { unreadCount: 100, unreadCapped: true });
     expect(await screen.findByRole("button", { name: "Notifications, 99+ unread" })).toBeTruthy();
     FakeEventSource.last?.emit("notifications", { unreadCount: 4 });
     expect(await screen.findByRole("button", { name: "Notifications, 4 unread" })).toBeTruthy();
@@ -386,7 +388,7 @@ describe("the notifications page", () => {
       "GET /api/v1/organizations": () => ({ body: { items: [], nextCursor: null } }),
       "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
       "GET /api/v1/account/preferences": () => ({ body: [] }),
-      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 1 } }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 1, capped: false } }),
       "GET /api/v1/notifications": () => ({ body: { items: [asked], nextCursor: null } }),
       [`GET /api/v1/access-requests/${REQUEST}`]: () => ({
         body: {
@@ -451,7 +453,7 @@ function shellApi(routes: Parameters<typeof mockApi>[0]) {
     "GET /api/v1/organizations": () => ({ body: { items: [], nextCursor: null } }),
     "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 1 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 1, capped: false } }),
     "GET /api/v1/account/sessions": () => problem(404, "notFound"),
     ...routes,
   });
@@ -680,7 +682,7 @@ describe("live settings", () => {
           },
         ],
       }),
-      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     });
     window.history.replaceState(null, "", "/settings/preferences");
     const i18n = await initI18n(["en"]);

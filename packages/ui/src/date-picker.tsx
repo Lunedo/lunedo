@@ -172,6 +172,9 @@ export function DatePicker({
             event.preventDefault();
             grid.current?.querySelector<HTMLButtonElement>(`[data-date="${focusedIso}"]`)?.focus();
           }}
+          onCloseAutoFocus={(event) => {
+            if (document.activeElement && document.activeElement !== document.body) event.preventDefault();
+          }}
           className="z-50 flex flex-col gap-2 rounded-md border border-border bg-surface p-3 shadow-popover"
         >
           <div className="flex items-center justify-between gap-2">

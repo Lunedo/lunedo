@@ -259,6 +259,11 @@ notificationTypes.register(
     link: (item) => inOrganization(item, "/spaces"),
   },
   {
+    id: "space.personalWithoutAdministrator",
+    icon: UserRoundX,
+    link: (item) => inOrganization(item, "/spaces"),
+  },
+  {
     id: "chatChannel.failing",
     icon: MessagesSquare,
     link: (item) => {

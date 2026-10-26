@@ -114,7 +114,7 @@ function shellRoutes(search: (request: RecordedRequest) => { status?: number; bo
       body: { instance: [], organization: ["organization.view", "organization.search"] },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/recent": () => ({
       body: [
         {

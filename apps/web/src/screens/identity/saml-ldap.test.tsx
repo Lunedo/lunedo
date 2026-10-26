@@ -68,7 +68,7 @@ function adminApi(overrides: Record<string, Handler> = {}) {
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/settings": () => ({ body: { items: [], nextCursor: null } }),
     "POST /api/v1/instance/identity-provider-connection-checks": (request) => ({
       body: {

@@ -177,7 +177,7 @@ function routes(role: Role, extra: Record<string, Handler> = {}): Record<string,
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
     [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
       body: { items: [item(VPN, "VPN access")], nextCursor: null },

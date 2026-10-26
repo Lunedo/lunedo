@@ -480,11 +480,11 @@ describe.skipIf(!baseUrl)("watching", () => {
       const page = await publishedPage(context);
       await test.services.watches.set(context.readerId, { type: "item", id: page.id }, { state: "watching" });
       await edit(context.secondEditor, page.id, "Visible change");
-      expect(await test.services.notifications.unreadCount(context.readerId)).toBe(1);
+      expect((await test.services.notifications.unreadCount(context.readerId)).count).toBe(1);
 
       await test.services.pageAccess.change(context.editor, page.id, [{ action: "restrict", kind: "view" }]);
       expect(await notificationsOf(context.readerId)).toEqual([]);
-      expect(await test.services.notifications.unreadCount(context.readerId)).toBe(0);
+      expect((await test.services.notifications.unreadCount(context.readerId)).count).toBe(0);
       await test.database.execute(
         sql`update notifications set read_at = now() where recipient_id = ${context.readerId}`,
       );
@@ -503,7 +503,7 @@ describe.skipIf(!baseUrl)("watching", () => {
       expect(await notificationsOf(context.readerId, "content.changed")).toHaveLength(1);
       await edit(context.secondEditor, page.id, "Open again");
       expect(await notificationsOf(context.readerId, "content.changed")).toHaveLength(2);
-      expect(await test.services.notifications.unreadCount(context.readerId)).toBe(1);
+      expect((await test.services.notifications.unreadCount(context.readerId)).count).toBe(1);
     });
 
     it("follows shares: a person with a share watches and loses delivery when the share ends", async () => {
@@ -522,7 +522,7 @@ describe.skipIf(!baseUrl)("watching", () => {
         { action: "removeShare", shareId: share?.id ?? "" },
       ]);
       expect(await notificationsOf(guestId)).toEqual([]);
-      expect(await test.services.notifications.unreadCount(guestId)).toBe(0);
+      expect((await test.services.notifications.unreadCount(guestId)).count).toBe(0);
     });
 
     it("stops delivery when the membership ends and keeps confidential spaces closed to administrators", async () => {

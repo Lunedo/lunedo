@@ -103,6 +103,8 @@ const english: Record<ContentNotificationType, Line> = {
   },
   "space.confidentialWithoutAdministrator": (p) =>
     `The confidential space ${text(p.spaceKey)} has no space admin anymore. You can appoint one of its remaining members.`,
+  "space.personalWithoutAdministrator": (p) =>
+    `The personal space ${text(p.spaceKey)} of a deactivated person has no space admin. You can appoint one of its remaining members.`,
   "space.administratorAppointed": (p, c) =>
     `${c.actor ?? "An administrator"} made you space admin of ${text(p.spaceName)}. You now manage its permissions and settings.`,
   "blogPost.published": (p) => `New post in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
@@ -199,6 +201,8 @@ const german: Record<ContentNotificationType, Line> = {
   },
   "space.confidentialWithoutAdministrator": (p) =>
     `Der vertrauliche Space ${text(p.spaceKey)} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.`,
+  "space.personalWithoutAdministrator": (p) =>
+    `Der persönliche Space ${text(p.spaceKey)} einer deaktivierten Person hat keinen Space-Admin. Du kannst eines der verbliebenen Mitglieder ernennen.`,
   "space.administratorAppointed": (p, c) =>
     `${c.actor ?? "Die Administration"} hat dich zum Space-Admin von ${text(p.spaceName)} ernannt. Du verwaltest jetzt seine Berechtigungen und Einstellungen.`,
   "blogPost.published": (p) => `Neuer Beitrag in ${text(p.spaceName)}: ${text(p.itemTitle)}`,

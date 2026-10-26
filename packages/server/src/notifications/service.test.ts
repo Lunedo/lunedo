@@ -131,10 +131,10 @@ describe.skipIf(!baseUrl)("notifications", () => {
       principal: { kind: "account", id: administrator.id },
     });
     await notify(guestNotice(org.id, [administrator.id]));
-    expect(await test.services.notifications.unreadCount(administrator.id)).toBe(1);
+    expect((await test.services.notifications.unreadCount(administrator.id)).count).toBe(1);
 
     await test.services.roles.unassign(SYSTEM, "organization", org.id, assignment.id);
-    expect(await test.services.notifications.unreadCount(administrator.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(administrator.id)).count).toBe(0);
     expect((await test.services.notifications.list(administrator.id, { limit: 10 })).items).toEqual([]);
   });
 
@@ -359,12 +359,12 @@ describe.skipIf(!baseUrl)("notifications", () => {
     const [newest] = (await test.services.notifications.list(org.owner.id, { limit: 10 })).items;
     expect(await test.services.notifications.markRead(stranger.id, newest?.id ?? "")).toBe(false);
     expect(await test.services.notifications.markRead(org.owner.id, newest?.id ?? "")).toBe(true);
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(1);
 
     const before = new Date(Date.now() - 60_000);
     expect(await test.services.notifications.markAllRead(org.owner.id, before)).toBe(0);
     expect(await test.services.notifications.markAllRead(org.owner.id)).toBe(1);
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(0);
     const unread = await test.services.notifications.list(org.owner.id, { limit: 10, unreadOnly: true });
     expect(unread.items).toEqual([]);
   });
@@ -380,9 +380,9 @@ describe.skipIf(!baseUrl)("notifications", () => {
     await test.pool.query("update notifications set in_app = false where id = $1", [second?.id]);
     await test.pool.query("delete from notifications where id = $1", [third?.id]);
 
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
-    expect(await test.services.notifications.unreadCount(org.owner.id, "requests")).toBe(0);
-    expect(await test.services.notifications.unreadCount(other.owner.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(1);
+    expect((await test.services.notifications.unreadCount(org.owner.id, "requests")).count).toBe(0);
+    expect((await test.services.notifications.unreadCount(other.owner.id)).count).toBe(0);
   });
 
   it("counts a notification that combines several events once", async () => {
@@ -391,7 +391,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     await notify(guestNotice(org.id, [org.owner.id], target));
     await notify(guestNotice(org.id, [org.owner.id], target));
     await notify(guestNotice(org.id, [org.owner.id]));
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(2);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(2);
   });
 
   it("stops counting at 100, so a large backlog costs a bounded amount of work", async () => {
@@ -405,7 +405,21 @@ describe.skipIf(!baseUrl)("notifications", () => {
        from notifications, generate_series(1, 1000) as n where recipient_id = $1`,
       [org.owner.id],
     );
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(100);
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toEqual({ count: 100, capped: true });
+  });
+
+  it("reports exactly 100 unread notifications as not capped", async () => {
+    const org = await organization();
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key,
+         in_app, email_status, count, created_at, updated_at)
+       select gen_random_uuid(), recipient_id, organization_id, type, target_type, gen_random_uuid()::text, params,
+         group_key || n, in_app, email_status, count, created_at, updated_at - make_interval(secs => n)
+       from notifications, generate_series(1, 99) as n where recipient_id = $1`,
+      [org.owner.id],
+    );
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toEqual({ count: 100, capped: false });
   });
 
   it("counts visible notifications behind more than 100 hidden ones", async () => {
@@ -419,7 +433,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
        from generate_series(1, 150) as n`,
       [org.owner.id, org.id],
     );
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(3);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(3);
   });
 
   it("asks the authorization service once per decision, however many notifications share it", async () => {
@@ -443,7 +457,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     }
     const explain = vi.spyOn(test.services.authorization, "explainMany");
     try {
-      expect(await test.services.notifications.unreadCount(administrator.id)).toBe(12);
+      expect((await test.services.notifications.unreadCount(administrator.id)).count).toBe(12);
       expect(explain).toHaveBeenCalledTimes(1);
       expect(explain.mock.calls[0]?.[2]).toHaveLength(1);
     } finally {
@@ -527,8 +541,8 @@ describe.skipIf(!baseUrl)("notifications", () => {
         minutes: 60,
       },
     });
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toBe(1);
-    expect(await test.services.notifications.unreadCount(outsider.id)).toBe(0);
+    expect((await test.services.notifications.unreadCount(org.owner.id)).count).toBe(1);
+    expect((await test.services.notifications.unreadCount(outsider.id)).count).toBe(0);
     const [item] = (await test.services.notifications.list(org.owner.id, { limit: 1 })).items;
     expect(item?.actor).toEqual({ type: "account", id: outsider.id, name: "Person" });
   });

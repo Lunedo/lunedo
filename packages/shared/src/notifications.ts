@@ -225,6 +225,7 @@ export const notificationEvents: readonly NotificationEvent[] = [
     [
       "restriction.orphaned",
       "space.confidentialWithoutAdministrator",
+      "space.personalWithoutAdministrator",
       "space.administratorAppointed",
       "blogPost.scheduleHeld",
       "chatChannel.failing",
@@ -353,6 +354,7 @@ export const contentNotificationParamSchemas = {
     items: z.number().int().positive(),
   }),
   "space.confidentialWithoutAdministrator": z.object({ spaceKey: z.string() }),
+  "space.personalWithoutAdministrator": z.object({ spaceKey: z.string() }),
   "space.administratorAppointed": z.object({ spaceName: z.string(), spaceKey: z.string() }),
   "blogPost.published": z.object({
     itemTitle: z.string(),

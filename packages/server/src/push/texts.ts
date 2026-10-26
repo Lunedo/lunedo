@@ -87,6 +87,10 @@ const en: Texts = {
     title: "A confidential space has no space admin",
     body: text(params.spaceKey),
   }),
+  "space.personalWithoutAdministrator": ({ params }) => ({
+    title: "A personal space has no space admin",
+    body: text(params.spaceKey),
+  }),
   "space.administratorAppointed": ({ params }) => ({
     title: "You are now space admin",
     body: text(params.spaceName),
@@ -255,6 +259,10 @@ const de: Texts = {
   }),
   "space.confidentialWithoutAdministrator": ({ params }) => ({
     title: "Ein vertraulicher Space hat keinen Space-Admin",
+    body: text(params.spaceKey),
+  }),
+  "space.personalWithoutAdministrator": ({ params }) => ({
+    title: "Ein persönlicher Space hat keinen Space-Admin",
     body: text(params.spaceKey),
   }),
   "space.administratorAppointed": ({ params }) => ({

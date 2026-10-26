@@ -297,7 +297,7 @@ describe("confirming the identity with a directory password", () => {
         body: { instance: [], organization: [], grantableAreas: { instance: {}, organization: {} } },
       }),
       "GET /api/v1/account/preferences": () => ({ body: [] }),
-      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
       "GET /api/v1/account/profile": () => ({
         body: { name: "Olivia Owner", jobTitle: null, pictureRef: null, nameProvider: null },
       }),

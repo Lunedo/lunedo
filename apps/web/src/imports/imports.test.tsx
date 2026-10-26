@@ -113,7 +113,7 @@ function setup(routes: Record<string, () => Reply | Promise<Reply>>, permissions
       },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     [`GET /api/v1/organizations/${ORGANIZATION.id}/import-folder`]: () => ({
       body: { enabled: true, path: FOLDER_PATH, files: [], maxUploadBytes: 1024 },
     }),

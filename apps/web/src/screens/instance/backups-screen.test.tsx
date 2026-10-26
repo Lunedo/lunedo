@@ -120,7 +120,7 @@ function api(
       body: { instance: permissions, organization: [], grantableAreas: { instance: {}, organization: {} } },
     }),
     "GET /api/v1/account/preferences": () => ({ body: [] }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/storage": () => ({ body: { level: 0 } }),
     "GET /api/v1/instance/backups": () => ({ body: overview() }),
     "GET /api/v1/instance/backups/files": () => ({ body: files() }),

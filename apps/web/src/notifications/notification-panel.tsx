@@ -28,6 +28,7 @@ import {
   type NotificationFilter,
   type NotificationItem,
   type NotificationKind,
+  type UnreadCount,
   unreadCountLabel,
   useMarkAllRead,
   useNotificationList,
@@ -156,7 +157,7 @@ function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; o
   const unreadMentions = useUnreadCountOf("mentions").data;
   const unreadWatched = useUnreadCountOf("watched").data;
   const unreadRequests = useUnreadCountOf("requests", page).data;
-  const counts: Record<Kind, number | undefined> = {
+  const counts: Record<Kind, UnreadCount | undefined> = {
     all: unreadAll,
     mentions: unreadMentions,
     watched: unreadWatched,
@@ -321,7 +322,7 @@ function NotificationFeed({ variant, onClose }: { variant: "popover" | "page"; o
             return {
               value,
               label: t(`notifications.kinds.${value}`),
-              ...(count ? { count: unreadCountLabel(count) } : {}),
+              ...(count?.count ? { count: unreadCountLabel(count) } : {}),
             };
           })}
           fill={!page}

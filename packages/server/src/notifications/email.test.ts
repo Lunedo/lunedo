@@ -363,7 +363,7 @@ describe.skipIf(!baseUrl)("notification e-mails", () => {
       const context = await setup();
       await test.settings.set(settingsOf("mentions").inApp, { user: context.readerId }, "user", false);
       await mention(context, [context.readerId]);
-      expect(await test.services.notifications.unreadCount(context.readerId)).toBe(0);
+      expect((await test.services.notifications.unreadCount(context.readerId)).count).toBe(0);
       expect((await test.services.notifications.list(context.readerId, { limit: 5 })).items).toEqual([]);
       await settle(context.readerId);
       await test.services.notificationMailer.sendDue();

@@ -3185,6 +3185,7 @@
       },
       "space": {
         "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members.",
+        "personalWithoutAdministrator": "The personal space {spaceKey} of a deactivated person has no space admin. You can appoint one of its remaining members.",
         "administratorAppointed": "{actor} made you space admin of {spaceName}.",
         "administratorTaken": "{actorName} became space admin of {spaceName} through the administration of {organizationName}: {reason}"
       },

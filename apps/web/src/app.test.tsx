@@ -87,7 +87,7 @@ function api(overrides: Record<string, (request: RecordedRequest) => Reply | Pro
         preference("appearance.textSize", 1.25),
       ],
     }),
-    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 2 } }),
+    "GET /api/v1/notifications/unread-count": () => ({ body: { count: 2, capped: false } }),
     ...overrides,
   });
 }

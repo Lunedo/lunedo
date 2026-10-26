@@ -3185,6 +3185,7 @@
       },
       "space": {
         "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.",
+        "personalWithoutAdministrator": "Der persönliche Space {spaceKey} einer deaktivierten Person hat keinen Space-Admin. Du kannst eines der verbliebenen Mitglieder ernennen.",
         "administratorAppointed": "{actor} hat dich zum Space-Admin von {spaceName} ernannt.",
         "administratorTaken": "{actorName} ist über die Verwaltung von {organizationName} Space-Admin von {spaceName} geworden: {reason}"
       },

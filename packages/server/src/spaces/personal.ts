@@ -8,6 +8,7 @@ import type { Database, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, isUniqueViolation, SpaceError } from "./common.js";
+import { organizationSpaceManagers } from "./confidential.js";
 import { insertPage } from "./items.js";
 import { randomPersonalSpaceKey } from "./keys.js";
 import { signalSpaceChange } from "./signals.js";
@@ -300,6 +301,28 @@ export class PersonalSpaceService {
       });
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId: null });
     });
+  }
+
+  async afterDeactivation(tx: Transaction, accountId: string): Promise<void> {
+    const left = await tx.execute<{ id: string; key: string; organization_id: string }>(sql`
+      select s.id, s.key, o.home_organization_id as organization_id from spaces s
+      join accounts o on o.id = s.owner_account_id
+      where s.owner_account_id = ${accountId} and s.personal_of is not null and s.deleted_at is null
+        and o.home_organization_id is not null
+        and exists (select 1 from space_permissions sp join accounts a on a.id = sp.principal_id
+          where ${remainingMember(sql`s`)})
+        and not ${activeAdministratorCondition(storedGrants(sql`s.id`), sql`s.organization_id`)}`);
+    for (const space of left.rows) {
+      const recipients = await organizationSpaceManagers(tx, space.organization_id);
+      if (recipients.length === 0) continue;
+      await this.#notifications.notify(tx, {
+        type: "space.personalWithoutAdministrator",
+        recipients,
+        organizationId: space.organization_id,
+        targetId: space.id,
+        params: { spaceKey: space.key },
+      });
+    }
   }
 
   async #reviewed(tx: Transaction, spaceId: string, organizationId: string | null) {

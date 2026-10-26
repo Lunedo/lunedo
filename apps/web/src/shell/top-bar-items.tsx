@@ -31,7 +31,7 @@ export function NotificationsButton() {
   const { t } = useTranslation();
   const shell = useShell();
   const unread = useUnreadCount();
-  const count = unread.data ?? 0;
+  const count = unread.data?.count ?? 0;
   return (
     <span className="relative inline-flex">
       <NotificationPopover
@@ -43,7 +43,7 @@ export function NotificationsButton() {
           <IconButton
             label={
               count > 0
-                ? t("rail.notificationsUnread", { count, label: unreadCountLabel(count) })
+                ? t("rail.notificationsUnread", { count, label: unreadCountLabel(unread.data ?? { count, capped: false }) })
                 : t("rail.notifications")
             }
             icon={Bell}

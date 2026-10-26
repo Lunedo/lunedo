@@ -188,12 +188,12 @@ function unsubscribeView(state: UnsubscribeState) {
 }
 const readAllSchema = z.object({ before: z.iso.datetime().optional() }).strict();
 const countSchema = z.object({
-  count: z
-    .number()
-    .int()
-    .min(0)
-    .max(UNREAD_COUNT_CAP)
-    .describe(`Counts up to ${UNREAD_COUNT_CAP}; ${UNREAD_COUNT_CAP} means at least that many.`),
+  count: z.number().int().min(0).max(UNREAD_COUNT_CAP).describe(`Counts up to ${UNREAD_COUNT_CAP}.`),
+  capped: z
+    .boolean()
+    .describe(
+      `True when there are more than ${UNREAD_COUNT_CAP} unread notifications; \`count\` is then ${UNREAD_COUNT_CAP}.`,
+    ),
 });
 const countQuery = z
   .object({
@@ -246,7 +246,7 @@ export class NotificationsController {
     response: { description: "Unread notifications the caller may still see.", schema: countSchema },
   })
   async unreadCount(@Req() request: FastifyRequest, @Query() query: z.output<typeof countQuery>) {
-    return { count: await this.#notifications.unreadCount(sessionOf(request).accountId, query.kind) };
+    return await this.#notifications.unreadCount(sessionOf(request).accountId, query.kind);
   }
 
   @Post("read-all")
@@ -358,9 +358,9 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, or where someone opened or left a page in the editor, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements. The event `maintenance` says that maintenance mode was switched on or off or its message changed; reload `GET /api/v1/maintenance`.",
+        "Server-sent events. The event `notifications` carries the unread count (`unreadCount`, at most 100, with `unreadCapped` true when there are more) at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, or where someone opened or left a page in the editor, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements. The event `maintenance` says that maintenance mode was switched on or off or its message changed; reload `GET /api/v1/maintenance`.",
       example:
-        'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
+        'event: notifications\ndata: {"unreadCount":2,"unreadCapped":false}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
   })
   async stream(@Req() request: FastifyRequest, @Res() reply: FastifyReply) {
@@ -387,8 +387,11 @@ export class NotificationsController {
     const send = () => {
       enqueue(async () => {
         if (closed) return;
-        const unreadCount = await services.notifications.unreadCount(session.accountId);
-        if (!closed) raw.write(`event: notifications\ndata: ${JSON.stringify({ unreadCount })}\n\n`);
+        const unread = await services.notifications.unreadCount(session.accountId);
+        if (!closed)
+          raw.write(
+            `event: notifications\ndata: ${JSON.stringify({ unreadCount: unread.count, unreadCapped: unread.capped })}\n\n`,
+          );
       }, "Sending a notification event failed");
     };
     const sendSetting = (signal: SettingChangeSignal) => {
