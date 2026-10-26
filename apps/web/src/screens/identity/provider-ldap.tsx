@@ -518,6 +518,13 @@ function AttributeSelect({
             ? t("identityProviders.ldap.attributeExample", { value: fromDirectory.example ?? "" })
             : t("identityProviders.ldap.attributeNotReturned")
       }
+      help={
+        found.length === 0
+          ? t("identityProviders.ldap.attributeChoiceHelp")
+          : fromDirectory
+            ? undefined
+            : t("identityProviders.ldap.attributeNotReturnedHelp")
+      }
       control={
         <Select
           aria-label={label}

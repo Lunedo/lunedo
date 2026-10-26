@@ -241,9 +241,15 @@ function SettingItem({
       : []),
   ];
 
+  const boundInHint = variant === "row" && bound !== null && typeof bound.value !== "boolean" && !lockedAbove;
+  const description = boundInHint
+    ? t(bound.direction === "lower" ? "settings.bound.hintAtMost" : "settings.bound.hintAtLeast", {
+        value: formatValue(bound.value),
+      })
+    : translateKey(t, settingDescriptionKey(entry.key, level));
   const marks = (
     <>
-      {bound && !lockedAbove ? <BoundMark bound={bound} formatValue={formatValue} /> : null}
+      {bound && !lockedAbove && !boundInHint ? <BoundMark bound={bound} formatValue={formatValue} /> : null}
       <SettingMarks
         entry={entry}
         level={level}
@@ -277,7 +283,7 @@ function SettingItem({
       ) : (
         <SettingRow
           label={label}
-          description={translateKey(t, settingDescriptionKey(entry.key))}
+          description={description}
           help={
             i18n.exists(settingHelpKey(entry.key)) ? translateKey(t, settingHelpKey(entry.key)) : undefined
           }

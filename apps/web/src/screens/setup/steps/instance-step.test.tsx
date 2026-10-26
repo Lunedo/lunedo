@@ -44,6 +44,6 @@ describe("the instance step", () => {
     expect(screen.queryByRole("textbox", { name: /address/i })).toBeNull();
     expect(screen.getByText("https://wiki.example.org")).toBeTruthy();
     expect(screen.getByText("Locked:")).toBeTruthy();
-    expect(screen.getByText(/Set by LUNEDO_INSTANCE_URL/)).toBeTruthy();
+    expect(screen.getByText(/LUNEDO_INSTANCE_URL/)).toBeTruthy();
   });
 });

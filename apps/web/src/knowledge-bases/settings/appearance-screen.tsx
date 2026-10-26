@@ -205,6 +205,7 @@ function NumberSetting({
   disabled,
   onSave,
   confirm,
+  unit,
 }: {
   label: string;
   hint: string;
@@ -215,6 +216,7 @@ function NumberSetting({
   disabled: boolean;
   onSave: (value: number) => Promise<unknown>;
   confirm?: (next: number, apply: () => void) => boolean;
+  unit?: string;
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(String(value));
@@ -235,23 +237,26 @@ function NumberSetting({
   return (
     <div className="flex flex-col gap-1">
       <Field label={label} hint={hint} help={help} {...(invalid ? { error: invalid } : {})}>
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          className="w-number-field"
-          value={draft}
-          disabled={disabled}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commit();
-            }
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            className="w-number-field"
+            value={draft}
+            disabled={disabled}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commit();
+              }
+            }}
+          />
+          {unit ? <span className="text-text-muted">{unit}</span> : null}
+        </div>
       </Field>
       {saver.status}
     </div>
@@ -268,6 +273,7 @@ function RetentionRow({ portal, editable }: { portal: PortalSettings; editable: 
         label={t("knowledgeBase.appearance.retention")}
         hint={t("knowledgeBase.appearance.retentionHint")}
         help={t("knowledgeBase.appearance.retentionHelp")}
+        unit={t("knowledgeBase.appearance.retentionUnit")}
         value={portal.feedbackRetentionMonths}
         min={1}
         max={60}

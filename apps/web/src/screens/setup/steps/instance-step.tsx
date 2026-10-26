@@ -77,7 +77,9 @@ export function LockedAddress({ url }: { url: string }) {
         <span className="sr-only">{t("setup.instance.locked")}</span>
         <span className="min-w-0 break-all">{url}</span>
       </p>
-      <p className="text-sm text-text-muted">{t("instance.general.addressFromEnvironment")}</p>
+      <p className="text-sm text-text-muted">
+        {t("instance.general.addressFromEnvironment")} {t("instance.general.addressFromEnvironmentHelp")}
+      </p>
     </div>
   );
 }

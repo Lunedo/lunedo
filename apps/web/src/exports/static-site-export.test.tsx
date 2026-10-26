@@ -26,7 +26,7 @@ describe("static website download", () => {
       }),
     });
     await renderWithProviders(routed(<StaticSiteExport space={space} />));
-    const field = await screen.findByLabelText("Address of the website (optional)");
+    const field = await screen.findByLabelText("Address of the website");
     await userEvent.type(field, "help.example.org");
     await userEvent.click(screen.getByRole("button", { name: "Download as static website" }));
     expect(await screen.findByText(/Enter a full address that starts with https:\/\//)).toBeTruthy();

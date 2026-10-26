@@ -215,6 +215,7 @@ function LevelsSection({ status, canManage }: { status: StorageStatus; canManage
             key={field}
             label={translateKey(t, `storage.levels.${field}`)}
             hint={translateKey(t, `storage.levels.${field}Hint`)}
+            {...(field === "largeWrites" ? {} : { help: translateKey(t, `storage.levels.${field}Help`) })}
             {...(errors[field] ? { error: errors[field] } : {})}
           >
             <div className="flex items-center gap-2">

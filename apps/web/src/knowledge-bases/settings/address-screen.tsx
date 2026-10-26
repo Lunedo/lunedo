@@ -160,6 +160,7 @@ export function AddressPanel({ portal }: { portal: PortalSettings }) {
                 ? t("knowledgeBase.address.noDomains")
                 : t("knowledgeBase.address.domainHint")
             }
+            {...(available.length === 0 ? { help: t("knowledgeBase.address.noDomainsHelp") } : {})}
             {...(domainError ? { error: domainError } : {})}
           >
             <Select

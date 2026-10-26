@@ -180,9 +180,24 @@ export function settingLabelKey(key: string): string {
   return `settings.keys.${key.replaceAll(".", "_")}.label`;
 }
 
-export function settingDescriptionKey(key: string): string {
-  return `settings.keys.${key.replaceAll(".", "_")}.description`;
+export function settingDescriptionKey(key: string, level?: string): string {
+  const base = `settings.keys.${key.replaceAll(".", "_")}`;
+  if (level && levelDescriptions.has(`${key}@${level}`)) return `${base}.descriptionAt.${level}`;
+  return `${base}.description`;
 }
+
+const levelDescriptions = new Set([
+  "notifications.digestTime@user",
+  "apiTokens.maxLifetimeDays@organization",
+  "sharing.anyoneLinkMaxDays@organization",
+  "auth.passwordMinLength@organization",
+  "files.maxFileSizeMegabytes@organization",
+]);
+
+export const levelDescriptionKeys = [...levelDescriptions].map((entry) => {
+  const [key = "", level = ""] = entry.split("@");
+  return settingDescriptionKey(key, level);
+});
 
 export function settingHelpKey(key: string): string {
   return `settings.keys.${key.replaceAll(".", "_")}.help`;

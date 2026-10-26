@@ -61,6 +61,11 @@ export function OrganizationNotificationDefaultsScreen() {
                 ? t("notifications.push.organizationOn")
                 : t("notifications.push.organizationOff")
             }
+            help={
+              delivery.data.browserPush
+                ? t("notifications.push.organizationOnHelp")
+                : t("notifications.push.organizationOffHelp")
+            }
             control={
               <Badge variant={delivery.data.browserPush ? "success" : "neutral"}>
                 {delivery.data.browserPush ? t("notifications.push.on") : t("notifications.push.off")}

@@ -14,8 +14,8 @@
       "moveUp": "Move up",
       "moveDown": "Move down",
       "group": "Group in {provider}",
-      "groupHint": "Suggests the groups Lunedo has seen at sign-ins and synchronizations of {provider}, with their names where known. If a group is not listed yet, type its value exactly as {provider} sends it. Groups are matched by this value.",
-      "groupHintDirectory": "Searches the groups of {provider} by name as you type and suggests the groups seen at sign-ins and synchronizations. Lunedo stores the ID of the group, so the rule keeps working when the group is renamed.",
+      "groupHint": "Groups Lunedo has seen from {provider}.",
+      "groupHintDirectory": "Searches the groups of {provider} by name.",
       "groupPlaceholder": "Name or value of the group",
       "groupPlaceholderDirectory": "Name of the group",
       "noGroups": "No group seen yet. Type the value of the group to use it.",
@@ -54,7 +54,9 @@
       "remove": "Remove rule",
       "removed": "The rule for {name} was removed.",
       "chooseGroup": "Choose the group whose members the rule applies to.",
-      "chooseOrganization": "Choose the organization the rule gives access to."
+      "chooseOrganization": "Choose the organization the rule gives access to.",
+      "groupHelpDirectory": "The groups seen at sign-ins and synchronizations are suggested. Lunedo stores the ID of the group, so the rule keeps working when the group is renamed.",
+      "groupHelp": "If a group is not listed yet, type its value exactly as {provider} sends it. Groups are matched by this value."
     },
     "sync": {
       "now": "Sync now",
@@ -764,8 +766,8 @@
       "urlInvalid": "Enter an address such as ldaps://dc01.example.org, without a path.",
       "urlInvalidStartTls": "Enter an ldap:// address while StartTLS is on. To use ldaps://, turn StartTLS off first.",
       "startTls": "Use StartTLS",
-      "startTlsHint": "Encrypts the ldap:// connection before any password is sent.",
-      "startTlsLdaps": "Only for ldap:// addresses; ldaps:// is encrypted already.",
+      "startTlsHint": "Encrypts ldap:// before any password is sent.",
+      "startTlsLdaps": "Only for ldap://; ldaps:// is encrypted.",
       "plainWarning": "Without StartTLS, passwords travel unencrypted. Lunedo refuses such a connection unless the instance runs with insecure identity providers allowed.",
       "bindDn": "Service account",
       "bindDnHint": "The account Lunedo uses to look people up, for example CN=lunedo,OU=Service,DC=example,DC=org.",
@@ -805,9 +807,9 @@
       "noMatch": "No person has {attribute} = {value}.",
       "noMatchAddress": "{attribute} holds an address such as lena@example.org. Enter the full address, or choose another attribute under Sign-in name.",
       "noMatchOther": "If people sign in with another value, choose it under Sign-in name. Otherwise check the base DN and the filter for people.",
-      "attributeChoiceHint": "Read the attributes of a test person to choose from every attribute the directory returns.",
+      "attributeChoiceHint": "Read a test person to choose attributes.",
       "attributeExample": "Value of the test person: {value}",
-      "attributeNotReturned": "The directory returned no value of this attribute for the test person. Choose another attribute or check the person in the directory.",
+      "attributeNotReturned": "No value for the test person.",
       "groupMembership": "Group membership",
       "groupMembershipHint": "Where the directory keeps members.",
       "memberships": {
@@ -840,7 +842,9 @@
       "userBaseDnHelp": "Lunedo also looks in everything below it.",
       "groupBaseDnHelp": "Lunedo also looks in everything below it.",
       "bindDnHelp": "It only needs to read people and groups.",
-      "bindDnHelpActiveDirectory": "EXAMPLE\\svc-lunedo or the full distinguished name work as well. It only needs to read people and groups."
+      "bindDnHelpActiveDirectory": "EXAMPLE\\svc-lunedo or the full distinguished name work as well. It only needs to read people and groups.",
+      "attributeChoiceHelp": "Then every attribute the directory returns for that person is offered.",
+      "attributeNotReturnedHelp": "Choose another attribute or check the person in the directory."
     },
     "directoryTest": {
       "title": "Test the directory",
@@ -1053,14 +1057,14 @@
     "administrators": "Tell instance administrators",
     "administratorsHint": "All owners and admins of the instance.",
     "accounts": "Further people",
-    "accountsHint": "Notified in Lunedo and by e-mail.",
+    "accountsHint": "In Lunedo and by e-mail.",
     "choosePeople": "Choose people",
     "addresses": "Further e-mail addresses",
-    "addressesHint": "Outside addresses, comma-separated, up to 20.",
-    "addressesInvalid": "Enter up to 20 valid e-mail addresses, separated by commas.",
+    "addressesHint": "One address per line, up to 20.",
+    "addressesInvalid": "Enter up to 20 valid e-mail addresses, one per line.",
     "otherEmergency": "This is how the instance owner signs in when providers fail. Administrator access to organizations in an emergency is set elsewhere:",
     "accountsHelp": "They get a notification in Lunedo and by e-mail.",
-    "addressesHelp": "Addresses outside Lunedo, for example a security team, separated by commas. Up to 20.",
+    "addressesHelp": "Addresses outside Lunedo, for example a security team.",
     "administratorsHelp": "All instance owners and administrators get a notification."
   },
   "shell": {
@@ -2340,7 +2344,7 @@
     "description": "How Lunedo looks and behaves for you.",
     "display": "Display",
     "colorMode": "Color mode",
-    "colorModeHint": "Automatic follows your system.",
+    "colorModeHint": "“Automatic” follows your system.",
     "colorModes": {
       "system": "Automatic",
       "light": "Light",
@@ -2351,7 +2355,7 @@
     "textSize": "Text size",
     "textSizeHint": "Scales text, spacing and icons together.",
     "density": "Density",
-    "densityHint": "Compact fits more items on the screen.",
+    "densityHint": "“Compact” shows more entries.",
     "fonts": {
       "default": "Default",
       "readable": "Reading-friendly"
@@ -2494,7 +2498,7 @@
       },
       "locale_language": {
         "label": "Language",
-        "description": "For people without their own language.",
+        "description": "For everyone who has not chosen their own.",
         "help": "Interface and e-mail language of people who did not choose their own."
       },
       "locale_timeZone": {
@@ -2527,7 +2531,10 @@
       },
       "auth_passwordMinLength": {
         "label": "Minimum password length",
-        "description": "Can only be raised at lower levels."
+        "description": "Organizations can only raise it.",
+        "descriptionAt": {
+          "organization": "At least as long as the instance requires."
+        }
       },
       "auth_twoFactorRequired": {
         "label": "Require two-factor authentication",
@@ -2541,7 +2548,7 @@
       },
       "auth_sessionIdleTimeoutMinutes": {
         "label": "Sign out after inactivity",
-        "description": "Stay signed in without activity.",
+        "description": "How long you stay signed in without activity.",
         "help": "How long people stay signed in without activity."
       },
       "auth_sessionLifetimeMinutes": {
@@ -2551,7 +2558,7 @@
       },
       "auth_reauthenticationMinutes": {
         "label": "Confirmation for sensitive changes",
-        "description": "How long a confirmed identity lasts.",
+        "description": "How long a renewed confirmation stays valid.",
         "help": "How long a confirmed identity is valid for changes such as a new password."
       },
       "auth_signInAttemptsPerAccountPerMinute": {
@@ -2587,17 +2594,20 @@
       },
       "apiTokens_maxLifetimeDays": {
         "label": "Maximum lifetime of API tokens",
-        "description": "Longest lifetime of new tokens.",
-        "help": "Without a limit, tokens may have no expiry. Organizations can only make the limit stricter."
+        "description": "Organizations can only shorten it.",
+        "help": "Without a limit, tokens may never expire.",
+        "descriptionAt": {
+          "organization": "At most as long as the instance allows."
+        }
       },
       "apiTokens_requestsPerMinute": {
         "label": "Requests per token",
-        "description": "Requests per minute and token.",
+        "description": "Further requests are refused for a moment.",
         "help": "Per minute. Further requests are refused for a moment."
       },
       "apiTokens_expiryReminderDays": {
         "label": "Expiry reminder",
-        "description": "Reminder before a token expires.",
+        "description": "The person who owns the token is reminded.",
         "help": "Owners are reminded this long before a token expires."
       },
       "apiTokens_publicDocumentation": {
@@ -2608,16 +2618,16 @@
       "organizations_selfServiceCreation": {
         "label": "Self-service organizations",
         "description": "Members create organizations.",
-        "help": "Every member may create organizations, which they then own."
+        "help": "All members may create organizations and become Owner of the new organization."
       },
       "organizations_membersCreateGroups": {
         "label": "Members create groups",
-        "description": "Members create groups.",
+        "description": "And manage the groups they created.",
         "help": "Members may create groups and manage them."
       },
       "organizations_selfRegistration": {
         "label": "Self-registration",
-        "description": "Sign up with an address of a domain.",
+        "description": "With an address of these domains.",
         "help": "People with an address in one of the domains can create an account themselves."
       },
       "organizations_guestExpiryReminderDays": {
@@ -2632,25 +2642,25 @@
       },
       "organizations_expiryReminderDays": {
         "label": "Access expiry reminder",
-        "description": "Reminder before roles expire.",
+        "description": "For roles and memberships that expire.",
         "help": "The people responsible are reminded this long before roles and memberships expire."
       },
       "organizations_breakGlassMinutes": {
         "label": "Break-glass duration",
-        "description": "How long break-glass access lasts."
+        "description": "Then it ends by itself."
       },
       "audit_retentionDays": {
         "label": "Audit log retention",
         "description": "Older events are removed."
       },
       "notifications_retentionDays": {
-        "label": "Keep notifications for",
+        "label": "Retention of notifications",
         "description": "Older notifications are deleted."
       },
       "apiTokens_unusedNoticeDays": {
         "label": "Unused API tokens",
-        "description": "Notice about unused tokens.",
-        "help": "Notify the owner when a token has not been used for this long. The token keeps working."
+        "description": "After that, the owner is told.",
+        "help": "The person who owns a token is notified when it was not used for this long. The token keeps working."
       },
       "spaces_membersCreateSpaces": {
         "label": "Members create spaces",
@@ -2674,7 +2684,7 @@
       },
       "pages_liveVersionIdleMinutes": {
         "label": "Version after a pause in live mode",
-        "description": "Version after this pause in live mode.",
+        "description": "Or when the last person leaves the page.",
         "help": "A page in live mode gets a version after this time without changes, or when the last person editing leaves."
       },
       "pages_status": {
@@ -2684,33 +2694,36 @@
       },
       "trash_firstStageDays": {
         "label": "Time in the trash",
-        "description": "Restoring from the trash.",
+        "description": "How long Editors restore items themselves.",
         "help": "How long editors can restore deleted pages from the trash of a space."
       },
       "trash_secondStageDays": {
         "label": "Time in second-stage recovery",
-        "description": "Then admins only, then gone for good.",
+        "description": "Then only Space admins restore it.",
         "help": "After the trash, only organization administrators can restore content for this long. Then it is deleted for good."
       },
       "trash_firstStageMinimumDays": {
         "label": "Shortest time in the trash",
-        "description": "Shortest time in the trash.",
+        "description": "Organizations and spaces can only extend it.",
         "help": "Organizations and spaces cannot set a shorter time in the trash."
       },
       "trash_secondStageMinimumDays": {
         "label": "Shortest time in second-stage recovery",
-        "description": "Shortest time for admin recovery.",
+        "description": "Organizations and spaces can only extend it.",
         "help": "Organizations and spaces cannot set a shorter time in second-stage recovery."
       },
       "reactions_enabled": {
         "label": "Reactions",
-        "description": "Reactions with emoji.",
+        "description": "On pages, blog posts and comments.",
         "help": "People can react with emoji to pages, blog posts and comments."
       },
       "files_maxFileSizeMegabytes": {
         "label": "Largest file to upload",
         "description": "Larger uploads are refused.",
-        "help": "Uploads above this size are refused before anything is stored, with a message that names the limit. Organizations can only lower it."
+        "help": "Uploads above this size are refused before anything is stored, with a message that names the limit. Organizations can only lower it.",
+        "descriptionAt": {
+          "organization": "At most as large as the instance allows."
+        }
       },
       "files_keepVersions": {
         "label": "Versions of a file to keep",
@@ -2724,22 +2737,25 @@
       },
       "sharing_anyoneLinks": {
         "label": "Links for anyone without signing in",
-        "description": "Links without sign-in, with expiry.",
+        "description": "Every link needs an expiry date.",
         "help": "Visitors see only the shared page. Each link needs an expiry date. Restricted pages never get such links."
       },
       "sharing_anyoneLinkMaxDays": {
         "label": "Longest lifetime of a link for anyone",
-        "description": "Longest lifetime of links for anyone.",
-        "help": "Links for anyone must expire within this time. Organizations can only shorten it."
+        "description": "Organizations can only shorten it.",
+        "help": "Links for everyone must expire within this time.",
+        "descriptionAt": {
+          "organization": "At most as long as the instance allows."
+        }
       },
       "sharing_membersInviteGuests": {
         "label": "Members can invite guests to a page",
-        "description": "Sharers invite guests by e-mail.",
+        "description": "Everyone who may share, by e-mail.",
         "help": "When on, people who may share a page can invite someone by e-mail as a guest. Administrators of the organization can always do this."
       },
       "files_keepVersionsMaximum": {
         "label": "Most versions organizations and spaces may keep",
-        "description": "Maximum for organizations and spaces.",
+        "description": "Only here “No limit” is possible.",
         "help": "Organizations and spaces can choose any number up to this maximum. Only here can it be set to no limit."
       },
       "spaces_membersCreateConfidentialSpaces": {
@@ -2764,12 +2780,12 @@
       },
       "imports_atlassianHosts": {
         "label": "Further Atlassian sites",
-        "description": "More allowed hosts, separated by commas.",
+        "description": "Host names, separated by commas.",
         "help": "Host names Lunedo may contact with an import's API token besides sites under atlassian.net, separated by commas, such as wiki.example.com."
       },
       "spaces_export": {
         "label": "Allow export",
-        "description": "Export as PDF, Word, HTML, Markdown.",
+        "description": "As PDF, Word, HTML and Markdown.",
         "help": "People can export pages and the space as PDF, Word, HTML and Markdown. When it is off, nobody can export, space admins included."
       },
       "content_language": {
@@ -2779,12 +2795,15 @@
       },
       "notifications_digestTime": {
         "label": "Send the digest at",
-        "description": "In each person's own time zone.",
-        "help": "In each person's own time zone. Only sent when something happened."
+        "description": "For every person in their time zone.",
+        "help": "In each person's own time zone. Only sent when something happened.",
+        "descriptionAt": {
+          "user": "In your time zone, only when something happened."
+        }
       },
       "notifications_watchAutomatically": {
         "label": "Watch what I create, edit or comment on",
-        "description": "Get changes and comments.",
+        "description": "You get its changes and comments.",
         "help": "You get changes and comments on these items."
       },
       "notifications_browserPush": {
@@ -2794,7 +2813,7 @@
       },
       "notifications_digestEnabled": {
         "label": "Send a daily summary by e-mail",
-        "description": "Daily summary by e-mail.",
+        "description": "When off, only in the app.",
         "help": "Collects the notifications whose e-mail is set to the daily summary. Turned off, they appear only in the app."
       },
       "storage_reminder": {
@@ -2814,7 +2833,7 @@
       },
       "identityProviders_syncLogRetentionDays": {
         "label": "Keep synchronization logs for",
-        "description": "Remove older synchronization runs.",
+        "description": "Older logs are removed.",
         "help": "Older synchronization runs with identity providers are deleted."
       },
       "spaces_cleanupGraceDays": {
@@ -2856,7 +2875,9 @@
     "bound": {
       "atMost": "At most {value} · set by the instance",
       "atLeast": "At least {value} · set by the instance",
-      "required": "Set by the instance"
+      "required": "Set by the instance",
+      "hintAtMost": "At most {value}, set by the instance.",
+      "hintAtLeast": "At least {value}, set by the instance."
     }
   },
   "security": {
@@ -2887,7 +2908,7 @@
     },
     "authenticatorApp": "Authenticator app",
     "authenticatorOn": "Codes from an app on your phone.",
-    "authenticatorOff": "Use an app such as Aegis, Google Authenticator or 1Password.",
+    "authenticatorOff": "With an app such as Aegis or 1Password.",
     "setUp": "Set up",
     "setUpAuthenticator": "Set up an authenticator app",
     "totpScan": "Scan the code with your authenticator app.",
@@ -2900,8 +2921,8 @@
     "authenticatorRemoved": "The authenticator app was removed.",
     "passkey": "Passkey",
     "passkeys": "Passkeys",
-    "passkeysDescription": "Sign in with your fingerprint, face or security key.",
-    "noPasskeys": "No passkeys yet. Passkeys work as sign-in and as second factor.",
+    "passkeysDescription": "With fingerprint, face or security key.",
+    "noPasskeys": "No passkeys yet.",
     "passkeysUnsupported": "This browser does not support passkeys.",
     "addPasskey": "Add passkey",
     "passkeyName": "Name",
@@ -2933,7 +2954,8 @@
     "removeAuthenticatorSummary": "Codes from the app no longer work for sign-in. Set up another second factor first if your organization requires one.",
     "removePasskey": "Remove passkey",
     "passkeyNameHelp": "For example, the device or security key.",
-    "passwordHelp": "Use a long passphrase that you use nowhere else."
+    "passwordHelp": "Use a long passphrase that you use nowhere else.",
+    "noPasskeysHelp": "For signing in and as second factor."
   },
   "tokens": {
     "personal": "API tokens",
@@ -3378,8 +3400,8 @@
     "push": {
       "title": "Browser push",
       "thisDevice": "Notifications on this device",
-      "explanation": "Push messages are delivered through your browser maker's push service. Their content is encrypted, but they leave this server. Turning it on asks your browser for permission.",
-      "unsupported": "This browser cannot receive push messages. Use a current version of Firefox, Chrome, Edge or Safari.",
+      "explanation": "Through the push service of your browser.",
+      "unsupported": "This browser cannot receive push messages.",
       "instanceOff": "Turned off for this instance.",
       "off": "Off",
       "on": "On",
@@ -3401,7 +3423,7 @@
       "browserFailed": "The browser or its push service did not answer. Check your internet connection and try again.",
       "loadFailed": "Browser push could not be loaded",
       "instanceLabel": "Browser push for this instance",
-      "instanceDescription": "Per device, through browser push.",
+      "instanceDescription": "Through the push services of the browser makers.",
       "instanceReadOnly": "Only instance administrators who manage settings can change this.",
       "enableTitle": "Turn on browser push?",
       "enableDescription": "Read this before you turn it on:",
@@ -3409,10 +3431,14 @@
       "enableContent": "Their content is encrypted between this server and the browser. The push services only see when a message goes to which browser.",
       "enablePerDevice": "Nothing is sent until people turn it on for their own devices.",
       "enableConfirm": "Turn on browser push",
-      "organizationOn": "Turned on for this instance. People choose it per event and turn it on per device.",
-      "organizationOff": "Turned off for this instance. Instance administrators can turn it on.",
+      "organizationOn": "Turned on for this instance.",
+      "organizationOff": "Turned off for this instance.",
       "instanceOffHelp": "Turned off for this instance. Instance administrators can turn it on.",
-      "instanceHelp": "People can turn on notifications per device. Messages go through the push services of browser makers."
+      "instanceHelp": "People can turn on notifications per device. Messages go through the push services of browser makers.",
+      "organizationOnHelp": "People choose it per event and turn it on per device.",
+      "organizationOffHelp": "Instance administrators can turn it on.",
+      "explanationHelp": "Push messages are delivered through your browser maker's push service. Their content is encrypted, but they leave this server. Turning it on asks your browser for permission.",
+      "unsupportedHelp": "Use a current version of Firefox, Chrome, Edge or Safari."
     },
     "open": {
       "loading": "Opening the notification",
@@ -3670,8 +3696,8 @@
       "clientSecret": "Client secret",
       "secretKept": "Leave empty to keep the stored secret.",
       "keyFile": "Key file of the service account",
-      "keyFileHint": "The JSON key from Google Cloud. Lunedo stores only the private key, encrypted.",
-      "keyKept": "A key is stored. Choose a file only to replace it.",
+      "keyFileHint": "The JSON key from Google Cloud.",
+      "keyKept": "Stored. A file replaces the key.",
       "serviceAccount": "Service account {email}, client ID {clientId}",
       "tokenUrl": "Token endpoint",
       "genericClientId": "Client ID",
@@ -3711,7 +3737,8 @@
         "application": "<application ID>",
         "objectId": "<object ID>"
       },
-      "advanced": "Advanced: other Microsoft cloud"
+      "advanced": "Advanced: other Microsoft cloud",
+      "keyFileHelp": "Lunedo stores only the private key, encrypted."
     },
     "delivery": {
       "title": "Delivery",
@@ -3720,7 +3747,8 @@
       "noFailure": "No delivery error so far.",
       "lastSuccess": "Last e-mail handed to the server",
       "never": "Not yet",
-      "retry": "Lunedo retries each e-mail for several hours. Fix the cause and send a test mail to check."
+      "retry": "Each e-mail is retried for hours.",
+      "retryHelp": "Fix the cause and send a test mail to check."
     },
     "methodHelp": "Lunedo sends through {method} now. Exchange Online is moving away from SMTP with passwords; for Microsoft 365, use SMTP with OAuth2 or Microsoft Graph. A method takes effect when you save its settings.",
     "presetHelp": "Fills in server, port and connection security. All services are used through SMTP.",
@@ -4213,7 +4241,7 @@
       "mailMissingTitle": "E-mail is not set up",
       "mailMissing": "Lunedo sends no invitations and no e-mail notifications until a mail server or Microsoft Graph is set up. Notifications still appear in the app.",
       "mailSettings": "Set up e-mail",
-      "addressFromEnvironment": "Set by LUNEDO_INSTANCE_URL in the server environment. To change it, change the variable and restart Lunedo.",
+      "addressFromEnvironment": "Set in the server environment.",
       "addressInvalid": "Enter an address with http:// or https:// and without a path, for example https://wiki.example.org.",
       "addressUnchanged": "This is the current address. Enter the new one.",
       "addressConfirmTitle": "Move Lunedo to {url}?",
@@ -4227,7 +4255,8 @@
       "movedDescription": "This page is open under {old}, but Lunedo is now at {url}. Changes made here cannot be saved. Sessions under the old address have ended.",
       "movedAction": "Open {url}",
       "movedPasskeys": "If you signed in with a passkey, sign in with another method at the new address and add a new passkey there.",
-      "localeDefaultsHint": "For pages outside an organization: sign-in, setup and e-mails without an organization."
+      "localeDefaultsHint": "For pages outside an organization: sign-in, setup and e-mails without an organization.",
+      "addressFromEnvironmentHelp": "Variable `LUNEDO_INSTANCE_URL`; change it and restart Lunedo."
     },
     "organizations": {
       "search": "Search by name or short name",
@@ -9858,7 +9887,9 @@
     "byImport": "The import",
     "activitySet": "{actor} set the status to",
     "activityRemoved": "{actor} removed the status",
-    "changeFrom": "Change the status, currently {status}"
+    "changeFrom": "Change the status, currently {status}",
+    "nameOf": "Name of status {position}",
+    "colorOf": "Color of status {position}"
   },
   "ownership": {
     "someone": "Someone you cannot see",
@@ -10099,8 +10130,8 @@
     "site": {
       "title": "Static website",
       "description": "Download the knowledge base as a ZIP with a static website: every published article, the start, area, search and contact pages, images and redirects for old addresses. Upload the unpacked files to Cloudflare Pages, GitHub Pages or any web server. Feedback, statistics and sign-in are left out because they need Lunedo.",
-      "address": "Address of the website (optional)",
-      "addressHint": "Where the website will be reachable. With it, the download gets a sitemap and language links for search engines; the website itself works under any address.",
+      "address": "Address of the website",
+      "addressHint": "Optional. Where the website will be reachable.",
       "invalidUrl": "Enter a full address that starts with https://, for example https://help.example.org/, or leave the field empty.",
       "start": "Download as static website",
       "started": "The website is being built. You get a notification when the download is ready; it also appears in the list below.",
@@ -10109,7 +10140,8 @@
       "notPublic": "A static website has no sign-in, so everyone who knows its address can read it. Make the knowledge base public first if all its articles may be read by anyone.",
       "toVisibility": "Open the visibility settings",
       "exportOff": "Export is turned off for this knowledge base. Turn it on above to download the website.",
-      "addressPlaceholder": "https://help.example.org/"
+      "addressPlaceholder": "https://help.example.org/",
+      "addressHelp": "For the sitemap and language links; the website works at any address."
     }
   },
   "search": {
@@ -10337,7 +10369,7 @@
     "targetItem": "Content in Lunedo",
     "targetUrl": "Website",
     "itemLabel": "Content",
-    "itemHint": "Search by title. Only content you can open is found.",
+    "itemHint": "Only finds what you can open.",
     "itemRequired": "Choose the content the shortcut leads to.",
     "noMatch": "No content matches",
     "hiddenTargetKept": "The current content stays unless you choose other content.",
@@ -10345,7 +10377,7 @@
     "urlHint": "https:// is added when missing.",
     "urlInvalid": "Enter a web address, for example status.example.org.",
     "label": "Label",
-    "labelHint": "Shown in the sidebar, up to {max} characters. Empty uses the title of the content.",
+    "labelHint": "Up to {max} characters; empty: the content title.",
     "labelExample": "For example: On-call rota",
     "labelRequired": "Enter a label.",
     "labelTooLong": "The label can have up to {max} characters.",
@@ -10553,15 +10585,17 @@
       "title": "Warning levels",
       "description": "Percentages of the volume, or of the S3 limit. Lunedo checks every minute and acts when two checks in a row reach a level.",
       "warning": "Warning",
-      "warningHint": "Administrators and operations contacts are told. Nothing is blocked.",
+      "warningHint": "Informs, blocks nothing.",
       "largeWrites": "Large writes paused",
-      "largeWritesHint": "New space and subtree exports and imports are refused.",
+      "largeWritesHint": "New exports and imports are refused.",
       "critical": "Critical",
-      "criticalHint": "Uploads are refused too. Editing pages keeps working.",
+      "criticalHint": "Uploads are refused too.",
       "unit": "%",
       "invalid": "Enter a whole percentage from 1 to 100.",
       "order": "Each level must be higher than the one before: warning, then large writes, then critical.",
-      "saved": "Warning levels saved"
+      "saved": "Warning levels saved",
+      "warningHelp": "Administrators and operations contacts are told.",
+      "criticalHelp": "Editing pages keeps working."
     },
     "s3": {
       "title": "S3 limit",
@@ -10671,7 +10705,7 @@
       "s3": "S3-compatible storage",
       "s3Description": "Amazon S3, Google Cloud Storage, MinIO, Cloudflare R2 and other S3-compatible services.",
       "path": "Directory",
-      "pathHint": "Absolute path inside the container. It must be writable by the container user.",
+      "pathHint": "Absolute path inside the container.",
       "sameVolumeTitle": "On the same disk as the file store",
       "sameVolume": "This directory is on the same volume as the file store, so one disk failure loses both. Mount a separate disk or a network share, or use S3-compatible storage.",
       "endpoint": "Endpoint",
@@ -10713,7 +10747,8 @@
         "bucket": "{step} failed: the bucket does not exist or is in another region. Check the bucket and the region.",
         "mismatch": "{step} failed: the test object came back changed. Check the storage service.",
         "other": "{step} failed: the storage service refused the request. Check the settings and the logs of the service."
-      }
+      },
+      "pathHelp": "The container user must be allowed to write there."
     },
     "schedule": {
       "title": "Schedule",
@@ -10749,8 +10784,8 @@
       "environmentTitle": "Turned off for this installation",
       "environment": "LUNEDO_BACKUP_BEFORE_UPDATE=false is set, so Lunedo starts without a backup when migrations are pending. Remove the variable to use this setting.",
       "enabled": "Back up before migrations",
-      "enabledHint": "When a new version starts with pending migrations, it first writes a backup to the target and waits for it.",
-      "defaultTarget": "When a new version starts with pending migrations, it first writes a backup to the default directory of the container, because no target is set up."
+      "enabledHint": "A backup before every migration.",
+      "enabledHelp": "Without a target of its own, into the default folder of the container."
     },
     "advanced": {
       "title": "Advanced options",
@@ -11242,8 +11277,8 @@
       "pathHint": "Lowercase letters, digits, hyphens.",
       "pathInvalid": "Use lowercase letters, digits and single hyphens, at most 60 characters.",
       "domain": "Own domain",
-      "domainHint": "Optional. For example the old address of a help center can point here.",
-      "noDomains": "Your instance administrator has not allowed a domain for this organization yet. Domains are allowed in the instance settings under Knowledge base portals.",
+      "domainHint": "Optional, e.g. the old address of a help center.",
+      "noDomains": "No domain allowed by the instance yet.",
       "noDomain": "No own domain",
       "dnsTitle": "First add this record at your DNS provider",
       "dnsText": "Point {domain} to this instance. Your reverse proxy must send the domain to Lunedo and hold its certificate.",
@@ -11251,7 +11286,8 @@
       "saved": "Address saved",
       "footnote": "A change of the address is recorded in the audit log. Readers are never redirected between the portal and the app; the address they open decides.",
       "adminsOnly": "Only space admins change the address.",
-      "pathHelp": "Lowercase letters, digits and hyphens after {prefix}. Links to the old path keep working."
+      "pathHelp": "Lowercase letters, digits and hyphens after {prefix}. Links to the old path keep working.",
+      "noDomainsHelp": "Domains are allowed in the instance settings under Knowledge base portals."
     },
     "appearance": {
       "title": "Appearance and start page",
@@ -11260,7 +11296,7 @@
       "open": "Open the portal",
       "identity": "Logo and color",
       "logo": "Logo",
-      "logoHint": "Square, up to 256 KiB.",
+      "logoHint": "PNG, JPEG or WebP, square, up to 256 KiB.",
       "logoAlt": "Logo of the portal",
       "noLogo": "No logo",
       "uploadLogo": "Upload logo",
@@ -11296,7 +11332,7 @@
       "poweredBy": "Show “Made with Lunedo”",
       "poweredByHint": "Small note in the footer.",
       "feedback": "Readers' notes",
-      "retention": "Keep notes for (months)",
+      "retention": "Retention of notes",
       "retentionHint": "Then notes are deleted.",
       "shortenTitle": "Delete older notes now?",
       "shortenDescription": "{count, plural, one {Notes older than # month are deleted at once and cannot be restored.} other {Notes older than # months are deleted at once and cannot be restored.}}",
@@ -11306,7 +11342,8 @@
       "retentionHelp": "Readers can leave a note after “No” on “Was this helpful?”. Notes are stored without names and deleted after this period.",
       "colorHelp": "Used for links, the main actions and highlights. Palette colors reach the required contrast in light and dark mode.",
       "poweredByHelp": "A small note in the footer of every portal page.",
-      "logoHelp": "Shown in the top bar and on the sign-in page. PNG, JPEG or WebP, square, at most 256 KiB. Without a logo the portal shows the organization's logo or the first letter of its name."
+      "logoHelp": "Shown in the top bar and on the sign-in page. PNG, JPEG or WebP, square, at most 256 KiB. Without a logo the portal shows the organization's logo or the first letter of its name.",
+      "retentionUnit": "months"
     },
     "languages": {
       "tab": "Languages",
@@ -11397,10 +11434,11 @@
   "helpTarget": {
     "title": "Help",
     "label": "Help icon opens",
-    "description": "The help icon in the navigation opens this knowledge base in its portal. Only knowledge bases that everyone signed in may read can be chosen.",
+    "description": "Knowledge base behind the help icon.",
     "noCandidates": "No knowledge base of this organization can be read by everyone signed in yet, so the help icon opens the Lunedo documentation.",
     "documentation": "Lunedo documentation",
-    "loadFailed": "The help settings could not be loaded"
+    "loadFailed": "The help settings could not be loaded",
+    "help": "Only knowledge bases that everyone signed in may read."
   },
   "portals": {
     "title": "Knowledge base portals",
@@ -11534,19 +11572,21 @@
       "loadFailed": "The review settings",
       "section": "Review and reminders",
       "interval": "Review interval",
-      "intervalDescription": "Applies to every article without an interval of its own. Default: no review.",
+      "intervalDescription": "For articles without an interval of their own.",
       "lead": "First reminder",
       "leadDescription": "In addition to the reminder on the due date.",
       "leadNone": "Only on the due date",
       "leadDays": "{count, plural, one {# day before} other {# days before}}",
       "recipients": "Who is reminded",
-      "recipientsDescription": "Articles without an owner always go to the space admins.",
+      "recipientsDescription": "Without an owner: the space admins.",
       "recipientsOwner": "The owner",
       "recipientsOwnerAndAdministrators": "The owner and the space admins",
       "sources": "Changed source page",
-      "sourcesDescription": "When an internal source page of an article is published with changes, the article is listed under Review and its owner is notified.",
+      "sourcesDescription": "The article is listed under “Review”.",
       "sourcesAlways": "Always on",
-      "adminsOnly": "Only space admins change these settings."
+      "adminsOnly": "Only space admins change these settings.",
+      "intervalHelp": "Default: no review.",
+      "sourcesHelp": "When an internal source page is published with changes; the responsible person is notified."
     },
     "sources": {
       "label": "Source pages:",

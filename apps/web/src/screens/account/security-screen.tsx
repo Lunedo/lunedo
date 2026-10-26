@@ -258,6 +258,7 @@ export function TwoFactorSection() {
         description={
           data.passkeys.length === 0 ? t("security.noPasskeys") : t("security.passkeysDescription")
         }
+        help={t("security.noPasskeysHelp")}
         control={
           passkeysSupported() ? (
             <Button variant="outline" icon={Plus} onClick={() => setDialog("passkey")}>

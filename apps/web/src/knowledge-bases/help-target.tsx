@@ -80,6 +80,7 @@ export function HelpTargetSection({
           description={
             help.data.candidates.length === 0 ? t("helpTarget.noCandidates") : t("helpTarget.description")
           }
+          help={t("helpTarget.help")}
           control={
             <Select
               value={help.data.current?.spaceId ?? DOCUMENTATION}

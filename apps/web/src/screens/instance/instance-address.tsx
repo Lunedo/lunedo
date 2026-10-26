@@ -106,7 +106,11 @@ export function InstanceAddressRow({
             ? t("instance.general.addressFromEnvironment")
             : translateKey(t, settingDescriptionKey("instance.url"))
         }
-        help={fromEnvironment ? undefined : translateKey(t, settingHelpKey("instance.url"))}
+        help={
+          fromEnvironment
+            ? t("instance.general.addressFromEnvironmentHelp")
+            : translateKey(t, settingHelpKey("instance.url"))
+        }
         control={control}
         {...(problem
           ? {

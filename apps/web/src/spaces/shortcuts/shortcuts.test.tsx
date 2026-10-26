@@ -182,9 +182,9 @@ describe("the shortcut settings", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Add shortcut" }));
     expect(await within(dialog).findByText("Choose the content the shortcut leads to.")).toBeTruthy();
     expect(within(dialog).queryByText("Enter a label.")).toBeNull();
-    expect(within(dialog).getByText(/Empty uses the title of the content/)).toBeTruthy();
+    expect(within(dialog).getByText(/empty: the content title/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole("radio", { name: "Website" }));
-    expect(within(dialog).queryByText(/Empty uses the title of the content/)).toBeNull();
+    expect(within(dialog).queryByText(/empty: the content title/)).toBeNull();
   });
 
   it("validates a new shortcut on save and adds it", async () => {

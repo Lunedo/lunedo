@@ -446,6 +446,7 @@ export function SmtpForm({
               hint={
                 oauth2SecretSet && keyFile === "" ? t("mail.oauth2.keyKept") : t("mail.oauth2.keyFileHint")
               }
+              help={t("mail.oauth2.keyFileHelp")}
               {...(form.formState.errors.keyFile
                 ? {
                     error:

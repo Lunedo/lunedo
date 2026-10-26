@@ -113,6 +113,7 @@ export function InstanceMailScreen() {
           <SettingRow
             label={t("mail.delivery.lastFailure")}
             description={data.delivery.lastFailure ? t("mail.delivery.retry") : undefined}
+            help={data.delivery.lastFailure ? t("mail.delivery.retryHelp") : undefined}
             control={
               <span className="text-sm">
                 {data.delivery.lastFailure

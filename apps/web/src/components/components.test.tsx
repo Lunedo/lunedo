@@ -233,7 +233,7 @@ describe("SettingsList", () => {
     const input = screen.getByRole("textbox", { name: "Versions of a file to keep" });
     await userEvent.type(input, "600{Enter}");
     expect(screen.getByRole("alert").textContent).toBe("Enter a whole number from 1 to 500.");
-    expect(screen.getByText("At most 500 versions · set by the instance")).toBeTruthy();
+    expect(screen.getByText("At most 500 versions, set by the instance.")).toBeTruthy();
     expect(onChange).not.toHaveBeenCalled();
     await userEvent.clear(input);
     await userEvent.type(input, "120{Enter}");
@@ -310,7 +310,7 @@ describe("SettingsList", () => {
       ],
       onChange,
     );
-    expect(screen.getByText("At least 14 characters · set by the instance")).toBeTruthy();
+    expect(screen.getByText("At least 14 characters, set by the instance.")).toBeTruthy();
     const input = screen.getByRole("textbox", { name: "Minimum password length" });
     await userEvent.type(input, "10{Enter}");
     expect(await screen.findByRole("alert")).toBeTruthy();

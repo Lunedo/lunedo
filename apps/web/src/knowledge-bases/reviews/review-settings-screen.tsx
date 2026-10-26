@@ -76,6 +76,7 @@ export function ReviewSettingsScreen() {
               <SettingRow
                 label={t("reviews.settings.interval")}
                 description={t("reviews.settings.intervalDescription")}
+                help={t("reviews.settings.intervalHelp")}
                 control={
                   <Select
                     aria-label={t("reviews.settings.interval")}
@@ -146,6 +147,7 @@ export function ReviewSettingsScreen() {
               <SettingRow
                 label={t("reviews.settings.sources")}
                 description={t("reviews.settings.sourcesDescription")}
+                help={t("reviews.settings.sourcesHelp")}
                 control={
                   <span className="text-sm text-text-muted">{t("reviews.settings.sourcesAlways")}</span>
                 }

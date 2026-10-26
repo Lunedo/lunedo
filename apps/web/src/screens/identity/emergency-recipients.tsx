@@ -112,7 +112,8 @@ export function EmergencyRecipients() {
           label={t("emergencyRecipients.addresses")}
           hint={t("emergencyRecipients.addressesHint")}
           help={t("emergencyRecipients.addressesHelp")}
-          value={current.addresses.join(", ")}
+          multiline
+          value={current.addresses.join("\n")}
           schema={addressList}
           invalidMessage={t("emergencyRecipients.addressesInvalid")}
           disabled={!canManage}

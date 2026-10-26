@@ -117,6 +117,7 @@ export function BrowserPushSection() {
       <SettingRow
         label={t("notifications.push.thisDevice")}
         description={supported ? t("notifications.push.explanation") : t("notifications.push.unsupported")}
+        help={supported ? t("notifications.push.explanationHelp") : t("notifications.push.unsupportedHelp")}
         control={
           !supported ? null : current ? (
             <Button variant="secondary" loading={remove.isPending} onClick={() => void removeDevice(current)}>

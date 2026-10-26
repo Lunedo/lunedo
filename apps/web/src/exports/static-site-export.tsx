@@ -95,6 +95,7 @@ export function StaticSiteExport({
       <Field
         label={t("exports.site.address")}
         hint={t("exports.site.addressHint")}
+        help={t("exports.site.addressHelp")}
         {...(error ? { error } : {})}
       >
         <Input

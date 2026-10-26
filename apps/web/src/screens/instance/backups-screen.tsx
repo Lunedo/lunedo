@@ -402,8 +402,13 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
     setResult(null);
   };
 
-  const field = (name: TargetField, label: string, hint: string, control: React.ReactNode) => (
-    <Field label={label} hint={hint} {...(errors[name] ? { error: errors[name] } : {})}>
+  const field = (name: TargetField, label: string, hint: string, control: React.ReactNode, help?: string) => (
+    <Field
+      label={label}
+      hint={hint}
+      {...(help ? { help } : {})}
+      {...(errors[name] ? { error: errors[name] } : {})}
+    >
       {control}
     </Field>
   );
@@ -446,6 +451,7 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
               t("backups.target.path"),
               t("backups.target.pathHint"),
               text("path", "/var/lib/lunedo/backups"),
+              t("backups.target.pathHelp"),
             )}
             {data.target?.kind === "local" && data.target.sameVolumeAsFiles && !changed ? (
               <Notice variant="warning" title={t("backups.target.sameVolumeTitle")}>
@@ -778,7 +784,8 @@ function UpdatesSection({ data, canManage }: { data: BackupOverview; canManage: 
       ) : null}
       <SettingRow
         label={t("backups.updates.enabled")}
-        description={data.target ? t("backups.updates.enabledHint") : t("backups.updates.defaultTarget")}
+        description={t("backups.updates.enabledHint")}
+        help={t("backups.updates.enabledHelp")}
         status={<SaveIndicator tracker={tracker} />}
         control={
           <Switch

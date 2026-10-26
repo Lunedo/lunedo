@@ -230,7 +230,7 @@ describe("group mapping", () => {
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
-    expect(within(dialog).getByText(/Suggests the groups Lunedo has seen at sign-ins/)).toBeTruthy();
+    expect(within(dialog).getByText(/Groups Lunedo has seen from/)).toBeTruthy();
     await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "lunedo-users");
     expect(await screen.findByRole("option", { name: /Lunedo staff/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Use this text as group value/ })).toBeTruthy();
@@ -244,7 +244,7 @@ describe("group mapping", () => {
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=mapping`);
     await userEvent.click(await screen.findByRole("button", { name: "Add rule" }));
     const dialog = await screen.findByRole("dialog", { name: "Add mapping rule" });
-    expect(within(dialog).getByText(/Lunedo stores the ID of the group/)).toBeTruthy();
+    expect(within(dialog).getByText(/Searches the groups of/)).toBeTruthy();
     await userEvent.type(within(dialog).getByRole("combobox", { name: /^Group in/ }), "lunedo-users");
     expect(await screen.findByText(/No group with this name found/)).toBeTruthy();
     expect(screen.queryByRole("option", { name: /Use this text as group value/ })).toBeNull();

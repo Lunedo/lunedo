@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resources } from "../i18n/resources.js";
-import { knownSettingKeys, settingDescriptionKey } from "./setting-fields.js";
+import { knownSettingKeys, levelDescriptionKeys, settingDescriptionKey } from "./setting-fields.js";
 
 const MAX_HINT = 50;
 const settingsScreens = [
@@ -32,10 +32,11 @@ function hintKeys(): string[] {
   const keys = new Set<string>();
   for (const file of settingsScreens.flatMap((folder) => files(path.resolve("src", folder)))) {
     const text = readFileSync(file, "utf8");
-    for (const match of text.matchAll(/hint=\{\s*t\("([\w.]+)"/g)) if (match[1]) keys.add(match[1]);
-    for (const block of text.split("<SettingRow").slice(1)) {
-      const match = block.slice(0, 600).match(/description=\{\s*t\("([\w.]+)"/);
-      if (match?.[1]) keys.add(match[1]);
+    for (const block of text.split(/<(?=SettingRow\b|Field\b|NumberSetting\b)/).slice(1)) {
+      const head = block.slice(0, 900).split(/\n\s*>\n|\/>/)[0] ?? "";
+      for (const attribute of head.matchAll(/(?:hint|description)=\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g)) {
+        for (const key of (attribute[1] ?? "").matchAll(/\bt\("([\w.]+)"/g)) if (key[1]) keys.add(key[1]);
+      }
     }
   }
   return [...keys];
@@ -53,14 +54,50 @@ function lookup(language: keyof typeof resources, key: string): unknown {
 
 describe("hints of settings", () => {
   it("are one short sentence that fits in one line, with longer explanations behind the help", () => {
-    const keys = [...hintKeys(), ...knownSettingKeys.map(settingDescriptionKey)];
+    const keys = [
+      ...hintKeys(),
+      ...knownSettingKeys.map((key) => settingDescriptionKey(key)),
+      ...levelDescriptionKeys,
+    ];
     expect(keys.length).toBeGreaterThan(150);
     for (const language of Object.keys(resources) as (keyof typeof resources)[]) {
       const long = keys.filter((key) => {
         const text = lookup(language, key);
-        return typeof text === "string" && text.length > MAX_HINT;
+        if (typeof text !== "string") return false;
+        return STATUS_KEYS.has(key) ? shown(text).length > MAX_STATUS : text.length > MAX_HINT;
       });
       expect(long, language).toEqual([]);
+    }
+  });
+});
+
+const MAX_STATUS = 90;
+const STATUS_KEYS = new Set([
+  "notifications.watching.counts",
+  "security.recoveryCodesLeft",
+  "identityProviders.scim.lastRequestDetail",
+  "identityProviders.scim.noRequests",
+  "spaceShortcuts.hiddenTargetKept",
+]);
+
+function shown(text: string): string {
+  return text
+    .replace(
+      /\{\w+, plural,(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g,
+      (plural) => /other \{([^{}]*)\}/.exec(plural)?.[1] ?? "",
+    )
+    .replace(/#/g, "12")
+    .replace(/\{\w+\}/g, "12:30");
+}
+
+describe("status texts in settings", () => {
+  it("fit in one line", () => {
+    for (const language of Object.keys(resources) as (keyof typeof resources)[]) {
+      for (const key of STATUS_KEYS) {
+        const text = lookup(language, key);
+        expect(typeof text, key).toBe("string");
+        expect(shown(String(text)).length, `${language} ${key}`).toBeLessThanOrEqual(MAX_STATUS);
+      }
     }
   });
 });
