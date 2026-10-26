@@ -48,6 +48,21 @@ describe("On this page", () => {
     expect(nav.closest("aside")?.className).toContain("xl:block");
   });
 
+  it("lists only headings 1 and 2 when there are more than 20", async () => {
+    await render(21);
+    const nav = screen.getByRole("navigation", { name: "On this page" });
+    const titles = Array.from(nav.querySelectorAll("a")).map((link) => link.textContent);
+    expect(titles).toHaveLength(14);
+    expect(titles).not.toContain("Section 3");
+    expect(titles.slice(0, 3)).toEqual(["Section 1", "Section 2", "Section 4"]);
+  });
+
+  it("keeps all three levels up to 20 headings", async () => {
+    await render(20);
+    const nav = screen.getByRole("navigation", { name: "On this page" });
+    expect(nav.querySelectorAll("a")).toHaveLength(20);
+  });
+
   it("stays away on pages with fewer headings", async () => {
     await render(5);
     expect(screen.queryByRole("navigation", { name: "On this page" })).toBeNull();

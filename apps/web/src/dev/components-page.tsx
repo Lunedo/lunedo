@@ -145,6 +145,7 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     next: "Next",
     selectAll: "Select all on this page",
     selection: "Selection",
+    moreAbout: "More about",
   },
   de: {
     close: "Schließen",
@@ -200,6 +201,7 @@ const LABELS: Record<PageLanguage, UiLabels> = {
     next: "Weiter",
     selectAll: "Alle auf dieser Seite auswählen",
     selection: "Auswahl",
+    moreAbout: "Mehr zu",
   },
 };
 

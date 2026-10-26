@@ -22,7 +22,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
 import { useContentCollaboration } from "../collaboration/content-collaboration.js";
-import { peopleLoader } from "../collaboration/people.js";
+import { peopleLoaderFor } from "../collaboration/people.js";
 import { readViewContext } from "../editor/read-view.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
@@ -371,6 +371,7 @@ function EditTopicDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const ownerLoader = useMemo(() => peopleLoaderFor({ seriesId: topic.seriesId }), [topic.seriesId]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(topic.title);
@@ -448,7 +449,7 @@ function EditTopicDialog({
         </Field>
         <Field label={t("meetings.topics.owner")}>
           <Combobox
-            load={peopleLoader}
+            load={ownerLoader}
             value={owner?.value ?? null}
             selectedItem={owner}
             onValueChange={(_value, item) => setOwner(item)}

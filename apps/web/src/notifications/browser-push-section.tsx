@@ -63,6 +63,7 @@ export function BrowserPushSection() {
         <SettingRow
           label={t("notifications.push.thisDevice")}
           description={t("notifications.push.instanceOff")}
+          help={t("notifications.push.instanceOffHelp")}
           control={<Badge>{t("notifications.push.off")}</Badge>}
         />
       </Section>

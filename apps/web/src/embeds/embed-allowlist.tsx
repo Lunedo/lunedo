@@ -114,6 +114,7 @@ function AddServiceForm({
       <Field
         label={t("embeds.allowlist.pattern")}
         hint={t("embeds.allowlist.patternHint")}
+        help={t("embeds.allowlist.patternHelp")}
         error={errors.pattern}
       >
         <Input
@@ -126,7 +127,11 @@ function AddServiceForm({
         />
       </Field>
       <div className="sm:col-span-2">
-        <Field label={t("embeds.allowlist.embed")} hint={t("embeds.allowlist.embedHint")}>
+        <Field
+          label={t("embeds.allowlist.embed")}
+          hint={t("embeds.allowlist.embedHint")}
+          help={t("embeds.allowlist.embedHelp")}
+        >
           <Input
             value={embed}
             inputMode="url"
@@ -137,7 +142,11 @@ function AddServiceForm({
         </Field>
       </div>
       <div className="sm:col-span-2">
-        <Field label={t("embeds.allowlist.referrer")} hint={t("embeds.allowlist.referrerHint")}>
+        <Field
+          label={t("embeds.allowlist.referrer")}
+          hint={t("embeds.allowlist.referrerHint")}
+          help={t("embeds.allowlist.referrerHelp")}
+        >
           <Select
             value={referrerPolicy}
             onValueChange={(value) => setReferrerPolicy(value as EmbedReferrerPolicy)}

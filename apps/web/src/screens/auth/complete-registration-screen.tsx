@@ -71,6 +71,7 @@ export function CompleteRegistrationScreen() {
           <Field
             label={t("auth.password")}
             hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
+            help={t("auth.passwordHelp", { minimum: info.data?.passwordMinLength ?? 12 })}
             error={form.formState.errors.password?.message}
           >
             <PasswordInput autoComplete="new-password" {...form.register("password")} />

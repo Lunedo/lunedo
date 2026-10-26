@@ -285,7 +285,7 @@ export function SmtpForm({
           {error}
         </Notice>
       ) : null}
-      <Field label={t("mail.preset")} hint={t("mail.presetHint")}>
+      <Field label={t("mail.preset")} hint={t("mail.presetHint")} help={t("mail.presetHelp")}>
         <Select
           aria-label={t("mail.preset")}
           value={preset}
@@ -317,7 +317,12 @@ export function SmtpForm({
           <Input inputMode="numeric" autoComplete="off" {...form.register("port")} />
         </Field>
       </FieldGrid>
-      <Field label={t("mail.security")} hint={t("mail.securityHint")} {...fieldError("security")}>
+      <Field
+        label={t("mail.security")}
+        hint={t("mail.securityHint")}
+        help={t("mail.securityHelp")}
+        {...fieldError("security")}
+      >
         <Controller
           control={form.control}
           name="security"
@@ -334,7 +339,11 @@ export function SmtpForm({
           )}
         />
       </Field>
-      <Field label={t("mail.authentication")} hint={t("mail.authenticationHint")}>
+      <Field
+        label={t("mail.authentication")}
+        hint={t("mail.authenticationHint")}
+        help={t("mail.authenticationHelp")}
+      >
         <Controller
           control={form.control}
           name="authentication"
@@ -378,6 +387,7 @@ export function SmtpForm({
           <Field
             label={t("mail.mailbox")}
             hint={t("mail.mailboxHint")}
+            help={t("mail.mailboxHelp")}
             {...(usernameError ? { error: usernameError } : {})}
           >
             <Input type="email" autoComplete="off" {...form.register("username")} />
@@ -492,6 +502,7 @@ export function SmtpForm({
           <Field
             label={t("mail.username")}
             hint={t("mail.usernameHint")}
+            help={t("mail.usernameHelp")}
             {...(usernameError ? { error: usernameError } : {})}
           >
             <Input autoComplete="off" {...form.register("username")} />

@@ -609,6 +609,7 @@ function MemberActionDialogs({
           <Field
             label={t("members.expires")}
             hint={t("members.expiryHint")}
+            help={t("members.expiryHelp")}
             {...(expiryMissing && !expiry ? { error: t("members.chooseDate") } : {})}
           >
             <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
@@ -766,6 +767,7 @@ function PermissionsDialog({
           {
             key: "why",
             header: t("members.why"),
+            grow: true,
             cell: (decision) =>
               decision.allowed
                 ? decision.grants.map((grant) => grantText(t, grant)).join("; ")

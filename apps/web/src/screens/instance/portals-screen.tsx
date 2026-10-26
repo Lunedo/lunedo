@@ -72,6 +72,7 @@ function AppLinkSection() {
           <AutoSaveTextField
             label={t("portals.appLink.label")}
             hint={t("portals.appLink.hint")}
+            help={t("portals.appLink.help")}
             value={typeof value === "string" ? value : ""}
             schema={z.string().max(60)}
             disabled={!state.can("instance.settings.manage")}
@@ -276,6 +277,7 @@ function AllowDomainDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         <Field
           label={t("portals.domains.domain")}
           hint={t("portals.domains.domainHint")}
+          help={t("portals.domains.domainHelp")}
           {...(errors.domain ? { error: errors.domain } : {})}
         >
           <Input

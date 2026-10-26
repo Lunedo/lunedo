@@ -218,7 +218,11 @@ export function GraphMailForm({
             onChange={(event) => set({ sender: event.target.value })}
           />
         </Field>
-        <Field label={t("mail.graph.senderName")} hint={t("mail.graph.senderNameHint")}>
+        <Field
+          label={t("mail.graph.senderName")}
+          hint={t("mail.graph.senderNameHint")}
+          help={t("mail.graph.senderNameHelp")}
+        >
           <Input value={values.senderName} onChange={(event) => set({ senderName: event.target.value })} />
         </Field>
       </FieldGrid>
@@ -438,12 +442,20 @@ function AddCredentialDialog({
                 onChange={(event) => setSecret(event.target.value)}
               />
             </Field>
-            <Field label={t("identityProviders.credentials.expiresOn")} hint={t("mail.graph.expiresHint")}>
+            <Field
+              label={t("identityProviders.credentials.expiresOn")}
+              hint={t("mail.graph.expiresHint")}
+              help={t("mail.graph.expiresHelp")}
+            >
               <AppDatePicker value={expiresOn} clearable onValueChange={setExpiresOn} />
             </Field>
           </FieldGrid>
         ) : (
-          <Field label={t("mail.graph.validity")} hint={t("mail.graph.certificateHint")}>
+          <Field
+            label={t("mail.graph.validity")}
+            hint={t("mail.graph.certificateHint")}
+            help={t("mail.graph.certificateHelp")}
+          >
             <Select
               aria-label={t("mail.graph.validity")}
               value={validDays}

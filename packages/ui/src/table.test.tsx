@@ -58,14 +58,15 @@ describe("Table", () => {
     expect(table.closest('[class~="@container"]')).not.toBeNull();
   });
 
-  it("lets a growing column take the free width and shrink so that long text truncates", () => {
+  it("lets a growing column take the free width from card width on, and scrolls narrower tables instead", () => {
     renderTable({
       columns: [{ ...columns[0], grow: true } as TableColumn<Person>, columns[1] as TableColumn<Person>],
     });
     const table = screen.getByRole("table", { name: "Members" });
     const header = within(table).getByRole("columnheader", { name: "Name" });
-    expect(header.className).toContain("w-full max-w-0");
-    expect(within(table).getByRole("cell", { name: "Lena Hofer" }).className).toContain("w-full max-w-0");
+    expect(header.className).toContain("@card:w-full @card:max-w-0");
+    expect(within(table).getByRole("cell", { name: "Lena Hofer" }).className).toContain("@card:max-w-0");
+    expect(table.closest("[data-table-frame]")?.className).toContain("overflow-x-auto");
     expect(within(table).getByRole("cell", { name: "Admin" }).className).not.toContain("max-w-0");
   });
 

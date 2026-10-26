@@ -219275,6 +219275,26 @@
               "type": "string",
               "maxLength": 200
             }
+          },
+          {
+            "name": "seriesId",
+            "in": "query",
+            "required": false,
+            "description": "Only participants of the meetings of this series who can open its space, for example to choose the owner of a topic.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "description": "Only people who can open this space, for example to choose members of a meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -219405,6 +219425,26 @@
                       "title": "This endpoint needs a signed-in session",
                       "status": 403,
                       "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -252915,6 +252955,839 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/permissions/grants": {
+      "post": {
+        "operationId": "spaces.grant",
+        "summary": "Give several holders a role",
+        "description": "Gives all holders the same role in one change: either all get it or none. Nobody extends their own permissions, and every grant is audited.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-lunedo-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holders": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "principalKind": {
+                          "type": "string",
+                          "enum": [
+                            "account",
+                            "group",
+                            "organizationMembers",
+                            "instanceUsers"
+                          ],
+                          "description": "Holder of a role: an account (person or service account), a group, all members of the organization, or all internal users of the instance."
+                        },
+                        "principalId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "ID of the account or group; null for all members and all internal users."
+                        }
+                      },
+                      "required": [
+                        "principalKind",
+                        "principalId"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A person, group or everyone of a kind."
+                    },
+                    "description": "Holders who get the role, up to 50."
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "reader",
+                      "commenter",
+                      "editor",
+                      "admin"
+                    ],
+                    "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                  }
+                },
+                "required": [
+                  "holders",
+                  "role"
+                ],
+                "additionalProperties": false,
+                "description": "Several holders who get the same role."
+              },
+              "example": {
+                "holders": [
+                  {
+                    "principalKind": "account",
+                    "principalId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20"
+                  },
+                  {
+                    "principalKind": "group",
+                    "principalId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30"
+                  }
+                ],
+                "role": "reader"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The permissions after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the permission."
+                      },
+                      "principalKind": {
+                        "type": "string",
+                        "enum": [
+                          "account",
+                          "group",
+                          "organizationMembers",
+                          "instanceUsers"
+                        ],
+                        "description": "Holder of a role: an account (person or service account), a group, all members of the organization, or all internal users of the instance."
+                      },
+                      "principalId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the account or group, or null."
+                      },
+                      "name": {
+                        "description": "Name of the account or group, or null for the other holders.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "email": {
+                        "description": "E-mail address of an account, or null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "organizationName": {
+                        "description": "Organization of a group, or null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "reader",
+                          "commenter",
+                          "editor",
+                          "admin"
+                        ],
+                        "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "principalKind",
+                      "principalId",
+                      "name",
+                      "email",
+                      "organizationName",
+                      "role"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A role of a holder in a space."
+                  },
+                  "description": "Permissions of the space."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
+                    "principalKind": "account",
+                    "principalId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Berger",
+                    "email": "anna@example.org",
+                    "organizationName": null,
+                    "role": "admin"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidHolder": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidHolder",
+                      "title": "The holder cannot get a role in this space",
+                      "status": 400,
+                      "code": "invalidHolder"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:lunedo:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `selfExtension`: Nobody can extend their own permissions.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "selfExtension": {
+                    "value": {
+                      "type": "urn:lunedo:problem:selfExtension",
+                      "title": "Nobody can extend their own permissions",
+                      "status": 403,
+                      "code": "selfExtension"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`alreadyGranted`: The holder already has a role in the space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "alreadyGranted": {
+                    "value": {
+                      "type": "urn:lunedo:problem:alreadyGranted",
+                      "title": "The holder already has a role in the space",
+                      "status": 409,
+                      "code": "alreadyGranted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/permissions/grants/preview": {
+      "post": {
+        "operationId": "spaces.previewGrants",
+        "summary": "Preview giving several holders a role",
+        "description": "Shows who would gain access if all holders got the role together. Nothing is changed.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-lunedo-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holders": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "principalKind": {
+                          "type": "string",
+                          "enum": [
+                            "account",
+                            "group",
+                            "organizationMembers",
+                            "instanceUsers"
+                          ],
+                          "description": "Holder of a role: an account (person or service account), a group, all members of the organization, or all internal users of the instance."
+                        },
+                        "principalId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "ID of the account or group; null for all members and all internal users."
+                        }
+                      },
+                      "required": [
+                        "principalKind",
+                        "principalId"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A person, group or everyone of a kind."
+                    },
+                    "description": "Holders who get the role, up to 50."
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "reader",
+                      "commenter",
+                      "editor",
+                      "admin"
+                    ],
+                    "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                  }
+                },
+                "required": [
+                  "holders",
+                  "role"
+                ],
+                "additionalProperties": false,
+                "description": "Several holders who get the same role."
+              },
+              "example": {
+                "holders": [
+                  {
+                    "principalKind": "account",
+                    "principalId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20"
+                  },
+                  {
+                    "principalKind": "group",
+                    "principalId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30"
+                  }
+                ],
+                "role": "reader"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The change in access.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "gaining": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people who get access."
+                    },
+                    "losing": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people who lose access."
+                    },
+                    "raised": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people whose role rises."
+                    },
+                    "lowered": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people whose role drops."
+                    },
+                    "unlisted": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of affected people the caller may not see; they are counted but not listed."
+                    },
+                    "truncated": {
+                      "type": "boolean",
+                      "description": "Whether `changes` lists only the first 100 people."
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the account."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the person."
+                          },
+                          "before": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "reader",
+                                  "commenter",
+                                  "editor",
+                                  "admin"
+                                ],
+                                "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Role before the change, or null for no access."
+                          },
+                          "after": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "reader",
+                                  "commenter",
+                                  "editor",
+                                  "admin"
+                                ],
+                                "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Role after the change, or null for no access."
+                          }
+                        },
+                        "required": [
+                          "accountId",
+                          "name",
+                          "before",
+                          "after"
+                        ],
+                        "additionalProperties": false,
+                        "description": "How the access of one person changes."
+                      },
+                      "description": "People whose access changes, ordered by name."
+                    }
+                  },
+                  "required": [
+                    "gaining",
+                    "losing",
+                    "raised",
+                    "lowered",
+                    "unlisted",
+                    "truncated",
+                    "changes"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Who gains, loses or changes access."
+                },
+                "example": {
+                  "gaining": 1,
+                  "losing": 0,
+                  "raised": 0,
+                  "lowered": 0,
+                  "unlisted": 0,
+                  "truncated": false,
+                  "changes": [
+                    {
+                      "accountId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger",
+                      "before": null,
+                      "after": "reader"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidHolder": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidHolder",
+                      "title": "The holder cannot get a role in this space",
+                      "status": 400,
+                      "code": "invalidHolder"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:lunedo:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`alreadyGranted`: The holder already has a role in the space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "alreadyGranted": {
+                    "value": {
+                      "type": "urn:lunedo:problem:alreadyGranted",
+                      "title": "The holder already has a role in the space",
+                      "status": 409,
+                      "code": "alreadyGranted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
                     }
                   }
                 }

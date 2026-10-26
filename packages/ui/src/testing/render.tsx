@@ -58,6 +58,7 @@ export const testLabels: UiLabels = {
   next: "Next",
   selectAll: "Select all on this page",
   selection: "Selection",
+  moreAbout: "More about",
 };
 
 export function renderUi(element: ReactElement): RenderResult {

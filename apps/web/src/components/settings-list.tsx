@@ -22,6 +22,7 @@ import {
   type SettingField,
   settingDescriptionKey,
   settingField,
+  settingHelpKey,
   settingLabelKey,
   toMinutes,
 } from "../settings/setting-fields.js";
@@ -154,7 +155,7 @@ function SettingItem({
   formatValue: (value: unknown) => string;
   onChange: (change: SettingChange) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const bound = instanceBound(entry, level);
   const baseField = settingField(entry.key);
   const field = baseField ? boundedField(baseField, bound) : undefined;
@@ -277,6 +278,9 @@ function SettingItem({
         <SettingRow
           label={label}
           description={translateKey(t, settingDescriptionKey(entry.key))}
+          help={
+            i18n.exists(settingHelpKey(entry.key)) ? translateKey(t, settingHelpKey(entry.key)) : undefined
+          }
           meta={marks}
           control={control}
           status={<SaveIndicator tracker={tracker} />}

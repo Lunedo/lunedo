@@ -1,10 +1,10 @@
 import { Button, Checkbox, Combobox, type ComboboxItem, Input, useToast } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { peopleLoader } from "../collaboration/people.js";
+import { peopleLoaderFor } from "../collaboration/people.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { meetingKeys } from "./queries.js";
 
@@ -18,6 +18,7 @@ export function TopicForm({
   onDone: () => void;
 }) {
   const { t } = useTranslation();
+  const ownerLoader = useMemo(() => peopleLoaderFor({ seriesId }), [seriesId]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const titleId = useId();
@@ -91,7 +92,7 @@ export function TopicForm({
       </div>
       <div className="w-field max-w-full">
         <Combobox
-          load={peopleLoader}
+          load={ownerLoader}
           value={owner?.value ?? null}
           selectedItem={owner}
           placeholder={t("meetings.agenda.ownerPlaceholder")}

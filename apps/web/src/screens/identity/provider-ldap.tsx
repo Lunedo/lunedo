@@ -114,6 +114,7 @@ export function LdapConnectionFields({
         <ExplicitSaveTextField
           label={t("identityProviders.ldap.url")}
           hint={t("identityProviders.ldap.urlHint")}
+          help={t("identityProviders.ldap.urlHelp")}
           value={config.url}
           schema={config.startTls ? ldapUrlSchema.refine(isPlainLdap) : ldapUrlSchema}
           invalidMessage={
@@ -300,6 +301,7 @@ export function CaCertificateSection({
         <SettingRow
           label={t("identityProviders.ldap.caNone")}
           description={t("identityProviders.ldap.caNoneHint")}
+          help={t("identityProviders.ldap.caNoneHelp")}
           control={<span className="text-text-muted">{t("identityProviders.ldap.caSystem")}</span>}
         />
       )}
@@ -354,6 +356,7 @@ export function LdapAttributeFields({
       <SettingRow
         label={t("identityProviders.attributes.identifier")}
         description={t("identityProviders.attributes.identifierHint")}
+        help={t("identityProviders.attributes.identifierHelp")}
         meta={t("identityProviders.attributes.fixed")}
         control={
           <Badge variant="neutral" icon={Lock}>
@@ -364,6 +367,7 @@ export function LdapAttributeFields({
       <SettingRow
         label={t("identityProviders.ldap.signInAttribute")}
         description={t("identityProviders.ldap.signInAttributeHint")}
+        help={t("identityProviders.ldap.signInAttributeHelp")}
         control={
           <Select
             aria-label={t("identityProviders.ldap.signInAttribute")}
@@ -443,6 +447,7 @@ export function LdapAttributeFields({
           <SettingRow
             label={t("identityProviders.ldap.groupMembership")}
             description={t("identityProviders.ldap.groupMembershipHint")}
+            help={t("identityProviders.ldap.groupMembershipHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.ldap.groupMembership")}
@@ -610,6 +615,7 @@ function TestPersonLookup({
           <Field
             label={t("identityProviders.ldap.testPerson")}
             hint={t("identityProviders.ldap.testPersonHint")}
+            help={t("identityProviders.ldap.testPersonHelp")}
           >
             <Input value={signInName} onChange={(event) => setSignInName(event.target.value)} />
           </Field>
@@ -671,6 +677,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
       <AutoSaveTextField
         label={t("identityProviders.ldap.disabledAttribute")}
         hint={t("identityProviders.ldap.disabledAttributeHint")}
+        help={t("identityProviders.ldap.disabledAttributeHelp")}
         value={disabled?.attribute ?? ""}
         schema={z.union([z.literal(""), ldapAttribute])}
         invalidMessage={t("identityProviders.ldap.attributeInvalid")}
@@ -682,6 +689,7 @@ function DisabledAttributeFields({ provider, canManage }: { provider: LdapProvid
         <AutoSaveTextField
           label={t("identityProviders.ldap.disabledValues")}
           hint={t("identityProviders.ldap.disabledValuesHint")}
+          help={t("identityProviders.ldap.disabledValuesHelp")}
           value={disabled.values.join(", ")}
           schema={valueList}
           invalidMessage={t("identityProviders.ldap.disabledValuesInvalid")}
@@ -768,6 +776,7 @@ export function DirectoryTest({ provider }: { provider: LdapProvider }) {
           <Field
             label={t("identityProviders.directoryTest.signInName")}
             hint={t("identityProviders.directoryTest.signInNameHint")}
+            help={t("identityProviders.directoryTest.signInNameHelp")}
           >
             <Input value={signInName} onChange={(event) => setSignInName(event.target.value)} />
           </Field>

@@ -2,6 +2,7 @@ import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import { type ComponentProps, createContext, type ReactNode, useContext, useId, useState } from "react";
 import { IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
+import { SettingHelp } from "./help-popover.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -51,6 +52,7 @@ export function useFieldControl(): FieldControlProps {
 export interface FieldProps {
   label: ReactNode;
   hint?: ReactNode;
+  help?: ReactNode;
   error?: ReactNode;
   required?: boolean;
   id?: string;
@@ -67,7 +69,7 @@ export function FieldError({ id, children }: { id?: string; children: ReactNode 
   );
 }
 
-export function Field({ label, hint, error, required = false, id, labelAction, children }: FieldProps) {
+export function Field({ label, hint, help, error, required = false, id, labelAction, children }: FieldProps) {
   const generated = useId();
   const controlId = id ?? `field-${generated}`;
   const hintId = hint ? `${controlId}-hint` : undefined;
@@ -89,9 +91,12 @@ export function Field({ label, hint, error, required = false, id, labelAction, c
           className="grid grid-cols-1 items-center gap-x-4 gap-y-2 py-3 sm:grid-cols-setting-row"
         >
           <div data-setting-label="" className="flex min-w-0 flex-col">
-            <label htmlFor={controlId} className="font-medium text-text">
-              {label}
-            </label>
+            <div className="flex min-w-0 items-center gap-1">
+              <label htmlFor={controlId} className="font-medium text-text">
+                {label}
+              </label>
+              {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+            </div>
             {hint && (
               <p id={hintId} data-setting-hint="" className="text-sm text-text-muted">
                 {hint}
@@ -115,9 +120,12 @@ export function Field({ label, hint, error, required = false, id, labelAction, c
     <FieldContext.Provider value={{ id: controlId, describedBy, invalid: Boolean(error), required }}>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor={controlId} className="font-medium text-text">
-            {label}
-          </label>
+          <div className="flex min-w-0 items-center gap-1">
+            <label htmlFor={controlId} className="font-medium text-text">
+              {label}
+            </label>
+            {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+          </div>
           {labelAction}
         </div>
         {children}

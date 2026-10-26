@@ -556,6 +556,7 @@ function useImmediate(
 function NumberSetting({
   label,
   hint,
+  help,
   value,
   min,
   max,
@@ -564,6 +565,7 @@ function NumberSetting({
 }: {
   label: string;
   hint: string;
+  help?: string;
   value: number;
   min: number;
   max: number;
@@ -592,7 +594,7 @@ function NumberSetting({
   };
   const shown = error ?? (tracker.state === "error" ? tracker.error : null);
   return (
-    <Field label={label} hint={hint} {...(shown ? { error: shown } : {})}>
+    <Field label={label} hint={hint} {...(help ? { help } : {})} {...(shown ? { error: shown } : {})}>
       <div className="flex items-center gap-2">
         <Input
           className="w-24"
@@ -645,6 +647,7 @@ function ScheduleSection({ data, canManage }: { data: BackupOverview; canManage:
       <SettingRow
         label={t("backups.schedule.enabled")}
         description={t("backups.schedule.enabledHint")}
+        help={t("backups.schedule.enabledHelp")}
         status={<SaveIndicator tracker={enabledTracker} />}
         control={
           <Switch
@@ -685,7 +688,11 @@ function ScheduleSection({ data, canManage }: { data: BackupOverview; canManage:
             {timeTracker.state === "error" ? null : <SaveIndicator tracker={timeTracker} />}
           </div>
         </Field>
-        <Field label={t("backups.schedule.weekly")} hint={t("backups.schedule.weeklyHint")}>
+        <Field
+          label={t("backups.schedule.weekly")}
+          hint={t("backups.schedule.weeklyHint")}
+          help={t("backups.schedule.weeklyHelp")}
+        >
           <div className="flex items-center gap-2">
             <Select
               value={settings.weeklyDay === null ? "none" : String(settings.weeklyDay)}
@@ -701,7 +708,11 @@ function ScheduleSection({ data, canManage }: { data: BackupOverview; canManage:
             <SaveIndicator tracker={weeklyTracker} />
           </div>
         </Field>
-        <Field label={t("backups.schedule.monthly")} hint={t("backups.schedule.monthlyHint")}>
+        <Field
+          label={t("backups.schedule.monthly")}
+          hint={t("backups.schedule.monthlyHint")}
+          help={t("backups.schedule.monthlyHelp")}
+        >
           <div className="flex items-center gap-2">
             <Select
               value={settings.monthlyDay === null ? "none" : String(settings.monthlyDay)}
@@ -823,6 +834,7 @@ function AdvancedSection({ data, canManage }: { data: BackupOverview; canManage:
       <NumberSetting
         label={t("backups.advanced.missingDays")}
         hint={t("backups.advanced.missingDaysHint")}
+        help={t("backups.advanced.missingDaysHelp")}
         value={data.settings.missingDays}
         min={1}
         max={365}
@@ -832,6 +844,7 @@ function AdvancedSection({ data, canManage }: { data: BackupOverview; canManage:
       <SettingRow
         label={t("backups.advanced.autoTestRestore")}
         description={t("backups.advanced.autoTestRestoreHint")}
+        help={t("backups.advanced.autoTestRestoreHelp")}
         status={<SaveIndicator tracker={testTracker} />}
         control={
           <Switch

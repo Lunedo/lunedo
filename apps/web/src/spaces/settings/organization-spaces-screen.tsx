@@ -781,6 +781,7 @@ function AppointDialog({
         <Field
           label={t("spaces.organization.person")}
           hint={t("spaces.organization.personHint")}
+          help={t("spaces.organization.personHelp")}
           {...(error ? { error } : {})}
         >
           <Combobox

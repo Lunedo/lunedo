@@ -98,7 +98,11 @@ export function IntroductionEditor({
   };
   return (
     <div className="flex flex-col gap-2">
-      <Field label={t("knowledgeBase.categories.intro")} hint={t("knowledgeBase.folders.introHint")}>
+      <Field
+        label={t("knowledgeBase.categories.intro")}
+        hint={t("knowledgeBase.folders.introHint")}
+        help={t("knowledgeBase.folders.introHelp")}
+      >
         <div className="flex flex-col gap-1">
           {disabled ? null : (
             <div

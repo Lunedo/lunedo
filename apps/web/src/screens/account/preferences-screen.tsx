@@ -178,6 +178,7 @@ export function PreferencesScreen() {
         <SettingRow
           label={t("preferences.readableFont")}
           description={t("preferences.readableFontHint")}
+          help={t("preferences.readableFontHelp")}
           status={<SaveIndicator tracker={saveState(preferenceKeys.font)} />}
           control={
             <Switch

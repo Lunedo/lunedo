@@ -1,13 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Slot } from "radix-ui";
-import { type ComponentProps, isValidElement, type ReactNode, useId, useRef, useState } from "react";
+import { type ComponentProps, isValidElement, type ReactNode, useId, useState } from "react";
 import { classNames } from "./class-names.js";
 import { FieldLayoutProvider } from "./field.js";
+import { SettingHelp } from "./help-popover.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
-import { Tooltip } from "./tooltip.js";
-import { useTruncated } from "./truncated-text.js";
 
 export interface Breadcrumb {
   label: ReactNode;
@@ -207,6 +206,7 @@ export function DangerAction({
 export interface SettingRowProps {
   label: ReactNode;
   description?: ReactNode;
+  help?: ReactNode;
   more?: ReactNode;
   meta?: ReactNode;
   control: ReactNode;
@@ -218,19 +218,9 @@ export interface SettingRowProps {
 }
 
 function SettingHint({ children, more }: { children: ReactNode; more?: ReactNode }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const text = typeof children === "string" ? children : "";
-  const truncated = useTruncated(ref, text);
-  const hint = (
-    <span ref={ref} className="min-w-0 sm:truncate">
-      {children}
-    </span>
-  );
   return (
     <div data-setting-hint="" className="flex min-w-0 items-baseline gap-1 text-sm text-text-muted">
-      <Tooltip content={children} disabled={!truncated}>
-        {hint}
-      </Tooltip>
+      <span className="min-w-0">{children}</span>
       {more && <span className="shrink-0">{more}</span>}
     </div>
   );
@@ -239,6 +229,7 @@ function SettingHint({ children, more }: { children: ReactNode; more?: ReactNode
 export function SettingRow({
   label,
   description,
+  help,
   more,
   meta,
   control,
@@ -257,7 +248,10 @@ export function SettingRow({
       )}
     >
       <div data-setting-label="" className="flex min-w-0 flex-col">
-        <div className="font-medium text-text">{label}</div>
+        <div className="flex min-w-0 items-center gap-1">
+          <div className="font-medium text-text">{label}</div>
+          {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+        </div>
         {(description || more) && <SettingHint more={more}>{description}</SettingHint>}
       </div>
       <div className="flex min-w-0 flex-col gap-1">

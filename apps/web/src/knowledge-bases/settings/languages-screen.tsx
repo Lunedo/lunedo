@@ -140,6 +140,7 @@ export function LanguagesScreen() {
                 <SettingRow
                   label={t("knowledgeBase.languages.default")}
                   description={t("knowledgeBase.languages.defaultDescription")}
+                  help={t("knowledgeBase.languages.defaultHelp")}
                   control={
                     <Select
                       aria-label={t("knowledgeBase.languages.default")}
@@ -158,6 +159,9 @@ export function LanguagesScreen() {
                 <SettingRow
                   label={t("knowledgeBase.languages.enabled")}
                   description={t("knowledgeBase.languages.enabledDescription", {
+                    language: label(value.defaultLanguage),
+                  })}
+                  help={t("knowledgeBase.languages.enabledHelp", {
                     language: label(value.defaultLanguage),
                   })}
                   control={

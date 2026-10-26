@@ -282,6 +282,7 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
         <Field
           label={t("organization.general.slug")}
           hint={t("instance.organizations.slugHint")}
+          help={t("instance.organizations.slugHelp")}
           error={form.formState.errors.slug?.message}
         >
           <Input className="font-mono" {...form.register("slug")} />

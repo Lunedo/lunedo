@@ -359,7 +359,6 @@ details.ld-expand > summary {
 
 .ld-content table {
   @apply w-full border-collapse;
-  table-layout: fixed;
 }
 
 .ld-content .ld-table,
@@ -371,6 +370,7 @@ details.ld-expand > summary {
 .ld-content td {
   @apply relative border border-border px-2 py-1 align-top;
   min-width: var(--ld-control-lg);
+  overflow-wrap: normal;
 }
 
 .ld-content th {

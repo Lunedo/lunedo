@@ -91,6 +91,7 @@ function PdfSection({
           <SettingRow
             label={t("rendering.pdf.concurrency")}
             description={t("rendering.pdf.concurrencyHint")}
+            help={t("rendering.pdf.concurrencyHelp")}
             control={<span>{pdf.concurrency}</span>}
           />
           <SettingRow
@@ -170,11 +171,13 @@ export function InstanceRenderingScreen() {
             <SettingRow
               label={t("rendering.other.diagrams")}
               description={t("rendering.other.diagramsDescription")}
+              help={t("rendering.other.diagramsHelp")}
               control={<Badge variant="success">{t("rendering.other.available")}</Badge>}
             />
             <SettingRow
               label={t("rendering.other.drawio")}
               description={t("rendering.other.drawioDescription", { version: DRAWIO_VERSION })}
+              help={t("rendering.other.drawioHelp", { version: DRAWIO_VERSION })}
               control={<Badge variant="success">{t("rendering.other.servedLocally")}</Badge>}
             />
           </Section>

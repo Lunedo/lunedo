@@ -114,6 +114,7 @@ export function SignInSection({ withEmail = false }: { withEmail?: boolean }) {
       <SettingRow
         label={t("auth.password")}
         description={t("security.passwordDescription")}
+        help={t("security.passwordHelp")}
         control={
           <Button variant="outline" onClick={() => setOpen(true)}>
             {t("security.changePassword")}
@@ -176,6 +177,7 @@ function ChangePasswordDialog({
         <Field
           label={t("auth.newPassword")}
           hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
+          help={t("auth.passwordHelp", { minimum: info.data?.passwordMinLength ?? 12 })}
           error={form.formState.errors.password?.message}
         >
           <PasswordInput autoComplete="new-password" autoFocus {...form.register("password")} />
@@ -419,6 +421,7 @@ function AddPasskeyDialog({
         <Field
           label={t("security.passkeyName")}
           hint={t("security.passkeyNameHint")}
+          help={t("security.passkeyNameHelp")}
           error={form.formState.errors.name?.message}
         >
           <Input autoComplete="off" autoFocus {...form.register("name")} />

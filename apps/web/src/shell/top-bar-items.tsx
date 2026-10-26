@@ -15,6 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useBackupAttention } from "../components/backup-banner.js";
 import { PersonAvatar } from "../components/person-avatar.js";
 import { docsUrl } from "../docs/docs-url.js";
 import { useHelpUrl } from "../knowledge-bases/help-target.js";
@@ -98,11 +99,23 @@ export function useAdminAreas() {
   });
 }
 
+function AttentionDot() {
+  return (
+    <span
+      aria-hidden="true"
+      data-attention-dot=""
+      className="pointer-events-none absolute top-1 right-1 size-2 rounded-full bg-badge ring-2 ring-bg"
+    />
+  );
+}
+
 export function SettingsGear() {
   const { t } = useTranslation();
   const shell = useShell();
   const location = useShownLocation();
   const areas = useAdminAreas();
+  const backupAttention = useBackupAttention();
+  const attention = backupAttention && areas.some((area) => area.section === "instance");
   const open = (to: string) =>
     shell.navigate(to, shell.organizationId ? { organizationId: shell.organizationId } : {});
   const current =
@@ -112,31 +125,38 @@ export function SettingsGear() {
   if (!only) return null;
   if (areas.length === 1) {
     return (
-      <IconButton
-        label={t("rail.settings")}
-        icon={Settings}
-        size="field"
-        aria-current={current ? "page" : undefined}
-        onClick={() => open(only.to)}
-      />
-    );
-  }
-  return (
-    <Menu
-      trigger={
+      <span className="relative inline-flex">
         <IconButton
-          label={t("rail.settings")}
+          label={attention ? t("rail.settingsAttention") : t("rail.settings")}
           icon={Settings}
           size="field"
           aria-current={current ? "page" : undefined}
+          onClick={() => open(only.to)}
         />
-      }
-      items={areas.map((area) => ({
-        label: t(area.labelKey),
-        icon: area.icon,
-        onSelect: () => open(area.to),
-      }))}
-    />
+        {attention ? <AttentionDot /> : null}
+      </span>
+    );
+  }
+  return (
+    <span className="relative inline-flex">
+      <Menu
+        trigger={
+          <IconButton
+            label={attention ? t("rail.settingsAttention") : t("rail.settings")}
+            icon={Settings}
+            size="field"
+            aria-current={current ? "page" : undefined}
+          />
+        }
+        items={areas.map((area) => ({
+          label: t(area.labelKey),
+          icon: area.icon,
+          onSelect: () => open(area.to),
+          ...(attention && area.section === "instance" ? { attention: t("rail.backupAttention") } : {}),
+        }))}
+      />
+      {attention ? <AttentionDot /> : null}
+    </span>
   );
 }
 

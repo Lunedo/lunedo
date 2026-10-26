@@ -13,6 +13,7 @@ import { signalSpaceChange } from "../spaces/signals.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
 import { addDecision, addTopicUpdates } from "./meeting-document.js";
 import type { MeetingService } from "./meetings.js";
+import { seriesParticipant } from "./participants.js";
 import type { TopicOutcome, TopicStatus } from "./schema.js";
 
 export const TOPIC_TITLE_MAX_LENGTH = 255;
@@ -303,10 +304,13 @@ export class TopicService {
       const row = series.rows[0];
       if (!row) throw new SpaceError("seriesNotFound", "The meeting series does not exist");
       if (row.archived) throw new SpaceError("seriesEnded", "The series has ended");
-      const ownerId = input.ownerId === undefined ? actorId : input.ownerId;
-      if (ownerId && !(await this.#people.canSee(actor, ownerId, tx))) {
-        throw new SpaceError("invalidMember", "Choose an owner among the people you can see");
-      }
+      const ownerId =
+        input.ownerId !== undefined
+          ? input.ownerId
+          : actorId && (await this.#participates(tx, seriesId, actorId))
+            ? actorId
+            : null;
+      if (input.ownerId) await this.#checkOwner(tx, actor, seriesId, input.ownerId);
       const raisedIn = input.meetingId ?? (await this.#meetings.currentMeeting(tx, seriesId));
       if (input.meetingId && (await this.#meetings.seriesOfMeeting(input.meetingId, tx)) !== seriesId) {
         throw new SpaceError("meetingNotFound", "The meeting does not belong to this series");
@@ -355,6 +359,22 @@ export class TopicService {
       order by d.item_id for update`);
   }
 
+  async #checkOwner(tx: Transaction, actor: Principal, seriesId: string, ownerId: string): Promise<void> {
+    if (
+      !(await this.#people.canSee(actor, ownerId, tx)) ||
+      !(await this.#participates(tx, seriesId, ownerId))
+    ) {
+      throw new SpaceError("invalidMember", "Choose an owner among the participants of the meetings");
+    }
+  }
+
+  async #participates(tx: Transaction, seriesId: string, accountId: string): Promise<boolean> {
+    const result = await tx.execute<{ participant: boolean }>(
+      sql`select ${seriesParticipant(sql`${seriesId}::uuid`, sql`${accountId}::uuid`)} as participant`,
+    );
+    return result.rows[0]?.participant === true;
+  }
+
   async #lock(tx: Transaction, topicId: string) {
     const result = await tx.execute<{
       series_id: string;
@@ -387,8 +407,8 @@ export class TopicService {
           where id = ${topicId}`);
       }
       if (changes.ownerId !== undefined) {
-        if (changes.ownerId && !(await this.#people.canSee(actor, changes.ownerId, tx))) {
-          throw new SpaceError("invalidMember", "Choose an owner among the people you can see");
+        if (changes.ownerId) {
+          await this.#checkOwner(tx, actor, topic.series_id, changes.ownerId);
         }
         await tx.execute(
           sql`update tree_items set owner_id = ${changes.ownerId}, updated_at = now() where id = ${topicId}`,

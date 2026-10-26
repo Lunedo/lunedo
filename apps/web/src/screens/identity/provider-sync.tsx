@@ -392,6 +392,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
         <SettingRow
           label={t("identityProviders.sync.interval")}
           description={t("identityProviders.sync.intervalHint")}
+          help={t("identityProviders.sync.intervalHelp")}
           control={
             <DurationSelect
               aria-label={t("identityProviders.sync.interval")}
@@ -420,6 +421,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
         <SettingRow
           label={t("identityProviders.sync.deactivationLimit")}
           description={t("identityProviders.sync.deactivationLimitHint")}
+          help={t("identityProviders.sync.deactivationLimitHelp")}
           control={
             <LimitField
               label={t("identityProviders.sync.deactivationLimit")}
@@ -444,6 +446,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
         <SettingRow
           label={t("identityProviders.sync.deactivationMinimum")}
           description={t("identityProviders.sync.deactivationMinimumHint")}
+          help={t("identityProviders.sync.deactivationMinimumHelp")}
           control={
             <LimitField
               label={t("identityProviders.sync.deactivationMinimum")}
@@ -468,6 +471,7 @@ export function SyncSettings({ provider, canManage }: { provider: IdentityProvid
         <SettingRow
           label={t("identityProviders.sync.whenDisabled")}
           description={t("identityProviders.sync.whenDisabledHint", { provider: provider.name })}
+          help={t("identityProviders.sync.whenDisabledHelp", { provider: provider.name })}
           control={<span className="text-text-muted">{t("identityProviders.sync.deactivate")}</span>}
         />
       ) : null}
@@ -625,6 +629,7 @@ function GoogleDirectory({ provider, canManage }: { provider: IdentityProvider; 
             <AutoSaveTextField
               label={t("identityProviders.sync.adminEmail")}
               hint={t("identityProviders.sync.adminEmailHint")}
+              help={t("identityProviders.sync.adminEmailHelp")}
               value={directory.adminEmail ?? ""}
               schema={z.email()}
               disabled={!canManage}

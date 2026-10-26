@@ -129,6 +129,7 @@ function AppearanceForm({ portal }: { portal: PortalSettings }) {
           <AutoSaveTextField
             label={t("knowledgeBase.appearance.heading")}
             hint={t("knowledgeBase.appearance.headingHint")}
+            help={t("knowledgeBase.appearance.headingHelp")}
             value={portal.welcomeHeading}
             schema={z.string().max(120)}
             disabled={!editable}
@@ -137,6 +138,7 @@ function AppearanceForm({ portal }: { portal: PortalSettings }) {
           <AutoSaveTextField
             label={t("knowledgeBase.appearance.text")}
             hint={t("knowledgeBase.appearance.textHint")}
+            help={t("knowledgeBase.appearance.textHelp")}
             value={portal.welcomeText}
             schema={z.string().max(400)}
             multiline
@@ -196,6 +198,7 @@ function useStatus() {
 function NumberSetting({
   label,
   hint,
+  help,
   value,
   min,
   max,
@@ -205,6 +208,7 @@ function NumberSetting({
 }: {
   label: string;
   hint: string;
+  help: string;
   value: number;
   min: number;
   max: number;
@@ -230,7 +234,7 @@ function NumberSetting({
   };
   return (
     <div className="flex flex-col gap-1">
-      <Field label={label} hint={hint} {...(invalid ? { error: invalid } : {})}>
+      <Field label={label} hint={hint} help={help} {...(invalid ? { error: invalid } : {})}>
         <Input
           type="number"
           inputMode="numeric"
@@ -263,6 +267,7 @@ function RetentionRow({ portal, editable }: { portal: PortalSettings; editable: 
       <NumberSetting
         label={t("knowledgeBase.appearance.retention")}
         hint={t("knowledgeBase.appearance.retentionHint")}
+        help={t("knowledgeBase.appearance.retentionHelp")}
         value={portal.feedbackRetentionMonths}
         min={1}
         max={60}
@@ -298,6 +303,7 @@ function PoweredByRow({ portal, editable }: { portal: PortalSettings; editable: 
     <SettingRow
       label={t("knowledgeBase.appearance.poweredBy")}
       description={t("knowledgeBase.appearance.poweredByHint")}
+      help={t("knowledgeBase.appearance.poweredByHelp")}
       control={
         <Switch
           checked={portal.poweredBy}
@@ -364,7 +370,11 @@ export function BrandRow({ portal, editable }: { portal: PortalSettings; editabl
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <Field label={t("knowledgeBase.appearance.color")} hint={t("knowledgeBase.appearance.colorHint")}>
+      <Field
+        label={t("knowledgeBase.appearance.color")}
+        hint={t("knowledgeBase.appearance.colorHint")}
+        help={t("knowledgeBase.appearance.colorHelp")}
+      >
         <Select
           value={choice}
           onValueChange={choose}
@@ -513,6 +523,7 @@ function LogoRow({ portal, editable }: { portal: PortalSettings; editable: boole
     <SettingRow
       label={t("knowledgeBase.appearance.logo")}
       description={t("knowledgeBase.appearance.logoHint")}
+      help={t("knowledgeBase.appearance.logoHelp")}
       control={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {portal.logoRef ? (

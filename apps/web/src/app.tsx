@@ -64,6 +64,7 @@ function TranslatedUi({ children }: { children: ReactNode }) {
       next: t("ui.next"),
       selectAll: t("ui.selectAll"),
       selection: t("ui.selection"),
+      moreAbout: t("ui.moreAbout"),
     }),
     [t],
   );

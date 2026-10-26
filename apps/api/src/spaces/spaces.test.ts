@@ -780,6 +780,50 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     });
   });
 
+  it("gives several people one role together, or none of them", async () => {
+    const lead = await person();
+    const first = await person();
+    const second = await person();
+    const outsider = await person();
+    const created = await createSpace(lead.client, [
+      { principalKind: "account", principalId: second.id, role: "reader" },
+    ]);
+    const base = `/api/v1/spaces/${created.id}/permissions/grants`;
+    const both = { principalKind: "account", principalId: first.id };
+    const already = { principalKind: "account", principalId: second.id };
+    const refused = await lead.client.post(base, { holders: [both, already], role: "editor" });
+    expect(refused.json()).toMatchObject({ code: "alreadyGranted" });
+    const unchanged = await lead.client.get(`/api/v1/spaces/${created.id}/permissions`);
+    expect(unchanged.json().map((entry: { principalId: string }) => entry.principalId)).not.toContain(
+      first.id,
+    );
+    expect((await lead.client.post(base, { holders: [both, both], role: "editor" })).statusCode).toBe(400);
+    const third = { principalKind: "account", principalId: outsider.id };
+    const preview = await lead.client.post(`${base}/preview`, { holders: [both, third], role: "editor" });
+    expect(preview.statusCode, preview.body).toBe(200);
+    const granted = await lead.client.post(base, { holders: [both, third], role: "editor" });
+    expect(granted.statusCode, granted.body).toBe(200);
+    const roles = Object.fromEntries(
+      granted.json().map((entry: { principalId: string; role: string }) => [entry.principalId, entry.role]),
+    );
+    expect(roles).toMatchObject({ [first.id]: "editor", [outsider.id]: "editor", [second.id]: "reader" });
+    expect((await first.client.post(base, { holders: [third], role: "admin" })).statusCode).toBe(403);
+  });
+
+  it("limits the people search to members of a space the caller can open", async () => {
+    const lead = await person();
+    const colleague = await person();
+    const bystander = await person();
+    const created = await createSpace(lead.client, [
+      { principalKind: "account", principalId: colleague.id, role: "reader" },
+    ]);
+    const found = await lead.client.get(`/api/v1/people?spaceId=${created.id}`);
+    const ids = found.json().items.map((item: { id: string }) => item.id);
+    expect(ids).toEqual(expect.arrayContaining([lead.id, colleague.id]));
+    expect(ids).not.toContain(bystander.id);
+    expect((await bystander.client.get(`/api/v1/people?spaceId=${created.id}`)).statusCode).toBe(404);
+  });
+
   it("finds people the caller may see", async () => {
     const searcher = await person();
     const colleague = await person();

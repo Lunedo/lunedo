@@ -166,6 +166,76 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     });
   });
 
+  describe("who can take part", () => {
+    it("accepts only members of the space as members of a series, also when the members change", async () => {
+      const context = await setup();
+      const input = {
+        name: "Jour fixe IT",
+        parentId: null,
+        templateId: "builtin:team-meeting",
+        rhythm: WEEKLY,
+        startsOn: "2030-03-18",
+        startTime: "09:30",
+        timeZone: "Europe/Vienna",
+        durationMinutes: 45,
+      };
+      await expect(
+        test.services.meetings.createSeries(context.lead, context.space.id, {
+          ...input,
+          members: [context.leadId, context.outsiderId],
+        }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      const created = await series(context);
+      await expect(
+        test.services.meetings.updateSeries(context.lead, created.id, {
+          members: [context.leadId, context.outsiderId],
+        }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      await test.services.meetings.updateSeries(context.lead, created.id, {
+        members: [context.leadId, context.readerId],
+      });
+      const details = await test.services.meetings.details(context.lead, created.id);
+      expect(details.members.map((entry) => entry.id)).toEqual([context.leadId, context.readerId]);
+    });
+
+    it("accepts only participants who can open the space as owners of a topic", async () => {
+      const context = await setup();
+      const created = await series(context);
+      await test.services.meetings.addAttendee(context.lead, created.firstMeetingId, context.outsiderId);
+      const topics = test.services.topics;
+      await expect(
+        topics.create(context.lead, created.id, { title: "Budget", ownerId: context.outsiderId }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      await expect(
+        topics.create(context.lead, created.id, { title: "Budget", ownerId: context.readerId }),
+      ).rejects.toMatchObject({ code: "invalidMember" });
+      const topic = await topics.create(context.lead, created.id, {
+        title: "Budget",
+        ownerId: context.editorId,
+      });
+      await expect(topics.update(context.lead, topic, { ownerId: context.outsiderId })).rejects.toMatchObject(
+        {
+          code: "invalidMember",
+        },
+      );
+      await test.services.meetings.addAttendee(context.lead, created.firstMeetingId, context.readerId);
+      await topics.update(context.lead, topic, { ownerId: context.readerId });
+      const owner = await test.database.execute<{ owner_id: string }>(
+        sql`select owner_id from tree_items where id = ${topic}`,
+      );
+      expect(owner.rows[0]?.owner_id).toBe(context.readerId);
+      const choices = await test.services.people.search(context.lead, undefined, { seriesId: created.id });
+      expect(choices.items.map((person) => person.id).sort()).toEqual(
+        [context.leadId, context.editorId, context.readerId].sort(),
+      );
+      const own = await topics.create(context.editor, created.id, { title: "Network" });
+      const owned = await test.database.execute<{ owner_id: string | null }>(
+        sql`select owner_id from tree_items where id = ${own}`,
+      );
+      expect(owned.rows[0]?.owner_id).toBe(context.editorId);
+    });
+  });
+
   describe("schedules", () => {
     it("create the first meeting from the built-in template with notes only and the members", async () => {
       const context = await setup();

@@ -73,6 +73,7 @@ export function EmergencyRecipients() {
       <SettingRow
         label={t("emergencyRecipients.administrators")}
         description={t("emergencyRecipients.administratorsHint")}
+        help={t("emergencyRecipients.administratorsHelp")}
         control={
           <Switch
             label={t("emergencyRecipients.administrators")}
@@ -88,7 +89,11 @@ export function EmergencyRecipients() {
         status={<SaveIndicator tracker={tracker("administrators")} />}
       />
       <div className="flex flex-col gap-1 py-3">
-        <Field label={t("emergencyRecipients.accounts")} hint={t("emergencyRecipients.accountsHint")}>
+        <Field
+          label={t("emergencyRecipients.accounts")}
+          hint={t("emergencyRecipients.accountsHint")}
+          help={t("emergencyRecipients.accountsHelp")}
+        >
           <Combobox
             multiple
             aria-label={t("emergencyRecipients.accounts")}
@@ -106,6 +111,7 @@ export function EmergencyRecipients() {
         <AutoSaveTextField
           label={t("emergencyRecipients.addresses")}
           hint={t("emergencyRecipients.addressesHint")}
+          help={t("emergencyRecipients.addressesHelp")}
           value={current.addresses.join(", ")}
           schema={addressList}
           invalidMessage={t("emergencyRecipients.addressesInvalid")}

@@ -92,6 +92,7 @@ export type MenuItem =
       disabled?: boolean;
       shortcut?: string;
       checked?: boolean;
+      attention?: string;
     }
   | { type: "separator" }
   | { type: "label"; label: string }
@@ -192,6 +193,11 @@ export function Menu({ trigger, items, align = "end", side = "bottom", runAfterC
               >
                 <Icon icon={item.icon} className={item.danger ? "" : "text-text-muted"} />
                 <span className="flex-1">{item.label}</span>
+                {item.attention && (
+                  <span data-attention="" className="size-2 shrink-0 rounded-full bg-badge">
+                    <span className="sr-only">{item.attention}</span>
+                  </span>
+                )}
                 {item.shortcut && <span className="text-xs text-text-muted">{item.shortcut}</span>}
               </DropdownMenu.Item>
             );

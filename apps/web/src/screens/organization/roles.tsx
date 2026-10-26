@@ -170,6 +170,7 @@ export function AssignRoleDialog({
           <Field
             label={t("roles.principalsLabel")}
             hint={t("roles.principalsHint")}
+            help={t("roles.principalsHelp")}
             {...(missing.principals && principals.length === 0 ? { error: t("roles.choosePrincipal") } : {})}
           >
             <Combobox

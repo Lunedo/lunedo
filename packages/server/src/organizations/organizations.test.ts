@@ -188,6 +188,18 @@ describe.skipIf(!baseUrl)("organizations", () => {
         [accepted.accountId],
       );
       expect(account.rows).toEqual([{ type: "standard", home_organization_id: org.id, verified: true }]);
+      const actors = await test.pool.query<{ name: string; actor_type: string; actor_id: string | null }>(
+        `select name, actor_type, actor_id from audit_events
+         where name in ('invitation.accepted', 'account.created', 'membership.added')
+           and (target_id = $1 or target_id = $2) order by sequence`,
+        [accepted.accountId, invitation.id],
+      );
+      expect(actors.rows.map((row) => row.name).sort()).toEqual(
+        ["account.created", "invitation.accepted", "membership.added"].sort(),
+      );
+      expect(
+        actors.rows.every((row) => row.actor_type === "account" && row.actor_id === accepted.accountId),
+      ).toBe(true);
       expect(
         await test.services.authorization.authorize(
           accountPrincipal(accepted.accountId),

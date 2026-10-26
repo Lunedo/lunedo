@@ -1,8 +1,10 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import { spaceRoleConditionFor } from "../authorization/space-access.js";
 import type { Database, Executor } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import { seriesParticipant } from "../meetings/participants.js";
 
 export interface Person {
   id: string;
@@ -59,7 +61,11 @@ export class PeopleService {
     return result.rows[0]?.visible === true;
   }
 
-  async search(viewer: Principal, page: PageRequest = FIRST_PAGE): Promise<Page<Person>> {
+  async search(
+    viewer: Principal,
+    page: PageRequest = FIRST_PAGE,
+    options: { spaceId?: string | undefined; seriesId?: string | undefined } = {},
+  ): Promise<Page<Person>> {
     const term = page.search?.trim() ?? "";
     const pattern = `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
     const sortName = sql`lower(a.name)`;
@@ -75,6 +81,8 @@ export class PeopleService {
       from accounts a
       where a.state = 'active' and ${this.visibleCondition(viewer, sql`a.id`)}
         ${term ? sql`and (a.name ilike ${pattern} or (a.email ilike ${pattern} and ${this.colleagueCondition(viewer, sql`a.id`)}))` : sql``}
+        ${options.spaceId ? sql`and exists (select 1 from spaces ps where ps.id = ${options.spaceId} and ${spaceRoleConditionFor(sql`a.id`, sql`ps`, "reader")})` : sql``}
+        ${options.seriesId ? sql`and ${seriesParticipant(sql`${options.seriesId}::uuid`, sql`a.id`)}` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`a.id`], page.after)}` : sql``}
       order by ${sortName}, a.id
       limit ${pageLimit(page)}`);

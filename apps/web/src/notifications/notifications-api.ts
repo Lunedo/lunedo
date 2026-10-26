@@ -1,3 +1,4 @@
+import { UNREAD_COUNT_CAP } from "@lunedo/shared";
 import {
   infiniteQueryOptions,
   type QueryClient,
@@ -6,7 +7,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { UNREAD_COUNT_CAP } from "@lunedo/shared";
 import { useEffect } from "react";
 import { api } from "../api/client.js";
 import { identityKeys } from "../api/identity-queries.js";

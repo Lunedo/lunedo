@@ -196,7 +196,7 @@ export function Table<T>({
       column.align === "end" ? "text-right" : "text-left",
       column.hideBelow && HIDDEN[column.hideBelow],
       column.sticky && "sticky right-0",
-      column.grow && "w-full max-w-0",
+      column.grow && "@card:w-full @card:max-w-0",
     );
   const toggle = (key: Key, on: boolean) => {
     if (!selection) return;
@@ -227,7 +227,7 @@ export function Table<T>({
       data-table-frame=""
       className={classNames(
         "@container flex flex-col",
-        framed && "rounded-lg border border-border max-sm:overflow-x-auto sm:overflow-x-clip",
+        framed ? "rounded-lg border border-border max-sm:overflow-x-auto sm:overflow-x-clip" : "overflow-x-auto",
       )}
     >
       {bulk ? (

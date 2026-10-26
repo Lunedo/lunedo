@@ -197,6 +197,7 @@ function ShortcutDialog({
           <Field
             label={t("spaceShortcuts.url")}
             hint={t("spaceShortcuts.urlHint")}
+            help={t("spaceShortcuts.urlHelp")}
             {...(errors.target ? { error: errors.target } : {})}
           >
             <Input

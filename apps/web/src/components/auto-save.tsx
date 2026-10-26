@@ -76,9 +76,9 @@ const IDLE: SaveSnapshot = { state: "idle", error: null, retryable: false };
 export function useSaveStates(): (key: string) => SaveTracker {
   const { t } = useTranslation();
   const [states, setStates] = useState<Record<string, SaveSnapshot>>({});
-  const actions = useRef<Record<string, { action: () => Promise<unknown>; onSaved: (() => void) | undefined }>>(
-    {},
-  );
+  const actions = useRef<
+    Record<string, { action: () => Promise<unknown>; onSaved: (() => void) | undefined }>
+  >({});
   const set = (key: string, snapshot: SaveSnapshot) =>
     setStates((current) => ({ ...current, [key]: snapshot }));
   const run = async (key: string, action: () => Promise<unknown>, onSaved?: () => void) => {
@@ -203,6 +203,7 @@ function useAutoSaveText({
 export function AutoSaveTextField({
   label,
   hint,
+  help,
   value,
   schema,
   onSave,
@@ -214,6 +215,7 @@ export function AutoSaveTextField({
   invalidMessage?: string;
   label: string;
   hint?: string;
+  help?: string;
   value: string;
   schema?: z.ZodType<string>;
   onSave: (value: string) => Promise<unknown>;
@@ -257,6 +259,7 @@ export function AutoSaveTextField({
     <Field
       label={label}
       {...(hint ? { hint } : {})}
+      {...(help ? { help } : {})}
       {...(fieldError ? { error: fieldError } : {})}
       {...(tracker.state === "error" && !tracker.retryable
         ? {}
@@ -270,6 +273,7 @@ export function AutoSaveTextField({
 export function AutoSaveTextRow({
   label,
   hint,
+  help,
   value,
   schema,
   onSave,
@@ -279,6 +283,7 @@ export function AutoSaveTextRow({
 }: {
   label: string;
   hint?: string;
+  help?: string;
   value: string;
   schema?: z.ZodType<string>;
   onSave: (value: string) => Promise<unknown>;
@@ -320,6 +325,7 @@ export function AutoSaveTextRow({
         />
       }
       {...(hint ? { description: <span id={hintId}>{hint}</span> } : {})}
+      {...(help ? { help } : {})}
       {...(fieldError ? { error: <FieldError id={errorId}>{fieldError}</FieldError> } : {})}
       status={
         tracker.state === "error" && !tracker.retryable ? undefined : <SaveIndicator tracker={tracker} />
@@ -331,6 +337,7 @@ export function AutoSaveTextRow({
 export function ExplicitSaveTextField({
   label,
   hint,
+  help,
   value,
   schema,
   invalidMessage,
@@ -341,6 +348,7 @@ export function ExplicitSaveTextField({
 }: {
   label: string;
   hint?: string;
+  help?: string;
   value: string;
   schema?: z.ZodType<string>;
   invalidMessage?: string;
@@ -398,7 +406,12 @@ export function ExplicitSaveTextField({
   const fieldError = invalid ?? (tracker.state === "error" && tracker.error ? tracker.error : undefined);
   return (
     <div className="flex flex-col gap-2">
-      <Field label={label} {...(hint ? { hint } : {})} {...(fieldError ? { error: fieldError } : {})}>
+      <Field
+        label={label}
+        {...(hint ? { hint } : {})}
+        {...(help ? { help } : {})}
+        {...(fieldError ? { error: fieldError } : {})}
+      >
         <Input
           value={draft}
           disabled={disabled}

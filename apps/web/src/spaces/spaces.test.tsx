@@ -1097,7 +1097,7 @@ describe("space permissions", () => {
       [`GET /api/v1/organizations/${ORGANIZATION.id}/groups`]: () => ({
         body: { items: [], nextCursor: null },
       }),
-      [`POST /api/v1/spaces/${SPACE_ID}/permissions/preview`]: () => ({
+      [`POST /api/v1/spaces/${SPACE_ID}/permissions/grants/preview`]: () => ({
         body: {
           gaining: 1,
           losing: 0,
@@ -1108,28 +1108,34 @@ describe("space permissions", () => {
           changes: [{ accountId: ANNA, name: "Anna Berger", before: null, after: "reader" }],
         },
       }),
-      [`POST /api/v1/spaces/${SPACE_ID}/permissions`]: () => ({ body: [] }),
+      [`POST /api/v1/spaces/${SPACE_ID}/permissions/grants`]: () => ({ body: [] }),
     });
     await renderAt("/spaces/ITOPS/settings/permissions");
-    const picker = await screen.findByRole("combobox", { name: "Add people or groups" });
-    await userEvent.click(picker);
+    await userEvent.click(await screen.findByRole("button", { name: "Add people" }));
+    const adding = await screen.findByRole("dialog", { name: "Add people and groups" });
+    await userEvent.click(within(adding).getByRole("button", { name: "Continue" }));
+    expect(await within(adding).findByText("Choose a person or group first.")).toBeTruthy();
+    await userEvent.click(within(adding).getByRole("combobox", { name: "Add people or groups" }));
     await userEvent.click(await screen.findByRole("option", { name: /Anna Berger/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Give role" }));
+    expect(within(adding).getByRole("list", { name: "Chosen" }).textContent).toContain("Anna Berger");
+    await userEvent.click(within(adding).getByRole("button", { name: "Continue" }));
     const dialog = await screen.findByRole("dialog", { name: "Give Anna Berger the role Reader?" });
     expect(await within(dialog).findByText("1 person gets access")).toBeTruthy();
     expect(within(dialog).getByText("Anna Berger · Reader")).toBeTruthy();
     expect(
       requests.some(
-        (request) => request.path === `/api/v1/spaces/${SPACE_ID}/permissions` && request.method === "POST",
+        (request) =>
+          request.path === `/api/v1/spaces/${SPACE_ID}/permissions/grants` && request.method === "POST",
       ),
     ).toBe(false);
     await userEvent.click(within(dialog).getByRole("button", { name: "Give role" }));
     await waitFor(() =>
       expect(
         requests.find(
-          (request) => request.path === `/api/v1/spaces/${SPACE_ID}/permissions` && request.method === "POST",
+          (request) =>
+            request.path === `/api/v1/spaces/${SPACE_ID}/permissions/grants` && request.method === "POST",
         )?.body,
-      ).toEqual({ action: "grant", principalKind: "account", principalId: ANNA, role: "reader" }),
+      ).toEqual({ holders: [{ principalKind: "account", principalId: ANNA }], role: "reader" }),
     );
   });
 

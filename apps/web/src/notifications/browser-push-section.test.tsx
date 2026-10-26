@@ -39,7 +39,7 @@ describe("browser push on the personal settings", () => {
     });
     await renderWithProviders(section());
     expect(
-      await screen.findByText("Turned off for this instance. Instance administrators can turn it on."),
+      await screen.findByText("Turned off for this instance."),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Turn on for this device" })).toBeNull();
   });

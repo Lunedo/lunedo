@@ -108,6 +108,7 @@ function NewPassword({ token }: { token: string }) {
           <Field
             label={t("auth.newPassword")}
             hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
+            help={t("auth.passwordHelp", { minimum: info.data?.passwordMinLength ?? 12 })}
             error={form.formState.errors.password?.message}
           >
             <PasswordInput autoComplete="new-password" autoFocus {...form.register("password")} />

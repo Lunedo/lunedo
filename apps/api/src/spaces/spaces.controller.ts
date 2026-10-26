@@ -14,6 +14,7 @@ import {
   exampleImpact,
   examplePermission,
   exampleSpace,
+  grantsSchema,
   impactSchema,
   permissionChangeSchema,
   permissionSchema,
@@ -332,6 +333,65 @@ export class SpacesController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.spacePermissions.preview(actorOf(request), spaceId, body);
+  }
+
+  @Post("spaces/:spaceId/permissions/grants/preview")
+  @Permission("space.manage", space)
+  @ApiRoute({
+    summary: "Preview giving several holders a role",
+    description: "Shows who would gain access if all holders got the role together. Nothing is changed.",
+    tags: [TAG],
+    status: 200,
+    params: spaceParams,
+    body: grantsSchema,
+    bodyExample: {
+      holders: [
+        { principalKind: "account", principalId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20" },
+        { principalKind: "group", principalId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30" },
+      ],
+      role: "reader",
+    },
+    response: { description: "The change in access.", schema: impactSchema, example: exampleImpact },
+    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted"],
+  })
+  async previewGrants(
+    @Param("spaceId") spaceId: string,
+    @Body() body: z.output<typeof grantsSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.spacePermissions.previewGrants(actorOf(request), spaceId, body.holders, body.role);
+  }
+
+  @Post("spaces/:spaceId/permissions/grants")
+  @Permission("space.manage", space)
+  @ApiRoute({
+    summary: "Give several holders a role",
+    description:
+      "Gives all holders the same role in one change: either all get it or none. Nobody extends their own permissions, and every grant is audited.",
+    tags: [TAG],
+    status: 200,
+    params: spaceParams,
+    body: grantsSchema,
+    bodyExample: {
+      holders: [
+        { principalKind: "account", principalId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20" },
+        { principalKind: "group", principalId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30" },
+      ],
+      role: "reader",
+    },
+    response: {
+      description: "The permissions after the change.",
+      schema: z.array(permissionSchema).describe("Permissions of the space."),
+      example: [examplePermission],
+    },
+    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted", "selfExtension"],
+  })
+  async grant(
+    @Param("spaceId") spaceId: string,
+    @Body() body: z.output<typeof grantsSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.spacePermissions.grant(actorOf(request), spaceId, body.holders, body.role);
   }
 
   @Post("spaces/:spaceId/permissions")

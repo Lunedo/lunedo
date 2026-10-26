@@ -45,6 +45,7 @@ export function InstanceMailScreen() {
           <SettingRow
             label={t("mail.method")}
             description={t("mail.methodHint", { method: t(`mail.methods.${data.method}`) })}
+            help={t("mail.methodHelp", { method: t(`mail.methods.${data.method}`) })}
             control={
               <SegmentedControl
                 label={t("mail.method")}

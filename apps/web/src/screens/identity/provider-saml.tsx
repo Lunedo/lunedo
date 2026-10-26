@@ -59,16 +59,19 @@ export function SamlServiceProviderFields({ provider }: { provider: SamlProvider
         label={t("identityProviders.saml.entityId")}
         value={provider.saml.entityId}
         hint={t("identityProviders.saml.entityIdHint")}
+        help={t("identityProviders.saml.entityIdHelp")}
       />
       <CopyField
         label={t("identityProviders.saml.acsUrl")}
         value={provider.redirectUri}
         hint={t("identityProviders.saml.acsUrlHint")}
+        help={t("identityProviders.saml.acsUrlHelp")}
       />
       <CopyField
         label={t("identityProviders.saml.metadataUrl")}
         value={provider.saml.metadataUrl}
         hint={t("identityProviders.saml.metadataUrlHint")}
+        help={t("identityProviders.saml.metadataUrlHelp")}
         action={
           <a
             href={provider.saml.metadataUrl}
@@ -165,6 +168,7 @@ export function SamlMetadataSection({ provider, canManage }: { provider: SamlPro
           <SettingRow
             label={t("identityProviders.saml.certificates")}
             description={t("identityProviders.saml.certificatesHint")}
+            help={t("identityProviders.saml.certificatesHelp")}
             control={
               <ul className="flex flex-col gap-1 text-sm">
                 {metadata.certificates.map((certificate) => (
@@ -282,6 +286,7 @@ export function SamlConnectionFields({
       <SettingRow
         label={t("identityProviders.saml.source")}
         description={t("identityProviders.saml.sourceHint")}
+        help={t("identityProviders.saml.sourceHelp")}
         control={
           <Select
             aria-label={t("identityProviders.saml.source")}
@@ -309,6 +314,7 @@ export function SamlConnectionFields({
           <ExplicitSaveTextField
             label={t("identityProviders.saml.metadataAddress")}
             hint={t("identityProviders.saml.metadataAddressHint")}
+            help={t("identityProviders.saml.metadataAddressHelp")}
             value={config.metadata.source === "url" ? config.metadata.url : ""}
             schema={metadataUrlSchema}
             invalidMessage={t("validation.url")}
@@ -365,6 +371,7 @@ export function SamlGraphClientField({
       <AutoSaveTextField
         label={t("identityProviders.saml.graphClientId")}
         hint={t("identityProviders.saml.graphClientIdHint")}
+        help={t("identityProviders.saml.graphClientIdHelp")}
         value={config.graphClientId ?? ""}
         schema={z.union([z.literal(""), z.string().trim().min(1).max(500)])}
         disabled={!canManage}
@@ -393,6 +400,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           <SettingRow
             label={t("identityProviders.attributes.identifier")}
             description={t("identityProviders.attributes.identifierHint")}
+            help={t("identityProviders.attributes.identifierHelp")}
             meta={t("identityProviders.attributes.fixed")}
             control={
               <Badge variant="neutral" icon={Lock}>
@@ -403,6 +411,7 @@ export function SamlAttributeFields({ provider, canManage }: { provider: SamlPro
           <SettingRow
             label={t("identityProviders.attributes.email")}
             description={t("identityProviders.attributes.emailHint")}
+            help={t("identityProviders.attributes.emailHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.attributes.email")}

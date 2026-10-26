@@ -278,6 +278,7 @@ function DeleteDialog({
       <Field
         label={t("spaces.cleanup.reason")}
         hint={t("spaces.cleanup.reasonHint")}
+        help={t("spaces.cleanup.reasonHelp")}
         {...(error ? { error } : {})}
       >
         <Textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} />

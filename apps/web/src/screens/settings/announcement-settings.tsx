@@ -416,6 +416,7 @@ function AnnouncementForm({
             <Field
               label={t("announcements.linkUrl")}
               hint={t("announcements.linkUrlHint")}
+              help={t("announcements.linkUrlHelp")}
               error={errors.linkUrl}
             >
               <Input
@@ -442,6 +443,7 @@ function AnnouncementForm({
             <Field
               label={t("announcements.start")}
               hint={t("announcements.startHint", { timeZone })}
+              help={t("announcements.startHelp", { timeZone })}
               error={errors.start}
             >
               <div className="flex flex-wrap gap-2">

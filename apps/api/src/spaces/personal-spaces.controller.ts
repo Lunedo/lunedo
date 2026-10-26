@@ -13,6 +13,7 @@ import {
   searchQuerySchema,
   toApiPage,
 } from "../http/pagination.js";
+import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { organizationIdParams, timestamp, uuid } from "../http/schemas.js";
 import { exampleSpace, spaceSchema } from "./schemas.js";
@@ -96,6 +97,17 @@ const appointSchema = z
   .strict()
   .describe("The new space admin.");
 
+const peopleQuery = searchQuerySchema
+  .extend({
+    seriesId: uuid(
+      "Only participants of the meetings of this series who can open its space, for example to choose the owner of a topic.",
+    ).optional(),
+    spaceId: uuid(
+      "Only people who can open this space, for example to choose members of a meeting series.",
+    ).optional(),
+  })
+  .strict();
+
 const personSchema = z
   .object({
     id: uuid("ID of the account."),
@@ -142,7 +154,8 @@ export class PersonalSpacesController {
     description:
       "Searches the people the caller may see: members of the caller's organizations and people the caller shares a space with.",
     tags: [TAG],
-    query: searchQuerySchema,
+    query: peopleQuery,
+    errors: ["notFound"],
     response: {
       description: "People, ordered by name.",
       schema: pageSchema(personSchema, "People, ordered by name."),
@@ -154,8 +167,22 @@ export class PersonalSpacesController {
       },
     },
   })
-  async people(@Query() query: z.output<typeof searchQuerySchema>, @Req() request: FastifyRequest) {
-    return toApiPage(await this.#services.people.search(actorOf(request), pageRequest(query, nameCursor)));
+  async people(@Query() query: z.output<typeof peopleQuery>, @Req() request: FastifyRequest) {
+    const actor = actorOf(request);
+    const scopes = [
+      ...(query.spaceId ? [{ action: "space.view", resource: { type: "space", id: query.spaceId } }] : []),
+      ...(query.seriesId ? [{ action: "item.view", resource: { type: "item", id: query.seriesId } }] : []),
+    ];
+    for (const scope of scopes) {
+      if (!(await this.#services.authorization.authorize(actor, scope.action, scope.resource)))
+        throw notFound();
+    }
+    return toApiPage(
+      await this.#services.people.search(actor, pageRequest(query, nameCursor), {
+        spaceId: query.spaceId,
+        seriesId: query.seriesId,
+      }),
+    );
   }
 
   @Get("instance/personal-spaces")

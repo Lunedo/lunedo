@@ -288,6 +288,7 @@ function TransferDialog({
         <Field
           label={t("spaces.instance.newOwner")}
           hint={t("spaces.instance.newOwnerHint")}
+          help={t("spaces.instance.newOwnerHelp")}
           {...(error ? { error } : {})}
         >
           {remaining.isPending ? <Skeleton className="h-field w-full" /> : null}

@@ -159,7 +159,7 @@ describe("CollapsibleSection", () => {
 });
 
 describe("SettingRow", () => {
-  it("shows the label with one line of hint on the left and the control, marks and menu on the right", () => {
+  it("shows the label with a short hint that is never cut off on the left and the control, marks and menu on the right", () => {
     renderUi(
       <SettingRow
         label="Retention"
@@ -176,7 +176,7 @@ describe("SettingRow", () => {
     const label = row?.querySelector("[data-setting-label]") as HTMLElement;
     expect(within(label).getByText("Retention").className).toContain("font-medium");
     const hint = within(label).getByText("Older versions are deleted.");
-    expect(hint.className).toContain("sm:truncate");
+    expect(hint.className).not.toContain("truncate");
     expect(hint.closest("[data-setting-hint]")?.className).toContain("text-sm");
     const line = row?.querySelector("[data-setting-line]") as HTMLElement;
     expect(within(line).getByText("Own value")).toBeDefined();

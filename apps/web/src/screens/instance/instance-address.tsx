@@ -9,7 +9,7 @@ import { instanceAddressQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
-import { settingDescriptionKey, settingLabelKey } from "../../settings/setting-fields.js";
+import { settingDescriptionKey, settingHelpKey, settingLabelKey } from "../../settings/setting-fields.js";
 
 export function cleanAddress(value: string): string | null {
   const trimmed = value.trim();
@@ -106,6 +106,7 @@ export function InstanceAddressRow({
             ? t("instance.general.addressFromEnvironment")
             : translateKey(t, settingDescriptionKey("instance.url"))
         }
+        help={fromEnvironment ? undefined : translateKey(t, settingHelpKey("instance.url"))}
         control={control}
         {...(problem
           ? {

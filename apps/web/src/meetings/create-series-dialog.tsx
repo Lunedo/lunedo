@@ -1,11 +1,11 @@
 import { Button, Combobox, type ComboboxItem, Dialog, Field, Input, Select, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { peopleLoader } from "../collaboration/people.js";
+import { peopleLoaderFor } from "../collaboration/people.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
@@ -36,6 +36,7 @@ export function CreateSeriesDialog({
   initialTemplateId?: string;
 }) {
   const { t } = useTranslation();
+  const membersLoader = useMemo(() => peopleLoaderFor({ spaceId: space.id }), [space.id]);
   const { toast } = useToast();
   const format = useFormat();
   const navigate = useNavigate();
@@ -161,7 +162,7 @@ export function CreateSeriesDialog({
         <Field label={t("meetings.create.members")} hint={t("meetings.create.membersHint")}>
           <Combobox
             multiple
-            load={peopleLoader}
+            load={membersLoader}
             value={members.map((member) => member.value)}
             selectedItems={members}
             placeholder={t("meetings.create.membersPlaceholder")}

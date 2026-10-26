@@ -3,22 +3,28 @@ import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { rememberReferences } from "../editor/references.js";
 
-export const peopleLoader: ComboboxLoader = async (query, cursor) => {
-  const page = await request(() =>
-    api.GET("/api/v1/people", {
-      params: { query: { limit: 20, ...(query ? { q: query } : {}), ...(cursor ? { cursor } : {}) } },
-    }),
-  );
-  rememberReferences({ people: Object.fromEntries(page.items.map((person) => [person.id, person.name])) });
-  return {
-    items: page.items.map((person) => ({
-      value: person.id,
-      label: person.name,
-      ...(person.email ? { description: person.email } : {}),
-    })),
-    nextCursor: page.nextCursor,
+export function peopleLoaderFor(filter: { spaceId?: string; seriesId?: string }): ComboboxLoader {
+  return async (query, cursor) => {
+    const page = await request(() =>
+      api.GET("/api/v1/people", {
+        params: {
+          query: { limit: 20, ...filter, ...(query ? { q: query } : {}), ...(cursor ? { cursor } : {}) },
+        },
+      }),
+    );
+    rememberReferences({ people: Object.fromEntries(page.items.map((person) => [person.id, person.name])) });
+    return {
+      items: page.items.map((person) => ({
+        value: person.id,
+        label: person.name,
+        ...(person.email ? { description: person.email } : {}),
+      })),
+      nextCursor: page.nextCursor,
+    };
   };
-};
+}
+
+export const peopleLoader: ComboboxLoader = peopleLoaderFor({});
 
 export async function checkMentionAccess(
   pageId: string,

@@ -520,6 +520,7 @@ export function LdapConnectionStep({
       <Field
         label={t("identityProviders.ldap.url")}
         hint={t("identityProviders.ldap.urlHint")}
+        help={t("identityProviders.ldap.urlHelp")}
         {...(errors.url ? { error: errors.url } : {})}
       >
         <Input

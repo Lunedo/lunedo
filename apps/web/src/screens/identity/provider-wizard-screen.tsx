@@ -546,16 +546,19 @@ function DraftCopyValues({ draft }: { draft: ProviderDraft }) {
               label={t("identityProviders.saml.entityId")}
               value={draft.saml.entityId}
               hint={t("identityProviders.saml.entityIdHint")}
+              help={t("identityProviders.saml.entityIdHelp")}
             />
             <CopyField
               label={t("identityProviders.saml.acsUrl")}
               value={draft.redirectUri}
               hint={t("identityProviders.saml.acsUrlHint")}
+              help={t("identityProviders.saml.acsUrlHelp")}
             />
             <CopyField
               label={t("identityProviders.saml.metadataUrl")}
               value={draft.saml.metadataUrl}
               hint={t("identityProviders.saml.metadataUrlHint")}
+              help={t("identityProviders.saml.metadataUrlHelp")}
               action={
                 <a
                   href={draft.saml.metadataUrl}
@@ -801,6 +804,7 @@ function OidcConnectionStep({
           <Field
             label={t("identityProviders.fields.issuer")}
             hint={t("identityProviders.fields.issuerHint")}
+            help={t("identityProviders.fields.issuerHelp")}
             {...(errors.issuer ? { error: errors.issuer } : {})}
           >
             <Input

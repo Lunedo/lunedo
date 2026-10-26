@@ -3,6 +3,7 @@ import { type MouseEvent, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export const MIN_HEADINGS = 6;
+export const MAX_ALL_LEVELS = 20;
 const SELECTOR = ".ld-read-view :is(h1, h2, h3)[id]";
 const ACTIVE_OFFSET = 96;
 
@@ -18,6 +19,10 @@ function entriesOf(root: HTMLElement): Entry[] {
     title: heading.textContent?.trim() ?? "",
     level: Number(heading.tagName.slice(1)),
   }));
+}
+
+function shownEntries(entries: Entry[]): Entry[] {
+  return entries.length > MAX_ALL_LEVELS ? entries.filter((entry) => entry.level <= 2) : entries;
 }
 
 function sameEntries(left: Entry[], right: Entry[]): boolean {
@@ -49,7 +54,7 @@ export function OnThisPage({ content }: { content: RefObject<HTMLElement | null>
     if (!root) return;
     const scan = () =>
       setEntries((current) => {
-        const next = entriesOf(root);
+        const next = shownEntries(entriesOf(root));
         return sameEntries(current, next) ? current : next;
       });
     scan();

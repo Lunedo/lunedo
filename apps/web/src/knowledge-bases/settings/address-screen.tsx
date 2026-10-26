@@ -143,6 +143,7 @@ export function AddressPanel({ portal }: { portal: PortalSettings }) {
           <Field
             label={t("knowledgeBase.address.path")}
             hint={t("knowledgeBase.address.pathHint", { prefix: instance })}
+            help={t("knowledgeBase.address.pathHelp", { prefix: instance })}
             {...(pathError ? { error: pathError } : {})}
           >
             <Input

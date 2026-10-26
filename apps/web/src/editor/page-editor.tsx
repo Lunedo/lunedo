@@ -336,9 +336,7 @@ function CollaborativeEditor({
                       : "ld-editor-bar sticky top-0 z-10 flex flex-col gap-1 rounded-md border border-border bg-surface p-1 shadow-card"
                   }
                 >
-                  <div
-                    className={`flex min-w-0 items-center gap-2${docked ? " w-full" : ""}`}
-                  >
+                  <div className={`flex min-w-0 items-center gap-2${docked ? " w-full" : ""}`}>
                     <div className="min-w-0 flex-1">
                       {preferences.editorToolbar && editable ? (
                         <EditorToolbar ref={toolbar} editor={editor} items={items ?? []} />

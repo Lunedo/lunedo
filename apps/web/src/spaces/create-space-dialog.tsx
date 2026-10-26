@@ -262,7 +262,11 @@ function CreateSpaceForm({
           }}
         />
       </Field>
-      <Field label={t("spaces.create.description")} hint={t("spaces.create.descriptionHint")}>
+      <Field
+        label={t("spaces.create.description")}
+        hint={t("spaces.create.descriptionHint")}
+        help={t("spaces.create.descriptionHelp")}
+      >
         <Textarea
           rows={2}
           maxLength={1000}

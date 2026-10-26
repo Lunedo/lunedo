@@ -10,7 +10,9 @@ import { useOrganizationState } from "../shell/shell-context.js";
 import { useSaveState } from "./auto-save.js";
 
 const REFRESH_MS = 60_000;
-const BACKUP_SETTINGS = "/settings/instance/backups";
+const INSTANCE_SETTINGS = "/settings/instance";
+const BACKUP_SETTINGS = `${INSTANCE_SETTINGS}/backups`;
+const SYSTEM_STATUS = `${INSTANCE_SETTINGS}/status`;
 
 function targetLocation(target: BackupOverview["target"]): string | null {
   if (!target) return null;
@@ -62,10 +64,8 @@ function RestoredBanner({ data, onSettings }: { data: BackupOverview; onSettings
   );
 }
 
-export function BackupBanner() {
-  const { t } = useTranslation();
+function useBackupStatus() {
   const allowed = useOrganizationState().can("instance.operations.manage");
-  const onSettings = useLocation({ select: (location) => location.pathname === BACKUP_SETTINGS });
   const status = useQuery({
     ...backupsQuery,
     enabled: allowed,
@@ -73,8 +73,23 @@ export function BackupBanner() {
     retry: false,
     refetchInterval: REFRESH_MS,
   });
-  const data = status.data;
-  if (!allowed || !data) return null;
+  return allowed ? status.data : undefined;
+}
+
+export function useBackupAttention(): boolean {
+  const data = useBackupStatus();
+  return Boolean(data && (data.restoredAt || data.alert !== "none" || data.warning));
+}
+
+export function BackupBanner() {
+  const { t } = useTranslation();
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const onSettings = pathname === BACKUP_SETTINGS;
+  const onInstancePage =
+    (pathname === INSTANCE_SETTINGS || pathname.startsWith(`${INSTANCE_SETTINGS}/`)) &&
+    pathname !== SYSTEM_STATUS;
+  const data = useBackupStatus();
+  if (!data || !onInstancePage) return null;
   if (data.restoredAt) return <RestoredBanner data={data} onSettings={onSettings} />;
   const kind = data.alert !== "none" ? data.alert : data.warning;
   if (!kind) return null;

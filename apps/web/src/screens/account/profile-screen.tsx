@@ -96,6 +96,7 @@ function ProfileRows({ profile }: { profile: Profile }) {
       <AutoSaveTextRow
         label={t("profile.jobTitle")}
         hint={t("profile.jobTitleHint")}
+        help={t("profile.jobTitleHelp")}
         value={profile.jobTitle ?? ""}
         schema={jobTitleSchema}
         maxLength={JOB_TITLE_MAX_LENGTH}
@@ -150,6 +151,7 @@ function PictureRow({ profile }: { profile: Profile }) {
     <SettingRow
       label={t("profile.picture")}
       description={t("profile.pictureHint")}
+      help={t("profile.pictureHelp")}
       control={
         <div className="flex flex-wrap items-center gap-3">
           <PersonAvatar id={accountId} name={profile.name} pictureRef={profile.pictureRef} size="lg" />

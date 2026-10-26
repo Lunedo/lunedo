@@ -742,6 +742,7 @@ export function ResetSecondFactorDialog({
         <Field
           label={t("instance.accounts.resetReason")}
           hint={t("instance.accounts.resetReasonHint", { name: account.name })}
+          help={t("instance.accounts.resetReasonHelp", { name: account.name })}
           error={invalid ? t("instance.accounts.resetReasonRequired") : undefined}
         >
           <Textarea

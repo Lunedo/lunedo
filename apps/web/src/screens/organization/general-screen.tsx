@@ -111,6 +111,7 @@ function ProfileSection({
         <AutoSaveTextField
           label={t("organization.general.slug")}
           hint={t("organization.general.slugHint")}
+          help={t("organization.general.slugHelp")}
           value={organization.slug}
           schema={slugSchema}
           invalidMessage={t("validation.slug")}
@@ -171,6 +172,7 @@ function LogoRow({
     <SettingRow
       label={t("organization.general.logo")}
       description={t("organization.general.logoHint")}
+      help={t("organization.general.logoHelp")}
       control={
         <div className="flex flex-wrap items-center gap-3">
           {organization.logoRef ? (
@@ -247,6 +249,7 @@ function LeaveSection({ organizationId, name }: { organizationId: string; name: 
       <SettingRow
         label={t("organization.general.leave", { name })}
         description={t("organization.general.leaveDescription")}
+        help={t("organization.general.leaveHelp")}
         control={
           <Button variant="danger" icon={LogOut} onClick={() => setOpen(true)}>
             {t("organization.general.leaveAction")}

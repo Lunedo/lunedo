@@ -413,6 +413,7 @@ function LogoRow({ provider, canManage }: { provider: IdentityProvider; canManag
     <SettingRow
       label={t("identityProviders.logo.label")}
       description={t("identityProviders.logo.hint")}
+      help={t("identityProviders.logo.help")}
       control={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {logo ? (
@@ -502,6 +503,7 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
           <SettingRow
             label={t("identityProviders.status.activateTitle", { name: provider.name })}
             description={t("identityProviders.status.activateDescription")}
+            help={t("identityProviders.status.activateHelp")}
             control={
               <Button variant="primary" icon={Play} loading={busy} onClick={() => void activate()}>
                 {t("identityProviders.status.activate")}

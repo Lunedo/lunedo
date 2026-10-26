@@ -396,6 +396,7 @@ export class MeetingService {
     actor: Principal,
     spaceId: string,
     members: readonly string[],
+    options: { seriesMembers?: boolean } = {},
   ): Promise<string[]> {
     const unique = [...new Set(members.map((id) => id.toLowerCase()))];
     if (unique.length > MAX_SERIES_MEMBERS) {
@@ -404,6 +405,12 @@ export class MeetingService {
     for (const id of unique) {
       if (!(await this.#people.canSee(actor, id, tx))) {
         throw new SpaceError("invalidMember", "Choose members among the people you can see");
+      }
+      if (
+        options.seriesMembers &&
+        (await this.#authorization.spaceRole(id, spaceId, { executor: tx, fresh: true })).role === null
+      ) {
+        throw new SpaceError("invalidMember", "Members of a series must be members of its space");
       }
     }
     const space = await tx.execute<{ confidential: boolean }>(
@@ -509,7 +516,7 @@ export class MeetingService {
       await lockSpaces(tx, [spaceId]);
       if (await isKnowledgeBase(tx, spaceId)) throw knowledgeBaseKindError();
       if (input.parentId) await this.#checkParent(tx, actor, spaceId, input.parentId);
-      const members = await this.#validMembers(tx, actor, spaceId, input.members);
+      const members = await this.#validMembers(tx, actor, spaceId, input.members, { seriesMembers: true });
       const template = await this.#template(actor, spaceId, input.templateId);
       const last = await tx.execute<{ position: string | null }>(sql`
         select max(position) as position from tree_items
@@ -785,7 +792,9 @@ export class MeetingService {
           where item_id = ${seriesId}`);
       }
       if (changes.members !== undefined) {
-        const members = await this.#validMembers(tx, actor, series.space_id, changes.members);
+        const members = await this.#validMembers(tx, actor, series.space_id, changes.members, {
+          seriesMembers: true,
+        });
         await tx.execute(sql`delete from meeting_series_members where series_id = ${seriesId}
           and not (account_id = any(${sql.param(members)}::uuid[]))`);
         for (const [position, accountId] of members.entries()) {

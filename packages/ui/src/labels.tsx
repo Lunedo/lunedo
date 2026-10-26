@@ -55,6 +55,7 @@ export interface UiLabels {
   next: string;
   selectAll: string;
   selection: string;
+  moreAbout: string;
 }
 
 const LabelsContext = createContext<UiLabels | null>(null);

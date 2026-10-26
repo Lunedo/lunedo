@@ -35,7 +35,12 @@ import {
   portalReadableCondition,
   type ShareVia,
 } from "./item-access.js";
-import type { AuthorizationRegistry, RegisteredAction, Resource, RestrictionDenial } from "./registry.js";
+import {
+  type AuthorizationRegistry,
+  type RegisteredAction,
+  type Resource,
+  restrictionDenials,
+} from "./registry.js";
 import { spaceRoleCondition, spaceRoleConditionFor, tokenSpaceCondition } from "./space-access.js";
 
 export type Grant =
@@ -47,21 +52,24 @@ export type Grant =
   | { kind: "link"; linkId: string; scope: string }
   | { kind: "rule"; rule: string };
 
-export type Denial =
-  | "anonymous"
-  | "accountInactive"
-  | "resourceNotFound"
-  | "notMember"
-  | "limitedMembership"
-  | "noRoleGrantsArea"
-  | "ownerOnly"
-  | "instanceRolesDoNotGrantOrganizationAccess"
-  | "roleExceedsOwnPermissions"
-  | "selfExtension"
-  | "noSpaceRole"
-  | "tokenScope"
-  | "ruleNotMet"
-  | RestrictionDenial;
+export const denials = [
+  "anonymous",
+  "accountInactive",
+  "resourceNotFound",
+  "notMember",
+  "limitedMembership",
+  "noRoleGrantsArea",
+  "ownerOnly",
+  "instanceRolesDoNotGrantOrganizationAccess",
+  "roleExceedsOwnPermissions",
+  "selfExtension",
+  "noSpaceRole",
+  "tokenScope",
+  "ruleNotMet",
+  ...restrictionDenials,
+] as const;
+
+export type Denial = (typeof denials)[number];
 
 export interface GrantCheck {
   scope: RoleScope;

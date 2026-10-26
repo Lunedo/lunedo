@@ -1,6 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { type DocumentJson, migrateDocument, schema as reference, validateDocument } from "@lunedo/editor-schema";
+import {
+  type DocumentJson,
+  migrateDocument,
+  schema as reference,
+  validateDocument,
+} from "@lunedo/editor-schema";
 import { Editor, getSchema } from "@tiptap/core";
 import type { MarkType, NodeType, Schema } from "@tiptap/pm/model";
 import { describe, expect, it } from "vitest";

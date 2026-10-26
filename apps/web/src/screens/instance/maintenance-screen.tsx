@@ -156,6 +156,7 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
             <Field
               label={t("maintenance.form.message")}
               hint={t("maintenance.form.messageHint", { max: MESSAGE_MAX })}
+              help={t("maintenance.form.messageHelp", { max: MESSAGE_MAX })}
               {...(error ? { error } : {})}
             >
               <Textarea

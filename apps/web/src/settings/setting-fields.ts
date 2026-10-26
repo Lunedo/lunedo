@@ -184,6 +184,10 @@ export function settingDescriptionKey(key: string): string {
   return `settings.keys.${key.replaceAll(".", "_")}.description`;
 }
 
+export function settingHelpKey(key: string): string {
+  return `settings.keys.${key.replaceAll(".", "_")}.help`;
+}
+
 export const knownSettingKeys = fields.map((field) => field.key);
 
 export const MINUTES_PER_DAY = DAY;

@@ -277,6 +277,7 @@ function LinkIdentityDialog({
       <Field
         label={t("identities.subject")}
         hint={t("identities.subjectHint")}
+        help={t("identities.subjectHelp")}
         {...(invalid === "subject" ? { error: t("validation.required") } : {})}
       >
         <Input className="font-mono" value={subject} onChange={(event) => setSubject(event.target.value)} />

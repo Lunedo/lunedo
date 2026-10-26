@@ -319,6 +319,36 @@ export const examplePermission = {
   role: "admin",
 };
 
+export const MAX_GRANTS = 50;
+
+export const grantsSchema = z
+  .object({
+    holders: z
+      .array(
+        z
+          .object({
+            principalKind: holderKindSchema,
+            principalId: uuid(
+              "ID of the account or group; null for all members and all internal users.",
+            ).nullable(),
+          })
+          .strict()
+          .describe("A person, group or everyone of a kind."),
+      )
+      .min(1)
+      .max(MAX_GRANTS)
+      .refine(
+        (holders) =>
+          new Set(holders.map((holder) => `${holder.principalKind}:${holder.principalId}`)).size ===
+          holders.length,
+        "Name every holder once.",
+      )
+      .describe(`Holders who get the role, up to ${MAX_GRANTS}.`),
+    role: roleSchema,
+  })
+  .strict()
+  .describe("Several holders who get the same role.");
+
 export const permissionChangeSchema = z
   .discriminatedUnion("action", [
     z

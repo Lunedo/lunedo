@@ -51,6 +51,7 @@ export function SpaceGeneralScreen() {
             <AutoSaveTextField
               label={t("spaces.settings.description")}
               hint={t("spaces.create.descriptionHint")}
+              help={t("spaces.create.descriptionHelp")}
               value={space.description}
               multiline
               disabled={!editable}
@@ -147,6 +148,7 @@ function KeyField() {
       <Field
         label={t("spaces.settings.key")}
         hint={t("spaces.settings.keyHint")}
+        help={t("spaces.settings.keyHelp")}
         {...(error ? { error } : {})}
       >
         <Input

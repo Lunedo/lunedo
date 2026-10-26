@@ -312,6 +312,7 @@ function S3LimitSection({ status, canManage }: { status: StorageStatus; canManag
         <Field
           label={t("storage.s3.label")}
           hint={t("storage.s3.hint")}
+          help={t("storage.s3.help")}
           {...(shownError ? { error: shownError } : {})}
         >
           <div className="flex items-center gap-2">
@@ -450,6 +451,7 @@ export function OperationsContactsSection({
         <Field
           label={t("storage.contacts.addresses")}
           hint={t("storage.contacts.addressesHint")}
+          help={t("storage.contacts.addressesHelp")}
           {...(errors.addresses ? { error: errors.addresses } : {})}
         >
           <Textarea
@@ -489,6 +491,7 @@ export function OperationsContactsSection({
             <Field
               label={t("storage.contacts.webhook")}
               hint={t("storage.contacts.webhookHint")}
+              help={t("storage.contacts.webhookHelp")}
               {...(errors.webhook ? { error: errors.webhook } : {})}
             >
               <PasswordInput
@@ -507,6 +510,7 @@ export function OperationsContactsSection({
             <Field
               label={t("storage.contacts.webhook")}
               hint={t("storage.contacts.webhookHint")}
+              help={t("storage.contacts.webhookHelp")}
               {...(errors.webhook ? { error: errors.webhook } : {})}
             >
               <PasswordInput

@@ -1,16 +1,6 @@
-import {
-  Button,
-  DangerAction,
-  DangerZone,
-  Field,
-  focusFirstInvalidSoon,
-  IconButton,
-  Notice,
-  Skeleton,
-  useToast,
-} from "@lunedo/ui";
+import { Button, DangerAction, DangerZone, IconButton, Notice, Skeleton, useToast } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -18,40 +8,20 @@ import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useSession } from "../../shell/shell-context.js";
-import {
-  type Holder,
-  HolderPicker,
-  holderLabel,
-  holderValue,
-  RoleSelect,
-  roleLabel,
-} from "../access/holders.js";
+import { holderLabel, holderValue, RoleSelect, roleLabel } from "../access/holders.js";
 import { ImpactConfirmDialog } from "../access/impact.js";
 import { useSpace } from "../space-context.js";
 import { permissionsQuery, type SpacePermission, type SpaceRole, spaceKeys } from "../space-queries.js";
+import { AddHoldersDialog } from "./add-holders-dialog.js";
 import { Panel } from "./panel.js";
 import { SpaceSettingsPage } from "./space-settings-page.js";
 
 type Change =
-  | {
-      action: "grant";
-      principalKind: Holder["principalKind"];
-      principalId: string | null;
-      role: SpaceRole;
-      label: string;
-    }
   | { action: "change"; permissionId: string; role: SpaceRole; label: string }
   | { action: "remove"; permissionId: string; label: string };
 
 function body(change: Change) {
   switch (change.action) {
-    case "grant":
-      return {
-        action: "grant" as const,
-        principalKind: change.principalKind,
-        principalId: change.principalId,
-        role: change.role,
-      };
     case "change":
       return { action: "change" as const, permissionId: change.permissionId, role: change.role };
     case "remove":
@@ -67,9 +37,7 @@ export function SpacePermissionsScreen() {
   const queryClient = useQueryClient();
   const permissions = useQuery({ ...permissionsQuery(space.id), enabled: space.role === "admin" });
   const [change, setChange] = useState<Change | null>(null);
-  const [adding, setAdding] = useState<(Holder & { name: string }) | null>(null);
-  const [addingRole, setAddingRole] = useState<SpaceRole>("reader");
-  const [addError, setAddError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const impact = useQuery({
     queryKey: ["spaces", space.id, "permissionImpact", change ? JSON.stringify(body(change)) : null],
     enabled: change !== null,
@@ -116,7 +84,6 @@ export function SpacePermissionsScreen() {
         variant: "success",
       });
       setChange(null);
-      if (change.action === "grant") setAdding(null);
     } catch (failure) {
       toast({
         title: t("spaces.permissions.failed"),
@@ -127,13 +94,11 @@ export function SpacePermissionsScreen() {
   };
 
   const confirmTitle =
-    change?.action === "grant"
-      ? t("spaces.permissions.grantTitle", { holder: change.label, role: roleLabel(t, change.role) })
-      : change?.action === "change"
-        ? t("spaces.permissions.changeTitle", { holder: change.label, role: roleLabel(t, change.role) })
-        : change
-          ? t("spaces.permissions.removeTitle", { holder: change.label })
-          : "";
+    change?.action === "change"
+      ? t("spaces.permissions.changeTitle", { holder: change.label, role: roleLabel(t, change.role) })
+      : change
+        ? t("spaces.permissions.removeTitle", { holder: change.label })
+        : "";
 
   return (
     <SpaceSettingsPage
@@ -195,6 +160,7 @@ export function SpacePermissionsScreen() {
                     />
                   </div>
                   <IconButton
+                    size="field"
                     label={t("spaces.permissions.remove", { holder: text })}
                     icon={X}
                     onClick={() => setChange({ action: "remove", permissionId: entry.id, label: text })}
@@ -203,51 +169,17 @@ export function SpacePermissionsScreen() {
               );
             })}
           </ul>
-          <form
-            className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end"
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!adding) {
-                setAddError(t("spaces.create.chooseHolderFirst"));
-                focusFirstInvalidSoon();
-                return;
-              }
-              setAddError(null);
-              setChange({
-                action: "grant",
-                principalKind: adding.principalKind,
-                principalId: adding.principalId,
-                role: addingRole,
-                label: holderLabel(t, adding, space.organizationName),
-              });
-            }}
-          >
-            <div className="min-w-0 flex-1">
-              <Field label={t("spaces.create.addHolder")} {...(addError ? { error: addError } : {})}>
-                <HolderPicker
-                  label={t("spaces.create.addHolder")}
-                  organizationId={space.organizationId}
-                  organizationName={space.organizationName}
-                  personal={space.personal}
-                  peopleOnly={space.confidential}
-                  exclude={entries.map(holderValue)}
-                  value={adding ? holderValue(adding) : null}
-                  onValueChange={setAdding}
-                />
-              </Field>
-            </div>
-            <div className="sm:w-unit-field">
-              <RoleSelect
-                label={t("spaces.create.newRole")}
-                value={addingRole}
-                onValueChange={setAddingRole}
-              />
-            </div>
-            <Button type="submit" variant="secondary" icon={Plus}>
-              {t("spaces.permissions.add")}
+          <div className="mt-4">
+            <Button variant="secondary" icon={UserPlus} onClick={() => setAdding(true)}>
+              {t("spaces.permissions.addPeople")}
             </Button>
-          </form>
+          </div>
+          <AddHoldersDialog
+            space={space}
+            existing={entries.map(holderValue)}
+            open={adding}
+            onOpenChange={setAdding}
+          />
         </Panel>
         <Panel title={t("spaces.permissions.rolesTitle")}>
           <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-4">
@@ -289,9 +221,7 @@ export function SpacePermissionsScreen() {
         confirmLabel={
           change?.action === "remove"
             ? t("spaces.permissions.confirmRemove")
-            : change?.action === "grant"
-              ? t("spaces.permissions.confirmGrant")
-              : t("spaces.permissions.confirmChange")
+            : t("spaces.permissions.confirmChange")
         }
         destructive={change?.action === "remove"}
         impact={impact}

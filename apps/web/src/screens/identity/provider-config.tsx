@@ -6,7 +6,7 @@ import {
   secondFactorModes,
   signInNameSources,
 } from "@lunedo/shared";
-import { Badge, CopyButton, FieldGrid, Input, Select, SettingRow, Switch } from "@lunedo/ui";
+import { Badge, CopyButton, FieldGrid, Input, Select, SettingHelp, SettingRow, Switch } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -261,6 +261,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
           <ExplicitSaveTextField
             label={t("identityProviders.fields.issuer")}
             hint={t("identityProviders.fields.issuerHint")}
+            help={t("identityProviders.fields.issuerHelp")}
             value={String(config.issuer ?? "")}
             schema={z.url({ protocol: /^https?$/ })}
             disabled={!canManage}
@@ -274,6 +275,7 @@ export function ConnectionFields({ provider, canManage }: { provider: OidcProvid
       <SettingRow
         label={t("identityProviders.fields.algorithm")}
         description={t("identityProviders.fields.algorithmHint")}
+        help={t("identityProviders.fields.algorithmHelp")}
         control={
           <Select
             aria-label={t("identityProviders.fields.algorithm")}
@@ -311,6 +313,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
       <SettingRow
         label={t("identityProviders.attributes.identifier")}
         description={t("identityProviders.attributes.identifierHint")}
+        help={t("identityProviders.attributes.identifierHelp")}
         meta={t("identityProviders.attributes.fixed")}
         control={fixed}
       />
@@ -319,6 +322,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
           <SettingRow
             label={t("identityProviders.attributes.email")}
             description={t("identityProviders.attributes.emailHint")}
+            help={t("identityProviders.attributes.emailHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.attributes.email")}
@@ -344,6 +348,7 @@ export function AttributeFields({ provider, canManage }: { provider: OidcProvide
           <SettingRow
             label={t("identityProviders.attributes.signInName")}
             description={t("identityProviders.attributes.signInNameHint")}
+            help={t("identityProviders.attributes.signInNameHelp")}
             control={
               <Select
                 aria-label={t("identityProviders.attributes.signInName")}
@@ -428,6 +433,7 @@ export function AccountFields({
       <SettingRow
         label={t("identityProviders.accounts.create")}
         description={t("identityProviders.accounts.createHint")}
+        help={t("identityProviders.accounts.createHelp")}
         control={
           <Switch
             label={t("identityProviders.accounts.create")}
@@ -463,6 +469,7 @@ export function AccountFields({
       <SettingRow
         label={t("identityProviders.accounts.requireGroup")}
         description={t("identityProviders.accounts.requireGroupHint")}
+        help={t("identityProviders.accounts.requireGroupHelp")}
         control={
           <Switch
             label={t("identityProviders.accounts.requireGroup")}
@@ -490,6 +497,7 @@ export function AccountFields({
           <AutoSaveTextField
             label={t("identityProviders.accounts.groups")}
             hint={t("identityProviders.accounts.groupsHint")}
+            help={t("identityProviders.accounts.groupsHelp")}
             value={creation.requiredGroups.join(", ")}
             disabled={!canManage}
             className="font-mono"
@@ -548,6 +556,7 @@ export function SecondFactorFields({
           <AutoSaveTextField
             label={t("identityProviders.secondFactor.proofValues")}
             hint={t("identityProviders.secondFactor.proofValuesHint")}
+            help={t("identityProviders.secondFactor.proofValuesHelp")}
             value={setting.proofValues.join(", ")}
             schema={proofValueList}
             invalidMessage={t("identityProviders.secondFactor.proofValuesInvalid")}
@@ -577,6 +586,7 @@ export function LinkFields() {
     <SettingRow
       label={t("identityProviders.accounts.link")}
       description={t("identityProviders.accounts.linkHint")}
+      help={t("identityProviders.accounts.linkHelp")}
       meta={t("identityProviders.accounts.linkFixed")}
       control={
         <Badge variant="neutral" icon={Lock}>
@@ -591,16 +601,21 @@ export function CopyField({
   label,
   value,
   hint,
+  help,
   action,
 }: {
   label: string;
   value: string;
   hint?: string;
+  help?: string;
   action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-medium">{label}</span>
+      <span className="flex items-center gap-1 font-medium">
+        {label}
+        {help ? <SettingHelp subject={label}>{help}</SettingHelp> : null}
+      </span>
       <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
         <Input readOnly value={value} aria-label={label} className="font-mono" />
         <CopyButton value={value} />
@@ -618,6 +633,7 @@ export function RedirectUriField({ uri }: { uri: string }) {
       label={t("identityProviders.redirectUri")}
       value={uri}
       hint={t("identityProviders.redirectUriHint")}
+      help={t("identityProviders.redirectUriHelp")}
     />
   );
 }

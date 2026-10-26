@@ -143,14 +143,14 @@
       },
       "settingsTitle": "Synchronisierung",
       "interval": "Sync-Intervall",
-      "intervalHint": "Gruppen und Kontostatus werden auch bei jeder Anmeldung aktualisiert.",
+      "intervalHint": "Auch bei jeder Anmeldung aktualisiert.",
       "deactivationLimit": "Größter Anteil, der auf einmal deaktiviert wird",
-      "deactivationLimitHint": "Schützt davor, versehentlich viele Konten zu deaktivieren. Würde ein Lauf mehr Konten dieses Anbieters als diesen Anteil deaktivieren, und mehr als die Mindestzahl unten, hält er an und ändert niemanden. Die Instanz-Administration wird benachrichtigt und kann den Lauf im Sync-Protokoll bestätigen.",
+      "deactivationLimitHint": "Schützt vor zu vielen Deaktivierungen.",
       "deactivationMinimum": "Konten, die ein Lauf immer deaktivieren darf",
-      "deactivationMinimumHint": "Ein Lauf hält nur an, wenn er mehr als diese Zahl von Konten und zugleich mehr als den Anteil oben deaktivieren würde. Ein Lauf, der keines der verknüpften Konten findet, hält immer an.",
+      "deactivationMinimumHint": "Erst ab dieser Zahl hält ein Lauf an.",
       "accountsUnit": "Konten",
       "whenDisabled": "Wenn ein Konto deaktiviert wird",
-      "whenDisabledHint": "Konten, die in {provider} deaktiviert oder gelöscht werden, werden in Lunedo deaktiviert und wieder aktiviert, wenn sie wieder aktiv sind. Lunedo löscht nie Konten.",
+      "whenDisabledHint": "Lunedo löscht nie Konten.",
       "deactivate": "In Lunedo deaktivieren",
       "groupSync": "Gruppen synchronisieren",
       "groupSyncHint": "Ohne Synchronisierung dient Google Workspace nur zur Anmeldung, und Zuordnungsregeln sehen keine Gruppen.",
@@ -164,14 +164,19 @@
       "readUsers": "Gesperrte Konten erkennen",
       "readUsersHint": "Braucht eine Rolle, die auch Nutzer lesen darf, zum Beispiel eine eigene Rolle mit Nutzer > Lesen. Ohne sie sieht Lunedo keine Sperren: Eine gesperrte Person kann sich nicht mehr über Google anmelden, offene Sitzungen laufen aber weiter, bis sie ablaufen.",
       "adminEmail": "Administrator für das Verzeichnis",
-      "adminEmailHint": "Das Dienstkonto handelt über die domainweite Delegierung im Namen dieser Person.",
+      "adminEmailHint": "In deren Namen handelt das Dienstkonto.",
       "serviceAccountKey": "Schlüssel des Dienstkontos",
       "keyStored": "Gespeichert",
       "noKey": "Nicht gesetzt",
       "keyPlaceholder": "JSON-Schlüssel des Dienstkontos einfügen",
       "saveKey": "Schlüssel speichern",
       "removeKey": "Schlüssel entfernen",
-      "keyRequired": "Füge den JSON-Schlüssel des Dienstkontos ein."
+      "keyRequired": "Füge den JSON-Schlüssel des Dienstkontos ein.",
+      "adminEmailHelp": "Das Dienstkonto handelt über die domainweite Delegierung im Namen dieser Person.",
+      "intervalHelp": "Gruppen und Kontostatus werden auch bei jeder Anmeldung aktualisiert.",
+      "deactivationLimitHelp": "Schützt davor, versehentlich viele Konten zu deaktivieren. Würde ein Lauf mehr Konten dieses Anbieters als diesen Anteil deaktivieren, und mehr als die Mindestzahl unten, hält er an und ändert niemanden. Die Instanz-Administration wird benachrichtigt und kann den Lauf im Sync-Protokoll bestätigen.",
+      "deactivationMinimumHelp": "Ein Lauf hält nur an, wenn er mehr als diese Zahl von Konten und zugleich mehr als den Anteil oben deaktivieren würde. Ein Lauf, der keines der verknüpften Konten findet, hält immer an.",
+      "whenDisabledHelp": "Konten, die in {provider} deaktiviert oder gelöscht werden, werden in Lunedo deaktiviert und wieder aktiviert, wenn sie wieder aktiv sind. Lunedo löscht nie Konten."
     },
     "title": "Anmeldemethoden",
     "description": "Wie sich Personen bei dieser Instanz anmelden.",
@@ -211,7 +216,7 @@
         "lunedo": "Nach jeder Anmeldung über diesen Anbieter fragt Lunedo den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein."
       },
       "proofValues": "Anerkannte Nachweise",
-      "proofValuesHint": "Werte des amr-Claims, die als Mehrfaktor-Authentifizierung gelten, durch Kommas getrennt. Die meisten Anbieter senden mfa.",
+      "proofValuesHint": "Werte des amr-Claims, meist mfa.",
       "proofValuesInvalid": "Gib 1 bis 20 Werte mit höchstens 50 Zeichen ein, durch Kommas getrennt.",
       "directoryModes": {
         "lunedo": "Immer den zweiten Faktor von Lunedo abfragen",
@@ -220,7 +225,8 @@
       "directoryHints": {
         "lunedo": "Ein Verzeichnispasswort ist kein zweiter Faktor. Nach jeder Anmeldung damit fragt Lunedo den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
         "provider": "Ein Verzeichnispasswort ist kein zweiter Faktor. Lunedo fragt trotzdem einen ab, wo die Instanz oder eine Organisation ihn verlangt."
-      }
+      },
+      "proofValuesHelp": "Werte des amr-Claims, die als Mehrfaktor-Authentifizierung gelten, durch Kommas getrennt. Die meisten Anbieter senden mfa."
     },
     "status": {
       "title": "Status",
@@ -233,9 +239,10 @@
       "deactivate": "Anbieter deaktivieren",
       "deactivated": "{name} ist deaktiviert.",
       "activateTitle": "{name} aktivieren",
-      "activateDescription": "Personen können sich wieder über diesen Anbieter anmelden, und die Synchronisierung läuft weiter.",
+      "activateDescription": "Anmelden und Synchronisieren wieder an.",
       "activate": "Aktivieren",
-      "activated": "{name} ist wieder aktiv."
+      "activated": "{name} ist wieder aktiv.",
+      "activateHelp": "Personen können sich wieder über diesen Anbieter anmelden, und die Synchronisierung läuft weiter."
     },
     "emptyTitle": "Noch keine Identitätsanbieter",
     "emptyDescription": "Füge Microsoft Entra ID, Google Workspace oder einen anderen OIDC-Anbieter hinzu, damit sich Personen mit ihrem Arbeitskonto anmelden.",
@@ -293,7 +300,7 @@
       "signIn": "Anmeldung"
     },
     "redirectUri": "Weiterleitungs-URI",
-    "redirectUriHint": "Trage diese Adresse in der App-Registrierung deines Anbieters ein.",
+    "redirectUriHint": "In der App-Registrierung eintragen.",
     "fields": {
       "name": "Name auf der Anmeldeseite",
       "nameHints": {
@@ -308,26 +315,28 @@
       "tenantIdHint": "Steht in der Übersicht deines Entra-ID-Tenants.",
       "tenantIdInvalid": "Gib die Tenant-ID so ein, wie Entra ID sie zeigt, zum Beispiel 3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17.",
       "issuer": "Issuer-URL",
-      "issuerHint": "Die Adresse des Anbieters. Lunedo liest seine Konfiguration aus /.well-known/openid-configuration.",
+      "issuerHint": "Die Adresse des Anbieters.",
       "googleDomains": "Gib mindestens eine Google-Workspace-Domain ein.",
       "algorithm": "Token-Signatur",
-      "algorithmHint": "Der einzige Algorithmus, den Lunedo für ID-Tokens dieses Anbieters akzeptiert."
+      "algorithmHint": "Einziger akzeptierter Algorithmus.",
+      "issuerHelp": "Die Adresse des Anbieters. Lunedo liest seine Konfiguration aus /.well-known/openid-configuration.",
+      "algorithmHelp": "Der einzige Algorithmus, den Lunedo für ID-Tokens dieses Anbieters akzeptiert."
     },
     "attributes": {
       "description": "Lunedo erkennt ein Konto an der Kennung des Anbieters, nie an der E-Mail-Adresse. Die anderen Attribute füllen das Profil und werden bei jeder Anmeldung aktualisiert.",
       "mapping": "Benutzerattribute",
       "identifier": "Kennung",
-      "identifierHint": "Ändert sich nie, auch wenn sich Namen oder Adressen ändern.",
+      "identifierHint": "Ein Wert, der sich nie ändert.",
       "fixed": "Für diesen Anbietertyp fest",
       "email": "E-Mail-Adresse",
-      "emailHint": "Für Benachrichtigungen, Einladungen und die Heimatorganisation nach Domain.",
+      "emailHint": "Für Mails und die Heimatorganisation.",
       "emailSources": {
         "email": "Claim email",
         "userPrincipalName": "User Principal Name",
         "graphMail": "Attribut mail (Graph)"
       },
       "signInName": "Anmeldename",
-      "signInNameHint": "Steht neben der E-Mail-Adresse, damit Personen ihr Arbeitskonto erkennen.",
+      "signInNameHint": "Hilft, das Arbeitskonto zu erkennen.",
       "signInNameSources": {
         "preferredUsername": "Claim preferred_username",
         "userPrincipalName": "User Principal Name",
@@ -386,27 +395,34 @@
           }
         },
         "namesWarning": "Mit Gruppennamen greifen die Regeln einer Gruppe nicht mehr, sobald sie im Anbieter umbenannt wird. Nutze Kennungen, wenn der Anbieter sie senden kann."
-      }
+      },
+      "identifierHelp": "Ändert sich nie, auch wenn sich Namen oder Adressen ändern.",
+      "emailHelp": "Für Benachrichtigungen, Einladungen und die Heimatorganisation nach Domain.",
+      "signInNameHelp": "Steht neben der E-Mail-Adresse, damit Personen ihr Arbeitskonto erkennen."
     },
     "accounts": {
       "newPeople": "Neue Personen",
       "existing": "Bestehende Konten",
       "create": "Konten bei der ersten Anmeldung anlegen",
-      "createHint": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
+      "createHint": "Sonst nur Eingeladene und Bestehende.",
       "domains": "Domains",
       "domainsHint": "Gib jede Domain ein, die deine Personen bei diesem Anbieter verwenden, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHintEntraId": "Gib jede Domain ein, die im Tenant verifiziert ist, für Anmeldenamen und für E-Mail-Adressen, zum Beispiel example.com und example.at. Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHintGoogle": "Gib jede Domain deines Google Workspace ein, für Anmeldenamen und für E-Mail-Adressen. Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
       "domainsInvalid": "Gib Domains wie example.org ein, durch Kommas getrennt.",
       "requireGroup": "Gruppenmitgliedschaft verlangen",
-      "requireGroupHint": "Meist nicht nötig: Beschränke den Zugang besser beim Anbieter. Verwende das nur, wenn der Anbieter den Zugang nicht selbst beschränken kann.",
+      "requireGroupHint": "Meist besser beim Anbieter beschränken.",
       "groups": "Verlangte Gruppen",
-      "groupsHint": "IDs der Gruppen beim Anbieter, durch Kommas getrennt. Die Mitgliedschaft in einer davon genügt.",
+      "groupsHint": "Gruppen-IDs beim Anbieter, mit Kommas.",
       "link": "Über die E-Mail-Adresse verknüpfen",
-      "linkHint": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Lunedo verknüpft Konten nie automatisch.",
+      "linkHint": "Einmal mit dem alten Passwort bestätigen.",
       "linkFixed": "Aus Sicherheitsgründen fest",
       "confirmationRequired": "Bestätigung erforderlich",
-      "domainsHintDirectory": "Gib die Domains der E-Mail-Adressen und Anmeldenamen im Verzeichnis ein, zum Beispiel example.com. Die Anmeldeseite fragt Personen mit diesen Domains nach ihrem Verzeichnispasswort, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter."
+      "domainsHintDirectory": "Gib die Domains der E-Mail-Adressen und Anmeldenamen im Verzeichnis ein, zum Beispiel example.com. Die Anmeldeseite fragt Personen mit diesen Domains nach ihrem Verzeichnispasswort, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
+      "groupsHelp": "IDs der Gruppen beim Anbieter, durch Kommas getrennt. Die Mitgliedschaft in einer davon genügt.",
+      "createHelp": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
+      "requireGroupHelp": "Meist nicht nötig: Beschränke den Zugang besser beim Anbieter. Verwende das nur, wenn der Anbieter den Zugang nicht selbst beschränken kann.",
+      "linkHelp": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Lunedo verknüpft Konten nie automatisch."
     },
     "credentials": {
       "title": "Zugänge",
@@ -487,13 +503,14 @@
     },
     "logo": {
       "label": "Logo",
-      "hint": "Erscheint auf dem Anmeldebutton. PNG, JPEG oder WebP, höchstens 256 KiB. Microsoft und Google verwenden ihre eigenen Buttons.",
+      "hint": "Auf dem Anmeldebutton, bis 256 KiB.",
       "alt": "Logo von {name}",
       "none": "Kein Logo",
       "upload": "Logo hochladen",
       "replace": "Logo ersetzen",
       "removeTitle": "Logo entfernen?",
-      "removeDescription": "Der Anmeldebutton zeigt dann ein Schlüssel-Symbol."
+      "removeDescription": "Der Anmeldebutton zeigt dann ein Schlüssel-Symbol.",
+      "help": "Erscheint auf dem Anmeldebutton. PNG, JPEG oder WebP, höchstens 256 KiB. Microsoft und Google verwenden ihre eigenen Buttons."
     },
     "test": {
       "title": "Verbindung testen",
@@ -693,11 +710,11 @@
     },
     "saml": {
       "entityId": "Entity-ID von Lunedo",
-      "entityIdHint": "Beim Identitätsanbieter auch Bezeichner oder Zielgruppe genannt.",
+      "entityIdHint": "Auch Bezeichner oder Zielgruppe.",
       "acsUrl": "Assertion-Consumer-Service-URL",
-      "acsUrlHint": "Auch Antwort-URL genannt. Der Identitätsanbieter schickt die Anmeldeantwort an diese Adresse.",
+      "acsUrlHint": "Auch Antwort-URL genannt.",
       "metadataUrl": "Metadatenadresse von Lunedo",
-      "metadataUrlHint": "Die meisten Identitätsanbieter können diese Adresse oder die heruntergeladene Datei lesen. Dann musst du die Werte oben nicht von Hand eintragen.",
+      "metadataUrlHint": "Erspart das Eintragen von Hand.",
       "downloadMetadata": "Metadaten herunterladen",
       "metadataTitle": "Metadaten des Identitätsanbieters",
       "noMetadataTitle": "Noch keine Metadaten geladen",
@@ -705,17 +722,17 @@
       "noMetadataFile": "Lade die Metadatendatei des Identitätsanbieters hoch. Bis dahin kann sich niemand anmelden.",
       "refreshFailedTitle": "Die Metadaten konnten nicht aktualisiert werden",
       "source": "Quelle der Metadaten",
-      "sourceHint": "Mit einer Adresse lädt Lunedo die Metadaten täglich neu und übernimmt neue Zertifikate des Identitätsanbieters selbst.",
+      "sourceHint": "Mit Adresse täglich neu geladen.",
       "sources": {
         "url": "Metadatenadresse",
         "file": "Hochgeladene Datei"
       },
       "metadataAddress": "Metadatenadresse",
-      "metadataAddressHint": "Die Adresse der Metadaten des Identitätsanbieters, beginnend mit https://.",
+      "metadataAddressHint": "Beginnt mit https://.",
       "idpEntityId": "Entity-ID des Identitätsanbieters",
       "ssoUrl": "Anmeldeadresse",
       "certificates": "Signaturzertifikate",
-      "certificatesHint": "Lunedo akzeptiert nur Antworten, die mit einem dieser Zertifikate signiert sind.",
+      "certificatesHint": "Nur damit signierte Antworten gelten.",
       "fetchedAt": "Zuletzt geladen",
       "loadAgain": "Erneut laden",
       "uploadMetadata": "Metadatendatei hochladen",
@@ -726,11 +743,18 @@
       "encryptedAssertions": "Verschlüsselte Assertions verlangen",
       "encryptedAssertionsHint": "Der Identitätsanbieter verschlüsselt die Assertion mit dem Zertifikat von Lunedo aus den Metadaten. Schalte das erst ein, wenn der Identitätsanbieter dafür eingerichtet ist, sonst funktioniert die Anmeldung nicht mehr.",
       "graphClientId": "Client-ID für Microsoft Graph",
-      "graphClientIdHint": "Optional. Mit einer App-Registrierung und einem Zugang dafür liest Lunedo Gruppen über die Grenze des Tokens hinaus und synchronisiert das Verzeichnis über Microsoft Graph."
+      "graphClientIdHint": "Optional, für Gruppen über Graph.",
+      "entityIdHelp": "Beim Identitätsanbieter auch Bezeichner oder Zielgruppe genannt.",
+      "acsUrlHelp": "Auch Antwort-URL genannt. Der Identitätsanbieter schickt die Anmeldeantwort an diese Adresse.",
+      "metadataUrlHelp": "Die meisten Identitätsanbieter können diese Adresse oder die heruntergeladene Datei lesen. Dann musst du die Werte oben nicht von Hand eintragen.",
+      "metadataAddressHelp": "Die Adresse der Metadaten des Identitätsanbieters, beginnend mit https://.",
+      "graphClientIdHelp": "Optional. Mit einer App-Registrierung und einem Zugang dafür liest Lunedo Gruppen über die Grenze des Tokens hinaus und synchronisiert das Verzeichnis über Microsoft Graph.",
+      "certificatesHelp": "Lunedo akzeptiert nur Antworten, die mit einem dieser Zertifikate signiert sind.",
+      "sourceHelp": "Mit einer Adresse lädt Lunedo die Metadaten täglich neu und übernimmt neue Zertifikate des Identitätsanbieters selbst."
     },
     "ldap": {
       "url": "Serveradresse",
-      "urlHint": "Die Adresse deines Verzeichnisservers, zum Beispiel ldaps://dc01.example.org. Ein Servername allein, etwa dc01.example.org, genügt; Lunedo verwendet dann ldaps:// auf Port 636. Einfaches ldap:// funktioniert nur mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
+      "urlHint": "Zum Beispiel ldaps://dc01.example.org.",
       "urlInvalid": "Gib eine Adresse wie ldaps://dc01.example.org ohne Pfad ein.",
       "urlInvalidStartTls": "Gib eine ldap://-Adresse ein, solange StartTLS eingeschaltet ist. Für ldaps:// schalte zuerst StartTLS aus.",
       "startTls": "StartTLS verwenden",
@@ -752,7 +776,7 @@
       "groupFilterHint": "Welche Einträge als Gruppen gelten, zum Beispiel (objectClass=group). Der vorgeschlagene Wert passt für die meisten Verzeichnisse.",
       "filterInvalid": "Gib einen LDAP-Filter in Klammern ein, etwa (objectClass=person).",
       "signInAttribute": "Anmeldename",
-      "signInAttributeHint": "Was Personen auf der Anmeldeseite neben ihrem Passwort eingeben.",
+      "signInAttributeHint": "Was Personen bei der Anmeldung eingeben.",
       "signInAttributes": {
         "userPrincipalName": "User Principal Name (lena.hofer@example.org)",
         "sAMAccountName": "Windows-Benutzername (lhofer)",
@@ -767,7 +791,7 @@
       },
       "attributeInvalid": "Gib einen LDAP-Attributnamen wie mail ein.",
       "testPerson": "Testperson",
-      "testPersonHint": "Anmeldename einer Person im Verzeichnis. Lunedo liest alle Attribute, die das Verzeichnis für diese Person liefert, damit du unten daraus wählen kannst.",
+      "testPersonHint": "Anmeldename einer Person im Verzeichnis.",
       "readAttributes": "Attribute lesen",
       "attributesRead": "{count, plural, one {Das Verzeichnis hat # Attribut für {person} geliefert.} other {Das Verzeichnis hat # Attribute für {person} geliefert.}}",
       "attributesReadFirst": "{count, plural, one {Es wurde keine Testperson eingegeben, also hat Lunedo die erste Person gelesen, die das Verzeichnis geliefert hat: {person}, mit # Attribut.} other {Es wurde keine Testperson eingegeben, also hat Lunedo die erste Person gelesen, die das Verzeichnis geliefert hat: {person}, mit # Attributen.}}",
@@ -779,33 +803,40 @@
       "attributeExample": "Wert der Testperson: {value}",
       "attributeNotReturned": "Das Verzeichnis hat für die Testperson keinen Wert dieses Attributs geliefert. Wähle ein anderes Attribut oder prüfe die Person im Verzeichnis.",
       "groupMembership": "Gruppenmitgliedschaft",
-      "groupMembershipHint": "Wo das Verzeichnis festhält, wer zu einer Gruppe gehört.",
+      "groupMembershipHint": "Wo das Verzeichnis Mitglieder speichert.",
       "memberships": {
         "member": "Attribut member der Gruppe",
         "memberOf": "Attribut memberOf der Person"
       },
       "disabledAttribute": "Attribut für deaktivierte Konten",
-      "disabledAttributeHint": "Optional. Leer lassen, wenn das Verzeichnis deaktivierte Konten nicht kennzeichnet.",
+      "disabledAttributeHint": "Optional, falls das Verzeichnis es kennt.",
       "disabledValues": "Werte, die deaktiviert bedeuten",
-      "disabledValuesHint": "Durch Kommas getrennt. Ohne Werte bedeutet jeder Wert des Attributs deaktiviert.",
+      "disabledValuesHint": "Mit Kommas getrennt.",
       "disabledValuesInvalid": "Gib bis zu 20 Werte mit höchstens 256 Zeichen ein, durch Kommas getrennt.",
       "caTitle": "CA-Zertifikat",
       "goToCaUpload": "Zum CA-Zertifikat",
       "caDescription": "Nötig, wenn das Serverzertifikat des Verzeichnisses von deiner eigenen Zertifizierungsstelle ausgestellt wurde.",
       "caNone": "Kein CA-Zertifikat hochgeladen",
-      "caNoneHint": "Lunedo vertraut nur Zertifikaten öffentlicher Zertifizierungsstellen.",
+      "caNoneHint": "Nur öffentliche Zertifizierungsstellen.",
       "caSystem": "Nur öffentliche Stellen",
       "caUpload": "CA-Zertifikat hochladen",
       "caReplace": "CA-Zertifikat ersetzen",
       "caRemove": "CA-Zertifikat entfernen",
       "caRemoveTitle": "CA-Zertifikat entfernen?",
-      "caRemoveDescription": "Lunedo vertraut dann nur öffentlichen Zertifizierungsstellen. Verwendet das Verzeichnis ein Zertifikat deiner eigenen Stelle, funktionieren Anmeldung und Synchronisierung nicht mehr."
+      "caRemoveDescription": "Lunedo vertraut dann nur öffentlichen Zertifizierungsstellen. Verwendet das Verzeichnis ein Zertifikat deiner eigenen Stelle, funktionieren Anmeldung und Synchronisierung nicht mehr.",
+      "urlHelp": "Die Adresse deines Verzeichnisservers, zum Beispiel ldaps://dc01.example.org. Ein Servername allein, etwa dc01.example.org, genügt; Lunedo verwendet dann ldaps:// auf Port 636. Einfaches ldap:// funktioniert nur mit StartTLS, damit Passwörter nie unverschlüsselt übertragen werden.",
+      "testPersonHelp": "Anmeldename einer Person im Verzeichnis. Lunedo liest alle Attribute, die das Verzeichnis für diese Person liefert, damit du unten daraus wählen kannst.",
+      "disabledAttributeHelp": "Optional. Leer lassen, wenn das Verzeichnis deaktivierte Konten nicht kennzeichnet.",
+      "disabledValuesHelp": "Durch Kommas getrennt. Ohne Werte bedeutet jeder Wert des Attributs deaktiviert.",
+      "caNoneHelp": "Lunedo vertraut nur Zertifikaten öffentlicher Zertifizierungsstellen.",
+      "signInAttributeHelp": "Was Personen auf der Anmeldeseite neben ihrem Passwort eingeben.",
+      "groupMembershipHelp": "Wo das Verzeichnis festhält, wer zu einer Gruppe gehört."
     },
     "directoryTest": {
       "title": "Verzeichnis testen",
       "description": "Lunedo verbindet sich mit dem Dienstkonto und sucht eine Person. Es wird nichts gespeichert und kein Konto angelegt.",
       "signInName": "Anmeldename einer Testperson",
-      "signInNameHint": "Optional. Ohne Angabe zeigt Lunedo die erste Person, die es findet.",
+      "signInNameHint": "Optional, sonst die erste Person.",
       "start": "Verzeichnis testen",
       "checks": "Prüfungen",
       "steps": {
@@ -829,7 +860,8 @@
         "search": "Prüfe die Basis-DNs und die Filter und teste dann erneut."
       },
       "sample": "Gefundene Person",
-      "attributes": "Attribute aus dem Verzeichnis"
+      "attributes": "Attribute aus dem Verzeichnis",
+      "signInNameHelp": "Optional. Ohne Angabe zeigt Lunedo die erste Person, die es findet."
     },
     "scim": {
       "intro": "Mit SCIM sendet der Anbieter Änderungen an Personen und Gruppen sofort an Lunedo, statt auf die nächste Anmeldung oder Synchronisierung zu warten. Konten werden vor der ersten Anmeldung angelegt und deaktiviert, nie gelöscht.",
@@ -881,7 +913,8 @@
       "removeTitle": "Entwurf {name} entfernen?",
       "removeDescription": "Die Redirect-URI und das Zertifikat dieses Entwurfs funktionieren dann nicht mehr. Entferne auch die Registrierung beim Anbieter, falls du eine angelegt hast.",
       "notice": "Niemand meldet sich über {name} an, bis die Einrichtung abgeschlossen ist. Testanmeldungen funktionieren bereits."
-    }
+    },
+    "redirectUriHelp": "Trage diese Adresse in der App-Registrierung deines Anbieters ein."
   },
   "identities": {
     "title": "Verknüpfte Anmeldungen",
@@ -902,7 +935,8 @@
     "provider": "Anbieter",
     "chooseProvider": "Anbieter wählen",
     "subject": "Kennung beim Anbieter",
-    "subjectHint": "Die feste ID der Person beim Anbieter, zum Beispiel die Objekt-ID in Entra ID. Eine Testanmeldung zeigt sie an."
+    "subjectHint": "Die feste ID der Person beim Anbieter.",
+    "subjectHelp": "Die feste ID der Person beim Anbieter, zum Beispiel die Objekt-ID in Entra ID. Eine Testanmeldung zeigt sie an."
   },
   "brand": {
     "name": "Lunedo",
@@ -997,21 +1031,25 @@
     "previous": "Zurück",
     "next": "Weiter",
     "selectAll": "Alle auf dieser Seite auswählen",
-    "selection": "Auswahl"
+    "selection": "Auswahl",
+    "moreAbout": "Mehr zu"
   },
   "emergencyRecipients": {
     "title": "Notfall-Anmeldung des Owners",
     "description": "Wenn du dich bei ausgeschalteter Passwort-Anmeldung mit deinem Passwort anmeldest, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
     "ownerOnly": "Nur der Instanz-Owner kann ändern, wer über eine Notfall-Anmeldung informiert wird.",
     "administrators": "Instanz-Administration informieren",
-    "administratorsHint": "Alle Owner und Administratoren der Instanz bekommen eine Benachrichtigung.",
+    "administratorsHint": "Alle Owner und Admins der Instanz.",
     "accounts": "Weitere Personen",
-    "accountsHint": "Sie bekommen eine Benachrichtigung in Lunedo und per E-Mail.",
+    "accountsHint": "Benachrichtigung in Lunedo und per Mail.",
     "choosePeople": "Personen auswählen",
     "addresses": "Weitere E-Mail-Adressen",
-    "addressesHint": "Adressen außerhalb von Lunedo, zum Beispiel ein Security-Team, durch Kommas getrennt. Höchstens 20.",
+    "addressesHint": "Externe Adressen, mit Kommas, bis 20.",
     "addressesInvalid": "Gib bis zu 20 gültige E-Mail-Adressen ein, durch Kommas getrennt.",
-    "otherEmergency": "So meldet sich der Instanz-Owner an, wenn die Anbieter ausfallen. Den Zugriff von Administratoren auf Organisationen im Notfall regelst du an anderer Stelle:"
+    "otherEmergency": "So meldet sich der Instanz-Owner an, wenn die Anbieter ausfallen. Den Zugriff von Administratoren auf Organisationen im Notfall regelst du an anderer Stelle:",
+    "accountsHelp": "Sie bekommen eine Benachrichtigung in Lunedo und per E-Mail.",
+    "addressesHelp": "Adressen außerhalb von Lunedo, zum Beispiel ein Security-Team, durch Kommas getrennt. Höchstens 20.",
+    "administratorsHelp": "Alle Owner und Administratoren der Instanz bekommen eine Benachrichtigung."
   },
   "shell": {
     "documentTitle": "{title} · Lunedo",
@@ -1042,7 +1080,9 @@
     "settings": "Einstellungen",
     "account": "Konto",
     "forYou": "Für dich",
-    "tasks": "Meine Aufgaben"
+    "tasks": "Meine Aufgaben",
+    "settingsAttention": "Einstellungen, Backup braucht Aufmerksamkeit",
+    "backupAttention": "Backup braucht Aufmerksamkeit"
   },
   "help": {
     "shortcuts": "Tastenkürzel",
@@ -1834,7 +1874,7 @@
     "newPasswordTitle": "Neues Passwort festlegen",
     "newPassword": "Neues Passwort",
     "repeatPassword": "Passwort wiederholen",
-    "passwordHint": "Mindestens {minimum} Zeichen. Eine Passphrase merkt man sich leichter.",
+    "passwordHint": "Mindestens {minimum} Zeichen.",
     "passwordsDiffer": "Die Passwörter stimmen nicht überein.",
     "setPassword": "Passwort festlegen",
     "passwordChanged": "Dein Passwort wurde geändert. Melde dich jetzt damit an.",
@@ -1906,7 +1946,8 @@
     },
     "brand": {
       "withLunedo": "mit Lunedo"
-    }
+    },
+    "passwordHelp": "Mindestens {minimum} Zeichen. Eine Passphrase merkt man sich leichter."
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",
@@ -2299,7 +2340,7 @@
       "compact": "Kompakt"
     },
     "readableFont": "Leserfreundliche Schrift",
-    "readableFontHint": "Atkinson Hyperlegible, entwickelt für Menschen mit Sehschwäche.",
+    "readableFontHint": "Entwickelt für Menschen mit Sehschwäche.",
     "languageAndRegion": "Sprache und Region",
     "language": "Sprache",
     "timeZone": "Zeitzone",
@@ -2318,7 +2359,8 @@
     "startPages": {
       "forYou": "Für dich",
       "organizationHome": "Startseite der Organisation"
-    }
+    },
+    "readableFontHelp": "Atkinson Hyperlegible, entwickelt für Menschen mit Sehschwäche."
   },
   "settings": {
     "actions": "Aktionen",
@@ -2392,7 +2434,8 @@
     "keys": {
       "auth_passwordSignIn": {
         "label": "Anmeldung mit Passwort",
-        "description": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
+        "description": "Aus: nur über Anbieter oder Passkey.",
+        "help": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
       },
       "appearance_colorMode": {
         "label": "Farbmodus",
@@ -2420,23 +2463,28 @@
       },
       "instance_name": {
         "label": "Name der Instanz",
-        "description": "Erscheint auf der Anmeldeseite, in E-Mails und im Browser."
+        "description": "Auf der Anmeldeseite und in E-Mails.",
+        "help": "Erscheint auf der Anmeldeseite, in E-Mails und im Browser."
       },
       "instance_url": {
         "label": "Adresse",
-        "description": "Wird in Links, E-Mails und für Passkeys verwendet. Eine Änderung macht vorhandene Passkeys ungültig."
+        "description": "Für Links, E-Mails und Passkeys.",
+        "help": "Wird in Links, E-Mails und für Passkeys verwendet. Eine Änderung macht vorhandene Passkeys ungültig."
       },
       "locale_language": {
         "label": "Sprache",
-        "description": "Sprache der Oberfläche und der E-Mails für alle, die keine eigene gewählt haben."
+        "description": "Für alle ohne eigene Sprache.",
+        "help": "Sprache der Oberfläche und der E-Mails für alle, die keine eigene gewählt haben."
       },
       "locale_timeZone": {
         "label": "Zeitzone",
-        "description": "Datum und Uhrzeit werden in dieser Zeitzone angezeigt."
+        "description": "Für Datum und Uhrzeit.",
+        "help": "Datum und Uhrzeit werden in dieser Zeitzone angezeigt."
       },
       "locale_dateFormat": {
         "label": "Datumsformat",
-        "description": "Wie volle Datumsangaben geschrieben werden, etwa in Tabellen und Versionen. Kurze Angaben wie „heute“ oder „26. Okt.“ folgen der Sprache."
+        "description": "Wie volle Datumsangaben aussehen.",
+        "help": "Wie volle Datumsangaben geschrieben werden, etwa in Tabellen und Versionen. Kurze Angaben wie „heute“ oder „26. Okt.“ folgen der Sprache."
       },
       "locale_timeFormat": {
         "label": "Zeitformat",
@@ -2444,7 +2492,8 @@
       },
       "locale_numberFormat": {
         "label": "Zahlenformat",
-        "description": "Trennzeichen für Tausender und Dezimalstellen."
+        "description": "Trennzeichen für Tausender und Dezimalen.",
+        "help": "Trennzeichen für Tausender und Dezimalstellen."
       },
       "locale_firstDayOfWeek": {
         "label": "Erster Tag der Woche",
@@ -2452,7 +2501,8 @@
       },
       "branding_accentColor": {
         "label": "Akzentfarbe",
-        "description": "Für die Hauptaktion, das aktive Element, Links und den Fokus."
+        "description": "Für Hauptaktion, Links und Fokus.",
+        "help": "Für die Hauptaktion, das aktive Element, Links und den Fokus."
       },
       "auth_passwordMinLength": {
         "label": "Mindestlänge des Passworts",
@@ -2460,27 +2510,33 @@
       },
       "auth_twoFactorRequired": {
         "label": "Zwei-Faktor-Authentifizierung verlangen",
-        "description": "Alle richten eine Authenticator-App oder einen Passkey ein, bevor sie arbeiten können."
+        "description": "Alle richten einen zweiten Faktor ein.",
+        "help": "Alle richten eine Authenticator-App oder einen Passkey ein, bevor sie arbeiten können."
       },
       "auth_maxSessionsPerAccount": {
         "label": "Sitzungen pro Konto",
-        "description": "Die älteste Sitzung endet, wenn eine neue das Limit überschreiten würde."
+        "description": "Darüber endet die älteste Sitzung.",
+        "help": "Die älteste Sitzung endet, wenn eine neue das Limit überschreiten würde."
       },
       "auth_sessionIdleTimeoutMinutes": {
         "label": "Abmelden nach Inaktivität",
-        "description": "Wie lange man ohne Aktivität angemeldet bleibt."
+        "description": "Angemeldet bleiben ohne Aktivität.",
+        "help": "Wie lange man ohne Aktivität angemeldet bleibt."
       },
       "auth_sessionLifetimeMinutes": {
         "label": "Maximale Sitzungsdauer",
-        "description": "Danach meldet man sich erneut an, auch wenn man aktiv ist."
+        "description": "Danach neu anmelden, auch wenn aktiv.",
+        "help": "Danach meldet man sich erneut an, auch wenn man aktiv ist."
       },
       "auth_reauthenticationMinutes": {
         "label": "Bestätigung für heikle Änderungen",
-        "description": "Wie lange eine bestätigte Identität für Änderungen wie ein neues Passwort gilt."
+        "description": "Gültigkeit einer bestätigten Identität.",
+        "help": "Wie lange eine bestätigte Identität für Änderungen wie ein neues Passwort gilt."
       },
       "auth_signInAttemptsPerAccountPerMinute": {
         "label": "Anmeldeversuche pro Konto",
-        "description": "Weitere Versuche werden eine Minute lang abgewiesen."
+        "description": "Danach eine Minute lang gesperrt.",
+        "help": "Weitere Versuche werden eine Minute lang abgewiesen."
       },
       "auth_signInAttemptsPerClientPerMinute": {
         "label": "Anmeldeversuche pro Client",
@@ -2496,11 +2552,13 @@
       },
       "auth_lockoutWindowMinutes": {
         "label": "Sperrfenster",
-        "description": "Fehlversuche innerhalb dieser Zeit zählen zusammen."
+        "description": "Fehlversuche darin zählen zusammen.",
+        "help": "Fehlversuche innerhalb dieser Zeit zählen zusammen."
       },
       "auth_lockoutMinutes": {
         "label": "Erste Sperre",
-        "description": "Wiederholte Sperren werden bis zum Maximum länger."
+        "description": "Wiederholte Sperren werden länger.",
+        "help": "Wiederholte Sperren werden bis zum Maximum länger."
       },
       "auth_lockoutMaxMinutes": {
         "label": "Längste Sperre",
@@ -2508,43 +2566,53 @@
       },
       "apiTokens_maxLifetimeDays": {
         "label": "Maximale Lebensdauer von API-Tokens",
-        "description": "Ohne Begrenzung dürfen Tokens ohne Ablauf sein. Organisationen können die Begrenzung nur verschärfen."
+        "description": "Höchste Laufzeit neuer Tokens.",
+        "help": "Ohne Begrenzung dürfen Tokens ohne Ablauf sein. Organisationen können die Begrenzung nur verschärfen."
       },
       "apiTokens_requestsPerMinute": {
         "label": "Anfragen pro Token",
-        "description": "Pro Minute. Weitere Anfragen werden kurz abgewiesen."
+        "description": "Anfragen pro Minute und Token.",
+        "help": "Pro Minute. Weitere Anfragen werden kurz abgewiesen."
       },
       "apiTokens_expiryReminderDays": {
         "label": "Erinnerung vor Ablauf",
-        "description": "So lange vor dem Ablauf eines Tokens werden die Verantwortlichen erinnert."
+        "description": "Erinnerung vor dem Ablauf eines Tokens.",
+        "help": "So lange vor dem Ablauf eines Tokens werden die Verantwortlichen erinnert."
       },
       "apiTokens_publicDocumentation": {
         "label": "Öffentliche API-Referenz",
-        "description": "Alle können die API-Referenz öffnen, auch ohne Anmeldung."
+        "description": "API-Referenz auch ohne Anmeldung.",
+        "help": "Alle können die API-Referenz öffnen, auch ohne Anmeldung."
       },
       "organizations_selfServiceCreation": {
         "label": "Organisationen selbst anlegen",
-        "description": "Alle Mitglieder dürfen Organisationen anlegen und sind dann deren Owner."
+        "description": "Mitglieder legen Organisationen an.",
+        "help": "Alle Mitglieder dürfen Organisationen anlegen und sind dann deren Owner."
       },
       "organizations_membersCreateGroups": {
         "label": "Mitglieder legen Gruppen an",
-        "description": "Mitglieder dürfen Gruppen anlegen und verwalten."
+        "description": "Mitglieder legen Gruppen an.",
+        "help": "Mitglieder dürfen Gruppen anlegen und verwalten."
       },
       "organizations_selfRegistration": {
         "label": "Selbstregistrierung",
-        "description": "Personen mit einer Adresse in einer der Domains können selbst ein Konto anlegen."
+        "description": "Konto selbst anlegen mit Domain-Adresse.",
+        "help": "Personen mit einer Adresse in einer der Domains können selbst ein Konto anlegen."
       },
       "organizations_guestExpiryReminderDays": {
         "label": "Erinnerung vor Ablauf von Gästen",
-        "description": "So lange vor dem Ende eines Gastzugangs wird die verantwortliche Person erinnert."
+        "description": "Erinnerung vor Ende eines Gastzugangs.",
+        "help": "So lange vor dem Ende eines Gastzugangs wird die verantwortliche Person erinnert."
       },
       "organizations_guestInactivityDays": {
         "label": "Inaktive Gäste",
-        "description": "Die verantwortliche Person erfährt, wenn ein Gast so lange nicht aktiv war."
+        "description": "Hinweis, wenn ein Gast inaktiv ist.",
+        "help": "Die verantwortliche Person erfährt, wenn ein Gast so lange nicht aktiv war."
       },
       "organizations_expiryReminderDays": {
         "label": "Erinnerung vor Ablauf von Zugängen",
-        "description": "So lange vor dem Ablauf von Rollen und Mitgliedschaften werden die Verantwortlichen erinnert."
+        "description": "Erinnerung vor Ablauf von Rollen.",
+        "help": "So lange vor dem Ablauf von Rollen und Mitgliedschaften werden die Verantwortlichen erinnert."
       },
       "organizations_breakGlassMinutes": {
         "label": "Dauer des Notfallzugriffs",
@@ -2560,143 +2628,178 @@
       },
       "apiTokens_unusedNoticeDays": {
         "label": "Ungenutzte API-Tokens",
-        "description": "Benachrichtige die Person, der ein Token gehört, wenn es so lange nicht verwendet wurde. Das Token funktioniert weiter."
+        "description": "Hinweis bei ungenutzten Tokens.",
+        "help": "Benachrichtige die Person, der ein Token gehört, wenn es so lange nicht verwendet wurde. Das Token funktioniert weiter."
       },
       "spaces_membersCreateSpaces": {
         "label": "Mitglieder erstellen Spaces",
-        "description": "Mitglieder dürfen Spaces erstellen. Administratoren dürfen es immer, Gäste und Mitwirkende nie."
+        "description": "Mitglieder erstellen Spaces.",
+        "help": "Mitglieder dürfen Spaces erstellen. Administratoren dürfen es immer, Gäste und Mitwirkende nie."
       },
       "spaces_personalSpaces": {
         "label": "Persönliche Spaces",
-        "description": "Jede Person mit Standardkonto bekommt einen persönlichen Space, sobald sie ihn das erste Mal öffnet."
+        "description": "Ein eigener Space für jede Person.",
+        "help": "Jede Person mit Standardkonto bekommt einen persönlichen Space, sobald sie ihn das erste Mal öffnet."
       },
       "appearance_folderView": {
         "label": "Ordneransicht",
-        "description": "Zeigt den Inhalt von Ordnern als Liste oder als Kacheln."
+        "description": "Ordnerinhalt als Liste oder Kacheln.",
+        "help": "Zeigt den Inhalt von Ordnern als Liste oder als Kacheln."
       },
       "pages_defaultMode": {
         "label": "Standardmodus neuer Seiten",
-        "description": "Im Veröffentlichen-Modus sehen Leser die zuletzt veröffentlichte Version, während Bearbeiter an einem Entwurf arbeiten. Im Live-Modus sehen Leser jede Änderung sofort. Jede Seite kann abweichen."
+        "description": "Wie neue Seiten veröffentlicht werden.",
+        "help": "Im Veröffentlichen-Modus sehen Leser die zuletzt veröffentlichte Version, während Bearbeiter an einem Entwurf arbeiten. Im Live-Modus sehen Leser jede Änderung sofort. Jede Seite kann abweichen."
       },
       "pages_liveVersionIdleMinutes": {
         "label": "Version nach einer Pause im Live-Modus",
-        "description": "Eine Seite im Live-Modus erhält nach dieser Zeit ohne Änderungen eine Version, oder wenn die letzte bearbeitende Person sie verlässt."
+        "description": "Version nach dieser Pause im Live-Modus.",
+        "help": "Eine Seite im Live-Modus erhält nach dieser Zeit ohne Änderungen eine Version, oder wenn die letzte bearbeitende Person sie verlässt."
       },
       "pages_status": {
         "label": "Seitenstatus",
-        "description": "Bearbeiter können markieren, wie weit eine Seite ist, und Leser sehen es oben auf der Seite. Ausgeschaltet ist der Status überall verborgen; Seiten behalten ihn, falls du ihn wieder einschaltest."
+        "description": "Markiert, wie weit eine Seite ist.",
+        "help": "Bearbeiter können markieren, wie weit eine Seite ist, und Leser sehen es oben auf der Seite. Ausgeschaltet ist der Status überall verborgen; Seiten behalten ihn, falls du ihn wieder einschaltest."
       },
       "trash_firstStageDays": {
         "label": "Zeit im Papierkorb",
-        "description": "Wie lange Bearbeiter gelöschte Seiten aus dem Papierkorb eines Space wiederherstellen können."
+        "description": "Wiederherstellen aus dem Papierkorb.",
+        "help": "Wie lange Bearbeiter gelöschte Seiten aus dem Papierkorb eines Space wiederherstellen können."
       },
       "trash_secondStageDays": {
         "label": "Zeit in der Admin-Wiederherstellung",
-        "description": "Nach dem Papierkorb können nur Organisationsadministratoren Inhalte so lange wiederherstellen. Danach werden sie endgültig gelöscht."
+        "description": "Danach nur Admins, dann endgültig weg.",
+        "help": "Nach dem Papierkorb können nur Organisationsadministratoren Inhalte so lange wiederherstellen. Danach werden sie endgültig gelöscht."
       },
       "trash_firstStageMinimumDays": {
         "label": "Kürzeste Zeit im Papierkorb",
-        "description": "Organisationen und Spaces können keine kürzere Zeit im Papierkorb festlegen."
+        "description": "Kürzeste Zeit im Papierkorb.",
+        "help": "Organisationen und Spaces können keine kürzere Zeit im Papierkorb festlegen."
       },
       "trash_secondStageMinimumDays": {
         "label": "Kürzeste Zeit in der Admin-Wiederherstellung",
-        "description": "Organisationen und Spaces können keine kürzere Zeit in der Admin-Wiederherstellung festlegen."
+        "description": "Kürzeste Zeit für Admin-Wiederherstellung.",
+        "help": "Organisationen und Spaces können keine kürzere Zeit in der Admin-Wiederherstellung festlegen."
       },
       "reactions_enabled": {
         "label": "Reaktionen",
-        "description": "Personen können mit Emojis auf Seiten, Blogbeiträge und Kommentare reagieren."
+        "description": "Reaktionen mit Emojis.",
+        "help": "Personen können mit Emojis auf Seiten, Blogbeiträge und Kommentare reagieren."
       },
       "files_maxFileSizeMegabytes": {
         "label": "Größte hochladbare Datei",
-        "description": "Größere Uploads werden abgelehnt, bevor etwas gespeichert wird, mit einer Meldung, die die Grenze nennt. Organisationen können sie nur senken."
+        "description": "Größere Uploads werden abgelehnt.",
+        "help": "Größere Uploads werden abgelehnt, bevor etwas gespeichert wird, mit einer Meldung, die die Grenze nennt. Organisationen können sie nur senken."
       },
       "files_keepVersions": {
         "label": "Versionen einer Datei, die behalten werden",
-        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen und Versionen, die eine Seitenversion noch zeigt, etwa Zeichnungen, bleiben immer erhalten und zählen nicht mit."
+        "description": "Ältere Dateiversionen werden entfernt.",
+        "help": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen und Versionen, die eine Seitenversion noch zeigt, etwa Zeichnungen, bleiben immer erhalten und zählen nicht mit."
       },
       "sharing_shareLinks": {
         "label": "Links zum Teilen",
-        "description": "Wer eine Seite teilen darf, kann Links für bestimmte Personen, die Organisation oder alle Angemeldeten erstellen."
+        "description": "Links für Personen und Organisation.",
+        "help": "Wer eine Seite teilen darf, kann Links für bestimmte Personen, die Organisation oder alle Angemeldeten erstellen."
       },
       "sharing_anyoneLinks": {
         "label": "Links für alle ohne Anmeldung",
-        "description": "Wer den Link öffnet, sieht nur die geteilte Seite. Jeder Link braucht ein Ablaufdatum. Eingeschränkte Seiten bekommen nie solche Links."
+        "description": "Links ohne Anmeldung, mit Ablauf.",
+        "help": "Wer den Link öffnet, sieht nur die geteilte Seite. Jeder Link braucht ein Ablaufdatum. Eingeschränkte Seiten bekommen nie solche Links."
       },
       "sharing_anyoneLinkMaxDays": {
         "label": "Längste Gültigkeit eines Links für alle",
-        "description": "Links für alle müssen innerhalb dieser Zeit ablaufen. Organisationen können sie nur verkürzen."
+        "description": "Höchste Laufzeit von Links für alle.",
+        "help": "Links für alle müssen innerhalb dieser Zeit ablaufen. Organisationen können sie nur verkürzen."
       },
       "sharing_membersInviteGuests": {
         "label": "Mitglieder können Gäste zu einer Seite einladen",
-        "description": "Wenn eingeschaltet, kann jede Person, die eine Seite teilen darf, jemanden per E-Mail als Gast einladen. Die Administration der Organisation kann das immer."
+        "description": "Teilende laden Gäste per E-Mail ein.",
+        "help": "Wenn eingeschaltet, kann jede Person, die eine Seite teilen darf, jemanden per E-Mail als Gast einladen. Die Administration der Organisation kann das immer."
       },
       "files_keepVersionsMaximum": {
         "label": "Höchstens behaltene Versionen für Organisationen und Spaces",
-        "description": "Organisationen und Spaces können jede Zahl bis zu diesem Höchstwert wählen. Nur hier lässt sich „Kein Limit“ einstellen."
+        "description": "Höchstwert für Organisationen und Spaces.",
+        "help": "Organisationen und Spaces können jede Zahl bis zu diesem Höchstwert wählen. Nur hier lässt sich „Kein Limit“ einstellen."
       },
       "spaces_membersCreateConfidentialSpaces": {
         "label": "Mitglieder legen vertrauliche Spaces an",
-        "description": "Mitglieder dürfen vertrauliche Spaces und 1:1-Gespräche anlegen, die Admins nicht lesen können. Admins dürfen das immer."
+        "description": "Mitglieder erstellen vertrauliche Spaces.",
+        "help": "Mitglieder dürfen vertrauliche Spaces und 1:1-Gespräche anlegen, die Admins nicht lesen können. Admins dürfen das immer."
       },
       "imports_maxUploadMegabytes": {
         "label": "Größter hochladbarer Export",
-        "description": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, dieses Limit zu erhöhen oder den Import-Ordner der Organisation auf dem Server zu verwenden."
+        "description": "Größere Exporte werden abgelehnt.",
+        "help": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, dieses Limit zu erhöhen oder den Import-Ordner der Organisation auf dem Server zu verwenden."
       },
       "imports_maxOrganizationMegabytes": {
         "label": "Import-Speicher je Organisation",
-        "description": "Hochgeladene Exporte und die daraus gelesenen Daten zählen für jede Organisation zusammen. Erreicht eine Organisation dieses Limit, werden neue Uploads und das Lesen abgelehnt, bis frühere Importe abgeschlossen, verworfen oder gelöscht sind."
+        "description": "Speicher für Importe je Organisation.",
+        "help": "Hochgeladene Exporte und die daraus gelesenen Daten zählen für jede Organisation zusammen. Erreicht eine Organisation dieses Limit, werden neue Uploads und das Lesen abgelehnt, bis frühere Importe abgeschlossen, verworfen oder gelöscht sind."
       },
       "imports_folderEnabled": {
         "label": "Import-Ordner",
-        "description": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er trägt die ID der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
+        "description": "Importe aus dem Ordner auf dem Server.",
+        "help": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er trägt die ID der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
       },
       "imports_atlassianHosts": {
         "label": "Weitere Atlassian-Sites",
-        "description": "Hostnamen, mit denen Lunedo das API-Token eines Imports außer Sites unter atlassian.net verwenden darf, durch Kommas getrennt, etwa wiki.example.com."
+        "description": "Weitere erlaubte Hosts, mit Kommas.",
+        "help": "Hostnamen, mit denen Lunedo das API-Token eines Imports außer Sites unter atlassian.net verwenden darf, durch Kommas getrennt, etwa wiki.example.com."
       },
       "spaces_export": {
         "label": "Export erlauben",
-        "description": "Seiten und der Space können als PDF, Word, HTML und Markdown exportiert werden. Ist es aus, kann niemand exportieren, auch Space-Admins nicht."
+        "description": "Export als PDF, Word, HTML, Markdown.",
+        "help": "Seiten und der Space können als PDF, Word, HTML und Markdown exportiert werden. Ist es aus, kann niemand exportieren, auch Space-Admins nicht."
       },
       "content_language": {
         "label": "Inhaltssprache",
-        "description": "Sprache der Seiten in diesem Space. Die Suche findet damit Wörter in allen Formen, zum Beispiel Häuser bei der Suche nach Haus. Jede Seite kann eine andere Sprache verwenden."
+        "description": "Sprache der Seiten, für die Suche.",
+        "help": "Sprache der Seiten in diesem Space. Die Suche findet damit Wörter in allen Formen, zum Beispiel Häuser bei der Suche nach Haus. Jede Seite kann eine andere Sprache verwenden."
       },
       "notifications_digestTime": {
         "label": "Zusammenfassung senden um",
-        "description": "In der Zeitzone der jeweiligen Person. Wird nur gesendet, wenn etwas passiert ist."
+        "description": "In der Zeitzone der jeweiligen Person.",
+        "help": "In der Zeitzone der jeweiligen Person. Wird nur gesendet, wenn etwas passiert ist."
       },
       "notifications_watchAutomatically": {
         "label": "Beobachten, was ich erstelle, bearbeite oder kommentiere",
-        "description": "Du bekommst Änderungen und Kommentare zu diesen Inhalten."
+        "description": "Änderungen und Kommentare bekommen.",
+        "help": "Du bekommst Änderungen und Kommentare zu diesen Inhalten."
       },
       "notifications_browserPush": {
         "label": "Browser-Push",
-        "description": "Erlaubt Benachrichtigungen über die Push-Dienste der Browserhersteller."
+        "description": "Über die Push-Dienste der Browser.",
+        "help": "Erlaubt Benachrichtigungen über die Push-Dienste der Browserhersteller."
       },
       "notifications_digestEnabled": {
         "label": "Tägliche Zusammenfassung per E-Mail senden",
-        "description": "Sammelt die Benachrichtigungen, deren E-Mail auf die tägliche Zusammenfassung steht. Ausgeschaltet erscheinen sie nur in der App."
+        "description": "Tägliche Zusammenfassung per E-Mail.",
+        "help": "Sammelt die Benachrichtigungen, deren E-Mail auf die tägliche Zusammenfassung steht. Ausgeschaltet erscheinen sie nur in der App."
       },
       "storage_reminder": {
         "label": "Erinnerung, solange eine Stufe aktiv ist",
-        "description": "Wie oft Lunedo den aktuellen Stand den informierten Personen wiederholt, solange eine Warnstufe aktiv bleibt."
+        "description": "Wie oft eine Warnung wiederholt wird.",
+        "help": "Wie oft Lunedo den aktuellen Stand den informierten Personen wiederholt, solange eine Warnstufe aktiv bleibt."
       },
       "operations_updateCheck": {
         "label": "Nach Updates suchen",
-        "description": "Lädt einmal am Tag die öffentliche Versionsdatei und informiert Instanz-Administratoren über neue Versionen. Aus: Lunedo stellt dafür keine Anfrage."
+        "description": "Einmal täglich nach Versionen sehen.",
+        "help": "Lädt einmal am Tag die öffentliche Versionsdatei und informiert Instanz-Administratoren über neue Versionen. Aus: Lunedo stellt dafür keine Anfrage."
       },
       "appearance_tablePageSize": {
         "label": "Einträge pro Seite",
-        "description": "Wie viele Zeilen Listen und Tabellen auf einmal zeigen."
+        "description": "Zeilen pro Seite in Listen.",
+        "help": "Wie viele Zeilen Listen und Tabellen auf einmal zeigen."
       },
       "identityProviders_syncLogRetentionDays": {
         "label": "Aufbewahrung der Synchronisierungsprotokolle",
-        "description": "Ältere Läufe der Synchronisierung mit Identitätsanbietern werden entfernt."
+        "description": "Ältere Synchronisierungen entfernen.",
+        "help": "Ältere Läufe der Synchronisierung mit Identitätsanbietern werden entfernt."
       },
       "spaces_cleanupGraceDays": {
         "label": "Wartezeit vor dem Aufräumen",
-        "description": "Wie lange ein persönlicher, 1:1- oder vertraulicher Space ohne aktive Mitglieder bleibt, bevor er unter Aufräumen erscheint. Mindestens 7 Tage."
+        "description": "Wartezeit, mindestens 7 Tage.",
+        "help": "Wie lange ein persönlicher, 1:1- oder vertraulicher Space ohne aktive Mitglieder bleibt, bevor er unter Aufräumen erscheint. Mindestens 7 Tage."
       }
     },
     "disabled": {
@@ -2745,7 +2848,7 @@
     "title": "Anmeldung und Sicherheit",
     "description": "Passwort, zweite Faktoren, Sitzungen und API-Tokens.",
     "signIn": "Anmeldung",
-    "passwordDescription": "Verwende eine lange Passphrase, die du sonst nirgends verwendest.",
+    "passwordDescription": "Eine lange Passphrase nur für hier.",
     "changePassword": "Passwort ändern",
     "passwordChanged": "Dein Passwort wurde geändert. Deine anderen Sitzungen wurden beendet.",
     "otherSessionsEnd": "Wenn du das Passwort änderst, enden deine anderen Sitzungen.",
@@ -2781,7 +2884,7 @@
     "passkeysUnsupported": "Dieser Browser unterstützt keine Passkeys.",
     "addPasskey": "Passkey hinzufügen",
     "passkeyName": "Name",
-    "passkeyNameHint": "Zum Beispiel das Gerät oder der Sicherheitsschlüssel.",
+    "passkeyNameHint": "Zum Beispiel das Gerät.",
     "defaultPasskeyName": "Passkey",
     "passkeyDetails": "Hinzugefügt {created} · zuletzt verwendet {used}",
     "removePasskeyTitle": "{name} entfernen?",
@@ -2807,7 +2910,9 @@
     "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden.",
     "removeAuthenticator": "Authenticator-App entfernen",
     "removeAuthenticatorSummary": "Codes aus der App funktionieren dann nicht mehr für die Anmeldung. Richte zuerst einen anderen zweiten Faktor ein, wenn deine Organisation einen verlangt.",
-    "removePasskey": "Passkey entfernen"
+    "removePasskey": "Passkey entfernen",
+    "passkeyNameHelp": "Zum Beispiel das Gerät oder der Sicherheitsschlüssel.",
+    "passwordHelp": "Verwende eine lange Passphrase, die du sonst nirgends verwendest."
   },
   "tokens": {
     "personal": "API-Tokens",
@@ -3252,7 +3357,7 @@
       "thisDevice": "Benachrichtigungen auf diesem Gerät",
       "explanation": "Push-Nachrichten werden über den Push-Dienst deines Browserherstellers zugestellt. Ihr Inhalt ist verschlüsselt, sie verlassen aber diesen Server. Beim Einschalten fragt dein Browser nach der Erlaubnis.",
       "unsupported": "Dieser Browser kann keine Push-Nachrichten empfangen. Verwende eine aktuelle Version von Firefox, Chrome, Edge oder Safari.",
-      "instanceOff": "Für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten.",
+      "instanceOff": "Für diese Instanz ausgeschaltet.",
       "off": "Aus",
       "on": "An",
       "turnOn": "Für dieses Gerät einschalten",
@@ -3273,7 +3378,7 @@
       "browserFailed": "Der Browser oder sein Push-Dienst hat nicht geantwortet. Prüfe deine Internetverbindung und versuche es erneut.",
       "loadFailed": "Browser-Push konnte nicht geladen werden",
       "instanceLabel": "Browser-Push für diese Instanz",
-      "instanceDescription": "Personen können Benachrichtigungen je Gerät einschalten. Die Nachrichten laufen über die Push-Dienste der Browserhersteller.",
+      "instanceDescription": "Je Gerät über Push-Dienste der Browser.",
       "instanceReadOnly": "Nur Instanz-Administratoren, die Einstellungen verwalten, können das ändern.",
       "enableTitle": "Browser-Push einschalten?",
       "enableDescription": "Lies das, bevor du es einschaltest:",
@@ -3282,7 +3387,9 @@
       "enablePerDevice": "Es wird nichts gesendet, bis Personen es für ihre eigenen Geräte einschalten.",
       "enableConfirm": "Browser-Push einschalten",
       "organizationOn": "Für diese Instanz eingeschaltet. Personen wählen es je Ereignis und schalten es je Gerät ein.",
-      "organizationOff": "Für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten."
+      "organizationOff": "Für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten.",
+      "instanceOffHelp": "Für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten.",
+      "instanceHelp": "Personen können Benachrichtigungen je Gerät einschalten. Die Nachrichten laufen über die Push-Dienste der Browserhersteller."
     },
     "open": {
       "loading": "Benachrichtigung wird geöffnet",
@@ -3368,14 +3475,14 @@
     "host": "Server",
     "port": "Port",
     "security": "Sicherheit",
-    "securityHint": "Verwende TLS oder STARTTLS, außer der Server läuft direkt neben Lunedo.",
+    "securityHint": "TLS oder STARTTLS verwenden.",
     "securityModes": {
       "tls": "TLS (meist Port 465)",
       "starttls": "STARTTLS (meist Port 587)",
       "none": "Keine (nur lokales Relay)"
     },
     "username": "Benutzername",
-    "usernameHint": "Leer lassen, wenn der Server keine Anmeldung braucht.",
+    "usernameHint": "Leer, wenn keine Anmeldung nötig ist.",
     "password": "Passwort",
     "passwordKept": "Leer lassen, um das gespeicherte Passwort zu behalten.",
     "from": "Absenderadresse",
@@ -3413,11 +3520,11 @@
     },
     "testFailedAction": "Prüfe Server, Port, Verbindungssicherheit und Zugangsdaten und sende den Test dann erneut.",
     "preset": "Dienst",
-    "presetHint": "Füllt Server, Port und Verbindungssicherheit aus. Alle Dienste werden über SMTP genutzt.",
+    "presetHint": "Füllt Server, Port und Sicherheit aus.",
     "presetCustom": "Eigener Mailserver",
     "methodTitle": "Versandart",
     "method": "Versandart",
-    "methodHint": "Lunedo sendet derzeit über {method}. Exchange Online rückt von SMTP mit Passwörtern ab; für Microsoft 365 nutze SMTP mit OAuth2 oder Microsoft Graph. Eine Versandart gilt, sobald du ihre Einstellungen speicherst.",
+    "methodHint": "Derzeit über {method}.",
     "methods": {
       "smtp": "SMTP",
       "graph": "Microsoft Graph"
@@ -3437,7 +3544,7 @@
       "sender": "Absenderpostfach",
       "senderHint": "Das Postfach, als das Lunedo sendet.",
       "senderName": "Absendername",
-      "senderNameHint": "Optional. Ohne ihn wird der Name des Postfachs angezeigt.",
+      "senderNameHint": "Optional, sonst Name des Postfachs.",
       "sentItems": "Über Microsoft Graph gesendete E-Mails werden nicht in den Gesendeten Elementen des Absenderpostfachs abgelegt. Graph kann den Header für die Abmeldung mit einem Klick nicht mitsenden, deshalb lassen sich Benachrichtigungs-E-Mails nur über den Link in der E-Mail abbestellen. Über SMTP enthalten sie zusätzlich den Header.",
       "credentials": "Client-Secret oder Zertifikat",
       "noCredentials": "Noch keines. Füge ein Client-Secret hinzu oder erstelle ein Zertifikat, bevor Lunedo senden kann.",
@@ -3455,12 +3562,15 @@
       "removeDescription": "Lunedo verwendet sie sofort nicht mehr. Füge zuerst neue hinzu, solange Microsoft Graph die E-Mails sendet.",
       "addTitle": "Zugangsdaten hinzufügen",
       "kind": "Art",
-      "expiresHint": "Wie in Entra ID angezeigt. Lunedo erinnert 30 und 7 Tage vorher.",
+      "expiresHint": "Erinnerung 30 und 7 Tage vorher.",
       "validity": "Gültig für",
-      "certificateHint": "Lunedo behält den privaten Schlüssel. Lade das Zertifikat in der App-Registrierung unter Zertifikate & Geheimnisse hoch.",
+      "certificateHint": "In der App-Registrierung hochladen.",
       "years": "{count, plural, one {# Jahr} other {# Jahre}}",
       "savedActive": "Gespeichert. Lunedo sendet über Microsoft Graph.",
-      "savedNeedsCredential": "Gespeichert. Füge ein Client-Secret oder Zertifikat hinzu und speichere erneut, um über Microsoft Graph zu senden."
+      "savedNeedsCredential": "Gespeichert. Füge ein Client-Secret oder Zertifikat hinzu und speichere erneut, um über Microsoft Graph zu senden.",
+      "senderNameHelp": "Optional. Ohne ihn wird der Name des Postfachs angezeigt.",
+      "expiresHelp": "Wie in Entra ID angezeigt. Lunedo erinnert 30 und 7 Tage vorher.",
+      "certificateHelp": "Lunedo behält den privaten Schlüssel. Lade das Zertifikat in der App-Registrierung unter Zertifikate & Geheimnisse hoch."
     },
     "graphErrors": {
       "graphMailboxNotAllowed": {
@@ -3505,13 +3615,13 @@
       }
     },
     "authentication": "Anmeldung",
-    "authenticationHint": "OAuth2 meldet sich mit einem Zugriffstoken an, das Lunedo selbst holt und erneuert, statt mit einem Passwort.",
+    "authenticationHint": "OAuth2 statt eines Passworts.",
     "authenticationModes": {
       "password": "Passwort",
       "oauth2": "OAuth2"
     },
     "mailbox": "Postfach",
-    "mailboxHint": "Das Postfach, als das sich Lunedo anmeldet. Meist auch die Absenderadresse.",
+    "mailboxHint": "Meist auch die Absenderadresse.",
     "failureStep": "Fehlgeschlagener Schritt: {step}",
     "failureSteps": {
       "token": "Zugriffstoken holen",
@@ -3588,7 +3698,13 @@
       "lastSuccess": "Letzte E-Mail an den Server übergeben",
       "never": "Noch nie",
       "retry": "Lunedo versucht jede E-Mail mehrere Stunden lang erneut. Behebe die Ursache und prüfe es mit einer Test-E-Mail."
-    }
+    },
+    "methodHelp": "Lunedo sendet derzeit über {method}. Exchange Online rückt von SMTP mit Passwörtern ab; für Microsoft 365 nutze SMTP mit OAuth2 oder Microsoft Graph. Eine Versandart gilt, sobald du ihre Einstellungen speicherst.",
+    "presetHelp": "Füllt Server, Port und Verbindungssicherheit aus. Alle Dienste werden über SMTP genutzt.",
+    "securityHelp": "Verwende TLS oder STARTTLS, außer der Server läuft direkt neben Lunedo.",
+    "authenticationHelp": "OAuth2 meldet sich mit einem Zugriffstoken an, das Lunedo selbst holt und erneuert, statt mit einem Passwort.",
+    "mailboxHelp": "Das Postfach, als das sich Lunedo anmeldet. Meist auch die Absenderadresse.",
+    "usernameHelp": "Leer lassen, wenn der Server keine Anmeldung braucht."
   },
   "organization": {
     "general": {
@@ -3597,10 +3713,10 @@
       "profile": "Profil",
       "name": "Name",
       "slug": "Kurzname",
-      "slugHint": "Wird in Adressen verwendet. Kleinbuchstaben, Ziffern und Bindestriche.",
+      "slugHint": "Kleinbuchstaben, Ziffern, Bindestriche.",
       "branding": "Erscheinungsbild",
       "logo": "Logo",
-      "logoHint": "Erscheint auf der Anmeldeseite und in E-Mails. PNG, JPEG oder WebP, höchstens 256 KiB.",
+      "logoHint": "PNG, JPEG oder WebP, bis 256 KiB.",
       "noLogo": "Kein Logo",
       "uploadLogo": "Logo hochladen",
       "replaceLogo": "Logo ersetzen",
@@ -3611,9 +3727,12 @@
       "leaveTitle": "Mitgliedschaft",
       "leave": "{name} verlassen",
       "leaveAction": "Verlassen",
-      "leaveDescription": "Du verlierst den Zugriff auf alles in dieser Organisation.",
+      "leaveDescription": "Du verlierst den Zugriff auf alles hier.",
       "leaveConfirm": "Um wieder beizutreten, brauchst du eine neue Einladung.",
-      "leaveImpact": "Du verlierst den Zugriff auf {name}."
+      "leaveImpact": "Du verlierst den Zugriff auf {name}.",
+      "slugHelp": "Wird in Adressen verwendet. Kleinbuchstaben, Ziffern und Bindestriche.",
+      "logoHelp": "Erscheint auf der Anmeldeseite und in E-Mails. PNG, JPEG oder WebP, höchstens 256 KiB.",
+      "leaveHelp": "Du verlierst den Zugriff auf alles in dieser Organisation."
     },
     "security": {
       "title": "Sicherheit",
@@ -3722,7 +3841,7 @@
     "deactivateImpact": "{count, plural, one {Diese Person verliert} other {Diese Personen verlieren}} den Zugriff auf alle Organisationen dieser Instanz.",
     "deactivated": "Das Konto wurde deaktiviert.",
     "expiryTitle": "Ablauf für {name}",
-    "expiryHint": "Der Zugang endet am Ende dieses Tages. Vorher gehen Erinnerungen hinaus.",
+    "expiryHint": "Der Zugang endet am Ende des Tages.",
     "expiryImpact": "{count, plural, one {Diese Person verliert} other {Diese Personen verlieren}} nach dem {date} den Zugriff auf {name}.",
     "responsibleTitle": "Verantwortliche Person für {name}",
     "permissionsTitle": "Berechtigungen von {name}",
@@ -3747,7 +3866,8 @@
       "anyTwoFactor": "Zweiter Faktor: alle",
       "twoFactorOn": "Eingerichtet",
       "twoFactorOff": "Nicht eingerichtet"
-    }
+    },
+    "expiryHelp": "Der Zugang endet am Ende dieses Tages. Vorher gehen Erinnerungen hinaus."
   },
   "roles": {
     "transferOwnership": "Owner-Rolle übertragen",
@@ -3759,7 +3879,7 @@
     "people": "Personen",
     "groups": "Gruppen",
     "principalsLabel": "Personen und Gruppen",
-    "principalsHint": "Rollen gehen an einzelne Personen und Gruppen, nie an alle auf einmal.",
+    "principalsHint": "Einzelne Personen und Gruppen.",
     "instancePrincipalsHint": "Instanzrollen gehen an einzelne Personen.",
     "choosePrincipals": "Personen oder Gruppen suchen",
     "choosePeople": "Personen suchen",
@@ -3832,7 +3952,8 @@
     "removeOwnerSummary": "{name} verliert die volle Kontrolle über {organization}. Nur ein anderer Owner kann die Rolle zurückgeben.",
     "removeOwnerEntry": "{name} ist Owner",
     "chooseRole": "Wähle die Rolle, die du vergeben möchtest.",
-    "choosePeopleFirst": "Wähle mindestens eine Person."
+    "choosePeopleFirst": "Wähle mindestens eine Person.",
+    "principalsHelp": "Rollen gehen an einzelne Personen und Gruppen, nie an alle auf einmal."
   },
   "areas": {
     "levels": {
@@ -3950,7 +4071,7 @@
       "deactivated": "Deaktiviert"
     },
     "tokens": "Tokens",
-    "tokenHint": "Das Token darf höchstens, was die Rollen des Dienstkontos erlauben.",
+    "tokenHint": "Darf höchstens, was das Dienstkonto darf.",
     "deactivate": "Dienstkonto deaktivieren",
     "deactivateTitle": "{name} deaktivieren?",
     "deactivateDescription": "Alle Tokens werden widerrufen. Das lässt sich nicht rückgängig machen.",
@@ -4033,13 +4154,14 @@
       "owner": "Owner",
       "ownerHint": "Der Owner verwaltet die Organisation.",
       "ownerImpact": "Diese Person wird Owner der neuen Organisation.",
-      "slugHint": "Optional. Wird aus dem Namen abgeleitet, wenn leer.",
+      "slugHint": "Optional, sonst aus dem Namen.",
       "open": "Einstellungen öffnen",
       "domains": "Domains",
       "actionsFor": "Aktionen für {name}",
       "copyId": "ID kopieren",
       "idCopied": "ID kopiert",
-      "idCopyFailed": "Die ID konnte nicht kopiert werden"
+      "idCopyFailed": "Die ID konnte nicht kopiert werden",
+      "slugHelp": "Optional. Wird aus dem Namen abgeleitet, wenn leer."
     },
     "accounts": {
       "account": "Konto",
@@ -4086,7 +4208,7 @@
       "resetTitle": "Zweiten Faktor von {name} zurücksetzen?",
       "resetDescription": "Damit werden die Authenticator-App, alle Passkeys und Wiederherstellungscodes von {name} entfernt und alle Sitzungen beendet. Bei der nächsten Anmeldung muss {name} einen zweiten Faktor einrichten, bevor Lunedo nutzbar ist. {name} erhält dazu eine E-Mail.",
       "resetReason": "Grund",
-      "resetReasonHint": "Wird im Audit-Log festgehalten und in der E-Mail an {name} genannt.",
+      "resetReasonHint": "Im Audit-Log und in der E-Mail.",
       "resetReasonRequired": "Gib einen Grund an, damit {name} und andere Admins das Zurücksetzen nachvollziehen können.",
       "resetDone": "Der zweite Faktor von {name} wurde zurückgesetzt. {count, plural, =0 {Es war keine Sitzung aktiv.} one {Eine Sitzung wurde beendet.} other {# Sitzungen wurden beendet.}}",
       "title": "Konten",
@@ -4120,7 +4242,8 @@
       "endSessionsSummary": "Meldet {name} auf allen Geräten ab. {name} kann sich sofort wieder anmelden.",
       "resetSummary": "Entfernt Authenticator-App, Passkeys und Wiederherstellungscodes und beendet alle Sitzungen. {name} richtet bei der nächsten Anmeldung einen neuen zweiten Faktor ein.",
       "chooseNewOwner": "Wähle, wer neuer Owner wird.",
-      "personalSpaceReview": "Persönlicher Space wartet auf Prüfung"
+      "personalSpaceReview": "Persönlicher Space wartet auf Prüfung",
+      "resetReasonHelp": "Wird im Audit-Log festgehalten und in der E-Mail an {name} genannt."
     },
     "roles": {
       "title": "Rollen",
@@ -4735,7 +4858,22 @@
     "organization_signIn_manage": "Anmeldeeinstellungen verwalten",
     "organization_integrations_view": "Integrationen und API ansehen",
     "organization_integrations_manage": "Integrationen und API verwalten",
-    "organization_audit_view": "Audit-Log ansehen"
+    "organization_audit_view": "Audit-Log ansehen",
+    "instance_emergencyRecipients_manage": "Notfallempfänger verwalten",
+    "instance_personalSpaces_view": "Persönliche Spaces deaktivierter Personen sehen",
+    "instance_personalSpaces_manage": "Persönliche Spaces deaktivierter Personen verwalten",
+    "instance_personalSpace_use": "Eigenen persönlichen Space nutzen",
+    "instance_templates_manage": "Vorlagen der Instanz verwalten",
+    "instance_content_view": "Inhalte lesen",
+    "organization_search": "In der Organisation suchen",
+    "organization_search_manage": "Eigene gespeicherte Suchen verwalten",
+    "organization_spaces_create": "Spaces anlegen",
+    "organization_spaces_createConfidential": "Vertrauliche Spaces anlegen",
+    "organization_trash_manage": "Papierkorb der Organisation verwalten",
+    "organization_templates_manage": "Vorlagen der Organisation verwalten",
+    "organization_blog_pin": "Blogbeiträge anheften",
+    "organization_access_view": "Zugriffsübersicht sehen",
+    "organization_imports_manage": "Importe verwalten"
   },
   "denials": {
     "anonymous": "Nicht angemeldet",
@@ -4755,7 +4893,8 @@
     "unpublished": "Es ist noch nicht veröffentlicht",
     "restricted": "Die Seite ist beschränkt und die Person steht nicht auf ihrer Zugriffsliste",
     "editRestricted": "Das Bearbeiten ist beschränkt und die Person darf laut Zugriffsliste nicht bearbeiten",
-    "ruleNotMet": "Eine Bedingung dieser Aktion ist nicht erfüllt"
+    "ruleNotMet": "Eine Bedingung dieser Aktion ist nicht erfüllt",
+    "exportDisabled": "Der Export ist in diesem Space ausgeschaltet"
   },
   "grants": {
     "system": "System",
@@ -4778,7 +4917,11 @@
       "membersCreateGroups": "Mitglieder dürfen Gruppen anlegen",
       "manager": "Verwaltet die Gruppe",
       "memberOrManager": "Mitglied oder Verwalter der Gruppe",
-      "homeOrganizationAdministrator": "Administrator der Heimatorganisation"
+      "homeOrganizationAdministrator": "Administrator der Heimatorganisation",
+      "activeAccount": "Aktives Konto",
+      "personalSpace": "Persönliche Spaces sind erlaubt",
+      "membersCreateSpaces": "Mitglieder dürfen Spaces anlegen",
+      "membersCreateConfidentialSpaces": "Mitglieder dürfen vertrauliche Spaces anlegen"
     }
   },
   "failures": {
@@ -4915,9 +5058,10 @@
       "description": "Ein Platzhalter steht für eine Person, die noch kein Konto hat, zum Beispiel den Autor importierter Inhalte. Er kann sich nicht anmelden.",
       "name": "Name",
       "email": "E-Mail-Adresse",
-      "emailHint": "Meldet sich die Person mit dieser Adresse über einen Anbieter an und bestätigt der Anbieter sie, wird der Platzhalter zu ihrem Konto.",
+      "emailHint": "Wird bei der Anmeldung zum Konto.",
       "create": "Platzhalter anlegen",
-      "created": "Platzhalter für {name} angelegt"
+      "created": "Platzhalter für {name} angelegt",
+      "emailHelp": "Meldet sich die Person mit dieser Adresse über einen Anbieter an und bestätigt der Anbieter sie, wird der Platzhalter zu ihrem Konto."
     },
     "merge": {
       "title": "Mit einem Konto zusammenführen",
@@ -4951,12 +5095,13 @@
       "auditLog": "Das Audit-Log behält die Ereignisse nur mit der Konto-ID; die persönlichen Daten darin werden unlesbar.",
       "copies": "Kopien des Audit-Logs, die exportiert oder an andere Systeme gestreamt wurden, liegen außerhalb von Lunedo und behalten die Daten. Lösche sie bei Bedarf dort.",
       "reason": "Grund",
-      "reasonHint": "Bis zu 500 Zeichen, bleibt im Audit-Log. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026.",
+      "reasonHint": "Bleibt im Audit-Log, ohne Namen.",
       "confirm": "Gib {name} zur Bestätigung ein",
       "reauthentication": "Danach bittet Lunedo dich, mit deinem Passwort, Passkey oder Authenticator-Code zu bestätigen.",
       "action": "Anonymisieren",
       "done": "Das Konto wurde anonymisiert",
-      "reasonRequired": "Gib an, warum das Konto anonymisiert wird, zum Beispiel das Datum des Löschantrags."
+      "reasonRequired": "Gib an, warum das Konto anonymisiert wird, zum Beispiel das Datum des Löschantrags.",
+      "reasonHelp": "Bis zu 500 Zeichen, bleibt im Audit-Log. Nenne die Person nicht, zum Beispiel: Löschanfrage vom 1. Oktober 2026."
     }
   },
   "editor": {
@@ -5890,7 +6035,7 @@
       "keyInvalid": "Verwende 2 bis 10 Buchstaben oder Ziffern, ohne Leerzeichen und andere Zeichen.",
       "keyTaken": "Ein anderer Space verwendet bereits {key}. Wähle einen anderen Schlüssel.",
       "description": "Beschreibung",
-      "descriptionHint": "Optional. Ein oder zwei Sätze dazu, wofür der Space da ist.",
+      "descriptionHint": "Optional, wofür der Space da ist.",
       "visibility": "Wer den Space lesen kann",
       "permissions": "Berechtigungen",
       "permissionsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf.",
@@ -5906,7 +6051,8 @@
       "accessHolder": "{holder}: {role}",
       "submit": "Space erstellen",
       "created": "Space {name} erstellt",
-      "failed": "Der Space konnte nicht erstellt werden"
+      "failed": "Der Space konnte nicht erstellt werden",
+      "descriptionHelp": "Optional. Ein oder zwei Sätze dazu, wofür der Space da ist."
     },
     "personal": {
       "label": "Persönlicher Space",
@@ -5941,7 +6087,7 @@
       "personalNameHint": "Lass ihn leer, um deinen Namen zu zeigen.",
       "description": "Beschreibung",
       "key": "Schlüssel",
-      "keyHint": "2 bis 10 Buchstaben oder Ziffern. Er steht in den Adressen des Space und seiner Seiten, zum Beispiel /spaces/ITOPS.",
+      "keyHint": "2 bis 10 Buchstaben oder Ziffern.",
       "keyRedirectTitle": "Alte Links funktionieren weiter",
       "keyRedirect": "Adressen mit {old} führen zum neuen Schlüssel, bis ein anderer Space {old} übernimmt. Links auf Seiten funktionieren immer weiter.",
       "saveKey": "Schlüssel ändern",
@@ -5958,7 +6104,8 @@
       "adminsOnly": "Deine Rolle in diesem Space ist {role}. Frag einen Space-Admin, wenn jemand eine andere Rolle braucht.",
       "discoverable": "Mitglieder der Organisation können diesen Space finden und um Beitritt bitten",
       "discoverableHint": "Sie sehen Name und Beschreibung in der Liste der Spaces, aber keine Seiten, bis ein Space-Admin sie aufnimmt.",
-      "discoverableNotPrivate": "Nur private Spaces lassen sich so finden; andere Sichtbarkeiten geben bereits Zugriff."
+      "discoverableNotPrivate": "Nur private Spaces lassen sich so finden; andere Sichtbarkeiten geben bereits Zugriff.",
+      "keyHelp": "2 bis 10 Buchstaben oder Ziffern. Er steht in den Adressen des Space und seiner Seiten, zum Beispiel /spaces/ITOPS."
     },
     "permissions": {
       "visibilityTitle": "Leser über die Sichtbarkeit",
@@ -5968,23 +6115,27 @@
       "loadFailed": "Die Berechtigungen konnten nicht geladen werden",
       "you": "{name} (du)",
       "remove": "Rolle von {holder} entfernen",
-      "add": "Rolle vergeben",
       "rolesTitle": "Was die Rollen erlauben",
-      "grantTitle": "{holder} die Rolle {role} geben?",
       "changeTitle": "Rolle von {holder} zu {role} ändern?",
       "removeTitle": "Rolle von {holder} entfernen?",
       "confirmDescription": "Prüfe vor dem Bestätigen, wer Zugriff bekommt oder verliert.",
       "confirmGrant": "Rolle vergeben",
       "confirmChange": "Rolle ändern",
       "confirmRemove": "Rolle entfernen",
-      "grantDone": "{holder} hat die neue Rolle",
       "changeDone": "Die Rolle von {holder} wurde geändert",
       "removeDone": "Die Rolle von {holder} wurde entfernt",
       "failed": "Die Berechtigungen konnten nicht geändert werden",
       "dangerZone": "Gefahrenbereich",
       "stepDownTitle": "Als Space-Admin zurücktreten",
       "stepDownDescription": "Du verlierst deine Rolle in diesem Space. Ein anderer Space-Admin muss bleiben; ernenne zuerst einen, wenn du der letzte bist.",
-      "stepDown": "Als Space-Admin zurücktreten"
+      "stepDown": "Als Space-Admin zurücktreten",
+      "addPeople": "Personen hinzufügen",
+      "addTitle": "Personen und Gruppen hinzufügen",
+      "addDescription": "Wähle eine oder mehrere Personen und Gruppen und dann die Rolle, die alle bekommen.",
+      "chosen": "Ausgewählt",
+      "unchoose": "{holder} wieder entfernen",
+      "grantManyTitle": "{count, plural, one {{holders} die Rolle {role} geben?} other {# Personen und Gruppen die Rolle {role} geben?}}",
+      "grantManyDone": "{count, plural, one {Die neue Rolle ist vergeben} other {# Personen und Gruppen haben die neue Rolle}}"
     },
     "organization": {
       "title": "Spaces",
@@ -6002,7 +6153,7 @@
       "appoint": "Space-Admin ernennen",
       "appointTitle": "Space-Admin für {space} ernennen",
       "person": "Person",
-      "personHint": "Ein Mitglied der Organisation. Du kannst dich nicht selbst ernennen.",
+      "personHint": "Nicht du selbst.",
       "choosePerson": "Wähle zuerst eine Person.",
       "appointEffectTitle": "Das gibt Zugriff auf alle Inhalte des Space",
       "appointEffect": "Die Person kann alles in {space} lesen und bearbeiten und seine Berechtigungen verwalten. Die Ernennung wird im Audit-Log festgehalten.",
@@ -6051,7 +6202,8 @@
         "private": "Privat",
         "shared": "Geteilt"
       },
-      "actionsFor": "Aktionen für {name}"
+      "actionsFor": "Aktionen für {name}",
+      "personHelp": "Ein Mitglied der Organisation. Du kannst dich nicht selbst ernennen."
     },
     "instance": {
       "title": "Persönliche Spaces",
@@ -6075,7 +6227,7 @@
       "transfer": "Übertragen",
       "transferTitle": "Persönlichen Space von {owner} übertragen",
       "newOwner": "Neuer Inhaber",
-      "newOwnerHint": "Eines der verbliebenen Mitglieder. Du kannst den Space nicht dir selbst übertragen.",
+      "newOwnerHint": "Eines der verbliebenen Mitglieder.",
       "chooseAccount": "Wähle zuerst den neuen Inhaber.",
       "transferEffectTitle": "Der neue Inhaber bekommt alle Inhalte",
       "transferEffect": "Der neue Inhaber wird Space-Admin und kann alles lesen, was {owner} dort geschrieben hat. Die Übertragung wird im Audit-Log festgehalten.",
@@ -6087,7 +6239,8 @@
       "deleted": "Persönlicher Space gelöscht. Du kannst ihn während der Admin-Wiederherstellung unter Seiten und Papierkorb zurückholen.",
       "nobodyRemains": "Niemand übrig",
       "nobodyRemainsDescription": "Außer der deaktivierten Person ist kein aktives Mitglied übrig. Der Space lässt sich nur noch löschen oder nach der Wartezeit unter Aufräumen entfernen.",
-      "remainingFailed": "Die verbliebenen Mitglieder konnten nicht geladen werden"
+      "remainingFailed": "Die verbliebenen Mitglieder konnten nicht geladen werden",
+      "newOwnerHelp": "Eines der verbliebenen Mitglieder. Du kannst den Space nicht dir selbst übertragen."
     },
     "access": {
       "tab": "Zugriff",
@@ -6159,14 +6312,15 @@
       "deleteTitle": "Space {key} löschen",
       "deleteDescription": "{count, plural, one {Der Space und seine # Seite kommen in die zweite Stufe des Papierkorbs, ohne dass jemand sie liest.} other {Der Space und seine # Seiten kommen in die zweite Stufe des Papierkorbs, ohne dass jemand sie liest.}} Nach Ablauf der Aufbewahrungsfrist werden sie endgültig gelöscht. Bis dahin können ihn nur seine früheren Space-Admins wiederherstellen, bei persönlichen Spaces auch die Instanz-Administration.",
       "reason": "Begründung",
-      "reasonHint": "Kommt ins Audit-Log, zum Beispiel warum niemand mehr da ist.",
+      "reasonHint": "Kommt ins Audit-Log.",
       "reasonRequired": "Nenne die Begründung mit höchstens {max} Zeichen.",
       "typeKey": "Tippe {key} zur Bestätigung",
       "keyMismatch": "Der Schlüssel stimmt nicht.",
       "deleteConfirm": "Space löschen",
       "deleted": "{key} wurde in den Papierkorb verschoben.",
       "deleteFailed": "Der Space {key} konnte nicht gelöscht werden",
-      "waitingTitle": "Wartezeit"
+      "waitingTitle": "Wartezeit",
+      "reasonHelp": "Kommt ins Audit-Log, zum Beispiel warum niemand mehr da ist."
     }
   },
   "tree": {
@@ -7654,7 +7808,7 @@
       "templateHint": "Jede Besprechungsseite beginnt mit dieser Vorlage.",
       "templateLoading": "Vorlagen werden geladen",
       "members": "Mitglieder",
-      "membersHint": "Mitglieder werden zu jeder Besprechung eingeladen. Zugriff auf die Notizen ergibt sich aus den Rollen in diesem Space.",
+      "membersHint": "Nur Personen mit Zugriff auf diesen Space. Sie werden zu jeder Besprechung eingeladen; was sie in den Notizen sehen, ergibt sich aus ihrer Rolle im Space.",
       "membersPlaceholder": "Personen nach Namen suchen",
       "submit": "Serie anlegen",
       "created": "{name} angelegt. Die erste Besprechung ist bereit.",
@@ -9961,7 +10115,7 @@
     "textRequired": "Gib den Text des Banners ein.",
     "textTooLong": "Der Text darf höchstens {max} Zeichen haben.",
     "linkUrl": "Link-Adresse",
-    "linkUrlHint": "Optional, zum Beispiel wiki.example.org/maintenance. Lunedo ergänzt https://, wenn es fehlt.",
+    "linkUrlHint": "Optional, https:// wird ergänzt.",
     "linkLabel": "Link-Text",
     "linkLabelExample": "Zum Beispiel: Zum Beitrag",
     "linkInvalid": "Gib eine Webadresse ein, zum Beispiel wiki.example.org/maintenance.",
@@ -9971,7 +10125,7 @@
     "start": "Beginn",
     "startDate": "Datum des Beginns",
     "startTime": "Uhrzeit des Beginns",
-    "startHint": "Leer lassen, um es sofort anzuzeigen. Zeitzone: {timeZone}.",
+    "startHint": "Leer: sofort. Zeitzone: {timeZone}.",
     "end": "Ende",
     "endDate": "Datum des Endes",
     "endTime": "Uhrzeit des Endes",
@@ -10000,7 +10154,9 @@
     "dismiss": "Ankündigung ausblenden",
     "dismissFailed": "Die Ankündigung konnte nicht ausgeblendet werden. Prüfe deine Verbindung und versuche es noch einmal.",
     "fromInstance": "Instanz",
-    "fromOrganization": "Organisation"
+    "fromOrganization": "Organisation",
+    "linkUrlHelp": "Optional, zum Beispiel wiki.example.org/maintenance. Lunedo ergänzt https://, wenn es fehlt.",
+    "startHelp": "Leer lassen, um es sofort anzuzeigen. Zeitzone: {timeZone}."
   },
   "spaceShortcuts": {
     "title": "Verknüpfungen",
@@ -10019,7 +10175,7 @@
     "noMatch": "Kein passender Inhalt",
     "hiddenTargetKept": "Der bisherige Inhalt bleibt, außer du wählst einen anderen.",
     "url": "Adresse",
-    "urlHint": "Zum Beispiel status.example.org. Lunedo ergänzt https://, wenn es fehlt.",
+    "urlHint": "https:// wird ergänzt, wenn es fehlt.",
     "urlInvalid": "Gib eine Webadresse ein, zum Beispiel status.example.org.",
     "label": "Bezeichnung",
     "labelHint": "Wird in der Seitenleiste angezeigt, höchstens {max} Zeichen. Leer verwendet den Titel des Inhalts.",
@@ -10045,7 +10201,8 @@
     "removeFailed": "Die Verknüpfung konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es noch einmal.",
     "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden. Füge sie erneut hinzu.",
     "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es noch einmal.",
-    "labelHintWebsite": "Wird in der Seitenleiste angezeigt, höchstens {max} Zeichen."
+    "labelHintWebsite": "Wird in der Seitenleiste angezeigt, höchstens {max} Zeichen.",
+    "urlHelp": "Zum Beispiel status.example.org. Lunedo ergänzt https://, wenn es fehlt."
   },
   "chatChannels": {
     "title": "Chat-Kanäle",
@@ -10242,9 +10399,10 @@
     "s3": {
       "title": "S3-Limit",
       "label": "Limit für gespeicherte Dateien",
-      "hint": "S3 meldet keinen freien Platz. Lege ein Limit fest, damit Lunedo dich warnen kann. Leer lassen für keine Warnung.",
+      "hint": "Limit für die Warnung, sonst leer.",
       "unit": "GB",
-      "invalid": "Gib eine Größe in Gigabyte ein, zum Beispiel 500, oder lass das Feld leer."
+      "invalid": "Gib eine Größe in Gigabyte ein, zum Beispiel 500, oder lass das Feld leer.",
+      "help": "S3 meldet keinen freien Platz. Lege ein Limit fest, damit Lunedo dich warnen kann. Leer lassen für keine Warnung."
     },
     "reminder": {
       "title": "Erinnerungen"
@@ -10253,10 +10411,10 @@
       "title": "Betriebskontakte",
       "description": "Neben allen Instanzadministratoren erhalten diese Kontakte Warnungen des Betriebs per E-Mail und optional als Teams-Beitrag, zum Beispiel wenn der Speicher voll wird oder Sicherungen fehlen.",
       "addresses": "E-Mail-Adressen",
-      "addressesHint": "Eine Adresse pro Zeile, zum Beispiel eine Ticket-Adresse der IT. Bis zu 20.",
+      "addressesHint": "Eine Adresse pro Zeile, bis zu 20.",
       "addressesInvalid": "Prüfe die Adressen: Jede Zeile braucht genau eine gültige E-Mail-Adresse, insgesamt bis zu 20.",
       "webhook": "Teams-Webhook",
-      "webhookHint": "Die Adresse eines Teams-Workflows-Webhooks. Sie wird verschlüsselt gespeichert und nie wieder angezeigt.",
+      "webhookHint": "Adresse eines Teams-Workflows-Webhooks.",
       "webhookSet": "Webhook gesetzt bei {host}",
       "webhookReplace": "Webhook ersetzen",
       "webhookRemove": "Webhook entfernen",
@@ -10278,7 +10436,9 @@
       },
       "moved": "Die Betriebskontakte, die Speicherwarnungen erhalten, legst du unter Benachrichtigungen fest.",
       "open": "Betriebskontakte öffnen",
-      "loadFailed": "Die Betriebskontakte konnten nicht geladen werden"
+      "loadFailed": "Die Betriebskontakte konnten nicht geladen werden",
+      "addressesHelp": "Eine Adresse pro Zeile, zum Beispiel eine Ticket-Adresse der IT. Bis zu 20.",
+      "webhookHelp": "Die Adresse eines Teams-Workflows-Webhooks. Sie wird verschlüsselt gespeichert und nie wieder angezeigt."
     }
   },
   "backups": {
@@ -10391,16 +10551,19 @@
     "schedule": {
       "title": "Zeitplan",
       "enabled": "Täglich sichern",
-      "enabledHint": "Läuft einmal am Tag auf dem Worker. Ein Lauf, der sich mit einem laufenden Backup überschneiden würde, wird übersprungen und aufgeführt.",
+      "enabledHint": "Einmal am Tag auf dem Worker.",
       "time": "Uhrzeit",
       "timeHint": "In der Zeitzone der Instanz: {zone}.",
       "weekly": "Wöchentliches Backup",
-      "weeklyHint": "Das Backup dieses Tages wird als wöchentliches aufbewahrt.",
+      "weeklyHint": "Wird als wöchentliches Backup behalten.",
       "noWeekly": "Keine wöchentlichen Backups",
       "monthly": "Monatliches Backup",
-      "monthlyHint": "Das Backup dieses Tages wird als monatliches aufbewahrt. In kürzeren Monaten gilt der letzte Tag.",
+      "monthlyHint": "Wird als monatliches Backup behalten.",
       "noMonthly": "Keine monatlichen Backups",
-      "dayOfMonth": "Tag {day}"
+      "dayOfMonth": "Tag {day}",
+      "weeklyHelp": "Das Backup dieses Tages wird als wöchentliches aufbewahrt.",
+      "monthlyHelp": "Das Backup dieses Tages wird als monatliches aufbewahrt. In kürzeren Monaten gilt der letzte Tag.",
+      "enabledHelp": "Läuft einmal am Tag auf dem Worker. Ein Lauf, der sich mit einem laufenden Backup überschneiden würde, wird übersprungen und aufgeführt."
     },
     "retention": {
       "title": "Aufbewahrung",
@@ -10430,10 +10593,12 @@
       "scopeDatabase": "Ohne Dateispeicher",
       "scopeDatabaseHint": "Für Installationen, die das Laufwerk des Dateispeichers selbst sichern. Eine Wiederherstellung bringt dann nur die Datenbank zurück; stelle den Dateispeicher aus deiner Sicherung vom selben Zeitpunkt wieder her, sonst fehlen Anhänge.",
       "missingDays": "Warnen nach Tagen ohne Backup",
-      "missingDaysHint": "Instanzadministration und Betriebskontakte werden einmal informiert.",
+      "missingDaysHint": "Admins und Kontakte werden informiert.",
       "autoTestRestore": "Neuestes Backup jeden Monat testweise wiederherstellen",
-      "autoTestRestoreHint": "Nach dem ersten geplanten Backup eines Monats stellt Lunedo es in eine temporäre Datenbank wieder her und prüft es.",
-      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus den Benachrichtigungseinstellungen, mit derselben Erinnerung."
+      "autoTestRestoreHint": "Monatlich wiederherstellen und prüfen.",
+      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus den Benachrichtigungseinstellungen, mit derselben Erinnerung.",
+      "missingDaysHelp": "Instanzadministration und Betriebskontakte werden einmal informiert.",
+      "autoTestRestoreHelp": "Nach dem ersten geplanten Backup eines Monats stellt Lunedo es in eine temporäre Datenbank wieder her und prüft es."
     },
     "test": {
       "title": "Test-Wiederherstellung",
@@ -10594,7 +10759,7 @@
       "version": "Version",
       "browser": "Browser",
       "concurrency": "Dokumente gleichzeitig",
-      "concurrencyHint": "Wird mit RENDER_CONCURRENCY im Container gesetzt. Jedes Dokument braucht etwa 300 MB Arbeitsspeicher.",
+      "concurrencyHint": "Gesetzt mit RENDER_CONCURRENCY.",
       "queue": "Jetzt",
       "queueValue": "{running} in Arbeit, {waiting} wartend",
       "limits": "Grenzen je Dokument",
@@ -10607,7 +10772,8 @@
       "loadFailed": "Der Zustand des Renderings konnte nicht geladen werden",
       "snippet": "Docker-Compose-Einträge für den Render-Container",
       "copySnippet": "Docker-Compose-Einträge kopieren",
-      "notRelease": "Diese Instanz läuft ohne Release, deshalb nennt das Beispiel das neueste Release des Render-Containers. Mit einem Release steht hier die passende Version."
+      "notRelease": "Diese Instanz läuft ohne Release, deshalb nennt das Beispiel das neueste Release des Render-Containers. Mit einem Release steht hier die passende Version.",
+      "concurrencyHelp": "Wird mit RENDER_CONCURRENCY im Container gesetzt. Jedes Dokument braucht etwa 300 MB Arbeitsspeicher."
     },
     "other": {
       "title": "Weitere Formate",
@@ -10615,10 +10781,12 @@
       "wordDescription": "Wird von Lunedo selbst erstellt. Immer verfügbar.",
       "available": "Verfügbar",
       "diagrams": "Diagrammbilder",
-      "diagramsDescription": "Bilder von Excalidraw, draw.io, Mermaid und PlantUML entstehen im Browser der Person, die das Diagramm speichert, und werden mit der Seite gespeichert. Auch PlantUML läuft im Browser; Java oder ein Render-Dienst sind nicht nötig.",
+      "diagramsDescription": "Entstehen im Browser, ohne Dienst.",
       "drawio": "draw.io-Editor",
-      "drawioDescription": "Version {version}, mit Lunedo ausgeliefert. Er verbindet sich nie mit diagrams.net.",
-      "servedLocally": "Lokal ausgeliefert"
+      "drawioDescription": "Version {version}, mit Lunedo geliefert.",
+      "servedLocally": "Lokal ausgeliefert",
+      "diagramsHelp": "Bilder von Excalidraw, draw.io, Mermaid und PlantUML entstehen im Browser der Person, die das Diagramm speichert, und werden mit der Seite gespeichert. Auch PlantUML läuft im Browser; Java oder ein Render-Dienst sind nicht nötig.",
+      "drawioHelp": "Version {version}, mit Lunedo ausgeliefert. Er verbindet sich nie mit diagrams.net."
     }
   },
   "embeds": {
@@ -10637,10 +10805,10 @@
       "nameRequired": "Gib einen Namen für den Dienst ein.",
       "tooMany": "Die Liste enthält höchstens {count} Dienste. Entferne zuerst einen.",
       "pattern": "Adressmuster",
-      "patternHint": "Eine https-Adresse mit Platzhaltern: '{name}' steht für einen Teil der Adresse, '{*}' für beliebig viele Pfadteile.",
+      "patternHint": "Eine https-Adresse mit Platzhaltern.",
       "patternInvalid": "Gib eine https-Adresse ein, die mit einer festen Domain endet und deren Platzhalter ganze Teile der Adresse füllen, etwa https://videos.example.org/watch?v='{video}'.",
       "embed": "Einbettungsadresse",
-      "embedHint": "Wird aus den Platzhaltern des Musters gebildet. '{url}' steht für den ganzen Link. Leer lassen, um den Link unverändert einzubetten.",
+      "embedHint": "Leer: Link unverändert einbetten.",
       "add": "Dienst hinzufügen",
       "remove": "Entfernen",
       "removeNamed": "{name} entfernen",
@@ -10656,12 +10824,15 @@
       "patternPlaceholder": "https://videos.example.org/watch?v='{video}'",
       "embedPlaceholder": "https://videos.example.org/embed/'{video}'",
       "referrer": "An den Dienst gesendete Adresse",
-      "referrerHint": "Manche Videodienste spielen nur ab, wenn sie die einbettende Website kennen. Gesendet wird nur die Adresse dieser Instanz, nie die Seite.",
+      "referrerHint": "Nur die Adresse der Instanz, nie Seiten.",
       "referrerPolicy": {
         "no-referrer": "Nichts (empfohlen)",
         "strict-origin": "Adresse dieser Instanz"
       },
-      "sendsOrigin": "Erhält die Adresse dieser Instanz, nicht die der Seite."
+      "sendsOrigin": "Erhält die Adresse dieser Instanz, nicht die der Seite.",
+      "patternHelp": "Eine https-Adresse mit Platzhaltern: '{name}' steht für einen Teil der Adresse, '{*}' für beliebig viele Pfadteile.",
+      "embedHelp": "Wird aus den Platzhaltern des Musters gebildet. '{url}' steht für den ganzen Link. Leer lassen, um den Link unverändert einzubetten.",
+      "referrerHelp": "Manche Videodienste spielen nur ab, wenn sie die einbettende Website kennen. Gesendet wird nur die Adresse dieser Instanz, nie die Seite."
     }
   },
   "copy": {
@@ -10901,7 +11072,7 @@
       "panel": "Adresse des Portals",
       "change": "Ändern",
       "path": "Pfad",
-      "pathHint": "Kleinbuchstaben, Ziffern und Bindestriche nach {prefix}. Links auf den bisherigen Pfad funktionieren weiter.",
+      "pathHint": "Kleinbuchstaben, Ziffern, Bindestriche.",
       "pathInvalid": "Verwende Kleinbuchstaben, Ziffern und einzelne Bindestriche, höchstens 60 Zeichen.",
       "domain": "Eigene Domain",
       "domainHint": "Optional. Zum Beispiel kann die alte Adresse einer Hilfe hierher zeigen.",
@@ -10912,7 +11083,8 @@
       "copyDns": "DNS-Eintrag kopieren",
       "saved": "Adresse gespeichert",
       "footnote": "Eine Änderung der Adresse steht im Audit-Log. Lesende werden nie zwischen Portal und App umgeleitet; die Adresse, die sie öffnen, entscheidet.",
-      "adminsOnly": "Nur Space-Admins ändern die Adresse."
+      "adminsOnly": "Nur Space-Admins ändern die Adresse.",
+      "pathHelp": "Kleinbuchstaben, Ziffern und Bindestriche nach {prefix}. Links auf den bisherigen Pfad funktionieren weiter."
     },
     "appearance": {
       "title": "Aussehen und Startseite",
@@ -10921,7 +11093,7 @@
       "open": "Portal öffnen",
       "identity": "Logo und Farbe",
       "logo": "Logo",
-      "logoHint": "Erscheint in der Kopfleiste und auf der Anmeldeseite. PNG, JPEG oder WebP, quadratisch, höchstens 256 KiB. Ohne Logo zeigt das Portal das Logo der Organisation oder den ersten Buchstaben seines Namens.",
+      "logoHint": "Quadratisch, bis 256 KiB.",
       "logoAlt": "Logo des Portals",
       "noLogo": "Kein Logo",
       "uploadLogo": "Logo hochladen",
@@ -10932,7 +11104,7 @@
       "removeLogoTitle": "Logo des Portals entfernen?",
       "removeLogoDescription": "Das Portal zeigt wieder das Logo der Organisation oder den ersten Buchstaben seines Namens. Lade die Datei erneut hoch, um das Logo zurückzubringen.",
       "color": "Markenfarbe",
-      "colorHint": "Für Links, die Hauptaktionen und Hervorhebungen. Die Farben der Palette erreichen den nötigen Kontrast in hell und dunkel.",
+      "colorHint": "Für Links, Aktionen und Hervorhebungen.",
       "customColor": "Eigene Farbe",
       "lightValue": "Hell: {value}",
       "darkValue": "Dunkel: {value}",
@@ -10947,21 +11119,27 @@
       "otherColor": "Andere Farbe wählen",
       "startPage": "Startseite",
       "heading": "Überschrift",
-      "headingHint": "Steht über der Suche. Leer lassen für „Wie können wir helfen?“ in der Sprache des Portals.",
+      "headingHint": "Steht über der Suche.",
       "text": "Kurzer Text",
-      "textHint": "Ein oder zwei Sätze unter der Überschrift. Optional.",
+      "textHint": "Optional, unter der Überschrift.",
       "numberInvalid": "Gib eine ganze Zahl von {min} bis {max} ein.",
       "orderHint": "Die Bereiche erscheinen in der Reihenfolge der Einstellungen „Bereiche und Themen“.",
       "orderLink": "Reihenfolge der Bereiche ändern",
       "footer": "Fußzeile",
       "poweredBy": "„Mit Lunedo erstellt“ anzeigen",
-      "poweredByHint": "Ein kleiner Hinweis in der Fußzeile jeder Portalseite.",
+      "poweredByHint": "Kleiner Hinweis in der Fußzeile.",
       "feedback": "Hinweise von Lesenden",
       "retention": "Hinweise aufbewahren (Monate)",
-      "retentionHint": "Lesende können nach „Nein“ bei „War das hilfreich?“ einen Hinweis hinterlassen. Hinweise werden ohne Namen gespeichert und nach dieser Zeit gelöscht.",
+      "retentionHint": "Danach werden Hinweise gelöscht.",
       "shortenTitle": "Ältere Hinweise jetzt löschen?",
       "shortenDescription": "{count, plural, one {Hinweise, die älter als # Monat sind, werden sofort gelöscht und lassen sich nicht wiederherstellen.} other {Hinweise, die älter als # Monate sind, werden sofort gelöscht und lassen sich nicht wiederherstellen.}}",
-      "shortenConfirm": "{count, plural, one {Hinweise # Monat aufbewahren} other {Hinweise # Monate aufbewahren}}"
+      "shortenConfirm": "{count, plural, one {Hinweise # Monat aufbewahren} other {Hinweise # Monate aufbewahren}}",
+      "headingHelp": "Steht über der Suche. Leer lassen für „Wie können wir helfen?“ in der Sprache des Portals.",
+      "textHelp": "Ein oder zwei Sätze unter der Überschrift. Optional.",
+      "retentionHelp": "Lesende können nach „Nein“ bei „War das hilfreich?“ einen Hinweis hinterlassen. Hinweise werden ohne Namen gespeichert und nach dieser Zeit gelöscht.",
+      "colorHelp": "Für Links, die Hauptaktionen und Hervorhebungen. Die Farben der Palette erreichen den nötigen Kontrast in hell und dunkel.",
+      "poweredByHelp": "Ein kleiner Hinweis in der Fußzeile jeder Portalseite.",
+      "logoHelp": "Erscheint in der Kopfleiste und auf der Anmeldeseite. PNG, JPEG oder WebP, quadratisch, höchstens 256 KiB. Ohne Logo zeigt das Portal das Logo der Organisation oder den ersten Buchstaben seines Namens."
     },
     "languages": {
       "tab": "Sprachen",
@@ -10970,9 +11148,9 @@
       "loadFailed": "Die Sprachen konnten nicht geladen werden",
       "section": "Sprachen",
       "default": "Standardsprache",
-      "defaultDescription": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen. Eine Änderung aktualisiert im Hintergrund die Suche aller Artikel; der Fortschritt steht hier.",
+      "defaultDescription": "Für neue Artikel und als Rückfall.",
       "enabled": "Aktivierte Sprachen",
-      "enabledDescription": "Ab zwei Sprachen zeigt das Portal eine Sprachauswahl. {language} als Standardsprache bleibt immer aktiviert. Eine deaktivierte Sprache blendet ihre Übersetzungen für Lesende aus, behält sie aber.",
+      "enabledDescription": "Ab zwei Sprachen mit Sprachauswahl.",
       "add": "Sprache hinzufügen",
       "progress": "Stand der Übersetzungen",
       "translated": "{count, plural, one {# von {total} Artikeln übersetzt} other {# von {total} Artikeln übersetzt}}",
@@ -10982,7 +11160,9 @@
       "adminsOnly": "Nur Bereichsadmins ändern die Sprachen. Frag eine von ihnen, wenn eine Sprache fehlt.",
       "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern.",
       "searchUpdate": "{count, plural, one {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche ihn eventuell nicht.} other {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche sie eventuell nicht.}}",
-      "searchUpdateLabel": "Aktualisierung der Suche"
+      "searchUpdateLabel": "Aktualisierung der Suche",
+      "defaultHelp": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen. Eine Änderung aktualisiert im Hintergrund die Suche aller Artikel; der Fortschritt steht hier.",
+      "enabledHelp": "Ab zwei Sprachen zeigt das Portal eine Sprachauswahl. {language} als Standardsprache bleibt immer aktiviert. Eine deaktivierte Sprache blendet ihre Übersetzungen für Lesende aus, behält sie aber."
     },
     "translations": {
       "button": "Sprachen",
@@ -11028,7 +11208,7 @@
       "articles": "{count, plural, one {# Artikel} other {# Artikel}}",
       "emptyTitle": "Noch keine Bereiche",
       "emptyEditor": "Leg einen Bereich an, zum Beispiel IT oder Personal. Darin legst du Themen in beliebiger Tiefe an.",
-      "introHint": "Kurzer Text, keine ganze Seite. **fett**, *kursiv*, [Link](https://…) und ein Hinweis mit > am Zeilenanfang.",
+      "introHint": "Kurzer Text, einfache Formatierung.",
       "introPlaceholderText": "Text",
       "format": "Formatierung",
       "bold": "Fett",
@@ -11043,7 +11223,8 @@
         "over": "{name} ist über {target}.",
         "dropped": "{name} bei {target} abgelegt.",
         "cancelled": "Verschieben von {name} abgebrochen."
-      }
+      },
+      "introHelp": "Kurzer Text, keine ganze Seite. **fett**, *kursiv*, [Link](https://…) und ein Hinweis mit > am Zeilenanfang."
     }
   },
   "helpTarget": {
@@ -11060,8 +11241,9 @@
     "appLink": {
       "title": "Link zur App",
       "label": "Name des Links zur App",
-      "hint": "Erscheint im Kontomenü des Portals bei Personen, die Spaces sehen, zum Beispiel „Zum Beispiel-Wiki“. Leer lassen für „Zum Wiki“.",
-      "loadFailed": "Der Name des Links konnte nicht geladen werden"
+      "hint": "Im Kontomenü des Portals.",
+      "loadFailed": "Der Name des Links konnte nicht geladen werden",
+      "help": "Erscheint im Kontomenü des Portals bei Personen, die Spaces sehen, zum Beispiel „Zum Beispiel-Wiki“. Leer lassen für „Zum Wiki“."
     },
     "domains": {
       "title": "Portal-Domains",
@@ -11071,7 +11253,7 @@
       "emptyTitle": "Keine Domain erlaubt",
       "emptyDescription": "Wissensdatenbanken sind unter /help auf dieser Instanz erreichbar. Erlaube eine Domain, damit eine Organisation einer Wissensdatenbank eine eigene Adresse geben kann.",
       "domain": "Domain",
-      "domainHint": "Nur der Domainname, ohne https:// und ohne Pfad.",
+      "domainHint": "Nur der Domainname, ohne https://.",
       "domainInvalid": "Gib einen Domainnamen wie hilfe.example.org ein.",
       "organization": "Organisation",
       "organizationPlaceholder": "Organisation nach Namen suchen",
@@ -11090,7 +11272,8 @@
       "removeConfirm": "{domain} entfernen",
       "removed": "{domain} entfernt",
       "removeFailed": "Die Domain konnte nicht entfernt werden",
-      "domainPlaceholder": "hilfe.example.org"
+      "domainPlaceholder": "hilfe.example.org",
+      "domainHelp": "Nur der Domainname, ohne https:// und ohne Pfad."
     }
   },
   "reviews": {
@@ -11571,7 +11754,7 @@
       "title": "Einschalten",
       "changeTitle": "Ändern oder ausschalten",
       "message": "Nachricht",
-      "messageHint": "Erscheint im Banner auf jeder Seite und in Wissensdatenbank-Portalen, etwa wann die Wartung endet. Höchstens {max} Zeichen.",
+      "messageHint": "Im Banner, höchstens {max} Zeichen.",
       "messageTooLong": "Die Nachricht hat {count} Zeichen. Kürze sie auf höchstens {max}.",
       "blockSignIn": "Anmeldung für alle außer Instanz-Administratoren pausieren",
       "blockSignInHint": "Wer angemeldet ist, bleibt angemeldet, kann aber nur lesen.",
@@ -11582,7 +11765,8 @@
       "switchedOff": "Wartungsmodus ist aus",
       "updated": "Wartungsnachricht gespeichert",
       "undoFailed": "Der vorherige Zustand konnte nicht wiederhergestellt werden",
-      "commandLine": "Skripte schalten ihn mit ./lunedo maintenance on oder off im Installationsverzeichnis, oder mit dem Befehl lunedo maintenance im Container."
+      "commandLine": "Skripte schalten ihn mit ./lunedo maintenance on oder off im Installationsverzeichnis, oder mit dem Befehl lunedo maintenance im Container.",
+      "messageHelp": "Erscheint im Banner auf jeder Seite und in Wissensdatenbank-Portalen, etwa wann die Wartung endet. Höchstens {max} Zeichen."
     }
   },
   "updates": {
@@ -11664,16 +11848,18 @@
     "displayName": "Anzeigename",
     "displayNameFrom": "Von {provider}. Ändere den Namen dort.",
     "jobTitle": "Berufsbezeichnung",
-    "jobTitleHint": "Steht in Mitgliederlisten und auf deiner Personenkarte.",
+    "jobTitleHint": "In Mitgliederlisten und Personenkarte.",
     "picture": "Profilbild",
-    "pictureHint": "PNG, JPEG oder WebP, höchstens 256 KiB. Ohne Bild sehen andere deine Initialen.",
+    "pictureHint": "PNG, JPEG oder WebP, bis 256 KiB.",
     "uploadPicture": "Bild hochladen",
     "replacePicture": "Bild ersetzen",
     "removePicture": "Bild entfernen",
     "removePictureTitle": "Profilbild entfernen?",
     "removePictureDescription": "Andere sehen dann wieder deine Initialen. Du kannst jederzeit ein neues Bild hochladen.",
     "pictureUploaded": "Profilbild gespeichert",
-    "pictureRemoved": "Profilbild entfernt"
+    "pictureRemoved": "Profilbild entfernt",
+    "jobTitleHelp": "Steht in Mitgliederlisten und auf deiner Personenkarte.",
+    "pictureHelp": "PNG, JPEG oder WebP, höchstens 256 KiB. Ohne Bild sehen andere deine Initialen."
   },
   "topBar": {
     "search": "Suchen",
