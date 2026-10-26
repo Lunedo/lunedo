@@ -1306,6 +1306,12 @@ export const auditCatalog = {
     fields: z.object({ name: z.string(), key: z.string(), reason: z.string() }),
     visibility: "organization",
   }),
+  "space.memberAddedByAdministration": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), accountId: z.uuid(), role: z.string() }),
+    visibility: "organization",
+  }),
   "space.cleanupDeleted": event({
     actor: ["account"],
     target: "space",

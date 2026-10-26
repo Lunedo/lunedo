@@ -246,6 +246,14 @@ notificationTypes.register(
     },
   },
   {
+    id: "space.memberAddedByAdministration",
+    icon: UserPlus,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
     id: "space.administratorTaken",
     icon: ShieldAlert,
     link: (item) => {

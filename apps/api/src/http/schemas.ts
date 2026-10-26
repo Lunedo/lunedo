@@ -177,6 +177,11 @@ export const groupSchema = z
       .int()
       .optional()
       .describe("Number of active accounts in the group. Only in lists of groups."),
+    spaceCount: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of spaces that give the group a role. Only in lists of groups."),
   })
   .describe("A group of accounts.");
 

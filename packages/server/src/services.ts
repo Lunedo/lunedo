@@ -186,6 +186,7 @@ import {
   organizationExpiryJob,
   organizationRemindersJob,
 } from "./organizations/lifecycle.js";
+import { MemberDetailService } from "./organizations/member-details.js";
 import { MembershipService } from "./organizations/memberships.js";
 import { OrganizationService } from "./organizations/organizations.js";
 import { RoleService } from "./organizations/roles.js";
@@ -234,6 +235,7 @@ import {
   TRASH_RETENTION_SCHEDULE,
   trashRetentionJob,
 } from "./spaces/jobs.js";
+import { MemberSpaceService } from "./spaces/member-spaces.js";
 import { spaceNotificationTypes } from "./spaces/notifications.js";
 import { OwnershipService } from "./spaces/ownership.js";
 import { PeopleService } from "./spaces/people.js";
@@ -315,6 +317,8 @@ export interface AccountServices {
   savedSearches: SavedSearchService;
   spaces: SpaceService;
   spacePermissions: SpacePermissionService;
+  memberSpaces: MemberSpaceService;
+  memberDetails: MemberDetailService;
   personalSpaces: PersonalSpaceService;
   tree: TreeService;
   ownership: OwnershipService;
@@ -686,6 +690,15 @@ export function createAccountServices(options: {
     people,
   });
   const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces, notifications });
+  const memberSpaces = new MemberSpaceService({
+    database,
+    authorization,
+    spaces,
+    permissions: spacePermissions,
+    audit,
+    notifications,
+  });
+  const memberDetails = new MemberDetailService({ database, authorization, settings, memberships });
   const watches = new WatchService({ database, authorization, settings });
   const activity = new ContentActivity({ database, notifications, authorization, watches });
   const documents = new PageDocumentService({
@@ -1283,6 +1296,8 @@ export function createAccountServices(options: {
     savedSearches,
     spaces,
     spacePermissions,
+    memberSpaces,
+    memberDetails,
     personalSpaces,
     tree,
     ownership,

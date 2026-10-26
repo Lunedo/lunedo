@@ -34154,6 +34154,12 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "spaceCount": {
+                      "description": "Number of spaces that give the group a role. Only in lists of groups.",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "managers": {
                       "type": "array",
                       "items": {
@@ -34444,6 +34450,12 @@
                     },
                     "memberCount": {
                       "description": "Number of active accounts in the group. Only in lists of groups.",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "spaceCount": {
+                      "description": "Number of spaces that give the group a role. Only in lists of groups.",
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
@@ -62877,6 +62889,16 @@
             }
           },
           {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "description": "Only events about this person: those they did and those that name them as the target or the account or holder concerned.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "targetType",
             "in": "query",
             "required": false,
@@ -62914,6 +62936,18 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "description": "`instance` lists only events of the instance itself, without those of organizations.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "instance"
+              ]
             }
           },
           {
@@ -63484,6 +63518,16 @@
             }
           },
           {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "description": "Only events about this person: those they did and those that name them as the target or the account or holder concerned.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "targetType",
             "in": "query",
             "required": false,
@@ -63521,6 +63565,18 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "description": "`instance` lists only events of the instance itself, without those of organizations.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "instance"
+              ]
             }
           }
         ],
@@ -165080,6 +165136,16 @@
             }
           },
           {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "description": "Only events about this person: those they did and those that name them as the target or the account or holder concerned.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "targetType",
             "in": "query",
             "required": false,
@@ -165702,6 +165768,16 @@
             "in": "query",
             "required": false,
             "description": "Only events of this account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "description": "Only events about this person: those they did and those that name them as the target or the account or holder concerned.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -171710,6 +171786,12 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "spaceCount": {
+                            "description": "Number of spaces that give the group a role. Only in lists of groups.",
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -171996,6 +172078,12 @@
                     },
                     "memberCount": {
                       "description": "Number of active accounts in the group. Only in lists of groups.",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "spaceCount": {
+                      "description": "Number of spaces that give the group a role. Only in lists of groups.",
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
@@ -179675,6 +179763,670 @@
           }
         }
       },
+      "get": {
+        "operationId": "organizations.member",
+        "summary": "Get a member",
+        "description": "Returns a member with how they joined and sign in, their groups with the provider that manages them, and their roles in the spaces of the organization. Spaces are left out unless the caller may view the spaces of the organization; personal and confidential spaces never appear.\n\nRequires the permission `organization.members.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Members"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.members.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the member's account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the account."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Display name of the account."
+                    },
+                    "jobTitle": {
+                      "description": "Job title the person entered on their profile, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pictureRef": {
+                      "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "email": {
+                      "description": "E-mail address, or null for service accounts.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "accountType": {
+                      "type": "string",
+                      "description": "`standard`, `guest`, `portal` or `service`."
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "member",
+                        "collaborator",
+                        "guest"
+                      ],
+                      "description": "Kind of membership in the organization."
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the membership ends, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "responsibleAccountId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Member responsible for a guest, or null."
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "assignmentId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the role assignment."
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Name of the role."
+                          },
+                          "customRoleId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the custom role, or null for a built-in role."
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the assignment ends, or null. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "assignmentId",
+                          "role",
+                          "customRoleId",
+                          "expiresAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A role assigned directly to the account."
+                      },
+                      "description": "Roles assigned directly to the account in this organization."
+                    },
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the group."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the group."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A group of the organization the account belongs to."
+                      },
+                      "description": "Groups of this organization the account belongs to, ordered by name."
+                    },
+                    "twoFactorActive": {
+                      "type": "boolean",
+                      "description": "Whether the account has a confirmed authenticator app or a passkey."
+                    },
+                    "lastActiveAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the account was last active in Lunedo, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "joinedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the person joined the organization. ISO 8601 timestamp in UTC."
+                    },
+                    "invitedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Account ID."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who added or invited the person, or null when unknown."
+                    },
+                    "homeOrganization": {
+                      "type": "boolean",
+                      "description": "Whether this is the home organization of the account."
+                    },
+                    "twoFactorRequired": {
+                      "type": "boolean",
+                      "description": "Whether the organization requires a second factor."
+                    },
+                    "signIn": {
+                      "type": "object",
+                      "properties": {
+                        "password": {
+                          "type": "boolean",
+                          "description": "Whether the account has a password."
+                        },
+                        "providers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "providerId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the identity provider."
+                              },
+                              "providerName": {
+                                "type": "string",
+                                "description": "Name of the identity provider."
+                              }
+                            },
+                            "required": [
+                              "providerId",
+                              "providerName"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An identity provider."
+                          },
+                          "description": "Identity providers linked to the account."
+                        }
+                      },
+                      "required": [
+                        "password",
+                        "providers"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the person signs in."
+                    },
+                    "groupDetails": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the group."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the group."
+                          },
+                          "managedBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "providerId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the identity provider."
+                                  },
+                                  "providerName": {
+                                    "type": "string",
+                                    "description": "Name of the identity provider."
+                                  }
+                                },
+                                "required": [
+                                  "providerId",
+                                  "providerName"
+                                ],
+                                "additionalProperties": false,
+                                "description": "An identity provider."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The provider the whole group is synchronized from; its members cannot be changed here."
+                          },
+                          "viaProvider": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "providerId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the identity provider."
+                                  },
+                                  "providerName": {
+                                    "type": "string",
+                                    "description": "Name of the identity provider."
+                                  }
+                                },
+                                "required": [
+                                  "providerId",
+                                  "providerName"
+                                ],
+                                "additionalProperties": false,
+                                "description": "An identity provider."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The provider whose mapping rule adds the person to the group; the next synchronization adds them again after a removal."
+                          },
+                          "spaces": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "How many spaces give the group a role."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "managedBy",
+                          "viaProvider",
+                          "spaces"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A group the person belongs to."
+                      },
+                      "description": "Groups of this organization the person belongs to, ordered by name."
+                    },
+                    "spaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the space."
+                              },
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space."
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "reader",
+                                  "commenter",
+                                  "editor",
+                                  "admin"
+                                ],
+                                "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                              },
+                              "sources": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "direct",
+                                        "group",
+                                        "organizationMembers"
+                                      ],
+                                      "description": "A role of the person, of a group or of all members."
+                                    },
+                                    "groupId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "The group, for `group`."
+                                    },
+                                    "groupName": {
+                                      "description": "Name of the group, for `group`.",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "Where a role comes from."
+                                },
+                                "description": "Where the roles come from; the highest is shown as `role`."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "key",
+                              "name",
+                              "role",
+                              "sources"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A space the person has a role in."
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Spaces of the organization the person has a role in, without personal and confidential spaces. Null when the caller may not view the spaces of the organization."
+                    }
+                  },
+                  "required": [
+                    "accountId",
+                    "name",
+                    "jobTitle",
+                    "pictureRef",
+                    "email",
+                    "accountType",
+                    "kind",
+                    "expiresAt",
+                    "responsibleAccountId",
+                    "roles",
+                    "groups",
+                    "twoFactorActive",
+                    "lastActiveAt",
+                    "joinedAt",
+                    "invitedBy",
+                    "homeOrganization",
+                    "twoFactorRequired",
+                    "signIn",
+                    "groupDetails",
+                    "spaces"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A member of an organization with groups, spaces and sign-in."
+                },
+                "example": {
+                  "accountId": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c",
+                  "name": "Ada Lovelace",
+                  "jobTitle": "Head of Engineering",
+                  "pictureRef": "5f2b8c1d9a0e4b7c",
+                  "email": "ada@example.org",
+                  "accountType": "standard",
+                  "kind": "member",
+                  "expiresAt": null,
+                  "responsibleAccountId": null,
+                  "roles": [
+                    {
+                      "assignmentId": "01929b1e-9e5c-7f40-b16d-5e4f3a2b7c8d",
+                      "role": "administrator",
+                      "customRoleId": null,
+                      "expiresAt": null
+                    }
+                  ],
+                  "groups": [
+                    {
+                      "id": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f",
+                      "name": "Engineering"
+                    }
+                  ],
+                  "twoFactorActive": true,
+                  "lastActiveAt": "2026-10-24T08:15:00.000Z",
+                  "joinedAt": "2026-08-21T09:58:00.000Z",
+                  "invitedBy": {
+                    "id": "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b70",
+                    "name": "Olivia Owner"
+                  },
+                  "homeOrganization": true,
+                  "twoFactorRequired": false,
+                  "signIn": {
+                    "password": true,
+                    "providers": []
+                  },
+                  "groupDetails": [
+                    {
+                      "id": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f",
+                      "name": "Engineering",
+                      "managedBy": null,
+                      "viaProvider": null,
+                      "spaces": 2
+                    }
+                  ],
+                  "spaces": [
+                    {
+                      "id": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e60",
+                      "key": "ITOPS",
+                      "name": "IT Operations",
+                      "role": "editor",
+                      "sources": [
+                        {
+                          "kind": "group",
+                          "groupId": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f",
+                          "groupName": "Engineering"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "operationId": "organizations.updateMember",
         "summary": "Change a membership",
@@ -180147,6 +180899,309 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/members/{accountId}/spaces": {
+      "post": {
+        "operationId": "organizations.addToSpaces",
+        "summary": "Add a member to spaces",
+        "description": "Gives the member a role in each of the spaces, all or none. For each space the caller must be its space admin or manage the spaces of the organization. Personal and confidential spaces are refused. When an organization administrator adds someone to a space they do not administer, its space admins are notified and the audit log records it; only space admins give the role `admin`. Only active members of the organization can be added, and nobody adds themselves.\n\nRequires the permission `organization.view` on the organization in `organizationId`.",
+        "tags": [
+          "Members"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the member's account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spaces": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "spaceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        }
+                      },
+                      "required": [
+                        "spaceId",
+                        "role"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A space and the role the person gets there."
+                    },
+                    "description": "1 to 50 different spaces."
+                  }
+                },
+                "required": [
+                  "spaces"
+                ],
+                "additionalProperties": false,
+                "description": "Spaces to add a person to."
+              },
+              "example": {
+                "spaces": [
+                  {
+                    "spaceId": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e60",
+                    "role": "reader"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `invalidSpaces`: Choose between 1 and 50 different spaces.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidHolder": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidHolder",
+                      "title": "The holder cannot get a role in this space",
+                      "status": 400,
+                      "code": "invalidHolder"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidSpaces": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidSpaces",
+                      "title": "Choose between 1 and 50 different spaces",
+                      "status": 400,
+                      "code": "invalidSpaces"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`administratorBySpaceAdmins`: Only space admins appoint space admins. `csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `selfExtension`: Nobody can extend their own permissions.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "administratorBySpaceAdmins": {
+                    "value": {
+                      "type": "urn:lunedo:problem:administratorBySpaceAdmins",
+                      "title": "Only space admins appoint space admins",
+                      "status": 403,
+                      "code": "administratorBySpaceAdmins"
+                    }
+                  },
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "selfExtension": {
+                    "value": {
+                      "type": "urn:lunedo:problem:selfExtension",
+                      "title": "Nobody can extend their own permissions",
+                      "status": 403,
+                      "code": "selfExtension"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`alreadyGranted`: The holder already has a role in the space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "alreadyGranted": {
+                    "value": {
+                      "type": "urn:lunedo:problem:alreadyGranted",
+                      "title": "The holder already has a role in the space",
+                      "status": 409,
+                      "code": "alreadyGranted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
                     }
                   }
                 }

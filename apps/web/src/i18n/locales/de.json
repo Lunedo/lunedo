@@ -976,7 +976,9 @@
     "removeDomain": "Domain entfernen",
     "deleteRole": "Rolle löschen",
     "removeCredential": "Zugang entfernen",
-    "opensInNewTab": "(öffnet in einem neuen Tab)"
+    "opensInNewTab": "(öffnet in einem neuen Tab)",
+    "next": "Weiter",
+    "loading": "Wird geladen …"
   },
   "ui": {
     "clear": "Leeren",
@@ -1722,7 +1724,9 @@
     "notEnoughSpace": "Im Sicherungsordner ist nicht genug Platz für diese Datei. Schaffe Platz auf dem Server und versuche es erneut.",
     "restoreRunning": "Es läuft schon eine Wiederherstellung. Warte, bis sie fertig ist.",
     "invalidKeys": "Ein Schlüssel hat nicht das erwartete Format. Füge den Backup-Schlüssel so ein, wie er in der Schlüsseldatei steht, und wähle die Datei mit den Master-Schlüsseln.",
-    "settingNotAtLevel": "Diese Einstellung gibt es auf dieser Ebene nicht mehr. Ändere sie in den Einstellungen der Organisation."
+    "settingNotAtLevel": "Diese Einstellung gibt es auf dieser Ebene nicht mehr. Ändere sie in den Einstellungen der Organisation.",
+    "invalidSpaces": "Wähle 1 bis 50 Spaces, jeden nur einmal, und versuche es erneut.",
+    "administratorBySpaceAdmins": "Nur die Space-Admins dieses Space können jemanden zum Space-Admin machen. Wähle eine andere Rolle oder frag einen Space-Admin."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3187,7 +3191,8 @@
         "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.",
         "personalWithoutAdministrator": "Der persönliche Space {spaceKey} einer deaktivierten Person hat keinen Space-Admin. Du kannst eines der verbliebenen Mitglieder ernennen.",
         "administratorAppointed": "{actor} hat dich zum Space-Admin von {spaceName} ernannt.",
-        "administratorTaken": "{actorName} ist über die Verwaltung von {organizationName} Space-Admin von {spaceName} geworden: {reason}"
+        "administratorTaken": "{actorName} ist über die Verwaltung von {organizationName} Space-Admin von {spaceName} geworden: {reason}",
+        "memberAddedByAdministration": "{actorName} hat {memberName} über die Verwaltung von {organizationName} zu {spaceName} hinzugefügt."
       },
       "import": {
         "finished": "Der Import in {spaceName} ({spaceKey}) ist bereit zur Prüfung. {problems, plural, =0 {Nichts ist zu prüfen.} one {# Punkt ist zu prüfen.} other {# Punkte sind zu prüfen.}}",
@@ -3778,7 +3783,6 @@
     }
   },
   "members": {
-    "openPermissions": "Berechtigungen von {name} anzeigen",
     "title": "Mitglieder",
     "description": "Personen in {name}.",
     "tabs": "Arten von Mitgliedern",
@@ -3790,7 +3794,6 @@
     "roles": "Rollen",
     "expires": "Läuft ab",
     "noExpiry": "Kein Ablauf",
-    "responsibleIs": "verantwortlich: {name}",
     "actionsFor": "Aktionen für {name}",
     "none": "Noch keine Mitglieder.",
     "noMatches": "Niemand passt zur Suche.",
@@ -3858,7 +3861,6 @@
     "lastActive": "Zuletzt aktiv",
     "never": "Nie",
     "noGroups": "Keine",
-    "until": "bis {date}",
     "filters": {
       "group": "Gruppe",
       "allGroups": "Alle Gruppen",
@@ -3868,7 +3870,76 @@
       "twoFactorOn": "Eingerichtet",
       "twoFactorOff": "Nicht eingerichtet"
     },
-    "expiryHelp": "Der Zugang endet am Ende dieses Tages. Vorher gehen Erinnerungen hinaus."
+    "expiryHelp": "Der Zugang endet am Ende dieses Tages. Vorher gehen Erinnerungen hinaus.",
+    "openMember": "Seite von {name} öffnen",
+    "twoFactorMissing": "Fehlt",
+    "moreGroups": "+{count}",
+    "page": {
+      "tabs": "Bereiche der Mitgliedsseite",
+      "overview": "Überblick",
+      "permissions": "Berechtigungen",
+      "spaces": "Spaces",
+      "activity": "Aktivität",
+      "extend": "Zugang verlängern",
+      "membership": "Mitgliedschaft",
+      "change": "ändern",
+      "since": "Seit",
+      "accessUntil": "Zugang bis",
+      "noEnd": "Ohne Ende",
+      "nobody": "Niemand",
+      "invitedBy": "Eingeladen von",
+      "unknown": "Unbekannt",
+      "signIn": "Anmeldung",
+      "factorRequired": "(von der Organisation verlangt)",
+      "factorNotRequired": "(von der Organisation nicht verlangt)",
+      "signInWith": "Anmeldung über",
+      "password": "Passwort",
+      "accountByInstance": "Das Konto wird von der Instanz verwaltet.",
+      "addToGroups": "Zu Gruppen hinzufügen",
+      "addToSpaces": "Zu Spaces hinzufügen",
+      "noSpaces": "Keine Rolle in einem Space dieser Organisation.",
+      "space": "Space",
+      "source": "Woher",
+      "viaGroup": "Gruppe {name}",
+      "direct": "direkt",
+      "allMembers": "alle Mitglieder",
+      "protectedSpaces": "Vertrauliche, 1:1- und persönliche Spaces erscheinen hier nicht.",
+      "activityHint": "Nur Ereignisse dieser Organisation. Anmeldungen und Geräte sieht die Instanz-Verwaltung.",
+      "viaProvider": "über {provider}",
+      "spaceAccess": "Space-Zugriff",
+      "givesSpaces": "{count, plural, one {gibt Zugriff auf # Space} other {gibt Zugriff auf # Spaces}}",
+      "noSpaceRoles": "keine Space-Rechte",
+      "remove": "Entfernen",
+      "removeFromGroup": "Aus {group} entfernen",
+      "removedFromGroup": "{name} aus {group} entfernt",
+      "providerKeeps": "Verwaltet von {provider}: Die nächste Synchronisierung würde die Person wieder hinzufügen.",
+      "providerRules": "Gruppen aus einem Identitätsanbieter folgen seinen Zuordnungsregeln unter Instanz → Anmeldemethoden.",
+      "addToGroupsTitle": "{name} zu Gruppen hinzufügen",
+      "addToGroupsDescription": "Wähle eine oder mehrere Gruppen. Vor dem Speichern siehst du, welchen Zugriff das gibt.",
+      "searchGroups": "Gruppen suchen",
+      "noGroupChosen": "Keine Gruppe gewählt",
+      "groupsChosen": "{count, plural, one {# Gruppe} other {# Gruppen}}: {names}",
+      "chooseGroup": "Wähle mindestens eine Gruppe.",
+      "alreadyMember": "schon Mitglied",
+      "synchronizedFrom": "aus {provider} synchronisiert",
+      "groupsImpact": "wird Mitglied von {groups}.",
+      "groupsImpactSpaces": "{count, plural, one {wird Mitglied von {groups} und bekommt dadurch Zugriff auf # Space.} other {wird Mitglied von {groups} und bekommt dadurch Zugriff auf # Spaces.}}",
+      "groupsAdded": "{count, plural, one {{name} zu # Gruppe hinzugefügt} other {{name} zu # Gruppen hinzugefügt}}",
+      "groupsFailed": "Nicht zu {groups} hinzugefügt",
+      "addToSpacesTitle": "{name} zu Spaces hinzufügen",
+      "addToSpacesDescription": "Wähle Spaces und je Space eine Rolle. Vertrauliche, 1:1- und persönliche Spaces stehen nicht zur Auswahl.",
+      "searchSpaces": "Spaces suchen",
+      "roleForAll": "Rolle für alle",
+      "roleIn": "Rolle in {space}",
+      "alreadyIn": "schon {role}",
+      "noSpaceChosen": "Kein Space gewählt",
+      "chooseSpace": "Wähle mindestens einen Space.",
+      "noSpacesOffered": "Kein Space, zu dem du Personen hinzufügen darfst.",
+      "spacesImpact": "bekommt eine Rolle in {spaces}.",
+      "spacesAdded": "{count, plural, one {{name} zu # Space hinzugefügt} other {{name} zu # Spaces hinzugefügt}}",
+      "spacesFailed": "Die Person wurde nicht zu den Spaces hinzugefügt",
+      "administratorNotice": "Als Organisations-Admin: Die Space-Admins der gewählten Spaces bekommen eine Benachrichtigung, und die Änderung steht im Audit-Log."
+    }
   },
   "roles": {
     "transferOwnership": "Owner-Rolle übertragen",
@@ -4048,7 +4119,9 @@
     "memberRemovedName": "{name} wurde aus der Gruppe entfernt.",
     "managerRemovedName": "{name} verwaltet die Gruppe nicht mehr.",
     "deleteSummary": "Entfernt die Gruppe und ihre Rollenzuweisungen endgültig. Mitglieder verlieren den Zugriff, den sie über die Gruppe hatten.",
-    "memberCount": "Mitglieder"
+    "memberCount": "Mitglieder",
+    "synchronizedReadOnly": "aus {provider} synchronisiert · nicht bearbeitbar",
+    "mappingRule": "Zuordnungsregel"
   },
   "serviceAccounts": {
     "open": "Dienstkonto {name} öffnen",
@@ -4489,7 +4562,8 @@
         "administratorTaken": "Administrator wurde Space-Admin",
         "cleanupDeleted": "Space ohne Mitglieder gelöscht",
         "exported": "Space exportiert",
-        "shortcutsChanged": "Verknüpfungen des Space geändert"
+        "shortcutsChanged": "Verknüpfungen des Space geändert",
+        "memberAddedByAdministration": "Person von der Verwaltung zu einem Space hinzugefügt"
       },
       "page": {
         "updateRejected": "Seitenänderung abgelehnt",
@@ -5050,7 +5124,8 @@
     "changeAddress": "Die Adresse wurde nicht geändert",
     "unsubscribeLink": "Der Abmeldelink konnte nicht geprüft werden",
     "openNotification": "Die Benachrichtigung konnte nicht geöffnet werden",
-    "loadStorage": "Der Speicherstatus konnte nicht geladen werden"
+    "loadStorage": "Der Speicherstatus konnte nicht geladen werden",
+    "loadMember": "Das Mitglied konnte nicht geladen werden"
   },
   "lifecycle": {
     "placeholder": {

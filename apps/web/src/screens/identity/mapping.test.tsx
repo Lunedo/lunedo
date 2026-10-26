@@ -795,7 +795,7 @@ describe("synchronized groups", () => {
     organizationApi();
     await renderPath(`/settings/organizations/${ORGANIZATION}/groups`);
     const table = await screen.findByRole("table");
-    expect(await within(table).findByText("Entra ID")).toBeTruthy();
+    expect(await within(table).findByText("synchronized from Entra ID · not editable")).toBeTruthy();
     expect(within(table).getByText("Lunedo")).toBeTruthy();
   });
 

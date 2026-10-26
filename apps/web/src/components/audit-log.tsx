@@ -88,10 +88,14 @@ export function AuditLog({
   scope,
   organizationId,
   canExport,
+  personId,
+  instanceOnly = false,
 }: {
   scope: "organization" | "instance";
   organizationId?: string;
   canExport: boolean;
+  personId?: string;
+  instanceOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -110,7 +114,14 @@ export function AuditLog({
   const cursor = cursors.at(-1);
   const { pageSize, setPageSize } = usePageSize();
   const [now, setNow] = useState(() => new Date());
-  const query = useMemo(() => toQuery(filters, now), [filters, now]);
+  const query = useMemo(
+    () => ({
+      ...toQuery(filters, now),
+      ...(personId ? { personId } : {}),
+      ...(instanceOnly && scope === "instance" ? { level: "instance" as const } : {}),
+    }),
+    [filters, now, personId, instanceOnly, scope],
+  );
 
   const events = useQuery({
     queryKey: ["audit", scope, organizationId ?? null, query, cursor ?? null, pageSize],
@@ -255,19 +266,21 @@ export function AuditLog({
                 }))}
               />
             </div>
-            <div className="w-field max-w-full">
-              <Combobox
-                aria-label={t("audit.actor")}
-                placeholder={t("audit.everyone")}
-                value={actor?.value ?? null}
-                selectedItem={actor}
-                load={actorLoader}
-                onValueChange={(value, item) => {
-                  setActor(item);
-                  update({ actorId: value ?? "" });
-                }}
-              />
-            </div>
+            {personId ? null : (
+              <div className="w-field max-w-full">
+                <Combobox
+                  aria-label={t("audit.actor")}
+                  placeholder={t("audit.everyone")}
+                  value={actor?.value ?? null}
+                  selectedItem={actor}
+                  load={actorLoader}
+                  onValueChange={(value, item) => {
+                    setActor(item);
+                    update({ actorId: value ?? "" });
+                  }}
+                />
+              </div>
+            )}
           </>
         }
         filtersActive={JSON.stringify(filters) !== JSON.stringify(EMPTY)}

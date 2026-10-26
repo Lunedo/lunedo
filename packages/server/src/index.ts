@@ -97,6 +97,7 @@ export {
   AuditLog,
   type AuditScope,
   type AuditVerification,
+  INSTANCE_AUDIT_SCOPE,
   parseAuditChangeSignal,
 } from "./audit/audit-log.js";
 export {
@@ -784,6 +785,13 @@ export { breakGlassReasonSchema } from "./organizations/break-glass.js";
 export type { Group, GroupDetails, GroupMember } from "./organizations/groups.js";
 export { groupDescriptionSchema, groupNameSchema } from "./organizations/groups.js";
 export type { Invitation } from "./organizations/invitations.js";
+export type {
+  MemberDetails,
+  MemberGroup,
+  MemberSpace,
+  MemberSpaceSource,
+  ProviderReference,
+} from "./organizations/member-details.js";
 export type { Member } from "./organizations/memberships.js";
 export { LastOwnerError } from "./organizations/memberships.js";
 export type { Organization } from "./organizations/organizations.js";

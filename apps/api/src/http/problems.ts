@@ -219,6 +219,8 @@ export const problems = {
   uploadIncomplete: { status: 409, title: "The upload is not complete" },
   uploadComplete: { status: 409, title: "The upload is already complete" },
   alreadyGranted: { status: 409, title: "The holder already has a role in the space" },
+  invalidSpaces: { status: 400, title: "Choose between 1 and 50 different spaces" },
+  administratorBySpaceAdmins: { status: 403, title: "Only space admins appoint space admins" },
   permissionNotFound: { status: 404, title: "The permission does not exist" },
   lastSpaceAdmin: { status: 409, title: "A space needs at least one space admin" },
   selfExtension: { status: 403, title: "Nobody can extend their own permissions" },

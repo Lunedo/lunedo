@@ -31,6 +31,7 @@ export interface AuditFilter {
   from?: Date;
   to?: Date;
   actorId?: string;
+  personId?: string;
   targetType?: string;
   targetId?: string;
   name?: string;
@@ -169,6 +170,17 @@ export class AuditReader {
       filter.from ? gte(auditEvents.occurredAt, filter.from) : undefined,
       filter.to ? lt(auditEvents.occurredAt, filter.to) : undefined,
       filter.actorId ? and(eq(auditEvents.actorId, filter.actorId), not(hidden)) : undefined,
+      filter.personId
+        ? and(
+            or(
+              eq(auditEvents.actorId, filter.personId),
+              and(eq(auditEvents.targetType, "account"), eq(auditEvents.targetId, filter.personId)),
+              sql`${auditEvents.fields} ->> 'accountId' = ${filter.personId}`,
+              sql`${auditEvents.fields} ->> 'principalId' = ${filter.personId}`,
+            ),
+            not(hidden),
+          )
+        : undefined,
       filter.targetType ? eq(auditEvents.targetType, filter.targetType) : undefined,
       filter.targetId ? eq(auditEvents.targetId, filter.targetId) : undefined,
       filter.name ? eq(auditEvents.name, filter.name) : undefined,

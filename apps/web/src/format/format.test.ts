@@ -13,6 +13,16 @@ const base: FormatSettings = {
 const moment = "2026-09-30T22:30:00.000Z";
 
 describe("createFormatter", () => {
+  it("says how far away a date is in days, months or years", () => {
+    const now = new Date("2026-10-26T10:00:00.000Z");
+    const distance = (value: string, language = "en") =>
+      createFormatter({ ...base, language }).distance(value, now);
+    expect(distance("2026-11-05T10:00:00.000Z")).toBe("in 10 days");
+    expect(distance("2027-02-21T10:00:00.000Z")).toBe("in 4 months");
+    expect(distance("2028-10-26T10:00:00.000Z")).toBe("in 2 years");
+    expect(distance("2027-02-21T10:00:00.000Z", "de")).toBe("in 4 Monaten");
+  });
+
   it("writes dates in the chosen pattern and time zone", () => {
     expect(createFormatter({ ...base, dateFormat: "DD.MM.YYYY" }).date(moment)).toBe("01.10.2026");
     expect(createFormatter({ ...base, dateFormat: "YYYY-MM-DD" }).date(moment)).toBe("2026-10-01");

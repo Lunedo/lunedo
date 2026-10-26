@@ -13,7 +13,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { Lock, Plus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -133,9 +133,22 @@ export function GroupsScreen() {
                 header: t("groups.managedBy"),
                 cell: (group) =>
                   group.managedBy ? (
-                    <Badge variant="info" icon={Lock}>
-                      {group.managedBy.providerName}
-                    </Badge>
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <Badge variant="info" icon={Lock}>
+                        {t("groups.synchronizedReadOnly", { provider: group.managedBy.providerName })}
+                      </Badge>
+                      {state.can("instance.signIn.view") ? (
+                        <Link
+                          to="/settings/instance/sign-in-providers/$providerId"
+                          params={{ providerId: group.managedBy.providerId }}
+                          search={{ tab: "mapping" }}
+                          onClick={(event) => event.stopPropagation()}
+                          className="text-sm text-accent hover:underline focus-visible:focus-ring"
+                        >
+                          {t("groups.mappingRule")}
+                        </Link>
+                      ) : null}
+                    </span>
                   ) : group.formerlySynchronizedFrom ? (
                     t("groups.formerlySynchronized", { provider: group.formerlySynchronizedFrom })
                   ) : (

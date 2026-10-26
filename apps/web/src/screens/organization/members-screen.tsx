@@ -17,10 +17,9 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import {
   CalendarClock,
-  Check,
   Info,
   MoreHorizontal,
   Plus,
@@ -40,6 +39,7 @@ import {
   membersQuery,
   organizationKeys,
   organizationQuery,
+  organizationSettingsQuery,
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
@@ -59,7 +59,7 @@ import { AssignRoleDialog } from "./roles.js";
 const route = getRouteApi("/app/settings/organizations/$organizationId/members");
 
 type Tab = "all" | "member" | "collaborator" | "guest" | "invitations";
-type Action =
+export type MemberAction =
   | { kind: "roles"; member: Member }
   | { kind: "expiry"; member: Member }
   | { kind: "responsible"; member: Member }
@@ -67,8 +67,6 @@ type Action =
   | { kind: "remove"; member: Member }
   | { kind: "deactivate"; member: Member }
   | { kind: "unassign"; member: Member; assignmentId: string; role: string };
-
-const KIND_BADGES = { member: "neutral", collaborator: "info", guest: "warning" } as const;
 
 export function MembersScreen() {
   const { t } = useTranslation();
@@ -85,8 +83,16 @@ export function MembersScreen() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [factorFilter, setFactorFilter] = useState<"all" | "on" | "off">("all");
   const [inviting, setInviting] = useState(false);
-  const [action, setAction] = useState<Action | null>(null);
+  const [action, setAction] = useState<MemberAction | null>(null);
   const organizationName = organization.data?.name ?? "";
+  const navigate = useNavigate();
+  const settings = useQuery({
+    ...organizationSettingsQuery(organizationId),
+    enabled: state.can("organization.settings.view"),
+    throwOnError: false,
+  });
+  const factorRequired =
+    settings.data?.find((setting) => setting.key === "auth.twoFactorRequired")?.value === true;
 
   const people = (members.data ?? []).filter((member) => member.accountType !== "service");
   const counts = {
@@ -124,88 +130,7 @@ export function MembersScreen() {
   );
   const paged = usePaged(sorted.rows);
   const filtersActive = groupFilter !== "all" || roleFilter !== "all" || factorFilter !== "all";
-  const queryClient = useQueryClient();
-  const unassign = useUnassignWithUndo({ organizationId }, async () => {
-    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
-    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
-  });
-  const nameOf = useMemo(() => new Map(people.map((member) => [member.accountId, member.name])), [people]);
-
-  const memberMenu = (member: Member) => [
-    {
-      label: t("members.actions.roles"),
-      icon: ShieldPlus,
-      onSelect: () => setAction({ kind: "roles", member }),
-      disabled: member.kind !== "member",
-    },
-    ...member.roles.map((role) => ({
-      label: t("members.actions.removeRole", {
-        role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
-      }),
-      icon: ShieldMinus,
-      onSelect: () => {
-        if (!role.customRoleId && role.role === "owner") {
-          setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
-          return;
-        }
-        void unassign(
-          {
-            id: role.assignmentId,
-            builtInRole: role.customRoleId ? null : role.role,
-            customRoleId: role.customRoleId,
-            principalKind: "account",
-            principalId: member.accountId,
-            expiresAt: role.expiresAt,
-          },
-          t("roles.unassignedNamed", {
-            name: member.name,
-            role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
-          }),
-        );
-      },
-    })),
-    { type: "separator" as const },
-    ...(member.kind !== "member"
-      ? [
-          {
-            label: t("members.actions.expiry"),
-            icon: CalendarClock,
-            onSelect: () => setAction({ kind: "expiry", member }),
-          },
-        ]
-      : []),
-    ...(member.kind === "guest"
-      ? [
-          {
-            label: t("members.actions.responsible"),
-            icon: UserCog,
-            onSelect: () => setAction({ kind: "responsible", member }),
-          },
-        ]
-      : []),
-    {
-      label: t("members.actions.permissions"),
-      icon: Info,
-      onSelect: () => setAction({ kind: "permissions", member }),
-    },
-    { type: "separator" as const },
-    {
-      label: t("members.actions.remove"),
-      icon: UserMinus,
-      danger: true,
-      onSelect: () => setAction({ kind: "remove", member }),
-    },
-    ...(state.can("instance.accounts.manage") || member.kind === "member" || member.accountType === "portal"
-      ? [
-          {
-            label: t("members.actions.deactivate"),
-            icon: UserX,
-            danger: true,
-            onSelect: () => setAction({ kind: "deactivate", member }),
-          },
-        ]
-      : []),
-  ];
+  const memberMenu = useMemberMenu(organizationId, setAction);
 
   return (
     <SettingsPage
@@ -311,8 +236,16 @@ export function MembersScreen() {
               rowKey={(member) => member.accountId}
               rows={paged.rows}
               loading={members.isPending}
-              onRowClick={(member) => setAction({ kind: "permissions", member })}
-              rowLabel={(member) => t("members.openPermissions", { name: member.name })}
+              {...(manage
+                ? {
+                    onRowClick: (member: Member) =>
+                      void navigate({
+                        to: "/settings/organizations/$organizationId/members/$accountId",
+                        params: { organizationId, accountId: member.accountId },
+                      }),
+                    rowLabel: (member: Member) => t("members.openMember", { name: member.name }),
+                  }
+                : {})}
               sort={sorted.sort}
               onSortChange={sorted.setSort}
               pagination={paged.pagination}
@@ -338,9 +271,7 @@ export function MembersScreen() {
                             {member.name}
                           </span>
                           {member.kind === "member" ? null : (
-                            <Badge variant={KIND_BADGES[member.kind]}>
-                              {t(`members.kinds.${member.kind}`)}
-                            </Badge>
+                            <Badge variant="neutral">{t(`members.kinds.${member.kind}`)}</Badge>
                           )}
                         </span>
                         <span className="truncate text-xs text-text-muted" title={member.email ?? ""}>
@@ -354,14 +285,7 @@ export function MembersScreen() {
                   key: "groups",
                   header: t("members.groups"),
                   hideBelow: "md",
-                  cell: (member) => {
-                    const names = member.groups.map((group) => group.name).join(", ");
-                    return names ? (
-                      <TruncatedText text={names} className="max-w-field" />
-                    ) : (
-                      <span className="text-text-muted">{t("members.noGroups")}</span>
-                    );
-                  },
+                  cell: (member) => <GroupNames groups={member.groups} />,
                 },
                 {
                   key: "roles",
@@ -369,23 +293,11 @@ export function MembersScreen() {
                   hideBelow: "sm",
                   cell: (member) => {
                     const roles = member.roles.map(roleName).join(", ");
-                    const expiry = member.expiresAt
-                      ? t("members.until", { date: format.date(member.expiresAt) })
-                      : null;
                     return (
-                      <span className={roles ? undefined : "text-text-muted"}>
-                        {[
-                          roles || t(`members.kinds.${member.kind}`),
-                          expiry,
-                          member.responsibleAccountId
-                            ? t("members.responsibleIs", {
-                                name: nameOf.get(member.responsibleAccountId) ?? "",
-                              })
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                      <TruncatedText
+                        text={roles || t(`members.kinds.${member.kind}`)}
+                        className={roles ? "max-w-field" : "max-w-field text-text-muted"}
+                      />
                     );
                   },
                 },
@@ -395,12 +307,11 @@ export function MembersScreen() {
                   hideBelow: "md",
                   cell: (member) =>
                     member.twoFactorActive ? (
-                      <span className="inline-flex items-center gap-1 text-success">
-                        <Check aria-hidden="true" className="size-icon-sm" />
-                        {t("common.yes")}
-                      </span>
+                      <span className="whitespace-nowrap">{t("common.yes")}</span>
+                    ) : factorRequired ? (
+                      <Badge variant="warning">{t("members.twoFactorMissing")}</Badge>
                     ) : (
-                      <Badge variant="warning">{t("common.no")}</Badge>
+                      <span className="whitespace-nowrap text-text-muted">{t("common.no")}</span>
                     ),
                 },
                 {
@@ -467,14 +378,121 @@ export function MembersScreen() {
   );
 }
 
-function MemberActionDialogs({
+export function GroupNames({ groups }: { groups: readonly { id: string; name: string }[] }) {
+  const { t } = useTranslation();
+  if (groups.length === 0) return <span className="text-text-muted">{t("members.noGroups")}</span>;
+  const shown = groups.slice(0, 2).map((group) => group.name);
+  const more = groups.length - shown.length;
+  return (
+    <span
+      className="flex min-w-0 items-center gap-1 whitespace-nowrap"
+      title={groups.map((group) => group.name).join(", ")}
+    >
+      <span className="min-w-0 truncate">{shown.join(", ")}</span>
+      {more > 0 ? <span className="text-text-muted">{t("members.moreGroups", { count: more })}</span> : null}
+    </span>
+  );
+}
+
+export function useMemberMenu(organizationId: string, setAction: (action: MemberAction) => void) {
+  const { t } = useTranslation();
+  const state = useOrganizationState();
+  const queryClient = useQueryClient();
+  const unassign = useUnassignWithUndo({ organizationId }, async () => {
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) });
+    await queryClient.invalidateQueries({ queryKey: organizationKeys.assignments(organizationId) });
+  });
+  return (member: Member, options: { permissions?: boolean } = {}) => [
+    {
+      label: t("members.actions.roles"),
+      icon: ShieldPlus,
+      onSelect: () => setAction({ kind: "roles", member }),
+      disabled: member.kind !== "member",
+    },
+    ...member.roles.map((role) => ({
+      label: t("members.actions.removeRole", {
+        role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
+      }),
+      icon: ShieldMinus,
+      onSelect: () => {
+        if (!role.customRoleId && role.role === "owner") {
+          setAction({ kind: "unassign", member, assignmentId: role.assignmentId, role: role.role });
+          return;
+        }
+        void unassign(
+          {
+            id: role.assignmentId,
+            builtInRole: role.customRoleId ? null : role.role,
+            customRoleId: role.customRoleId,
+            principalKind: "account",
+            principalId: member.accountId,
+            expiresAt: role.expiresAt,
+          },
+          t("roles.unassignedNamed", {
+            name: member.name,
+            role: role.customRoleId ? role.role : translateKey(t, `roles.builtIn.${role.role}`),
+          }),
+        );
+      },
+    })),
+    { type: "separator" as const },
+    ...(member.kind !== "member"
+      ? [
+          {
+            label: t("members.actions.expiry"),
+            icon: CalendarClock,
+            onSelect: () => setAction({ kind: "expiry", member }),
+          },
+        ]
+      : []),
+    ...(member.kind === "guest"
+      ? [
+          {
+            label: t("members.actions.responsible"),
+            icon: UserCog,
+            onSelect: () => setAction({ kind: "responsible", member }),
+          },
+        ]
+      : []),
+    ...(options.permissions === false
+      ? []
+      : [
+          {
+            label: t("members.actions.permissions"),
+            icon: Info,
+            onSelect: () => setAction({ kind: "permissions", member }),
+          },
+        ]),
+    { type: "separator" as const },
+    {
+      label: t("members.actions.remove"),
+      icon: UserMinus,
+      danger: true,
+      onSelect: () => setAction({ kind: "remove", member }),
+    },
+    ...(state.can("instance.accounts.manage") || member.kind === "member" || member.accountType === "portal"
+      ? [
+          {
+            label: t("members.actions.deactivate"),
+            icon: UserX,
+            danger: true,
+            onSelect: () => setAction({ kind: "deactivate", member }),
+          },
+        ]
+      : []),
+  ];
+}
+
+export function MemberActionDialogs({
   action,
   onClose,
   organizationId,
   organizationName,
   people,
+  onDone,
 }: {
-  action: Action | null;
+  onDone?: () => void;
+  action: MemberAction | null;
   onClose: () => void;
   organizationId: string;
   organizationName: string;
@@ -496,6 +514,7 @@ function MemberActionDialogs({
       await refresh();
       toast({ title: success, variant: "success" });
       onClose();
+      onDone?.();
     } catch (failure) {
       showFailure(t("failures.changeMember"), failure);
     }
@@ -722,10 +741,6 @@ function PermissionsDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const decisions = useQuery({
-    ...memberPermissionsQuery(organizationId, member.accountId),
-    throwOnError: false,
-  });
   return (
     <Dialog
       open
@@ -736,6 +751,19 @@ function PermissionsDialog({
       description={t("members.permissionsDescription")}
       size="lg"
     >
+      <PermissionsTable organizationId={organizationId} member={member} />
+    </Dialog>
+  );
+}
+
+export function PermissionsTable({ organizationId, member }: { organizationId: string; member: Member }) {
+  const { t } = useTranslation();
+  const decisions = useQuery({
+    ...memberPermissionsQuery(organizationId, member.accountId),
+    throwOnError: false,
+  });
+  return (
+    <>
       {decisions.isError ? (
         <LoadError
           what={t("failures.loadPermissions")}
@@ -768,14 +796,17 @@ function PermissionsDialog({
             key: "why",
             header: t("members.why"),
             grow: true,
-            cell: (decision) =>
-              decision.allowed
-                ? decision.grants.map((grant) => grantText(t, grant)).join("; ")
-                : decision.denials.map((denial) => translateKey(t, `denials.${denial}`)).join("; "),
+            cell: (decision) => (
+              <span className="text-text-muted">
+                {decision.allowed
+                  ? decision.grants.map((grant) => grantText(t, grant)).join("; ")
+                  : decision.denials.map((denial) => translateKey(t, `denials.${denial}`)).join("; ")}
+              </span>
+            ),
           },
         ]}
       />
-    </Dialog>
+    </>
   );
 }
 

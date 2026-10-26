@@ -91,6 +91,10 @@ const en: Texts = {
     title: "A personal space has no space admin",
     body: text(params.spaceKey),
   }),
+  "space.memberAddedByAdministration": ({ params }) => ({
+    title: "The administration added someone to a space",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
   "space.administratorAppointed": ({ params }) => ({
     title: "You are now space admin",
     body: text(params.spaceName),
@@ -264,6 +268,10 @@ const de: Texts = {
   "space.personalWithoutAdministrator": ({ params }) => ({
     title: "Ein persönlicher Space hat keinen Space-Admin",
     body: text(params.spaceKey),
+  }),
+  "space.memberAddedByAdministration": ({ params }) => ({
+    title: "Die Verwaltung hat jemanden zu einem Space hinzugefügt",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
   }),
   "space.administratorAppointed": ({ params }) => ({
     title: "Du bist jetzt Space-Admin",

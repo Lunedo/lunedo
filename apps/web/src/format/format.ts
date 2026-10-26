@@ -26,6 +26,7 @@ export interface Formatter {
   dateTime(value: Date | string): string;
   month(value: Date | string): string;
   relative(value: Date | string, now?: Date): string;
+  distance(value: Date | string, now?: Date): string;
   short(value: Date | string, now?: Date): string;
   day(value: Date | string, now?: Date): string;
   calendarDate(value: Date | string, now?: Date): string;
@@ -130,6 +131,13 @@ export function createFormatter(settings: FormatSettings): Formatter {
       if (absolute < 86_400) return relative.format(Math.round(seconds / 3600), "hour");
       if (absolute < 30 * 86_400) return relative.format(Math.round(seconds / 86_400), "day");
       return date(value);
+    },
+    distance(value, now = new Date()) {
+      const days = Math.round((toDate(value).getTime() - now.getTime()) / 86_400_000);
+      if (Math.abs(days) < 1) return relative.format(0, "day");
+      if (Math.abs(days) < 45) return relative.format(days, "day");
+      if (Math.abs(days) < 548) return relative.format(Math.round(days / 30.44), "month");
+      return relative.format(Math.round(days / 365.25), "year");
     },
     short(value, now = new Date()) {
       const moment = toDate(value);

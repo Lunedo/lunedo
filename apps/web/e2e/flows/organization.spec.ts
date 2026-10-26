@@ -1,5 +1,6 @@
 import { expect, test } from "../support/fixtures.js";
 import {
+  callApi,
   expectAccessible,
   linkFrom,
   openSettingsArea,
@@ -136,4 +137,42 @@ test("creates a personal API token and revokes it", async ({ page, organization 
     headers: { authorization: `Bearer ${secret}`, cookie: "" },
   });
   expect(refused.status()).toBe(401);
+});
+
+test("opens the page of a member and adds them to a group and a space", async ({ page, organization }) => {
+  const suffix = unique();
+  await page.goto("/settings/preferences");
+  const member = await organization.invite("Felix");
+  await callApi(page, "POST", `/api/v1/organizations/${organization.id}/groups`, {
+    name: `Field team ${suffix}`,
+  });
+  const key = `MP${suffix}`.slice(0, 10).toUpperCase();
+  await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: `Store north ${suffix}`,
+    key,
+    visibility: "private",
+    grants: [],
+  });
+
+  await page.goto(`/settings/organizations/${organization.id}/members`);
+  await page.getByRole("row", { name: pattern(member.name) }).click();
+  await expect(page.getByRole("heading", { name: member.name, level: 1 })).toBeVisible();
+  await expectAccessible(page, "member page");
+
+  await page.getByRole("button", { name: "Add to groups" }).click();
+  const groups = page.getByRole("dialog", { name: `Add ${member.name} to groups` });
+  await groups.getByRole("checkbox", { name: `Field team ${suffix}` }).click();
+  await groups.getByRole("button", { name: "Next" }).click();
+  await expect(groups.getByText("Who gains access")).toBeVisible();
+  await groups.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("tab", { name: /Groups/ }).click();
+  await expect(page.getByRole("link", { name: `Field team ${suffix}` })).toBeVisible();
+
+  await page.getByRole("tab", { name: /Spaces/ }).click();
+  await page.getByRole("button", { name: "Add to spaces" }).click();
+  const spaces = page.getByRole("dialog", { name: `Add ${member.name} to spaces` });
+  await spaces.getByRole("checkbox", { name: `Store north ${suffix}` }).click();
+  await spaces.getByRole("button", { name: "Next" }).click();
+  await spaces.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByRole("link", { name: `Store north ${suffix}` })).toBeVisible();
 });

@@ -976,7 +976,9 @@
     "removeDomain": "Remove domain",
     "deleteRole": "Delete role",
     "removeCredential": "Remove credential",
-    "opensInNewTab": "(opens in a new tab)"
+    "opensInNewTab": "(opens in a new tab)",
+    "next": "Next",
+    "loading": "Loading …"
   },
   "ui": {
     "clear": "Clear",
@@ -1722,7 +1724,9 @@
     "notEnoughSpace": "There is not enough space in the backup directory for this file. Free up space on the server and try again.",
     "restoreRunning": "A restore is already running. Wait until it is finished.",
     "invalidKeys": "A key does not have the expected format. Paste the backup key as it is in the key file, and choose the file with the master keys.",
-    "settingNotAtLevel": "This setting no longer exists at this level. Change it in the settings of the organization."
+    "settingNotAtLevel": "This setting no longer exists at this level. Change it in the settings of the organization.",
+    "invalidSpaces": "Choose between 1 and 50 spaces, each only once, and try again.",
+    "administratorBySpaceAdmins": "Only the space admins of this space can make someone space admin. Choose another role, or ask a space admin."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3187,7 +3191,8 @@
         "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members.",
         "personalWithoutAdministrator": "The personal space {spaceKey} of a deactivated person has no space admin. You can appoint one of its remaining members.",
         "administratorAppointed": "{actor} made you space admin of {spaceName}.",
-        "administratorTaken": "{actorName} became space admin of {spaceName} through the administration of {organizationName}: {reason}"
+        "administratorTaken": "{actorName} became space admin of {spaceName} through the administration of {organizationName}: {reason}",
+        "memberAddedByAdministration": "{actorName} added {memberName} to {spaceName} through the administration of {organizationName}."
       },
       "import": {
         "finished": "The import into {spaceName} ({spaceKey}) is ready for review. {problems, plural, =0 {Nothing needs attention.} one {# item needs attention.} other {# items need attention.}}",
@@ -3778,7 +3783,6 @@
     }
   },
   "members": {
-    "openPermissions": "Show the permissions of {name}",
     "title": "Members",
     "description": "People in {name}.",
     "tabs": "Kinds of members",
@@ -3790,7 +3794,6 @@
     "roles": "Roles",
     "expires": "Expires",
     "noExpiry": "No expiry",
-    "responsibleIs": "responsible: {name}",
     "actionsFor": "Actions for {name}",
     "none": "No members yet.",
     "noMatches": "Nobody matches the search.",
@@ -3858,7 +3861,6 @@
     "lastActive": "Last active",
     "never": "Never",
     "noGroups": "None",
-    "until": "until {date}",
     "filters": {
       "group": "Group",
       "allGroups": "All groups",
@@ -3868,7 +3870,76 @@
       "twoFactorOn": "Set up",
       "twoFactorOff": "Not set up"
     },
-    "expiryHelp": "Access ends at the end of this day. Reminders go out beforehand."
+    "expiryHelp": "Access ends at the end of this day. Reminders go out beforehand.",
+    "openMember": "Open the page of {name}",
+    "twoFactorMissing": "Missing",
+    "moreGroups": "+{count}",
+    "page": {
+      "tabs": "Sections of the member page",
+      "overview": "Overview",
+      "permissions": "Permissions",
+      "spaces": "Spaces",
+      "activity": "Activity",
+      "extend": "Extend access",
+      "membership": "Membership",
+      "change": "change",
+      "since": "Since",
+      "accessUntil": "Access until",
+      "noEnd": "No end",
+      "nobody": "Nobody",
+      "invitedBy": "Invited by",
+      "unknown": "Unknown",
+      "signIn": "Sign-in",
+      "factorRequired": "(required by the organization)",
+      "factorNotRequired": "(not required by the organization)",
+      "signInWith": "Signs in with",
+      "password": "Password",
+      "accountByInstance": "The account is managed by the instance.",
+      "addToGroups": "Add to groups",
+      "addToSpaces": "Add to spaces",
+      "noSpaces": "No role in a space of this organization.",
+      "space": "Space",
+      "source": "Source",
+      "viaGroup": "group {name}",
+      "direct": "direct",
+      "allMembers": "all members",
+      "protectedSpaces": "Confidential, one-on-one and personal spaces do not appear here.",
+      "activityHint": "Only events of this organization. Sign-ins and devices are shown to the instance administration.",
+      "viaProvider": "via {provider}",
+      "spaceAccess": "Space access",
+      "givesSpaces": "{count, plural, one {gives access to # space} other {gives access to # spaces}}",
+      "noSpaceRoles": "no space roles",
+      "remove": "Remove",
+      "removeFromGroup": "Remove from {group}",
+      "removedFromGroup": "{name} removed from {group}",
+      "providerKeeps": "Managed by {provider}: the next synchronization would add the person again.",
+      "providerRules": "Groups from an identity provider follow its mapping rules under Instance → Sign-in providers.",
+      "addToGroupsTitle": "Add {name} to groups",
+      "addToGroupsDescription": "Choose one or more groups. Before saving you see which access this gives.",
+      "searchGroups": "Search groups",
+      "noGroupChosen": "No group chosen",
+      "groupsChosen": "{count, plural, one {# group} other {# groups}}: {names}",
+      "chooseGroup": "Choose at least one group.",
+      "alreadyMember": "already a member",
+      "synchronizedFrom": "synchronized from {provider}",
+      "groupsImpact": "becomes a member of {groups}.",
+      "groupsImpactSpaces": "{count, plural, one {becomes a member of {groups} and gets access to # space through them.} other {becomes a member of {groups} and gets access to # spaces through them.}}",
+      "groupsAdded": "{count, plural, one {{name} added to # group} other {{name} added to # groups}}",
+      "groupsFailed": "Not added to {groups}",
+      "addToSpacesTitle": "Add {name} to spaces",
+      "addToSpacesDescription": "Choose spaces and one role for each. Confidential, one-on-one and personal spaces cannot be chosen.",
+      "searchSpaces": "Search spaces",
+      "roleForAll": "Role for all",
+      "roleIn": "Role in {space}",
+      "alreadyIn": "already {role}",
+      "noSpaceChosen": "No space chosen",
+      "chooseSpace": "Choose at least one space.",
+      "noSpacesOffered": "No space you may add people to.",
+      "spacesImpact": "gets a role in {spaces}.",
+      "spacesAdded": "{count, plural, one {{name} added to # space} other {{name} added to # spaces}}",
+      "spacesFailed": "The person was not added to the spaces",
+      "administratorNotice": "As an organization administrator: the space admins of the chosen spaces are notified, and the change is in the audit log."
+    }
   },
   "roles": {
     "transferOwnership": "Transfer ownership",
@@ -4048,7 +4119,9 @@
     "memberRemovedName": "{name} was removed from the group.",
     "managerRemovedName": "{name} no longer manages the group.",
     "deleteSummary": "Removes the group and its role assignments for good. Members lose the access the group gave them.",
-    "memberCount": "Members"
+    "memberCount": "Members",
+    "synchronizedReadOnly": "synchronized from {provider} · not editable",
+    "mappingRule": "Mapping rule"
   },
   "serviceAccounts": {
     "open": "Open service account {name}",
@@ -4489,7 +4562,8 @@
         "cleanupDeleted": "Space without members deleted",
         "pageStatusValuesChanged": "Page status values changed",
         "exported": "Space exported",
-        "shortcutsChanged": "Space shortcuts changed"
+        "shortcutsChanged": "Space shortcuts changed",
+        "memberAddedByAdministration": "Person added to a space by the administration"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -5050,7 +5124,8 @@
     "changeAddress": "The address was not changed",
     "unsubscribeLink": "Checking the unsubscribe link failed",
     "openNotification": "Opening the notification failed",
-    "loadStorage": "The storage status could not be loaded"
+    "loadStorage": "The storage status could not be loaded",
+    "loadMember": "The member could not be loaded"
   },
   "lifecycle": {
     "placeholder": {

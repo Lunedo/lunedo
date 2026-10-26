@@ -114,6 +114,7 @@ import { DomainsScreen } from "./screens/organization/domains-screen.js";
 import { OrganizationGeneralScreen } from "./screens/organization/general-screen.js";
 import { GroupScreen } from "./screens/organization/group-screen.js";
 import { GroupsScreen } from "./screens/organization/groups-screen.js";
+import { MemberScreen } from "./screens/organization/member-screen.js";
 import { MembersScreen } from "./screens/organization/members-screen.js";
 import { OrganizationNotificationDefaultsScreen } from "./screens/organization/notification-defaults-screen.js";
 import { OrganizationRolesScreen } from "./screens/organization/roles-screen.js";
@@ -872,6 +873,7 @@ const organizationGeneralRoute = organizationScreen(
 const membersRoute = organizationScreen("/members", MembersScreen, (queryClient, organizationId) => [
   queryClient.ensureQueryData(membersQuery(organizationId)),
 ]);
+const memberRoute = organizationScreen("/members/$accountId", MemberScreen);
 const groupsRoute = organizationScreen("/groups", GroupsScreen);
 const groupRoute = organizationScreen("/groups/$groupId", GroupScreen);
 const rolesRoute = organizationScreen("/roles", OrganizationRolesScreen, (queryClient, organizationId) => [
@@ -1161,6 +1163,7 @@ const routeTree = rootRoute.addChildren([
         organizationIndexRoute,
         organizationGeneralRoute,
         membersRoute,
+        memberRoute,
         groupsRoute,
         groupRoute,
         rolesRoute,

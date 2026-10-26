@@ -143,7 +143,15 @@ export class MembershipService {
     for (const listener of this.#endListeners) await listener(tx, organizationId, accountId);
   }
 
-  async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Member>> {
+  async member(organizationId: string, accountId: string): Promise<Member | null> {
+    return (await this.list(organizationId, FIRST_PAGE, accountId)).items[0] ?? null;
+  }
+
+  async list(
+    organizationId: string,
+    page: PageRequest = FIRST_PAGE,
+    accountId?: string,
+  ): Promise<Page<Member>> {
     const sortName = sql<string>`lower(${accounts.name})`;
     const rows = await this.#database
       .select({
@@ -167,6 +175,7 @@ export class MembershipService {
       .where(
         and(
           eq(memberships.organizationId, organizationId),
+          accountId ? eq(memberships.accountId, accountId) : undefined,
           eq(accounts.state, "active"),
           or(isNull(memberships.expiresAt), sql`${memberships.expiresAt} > now()`),
           afterKey([sortName, accounts.id], page.after),

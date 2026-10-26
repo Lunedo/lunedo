@@ -69,6 +69,7 @@ import {
   uuid,
 } from "../http/schemas.js";
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
+import { exampleMemberDetails, memberDetailsSchema, memberSpacesSchema } from "./member-schemas.js";
 
 const TAG = "Organizations";
 const MEMBERS = "Members";
@@ -608,6 +609,54 @@ export class OrganizationsController {
   async leave(@Param("organizationId") organizationId: string, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
     if (!(await this.#services.memberships.remove(actor, organizationId, actor.id, "left"))) throw notFound();
+  }
+
+  @Get(":organizationId/members/:accountId")
+  @Permission("organization.members.manage", organization)
+  @ApiRoute({
+    summary: "Get a member",
+    description:
+      "Returns a member with how they joined and sign in, their groups with the provider that manages them, and their roles in the spaces of the organization. Spaces are left out unless the caller may view the spaces of the organization; personal and confidential spaces never appear.",
+    tags: [MEMBERS],
+    params: memberParams,
+    response: { description: "The member.", schema: memberDetailsSchema, example: exampleMemberDetails },
+  })
+  async member(
+    @Param("organizationId") organizationId: string,
+    @Param("accountId") accountId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const details = await this.#services.memberDetails.details(actorOf(request), organizationId, accountId);
+    if (!details) throw notFound();
+    return details;
+  }
+
+  @Post(":organizationId/members/:accountId/spaces")
+  @Permission("organization.view", organization)
+  @ApiRoute({
+    summary: "Add a member to spaces",
+    description:
+      "Gives the member a role in each of the spaces, all or none. For each space the caller must be its space admin or manage the spaces of the organization. Personal and confidential spaces are refused. When an organization administrator adds someone to a space they do not administer, its space admins are notified and the audit log records it; only space admins give the role `admin`. Only active members of the organization can be added, and nobody adds themselves.",
+    tags: [MEMBERS],
+    status: 204,
+    params: memberParams,
+    body: memberSpacesSchema,
+    bodyExample: { spaces: [{ spaceId: "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e60", role: "reader" }] },
+    errors: [
+      "invalidSpaces",
+      "invalidHolder",
+      "alreadyGranted",
+      "selfExtension",
+      "administratorBySpaceAdmins",
+    ],
+  })
+  async addToSpaces(
+    @Param("organizationId") organizationId: string,
+    @Param("accountId") accountId: string,
+    @Body() body: z.output<typeof memberSpacesSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#services.memberSpaces.add(actorOf(request), organizationId, accountId, body.spaces);
   }
 
   @Get(":organizationId/members/:accountId/permissions")
