@@ -31,7 +31,11 @@ export function TruncatedText({ text, className }: TruncatedTextProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const truncated = useTruncated(ref, text);
   const span = (
-    <span ref={ref} className={classNames("block min-w-0 truncate", className)}>
+    <span
+      ref={ref}
+      {...(truncated ? { tabIndex: 0 } : {})}
+      className={classNames("block min-w-0 truncate rounded-sm focus-visible:focus-ring", className)}
+    >
       {text}
     </span>
   );

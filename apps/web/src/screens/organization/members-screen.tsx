@@ -6,6 +6,7 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
+  FirstAndMore,
   focusFirstInvalidSoon,
   IconButton,
   Menu,
@@ -285,7 +286,7 @@ export function MembersScreen() {
                   key: "groups",
                   header: t("members.groups"),
                   hideBelow: "md",
-                  cell: (member) => <GroupNames groups={member.groups} />,
+                  cell: (member) => <GroupNames name={member.name} groups={member.groups} />,
                 },
                 {
                   key: "roles",
@@ -378,19 +379,21 @@ export function MembersScreen() {
   );
 }
 
-export function GroupNames({ groups }: { groups: readonly { id: string; name: string }[] }) {
+export function GroupNames({
+  name,
+  groups,
+}: {
+  name: string;
+  groups: readonly { id: string; name: string }[];
+}) {
   const { t } = useTranslation();
-  if (groups.length === 0) return <span className="text-text-muted">{t("members.noGroups")}</span>;
-  const shown = groups.slice(0, 2).map((group) => group.name);
-  const more = groups.length - shown.length;
   return (
-    <span
-      className="flex min-w-0 items-center gap-1 whitespace-nowrap"
-      title={groups.map((group) => group.name).join(", ")}
-    >
-      <span className="min-w-0 truncate">{shown.join(", ")}</span>
-      {more > 0 ? <span className="text-text-muted">{t("members.moreGroups", { count: more })}</span> : null}
-    </span>
+    <FirstAndMore
+      title={t("members.groupsOf", { name })}
+      moreLabel={(count) => t("members.moreGroupsLabel", { count })}
+      values={groups.map((group) => ({ id: group.id, label: group.name }))}
+      empty={<span className="text-text-muted">{t("members.noGroups")}</span>}
+    />
   );
 }
 

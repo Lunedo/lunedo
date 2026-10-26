@@ -3991,7 +3991,9 @@
       "removedFromSpace": "Aus {space} entfernt",
       "removeFromSpaceFailed": "Aus {space} entfernen hat nicht geklappt",
       "undoRemoveFailed": "Rückgängig machen in {space} hat nicht geklappt"
-    }
+    },
+    "groupsOf": "Gruppen von {name}",
+    "moreGroupsLabel": "{count, plural, one {# weitere Gruppe} other {# weitere Gruppen}} anzeigen"
   },
   "roles": {
     "transferOwnership": "Owner-Rolle übertragen",
@@ -4268,6 +4270,8 @@
     "organizations": {
       "search": "Nach Name oder Kurzname suchen",
       "owners": "Owner",
+      "ownersOf": "Owner von {name}",
+      "moreOwners": "{count, plural, one {# weiteren Owner} other {# weitere Owner}} anzeigen",
       "members": "Mitglieder",
       "domainsColumn": "Domains",
       "openNamed": "Einstellungen von {name} öffnen",
@@ -4407,7 +4411,9 @@
       "changeInstanceRoleOf": "Instanzrolle von {name} ändern",
       "heldInstanceRoles": "Aktuelle Instanzrollen",
       "noInstanceRole": "Keine Instanzrolle.",
-      "ownerKept": "Ändert sich nur, wenn ein anderes Konto Owner wird"
+      "ownerKept": "Ändert sich nur, wenn ein anderes Konto Owner wird",
+      "organizationsOf": "Organisationen von {name}",
+      "moreOrganizations": "{count, plural, one {# weitere Organisation} other {# weitere Organisationen}} anzeigen"
     },
     "roles": {
       "title": "Rollen",

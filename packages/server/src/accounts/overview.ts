@@ -18,6 +18,7 @@ export interface InstanceRoleSummary {
 export type AdministeredAccount = Omit<Account, "passwordHash"> & {
   lastSignInAt: Date | null;
   twoFactorActive: boolean;
+  secondFactorRequired: boolean;
   instanceRoles: InstanceRoleSummary[];
   organizations: { id: string; name: string; home: boolean }[];
 };
@@ -94,10 +95,16 @@ function date(value: Date | string | null | undefined): Date | null {
 export class AccountOverviewService {
   readonly #database: Database;
   readonly #accounts: AccountService;
+  readonly #secondFactorRequired: (accountId: string) => Promise<boolean>;
 
-  constructor(options: { database: Database; accounts: AccountService }) {
+  constructor(options: {
+    database: Database;
+    accounts: AccountService;
+    secondFactorRequired?: (accountId: string) => Promise<boolean>;
+  }) {
     this.#database = options.database;
     this.#accounts = options.accounts;
+    this.#secondFactorRequired = options.secondFactorRequired ?? (async () => false);
   }
 
   async listAccounts(
@@ -106,10 +113,32 @@ export class AccountOverviewService {
   ): Promise<Page<AdministeredAccount>> {
     const result = await this.#accounts.list(page, filter);
     const details = await this.#details(result.items.map((item) => item.id));
-    return {
-      next: result.next,
-      items: result.items.map((item) => ({ ...item, ...this.#detailOf(details, item.id) })),
-    };
+    const items = result.items.map((item) => ({ ...item, ...this.#detailOf(details, item.id) }));
+    for (const item of items) {
+      if (
+        item.twoFactorActive ||
+        item.state !== "active" ||
+        item.type === "service" ||
+        item.type === "portal"
+      )
+        continue;
+      item.secondFactorRequired = await this.#secondFactorRequired(item.id);
+    }
+    return { next: result.next, items };
+  }
+
+  async #withRequirement<
+    T extends Pick<AdministeredAccount, "id" | "state" | "type" | "twoFactorActive" | "secondFactorRequired">,
+  >(account: T): Promise<T> {
+    if (
+      account.twoFactorActive ||
+      account.state !== "active" ||
+      account.type === "service" ||
+      account.type === "portal"
+    ) {
+      return account;
+    }
+    return { ...account, secondFactorRequired: await this.#secondFactorRequired(account.id) };
   }
 
   #detailOf(
@@ -117,7 +146,13 @@ export class AccountOverviewService {
     id: string,
   ): Omit<AdministeredAccount, keyof Omit<Account, "passwordHash">> {
     return (
-      details.get(id) ?? { lastSignInAt: null, twoFactorActive: false, instanceRoles: [], organizations: [] }
+      details.get(id) ?? {
+        lastSignInAt: null,
+        twoFactorActive: false,
+        secondFactorRequired: false,
+        instanceRoles: [],
+        organizations: [],
+      }
     );
   }
 
@@ -140,6 +175,7 @@ export class AccountOverviewService {
       result.set(row.id, {
         lastSignInAt: date(row.last_sign_in_at),
         twoFactorActive: row.two_factor,
+        secondFactorRequired: false,
         instanceRoles: [],
         organizations: [],
       });
@@ -290,7 +326,7 @@ export class AccountOverviewService {
       )
       .orderBy(apiTokens.name);
     return {
-      account: { ...visible, ...this.#detailOf(details, accountId) },
+      account: await this.#withRequirement({ ...visible, ...this.#detailOf(details, accountId) }),
       memberships: detailed,
       sessions: activeSessions,
       tokens,

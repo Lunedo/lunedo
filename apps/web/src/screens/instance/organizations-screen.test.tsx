@@ -65,7 +65,10 @@ function api() {
             id: ORGANIZATION,
             name: "Platform Team",
             slug: "platform",
-            owners: [{ id: OLIVIA.id, name: OLIVIA.name }],
+            owners: [
+              { id: OLIVIA.id, name: OLIVIA.name },
+              { id: "01929b1e-0000-7000-8000-0000000000dd", name: "Max Member" },
+            ],
             memberCount: 3,
             domains: [],
             language: "en",
@@ -94,5 +97,18 @@ describe("the organizations page", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "Copy ID" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(ORGANIZATION));
     expect(await screen.findByText("ID copied")).toBeTruthy();
+  });
+
+  it("shows the first owner on one line and the others behind +n", async () => {
+    api();
+    window.history.replaceState(null, "", "/settings/instance/organizations");
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const table = await screen.findByRole("table", { name: "Organizations" });
+    expect(await within(table).findByText(OLIVIA.name)).toBeTruthy();
+    expect(within(table).queryByText("Max Member")).toBeNull();
+    await userEvent.click(within(table).getByRole("button", { name: "Show 1 more owner" }));
+    const popover = await screen.findByRole("dialog", { name: "Owners of Platform Team" });
+    expect(within(popover).getByText("Max Member")).toBeTruthy();
   });
 });

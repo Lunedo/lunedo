@@ -1,4 +1,14 @@
-import { Badge, Button, Combobox, Field, InlineField, Notice, Section, Table } from "@lunedo/ui";
+import {
+  Badge,
+  Button,
+  Combobox,
+  Field,
+  InlineField,
+  Notice,
+  Section,
+  Table,
+  TruncatedText,
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
@@ -107,7 +117,9 @@ export function BreakGlassScreen() {
             {
               key: "organization",
               header: t("breakGlass.organization"),
-              cell: (entry) => <span className="font-medium">{entry.organizationName}</span>,
+              cell: (entry) => (
+                <TruncatedText text={entry.organizationName} className="max-w-field font-medium" />
+              ),
             },
             { key: "account", header: t("breakGlass.requestedBy"), cell: (entry) => entry.accountName },
             { key: "reason", header: t("breakGlass.reason"), hideBelow: "md", cell: (entry) => entry.reason },

@@ -17,6 +17,11 @@ export const administeredAccountSchema = accountSchema
   .extend({
     lastSignInAt: timestamp("When the account signed in last, or null.").nullable(),
     twoFactorActive: z.boolean().describe("Whether the account has an authenticator app or a passkey."),
+    secondFactorRequired: z
+      .boolean()
+      .describe(
+        "Whether the instance or the home organization requires a second factor that the account does not have yet.",
+      ),
     instanceRoles: z
       .array(
         z
@@ -46,6 +51,7 @@ export const exampleAdministeredAccount = {
   ...exampleAccount,
   lastSignInAt: "2026-10-01T09:30:00.000Z",
   twoFactorActive: true,
+  secondFactorRequired: false,
   instanceRoles: [{ builtInRole: "securityAuditor", customRoleId: null, name: null }],
   organizations: [{ id: exampleOrganization.id, name: exampleOrganization.name, home: true }],
 };

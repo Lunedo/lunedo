@@ -49,17 +49,22 @@ export function PageHeader({
             <ol className="flex flex-wrap items-center gap-x-1 gap-y-2 text-sm text-text-muted">
               {breadcrumbs.map((crumb, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: a breadcrumb is identified by its position in the path
-                <li key={index} className="inline-flex items-center gap-1">
+                <li key={index} className="inline-flex min-w-0 items-center gap-1">
                   {index > 0 && <Icon icon={ChevronRight} size="sm" />}
                   {crumb.href ? (
                     <a
                       href={crumb.href}
-                      className="rounded-sm text-accent hover:underline focus-visible:focus-ring"
+                      title={typeof crumb.label === "string" ? crumb.label : undefined}
+                      className="max-w-field truncate rounded-sm text-accent hover:underline focus-visible:focus-ring"
                     >
                       {crumb.label}
                     </a>
                   ) : (
-                    <span aria-current={index === breadcrumbs.length - 1 ? "page" : undefined}>
+                    <span
+                      aria-current={index === breadcrumbs.length - 1 ? "page" : undefined}
+                      title={typeof crumb.label === "string" ? crumb.label : undefined}
+                      className="max-w-field truncate"
+                    >
                       {crumb.label}
                     </span>
                   )}

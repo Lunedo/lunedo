@@ -13,6 +13,7 @@ const OLIVIA = {
 const MAX = "01929b1e-0000-7000-8000-0000000000cc";
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const RESEARCH = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e60";
+const LIAM = "01929b1e-0000-7000-8000-0000000000cd";
 
 function account(id: string, name: string, email: string) {
   const own = id === OLIVIA.id;
@@ -32,6 +33,7 @@ function account(id: string, name: string, email: string) {
     createdAt: "2026-09-01T08:00:00.000Z",
     lastSignInAt: "2026-10-01T09:00:00.000Z",
     twoFactorActive: true,
+    secondFactorRequired: false,
     instanceRoles: id === OLIVIA.id ? [{ builtInRole: "owner", customRoleId: null, name: null }] : [],
   };
 }
@@ -346,10 +348,14 @@ describe("the accounts page", () => {
     if (!olivia || !max) throw new Error("Rows not found");
     expect(within(table).getByRole("columnheader", { name: "Organizations" })).toBeTruthy();
     expect(within(olivia).getByText("Platform Team")).toBeTruthy();
-    expect(within(olivia).getByText("Research")).toBeTruthy();
+    expect(within(olivia).queryByText("Research")).toBeNull();
     const marks = within(olivia).getAllByRole("img", { name: /^Home organization:/ });
     expect(marks).toHaveLength(1);
-    expect(marks[0]?.closest("li")?.textContent).toBe("Platform Team");
+    expect(marks[0]?.closest("[data-first-and-more]")?.textContent).toMatch(/^Platform Team\+1$/);
+    await userEvent.click(within(olivia).getByRole("button", { name: "Show 1 more organization" }));
+    const all = await screen.findByRole("dialog", { name: "Organizations of Olivia Owner" });
+    expect(within(all).getByText("Research")).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(within(max).getByText("Without organization")).toBeTruthy();
 
     await userEvent.click(within(table).getByText("Olivia Owner"));
@@ -358,7 +364,7 @@ describe("the accounts page", () => {
     expect(home.some((mark) => mark.closest("li")?.textContent?.includes("Platform Team"))).toBe(true);
   });
 
-  it("shows no two-factor status for accounts that cannot have a second factor", async () => {
+  it("shows the second factor neutrally and warns only where one is required and missing", async () => {
     api(() => ({ body: {} }), {
       "GET /api/v1/instance/accounts": () => ({
         body: {
@@ -366,6 +372,11 @@ describe("the accounts page", () => {
             { ...account(MAX, "CI pipeline", ""), type: "service", email: null, twoFactorActive: false },
             { ...account(OLIVIA.id, "Imported Author", ""), state: "placeholder", twoFactorActive: false },
             { ...account(RESEARCH, "Lena Lind", "lena@example.org"), twoFactorActive: false },
+            {
+              ...account(LIAM, "Liam Lane", "liam@example.org"),
+              twoFactorActive: false,
+              secondFactorRequired: true,
+            },
           ],
           nextCursor: null,
         },
@@ -374,9 +385,11 @@ describe("the accounts page", () => {
     const table = await renderAccounts();
     const row = (name: string) => within(table).getByText(name).closest("tr") as HTMLElement;
     await within(table).findByText("CI pipeline");
-    expect(within(row("CI pipeline")).queryByText("Not set up")).toBeNull();
-    expect(within(row("Imported Author")).queryByText("Not set up")).toBeNull();
-    expect(within(row("Lena Lind")).getByText("Not set up")).toBeTruthy();
+    expect(within(row("CI pipeline")).queryByText("No")).toBeNull();
+    expect(within(row("Imported Author")).queryByText("Missing")).toBeNull();
+    expect(within(row("Lena Lind")).getByText("No")).toBeTruthy();
+    expect(within(row("Lena Lind")).queryByText("Missing")).toBeNull();
+    expect(within(row("Liam Lane")).getByText("Missing")).toBeTruthy();
   });
 
   it("shows the home organization also when the account belongs to one organization only", async () => {

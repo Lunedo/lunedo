@@ -3991,7 +3991,9 @@
       "removedFromSpace": "Removed from {space}",
       "removeFromSpaceFailed": "Could not remove from {space}",
       "undoRemoveFailed": "Could not undo the removal from {space}"
-    }
+    },
+    "groupsOf": "Groups of {name}",
+    "moreGroupsLabel": "Show {count, plural, one {# more group} other {# more groups}}"
   },
   "roles": {
     "transferOwnership": "Transfer ownership",
@@ -4268,6 +4270,8 @@
     "organizations": {
       "search": "Search by name or short name",
       "owners": "Owners",
+      "ownersOf": "Owners of {name}",
+      "moreOwners": "Show {count, plural, one {# more owner} other {# more owners}}",
       "members": "Members",
       "domainsColumn": "Domains",
       "openNamed": "Open the settings of {name}",
@@ -4407,7 +4411,9 @@
       "changeInstanceRoleOf": "Change the instance role of {name}",
       "heldInstanceRoles": "Current instance roles",
       "noInstanceRole": "No instance role.",
-      "ownerKept": "Changes only when another account becomes owner"
+      "ownerKept": "Changes only when another account becomes owner",
+      "organizationsOf": "Organizations of {name}",
+      "moreOrganizations": "Show {count, plural, one {# more organization} other {# more organizations}}"
     },
     "roles": {
       "title": "Roles",

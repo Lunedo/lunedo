@@ -6,6 +6,7 @@ import {
   DangerZone,
   Dialog,
   Field,
+  FirstAndMore,
   focusFirstInvalidSoon,
   IconButton,
   Notice,
@@ -17,6 +18,7 @@ import {
   Tabs,
   Textarea,
   Tooltip,
+  TruncatedText,
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -197,7 +199,12 @@ export function InstanceAccountsScreen() {
             {
               key: "organizations",
               header: t("instance.accounts.organizations"),
-              cell: (account) => <AccountOrganizations organizations={account.organizations} />,
+              cell: (account) => (
+                <AccountOrganizations
+                  name={account.name ?? account.email ?? ""}
+                  organizations={account.organizations}
+                />
+              ),
             },
             {
               key: "role",
@@ -213,11 +220,13 @@ export function InstanceAccountsScreen() {
               header: t("instance.accounts.twoFactor"),
               cell: (account) =>
                 !canHaveSecondFactor(account) ? (
-                  "—"
+                  <span className="text-text-muted">—</span>
                 ) : account.twoFactorActive ? (
-                  <Badge variant="success">{t("instance.accounts.twoFactorOn")}</Badge>
+                  <span className="whitespace-nowrap">{t("common.yes")}</span>
+                ) : account.secondFactorRequired ? (
+                  <Badge variant="warning">{t("members.twoFactorMissing")}</Badge>
                 ) : (
-                  <Badge variant="warning">{t("instance.accounts.twoFactorOff")}</Badge>
+                  <span className="whitespace-nowrap text-text-muted">{t("common.no")}</span>
                 ),
             },
             {
@@ -255,20 +264,25 @@ export function InstanceAccountsScreen() {
   );
 }
 
-function AccountOrganizations({ organizations }: { organizations: Account["organizations"] }) {
+function AccountOrganizations({
+  name,
+  organizations,
+}: {
+  name: string;
+  organizations: Account["organizations"];
+}) {
   const { t } = useTranslation();
-  if (organizations.length === 0) {
-    return <Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>;
-  }
   return (
-    <ul className="flex min-w-0 flex-col gap-0.5">
-      {organizations.map((organization) => (
-        <li key={organization.id} className="flex min-w-0 items-center gap-1.5">
-          {organization.home ? <HomeMark /> : null}
-          <span className="break-words">{organization.name}</span>
-        </li>
-      ))}
-    </ul>
+    <FirstAndMore
+      title={t("instance.accounts.organizationsOf", { name })}
+      moreLabel={(count) => t("instance.accounts.moreOrganizations", { count })}
+      values={organizations.map((organization) => ({
+        id: organization.id,
+        label: organization.name,
+        ...(organization.home ? { icon: <HomeMark /> } : {}),
+      }))}
+      empty={<Badge variant="warning">{t("instance.accounts.withoutOrganization")}</Badge>}
+    />
   );
 }
 
@@ -575,10 +589,10 @@ function AccountDetails({
                     {detail.memberships.map((membership) => (
                       <li
                         key={membership.organizationId}
-                        className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
                       >
                         {membership.home ? <HomeMark /> : null}
-                        <span className="font-medium">{membership.name}</span>
+                        <TruncatedText text={membership.name} className="max-w-field font-medium" />
                         <span className="text-text-muted">
                           {[
                             t(`members.kinds.${membership.kind}`),
@@ -767,9 +781,9 @@ function AccountDetails({
                   header: t("instance.accounts.organization"),
                   grow: true,
                   cell: (membership) => (
-                    <span className="flex items-center gap-2 font-medium">
+                    <span className="flex min-w-0 items-center gap-2 font-medium">
                       {membership.home ? <HomeMark /> : null}
-                      {membership.name}
+                      <TruncatedText text={membership.name} className="max-w-field" />
                     </span>
                   ),
                 },

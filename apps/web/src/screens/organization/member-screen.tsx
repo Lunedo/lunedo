@@ -1,4 +1,14 @@
-import { Badge, Button, IconButton, Menu, Table, Tabs, useToast, VisuallyHidden } from "@lunedo/ui";
+import {
+  Badge,
+  Button,
+  IconButton,
+  Menu,
+  Table,
+  Tabs,
+  TruncatedText,
+  useToast,
+  VisuallyHidden,
+} from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { MoreHorizontal, Plus } from "lucide-react";
@@ -307,7 +317,12 @@ export function MemberScreen() {
                 {
                   key: "source",
                   header: t("members.page.source"),
-                  cell: (space) => <span className="text-text-muted">{sourceText(t, space.sources)}</span>,
+                  cell: (space) => (
+                    <TruncatedText
+                      text={sourceText(t, space.sources)}
+                      className="max-w-field text-text-muted"
+                    />
+                  ),
                 },
                 {
                   key: "remove",
@@ -524,11 +539,14 @@ function GroupsTab({
             header: t("members.page.spaceAccess"),
             hideBelow: "sm",
             cell: (group) => (
-              <span className="text-text-muted">
-                {group.spaces > 0
-                  ? t("members.page.givesSpaces", { count: group.spaces })
-                  : t("members.page.noSpaceRoles")}
-              </span>
+              <TruncatedText
+                text={
+                  group.spaces > 0
+                    ? t("members.page.givesSpaces", { count: group.spaces })
+                    : t("members.page.noSpaceRoles")
+                }
+                className="max-w-field text-text-muted"
+              />
             ),
           },
           {

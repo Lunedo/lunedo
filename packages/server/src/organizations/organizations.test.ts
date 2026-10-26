@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { InvalidTokenError } from "../auth/errors.js";
+import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { languageSetting } from "../settings/builtin.js";
 import { formatSettings } from "../settings/preferences.js";
@@ -326,6 +327,19 @@ describe.skipIf(!baseUrl)("organizations", () => {
         }),
       ).rejects.toThrow(ForbiddenError);
     });
+  });
+
+  it("says per account whether its home organization or the instance requires a second factor it lacks", async () => {
+    const strict = await organization();
+    const relaxed = await organization();
+    const required = await standard(strict.id);
+    const optional = await standard(relaxed.id);
+    await test.settings.set(twoFactorRequiredSetting, { organization: strict.id }, "organization", true);
+    const listed = (await test.services.overview.listAccounts({ limit: 500 })).items;
+    expect(listed.find((item) => item.id === required)?.secondFactorRequired).toBe(true);
+    expect(listed.find((item) => item.id === optional)?.secondFactorRequired).toBe(false);
+    const detail = await test.services.overview.accountDetail(required);
+    expect(detail?.account.secondFactorRequired).toBe(true);
   });
 
   it("makes the first standard membership the home organization, never a guest or collaborator one", async () => {

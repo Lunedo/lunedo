@@ -203,12 +203,16 @@ async function open(path: string, heading: string) {
 }
 
 describe("the member table", () => {
-  it("shows one line per person, two groups and the count of the rest, and opens the member page", async () => {
+  it("shows one line per person, the first group and the rest behind +n, and opens the member page", async () => {
     memberApi();
     await open(`/settings/organizations/${ORGANIZATION.id}/members`, "Members");
     const row = (await screen.findByText("Felix Gruber")).closest("tr") as HTMLElement;
-    expect(within(row).getByText("IT, Entra staff")).toBeTruthy();
-    expect(within(row).getByText("+1")).toBeTruthy();
+    expect(within(row).getByText("IT")).toBeTruthy();
+    expect(within(row).queryByText("Entra staff")).toBeNull();
+    await userEvent.click(within(row).getByRole("button", { name: "Show 2 more groups" }));
+    const groups = await screen.findByRole("dialog", { name: "Groups of Felix Gruber" });
+    expect(within(groups).getByText("Entra staff")).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
     expect(within(row).getByText("No")).toBeTruthy();
     expect(within(row).queryByText("Missing")).toBeNull();
     await userEvent.click(within(row).getByText("felix@example.org"));
@@ -308,6 +312,15 @@ describe("the member page", () => {
     memberApi();
     await open(`${path}?tab=groups`, "Felix Gruber");
     expect(screen.getByRole("tab", { name: /Groups/ }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("keeps the space access of a group and the source of a space role on one line", async () => {
+    memberApi();
+    await open(`${path}?tab=groups`, "Felix Gruber");
+    expect((await screen.findByText("no space roles")).className).toContain("truncate");
+    await userEvent.click(screen.getByRole("tab", { name: /Spaces/ }));
+    const row = await screen.findByRole("row", { name: /Help center/ });
+    expect(within(row).getByText("direct").className).toContain("truncate");
   });
 
   it("lists the activity of the person in this organization", async () => {

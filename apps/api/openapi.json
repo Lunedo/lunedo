@@ -59896,6 +59896,10 @@
                             "type": "boolean",
                             "description": "Whether the account has an authenticator app or a passkey."
                           },
+                          "secondFactorRequired": {
+                            "type": "boolean",
+                            "description": "Whether the instance or the home organization requires a second factor that the account does not have yet."
+                          },
                           "instanceRoles": {
                             "type": "array",
                             "items": {
@@ -59988,6 +59992,7 @@
                           "createdAt",
                           "lastSignInAt",
                           "twoFactorActive",
+                          "secondFactorRequired",
                           "instanceRoles",
                           "organizations"
                         ],
@@ -60023,6 +60028,7 @@
                       "createdAt": "2026-10-01T08:00:00.000Z",
                       "lastSignInAt": "2026-10-01T09:30:00.000Z",
                       "twoFactorActive": true,
+                      "secondFactorRequired": false,
                       "instanceRoles": [
                         {
                           "builtInRole": "securityAuditor",
@@ -60258,6 +60264,10 @@
                           "type": "boolean",
                           "description": "Whether the account has an authenticator app or a passkey."
                         },
+                        "secondFactorRequired": {
+                          "type": "boolean",
+                          "description": "Whether the instance or the home organization requires a second factor that the account does not have yet."
+                        },
                         "instanceRoles": {
                           "type": "array",
                           "items": {
@@ -60350,6 +60360,7 @@
                         "createdAt",
                         "lastSignInAt",
                         "twoFactorActive",
+                        "secondFactorRequired",
                         "instanceRoles",
                         "organizations"
                       ],

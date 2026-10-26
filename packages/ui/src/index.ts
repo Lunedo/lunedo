@@ -118,6 +118,7 @@ export {
   type MultiFilterMenuProps,
   type SingleFilterMenuProps,
 } from "./filter-menu.js";
+export { FirstAndMore, type FirstAndMoreProps, type ListedValue } from "./first-and-more.js";
 export { focusFirstInvalid, focusFirstInvalidSoon } from "./focus-invalid.js";
 export {
   type FuzzyMatch,

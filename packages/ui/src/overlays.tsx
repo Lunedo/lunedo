@@ -133,7 +133,7 @@ export function Menu({ trigger, items, align = "end", side = "bottom", runAfterC
             action();
           }}
           style={{ maxHeight: "var(--radix-dropdown-menu-content-available-height)" }}
-          className={classNames(SURFACE, "min-w-field overflow-y-auto p-1")}
+          className={classNames(SURFACE, "max-w-dialog-sm min-w-field overflow-y-auto p-1")}
         >
           {items.map((item, index) => {
             if (item.type === "separator") {
@@ -174,7 +174,9 @@ export function Menu({ trigger, items, align = "end", side = "bottom", runAfterC
                   className="flex h-row cursor-default items-center gap-2 rounded-sm px-2 text-text outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover"
                 >
                   <Icon icon={item.icon} className="text-text-muted" />
-                  <span className="flex-1">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate" title={item.label}>
+                    {item.label}
+                  </span>
                   <DropdownMenu.ItemIndicator className="flex">
                     <Icon icon={Check} className="text-accent" />
                   </DropdownMenu.ItemIndicator>
@@ -192,7 +194,9 @@ export function Menu({ trigger, items, align = "end", side = "bottom", runAfterC
                 )}
               >
                 <Icon icon={item.icon} className={item.danger ? "" : "text-text-muted"} />
-                <span className="flex-1">{item.label}</span>
+                <span className="min-w-0 flex-1 truncate" title={item.label}>
+                  {item.label}
+                </span>
                 {item.attention && (
                   <span data-attention="" className="size-2 shrink-0 rounded-full bg-badge">
                     <span className="sr-only">{item.attention}</span>

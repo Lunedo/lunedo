@@ -477,7 +477,11 @@ export function createAccountServices(options: {
   });
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
-  const overview = new AccountOverviewService({ database, accounts });
+  const overview = new AccountOverviewService({
+    database,
+    accounts,
+    secondFactorRequired: (accountId) => signIn.secondFactorRequired(accountId),
+  });
   const accessReductions = new AccessReductions();
   const roles = new RoleService({ database, audit, authorization, reductions: accessReductions });
   const groups = new GroupService({ database, audit, authorization, reductions: accessReductions });

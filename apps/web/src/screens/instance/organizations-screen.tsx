@@ -5,6 +5,7 @@ import {
   type ComboboxItem,
   Dialog,
   Field,
+  FirstAndMore,
   IconButton,
   Input,
   Menu,
@@ -12,6 +13,7 @@ import {
   Table,
   TableToolbar,
   TimeZoneCombobox,
+  TruncatedText,
   useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -123,12 +125,21 @@ export function InstanceOrganizationsScreen() {
           {
             key: "name",
             header: t("instance.organizations.name"),
-            cell: (organization) => <span className="font-medium">{organization.name}</span>,
+            cell: (organization) => (
+              <TruncatedText text={organization.name} className="max-w-field font-medium" />
+            ),
           },
           {
             key: "owners",
             header: t("instance.organizations.owners"),
-            cell: (organization) => organization.owners.map((owner) => owner.name).join(", ") || "—",
+            cell: (organization) => (
+              <FirstAndMore
+                title={t("instance.organizations.ownersOf", { name: organization.name })}
+                moreLabel={(count) => t("instance.organizations.moreOwners", { count })}
+                values={organization.owners.map((owner) => ({ id: owner.id, label: owner.name }))}
+                empty="—"
+              />
+            ),
           },
           {
             key: "members",
