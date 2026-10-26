@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, renderWithProviders } from "../testing/render.js";
 import { CreateSeriesDialog } from "./create-series-dialog.js";
-import { TopicForm } from "./topic-form.js";
+import { TopicDialog } from "./topic-form.js";
 
 vi.mock("../shell/shell-context.js", () => {
   const session = { account: { id: "01929b1e-8d4b-7e3f-a05c-4d3e2f1a6b7c", name: "Olivia Owner" } };
@@ -18,7 +18,7 @@ describe("required fields of the meeting dialogs", () => {
     mockApi({});
     await renderWithProviders(
       <PreferencesProvider>
-        <TopicForm seriesId={SERIES} onDone={() => undefined} />
+        <TopicDialog seriesId={SERIES} open onOpenChange={() => undefined} />
       </PreferencesProvider>,
     );
     await userEvent.click(await screen.findByRole("button", { name: "Add" }));

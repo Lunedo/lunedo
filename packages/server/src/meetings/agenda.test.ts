@@ -212,6 +212,97 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     expect(closed.topics.map((topic) => topic.id)).toEqual([topicId]);
   });
 
+  it("starts the history with the description and counts the meetings a topic has been on", async () => {
+    const context = await setup();
+    const topicId = await test.services.topics.create(context.lead, context.seriesId, {
+      title: "Firewall",
+      description: "Two offers to compare.",
+      meetingId: context.meetingId,
+    });
+    const [closedId = ""] = await topics(context, "Printers");
+    await test.services.topics.close(context.lead, closedId, {
+      outcome: "resolved",
+      meetingId: context.meetingId,
+    });
+    const first = await test.services.agenda.agenda(context.lead, context.meetingId);
+    expect(first.closedTopics).toBe(1);
+    expect(first.topics[0]).toMatchObject({
+      update: { text: "Two offers to compare.", formatted: false },
+      history: [],
+      meetings: 1,
+    });
+    await closeMeeting(context.lead, context.meetingId);
+    const second = (await test.services.meetings.details(context.lead, context.seriesId)).upcoming?.id ?? "";
+    await test.services.agenda.saveUpdate(context.lead, second, topicId, "Vendor B chosen.");
+    await closeMeeting(context.lead, second);
+    const third = (await test.services.meetings.details(context.lead, context.seriesId)).upcoming?.id ?? "";
+    const agenda = await test.services.agenda.agenda(context.lead, third);
+    expect(agenda.closedTopics).toBe(0);
+    expect(agenda.topics[0]?.history.map((entry) => [entry.meetingId, entry.text])).toEqual([
+      [context.meetingId, "Two offers to compare."],
+      [second, "Vendor B chosen."],
+    ]);
+    expect(agenda.topics[0]?.meetings).toBe(3);
+    const earlier = await test.services.agenda.agenda(context.lead, second);
+    expect(earlier.topics[0]?.history.map((entry) => entry.meetingId)).toEqual([context.meetingId]);
+    const meeting = await test.services.meetings.meeting(context.lead, second);
+    expect(meeting.previousMeeting?.id).toBe(context.meetingId);
+    expect(meeting.followingMeeting?.id).toBe(third);
+    expect(
+      (await test.services.meetings.meeting(context.lead, context.meetingId)).previousMeeting,
+    ).toBeNull();
+    await expect(
+      test.services.topics.create(context.lead, context.seriesId, {
+        title: "Too late",
+        description: "No open meeting",
+        meetingId: context.meetingId,
+      }),
+    ).rejects.toMatchObject({ code: "meetingRequired" });
+  });
+
+  it("removes untouched template sections from existing meeting pages and keeps written ones", async () => {
+    const context = await setup();
+    const [topicId = ""] = await topics(context, "Firewall");
+    await test.services.agenda.saveUpdate(context.lead, context.meetingId, topicId, "Window on 1 Nov.");
+    const placeholder = (text: string): NodeJson => ({
+      type: "paragraph",
+      content: [{ type: "placeholder", attrs: { text } }],
+    });
+    await test.database.transaction((tx) =>
+      test.services.documents.editLocked(
+        tx,
+        context.meetingId,
+        (current) => ({
+          ...current,
+          content: [
+            { type: "section", attrs: { key: "agenda", title: "Agenda" }, content: [placeholder("Topic")] },
+            ...(current.content ?? []),
+            { type: "section", attrs: { key: "notes", title: "Notes" }, content: [paragraph("Kept")] },
+            {
+              type: "section",
+              attrs: { key: "openTasks", title: "Open tasks" },
+              content: [{ type: "taskReport", attrs: { status: "open" } }],
+            },
+          ],
+        }),
+        context.leadId,
+      ),
+    );
+    expect(await test.services.meetingTemplateSections.pending()).toBe(true);
+    const silent = { info: () => {} } as unknown as Parameters<
+      TestServices["services"]["meetingTemplateSections"]["removeUntouched"]
+    >[0];
+    expect(await test.services.meetingTemplateSections.removeUntouched(silent)).toMatchObject({ cleaned: 1 });
+    const keys = (await document(context.meetingId)).content
+      ?.filter((node) => node.type === "section")
+      .map((node) => node.attrs?.key);
+    expect(keys).toEqual(["runningTopics", "notes"]);
+    expect((await test.services.agenda.agenda(context.lead, context.meetingId)).topics[0]?.update?.text).toBe(
+      "Window on 1 Nov.",
+    );
+    expect(await test.services.meetingTemplateSections.removeUntouched(silent)).toMatchObject({ cleaned: 0 });
+  });
+
   it("saves updates and records decisions at the same moment without a deadlock", async () => {
     const context = await setup();
     const ids = await topics(context, "One", "Two", "Three", "Four");

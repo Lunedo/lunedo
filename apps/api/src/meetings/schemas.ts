@@ -371,6 +371,23 @@ export const seriesListSchema = z
   )
   .describe("The meeting series of the space the caller can see.");
 
+const adjacentMeetingSchema = z
+  .object({
+    id: uuid("ID of the meeting."),
+    title: z.string().describe("Title."),
+    startsAt: timestamp("Start.").nullable(),
+  })
+  .describe("A neighboring meeting.");
+
+const historyEntrySchema = z
+  .object({
+    meetingId: uuid("Meeting of the update."),
+    meetingTitle: z.string().describe("Title of that meeting."),
+    startsAt: timestamp("Start of that meeting.").nullable(),
+    text: z.string().describe("The update as plain text."),
+  })
+  .describe("An earlier update.");
+
 export const meetingSchema = z
   .object({
     id: uuid("ID of the meeting page."),
@@ -402,6 +419,12 @@ export const meetingSchema = z
     nextMeetingId: uuid(
       "The meeting created when this one was closed or skipped, or null when the caller cannot read the series.",
     ).nullable(),
+    previousMeeting: adjacentMeetingSchema
+      .nullable()
+      .describe("The meeting of the series before this one that the caller can read, skipped ones left out."),
+    followingMeeting: adjacentMeetingSchema
+      .nullable()
+      .describe("The meeting of the series after this one that the caller can read, skipped ones left out."),
     rhythm: z
       .boolean()
       .nullable()
@@ -464,6 +487,8 @@ export const exampleMeeting = {
   closedAt: null,
   closedBy: null,
   nextMeetingId: null,
+  previousMeeting: null,
+  followingMeeting: null,
   rhythm: true,
   attendees: [
     {
@@ -560,22 +585,24 @@ export const agendaSchema = z
               .nullable()
               .describe("This meeting's update, or null when the notes have no block for the topic."),
             previous: z
-              .array(
-                z
-                  .object({
-                    meetingId: uuid("Meeting of the update."),
-                    meetingTitle: z.string().describe("Title of that meeting."),
-                    startsAt: timestamp("Start of that meeting.").nullable(),
-                    text: z.string().describe("The update as plain text."),
-                  })
-                  .describe("An earlier update."),
-              )
+              .array(historyEntrySchema)
               .describe("The last earlier updates the caller can read, newest first."),
+            history: z
+              .array(historyEntrySchema)
+              .describe(
+                "All updates of meetings before this one that the caller can read, oldest first. The first is the start of the topic.",
+              ),
+            meetings: z
+              .number()
+              .int()
+              .min(1)
+              .describe("How many meetings of the series the topic has been on, this one included."),
             tasks: z.array(agendaTaskSchema).describe("Tasks written in the updates of this topic."),
           })
           .describe("A topic on the agenda."),
       )
       .describe("Topics in the order of the series."),
+    closedTopics: z.number().int().min(0).describe("How many topics were closed in this meeting."),
     decisions: z
       .array(
         z
@@ -776,6 +803,13 @@ export const createTopicSchema = z
       .optional()
       .describe(
         "True for a topic of the given meeting only. It closes when that meeting is closed. Needs `meetingId`.",
+      ),
+    description: z
+      .string()
+      .max(UPDATE_TEXT_MAX_LENGTH)
+      .optional()
+      .describe(
+        `What the topic is about, up to ${UPDATE_TEXT_MAX_LENGTH} characters. It becomes the topic's update in the meeting it is raised in, the first entry of its history. Needs a meeting that has not been closed.`,
       ),
   })
   .strict()

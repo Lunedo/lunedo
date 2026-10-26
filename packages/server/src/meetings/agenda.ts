@@ -37,8 +37,17 @@ export interface AgendaTopic {
   labels: string[];
   createdAt: Date;
   update: { text: string; formatted: boolean } | null;
-  previous: { meetingId: string; meetingTitle: string; startsAt: Date | null; text: string }[];
+  previous: AgendaHistoryEntry[];
+  history: AgendaHistoryEntry[];
+  meetings: number;
   tasks: AgendaTask[];
+}
+
+export interface AgendaHistoryEntry {
+  meetingId: string;
+  meetingTitle: string;
+  startsAt: Date | null;
+  text: string;
 }
 
 export interface Agenda {
@@ -46,6 +55,7 @@ export interface Agenda {
   seriesId: string;
   current: boolean;
   topics: AgendaTopic[];
+  closedTopics: number;
   decisions: { id: string; topicId: string | null; topicTitle: string | null; text: string }[];
   tasks: AgendaTask[];
 }
@@ -74,7 +84,7 @@ function findUpdate(document: NodeJson, topicId: string): NodeJson | null {
   return null;
 }
 
-function mapUpdate(
+export function mapUpdate(
   document: DocumentJson,
   topicId: string,
   change: (node: NodeJson) => NodeJson,
@@ -174,9 +184,11 @@ export class AgendaService {
     const result = await this.#database.execute<{
       series_id: string;
       state: MeetingState;
+      starts_at: Date | string | null;
       archived: boolean;
     }>(sql`
-      select m.series_id, m.state, (st.archived_root_id is not null or s.archived_at is not null) as archived
+      select m.series_id, m.state, m.starts_at,
+        (st.archived_root_id is not null or s.archived_at is not null) as archived
       from meetings m join tree_items t on t.id = m.item_id join tree_items st on st.id = m.series_id
       join spaces s on s.id = t.space_id
       where m.item_id = ${meetingId} and t.trash_entry_id is null`);
@@ -220,6 +232,7 @@ export class AgendaService {
   async agenda(viewer: Principal, meetingId: string): Promise<Agenda> {
     const meeting = await this.#meeting(meetingId);
     const current = !meeting.archived && (meeting.state === "upcoming" || meeting.state === "reopened");
+    const start = toDate(meeting.starts_at);
     const topics = await this.#database.execute<{
       id: string;
       title: string;
@@ -230,11 +243,19 @@ export class AgendaService {
       owner_name: string | null;
       labels: string[] | null;
       created_at: Date | string;
+      meetings: string;
     }>(sql`
       select mt.item_id as id, t.title, mt.status, mt.outcome, mt.one_off, t.owner_id,
         ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
-        t.created_at
+        t.created_at,
+        case when mt.one_off then 1 else (
+          select count(*) from meetings m2 join tree_items t2 on t2.id = m2.item_id
+          where m2.series_id = mt.series_id and m2.state <> 'skipped' and t2.trash_entry_id is null
+            and (m2.item_id = ${meetingId} or (
+              m2.starts_at >= coalesce((select r.starts_at from meetings r where r.item_id = mt.raised_in_id), t.created_at)
+              and m2.starts_at <= coalesce(${start?.toISOString() ?? null}::timestamptz, now())))
+        ) end as meetings
       from meeting_topics mt join tree_items t on t.id = mt.item_id join spaces s on s.id = t.space_id
       left join accounts o on o.id = t.owner_id
       where mt.series_id = ${meeting.series_id} and t.trash_entry_id is null
@@ -281,6 +302,11 @@ export class AgendaService {
     const tasks = await this.#tasks(viewer, [
       ...new Set([...[...taskIds.values()].flat(), ...meetingTaskIds]),
     ]);
+    const closed = await this.#database.execute<{ count: string }>(sql`
+      select count(*) as count from meeting_topics mt join tree_items t on t.id = mt.item_id
+      join spaces s on s.id = t.space_id
+      where mt.closed_in_id = ${meetingId} and t.trash_entry_id is null
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
     const decisions = await this.#database.execute<{
       id: string;
       topic_id: string | null;
@@ -295,9 +321,18 @@ export class AgendaService {
       meetingId,
       seriesId: meeting.series_id,
       current,
+      closedTopics: Number(closed.rows[0]?.count ?? 0),
       topics: topics.rows.map((row) => {
         const block = own.get(row.id);
         const seen = new Set<string>();
+        const earlier = updates.rows
+          .filter((update) => update.topic_id === row.id && update.item_id !== meetingId)
+          .map((update) => ({
+            meetingId: update.item_id,
+            meetingTitle: update.title,
+            startsAt: toDate(update.starts_at),
+            text: updateTextOf({ type: "topicUpdate", content: update.content }).text,
+          }));
         return {
           id: row.id,
           title: row.title,
@@ -308,15 +343,9 @@ export class AgendaService {
           labels: row.labels ?? [],
           createdAt: new Date(row.created_at),
           update: block ? updateTextOf(block) : null,
-          previous: updates.rows
-            .filter((update) => update.topic_id === row.id && update.item_id !== meetingId)
-            .slice(0, PREVIOUS_UPDATES)
-            .map((update) => ({
-              meetingId: update.item_id,
-              meetingTitle: update.title,
-              startsAt: toDate(update.starts_at),
-              text: updateTextOf({ type: "topicUpdate", content: update.content }).text,
-            })),
+          previous: earlier.slice(0, PREVIOUS_UPDATES),
+          history: earlier.filter((entry) => !start || !entry.startsAt || entry.startsAt <= start).reverse(),
+          meetings: Math.max(1, Number(row.meetings)),
           tasks: (taskIds.get(row.id) ?? []).flatMap((id) => {
             const task = tasks.get(id);
             if (!task || seen.has(id)) return [];

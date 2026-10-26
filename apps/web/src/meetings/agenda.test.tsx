@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, renderWithProviders } from "../testing/render.js";
 import { AgendaSection } from "./agenda.js";
-import { MeetingHeader } from "./meeting-header.js";
+import { MeetingHeader, MeetingTitle } from "./meeting-header.js";
+import { discussedTopics, MeetingRail } from "./meeting-rail.js";
 import type { Agenda, Meeting, Series } from "./queries.js";
 import { SeriesOverview } from "./series-overview.js";
 
@@ -39,34 +40,102 @@ function topic(
     createdAt: "2026-10-05T08:00:00.000Z",
     update: { text: "", formatted: false },
     previous: [],
+    history: [],
+    meetings: 1,
     tasks: [],
     ...extra,
   };
 }
 
 function agenda(topics: Agenda["topics"]): Agenda {
-  return { meetingId: MEETING, seriesId: SERIES, current: true, topics, decisions: [], tasks: [] };
+  return {
+    meetingId: MEETING,
+    seriesId: SERIES,
+    current: true,
+    topics,
+    closedTopics: 0,
+    decisions: [],
+    tasks: [],
+  };
 }
 
 describe("the agenda of a meeting", () => {
-  it("shows the text of the last update that is not empty, or that there is none", async () => {
+  it("shows without expanding the latest entry, the meetings, open and overdue tasks", async () => {
+    const task = (id: string, dueDate: string) => ({
+      id,
+      text: `Task ${id}`,
+      done: false,
+      dueDate,
+      assignee: null,
+      meetingId: MEETING,
+    });
     mockApi({
       [`GET /api/v1/meetings/${MEETING}/agenda`]: () => ({
         body: agenda([
           topic(FIREWALL, "Firewall", {
-            previous: [
-              { meetingId: SPACE, meetingTitle: "26 Oct", startsAt: null, text: "" },
-              { meetingId: SERIES, meetingTitle: "19 Oct", startsAt: null, text: "Rules\nreviewed" },
+            meetings: 4,
+            history: [
+              { meetingId: SERIES, meetingTitle: "5 Oct", startsAt: null, text: "Two offers" },
+              { meetingId: SPACE, meetingTitle: "19 Oct", startsAt: null, text: "Rules reviewed" },
+              { meetingId: LENA.id, meetingTitle: "26 Oct", startsAt: null, text: "" },
             ],
+            tasks: [task("a", "2020-01-01"), task("b", "2999-01-01")],
           }),
-          topic(PRINTERS, "Printers"),
+          topic(PRINTERS, "Printers", { update: { text: "Leasing is cheaper", formatted: false } }),
+          topic(SPACE, "Retro", { oneOff: true }),
         ]),
       }),
     });
     await renderWithProviders(inRouter(<AgendaSection meetingId={MEETING} spaceKey="ITOPS" writable />));
-    expect(await screen.findByText(/last: Rules reviewed$/)).toBeTruthy();
-    expect(screen.getByText(/no update yet$/)).toBeTruthy();
-    expect(screen.queryByText(/last: $/)).toBeNull();
+    expect(await screen.findByText("Rules reviewed")).toBeTruthy();
+    expect(screen.getByText(/4 meetings · 2 open tasks/)).toBeTruthy();
+    expect(screen.getByText("1 overdue")).toBeTruthy();
+    expect(screen.getByText("Leasing is cheaper").parentElement?.textContent).toMatch(/^Today/);
+    expect(screen.getByText("this meeting only")).toBeTruthy();
+    expect(screen.getByText("No entry yet.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "History (3)" }));
+    const history = screen.getByRole("list", { name: "History of Firewall" });
+    expect(
+      within(history)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(["5 Oct · StartTwo offers", "19 OctRules reviewed", "26 Oct(empty)"]);
+  });
+
+  it("adds a topic with a description in a dialog that stays open for the next one", async () => {
+    const api = mockApi({
+      [`GET /api/v1/meetings/${MEETING}/agenda`]: () => ({ body: agenda([]) }),
+      [`POST /api/v1/meeting-series/${SERIES}/topics`]: () => ({ status: 201, body: {} }),
+    });
+    await renderWithProviders(inRouter(<AgendaSection meetingId={MEETING} spaceKey="ITOPS" writable />));
+    await userEvent.click(await screen.findByRole("button", { name: "Topic" }));
+    const dialog = await screen.findByRole("dialog", { name: "New topic" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add and add another" }));
+    expect(await within(dialog).findByText("Enter a title for the topic.")).toBeTruthy();
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Title" }), "Printer costs");
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: /What is it about/ }),
+      "Three devices fail",
+    );
+    await userEvent.click(within(dialog).getByRole("radio", { name: /This meeting only/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add and add another" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "POST")?.body).toEqual({
+        title: "Printer costs",
+        description: "Three devices fail",
+        meetingId: MEETING,
+        oneOff: true,
+      }),
+    );
+    expect(screen.getByRole("dialog", { name: "New topic" })).toBeTruthy();
+    expect((within(dialog).getByRole("textbox", { name: "Title" }) as HTMLInputElement).value).toBe("");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Title" }), "Phishing{Enter}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "New topic" })).toBeNull());
+    expect(api.requests.filter((request) => request.method === "POST")[1]?.body).toEqual({
+      title: "Phishing",
+      meetingId: MEETING,
+      oneOff: false,
+    });
   });
 
   it("lists all open topics in order and moves one with the arrow buttons", async () => {
@@ -111,6 +180,7 @@ describe("the agenda of a meeting", () => {
     await userEvent.click(screen.getByRole("button", { name: "Close as decision" }));
     expect(await screen.findByText("Write the decision into the field, then click again.")).toBeTruthy();
     const field = screen.getByRole("textbox", { name: "Update on Firewall in this meeting" });
+    expect(screen.getByRole("heading", { name: "Entry of this meeting" })).toBeTruthy();
     expect(document.activeElement).toBe(field);
     await userEvent.type(field, "Window on 1 Nov.");
     await waitFor(
@@ -155,6 +225,8 @@ const meeting: Meeting = {
   closedAt: null,
   closedBy: null,
   nextMeetingId: null,
+  previousMeeting: null,
+  followingMeeting: null,
   rhythm: true,
   extra: false,
   attendees: [
@@ -185,6 +257,32 @@ describe("the head of a meeting", () => {
     expect(screen.getByText("Next")).toBeTruthy();
     const region = screen.getByRole("region", { name: "Meeting details" });
     expect(region.textContent).toMatch(/\w+day, /);
+  });
+
+  it("titles the meeting with series and weekday and links the meetings before and after", async () => {
+    mockApi({
+      [`GET /api/v1/meetings/${MEETING}`]: () => ({
+        body: {
+          ...meeting,
+          previousMeeting: { id: SPACE, title: "Jour fixe IT", startsAt: "2026-10-26T08:30:00.000Z" },
+          followingMeeting: { id: PRINTERS, title: "Jour fixe IT", startsAt: "2026-11-09T08:30:00.000Z" },
+        },
+      }),
+    });
+    await renderWithProviders(
+      inRouter(
+        <>
+          <h1>
+            <MeetingTitle meetingId={MEETING} fallback="Jour fixe IT" />
+          </h1>
+          <MeetingHeader meetingId={MEETING} spaceKey="ITOPS" writable />
+        </>,
+      ),
+    );
+    expect(await screen.findByRole("heading", { name: /^Jour fixe IT · Monday, / })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Oct 26/ }).getAttribute("href")).toContain(`/spaces/ITOPS/`);
+    expect(screen.getByRole("link", { name: /Nov 9/ })).toBeTruthy();
+    expect(screen.getByText(/^Previous:/)).toBeTruthy();
   });
 
   it("calls a later upcoming meeting planned, not next", async () => {
@@ -291,5 +389,43 @@ describe("the overview of a series", () => {
     );
     expect(screen.getByRole("button", { name: "Move Decisions" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Attendance" })).toBeTruthy();
+  });
+});
+
+describe("the result column of a meeting", () => {
+  it("counts topics with an entry today or closed today as discussed", () => {
+    const shown = agenda([
+      topic(FIREWALL, "Firewall", { update: { text: "Window set", formatted: false } }),
+      topic(PRINTERS, "Printers"),
+    ]);
+    expect(discussedTopics({ ...shown, closedTopics: 2 })).toEqual({ discussed: 3, total: 4 });
+    expect(discussedTopics({ ...shown, current: false })).toEqual({ discussed: 1, total: 2 });
+  });
+
+  it("shows progress, decisions, new tasks and what is open in the series", async () => {
+    const api = mockApi({
+      [`GET /api/v1/meetings/${MEETING}/agenda`]: () => ({
+        body: {
+          ...agenda([topic(FIREWALL, "Firewall"), topic(PRINTERS, "Printers")]),
+          closedTopics: 1,
+          decisions: [{ id: SPACE, topicId: PRINTERS, topicTitle: "Printers", text: "We lease." }],
+        },
+      }),
+      [`GET /api/v1/meetings/${MEETING}`]: () => ({ body: meeting }),
+      "GET /api/v1/tasks": () => ({
+        body: { items: [], counts: { open: 4, done: 0, overdue: 1 }, nextCursor: null },
+      }),
+    });
+    await renderWithProviders(inRouter(<MeetingRail meetingId={MEETING} spaceKey="ITOPS" />));
+    expect(await screen.findByText("1 of 3 topics discussed")).toBeTruthy();
+    expect(screen.getByText("We lease.")).toBeTruthy();
+    expect(screen.getByText("No tasks from this meeting yet.")).toBeTruthy();
+    expect(await screen.findByText("1 overdue")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "All tasks of the series" }).getAttribute("href")).toContain(
+      "tab=tasks",
+    );
+    const query = api.requests.find((request) => request.path.startsWith("/api/v1/tasks?"))?.path ?? "";
+    expect(query).toContain(`seriesId=${SERIES}`);
+    expect(query).toContain("status=open");
   });
 });

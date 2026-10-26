@@ -39,6 +39,7 @@ describe("jobs during maintenance", () => {
       "files.remove-orphaned",
       "imports.work",
       "knowledge-bases.prune-removed-articles",
+      "meetings.remove-template-sections",
       "pages.version-live-sessions",
       "portal.render-article",
       "templates.adopt-files",

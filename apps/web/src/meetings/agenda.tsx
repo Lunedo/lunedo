@@ -18,17 +18,7 @@ import {
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Flag,
-  ListChecks,
-  Plus,
-  X,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Flag, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -39,8 +29,16 @@ import { AppDatePicker } from "../components/date-fields.js";
 import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { localDateInZone } from "../format/zoned.js";
 import { useFormat } from "../preferences/preferences-provider.js";
-import { type Agenda, type AgendaTask, type AgendaTopic, agendaQuery, meetingKeys } from "./queries.js";
+import {
+  type Agenda,
+  type AgendaTask,
+  type AgendaTopic,
+  agendaQuery,
+  meetingKeys,
+  meetingQuery,
+} from "./queries.js";
 import {
   DropLine,
   useDropIndicator,
@@ -48,9 +46,16 @@ import {
   useSortableItem,
   useSortableSensors,
 } from "./sortable.js";
-import { TopicForm } from "./topic-form.js";
+import { TopicDialog } from "./topic-form.js";
 
 const SAVE_DELAY_MS = 800;
+const LABEL = "text-xs font-semibold tracking-label text-text-muted uppercase";
+
+interface TopicDay {
+  today: string;
+  label: string;
+  heading: string;
+}
 
 function moved(ids: string[], id: string, afterId: string | null): string[] {
   const rest = ids.filter((entry) => entry !== id);
@@ -71,6 +76,8 @@ export function AgendaSection({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const agenda = useQuery(agendaQuery(meetingId));
+  const meeting = useQuery({ ...meetingQuery(meetingId), throwOnError: false });
+  const format = useFormat();
   const [owner, setOwner] = useState("");
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
@@ -98,6 +105,19 @@ export function AgendaSection({
   );
   const reorderable = editable && owner === "";
   const allOpen = shown.length > 0 && shown.every((topic) => open.has(topic.id));
+  const timeZone = meeting.data?.timeZone ?? format.settings.timeZone;
+  const today = localDateInZone(new Date(), timeZone);
+  const startsAt = meeting.data?.startsAt ?? null;
+  const isToday = !startsAt || localDateInZone(new Date(startsAt), timeZone) === today;
+  const day: TopicDay = {
+    today,
+    label: isToday || !startsAt ? t("meetings.agenda.today") : format.calendarDate(startsAt),
+    heading: !startsAt
+      ? t("meetings.agenda.entry")
+      : isToday
+        ? t("meetings.agenda.todayOn", { date: format.calendarDate(startsAt) })
+        : t("meetings.agenda.entryOn", { date: format.calendarDate(startsAt) }),
+  };
 
   const move = async (id: string, afterId: string | null, undoable = true) => {
     const key = meetingKeys.agenda(meetingId);
@@ -176,14 +196,20 @@ export function AgendaSection({
             </Button>
           ) : null}
           {editable ? (
-            <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
+            <Button variant="primary" icon={Plus} onClick={() => setAdding(true)}>
               {t("meetings.agenda.topic")}
             </Button>
           ) : null}
         </div>
       </div>
-      {adding ? (
-        <TopicForm seriesId={data.seriesId} meetingId={meetingId} onDone={() => setAdding(false)} />
+      {editable ? (
+        <TopicDialog
+          seriesId={data.seriesId}
+          seriesTitle={meeting.data?.seriesTitle ?? null}
+          meetingId={meetingId}
+          open={adding}
+          onOpenChange={setAdding}
+        />
       ) : null}
       {shown.length === 0 ? (
         <p className="border-t border-border py-3 text-sm text-text-muted">
@@ -217,6 +243,7 @@ export function AgendaSection({
                   <DropLine show={drop.indicator?.overId === topic.id && !drop.indicator.after} />
                   <TopicRow
                     topic={topic}
+                    day={day}
                     number={data.topics.indexOf(topic) + 1}
                     meetingId={meetingId}
                     editable={editable}
@@ -263,6 +290,7 @@ export function AgendaSection({
 
 function TopicRow({
   topic,
+  day,
   number,
   meetingId,
   editable,
@@ -274,6 +302,7 @@ function TopicRow({
   onStep,
 }: {
   topic: AgendaTopic;
+  day: TopicDay;
   number: number;
   meetingId: string;
   editable: boolean;
@@ -287,54 +316,51 @@ function TopicRow({
   const { t } = useTranslation();
   const format = useFormat();
   const sortable = useSortableItem(topic.id, !reorderable);
-  const latest = topic.previous.find((update) => update.text.trim().length > 0);
   const openTasks = topic.tasks.filter((task) => !task.done).length;
+  const overdue = topic.tasks.filter((task) => isOverdue(task, day.today)).length;
   const owner = topic.owner?.name ?? t("meetings.topics.noOwner");
   const bodyId = `topic-body-${topic.id}`;
+  const own = topic.update?.text.trim() ? topic.update.text : null;
+  const latest = [...topic.history].reverse().find((entry) => entry.text.trim().length > 0);
+  const meta = topic.oneOff
+    ? [t("meetings.agenda.forThisMeeting")]
+    : [
+        t("meetings.agenda.runningSince", { date: format.calendarDate(topic.createdAt) }),
+        t("meetings.agenda.meetings", { count: topic.meetings }),
+        ...(openTasks > 0 ? [t("meetings.agenda.openTasks", { count: openTasks })] : []),
+      ];
   return (
     <div
       ref={sortable.setNodeRef}
-      className={classNames("group flex flex-col border-b border-border", sortable.dragging && "opacity-40")}
+      className={classNames(
+        "group flex flex-col border-b border-border py-3",
+        sortable.dragging && "opacity-40",
+      )}
     >
-      <div className="flex min-h-row items-center gap-2 py-2">
+      <div className="flex items-start gap-2">
         {reorderable ? sortable.handle(t("meetings.agenda.dragTopic", { title: topic.title })) : null}
-        <span className="w-6 shrink-0 text-right text-sm text-text-muted tabular-nums">{number}</span>
+        <span className="w-6 shrink-0 pt-1 text-right text-sm text-text-muted tabular-nums">{number}</span>
         <button
           type="button"
           aria-expanded={expanded}
           aria-controls={bodyId}
           onClick={onToggle}
-          className="flex min-w-0 flex-1 flex-col items-start rounded-sm text-left focus-visible:focus-ring"
+          className="flex min-w-0 flex-1 flex-col items-start gap-1 rounded-sm text-left focus-visible:focus-ring"
         >
-          <span className="flex max-w-full items-center gap-2 font-medium">
+          <span className="flex max-w-full items-center gap-2 font-semibold">
             <span className="truncate" title={topic.title}>
               {topic.title}
             </span>
-            {topic.oneOff ? <Badge variant="neutral">{t("meetings.agenda.onlyToday")}</Badge> : null}
+            {topic.oneOff ? <Badge variant="neutral">{t("meetings.agenda.onlyThisMeeting")}</Badge> : null}
           </span>
-          <span className="max-w-full truncate text-sm text-text-muted">
-            {[
-              topic.oneOff
-                ? t("meetings.agenda.forThisMeeting")
-                : t("meetings.agenda.runningSince", { date: format.calendarDate(topic.createdAt) }),
-              latest
-                ? t("meetings.agenda.lastUpdate", { text: latest.text.replace(/\s+/g, " ").trim() })
-                : t("meetings.agenda.noUpdate"),
-            ].join(" · ")}
+          <span className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted">
+            <span className="min-w-0 truncate">{meta.join(" · ")}</span>
+            {overdue > 0 ? (
+              <Badge variant="danger">{t("meetings.agenda.overdue", { count: overdue })}</Badge>
+            ) : null}
           </span>
         </button>
-        {topic.update?.text ? <Badge variant="accent">{t("meetings.agenda.newUpdate")}</Badge> : null}
-        {topic.tasks.length > 0 ? (
-          <span
-            className="inline-flex items-center gap-1 text-sm text-text-muted"
-            title={t("meetings.agenda.openTasks", { count: openTasks })}
-          >
-            <ListChecks aria-hidden="true" className="size-icon-sm" />
-            {openTasks}
-            <span className="sr-only">{t("meetings.agenda.openTasks", { count: openTasks })}</span>
-          </span>
-        ) : null}
-        <span title={owner} className="inline-flex">
+        <span title={owner} className="inline-flex pt-1">
           {topic.owner ? (
             <PersonAvatar id={topic.owner.id} name={owner} size="sm" />
           ) : (
@@ -378,20 +404,59 @@ function TopicRow({
         />
       </div>
       {expanded ? (
-        <div id={bodyId} className="flex flex-col gap-3 pb-4 pl-12">
-          <TopicBody topic={topic} meetingId={meetingId} editable={editable} />
+        <div id={bodyId} className="flex flex-col gap-3 pt-3 pl-8">
+          <TopicBody topic={topic} day={day} meetingId={meetingId} editable={editable} />
         </div>
-      ) : null}
+      ) : (
+        <p
+          className={classNames(
+            "mt-2 ml-8 border-l-2 px-3 py-2 text-sm",
+            own ? "rounded-r-md border-accent bg-accent-soft" : "border-border",
+          )}
+        >
+          {own ? (
+            <>
+              <span className="mr-2 font-semibold text-text-muted">{day.label}</span>
+              <span className="whitespace-pre-line">{own}</span>
+            </>
+          ) : latest ? (
+            <>
+              <span className="mr-2 font-semibold text-text-muted">
+                {latest.startsAt ? format.calendarDate(latest.startsAt) : latest.meetingTitle}
+              </span>
+              <span className="whitespace-pre-line">{latest.text}</span>
+            </>
+          ) : (
+            <span className="text-text-muted">{t("meetings.agenda.noEntry")}</span>
+          )}
+          {topic.history.length > 1 ? (
+            <>
+              {" · "}
+              <button
+                type="button"
+                aria-controls={bodyId}
+                aria-expanded={false}
+                onClick={onToggle}
+                className="text-accent hover:underline focus-visible:focus-ring"
+              >
+                {t("meetings.agenda.historyCount", { count: topic.history.length })}
+              </button>
+            </>
+          ) : null}
+        </p>
+      )}
     </div>
   );
 }
 
 function TopicBody({
   topic,
+  day,
   meetingId,
   editable,
 }: {
   topic: AgendaTopic;
+  day: TopicDay;
   meetingId: string;
   editable: boolean;
 }) {
@@ -521,20 +586,32 @@ function TopicBody({
 
   return (
     <>
-      {topic.previous.length > 0 ? (
-        <ul aria-label={t("meetings.agenda.previous")} className="flex flex-col gap-1 text-sm">
-          {topic.previous.map((entry) => (
-            <li key={entry.meetingId} className="text-text-muted">
-              <span className="font-medium text-text">
-                {entry.startsAt ? format.calendarDate(entry.startsAt) : entry.meetingTitle}:
-              </span>{" "}
-              {entry.text || t("meetings.agenda.emptyUpdate")}
-            </li>
-          ))}
-        </ul>
+      {topic.history.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <h3 className={LABEL}>{t("meetings.agenda.history")}</h3>
+          <ol
+            aria-label={t("meetings.agenda.historyOf", { title: topic.title })}
+            className="flex flex-col text-sm"
+          >
+            {topic.history.map((entry, index) => (
+              <li key={entry.meetingId} className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-3 py-1">
+                <span className="text-text-muted">
+                  {entry.startsAt ? format.calendarDate(entry.startsAt) : entry.meetingTitle}
+                  {index === 0 ? ` · ${t("meetings.agenda.start")}` : ""}
+                </span>
+                <span
+                  className={classNames("break-words whitespace-pre-line", !entry.text && "text-text-muted")}
+                >
+                  {entry.text || t("meetings.agenda.emptyUpdate")}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : null}
       {editable && !formatted ? (
         <div className="flex flex-col gap-1">
+          <h3 className={LABEL}>{day.heading}</h3>
           <Textarea
             ref={field}
             value={text}
@@ -553,21 +630,22 @@ function TopicBody({
           </div>
         </div>
       ) : topic.update?.text ? (
-        <p className="text-sm whitespace-pre-line">{topic.update.text}</p>
+        <div className="flex flex-col gap-1">
+          <h3 className={LABEL}>{day.heading}</h3>
+          <p className="text-sm whitespace-pre-line">{topic.update.text}</p>
+        </div>
       ) : null}
       {editable && formatted ? (
         <p className="text-sm text-text-muted">{t("meetings.agenda.formatted")}</p>
       ) : null}
       <div className="flex flex-col gap-1">
-        <h3 className="text-xs font-semibold tracking-label text-text-muted uppercase">
-          {t("meetings.agenda.topicTasks")}
-        </h3>
+        <h3 className={LABEL}>{t("meetings.agenda.topicTasks")}</h3>
         {topic.tasks.length === 0 && !editable ? (
           <p className="text-sm text-text-muted">{t("meetings.agenda.noTasks")}</p>
         ) : null}
         <ul className="flex flex-col">
           {topic.tasks.map((task) => (
-            <TaskLine key={task.id} task={task} />
+            <TaskLine key={task.id} task={task} today={day.today} />
           ))}
         </ul>
         {editable ? (
@@ -587,7 +665,7 @@ function TopicBody({
         ) : null}
       </div>
       {editable ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-border pt-3">
           <Button size="sm" variant="secondary" icon={Flag} onClick={() => void close("decided")}>
             {t("meetings.agenda.decide")}
           </Button>
@@ -604,7 +682,11 @@ function TopicBody({
   );
 }
 
-export function TaskLine({ task }: { task: AgendaTask }) {
+export function isOverdue(task: AgendaTask, today: string): boolean {
+  return !task.done && task.dueDate !== null && task.dueDate < today;
+}
+
+export function TaskLine({ task, today }: { task: AgendaTask; today?: string }) {
   const { t } = useTranslation();
   const format = useFormat();
   const setStatus = useSetTaskStatus(task.meetingId);
@@ -636,7 +718,11 @@ export function TaskLine({ task }: { task: AgendaTask }) {
           </span>
         ) : null}
         {task.dueDate ? (
-          <time dateTime={task.dueDate} title={format.date(`${task.dueDate}T12:00:00Z`)}>
+          <time
+            dateTime={task.dueDate}
+            title={format.date(`${task.dueDate}T12:00:00Z`)}
+            className={today && isOverdue(task, today) ? "text-danger" : undefined}
+          >
             {format.day(`${task.dueDate}T12:00:00Z`)}
           </time>
         ) : null}

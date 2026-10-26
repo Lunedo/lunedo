@@ -32,7 +32,7 @@ import {
   topicsQuery,
 } from "./queries.js";
 import { seriesMeetingsQuery } from "./series-overview.js";
-import { TopicForm } from "./topic-form.js";
+import { TopicDialog } from "./topic-form.js";
 
 const PAGE = 25;
 const TOPIC_PAGE = 10;
@@ -219,7 +219,9 @@ export function TopicsTab({
           </span>
         ) : null}
       </div>
-      {adding ? <TopicForm seriesId={series.id} onDone={() => setAdding(false)} /> : null}
+      {writable ? (
+        <TopicDialog seriesId={series.id} seriesTitle={series.title} open={adding} onOpenChange={setAdding} />
+      ) : null}
       {topics.isError ? (
         <LoadError
           what={t("meetings.topics.loadFailed")}

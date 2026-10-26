@@ -155,6 +155,7 @@ import { meetingNotificationTypes } from "./meetings/notifications.js";
 import { OneOnOneService } from "./meetings/one-on-ones.js";
 import { PrivateNotesService } from "./meetings/private-notes.js";
 import { MEETING_REMINDERS_SCHEDULE, MeetingReminders, meetingRemindersJob } from "./meetings/reminders.js";
+import { MeetingTemplateSections, meetingTemplateSectionsJob } from "./meetings/template-sections.js";
 import { TopicService } from "./meetings/topics.js";
 import {
   NOTIFICATION_EMAIL_SCHEDULE,
@@ -365,6 +366,7 @@ export interface AccountServices {
   meetings: MeetingService;
   agenda: AgendaService;
   meetingReminders: MeetingReminders;
+  meetingTemplateSections: MeetingTemplateSections;
   topics: TopicService;
   decisions: DecisionService;
   reports: ReportService;
@@ -996,7 +998,9 @@ export function createAccountServices(options: {
   const spaceCleanup = new SpaceCleanupService({ database, audit, settings, trash });
   spacePermissions.onAccessChange((tx, spaceId) => spaceCleanup.afterAccessChange(tx, spaceId));
   administration.onReactivated((tx, accountId) => spaceCleanup.afterActivity(tx, accountId));
-  memberships.onMembershipAdded((tx, _organizationId, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  memberships.onMembershipAdded((tx, _organizationId, accountId) =>
+    spaceCleanup.afterActivity(tx, accountId),
+  );
   invitations.onAccepted((tx, _invitationId, accountId) => spaceCleanup.afterActivity(tx, accountId));
   memberships.onDeactivated((tx, accountId) => spaceCleanup.afterDeactivation(tx, accountId));
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
@@ -1029,6 +1033,7 @@ export function createAccountServices(options: {
     ...(options.meetingClock ? { clock: options.meetingClock } : {}),
   });
   const meetingReminders = new MeetingReminders({ database, authorization, notifications });
+  const meetingTemplateSections = new MeetingTemplateSections({ database, documents });
   const topics = new TopicService({ database, authorization, people, documents, meetings, activity });
   const agenda = new AgendaService({ database, authorization, people, documents, meetings });
   const decisions = new DecisionService({ database, authorization });
@@ -1327,6 +1332,7 @@ export function createAccountServices(options: {
     spaceCleanup,
     meetings,
     meetingReminders,
+    meetingTemplateSections,
     topics,
     agenda,
     decisions,
@@ -1441,6 +1447,12 @@ export async function workAccountJobs(
   await jobs.work(adoptTemplateFilesJob, (job) => services.templates.adoptPendingFiles(job.logger));
   if (await services.templates.hasPendingFiles()) {
     await jobs.enqueue(adoptTemplateFilesJob, {}, { idempotencyKey: "pending" });
+  }
+  await jobs.work(meetingTemplateSectionsJob, async (job) => {
+    await services.meetingTemplateSections.removeUntouched(job.logger, job.signal);
+  });
+  if (await services.meetingTemplateSections.pending()) {
+    await jobs.enqueue(meetingTemplateSectionsJob, {}, { idempotencyKey: "pending" });
   }
   await jobs.work(copyWatchdogJob, async () => {
     await services.copies.watchdog();

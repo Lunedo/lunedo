@@ -407,7 +407,7 @@ export class MeetingsController {
   @ApiRoute({
     summary: "Get the agenda of a meeting",
     description:
-      "Returns the topics of the meeting in the order of the series: all open topics while the meeting is open, the discussed topics once it is closed. Each topic has this meeting's update, the last earlier updates and its tasks. Also returns the decisions and tasks written in this meeting.",
+      "Returns the topics of the meeting in the order of the series: all open topics while the meeting is open, the discussed topics once it is closed. Each topic has this meeting's update, its earlier updates and its tasks. Also returns the decisions and tasks written in this meeting.",
     tags: [TAG],
     params: meetingParams,
     response: {
@@ -429,9 +429,12 @@ export class MeetingsController {
             createdAt: exampleTopic.createdAt,
             update: { text: "HR sends the list on Friday.", formatted: false },
             previous: [],
+            history: [],
+            meetings: 1,
             tasks: [],
           },
         ],
+        closedTopics: 0,
         decisions: [],
         tasks: [],
       },
@@ -831,7 +834,15 @@ export class MeetingsController {
         decision: null,
       },
     },
-    errors: ["invalidTitle", "invalidLabel", "tooManyLabels", "invalidMember", "seriesEnded"],
+    errors: [
+      "invalidTitle",
+      "invalidLabel",
+      "tooManyLabels",
+      "invalidMember",
+      "seriesEnded",
+      "meetingRequired",
+      "invalidUpdate",
+    ],
   })
   async createTopic(
     @Param("seriesId") seriesId: string,

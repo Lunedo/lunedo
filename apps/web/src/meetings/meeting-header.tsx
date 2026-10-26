@@ -13,7 +13,7 @@ import {
   useToast,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarClock, CalendarPlus, CalendarX, Check, ChevronDown, Plus, RotateCcw, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -58,6 +58,37 @@ const STATE_BADGE = {
   closed: "neutral",
   skipped: "neutral",
 } as const;
+
+export function MeetingTitle({ meetingId, fallback }: { meetingId: string; fallback: string }) {
+  const format = useFormat();
+  const meeting = useQuery({ ...meetingQuery(meetingId), throwOnError: false });
+  const data = meeting.data;
+  if (!data?.seriesTitle || !data.startsAt) return <>{fallback}</>;
+  return <>{`${data.seriesTitle} · ${format.weekdayDate(data.startsAt)}`}</>;
+}
+
+function AdjacentLink({
+  meeting,
+  spaceKey,
+  label,
+}: {
+  meeting: NonNullable<Meeting["previousMeeting"]>;
+  spaceKey: string;
+  label: string;
+}) {
+  const format = useFormat();
+  return (
+    <span>
+      {label}{" "}
+      <Link
+        to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
+        className="text-accent hover:underline focus-visible:focus-ring"
+      >
+        {meeting.startsAt ? format.calendarDate(meeting.startsAt) : meeting.title}
+      </Link>
+    </span>
+  );
+}
 
 export function MeetingHeader({
   meetingId,
@@ -113,7 +144,7 @@ export function MeetingHeader({
         <span className="text-text-muted">
           {data.startsAt && end
             ? t("meetings.meeting.when", {
-                start: format.weekdayDateTime(data.startsAt),
+                start: format.time(data.startsAt),
                 end: format.time(end),
               })
             : t("meetings.notScheduled")}
@@ -143,6 +174,25 @@ export function MeetingHeader({
                 : []),
             ]}
           />
+        ) : null}
+        {data.previousMeeting || data.followingMeeting ? (
+          <span className="flex flex-wrap gap-x-2 text-text-muted">
+            {data.previousMeeting ? (
+              <AdjacentLink
+                meeting={data.previousMeeting}
+                spaceKey={spaceKey}
+                label={t("meetings.meeting.previous")}
+              />
+            ) : null}
+            {data.previousMeeting && data.followingMeeting ? <span aria-hidden="true">·</span> : null}
+            {data.followingMeeting ? (
+              <AdjacentLink
+                meeting={data.followingMeeting}
+                spaceKey={spaceKey}
+                label={t("meetings.meeting.following")}
+              />
+            ) : null}
+          </span>
         ) : null}
         <span className="ml-auto flex flex-wrap gap-2">
           {writable && data.state === "closed" ? (
@@ -383,11 +433,11 @@ function AttendanceSelect({
   const { t } = useTranslation();
   const current: AttendanceChoice = (value as AttendanceChoice | null) ?? "unset";
   const label = translateKey(t, `meetings.attendance.${current}`);
-  if (!writable) return <span className="pr-2 text-text-muted">{label}</span>;
+  if (!writable) return <span className="pr-2 text-sm text-text-muted">{label}</span>;
   return (
     <Select
       value={current}
-      className="h-control-md w-auto"
+      className="h-control-sm w-auto text-sm"
       aria-label={t("meetings.attendance.of", { name })}
       onValueChange={(next) => onChange(next === "unset" ? null : next)}
       options={ATTENDANCE.map((choice) => ({
@@ -460,10 +510,11 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
       await refresh();
     }
   };
-  const chip = "flex items-center gap-2 text-sm";
+  const chip =
+    "flex min-h-control-md items-center gap-2 rounded-full border border-border py-1 pr-1 pl-1 text-sm";
   return (
     <div className="flex flex-col gap-2">
-      <ul aria-label={t("meetings.attendance.title")} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <ul aria-label={t("meetings.attendance.title")} className="flex flex-wrap items-center gap-2">
         {meeting.attendees.map((attendee) => {
           const name = attendee.name ?? t("meetings.unknownPerson");
           return (
@@ -475,8 +526,8 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
                 size="sm"
                 decorative
               />
-              <span className="shrink-0 whitespace-nowrap" title={name}>
-                {name}
+              <span className="max-w-field shrink-0 truncate whitespace-nowrap" title={name}>
+                {name.split(" ")[0] || name}
               </span>
               {attendee.active ? null : <Badge variant="neutral">{t("meetings.inactive")}</Badge>}
               <AttendanceSelect
@@ -511,7 +562,7 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
         ))}
         {writable && !adding ? (
           <li>
-            <Button variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
+            <Button variant="ghost" size="sm" icon={Plus} onClick={() => setAdding(true)}>
               {t("meetings.attendance.person")}
             </Button>
           </li>

@@ -7905,12 +7905,14 @@
     "meeting": {
       "label": "Besprechungsdetails",
       "loadFailed": "Die Besprechungsdetails konnten nicht geladen werden",
-      "when": "{start} bis {end}",
+      "when": "{start}–{end}",
       "noAccessTitle": "{count, plural, one {Eine teilnehmende Person kann diese Seite nicht lesen} other {# Teilnehmende können diese Seite nicht lesen}}",
       "noAccess": "{names} hat keinen Zugriff. Teile die Seite, damit die Notizen alle erreichen.",
       "share": "Seite teilen",
       "date": "Termin",
-      "extra": "Zusätzlich"
+      "extra": "Zusätzlich",
+      "previous": "Vorherige:",
+      "following": "Nächste:"
     },
     "attendance": {
       "title": "Teilnehmende",
@@ -7972,7 +7974,6 @@
       "title": "Laufende Themen",
       "filter": "Themen filtern",
       "add": "Thema hinzufügen",
-      "addTitle": "Laufendes Thema hinzufügen",
       "addDescription": "Das Thema kommt in die nächste Besprechung und bleibt offen, bis es jemand schließt.",
       "titleLabel": "Titel",
       "titleExample": "Speichermigration auf das neue NAS",
@@ -8070,7 +8071,8 @@
       "ownDescription": "Nur du siehst diese Liste.",
       "savedAt": "gespeichert {date}",
       "shared": "Notizen",
-      "editShared": "Notizen bearbeiten"
+      "editShared": "Notizen bearbeiten",
+      "sharedHint": "Freier Text für alles, was zu keinem Thema gehört"
     },
     "home": {
       "upcoming": "Nächste Besprechungen",
@@ -8138,11 +8140,8 @@
       "collapseAll": "Alle zuklappen",
       "topic": "Thema",
       "add": "Hinzufügen",
-      "titlePlaceholder": "Neues Thema, z. B. Druckerkosten 2027",
       "titleRequired": "Gib einen Titel für das Thema ein.",
-      "ownerPlaceholder": "Verantwortlich",
       "running": "Laufend",
-      "runningHint": "Bleibt offen, bis es jemand schließt. Aus: nur für diese Besprechung, schließt mit ihr.",
       "topicAdded": "Laufendes Thema angelegt",
       "oneOffAdded": "Thema nur für diese Besprechung angelegt",
       "empty": "Keine offenen Themen. Füge eines mit „Thema“ hinzu.",
@@ -8155,13 +8154,10 @@
       "moveFailed": "Die Reihenfolge konnte nicht geändert werden",
       "expand": "{title} aufklappen",
       "collapse": "{title} zuklappen",
-      "onlyToday": "nur heute",
       "forThisMeeting": "für diese Besprechung",
       "runningSince": "laufend seit {date}",
       "lastUpdate": "zuletzt: {text}",
       "noUpdate": "noch kein Update",
-      "newUpdate": "neues Update",
-      "previous": "Frühere Updates",
       "emptyUpdate": "(leer)",
       "updateLabel": "Update zu {title} in dieser Besprechung",
       "updatePlaceholder": "Update in dieser Besprechung …",
@@ -8189,12 +8185,23 @@
         "dropped": "{title} wurde verworfen und ist jetzt im Archiv."
       },
       "openTasks": "{count, plural, one {# offene Aufgabe} other {# offene Aufgaben}}",
-      "moved": "Reihenfolge für alle geändert: {title}"
+      "moved": "Reihenfolge für alle geändert: {title}",
+      "today": "Heute",
+      "todayOn": "Heute, {date}",
+      "entryOn": "Eintrag vom {date}",
+      "entry": "Eintrag dieser Besprechung",
+      "history": "Verlauf",
+      "historyOf": "Verlauf von {title}",
+      "start": "Start",
+      "meetings": "{count, plural, one {# Besprechung} other {# Besprechungen}}",
+      "onlyThisMeeting": "nur diese Besprechung",
+      "overdue": "{count} überfällig",
+      "noEntry": "Noch kein Eintrag.",
+      "historyCount": "Verlauf ({count})"
     },
     "outcomes": {
       "decisions": "Entscheidungen",
       "tasks": "Neue Aufgaben",
-      "fromTopics": "entstehen aus den Themen",
       "noDecisions": "Noch keine Entscheidung in dieser Besprechung.",
       "noTasks": "Noch keine Aufgaben aus dieser Besprechung."
     },
@@ -8310,6 +8317,31 @@
         "updates": "Updates",
         "tasks": "Aufgaben"
       }
+    },
+    "topicDialog": {
+      "title": "Neues Thema",
+      "description": "Für {series}. Erscheint in dieser und den nächsten Besprechungen.",
+      "addAnother": "Hinzufügen und weiteres",
+      "added": "{title} hinzugefügt",
+      "titlePlaceholder": "z. B. Druckerkosten 2027",
+      "about": "Worum geht es?",
+      "aboutHint": "Wird der erste Eintrag im Verlauf.",
+      "aboutPlaceholder": "Ausgangslage, Fragen, Links …",
+      "ownerHint": "Nur Teilnehmende der Serie.",
+      "ownerPlaceholder": "Du, wenn du teilnimmst",
+      "duration": "Dauer",
+      "runningHint": "Bleibt offen, bis jemand es schließt.",
+      "oneOff": "Nur diese Besprechung",
+      "oneOffHint": "Schließt mit der Besprechung."
+    },
+    "rail": {
+      "label": "Ergebnis dieser Besprechung",
+      "progress": "Fortschritt",
+      "discussed": "{count} von {total} Themen besprochen",
+      "openInSeries": "Offen aus der Serie",
+      "overdue": "{count, plural, one {# überfällig} other {# überfällig}}",
+      "noneOverdue": "Nichts überfällig",
+      "allTasks": "Alle Aufgaben der Serie"
     }
   },
   "confidential": {

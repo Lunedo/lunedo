@@ -11,6 +11,7 @@ import { positionBetween } from "../spaces/fractional-index.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
+import { mapUpdate, UPDATE_TEXT_MAX_LENGTH, withUpdateText } from "./agenda.js";
 import { addDecision, addTopicUpdates } from "./meeting-document.js";
 import type { MeetingService } from "./meetings.js";
 import { seriesParticipant } from "./participants.js";
@@ -291,9 +292,14 @@ export class TopicService {
       labels?: string[] | undefined;
       meetingId?: string | undefined;
       oneOff?: boolean | undefined;
+      description?: string | undefined;
     },
   ): Promise<string> {
     const title = cleanTitle(input.title);
+    const description = input.description?.trim() ?? "";
+    if (description.length > UPDATE_TEXT_MAX_LENGTH) {
+      throw new SpaceError("invalidUpdate", `An update can have up to ${UPDATE_TEXT_MAX_LENGTH} characters`);
+    }
     const labels = cleanLabels(input.labels ?? []);
     const actorId = actorIdOf(actor);
     return this.#database.transaction(async (tx) => {
@@ -315,12 +321,16 @@ export class TopicService {
       if (input.meetingId && (await this.#meetings.seriesOfMeeting(input.meetingId, tx)) !== seriesId) {
         throw new SpaceError("meetingNotFound", "The meeting does not belong to this series");
       }
+      const raisedState = raisedIn
+        ? (await tx.execute<{ state: string }>(sql`select state from meetings where item_id = ${raisedIn}`))
+            .rows[0]?.state
+        : undefined;
+      const raisedOpen = raisedState === "upcoming" || raisedState === "reopened";
+      if (description && !raisedOpen) {
+        throw new SpaceError("meetingRequired", "A description needs a meeting that has not been closed");
+      }
       if (input.oneOff) {
-        const meeting = await tx.execute<{ state: string }>(
-          sql`select state from meetings where item_id = ${raisedIn}`,
-        );
-        const state = meeting.rows[0]?.state;
-        if (!input.meetingId || (state !== "upcoming" && state !== "reopened")) {
+        if (!input.meetingId || !raisedOpen) {
           throw new SpaceError(
             "meetingRequired",
             "A topic for one meeting only needs a meeting that has not been closed",
@@ -345,6 +355,18 @@ export class TopicService {
       await refreshReaderVisibility(tx, [id]);
       await this.#activity.created(tx, id, actorId);
       await this.#meetings.addTopicToUpcoming(tx, actor, seriesId, id);
+      if (description && raisedIn) {
+        const titles = await this.#meetings.sectionTitles(actor);
+        await this.#documents.editLocked(
+          tx,
+          raisedIn,
+          (document) =>
+            mapUpdate(addTopicUpdates(document, [id], titles), id, (block) =>
+              withUpdateText(block, description),
+            ),
+          actorId,
+        );
+      }
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "meetings", itemId: seriesId });
       return id;
     });

@@ -7905,12 +7905,14 @@
     "meeting": {
       "label": "Meeting details",
       "loadFailed": "The meeting details could not be loaded",
-      "when": "{start} to {end}",
+      "when": "{start}–{end}",
       "noAccessTitle": "{count, plural, one {An attendee cannot read this page} other {# attendees cannot read this page}}",
       "noAccess": "{names} has no access. Share the page so the notes reach everyone.",
       "share": "Share page",
       "date": "Date",
-      "extra": "Additional"
+      "extra": "Additional",
+      "previous": "Previous:",
+      "following": "Next:"
     },
     "attendance": {
       "title": "Attendees",
@@ -7972,7 +7974,6 @@
       "title": "Running topics",
       "filter": "Filter topics",
       "add": "Add topic",
-      "addTitle": "Add a running topic",
       "addDescription": "The topic is added to the next meeting and stays open until someone closes it.",
       "titleLabel": "Title",
       "titleExample": "Storage migration to the new NAS",
@@ -8070,7 +8071,8 @@
       "ownDescription": "Only you can see this list.",
       "savedAt": "saved {date}",
       "shared": "Notes",
-      "editShared": "Edit notes"
+      "editShared": "Edit notes",
+      "sharedHint": "Free text for everything that belongs to no topic"
     },
     "home": {
       "upcoming": "Upcoming meetings",
@@ -8138,11 +8140,8 @@
       "collapseAll": "Collapse all",
       "topic": "Topic",
       "add": "Add",
-      "titlePlaceholder": "New topic, for example printer costs 2027",
       "titleRequired": "Enter a title for the topic.",
-      "ownerPlaceholder": "Owner",
       "running": "Running",
-      "runningHint": "Stays open until someone closes it. Off: only for this meeting, closes with it.",
       "topicAdded": "Running topic added",
       "oneOffAdded": "Topic added for this meeting only",
       "empty": "No open topics. Add one with “Topic”.",
@@ -8155,13 +8154,10 @@
       "moveFailed": "The order could not be changed",
       "expand": "Show {title}",
       "collapse": "Hide {title}",
-      "onlyToday": "only today",
       "forThisMeeting": "for this meeting",
       "runningSince": "running since {date}",
       "lastUpdate": "last: {text}",
       "noUpdate": "no update yet",
-      "newUpdate": "new update",
-      "previous": "Earlier updates",
       "emptyUpdate": "(empty)",
       "updateLabel": "Update on {title} in this meeting",
       "updatePlaceholder": "Update in this meeting …",
@@ -8189,12 +8185,23 @@
         "dropped": "{title} was dropped and is now in the archive."
       },
       "openTasks": "{count, plural, one {# open task} other {# open tasks}}",
-      "moved": "Order changed for everyone: {title}"
+      "moved": "Order changed for everyone: {title}",
+      "today": "Today",
+      "todayOn": "Today, {date}",
+      "entryOn": "Entry of {date}",
+      "entry": "Entry of this meeting",
+      "history": "History",
+      "historyOf": "History of {title}",
+      "start": "Start",
+      "meetings": "{count, plural, one {# meeting} other {# meetings}}",
+      "onlyThisMeeting": "this meeting only",
+      "overdue": "{count} overdue",
+      "noEntry": "No entry yet.",
+      "historyCount": "History ({count})"
     },
     "outcomes": {
       "decisions": "Decisions",
       "tasks": "New tasks",
-      "fromTopics": "come from the topics",
       "noDecisions": "No decision in this meeting yet.",
       "noTasks": "No tasks from this meeting yet."
     },
@@ -8310,6 +8317,31 @@
         "updates": "Updates",
         "tasks": "Tasks"
       }
+    },
+    "topicDialog": {
+      "title": "New topic",
+      "description": "For {series}. It appears in this and the following meetings.",
+      "addAnother": "Add and add another",
+      "added": "{title} added",
+      "titlePlaceholder": "For example printer costs 2027",
+      "about": "What is it about?",
+      "aboutHint": "Becomes the first entry of the history.",
+      "aboutPlaceholder": "Background, questions, links …",
+      "ownerHint": "Only participants of the series.",
+      "ownerPlaceholder": "You, if you take part",
+      "duration": "Duration",
+      "runningHint": "Stays open until someone closes it.",
+      "oneOff": "This meeting only",
+      "oneOffHint": "Closes with the meeting."
+    },
+    "rail": {
+      "label": "Result of this meeting",
+      "progress": "Progress",
+      "discussed": "{count} of {total} topics discussed",
+      "openInSeries": "Open in the series",
+      "overdue": "{count, plural, one {# overdue} other {# overdue}}",
+      "noneOverdue": "None overdue",
+      "allTasks": "All tasks of the series"
     }
   },
   "confidential": {

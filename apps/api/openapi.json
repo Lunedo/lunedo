@@ -151601,6 +151601,88 @@
                       ],
                       "description": "The meeting created when this one was closed or skipped, or null when the caller cannot read the series."
                     },
+                    "previousMeeting": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the meeting."
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title."
+                            },
+                            "startsAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Start. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "startsAt"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A neighboring meeting."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The meeting of the series before this one that the caller can read, skipped ones left out."
+                    },
+                    "followingMeeting": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the meeting."
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title."
+                            },
+                            "startsAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Start. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "startsAt"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A neighboring meeting."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The meeting of the series after this one that the caller can read, skipped ones left out."
+                    },
                     "rhythm": {
                       "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date. Null when the caller cannot read the series.",
                       "type": [
@@ -151754,6 +151836,8 @@
                     "closedAt",
                     "closedBy",
                     "nextMeetingId",
+                    "previousMeeting",
+                    "followingMeeting",
                     "rhythm",
                     "attendees",
                     "extra",
@@ -151778,6 +151862,8 @@
                   "closedAt": null,
                   "closedBy": null,
                   "nextMeetingId": null,
+                  "previousMeeting": null,
+                  "followingMeeting": null,
                   "rhythm": true,
                   "attendees": [
                     {
@@ -153303,6 +153389,11 @@
                   "oneOff": {
                     "description": "True for a topic of the given meeting only. It closes when that meeting is closed. Needs `meetingId`.",
                     "type": "boolean"
+                  },
+                  "description": {
+                    "description": "What the topic is about, up to 5000 characters. It becomes the topic's update in the meeting it is raised in, the first entry of its history. Needs a meeting that has not been closed.",
+                    "type": "string",
+                    "maxLength": 5000
                   }
                 },
                 "required": [
@@ -153674,7 +153765,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidLabel`: The label is not valid. `invalidMember`: The person cannot take part. `invalidTitle`: The title is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidLabel`: The label is not valid. `invalidMember`: The person cannot take part. `invalidTitle`: The title is not valid. `invalidUpdate`: The update is too long. `meetingRequired`: A topic for one meeting needs that meeting.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -153719,6 +153810,22 @@
                       "title": "The title is not valid",
                       "status": 400,
                       "code": "invalidTitle"
+                    }
+                  },
+                  "invalidUpdate": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidUpdate",
+                      "title": "The update is too long",
+                      "status": 400,
+                      "code": "invalidUpdate"
+                    }
+                  },
+                  "meetingRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:meetingRequired",
+                      "title": "A topic for one meeting needs that meeting",
+                      "status": 400,
+                      "code": "meetingRequired"
                     }
                   }
                 }
@@ -154050,6 +154157,88 @@
                       ],
                       "description": "The meeting created when this one was closed or skipped, or null when the caller cannot read the series."
                     },
+                    "previousMeeting": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the meeting."
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title."
+                            },
+                            "startsAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Start. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "startsAt"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A neighboring meeting."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The meeting of the series before this one that the caller can read, skipped ones left out."
+                    },
+                    "followingMeeting": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the meeting."
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title."
+                            },
+                            "startsAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Start. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "startsAt"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A neighboring meeting."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The meeting of the series after this one that the caller can read, skipped ones left out."
+                    },
                     "rhythm": {
                       "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date. Null when the caller cannot read the series.",
                       "type": [
@@ -154203,6 +154392,8 @@
                     "closedAt",
                     "closedBy",
                     "nextMeetingId",
+                    "previousMeeting",
+                    "followingMeeting",
                     "rhythm",
                     "attendees",
                     "extra",
@@ -154227,6 +154418,8 @@
                   "closedAt": null,
                   "closedBy": null,
                   "nextMeetingId": null,
+                  "previousMeeting": null,
+                  "followingMeeting": null,
                   "rhythm": true,
                   "attendees": [
                     {
@@ -154376,7 +154569,7 @@
       "get": {
         "operationId": "meetings.agenda",
         "summary": "Get the agenda of a meeting",
-        "description": "Returns the topics of the meeting in the order of the series: all open topics while the meeting is open, the discussed topics once it is closed. Each topic has this meeting's update, the last earlier updates and its tasks. Also returns the decisions and tasks written in this meeting.\n\nRequires the permission `item.view` on the item in `meetingId`.",
+        "description": "Returns the topics of the meeting in the order of the series: all open topics while the meeting is open, the discussed topics once it is closed. Each topic has this meeting's update, its earlier updates and its tasks. Also returns the decisions and tasks written in this meeting.\n\nRequires the permission `item.view` on the item in `meetingId`.",
         "tags": [
           "Meetings"
         ],
@@ -154579,6 +154772,54 @@
                             },
                             "description": "The last earlier updates the caller can read, newest first."
                           },
+                          "history": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "meetingId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Meeting of the update."
+                                },
+                                "meetingTitle": {
+                                  "type": "string",
+                                  "description": "Title of that meeting."
+                                },
+                                "startsAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Start of that meeting. ISO 8601 timestamp in UTC."
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "description": "The update as plain text."
+                                }
+                              },
+                              "required": [
+                                "meetingId",
+                                "meetingTitle",
+                                "startsAt",
+                                "text"
+                              ],
+                              "additionalProperties": false,
+                              "description": "An earlier update."
+                            },
+                            "description": "All updates of meetings before this one that the caller can read, oldest first. The first is the start of the topic."
+                          },
+                          "meetings": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "How many meetings of the series the topic has been on, this one included."
+                          },
                           "tasks": {
                             "type": "array",
                             "items": {
@@ -154665,12 +154906,20 @@
                           "createdAt",
                           "update",
                           "previous",
+                          "history",
+                          "meetings",
                           "tasks"
                         ],
                         "additionalProperties": false,
                         "description": "A topic on the agenda."
                       },
                       "description": "Topics in the order of the series."
+                    },
+                    "closedTopics": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "How many topics were closed in this meeting."
                     },
                     "decisions": {
                       "type": "array",
@@ -154797,6 +155046,7 @@
                     "seriesId",
                     "current",
                     "topics",
+                    "closedTopics",
                     "decisions",
                     "tasks"
                   ],
@@ -154827,9 +155077,12 @@
                         "formatted": false
                       },
                       "previous": [],
+                      "history": [],
+                      "meetings": 1,
                       "tasks": []
                     }
                   ],
+                  "closedTopics": 0,
                   "decisions": [],
                   "tasks": []
                 }

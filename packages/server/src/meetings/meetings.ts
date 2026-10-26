@@ -183,6 +183,12 @@ export interface MeetingAttendee {
   canRead: boolean;
 }
 
+export interface AdjacentMeeting {
+  id: string;
+  title: string;
+  startsAt: Date | null;
+}
+
 export interface MeetingDetails {
   id: string;
   seriesId: string | null;
@@ -198,6 +204,8 @@ export interface MeetingDetails {
   closedAt: Date | null;
   closedBy: { id: string; name: string | null } | null;
   nextMeetingId: string | null;
+  previousMeeting: AdjacentMeeting | null;
+  followingMeeting: AdjacentMeeting | null;
   rhythm: boolean | null;
   extra: boolean;
   attendees: MeetingAttendee[];
@@ -1012,6 +1020,9 @@ export class MeetingService {
     const closer = meeting.closed_by
       ? await this.#people.visibleNames(viewer, [meeting.closed_by])
       : new Map();
+    const adjacent = seriesVisible
+      ? await this.#adjacent(viewer, meeting.series_id, meeting.item_id, toDate(meeting.starts_at))
+      : { previous: null, following: null };
     return {
       id: meeting.item_id,
       seriesId: seriesVisible ? meeting.series_id : null,
@@ -1033,6 +1044,8 @@ export class MeetingService {
         ? { id: meeting.closed_by, name: closer.get(meeting.closed_by) ?? null }
         : null,
       nextMeetingId: seriesVisible ? meeting.next_meeting_id : null,
+      previousMeeting: adjacent.previous,
+      followingMeeting: adjacent.following,
       rhythm: seriesVisible ? series.recurrence !== null : null,
       extra: meeting.extra,
       attendees: list,
@@ -1044,6 +1057,36 @@ export class MeetingService {
       })),
       calendarUid: meeting.calendar_uid,
     };
+  }
+
+  async #adjacent(
+    viewer: Principal,
+    seriesId: string,
+    meetingId: string,
+    startsAt: Date | null,
+  ): Promise<{ previous: AdjacentMeeting | null; following: AdjacentMeeting | null }> {
+    const find = async (before: boolean): Promise<AdjacentMeeting | null> => {
+      if (!startsAt && !before) return null;
+      const bound = startsAt
+        ? before
+          ? sql`and m.starts_at < ${startsAt.toISOString()}::timestamptz`
+          : sql`and m.starts_at > ${startsAt.toISOString()}::timestamptz`
+        : sql``;
+      const result = await this.#database.execute<{
+        item_id: string;
+        title: string;
+        starts_at: Date | string | null;
+      }>(sql`
+        select m.item_id, t.title, m.starts_at from meetings m
+        join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
+        where m.series_id = ${seriesId} and m.item_id <> ${meetingId} and m.state <> 'skipped'
+          and m.starts_at is not null and t.trash_entry_id is null ${bound}
+          and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+        order by m.starts_at ${before ? sql`desc` : sql`asc`}, m.item_id limit 1`);
+      const row = result.rows[0];
+      return row ? { id: row.item_id, title: row.title, startsAt: toDate(row.starts_at) } : null;
+    };
+    return { previous: await find(true), following: await find(false) };
   }
 
   async #nextAt(
