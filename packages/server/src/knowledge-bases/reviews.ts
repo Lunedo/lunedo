@@ -68,6 +68,7 @@ export interface ArticleReview {
 
 export interface ReviewListItem {
   id: string;
+  number: number;
   title: string;
   type: ArticleType | null;
   categoryPath: { id: string; title: string }[];
@@ -99,6 +100,7 @@ export interface ReviewList extends Page<ReviewListItem> {
 
 export interface HomeReview {
   id: string;
+  number: number;
   title: string;
   type: ArticleType | null;
   spaceKey: string;
@@ -128,6 +130,7 @@ export interface HiddenSources {
 
 export interface ArticleSource {
   id: string;
+  number: number;
   title: string;
   spaceKey: string;
   spaceName: string;
@@ -543,6 +546,7 @@ export class ReviewService {
     const page = options.page;
     const result = await this.#database.execute<{
       id: string;
+      number: number | string;
       title: string;
       article_type: ArticleType | null;
       category_ids: string[];
@@ -562,7 +566,7 @@ export class ReviewService {
       sort_key: string;
     }>(
       sql`
-      select * from (select t.id, t.title, t.article_type,
+      select * from (select t.id, t.number, t.title, t.article_type,
         ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
         ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles,
         t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
@@ -590,6 +594,7 @@ export class ReviewService {
           : null;
         return {
           id: row.id,
+          number: Number(row.number),
           title: row.title,
           type: row.article_type,
           categoryPath: row.category_ids.map((id, index) => ({
@@ -629,6 +634,7 @@ export class ReviewService {
     const soon = new Date(now.getTime() + SOON_DAYS * DAY_MS);
     const result = await this.#database.execute<{
       id: string;
+      number: number | string;
       title: string;
       article_type: ArticleType | null;
       key: string;
@@ -639,7 +645,7 @@ export class ReviewService {
       source_changed_at: Date | string | null;
       total: number;
     }>(sql`
-      select t.id, t.title, t.article_type, s.key, s.name, r.interval_months,
+      select t.id, t.number, t.title, t.article_type, s.key, s.name, r.interval_months,
         kb.review_interval_months as inherited_months, r.due_at, r.source_changed_at, count(*) over ()::int as total
       from article_reviews r join tree_items t on t.id = r.item_id join spaces s on s.id = t.space_id
       left join knowledge_bases kb on kb.space_id = s.id
@@ -653,6 +659,7 @@ export class ReviewService {
         const review = { dueAt: date(row.due_at), sourceChangedAt: date(row.source_changed_at) };
         return {
           id: row.id,
+          number: Number(row.number),
           title: row.title,
           type: row.article_type,
           spaceKey: row.key,
@@ -667,18 +674,20 @@ export class ReviewService {
   async sources(viewer: Principal, articleId: string): Promise<ArticleSource[]> {
     const result = await this.#database.execute<{
       id: string;
+      number: number | string;
       title: string;
       key: string;
       name: string;
       changed_at: Date | string | null;
     }>(sql`
-      select t.id, t.title, s.key, s.name, a.changed_at
+      select t.id, t.number, t.title, s.key, s.name, a.changed_at
       from article_sources a join tree_items t on t.id = a.source_id join spaces s on s.id = t.space_id
       where a.article_id = ${articleId} and s.deleted_at is null
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by a.created_at, t.id`);
     return result.rows.map((row) => ({
       id: row.id,
+      number: Number(row.number),
       title: row.title,
       spaceKey: row.key,
       spaceName: row.name,

@@ -35,6 +35,7 @@ import type { Formatter } from "../format/format.js";
 import { translateKey } from "../i18n/translate.js";
 import { AccessRequestActions } from "../sharing/access-requests.js";
 import { useSession } from "../shell/shell-context.js";
+import { itemSlug } from "../spaces/item-paths.js";
 import { notificationTypes } from "./notification-types.js";
 import { type NotificationItem, useMarkManyRead, useMarkRead, useMarkUnread } from "./notifications-api.js";
 import { useChangeWatch, useKnownWatchStatus, type WatchTarget } from "./watching-api.js";
@@ -233,10 +234,14 @@ function GroupMembers({
           {member.actor?.id && member.actor.name ? (
             <PersonAvatar id={member.actor.id} name={member.actor.name} size="sm" decorative />
           ) : null}
-          {member.itemId ? (
+          {member.number !== null ? (
             <Link
-              to="/spaces/$spaceKey/pages/$itemId/{-$slug}"
-              params={{ spaceKey: group.spaceKey, itemId: member.itemId } as never}
+              to="/spaces/$spaceKey/pages/$number/{-$slug}"
+              params={{
+                spaceKey: group.spaceKey,
+                number: member.number,
+                slug: itemSlug(member.itemTitle ?? "") || undefined,
+              }}
               onClick={() => {
                 if (member.readAt === null) markRead.mutate(member.id);
                 onNavigate();

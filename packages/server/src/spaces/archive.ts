@@ -13,6 +13,7 @@ import { refreshReaderVisibility, visibleItem } from "./visibility.js";
 
 export interface ArchivedItem {
   id: string;
+  number: number;
   kind: TreeItemKind;
   title: string;
   hasChildren: boolean;
@@ -44,6 +45,7 @@ export class ArchiveService {
   async list(viewer: Principal, spaceId: string): Promise<ArchivedItem[]> {
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       kind: TreeItemKind;
       title: string;
       has_children: boolean;
@@ -51,7 +53,7 @@ export class ArchiveService {
       archived_by: string | null;
       archived_by_name: string | null;
     }>(sql`
-      select t.id, t.kind, t.title, t.archived_at, t.archived_by, a.name as archived_by_name,
+      select t.id, t.number, t.kind, t.title, t.archived_at, t.archived_by, a.name as archived_by_name,
         exists (select 1 from tree_items c where c.parent_id = t.id
           and ${visibleItem(this.#authorization, viewer, sql`c`, sql`s`)}) as has_children
       from tree_items t join spaces s on s.id = t.space_id left join accounts a on a.id = t.archived_by
@@ -60,6 +62,7 @@ export class ArchiveService {
       order by lower(t.title), t.id limit 1000`);
     return result.rows.map((row) => ({
       id: row.id,
+      number: Number(row.number),
       kind: row.kind,
       title: row.title,
       hasChildren: row.has_children,

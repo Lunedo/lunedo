@@ -17,7 +17,7 @@ import { useShell } from "../shell/shell.js";
 import { useCan, useOrganizationState } from "../shell/shell-context.js";
 import { CreateSpaceDialog } from "../spaces/create-space-dialog.js";
 import { itemIcon } from "../spaces/item-icons.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { referenceSpaceName, SpaceBadge } from "../spaces/space-badge.js";
 import { postHref } from "./blog/blog-list.js";
 import { HomeEmpty, HomeRow, HomeRowsSkeleton } from "./home-rows.js";
@@ -52,7 +52,7 @@ function SharedWithYou() {
       {shared.data?.length === 0 ? <HomeEmpty text={t("home.noShared")} /> : null}
       {shared.data?.slice(0, 8).map((entry) => {
         const kind = entry.kind === "blogPost" ? "blogPost" : "page";
-        const href = itemHref({ id: entry.itemId, kind, title: entry.title, link: null }, entry.spaceKey);
+        const href = contentHref({ kind: kind, number: entry.number, title: entry.title }, entry.spaceKey);
         return href ? (
           <HomeRow
             key={entry.itemId}
@@ -133,8 +133,8 @@ function HomeSections() {
               <HomeRow
                 key={task.id}
                 to={
-                  itemHref(
-                    { id: task.item.id, kind: task.item.kind, title: task.item.title, link: null },
+                  contentHref(
+                    { kind: task.item.kind, number: task.item.number, title: task.item.title },
                     task.item.spaceKey,
                   ) ?? "/tasks"
                 }
@@ -155,8 +155,8 @@ function HomeSections() {
             {pending}
             {data?.recent.length === 0 ? <HomeEmpty text={t("home.noRecent")} /> : null}
             {data?.recent.map((item) => {
-              const href = itemHref(
-                { id: item.id, kind: item.kind, title: item.title, link: null },
+              const href = contentHref(
+                { kind: item.kind, number: item.number, title: item.title },
                 item.spaceKey,
               );
               return href ? (
@@ -181,8 +181,8 @@ function HomeSections() {
             {data?.mentions.length === 0 ? <HomeEmpty text={t("home.noMentions")} /> : null}
             {data?.mentions.map((mention) => {
               const item = mention.item;
-              const href = itemHref(
-                { id: item.id, kind: item.kind, title: item.title, link: null },
+              const href = contentHref(
+                { kind: item.kind, number: item.number, title: item.title },
                 item.spaceKey,
               );
               return href ? (
@@ -215,8 +215,8 @@ function HomeSections() {
               />
             ))}
             {data?.starred.items.map((item) => {
-              const href = itemHref(
-                { id: item.id, kind: item.kind, title: item.title, link: null },
+              const href = contentHref(
+                { kind: item.kind, number: item.number, title: item.title },
                 item.spaceKey,
               );
               return href ? (

@@ -9,7 +9,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { organizationIdParams, uuid } from "../http/schemas.js";
+import { itemNumberParam, organizationIdParams, uuid } from "../http/schemas.js";
 import {
   accessRequestSchema,
   exampleAccessRequest,
@@ -23,6 +23,10 @@ const space = { type: "space", param: "spaceId" } as const;
 const organization = { type: "organization", param: "organizationId" } as const;
 const spaceParams = z.object({ spaceId: uuid("ID of the space.") }).strict();
 const pageParams = z.object({ pageId: uuid("ID of the page.") }).strict();
+const numberParams = z
+  .object({ number: itemNumberParam("Number of the page, as shown in the addresses of the app.") })
+  .strict();
+const NO_ITEM = "00000000-0000-0000-0000-000000000000";
 const requestParams = z.object({ requestId: uuid("ID of the access request.") }).strict();
 const personParams = organizationIdParams.extend({ accountId: uuid("The person.") }).strict();
 
@@ -160,6 +164,28 @@ export class AccessRequestsController {
     await this.#services.accessRequests.requestPage(actorOf(request), pageId, body.message);
   }
 
+  @Post("pages/by-number/:number/access-requests")
+  @Permission("instance.content.view", { type: "instance" }, { sessionOnly: true })
+  @ApiRoute({
+    summary: "Ask for access to a page by its number",
+    description:
+      "Like `POST /pages/{pageId}/access-requests`, for a page found by the number in its address in the app. The answer is the same whether or not the page exists.",
+    tags: [REQUESTS],
+    status: 202,
+    params: numberParams,
+    body: messageSchema,
+    bodyExample: { message: "I need the runbook for the migration." },
+    errors: ["messageTooLong", "tooManyRequests"],
+  })
+  async requestPageByNumber(
+    @Param("number") number: string,
+    @Body() body: z.output<typeof messageSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    const itemId = (await this.#services.tree.idOfNumber(Number(number))) ?? NO_ITEM;
+    await this.#services.accessRequests.requestPage(actorOf(request), itemId, body.message);
+  }
+
   @Get("access-requests/mine")
   @Permission("instance.content.view", { type: "instance" }, { sessionOnly: true })
   @ApiRoute({
@@ -279,6 +305,7 @@ export class AccessRequestsController {
             spaceName: "IT Operations",
             spaceKey: "ITOPS",
             itemId: null,
+            number: null,
             itemTitle: null,
             role: "reader",
             count: 1,

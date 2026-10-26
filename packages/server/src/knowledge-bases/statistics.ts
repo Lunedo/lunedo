@@ -23,6 +23,7 @@ const ARTICLE_CANDIDATES = 200;
 
 export interface StatisticsArticle {
   id: string;
+  number: number;
   title: string;
   categoryPath: { id: string; title: string }[];
 }
@@ -105,11 +106,12 @@ export class KnowledgeBaseStatisticsService {
     if (ids.length === 0) return new Map();
     const result = await this.#database.execute<{
       id: string;
+      number: number | string;
       title: string;
       category_ids: string[];
       category_titles: string[];
     }>(sql`
-      select t.id, t.title,
+      select t.id, t.number, t.title,
         ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
         ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles
       from tree_items t join spaces s on s.id = t.space_id
@@ -120,6 +122,7 @@ export class KnowledgeBaseStatisticsService {
         row.id,
         {
           id: row.id,
+          number: Number(row.number),
           title: row.title,
           categoryPath: row.category_ids.map((id, index) => ({
             id,

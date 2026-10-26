@@ -8,6 +8,7 @@ import { request } from "../api/request.js";
 import { peopleLoader } from "../collaboration/people.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { seriesPath } from "../spaces/space-queries.js";
 import { meetingKeys } from "./queries.js";
 import {
   defaultSchedule,
@@ -77,7 +78,8 @@ export function OneOnOneDialog({
       const space = await request(() =>
         api.GET("/api/v1/spaces/{spaceId}", { params: { path: { spaceId: created.spaceId } } }),
       );
-      if (created.seriesId) await navigate({ to: `/spaces/${space.key}/meetings/${created.seriesId}` });
+      if (created.seriesNumber !== null)
+        await navigate({ to: seriesPath(space.key, created.seriesNumber, "") });
     } catch (failure) {
       toast({
         variant: "error",

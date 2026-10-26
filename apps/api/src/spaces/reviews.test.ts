@@ -32,6 +32,14 @@ describe.skipIf(!databaseBaseUrl)("knowledge base reviews through the API", () =
     await test?.close();
   });
 
+  async function numberOf(itemId: string): Promise<number> {
+    const result = await test.runtime.pool.query<{ number: string }>(
+      "select number from tree_items where id = $1",
+      [itemId],
+    );
+    return Number(result.rows[0]?.number);
+  }
+
   async function person() {
     counter += 1;
     const account = await createAccount(test, `review${counter}@lunedo.test`);
@@ -87,14 +95,20 @@ describe.skipIf(!databaseBaseUrl)("knowledge base reviews through the API", () =
     );
     const listed = await context.author.client.get(`/api/v1/spaces/${context.kb.id}/reviews?filter=due`);
     expect(listed.statusCode, listed.body).toBe(200);
+    const articleNumber = await numberOf(context.articleId);
     expect(listed.json()).toMatchObject({
-      items: [{ id: context.articleId, state: "overdue", owner: { id: context.author.id } }],
+      items: [
+        { id: context.articleId, number: articleNumber, state: "overdue", owner: { id: context.author.id } },
+      ],
       counts: { due: 1 },
     });
     const readers = await context.reader.client.get(`/api/v1/spaces/${context.kb.id}/reviews`);
     expect(readers.json()).toMatchObject({ items: [], counts: { all: 0 } });
     const mine = await context.author.client.get("/api/v1/reviews/mine");
-    expect(mine.json()).toMatchObject({ total: 1, items: [{ id: context.articleId }] });
+    expect(mine.json()).toMatchObject({
+      total: 1,
+      items: [{ id: context.articleId, number: articleNumber }],
+    });
   });
 
   it("marks as reviewed for editors, shows it in the activity and undoes it", async () => {
@@ -156,7 +170,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base reviews through the API", () =
       sourceId,
     });
     expect(linked.statusCode, linked.body).toBe(200);
-    expect(linked.json()).toMatchObject([{ id: sourceId, title: "VPN gateway" }]);
+    expect(linked.json()).toMatchObject([
+      { id: sourceId, number: await numberOf(sourceId), title: "VPN gateway" },
+    ]);
     expect((await context.reader.client.get(`/api/v1/articles/${context.articleId}/sources`)).json()).toEqual(
       [],
     );

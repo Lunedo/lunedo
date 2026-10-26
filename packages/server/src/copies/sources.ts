@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Executor } from "../database/database.js";
-import { pagePath, whiteboardPath } from "../spaces/documents.js";
+import { itemAddress } from "../spaces/addresses.js";
 import { visibleItem } from "../spaces/visibility.js";
 
 export interface CopiedFrom {
@@ -33,17 +33,18 @@ export async function visibleSources<T extends { copiedFrom: CopiedFrom | null }
     ids.length === 0
       ? []
       : (
-          await executor.execute<{ id: string; kind: string; title: string; key: string }>(sql`
-            select t.id, t.kind, t.title, s.key from tree_items t join spaces s on s.id = t.space_id
+          await executor.execute<{
+            id: string;
+            number: string;
+            kind: string;
+            title: string;
+            key: string;
+          }>(sql`
+            select t.id, t.number, t.kind, t.title, s.key from tree_items t join spaces s on s.id = t.space_id
             where t.id = any(${sql.param(ids)}::uuid[]) and ${visibleItem(authorization, viewer, sql`t`, sql`s`)}`)
         ).rows;
   const paths = new Map(
-    visible.map((row) => [
-      row.id,
-      row.kind === "whiteboard"
-        ? whiteboardPath(row.key, row.id, row.title)
-        : pagePath(row.key, row.id, row.title),
-    ]),
+    visible.map((row) => [row.id, itemAddress(row.kind, row.key, row.number, row.title)]),
   );
   return versions.map((version) => {
     if (!version.copiedFrom) return version;

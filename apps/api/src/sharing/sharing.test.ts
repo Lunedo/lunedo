@@ -182,6 +182,7 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       ).toBe(401);
       const opened = await visitor.post(`/api/v1/share-links/${token}/open`, { password: "harbour lantern" });
       expect(opened.statusCode, opened.body).toBe(200);
+      expect(opened.json()).toMatchObject({ kind: "anonymous", number: null });
       const unlock = (opened.json() as { unlock: string }).unlock;
       const read = await visitor.get(`/api/v1/share-links/${token}/page`, { "x-lunedo-unlock": unlock });
       expect(read.statusCode, read.body).toBe(200);
@@ -262,7 +263,8 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
     const made = await owner.post(`/api/v1/pages/${shared}/share-links`, { scope: "organization" });
     const { token } = made.json() as { token: string };
     const opened = await member.client.post(`/api/v1/share-links/${token}/open`, {});
-    expect(opened.json()).toMatchObject({ kind: "account", itemId: shared });
+    const sharedNumber = ((await owner.get(`/api/v1/items/${shared}`)).json() as { number: number }).number;
+    expect(opened.json()).toEqual({ kind: "account", itemId: shared, number: sharedNumber, unlock: null });
     const access = await owner.get(`/api/v1/pages/${shared}/access`);
     const body = access.json() as { linkVisitors: { accountId: string }[]; canInviteGuests: boolean };
     expect(body.linkVisitors.map((v) => v.accountId)).toEqual([member.id]);
@@ -274,8 +276,16 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       (await member.client.post(`/api/v1/pages/${other}/access-requests`, { message: "Please" })).statusCode,
     ).toBe(202);
     const requests = await owner.get(`/api/v1/spaces/${created.id}/access-requests`);
-    const [request] = requests.json() as { id: string; itemTitle: string }[];
+    const [request] = requests.json() as { id: string; itemTitle: string; number: number | null }[];
     expect(request?.itemTitle).toBe("Budget");
+    expect(request?.number).toBe(
+      ((await owner.get(`/api/v1/items/${other}`)).json() as { number: number }).number,
+    );
+    const [mine] = (await member.client.get("/api/v1/access-requests/mine")).json() as {
+      itemTitle: string | null;
+      number: number | null;
+    }[];
+    expect(mine).toMatchObject({ itemTitle: null, number: null });
     expect((await owner.get(`/api/v1/access-requests/${request?.id}`)).json()).toMatchObject({
       status: "open",
     });

@@ -1,3 +1,4 @@
+import { idIn, itemOfNumber, numberIn } from "../support/addresses.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, chooseDate, chooseTime } from "../support/helpers.js";
 import { type Series, series, teamSpace } from "../support/meetings.js";
@@ -87,7 +88,7 @@ test("a team holds a quarterly and a biweekly series with attendance, topics, ta
 
   await page.goto(meetingUrl);
   await expect(page.getByText(/Can be closed from/)).toBeVisible();
-  const meetingId = new URL(meetingUrl).pathname.split("/")[4] ?? "";
+  const meetingId = (await itemOfNumber(page, numberIn(meetingUrl, "pages"))).id;
   await callApi(page, "PUT", `/api/v1/meetings/${meetingId}/start`, {
     startsAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
   });
@@ -118,7 +119,8 @@ test("two people hold a one-on-one that administrators cannot read, with private
     await dialog.getByRole("button", { name: "Start one-on-one" }).click();
     await expect(first.page.getByRole("heading", { level: 1 })).toContainText(anna.name.split(" ")[0] ?? "");
     const seriesUrl = first.page.url();
-    const [, spaceKey, seriesId] = /\/spaces\/([^/]+)\/meetings\/([^/?]+)/.exec(seriesUrl) ?? [];
+    const spaceKey = /\/spaces\/([^/]+)\/meetings\//.exec(seriesUrl)?.[1];
+    const seriesId = await idIn(first.page, "meetings");
     const seriesData = (await (
       await first.page.request.get(`/api/v1/meeting-series/${seriesId}`)
     ).json()) as Series & { spaceId: string };

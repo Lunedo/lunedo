@@ -35,7 +35,7 @@ import { PortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ReviewNavLink } from "../knowledge-bases/reviews/home-reviews.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
-import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
+import { spaceSeriesQuery } from "../meetings/queries.js";
 import { useWatchEntries } from "../notifications/watch-menu.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
@@ -49,7 +49,14 @@ import { Redirect } from "./redirect.js";
 import { SidebarShortcuts } from "./shortcuts/sidebar-shortcuts.js";
 import { SpaceBadge, useSpaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
-import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
+import {
+  itemNumberQuery,
+  itemQuery,
+  pagePath,
+  type SpaceWithRole,
+  seriesPath,
+  spaceByKeyQuery,
+} from "./space-queries.js";
 import { type CreatableKind, creatableKinds } from "./space-types.js";
 import { TemplateGallery } from "./templates/template-gallery.js";
 import { CopyDialog } from "./tree/copy-dialog.js";
@@ -58,10 +65,13 @@ import { MoveDialog } from "./tree/move-dialog.js";
 import { PageTree } from "./tree/page-tree.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey");
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ITEM_SEGMENTS = new Set(["pages", "folders", "blog", "whiteboards", "meetings", "topics"]);
 
-function isUuid(value: string | undefined): value is string {
-  return value !== undefined && UUID.test(value);
+function itemNumberIn(segments: string[]): number | null {
+  const [segment, value] = segments;
+  return segment && ITEM_SEGMENTS.has(segment) && value && /^[1-9][0-9]{0,14}$/.test(value)
+    ? Number(value)
+    : null;
 }
 
 export function SpaceLayout() {
@@ -70,16 +80,15 @@ export function SpaceLayout() {
   const location = useShownLocation();
   const [, , , ...rest] = location.pathname.split("/");
   const currentKey = spaceKey;
-  const urlItemId =
-    (rest[0] === "pages" || rest[0] === "folders" || rest[0] === "blog") && isUuid(rest[1]) ? rest[1] : null;
+  const urlNumber = itemNumberIn(rest);
   const addressed = useQuery({
-    ...itemQuery(urlItemId ?? ""),
-    enabled: urlItemId !== null,
+    ...itemNumberQuery(urlNumber ?? 0),
+    enabled: urlNumber !== null,
     retry: false,
     throwOnError: false,
   });
   const redirectByItem =
-    urlItemId !== null && addressed.data !== undefined && addressed.data.spaceKey !== currentKey;
+    urlNumber !== null && addressed.data !== undefined && addressed.data.spaceKey !== currentKey;
   const resolved = useQuery({
     ...spaceByKeyQuery(spaceKey),
     retry: false,
@@ -87,10 +96,9 @@ export function SpaceLayout() {
     throwOnError: false,
   });
 
-  if (redirectByItem && addressed.data && !addressed.data.spaceKey && addressed.data.kind !== "folder") {
-    return (
-      <Redirect to={sharedPath(addressed.data.id, itemSlug(addressed.data.title))} search={location.search} />
-    );
+  if (redirectByItem && addressed.data && !addressed.data.spaceKey) {
+    const href = itemHref({ ...addressed.data, link: null }, "");
+    if (href) return <Redirect to={href} search={location.search} />;
   }
   if (redirectByItem && addressed.data) {
     return (
@@ -99,8 +107,8 @@ export function SpaceLayout() {
   }
   if (redirectByItem || resolved.isPending) return <SpaceLoading />;
   if (resolved.isError) {
-    if (isApiError(resolved.error, "notFound") && urlItemId && rest[0] !== "folders") {
-      return <NoPageAccess pageId={urlItemId} />;
+    if (isApiError(resolved.error, "notFound") && urlNumber !== null && rest[0] !== "folders") {
+      return <NoPageAccess number={urlNumber} />;
     }
     return (
       <main id="main" tabIndex={-1} className="flex-1 p-6 outline-none">
@@ -158,8 +166,14 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const location = useShownLocation();
   const settingsPath = `/spaces/${space.key}/settings`;
   const inSettings = location.pathname === settingsPath || location.pathname.startsWith(`${settingsPath}/`);
-  const params = useParams({ strict: false }) as { itemId?: string };
-  const currentId = params.itemId ?? null;
+  const params = useParams({ strict: false }) as { number?: unknown };
+  const currentNumber = typeof params.number === "number" ? params.number : null;
+  const numbered = useQuery({
+    ...itemNumberQuery(currentNumber ?? 0),
+    enabled: currentNumber !== null,
+    throwOnError: false,
+  });
+  const currentId = currentNumber !== null ? (numbered.data?.id ?? null) : null;
   const current = useQuery({ ...itemQuery(currentId ?? ""), enabled: currentId !== null });
   const ancestors = useMemo(
     () => current.data?.ancestors.map((ancestor) => ancestor.id) ?? [],
@@ -442,9 +456,8 @@ function SpaceNavigation({
   const overviewActive = space.overviewItemId !== null && currentId === space.overviewItemId;
   const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false, enabled: !knowledgeBase });
   const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
-  const overviewHref = space.overviewItemId
-    ? itemHref({ id: space.overviewItemId, kind: "page", title: name, link: null }, space.key)
-    : null;
+  const overviewHref =
+    space.overviewItemNumber !== null ? pagePath(space.key, space.overviewItemNumber, itemSlug(name)) : null;
   const createItem = (kind: CreatableKind): MenuItem => {
     const entries = {
       page: { label: knowledgeBase ? t("knowledgeBase.newArticle") : t("tree.newPage"), icon: FilePlus },
@@ -519,7 +532,7 @@ function SpaceNavigation({
               <li>
                 <ul aria-label={t("meetings.sidebar.series")} className="flex flex-col gap-px pl-6">
                   {runningSeries.map((entry) => {
-                    const href = seriesPath(space.key, entry.id);
+                    const href = seriesPath(space.key, entry.number, itemSlug(entry.title));
                     const active = path === href;
                     return (
                       <li key={entry.id}>
@@ -604,12 +617,9 @@ export function SpaceOverviewRedirect() {
   const space = resolved.data?.space;
   if (!space) return <Skeleton className="m-6 h-field" />;
   if (isKnowledgeBase(space)) return <KnowledgeBaseScreen />;
-  if (space.overviewItemId) {
-    const href = itemHref(
-      { id: space.overviewItemId, kind: "page", title: space.name || t("spaces.overview"), link: null },
-      space.key,
-    );
-    if (href) return <Redirect to={href} />;
+  if (space.overviewItemNumber !== null) {
+    const href = pagePath(space.key, space.overviewItemNumber, itemSlug(space.name || t("spaces.overview")));
+    return <Redirect to={href} />;
   }
   return (
     <div className="p-6">

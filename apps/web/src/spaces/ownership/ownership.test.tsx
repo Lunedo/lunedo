@@ -42,6 +42,7 @@ const space = (role: Role) => ({
   ownerId: null,
   ownerName: null,
   overviewItemId: OVERVIEW,
+  overviewItemNumber: 1001,
   archived: false,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
@@ -50,8 +51,9 @@ const space = (role: Role) => ({
 
 const verified = { id: VERIFIED, builtIn: "verified", name: null, color: "success" };
 
-const page = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
+const page = (id: string, number: number, title: string, extra: Record<string, unknown> = {}) => ({
   id,
+  number,
   spaceId: SPACE_ID,
   parentId: null,
   kind: "page",
@@ -76,7 +78,7 @@ const page = (id: string, title: string, extra: Record<string, unknown> = {}) =>
 });
 
 const details = (extra: Record<string, unknown> = {}) => ({
-  ...page(VPN, "VPN access"),
+  ...page(VPN, 1002, "VPN access"),
   spaceKey: "ITOPS",
   spaceName: "IT Operations",
   spaceAccess: true,
@@ -150,7 +152,10 @@ function routes(
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
     [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
-      body: { items: [page(OVERVIEW, "IT Operations"), page(VPN, "VPN access")], nextCursor: null },
+      body: {
+        items: [page(OVERVIEW, 1001, "IT Operations"), page(VPN, 1002, "VPN access")],
+        nextCursor: null,
+      },
     }),
     [`GET /api/v1/spaces/${SPACE_ID}/archive`]: () => ({ body: [] }),
     [`GET /api/v1/spaces/${SPACE_ID}/page-statuses`]: () => ({ body: statusValues }),
@@ -185,7 +190,7 @@ describe("page header", () => {
     mockApi(
       routes("reader", { [`GET /api/v1/items/${VPN}`]: () => ({ body: details({ status: verified }) }) }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByRole("button", { name: "Owner: Olivia Owner" })).toBeTruthy();
     expect(screen.getByText("Verified")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Change the status/ })).toBeNull();
@@ -200,7 +205,7 @@ describe("page header", () => {
     const { requests } = mockApi(
       routes("editor", { [`PUT /api/v1/items/${VPN}/status`]: () => ({ body: verified }) }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByRole("button", { name: "Owner: Olivia Owner" });
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Change the status" }));
@@ -221,7 +226,7 @@ describe("page header", () => {
         [`PUT /api/v1/items/${VPN}/owner`]: () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByRole("button", { name: "Owner: Olivia Owner" });
     expect(screen.queryByRole("button", { name: "Transfer ownership" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
@@ -248,7 +253,7 @@ describe("page header", () => {
         [`PUT /api/v1/items/${VPN}/owner`]: () => problem(400, "ownerNeedsEditAccess"),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Transfer ownership" }));
     const dialog = await screen.findByRole("dialog");

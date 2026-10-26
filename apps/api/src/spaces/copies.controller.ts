@@ -8,7 +8,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, itemNumber, timestamp, uuid } from "../http/schemas.js";
 import { copyImpactSchema, exampleCopyImpact } from "./schemas.js";
 
 const TAG = "Pages";
@@ -84,6 +84,7 @@ export const copySchema = z
     item: z
       .object({
         id: uuid("ID of the new item."),
+        number: itemNumber("Number of the new item in the addresses of the app."),
         spaceId: uuid("ID of its space."),
         spaceKey: z.string().describe("Key of its space."),
         kind: extensibleEnum(treeItemKinds, "Kind of the new item."),
@@ -115,6 +116,7 @@ const exampleCopy = {
   skipped: 0,
   item: {
     id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a71",
+    number: 1071,
     spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
     spaceKey: "OPS",
     kind: "page",

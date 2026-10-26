@@ -19,7 +19,7 @@ import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { contentKeys, type TrashEntry, trashQuery } from "../content-queries.js";
-import { itemHref } from "../item-paths.js";
+import { contentHref } from "../item-paths.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 import { formerParentOf, useRestoreChoice } from "./restore-choice.js";
@@ -54,7 +54,7 @@ export function TrashScreen() {
       await refresh();
       const href =
         result.itemId && entry.itemKind
-          ? itemHref({ id: result.itemId, kind: entry.itemKind, title: entry.title, link: null }, space.key)
+          ? contentHref({ kind: entry.itemKind, number: result.number, title: entry.title }, space.key)
           : null;
       toast({
         title: t("trash.restored", { title: entry.title }),

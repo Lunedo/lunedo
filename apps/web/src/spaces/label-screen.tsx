@@ -68,7 +68,7 @@ export function LabelScreen() {
           id: page.itemId,
           title: page.title,
           kind: "page",
-          href: pagePath(space.key, page.itemId, itemSlug(page.title)),
+          href: pagePath(space.key, page.number, itemSlug(page.title)),
           where: [spaceName, ...page.parents].filter(Boolean).join(" › "),
           date: page.contentUpdatedAt,
         }))

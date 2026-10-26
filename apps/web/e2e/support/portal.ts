@@ -1,3 +1,4 @@
+import { slugify } from "@lunedo/editor-schema";
 import { expect, type Page } from "@playwright/test";
 import { callApi } from "./helpers.js";
 import { unique } from "./people.js";
@@ -6,6 +7,7 @@ export type Audience = "public" | "signedIn" | "groups" | "portal";
 
 export interface PortalArticle {
   id: string;
+  number: number;
   title: string;
   address: string;
 }
@@ -16,6 +18,7 @@ export interface PortalFixture {
   name: string;
   path: string;
   categories: Record<string, string>;
+  topics: Record<string, string>;
   articles: PortalArticle[];
 }
 
@@ -123,6 +126,9 @@ export async function createPortal(
     contactEmail: "help@example.org",
   });
   const categories: Record<string, string> = {};
+  const topics: Record<string, string> = {};
+  const topicAddress = (folder: { number: number }, title: string) =>
+    `topics/${folder.number}-${slugify(title)}`;
   for (const [title, description, icon] of [
     ["IT", "Accounts, devices, printing and working from home.", "monitor"],
     ["People", "Leave, payroll, travel and your first days.", "users"],
@@ -133,9 +139,10 @@ export async function createPortal(
       title,
       description,
       parentId: null,
-    })) as { id: string };
+    })) as { id: string; number: number };
     if (icon) await callApi(page, "PUT", `/api/v1/categories/${folder.id}`, { icon });
     categories[title] = folder.id;
+    topics[title] = topicAddress(folder, title);
   }
   await callApi(page, "PUT", `/api/v1/categories/${categories.IT}/contact`, {
     contactEmail: "it-support@example.org",
@@ -145,8 +152,9 @@ export async function createPortal(
     title: "Remote access",
     description: "Working from home, VPN client and certificates.",
     parentId: categories.IT,
-  })) as { id: string };
+  })) as { id: string; number: number };
   categories["Remote access"] = remote.id;
+  topics["Remote access"] = topicAddress(remote, "Remote access");
   const articles: PortalArticle[] = [];
   for (const [title, parent, type, lead] of [
     [
@@ -189,14 +197,27 @@ export async function createPortal(
       number: number;
       slug: string;
     };
-    articles.push({ id: item.id, title, address: `${article.number}-${article.slug}` });
+    articles.push({
+      id: item.id,
+      number: article.number,
+      title,
+      address: `${article.number}-${article.slug}`,
+    });
   }
   const portal = (await (
     await page.request.get(`/api/v1/spaces/${space.id}/knowledge-base/portal`)
   ).json()) as {
     path: string;
   };
-  return { spaceId: space.id, spaceKey: space.key, name, path: `/help/${portal.path}`, categories, articles };
+  return {
+    spaceId: space.id,
+    spaceKey: space.key,
+    name,
+    path: `/help/${portal.path}`,
+    categories,
+    topics,
+    articles,
+  };
 }
 
 export async function waitForIndex(page: Page, fixture: PortalFixture, query: string): Promise<void> {

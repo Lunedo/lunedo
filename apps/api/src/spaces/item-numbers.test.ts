@@ -170,6 +170,16 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
     expect(unknown.statusCode).toBe(404);
     expect(denied.statusCode).toBe(404);
     expect(denied.json()).toEqual(unknown.json());
+    for (const number of [hidden.number, hidden.number + 1_000_000]) {
+      const requested = await outsider.client.post(`/api/v1/pages/by-number/${number}/access-requests`, {
+        message: "Please",
+      });
+      expect(requested.statusCode, requested.body).toBe(202);
+      expect(requested.body).toBe("");
+    }
+    const requests = await owner.get(`/api/v1/spaces/${team}/access-requests`);
+    expect(requests.statusCode, requests.body).toBe(200);
+    expect(requests.body).toContain(hidden.id);
     for (const malformed of ["0", "-4", "12a", "1e3", "99999999999999999"]) {
       expect((await outsider.client.get(`/api/v1/items/by-number/${malformed}`)).statusCode, malformed).toBe(
         404,

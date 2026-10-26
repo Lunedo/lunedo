@@ -1,4 +1,3 @@
-import { slugify } from "@lunedo/editor-schema";
 import {
   Button,
   EmptyState,
@@ -16,7 +15,6 @@ import { type Key, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePaged, useSorted } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
-import { seriesPath, topicPath } from "../../meetings/queries.js";
 import {
   useChangeWatches,
   useWatchedList,
@@ -24,30 +22,12 @@ import {
   type WatchTarget,
 } from "../../notifications/watching-api.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
-import { blogPostPath, folderPath, pagePath, whiteboardPath } from "../../spaces/space-queries.js";
+import { contentHref } from "../../spaces/item-paths.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 export function watchedPath(entry: WatchedEntry): string | null {
-  const slug = slugify(entry.title);
-  const id = entry.target.id;
-  switch (entry.kind) {
-    case "space":
-      return `/spaces/${encodeURIComponent(entry.spaceKey)}`;
-    case "page":
-      return pagePath(entry.spaceKey, id, slug);
-    case "blogPost":
-      return blogPostPath(entry.spaceKey, id, slug);
-    case "folder":
-      return folderPath(entry.spaceKey, id, slug);
-    case "meetingSeries":
-      return seriesPath(entry.spaceKey, id);
-    case "meetingTopic":
-      return topicPath(entry.spaceKey, id);
-    case "whiteboard":
-      return whiteboardPath(entry.spaceKey, id, slug);
-    default:
-      return null;
-  }
+  if (entry.kind === "space") return `/spaces/${encodeURIComponent(entry.spaceKey)}`;
+  return contentHref({ kind: entry.kind, number: entry.target.number, title: entry.title }, entry.spaceKey);
 }
 
 export type WatchedType = "space" | "page" | "article" | "meeting";

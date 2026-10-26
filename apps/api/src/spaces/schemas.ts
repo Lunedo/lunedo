@@ -101,6 +101,9 @@ export const spaceSchema = z
     ownerId: uuid("Owner of a personal space, or null.").nullable(),
     ownerName: z.string().nullable().describe("Name of the owner of a personal space, or null."),
     overviewItemId: uuid("The overview page of the space, or null for a knowledge base.").nullable(),
+    overviewItemNumber: itemNumber(
+      "Number of the overview page in the addresses of the app, or null for a knowledge base.",
+    ).nullable(),
     archived: z.boolean().describe("Whether the space is archived. Archived spaces are read-only."),
     exportEnabled: z
       .boolean()
@@ -142,6 +145,7 @@ export const exampleSpace = {
   ownerId: null,
   ownerName: null,
   overviewItemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+  overviewItemNumber: 1001,
   archived: false,
   exportEnabled: true,
   createdAt: "2026-10-05T08:00:00.000Z",
@@ -730,6 +734,9 @@ export const pageReferencesSchema = z
             title: z.string().describe("Title, or empty without access."),
             spaceKey: z.string().describe("Key of the page's space, or empty without access."),
             kind: z.string().describe("Kind of the item."),
+            number: itemNumber(
+              "Number of the item in the addresses of the app, or null without access.",
+            ).nullable(),
             accessible: z.boolean().describe("Whether the caller can open the page."),
             inTrash: z
               .boolean()
@@ -796,6 +803,7 @@ export const labelsSchema = z
 export const backlinkSchema = z
   .object({
     itemId: uuid("Page that links here."),
+    number: itemNumber("Number of that page in the addresses of the app."),
     title: z.string().describe("Title of that page."),
     spaceId: uuid("Space of that page."),
     spaceKey: z.string().describe("Key of that space."),
@@ -820,6 +828,9 @@ export const trashEntrySchema = z
       .enum(["items", "space"])
       .describe("`items` for deleted pages, folders or links, `space` for a deleted space."),
     itemId: uuid("The deleted item, or null for a space.").nullable(),
+    number: itemNumber(
+      "Number of the deleted item in the addresses of the app, or null for a space.",
+    ).nullable(),
     itemKind: extensibleEnum(treeItemKinds, "Kind of the deleted item, or null for a space.").nullable(),
     title: z.string().describe("Title of the deleted item, or name of the space."),
     descendants: z.number().int().describe("Number of descendants deleted with the item."),
@@ -845,6 +856,7 @@ export const exampleTrashEntry = {
   spaceName: "IT Operations",
   kind: "items",
   itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+  number: 1041,
   itemKind: "page",
   title: "Old VPN (OpenVPN) setup",
   descendants: 2,
@@ -859,6 +871,7 @@ export const exampleTrashEntry = {
 export const archivedItemSchema = z
   .object({
     id: uuid("ID of the archived item."),
+    number: itemNumber("Number of the archived item in the addresses of the app."),
     kind: extensibleEnum(treeItemKinds, "Kind of the item."),
     title: z.string().describe("Title."),
     hasChildren: z.boolean().describe("Whether it has archived descendants."),

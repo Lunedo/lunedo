@@ -12,7 +12,7 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { actorOf } from "../http/request.js";
-import { extensibleEnum, uuid } from "../http/schemas.js";
+import { extensibleEnum, itemNumber, uuid } from "../http/schemas.js";
 
 const TAG = "Spaces";
 const space = { type: "space", param: "spaceId" } as const;
@@ -27,6 +27,7 @@ const shortcutSchema = z
     item: z
       .object({
         id: uuid("ID of the content."),
+        number: itemNumber("Number of the content in the addresses of the app."),
         kind: extensibleEnum(treeItemKinds, "Kind of the content."),
         title: z.string().describe("Title of the content."),
         spaceKey: z.string().describe("Key of the space the content is in."),
@@ -48,6 +49,7 @@ const exampleShortcut = {
   url: null,
   item: {
     id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+    number: 1051,
     kind: "page" as const,
     title: "On-call rota 2026",
     spaceKey: "OPS",

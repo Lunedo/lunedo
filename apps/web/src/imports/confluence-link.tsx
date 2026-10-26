@@ -10,8 +10,8 @@ import { looksLikeConfluenceLink, type ResolvedLink, resolveConfluenceLink } fro
 
 export function linkTarget(link: ResolvedLink): string {
   return link.kind === "blogPost"
-    ? blogPostPath(link.spaceKey, link.itemId, link.slug)
-    : pagePath(link.spaceKey, link.itemId, link.slug);
+    ? blogPostPath(link.spaceKey, link.number, link.slug)
+    : pagePath(link.spaceKey, link.number, link.slug);
 }
 
 export function useConfluenceLink() {

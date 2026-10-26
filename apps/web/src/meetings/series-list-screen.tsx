@@ -7,10 +7,12 @@ import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { itemSlug } from "../spaces/item-paths.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
+import { seriesPath } from "../spaces/space-queries.js";
 import { CreateSeriesDialog } from "./create-series-dialog.js";
-import { isToday, seriesPath, spaceSeriesQuery } from "./queries.js";
+import { isToday, spaceSeriesQuery } from "./queries.js";
 
 export function SeriesListScreen() {
   const { t } = useTranslation();
@@ -62,7 +64,7 @@ export function SeriesListScreen() {
           {series.data.map((entry) => (
             <li key={entry.id}>
               <Link
-                to={seriesPath(space.key, entry.id)}
+                to={seriesPath(space.key, entry.number, itemSlug(entry.title))}
                 className="flex min-h-hit flex-wrap items-center gap-3 px-4 py-3 hover:bg-hover focus-visible:focus-ring"
               >
                 <Repeat aria-hidden className="size-icon-md text-text-muted" />

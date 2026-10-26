@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { pagePath } from "../support/addresses.js";
 import { paragraph } from "../support/collaboration.js";
 import { test } from "../support/fixtures.js";
 import { callApi, liveUpdatesConnected } from "../support/helpers.js";
@@ -32,14 +33,14 @@ test("an administrator switches maintenance on, a colleague can only read, and i
     title: "Opening hours",
     parentId: null,
     mode: "live",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
     document: { type: "doc", content: [paragraph("Open from nine to five.")] },
   });
 
   const { page: other } = await organization.signIn(colleague);
   const connected = liveUpdatesConnected(other);
-  await other.goto(`/spaces/${key}/pages/${created.id}/opening-hours?edit=true`);
+  await other.goto(`${pagePath(key, created)}?edit=true`);
   await connected;
   await expect(content(other)).toHaveAttribute("contenteditable", "true");
 

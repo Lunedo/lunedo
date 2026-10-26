@@ -465,8 +465,11 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       code: "externalPageLink",
       limit: 10,
     });
+    const alphaNumber = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${alpha}`,
+    );
     expect(external.entries[0]).toMatchObject({
-      item: { id: alpha, title: "Alpha" },
+      item: { id: alpha, number: Number(alphaNumber.rows[0]?.number), title: "Alpha" },
       details: { title: "Elsewhere" },
     });
   });

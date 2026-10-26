@@ -2,7 +2,7 @@ import { Skeleton } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useOrganizationState } from "../shell/shell-context.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { Redirect } from "../spaces/redirect.js";
 import { organizationHomePageQuery } from "./queries.js";
 
@@ -18,7 +18,7 @@ export function Landing() {
   if (wantsOrganization && homePage.isPending) return <Skeleton className="m-6 h-field" />;
   const page = wantsOrganization ? homePage.data?.page : null;
   const href = page
-    ? itemHref({ id: page.id, kind: page.kind, title: page.title, link: null }, page.spaceKey)
+    ? contentHref({ kind: page.kind, number: page.number, title: page.title }, page.spaceKey)
     : null;
   return <Redirect to={href ?? "/home"} />;
 }

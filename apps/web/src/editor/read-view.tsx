@@ -53,7 +53,7 @@ import {
   propertiesDisplayFromAttrs,
   propertiesReportFromAttrs,
 } from "./properties.js";
-import { followTitleLink, pagePath, type References, rememberReferences } from "./references.js";
+import { followTitleLink, type References, referenceHref, rememberReferences } from "./references.js";
 import {
   DecisionReportList,
   decisionReportFromAttrs,
@@ -102,7 +102,7 @@ export function readViewContext(
         if (!page) return null;
         if (page.inTrash) return { href: "", title: page.title, accessible: false, inTrash: true };
         return page.accessible
-          ? { href: pagePath(page.spaceKey, link.pageId, page.title), title: page.title, accessible: true }
+          ? { href: referenceHref(page), title: page.title, accessible: true }
           : { href: "", title: "", accessible: false };
       }
       const query = new URLSearchParams({ space: link.spaceId ?? "", title: link.title ?? "" });

@@ -236,7 +236,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(forEditor[0]?.copiedFrom).toEqual({
         itemId: source.id,
         title: "Policy",
-        path: `/spaces/${wiki.key}/pages/${source.id}/policy`,
+        path: `/spaces/${wiki.key}/pages/${source.number}/policy`,
       });
       await purgeSource(as, org.owner, source.id, wiki.id);
       const afterPurge = await test.services.copies.sources(as, await test.services.versions.list(item.id));
@@ -639,7 +639,12 @@ describe.skipIf(!baseUrl)("copying content", () => {
         title: "Payroll plan",
         sourceItemId: source.id,
         targetSpaceId: other.id,
-        item: { id: item.id, title: "Payroll plan", spaceKey: other.key },
+        item: {
+          id: item.id,
+          number: (await test.services.tree.get(as, item.id))?.number,
+          title: "Payroll plan",
+          spaceKey: other.key,
+        },
       });
       await test.services.pageAccess.change(as, item.id, [{ action: "restrict", kind: "view" }]);
       await test.services.pageAccess.change(as, source.id, [{ action: "restrict", kind: "view" }]);

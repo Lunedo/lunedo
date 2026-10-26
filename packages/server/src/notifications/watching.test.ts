@@ -329,6 +329,14 @@ describe.skipIf(!baseUrl)("watching", () => {
 
       const plain = (await test.services.notifications.list(context.readerId, { limit: 100 })).items;
       expect(plain.filter((item) => item.type === "content.changed")).toHaveLength(3);
+      const numbers = new Map([first, second, third].map((page) => [page.id, page.number]));
+      for (const item of plain.filter((entry) => entry.type === "content.changed")) {
+        expect(item.target).toEqual({
+          type: "item",
+          id: item.target.id,
+          number: numbers.get(item.target.id ?? ""),
+        });
+      }
 
       const grouped = (
         await test.services.notifications.list(context.readerId, { limit: 100, grouped: true })
@@ -338,6 +346,9 @@ describe.skipIf(!baseUrl)("watching", () => {
       expect(groups[0]?.group?.members.map((member) => member.itemId).sort()).toEqual(
         [first.id, second.id, third.id].sort(),
       );
+      for (const member of groups[0]?.group?.members ?? []) {
+        expect(member.number).toBe(numbers.get(member.itemId ?? ""));
+      }
       expect(groups[0]?.group?.actorCount).toBe(2);
       expect(grouped.filter((item) => item.type === "content.changed")).toHaveLength(1);
       const comment = grouped.find((item) => item.type === "comment.created");
@@ -644,6 +655,7 @@ describe.skipIf(!baseUrl)("watching", () => {
         ["space", "muted"],
         ["item", "watching"],
       ]);
+      expect(entries.map((entry) => entry.target.number)).toEqual([null, page.number]);
       await test.services.watches.set(
         context.readerId,
         { type: "space", id: context.space.id },

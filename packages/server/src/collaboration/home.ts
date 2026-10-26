@@ -15,6 +15,7 @@ export const MAX_STARS = 500;
 
 export interface ContentReference {
   id: string;
+  number: number;
   kind: "page" | "folder" | "link" | "blogPost" | "whiteboard";
   title: string;
   spaceId: string;
@@ -54,6 +55,7 @@ export interface ForYou {
 
 type ReferenceRow = {
   id: string;
+  number: string;
   kind: ContentReference["kind"];
   title: string;
   space_id: string;
@@ -65,6 +67,7 @@ type ReferenceRow = {
 function reference(row: ReferenceRow): ContentReference {
   return {
     id: row.id,
+    number: Number(row.number),
     kind: row.kind,
     title: row.title,
     spaceId: row.space_id,
@@ -149,7 +152,7 @@ export class HomeService {
   async starred(viewer: Principal): Promise<Starred> {
     const accountId = this.#account(viewer);
     const items = await this.#database.execute<ReferenceRow & { created_at: Date | string }>(sql`
-      select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+      select t.id, t.number, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space, st.created_at
       from stars st join tree_items t on t.id = st.item_id join spaces s on s.id = t.space_id
       where st.account_id = ${accountId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -191,7 +194,7 @@ export class HomeService {
   async recent(viewer: Principal, limit = 20): Promise<(ContentReference & { viewedAt: Date })[]> {
     const accountId = this.#account(viewer);
     const result = await this.#database.execute<ReferenceRow & { viewed_at: Date | string }>(sql`
-      select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+      select t.id, t.number, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space, v.viewed_at
       from recent_views v join tree_items t on t.id = v.item_id join spaces s on s.id = t.space_id
       where v.account_id = ${accountId}
@@ -219,7 +222,7 @@ export class HomeService {
       }
     >(sql`
       select m.id as mention_id, m.comment_id, m.actor_id, ${this.#people.visibleName(viewer, sql`a`)} as actor_name, m.notified_at,
-        t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+        t.id, t.number, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space
       from content_mentions m join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
       left join accounts a on a.id = m.actor_id
@@ -254,7 +257,7 @@ export class HomeService {
     const itemId = await this.#settings.get(organizationHomePageSetting, { organization: organizationId });
     if (!itemId) return null;
     const result = await this.#database.execute<ReferenceRow>(sql`
-      select t.id, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+      select t.id, t.number, t.kind, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, ${mySpace(viewer)} as my_space
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId} and s.organization_id = ${organizationId} and t.archived_root_id is null

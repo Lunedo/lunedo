@@ -90,6 +90,13 @@ describe.skipIf(!baseUrl)("knowledge base reviews", () => {
     return found;
   }
 
+  async function numberOf(itemId: string): Promise<number> {
+    const result = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${itemId}`,
+    );
+    return Number(result.rows[0]?.number);
+  }
+
   const dueOf = async (itemId: string) => {
     const due = (await row(itemId)).due_at;
     return due ? new Date(due).toISOString() : null;
@@ -356,7 +363,7 @@ describe.skipIf(!baseUrl)("knowledge base reviews", () => {
       ]);
       expect(all.counts).toEqual({ all: 2, due: 1, soon: 1, unowned: 0, translations: 0 });
       const due = await reviews.list(context.admin, context.kb.id, { filter: "due", page: { limit: 50 } });
-      expect(due.items.map((item) => item.id)).toEqual([overdue]);
+      expect(due.items.map((item) => [item.id, item.number])).toEqual([[overdue, await numberOf(overdue)]]);
       const mine = await reviews.list(context.admin, context.kb.id, { mine: true, page: { limit: 50 } });
       expect(mine.items.map((item) => item.id)).toEqual([soon]);
       const first = await reviews.list(context.admin, context.kb.id, { page: { limit: 1 } });
@@ -525,7 +532,7 @@ describe.skipIf(!baseUrl)("knowledge base reviews", () => {
     it("shows the source only to people who can read it", async () => {
       const context = await withSource();
       expect(await reviewsAt(new Date()).sources(context.editor, context.itemId)).toMatchObject([
-        { id: context.sourceId, title: "VPN gateway" },
+        { id: context.sourceId, number: await numberOf(context.sourceId), title: "VPN gateway" },
       ]);
       expect(await reviewsAt(new Date()).sources(context.reader, context.itemId)).toEqual([]);
       await expect(
@@ -655,7 +662,7 @@ describe.skipIf(!baseUrl)("knowledge base reviews", () => {
       const mine = await reviewsAt("2026-05-01T00:00:00.000Z").mine(context.editor);
       expect(mine).toMatchObject({
         total: 1,
-        items: [{ id: own, state: "overdue", spaceKey: context.kb.key }],
+        items: [{ id: own, number: await numberOf(own), state: "overdue", spaceKey: context.kb.key }],
       });
       await reviewsAt("2026-05-01T00:00:00.000Z").markReviewed(context.editor, own);
       expect((await reviewsAt("2026-05-01T00:00:00.000Z").mine(context.editor)).items).toEqual([]);

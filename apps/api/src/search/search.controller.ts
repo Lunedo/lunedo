@@ -18,7 +18,14 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
-import { extensibleEnum, inputTimestamp, organizationIdParams, timestamp, uuid } from "../http/schemas.js";
+import {
+  extensibleEnum,
+  inputTimestamp,
+  itemNumber,
+  organizationIdParams,
+  timestamp,
+  uuid,
+} from "../http/schemas.js";
 import { examplePageStatus, pageStatusSchema } from "../spaces/schemas.js";
 
 const TAG = "Search";
@@ -134,6 +141,7 @@ const referenceSchema = (description: string) =>
   z
     .object({
       id: uuid(`ID of the ${description}.`),
+      number: itemNumber(`Number of the ${description} in the addresses of the app.`),
       title: z.string().describe(`Title of the ${description}.`),
     })
     .describe(`The ${description}.`);
@@ -150,6 +158,7 @@ const resultSchema = z
     itemId: uuid(
       "ID of the page, blog post or running topic the result belongs to; for a decision, the meeting it was recorded in.",
     ),
+    number: itemNumber("Number of the item `itemId` names, in the addresses of the app."),
     itemType: extensibleEnum(
       searchItemTypes,
       "What `itemId` is: `page`, `blogPost` or `topic` (a running topic), so that clients open the right screen.",
@@ -182,7 +191,11 @@ const resultSchema = z
     path: z
       .array(
         z
-          .object({ id: uuid("ID of the page."), title: z.string().describe("Title of the page.") })
+          .object({
+            id: uuid("ID of the page."),
+            number: itemNumber("Number of the page in the addresses of the app."),
+            title: z.string().describe("Title of the page."),
+          })
           .describe("A parent page."),
       )
       .describe("Parent pages the caller can read, from the top. Empty for shared pages."),
@@ -304,6 +317,7 @@ const exampleResponse = {
       type: "page",
       id: "01929b1e-7c1a-7000-8000-000000000020",
       itemId: "01929b1e-7c1a-7000-8000-000000000020",
+      number: 1042,
       itemType: "page",
       title: "VPN access",
       heading: "Setup",

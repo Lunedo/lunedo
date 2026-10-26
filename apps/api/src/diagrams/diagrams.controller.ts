@@ -74,7 +74,7 @@ export class DiagramsController {
       example: {
         pageId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
         title: "Network",
-        path: "/spaces/NET/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20/network",
+        path: "/spaces/NET/pages/1020/network",
         found: true,
         previewId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
         previewVersion: 3,

@@ -214,7 +214,7 @@ shot(
     state: "list of versions, latest selected",
   },
   "owner",
-  async (page) => visit(page, `/spaces/IT/pages/${rich().id}/history`),
+  async (page) => visit(page, `/spaces/IT/pages/${rich().number}/history`),
 );
 
 shot(
@@ -225,7 +225,7 @@ shot(
     state: "version 1 against version 2, side by side",
   },
   "owner",
-  async (page) => visit(page, `/spaces/IT/pages/${rich().id}/history?from=1&to=2&view=sideBySide`),
+  async (page) => visit(page, `/spaces/IT/pages/${rich().number}/history?from=1&to=2&view=sideBySide`),
 );
 
 shot(
@@ -470,7 +470,7 @@ shot({ number: "14", name: "trash", title: "Trash", state: "two deleted pages" }
 shot(
   { number: "15", name: "meeting-series", title: "Meeting series page", state: "weekly series with topics" },
   "owner",
-  async (page) => visit(page, `/spaces/IT/meetings/${world().seriesId}`),
+  async (page) => visit(page, world().seriesPath),
 );
 
 shot(
@@ -696,7 +696,7 @@ shot(
     language: "content",
   },
   "signed out",
-  async (page) => visit(page, `${portal()}/topics/${world().knowledgeBase.categoryId}`),
+  async (page) => visit(page, `${portal()}/${world().knowledgeBase.categoryAddress}`),
 );
 
 shot(

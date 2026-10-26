@@ -17,6 +17,7 @@ const SPACE = "01929b1e-0000-7000-8000-0000000000a1";
 const FIREWALL = "01929b1e-0000-7000-8000-0000000000f1";
 const PRINTERS = "01929b1e-0000-7000-8000-0000000000f2";
 const LENA = { id: "01929b1e-0000-7000-8000-0000000000b1", name: "Lena Hofer" };
+const NUMBERS: Record<string, number> = { [FIREWALL]: 1071, [PRINTERS]: 1072, [SPACE]: 1073 };
 
 function inRouter(ui: ReactNode) {
   const root = createRootRoute({ component: () => <PreferencesProvider>{ui}</PreferencesProvider> });
@@ -31,6 +32,7 @@ function topic(
 ): Agenda["topics"][number] {
   return {
     id,
+    number: NUMBERS[id] ?? 1079,
     title,
     status: "open",
     outcome: null,
@@ -50,7 +52,9 @@ function topic(
 function agenda(topics: Agenda["topics"]): Agenda {
   return {
     meetingId: MEETING,
+    meetingNumber: 1060,
     seriesId: SERIES,
+    seriesNumber: 1061,
     current: true,
     topics,
     closedTopics: 0,
@@ -75,10 +79,22 @@ describe("the agenda of a meeting", () => {
           topic(FIREWALL, "Firewall", {
             meetings: 4,
             history: [
-              { meetingId: FIREWALL, meetingTitle: "28 Sep", startsAt: null, text: "" },
-              { meetingId: SERIES, meetingTitle: "5 Oct", startsAt: null, text: "Two offers" },
-              { meetingId: SPACE, meetingTitle: "19 Oct", startsAt: null, text: "Rules reviewed" },
-              { meetingId: LENA.id, meetingTitle: "26 Oct", startsAt: null, text: "" },
+              { meetingId: FIREWALL, meetingNumber: 1062, meetingTitle: "28 Sep", startsAt: null, text: "" },
+              {
+                meetingId: SERIES,
+                meetingNumber: 1063,
+                meetingTitle: "5 Oct",
+                startsAt: null,
+                text: "Two offers",
+              },
+              {
+                meetingId: SPACE,
+                meetingNumber: 1064,
+                meetingTitle: "19 Oct",
+                startsAt: null,
+                text: "Rules reviewed",
+              },
+              { meetingId: LENA.id, meetingNumber: 1065, meetingTitle: "26 Oct", startsAt: null, text: "" },
             ],
             tasks: [task("a", "2020-01-01"), task("b", "2999-01-01")],
           }),
@@ -216,7 +232,9 @@ describe("the agenda of a meeting", () => {
 
 const meeting: Meeting = {
   id: MEETING,
+  number: 1060,
   seriesId: SERIES,
+  seriesNumber: 1061,
   seriesTitle: "Jour fixe IT",
   title: "Jour fixe IT · 2 Nov 2026",
   state: "upcoming",
@@ -268,8 +286,18 @@ describe("the head of a meeting", () => {
       [`GET /api/v1/meetings/${MEETING}`]: () => ({
         body: {
           ...meeting,
-          previousMeeting: { id: SPACE, title: "Jour fixe IT", startsAt: "2026-10-26T08:30:00.000Z" },
-          followingMeeting: { id: PRINTERS, title: "Jour fixe IT", startsAt: "2026-11-09T08:30:00.000Z" },
+          previousMeeting: {
+            id: SPACE,
+            number: 1066,
+            title: "Jour fixe IT",
+            startsAt: "2026-10-26T08:30:00.000Z",
+          },
+          followingMeeting: {
+            id: PRINTERS,
+            number: 1067,
+            title: "Jour fixe IT",
+            startsAt: "2026-11-09T08:30:00.000Z",
+          },
         },
       }),
     });
@@ -284,7 +312,9 @@ describe("the head of a meeting", () => {
       ),
     );
     expect(await screen.findByRole("heading", { name: /^Jour fixe IT · Monday, / })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Oct 26/ }).getAttribute("href")).toContain(`/spaces/ITOPS/`);
+    expect(screen.getByRole("link", { name: /Oct 26/ }).getAttribute("href")).toBe(
+      "/spaces/ITOPS/pages/1066/jour-fixe-it",
+    );
     expect(screen.getByRole("link", { name: /Nov 9/ })).toBeTruthy();
     expect(screen.getByText(/^Previous:/)).toBeTruthy();
     for (const link of screen.getAllByRole("link")) expect(link.className.split(" ")).toContain("underline");

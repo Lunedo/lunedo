@@ -13,11 +13,9 @@ import {
   Repeat,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { topicPath } from "../meetings/queries.js";
 import { useFormat } from "../preferences/preferences-provider.js";
-import { itemSlug } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { StatusBadge } from "../spaces/ownership/page-status.js";
-import { blogPostPath, pagePath, whiteboardPath } from "../spaces/space-queries.js";
 import { WhiteboardPreview } from "../whiteboards/whiteboard-preview.js";
 import type { SearchHit } from "./search-api.js";
 
@@ -27,22 +25,22 @@ export interface HitTarget {
   hash?: string;
 }
 
-function itemPath(hit: SearchHit, itemId: string, title: string): string {
-  const spaceKey = hit.space?.key ?? "";
-  const slug = itemSlug(title);
-  if (hit.itemType === "whiteboard") return whiteboardPath(spaceKey, itemId, slug);
-  return hit.itemType === "blogPost"
-    ? blogPostPath(spaceKey, itemId, slug)
-    : pagePath(spaceKey, itemId, slug);
+function itemPath(hit: SearchHit): string | null {
+  const kind = hit.itemType === "whiteboard" || hit.itemType === "blogPost" ? hit.itemType : "page";
+  return contentHref({ kind, number: hit.number, title: hit.title }, hit.space?.key ?? "");
 }
 
 export function hitTarget(hit: SearchHit): HitTarget | null {
   const spaceKey = hit.space?.key;
   if (hit.type === "topic" || (hit.type === "decision" && hit.topic)) {
-    const topicId = hit.topic?.id ?? hit.itemId;
-    return spaceKey ? { to: topicPath(spaceKey, topicId) } : null;
+    const topic = hit.topic ?? { number: hit.number, title: hit.title };
+    const to = spaceKey
+      ? contentHref({ kind: "meetingTopic", number: topic.number, title: topic.title }, spaceKey)
+      : null;
+    return to ? { to } : null;
   }
-  const to = itemPath(hit, hit.itemId, hit.title);
+  const to = itemPath(hit);
+  if (!to) return null;
   if (hit.type === "attachment") return { to, attachment: hit.id };
   if (hit.type === "comment" || hit.type === "decision" || !hit.anchor) return { to };
   return { to, hash: hit.anchor };

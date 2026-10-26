@@ -67,6 +67,36 @@ describe.skipIf(!baseUrl)("search", () => {
       true,
     );
     expect(result.total).toBe(1);
+    expect(result.results[0]).toMatchObject({ itemId: page.id, number: page.number, path: [] });
+  });
+
+  it("gives the numbers of the result and of its parent pages", async () => {
+    const org = await organization();
+    const authorId = await member(org.id, "member", "Author");
+    const created = await space(org.id, authorId, { visibility: "organization" });
+    const author = accountPrincipal(authorId);
+    const word = `w${Math.random().toString(36).slice(2, 10)}`;
+    const add = (title: string, parentId: string | null, text = "Overview") =>
+      test.services.tree.create(author, created.id, {
+        kind: "page",
+        title,
+        mode: "live",
+        placement: { parentId },
+        document: doc(paragraph(text)),
+      });
+    const top = await add("Handbook", null);
+    const middle = await add("Chapter", top.id);
+    const leaf = await add("Printers", middle.id, `${word} printer setup`);
+    await drain();
+    const own = await find(author, org.id, word);
+    expect(own.results[0]).toMatchObject({
+      itemId: leaf.id,
+      number: leaf.number,
+      path: [
+        { id: top.id, number: top.number, title: "Handbook" },
+        { id: middle.id, number: middle.number, title: "Chapter" },
+      ],
+    });
   });
 
   async function world() {

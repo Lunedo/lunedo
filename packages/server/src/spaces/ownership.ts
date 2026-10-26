@@ -31,6 +31,7 @@ export interface ItemOwner {
 
 export interface UnownedItem {
   id: string;
+  number: number;
   spaceId: string;
   spaceKey: string;
   spaceName: string;
@@ -271,6 +272,7 @@ export class OwnershipService {
     const visible = visibleItem(this.#authorization, viewer, sql`t`, sql`s`);
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       space_id: string;
       key: string;
       space_name: string;
@@ -280,7 +282,7 @@ export class OwnershipService {
       owner_state: string | null;
       sort_title: string;
     }>(sql`
-      select t.id, t.space_id, s.key, ${spaceDisplayName(sql`s`)} as space_name, t.kind, t.title, t.owner_id, oa.state::text as owner_state,
+      select t.id, t.number, t.space_id, s.key, ${spaceDisplayName(sql`s`)} as space_name, t.kind, t.title, t.owner_id, oa.state::text as owner_state,
         lower(t.title) as sort_title
       from tree_items t join spaces s on s.id = t.space_id left join accounts oa on oa.id = t.owner_id
       where ${scope} and ${unownedCondition(sql`t`, sql`s`)} and ${visible}
@@ -299,6 +301,7 @@ export class OwnershipService {
     return {
       items: rows.map((row) => ({
         id: row.id,
+        number: Number(row.number),
         spaceId: row.space_id,
         spaceKey: row.key,
         spaceName: row.space_name,

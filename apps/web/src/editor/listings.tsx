@@ -19,9 +19,9 @@ import { attachmentsQuery, contentUrl } from "../files/attachments-api.js";
 import { useAttachmentPreview } from "../files/preview-host.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
-import { childrenQuery, itemQuery, type TreeItem } from "../spaces/space-queries.js";
+import { itemSlug } from "../spaces/item-paths.js";
+import { childrenQuery, itemQuery, pagePath, type TreeItem } from "../spaces/space-queries.js";
 import { useEditable, useOpenPath, usePageContext } from "./context.js";
-import { pagePath } from "./references.js";
 
 const pageLoader: ComboboxLoader = async (query) => {
   const items = await request(() =>
@@ -123,7 +123,7 @@ function ChildLevel({
     <ul>
       {pages.map((page) => (
         <li key={page.id}>
-          <PageAnchor href={pagePath(spaceKey, page.id, page.title)}>
+          <PageAnchor href={pagePath(spaceKey, page.number, itemSlug(page.title))}>
             {page.title || t("editor.readView.untitledPage")}
           </PageAnchor>
           {page.hasChildren && level < maxDepth ? (

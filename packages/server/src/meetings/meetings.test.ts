@@ -721,6 +721,124 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     });
   });
 
+  describe("numbers in addresses", () => {
+    async function numberOf(itemId: string): Promise<number> {
+      const result = await test.pool.query<{ number: string }>(
+        "select number from tree_items where id = $1",
+        [itemId],
+      );
+      return Number(result.rows[0]?.number);
+    }
+
+    it("come with every meeting, series, topic and decision the app links to", async () => {
+      const context = await setup();
+      const created = await series(context);
+      const seriesNumber = await numberOf(created.id);
+      const meetingNumber = await numberOf(created.firstMeetingId);
+      expect(meetingNumber).not.toBe(seriesNumber);
+      const topicId = await test.services.topics.create(context.lead, created.id, {
+        title: "BitLocker rollout",
+      });
+      const topicNumber = await numberOf(topicId);
+      await edit(context.lead, created.firstMeetingId, (document) =>
+        writeUpdate(document, topicId, "Letters or portal?"),
+      );
+      await test.services.privateNotes.save(context.lead, created.firstMeetingId, {
+        document: { type: "doc", content: [paragraph("Ask about the budget")] },
+        revision: 0,
+      });
+      expect(await test.services.agenda.agenda(context.lead, created.firstMeetingId)).toMatchObject({
+        meetingNumber,
+        seriesNumber,
+        topics: [{ id: topicId, number: topicNumber }],
+      });
+      await test.services.topics.closeAsDecision(context.lead, topicId, { statement: "Use the portal." });
+
+      const details = await test.services.meetings.details(context.lead, created.id);
+      expect(details).toMatchObject({ number: seriesNumber, upcoming: { number: meetingNumber } });
+      expect((await test.services.meetings.listSeries(context.lead, context.space.id))[0]).toMatchObject({
+        id: created.id,
+        number: seriesNumber,
+      });
+      expect((await test.services.meetings.meetings(context.lead, created.id)).items[0]).toMatchObject({
+        id: created.firstMeetingId,
+        number: meetingNumber,
+      });
+      expect(await test.services.meetings.meeting(context.lead, created.firstMeetingId)).toMatchObject({
+        number: meetingNumber,
+        seriesNumber,
+      });
+      expect(
+        (await test.services.meetings.upcoming(context.lead)).find((entry) => entry.seriesId === created.id),
+      ).toMatchObject({ seriesNumber });
+      const topic = await test.services.topics.get(context.lead, topicId);
+      expect(topic).toMatchObject({
+        number: topicNumber,
+        seriesNumber,
+        raisedIn: { id: created.firstMeetingId, number: meetingNumber },
+        decision: { itemId: created.firstMeetingId, itemNumber: meetingNumber },
+      });
+      expect(topic.timeline.map((entry) => [entry.meetingId, entry.meetingNumber])).toEqual([
+        [created.firstMeetingId, meetingNumber],
+      ]);
+      expect((await test.services.topics.list(context.lead, created.id, { status: "all" }))[0]).toMatchObject(
+        {
+          number: topicNumber,
+          seriesNumber,
+        },
+      );
+      expect((await test.services.decisions.log(context.lead, created.id))[0]).toMatchObject({
+        meeting: { id: created.firstMeetingId, number: meetingNumber },
+        topic: { id: topicId, number: topicNumber },
+      });
+      expect((await test.services.privateNotes.listForSeries(context.lead, created.id))[0]).toMatchObject({
+        meetingId: created.firstMeetingId,
+        meetingNumber,
+      });
+    });
+
+    it("leave out the number of a series the reader cannot see, as its ID", async () => {
+      const context = await setup();
+      const created = await series(context);
+      await test.services.pageAccess.change(context.lead, created.firstMeetingId, [
+        { action: "share", holderKind: "account", holderId: context.outsiderId, role: "reader" },
+      ]);
+      const meeting = await test.services.meetings.meeting(context.outsider, created.firstMeetingId);
+      expect(meeting).toMatchObject({
+        number: await numberOf(created.firstMeetingId),
+        seriesId: null,
+        seriesNumber: null,
+      });
+      expect(
+        (await test.services.meetings.upcoming(context.outsider)).find(
+          (entry) => entry.id === created.firstMeetingId,
+        ),
+      ).toMatchObject({ seriesId: null, seriesNumber: null });
+    });
+
+    it("come with the series and the next meeting of a one-on-one", async () => {
+      const context = await setup();
+      const created = await test.services.oneOnOnes.create(context.lead, {
+        otherId: context.editorId,
+        organizationId: context.org.id,
+        rhythm: WEEKLY,
+        startsOn: "2030-03-18",
+        startTime: "09:30",
+        timeZone: "Europe/Vienna",
+        durationMinutes: 30,
+      });
+      expect(created.seriesNumber).toBe(await numberOf(created.seriesId));
+      const listed = (await test.services.oneOnOnes.list(context.lead)).find(
+        (entry) => entry.seriesId === created.seriesId,
+      );
+      const nextMeetingId = listed?.nextMeeting?.id ?? "";
+      expect(listed).toMatchObject({
+        seriesNumber: created.seriesNumber,
+        nextMeeting: { number: await numberOf(nextMeetingId) },
+      });
+    });
+  });
+
   describe("private notes", () => {
     it("can be read by their author only", async () => {
       const context = await setup();

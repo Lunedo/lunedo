@@ -32,19 +32,25 @@ import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { itemSlug } from "../spaces/item-paths.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
-import { pagePath } from "../spaces/space-queries.js";
-import { meetingKeys, seriesPath, type TopicDetails, topicQuery } from "./queries.js";
+import { itemNumberQuery, pagePath, seriesPath } from "../spaces/space-queries.js";
+import { meetingKeys, type TopicDetails, topicQuery } from "./queries.js";
 import "../editor/editor.css";
 
-const route = getRouteApi("/app/spaces/$spaceKey/topics/$topicId");
+const route = getRouteApi("/app/spaces/$spaceKey/topics/$number/{-$slug}");
 const STATEMENT_MAX = 2000;
 
 export function TopicScreen() {
   const { t } = useTranslation();
-  const { topicId } = route.useParams();
-  const topic = useQuery({ ...topicQuery(topicId), retry: false });
+  const { number } = route.useParams();
+  const resolved = useQuery({ ...itemNumberQuery(number), retry: false });
+  const topic = useQuery({
+    ...topicQuery(resolved.data?.id ?? ""),
+    enabled: resolved.data !== undefined,
+    retry: false,
+  });
+  const failed = resolved.isError ? resolved : topic.isError ? topic : null;
   useDocumentTitle(topic.data?.title ?? t("meetings.topics.title"));
-  if (topic.isPending) {
+  if (!failed && topic.isPending) {
     return (
       <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 md:px-8">
         <Skeleton className="h-field w-2/3" />
@@ -52,24 +58,24 @@ export function TopicScreen() {
       </div>
     );
   }
-  if (topic.isError) {
+  if (failed) {
     return (
       <div className="p-6">
-        {topic.error instanceof ApiError && topic.error.status === 404 ? (
+        {failed.error instanceof ApiError && failed.error.status === 404 ? (
           <Notice variant="warning" title={t("meetings.topic.notFoundTitle")}>
             {t("meetings.topic.notFoundDescription")}
           </Notice>
         ) : (
           <LoadError
             what={t("meetings.topic.loadFailed")}
-            error={topic.error}
-            onRetry={() => topic.refetch()}
+            error={failed.error}
+            onRetry={() => failed.refetch()}
           />
         )}
       </div>
     );
   }
-  return <TopicView topic={topic.data} />;
+  return topic.data ? <TopicView topic={topic.data} /> : null;
 }
 
 function UpdateContent({ content }: { content: unknown[] }) {
@@ -149,7 +155,10 @@ function TopicView({ topic }: { topic: TopicDetails }) {
           breadcrumbs={[
             { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
             { label: t("meetings.title"), href: `/spaces/${space.key}/meetings` },
-            { label: topic.seriesTitle, href: seriesPath(space.key, topic.seriesId) },
+            {
+              label: topic.seriesTitle,
+              href: seriesPath(space.key, topic.seriesNumber, itemSlug(topic.seriesTitle)),
+            },
             { label: topic.title },
           ]}
           actions={
@@ -218,7 +227,7 @@ function TopicView({ topic }: { topic: TopicDetails }) {
             <dd>
               {topic.raisedIn ? (
                 <Link
-                  to={pagePath(space.key, topic.raisedIn.id, itemSlug(topic.raisedIn.title))}
+                  to={pagePath(space.key, topic.raisedIn.number, itemSlug(topic.raisedIn.title))}
                   className="text-accent hover:underline focus-visible:focus-ring"
                 >
                   {topic.raisedIn.startsAt ? format.date(topic.raisedIn.startsAt) : topic.raisedIn.title}
@@ -245,7 +254,7 @@ function TopicView({ topic }: { topic: TopicDetails }) {
             </h2>
             <UpdateContent content={topic.decision.statement} />
             <Link
-              to={pagePath(space.key, topic.decision.itemId, itemSlug(topic.decision.itemTitle))}
+              to={pagePath(space.key, topic.decision.itemNumber, itemSlug(topic.decision.itemTitle))}
               className="text-sm text-accent hover:underline focus-visible:focus-ring"
             >
               {topic.decision.itemTitle}
@@ -263,7 +272,7 @@ function TopicView({ topic }: { topic: TopicDetails }) {
             {topic.timeline.map((entry) => (
               <li key={entry.meetingId} className="flex flex-col gap-2 rounded-md border border-border p-3">
                 <Link
-                  to={pagePath(space.key, entry.meetingId, itemSlug(entry.meetingTitle))}
+                  to={pagePath(space.key, entry.meetingNumber, itemSlug(entry.meetingTitle))}
                   className="text-sm font-medium text-accent hover:underline focus-visible:focus-ring"
                 >
                   {entry.startsAt ? format.date(entry.startsAt) : entry.meetingTitle}

@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { slugify } from "@lunedo/editor-schema";
 import { notificationEventOf, uuidv7 } from "@lunedo/shared";
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -24,6 +23,7 @@ import {
   sendOutbound,
 } from "../outbound/guarded-request.js";
 import type { SettingsService } from "../settings/service.js";
+import { itemAddress } from "../spaces/addresses.js";
 import { PUSH_OUTBOX_CHANNEL } from "./outbox.js";
 import { pushOutbox, pushSubscriptions } from "./schema.js";
 import { pushText } from "./texts.js";
@@ -121,19 +121,24 @@ function clip(value: string): string {
   return value.length > TEXT_LIMIT ? `${value.slice(0, TEXT_LIMIT - 1)}…` : value;
 }
 
-export function pushLink(type: string, targetId: string | null, params: Record<string, unknown>): string {
+export function pushLink(
+  type: string,
+  targetId: string | null,
+  targetNumber: number | null,
+  params: Record<string, unknown>,
+): string {
   const spaceKey = typeof params.spaceKey === "string" ? params.spaceKey : "";
   const title = typeof params.itemTitle === "string" ? params.itemTitle : "";
   if ((type === "access.requested" || type === "access.requestDecided") && targetId) {
     return `/access-requests/${targetId}`;
   }
-  if (targetId && spaceKey && typeof params.itemKind === "string") {
-    const section =
-      params.itemKind === "blogPost" ? "blog" : params.itemKind === "whiteboard" ? "whiteboards" : "pages";
-    return `/spaces/${encodeURIComponent(spaceKey)}/${section}/${targetId}/${slugify(title)}`;
+  if (targetNumber !== null && spaceKey && typeof params.itemKind === "string") {
+    return itemAddress(params.itemKind, spaceKey, targetNumber, title) ?? "/";
   }
   return "/";
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class PushService {
   readonly #database: Database;
@@ -356,10 +361,19 @@ export class PushService {
       message: {
         title: clip(text.title),
         body: clip(text.body),
-        url: pushLink(entry.type, entry.targetId, params),
+        url: pushLink(entry.type, entry.targetId, await this.#itemNumber(entry.targetId), params),
         tag: `${entry.type}:${entry.targetId ?? entryId}`,
       },
     };
+  }
+
+  async #itemNumber(targetId: string | null): Promise<number | null> {
+    if (!targetId || !UUID.test(targetId)) return null;
+    const result = await this.#database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${targetId}::uuid`,
+    );
+    const row = result.rows[0];
+    return row ? Number(row.number) : null;
   }
 
   async deliver(entryId: string, lastAttempt: boolean): Promise<void> {

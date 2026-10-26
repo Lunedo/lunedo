@@ -84,7 +84,7 @@ describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options th
       ...extra,
     });
     expect(created.statusCode, created.body).toBe(201);
-    return created.json() as { id: string };
+    return created.json() as { id: string; number: number };
   }
 
   const services = async (client: TestClient) =>
@@ -179,7 +179,7 @@ describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options th
       title: "Netzwerk-Umbau 2027",
       preview: false,
     });
-    expect(reference.json().href).toContain(`/whiteboards/${board.id}/`);
+    expect(reference.json().href).toContain(`/whiteboards/${board.number}/`);
     const hidden = await pageOnly.client.get(`/api/v1/whiteboards/${board.id}/reference`);
     expect([403, 404]).toContain(hidden.statusCode);
     expect(hidden.body).not.toContain("Netzwerk-Umbau");

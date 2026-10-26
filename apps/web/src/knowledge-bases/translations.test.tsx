@@ -141,10 +141,18 @@ describe("translations of an article", () => {
       defaultLanguage: "de",
       language: "de",
       translations: [
-        { language: "de", itemId: ORIGINAL, title: "Passwort ändern", state: "original", enabled: true },
+        {
+          language: "de",
+          itemId: ORIGINAL,
+          itemNumber: 1010,
+          title: "Passwort ändern",
+          state: "original",
+          enabled: true,
+        },
         {
           language: "en",
           itemId: states.en === "missing" ? null : ENGLISH,
+          itemNumber: states.en === "missing" ? null : 1011,
           title: states.en === "missing" ? null : "Change the password",
           state: states.en ?? "current",
           enabled: true,
@@ -189,7 +197,9 @@ describe("translations of an article", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/published after this translation/)).toBeTruthy();
     expect(within(dialog).queryByRole("button", { name: /Translate into/ })).toBeNull();
-    expect(within(dialog).getByRole("link", { name: "Open" }).getAttribute("href")).toContain(ORIGINAL);
+    expect(within(dialog).getByRole("link", { name: "Open" }).getAttribute("href")).toBe(
+      "/spaces/HELP/pages/1010/passwort-aendern",
+    );
   });
 
   it("shows nothing while the knowledge base has one language", async () => {

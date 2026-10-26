@@ -23,14 +23,16 @@ export const MAX_STATEMENT_LENGTH = 2000;
 
 export interface TopicSummary {
   id: string;
+  number: number;
   seriesId: string;
+  seriesNumber: number;
   title: string;
   status: TopicStatus;
   outcome: TopicOutcome | null;
   oneOff: boolean;
   owner: { id: string; name: string | null } | null;
   labels: string[];
-  raisedIn: { id: string; title: string; startsAt: Date | null } | null;
+  raisedIn: { id: string; number: number; title: string; startsAt: Date | null } | null;
   updates: number;
   openTasks: number;
   lastUpdateAt: Date | null;
@@ -42,6 +44,7 @@ export interface TopicSummary {
 
 export interface TopicUpdateEntry {
   meetingId: string;
+  meetingNumber: number;
   meetingTitle: string;
   startsAt: Date | null;
   content: NodeJson[];
@@ -52,7 +55,14 @@ export interface TopicDetails extends TopicSummary {
   spaceId: string;
   seriesTitle: string;
   timeline: TopicUpdateEntry[];
-  decision: { id: string; itemId: string; itemTitle: string; statement: NodeJson[]; text: string } | null;
+  decision: {
+    id: string;
+    itemId: string;
+    itemNumber: number;
+    itemTitle: string;
+    statement: NodeJson[];
+    text: string;
+  } | null;
 }
 
 export interface TopicFilter {
@@ -67,7 +77,9 @@ export interface TopicFilter {
 
 type TopicRow = {
   item_id: string;
+  number: string;
   series_id: string;
+  series_number: string;
   title: string;
   status: TopicStatus;
   outcome: TopicOutcome | null;
@@ -76,6 +88,7 @@ type TopicRow = {
   owner_name: string | null;
   labels: string[] | null;
   raised_in_id: string | null;
+  raised_in_number: string | null;
   raised_in_title: string | null;
   raised_in_starts_at: Date | string | null;
   updates: string;
@@ -141,10 +154,12 @@ export class TopicService {
   }
 
   #select(viewer: Principal): SQL {
-    return sql`select mt.item_id, mt.series_id, t.title, mt.status, mt.outcome, mt.one_off, t.owner_id,
+    return sql`select mt.item_id, t.number, mt.series_id,
+        (select st.number from tree_items st where st.id = mt.series_id) as series_number, t.title, mt.status, mt.outcome, mt.one_off, t.owner_id,
         ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         case when ${visibleItem(this.#authorization, viewer, sql`rt`, sql`s`)} then mt.raised_in_id end as raised_in_id,
+        case when ${visibleItem(this.#authorization, viewer, sql`rt`, sql`s`)} then rt.number end as raised_in_number,
         case when ${visibleItem(this.#authorization, viewer, sql`rt`, sql`s`)} then rt.title end as raised_in_title,
         rm.starts_at as raised_in_starts_at,
         (select count(*) from meeting_topic_updates u join meetings um on um.item_id = u.item_id
@@ -172,7 +187,9 @@ export class TopicService {
   #summary(row: TopicRow): TopicSummary {
     return {
       id: row.item_id,
+      number: Number(row.number),
       seriesId: row.series_id,
+      seriesNumber: Number(row.series_number),
       title: row.title,
       status: row.status,
       outcome: row.outcome,
@@ -182,6 +199,7 @@ export class TopicService {
       raisedIn: row.raised_in_id
         ? {
             id: row.raised_in_id,
+            number: Number(row.raised_in_number),
             title: row.raised_in_title ?? "",
             startsAt: toDate(row.raised_in_starts_at),
           }
@@ -230,12 +248,13 @@ export class TopicService {
     if (!row) throw new SpaceError("topicNotFound", "The topic does not exist");
     const timeline = await this.#database.execute<{
       item_id: string;
+      number: string;
       title: string;
       starts_at: Date | string | null;
       content: NodeJson[];
       updated_at: Date | string;
     }>(sql`
-      select u.item_id, t.title, m.starts_at, u.content, u.updated_at
+      select u.item_id, t.number, t.title, m.starts_at, u.content, u.updated_at
       from meeting_topic_updates u join meetings m on m.item_id = u.item_id join tree_items t on t.id = u.item_id
       join spaces s on s.id = t.space_id
       where u.topic_id = ${topicId} and m.state <> 'skipped'
@@ -245,11 +264,12 @@ export class TopicService {
       ? await this.#database.execute<{
           id: string;
           item_id: string;
+          number: string;
           title: string;
           statement: NodeJson[];
           text: string;
         }>(sql`
-          select d.id, d.item_id, t.title, d.statement, d.text from decisions d
+          select d.id, d.item_id, t.number, t.title, d.statement, d.text from decisions d
           join tree_items t on t.id = d.item_id join spaces s on s.id = t.space_id
           where d.id = ${row.decision_id} and d.published
             and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`)
@@ -266,6 +286,7 @@ export class TopicService {
       seriesTitle: seriesRow.title,
       timeline: timeline.rows.map((entry) => ({
         meetingId: entry.item_id,
+        meetingNumber: Number(entry.number),
         meetingTitle: entry.title,
         startsAt: toDate(entry.starts_at),
         content: entry.content,
@@ -275,6 +296,7 @@ export class TopicService {
         ? {
             id: found.id,
             itemId: found.item_id,
+            itemNumber: Number(found.number),
             itemTitle: found.title,
             statement: found.statement,
             text: found.text,

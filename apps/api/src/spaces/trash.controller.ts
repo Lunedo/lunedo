@@ -8,7 +8,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { uuid } from "../http/schemas.js";
+import { itemNumber, uuid } from "../http/schemas.js";
 import {
   confidentialAdministrator,
   parentEntriesSchema,
@@ -43,6 +43,9 @@ const deletedConfidentialSchema = z
 const restoreResultSchema = z
   .object({
     itemId: uuid("The restored item, or null for a space.").nullable(),
+    number: itemNumber(
+      "Number of the restored item in the addresses of the app, or null for a space.",
+    ).nullable(),
     parentId: uuid("Where the item went: its parent, or null for the top level.").nullable(),
     parentEntries: parentEntriesSchema,
   })
@@ -134,7 +137,12 @@ export class TrashController {
     response: {
       description: "Where it went.",
       schema: restoreResultSchema,
-      example: { itemId: exampleTrashEntry.itemId, parentId: null, parentEntries: 0 },
+      example: {
+        itemId: exampleTrashEntry.itemId,
+        number: exampleTrashEntry.number,
+        parentId: null,
+        parentEntries: 0,
+      },
     },
     errors: ["restrictedParentInTrash"],
   })
@@ -249,7 +257,7 @@ export class TrashController {
     response: {
       description: "The result.",
       schema: restoreResultSchema,
-      example: { itemId: null, parentId: null, parentEntries: 0 },
+      example: { itemId: null, number: null, parentId: null, parentEntries: 0 },
     },
   })
   async restoreDeletedSpace(@Param("entryId") entryId: string, @Req() request: FastifyRequest) {
@@ -304,7 +312,7 @@ export class TrashController {
     response: {
       description: "Where it went.",
       schema: restoreResultSchema,
-      example: { itemId: null, parentId: null, parentEntries: 0 },
+      example: { itemId: null, number: null, parentId: null, parentEntries: 0 },
     },
     errors: ["restrictedParentInTrash"],
   })
@@ -406,7 +414,7 @@ export class TrashController {
     response: {
       description: "The result.",
       schema: restoreResultSchema,
-      example: { itemId: null, parentId: null, parentEntries: 0 },
+      example: { itemId: null, number: null, parentId: null, parentEntries: 0 },
     },
     errors: ["restrictedParentInTrash"],
   })

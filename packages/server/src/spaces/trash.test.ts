@@ -74,7 +74,13 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       const child = await item(context, "Child", folder.id);
       await item(context, "Grandchild", child.id);
       const entry = await test.services.trash.deleteItem(context.editor, folder.id);
-      expect(entry).toMatchObject({ title: "Folder", descendants: 2, stage: 1, itemKind: "folder" });
+      expect(entry).toMatchObject({
+        title: "Folder",
+        number: folder.number,
+        descendants: 2,
+        stage: 1,
+        itemKind: "folder",
+      });
       expect(entry.deletedBy?.id).toBe(context.editor.type === "account" ? context.editor.id : null);
       expect(await rootTitles(context)).not.toContain("Folder");
       expect(await allowed(context.editor, "item.view", child.id)).toBe(false);
@@ -100,6 +106,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       expect(await rootTitles(context, parent.id)).toEqual(["Second"]);
       expect(await test.services.trash.restore(context.editor, entry.id)).toEqual({
         itemId: first.id,
+        number: first.number,
         parentId: parent.id,
         parentEntries: 0,
       });
@@ -109,6 +116,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       const parentEntry = await test.services.trash.deleteItem(context.editor, parent.id);
       expect(await test.services.trash.restore(context.editor, again.id)).toEqual({
         itemId: first.id,
+        number: first.number,
         parentId: null,
         parentEntries: 0,
       });
@@ -131,7 +139,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
           withParents: true,
           mayRestore: async () => true,
         }),
-      ).toEqual({ itemId: child.id, parentId: parent.id, parentEntries: 1 });
+      ).toEqual({ itemId: child.id, number: child.number, parentId: parent.id, parentEntries: 1 });
       expect(await rootTitles(context)).toContain("Parent");
       expect(await rootTitles(context, parent.id)).toEqual(["Child"]);
       expect(await test.services.trash.listSpace(context.editor, context.space.id)).toEqual([]);
@@ -145,6 +153,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       await test.services.trash.deleteItem(context.editor, parent.id);
       expect(await test.services.trash.restore(context.editor, childEntry.id)).toEqual({
         itemId: child.id,
+        number: child.number,
         parentId: null,
         parentEntries: 0,
       });
@@ -163,7 +172,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
           withParents: true,
           mayRestore: async () => false,
         }),
-      ).toEqual({ itemId: child.id, parentId: null, parentEntries: 0 });
+      ).toEqual({ itemId: child.id, number: child.number, parentId: null, parentEntries: 0 });
     });
 
     it("shows links to pages in the trash as in trash to readers who could open them", async () => {
@@ -183,6 +192,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       expect(forReader.pages[target.id]).toMatchObject({
         title: "Printer list",
         inTrash: true,
+        number: null,
         accessible: false,
       });
       const outsider = accountPrincipal(await member(context.org.id));

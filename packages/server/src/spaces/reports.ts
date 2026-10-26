@@ -18,17 +18,16 @@ import {
   type RelatedLabel,
   type ReportedDecision,
   type ReportedPage,
-  slugify,
 } from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
+import { itemAddress } from "./addresses.js";
 import {
   blocksOfType,
   type PageDocumentService,
   type PageReferences,
-  pagePath,
   relatedLabelsKey,
   reportKey,
 } from "./documents.js";
@@ -95,12 +94,6 @@ export interface LabeledItem {
   excerpt: string | null;
   parents: string[];
   contentUpdatedAt: Date;
-}
-
-export function itemPath(kind: string, spaceKey: string, itemId: string, title: string): string {
-  return kind === "blogPost"
-    ? `/spaces/${encodeURIComponent(spaceKey)}/blog/${itemId}/${slugify(title)}`
-    : pagePath(spaceKey, itemId, title);
 }
 
 export function labelPath(spaceKey: string, label: string): string {
@@ -279,7 +272,7 @@ export class ReportService {
     const pageSize = Math.min(Math.max(request.pageSize, 1), MAX_PROPERTIES_REPORT_PAGE_SIZE);
     const offset = Math.max(page.offset ?? 0, 0);
     const matching = sql`
-      select t.id, t.title, t.kind, t.space_id, s.key, t.creator_id from tree_items t
+      select t.id, t.number, t.title, t.kind, t.space_id, s.key, t.creator_id from tree_items t
       join spaces s on s.id = t.space_id
       where t.kind in ('page', 'blogPost') and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         ${spacesCondition(request.spaceIds)} ${labelCondition(request.labels)}
@@ -293,6 +286,7 @@ export class ReportService {
     const direction = request.reverse ? sql`desc` : sql`asc`;
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       kind: string;
       space_id: string;
@@ -302,7 +296,7 @@ export class ReportService {
       total: string | number;
     }>(sql`
       with matching as (${matching})
-      select m.id, m.title, m.kind::text as kind, m.space_id, m.key, m.creator_id,
+      select m.id, m.number, m.title, m.kind::text as kind, m.space_id, m.key, m.creator_id,
         ${this.#people.visibleName(viewer, sql`a`)} as creator, count(*) over () as total
       from matching m left join accounts a on a.id = m.creator_id
       order by ${sortValue} ${direction} nulls last, lower(m.title) ${direction}, m.id
@@ -345,7 +339,7 @@ export class ReportService {
         page: {
           id: row.id,
           title: row.title,
-          path: itemPath(row.kind, row.key, row.id, row.title),
+          path: itemAddress(row.kind, row.key, row.number, row.title) ?? "",
           spaceId: row.space_id,
         },
         creator: row.creator_id && row.creator ? { id: row.creator_id, name: row.creator } : null,
@@ -376,6 +370,7 @@ export class ReportService {
     const ascending = request.sort === "title" ? !request.reverse : request.reverse;
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       kind: LabeledContentKind;
       key: string;
@@ -385,7 +380,7 @@ export class ReportService {
       parents: string[] | null;
       content_updated_at: Date | string;
     }>(sql`
-      select t.id, t.title, t.kind::text as kind, s.key, s.id as space_id, t.content_updated_at,
+      select t.id, t.number, t.title, t.kind::text as kind, s.key, s.id as space_id, t.content_updated_at,
         ${visibleParents(this.#authorization, viewer, sql`t`)} as parents,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name,
         ${request.excerpts ? sql`coalesce(e.text, nullif(b.excerpt, ''))` : sql`null::text`} as excerpt
@@ -403,7 +398,7 @@ export class ReportService {
       id: row.id,
       title: row.title,
       kind: row.kind,
-      path: itemPath(row.kind, row.key, row.id, row.title),
+      path: itemAddress(row.kind, row.key, row.number, row.title) ?? "",
       space: { id: row.space_id, name: row.space_name },
       labels: labels.get(row.id) ?? [],
       excerpt: row.excerpt,
@@ -451,6 +446,7 @@ export class ReportService {
     const ascending = request.sort === "title" ? !request.reverse : request.reverse;
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       space_id: string;
       key: string;
@@ -459,7 +455,7 @@ export class ReportService {
       created_at: Date | string;
       content_updated_at: Date | string;
     }>(sql`
-      select t.id, t.title, t.space_id, s.key, t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as author,
+      select t.id, t.number, t.title, t.space_id, s.key, t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as author,
         t.created_at, t.content_updated_at
       from tree_items t join spaces s on s.id = t.space_id left join accounts a on a.id = t.creator_id
       where t.kind = 'page' and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -469,7 +465,7 @@ export class ReportService {
     return result.rows.map((row) => ({
       id: row.id,
       title: row.title,
-      path: pagePath(row.key, row.id, row.title),
+      path: itemAddress("page", row.key, row.number, row.title) ?? "",
       spaceId: row.space_id,
       author: row.creator_id && row.author ? { id: row.creator_id, name: row.author } : null,
       createdAt: toDate(row.created_at),
@@ -493,12 +489,14 @@ export class ReportService {
       id: string;
       text: string;
       item_id: string;
+      number: string;
+      kind: string;
       title: string;
       key: string;
       created_at: Date | string;
       cursor: string;
     }>(sql`
-      select d.id, d.text, t.id as item_id, t.title, s.key, t.created_at, t.created_at::text as cursor
+      select d.id, d.text, t.id as item_id, t.number, t.kind::text as kind, t.title, s.key, t.created_at, t.created_at::text as cursor
       from decisions d join tree_items t on t.id = d.item_id join spaces s on s.id = t.space_id
       where d.published and d.text <> '' and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         ${archiveCondition(request.spaceId)} ${labelCondition(request.labels)}
@@ -512,7 +510,11 @@ export class ReportService {
       items: rows.map((row) => ({
         id: row.id,
         text: row.text,
-        page: { id: row.item_id, title: row.title, path: pagePath(row.key, row.item_id, row.title) },
+        page: {
+          id: row.item_id,
+          title: row.title,
+          path: itemAddress(row.kind, row.key, row.number, row.title) ?? "",
+        },
         date: toDate(row.created_at),
       })),
       next: result.rows.length > limit && last ? [last.cursor, last.id] : null,

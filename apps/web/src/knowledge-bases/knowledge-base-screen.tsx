@@ -9,7 +9,7 @@ import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { contentLanguageLabel } from "../search/content-language.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { PageBar } from "../spaces/page-bar.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
@@ -57,7 +57,7 @@ function ArticleGroup({
       grow: true,
       cell: (article) => {
         const Icon = articleTypeIcon(article.type);
-        const href = itemHref({ id: article.id, kind: "page", title: article.title, link: null }, space.key);
+        const href = contentHref({ kind: "page", number: article.number, title: article.title }, space.key);
         return (
           <span className="flex min-w-0 items-center gap-2">
             <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
@@ -188,8 +188,8 @@ function ArticleGroup({
             </p>
           }
           onRowClick={(article) => {
-            const href = itemHref(
-              { id: article.id, kind: "page", title: article.title, link: null },
+            const href = contentHref(
+              { kind: "page", number: article.number, title: article.title },
               space.key,
             );
             if (href) void navigate({ to: href });

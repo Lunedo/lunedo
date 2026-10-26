@@ -79,7 +79,11 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
       parentId: null,
       mode: "publish",
     });
-    return { spaceId: created.json().id as string, pageId: item.json().id as string };
+    return {
+      spaceId: created.json().id as string,
+      pageId: item.json().id as string,
+      pageNumber: item.json().number as number,
+    };
   }
 
   async function publish(pageId: string, content: unknown[]) {
@@ -373,7 +377,7 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
       previewId,
       previewVersion: 1,
     });
-    expect(first.json().path).toContain(`/pages/${source.pageId}/`);
+    expect(first.json().path).toContain(`/pages/${source.pageNumber}/`);
 
     await store("Firewall");
     expect((await both.client.get(path)).json()).toMatchObject({ previewId, previewVersion: 2 });

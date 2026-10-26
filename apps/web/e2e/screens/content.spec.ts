@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
+import { itemPath, pagePath, slugify } from "../support/addresses.js";
 import { BASE_URL, MAILPIT_URL, OWNER_STORAGE } from "../support/environment.js";
 import { callApi, linkFrom, waitForMail } from "../support/helpers.js";
 import { makeArticleDue } from "../support/jobs.js";
@@ -36,16 +37,6 @@ test.use({ storageState: OWNER_STORAGE });
 test.setTimeout(600_000);
 
 const HEADERS = { "X-Lunedo-Request": "1" };
-
-function slug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .split(/\s+/)
-    .join("-");
-}
 
 async function invite(owner: Page, browser: Browser, organizationId: string, name: string): Promise<Person> {
   const email = `${name.toLowerCase().split(" ").join(".")}@nordwind.test`;
@@ -110,7 +101,7 @@ async function createItem(
     kind: "page",
     parentId: null,
     ...body,
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
 }
 
 async function writePage(page: Page, id: string, document: unknown, publish = false) {
@@ -322,11 +313,11 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
     ),
     true,
   );
-  const titles: Record<string, string> = {};
+  const titles: Record<string, { id: string; number: number; title: string }> = {};
   const createTree = async (nodes: typeof TREE, parentId: string | null) => {
     for (const node of nodes) {
       const created = await createItem(page, it.id, { title: node.title, parentId, mode: "live" });
-      titles[node.title] = created.id;
+      titles[node.title] = created;
       await writePage(page, created.id, doc(p(node.text)));
       if (node.children) await createTree(node.children, created.id);
     }
@@ -336,10 +327,10 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   const richTitle = "Netzwerkplan Standort Wien";
   const rich = await createItem(page, it.id, {
     title: richTitle,
-    parentId: titles.Netzwerk ?? null,
+    parentId: titles.Netzwerk?.id ?? null,
     mode: "publish",
   });
-  const richPath = `/spaces/IT/pages/${rich.id}/${slug(richTitle)}`;
+  const richPath = pagePath("IT", rich);
   const firewall = await createItem(page, it.id, {
     title: "Firewall-Regeln",
     parentId: rich.id,
@@ -428,7 +419,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   }
 
   const board = await createItem(page, it.id, { title: "Umzugsplanung 3. Stock", kind: "whiteboard" });
-  const boardPath = `/spaces/IT/whiteboards/${board.id}/${slug("Umzugsplanung 3. Stock")}`;
+  const boardPath = itemPath("IT", "whiteboards", board);
   await page.goto(boardPath);
   await pasteWhiteboard(page);
 
@@ -462,7 +453,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
     startTime: "09:30",
     timeZone: "Europe/Vienna",
     durationMinutes: 45,
-  })) as { id: string; upcoming: { id: string } };
+  })) as { id: string; number: number; title: string; upcoming: { id: string } };
   for (const title of [
     "Umstellung auf die neue Firewall",
     "Urlaubsvertretung im Dezember",
@@ -557,7 +548,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   await callApi(page, "PUT", `/api/v1/spaces/${knowledgeBase.id}/knowledge-base/reviews`, {
     intervalMonths: 3,
   });
-  const articles: { id: string; title: string }[] = [];
+  const articles: { id: string; number: number; title: string }[] = [];
   let firstCategory = "";
   let englishAddress = "";
   for (const category of KNOWLEDGE_BASE) {
@@ -566,7 +557,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
       kind: "folder",
       description: category.description,
     });
-    firstCategory ||= folder.id;
+    firstCategory ||= `topics/${folder.number}-${slugify(folder.title)}`;
     await callApi(page, "PUT", `/api/v1/categories/${folder.id}`, { icon: category.icon });
     for (const article of category.articles) {
       const item = (await callApi(page, "POST", `/api/v1/spaces/${knowledgeBase.id}/items`, {
@@ -574,14 +565,14 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
         title: article.title,
         parentId: folder.id,
         articleType: article.type,
-      })) as { id: string };
+      })) as { id: string; number: number; title: string };
       await writePage(
         page,
         item.id,
         article.type === "howTo" ? howTo(article.lead) : troubleshooting(article.lead),
         true,
       );
-      articles.push({ id: item.id, title: article.title });
+      articles.push(item);
       if (article.english) {
         const translation = (await callApi(page, "POST", `/api/v1/articles/${item.id}/translations`, {
           language: "en",
@@ -604,14 +595,17 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   ).json()) as {
     path: string;
   };
-  const vpn = articles[0] ?? { id: "", title: "" };
+  const vpn = articles[0];
+  if (!vpn) throw new Error("The knowledge base has no article");
   const vpnArticle = (await (await page.request.get(`/api/v1/articles/${vpn.id}`)).json()) as {
     number: number;
     slug: string;
   };
 
   const lenaPage = await lena.newPage();
-  for (const target of [richPath, `/spaces/IT/pages/${titles["VPN-Zugang"]}`, `/spaces/INTERN`]) {
+  const vpnAccess = titles["VPN-Zugang"];
+  if (!vpnAccess) throw new Error("The page tree has no page VPN-Zugang");
+  for (const target of [richPath, pagePath("IT", vpnAccess), `/spaces/INTERN`]) {
     await lenaPage.goto(target);
     await expect(lenaPage.locator("#main h1").first()).toBeVisible();
   }
@@ -632,24 +626,25 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
     organizationId,
     people,
     it: { id: it.id, key: "IT", overviewPath: "/spaces/IT" },
-    rich: { id: rich.id, path: richPath },
-    whiteboard: { id: board.id, path: boardPath },
+    rich: { id: rich.id, number: rich.number, path: richPath },
+    whiteboard: { id: board.id, number: board.number, path: boardPath },
     templateName,
-    seriesId: series.id,
+    seriesPath: itemPath("IT", "meetings", series),
     general: { key: "INTERN", homePath: "/spaces/INTERN" },
     empty: { key: empty.key },
     personal: {
       key: "HR",
-      salary: { id: salary.id, path: `/spaces/HR/pages/${salary.id}/${slug("Gehaltsbänder 2027")}` },
+      salary: { id: salary.id, number: salary.number, path: pagePath("HR", salary) },
     },
     knowledgeBase: {
       id: knowledgeBase.id,
       key: "HILFE",
       portal: `/help/${portal.path}`,
-      categoryId: firstCategory,
+      categoryAddress: firstCategory,
       article: {
         id: vpn.id,
-        path: `/spaces/HILFE/pages/${vpn.id}/${slug(vpn.title)}`,
+        number: vpn.number,
+        path: pagePath("HILFE", vpn),
         address: `${vpnArticle.number}-${vpnArticle.slug}`,
       },
       englishAddress,

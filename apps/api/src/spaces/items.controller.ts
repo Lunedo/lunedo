@@ -9,7 +9,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { itemNumberParam, uuid } from "../http/schemas.js";
+import { itemNumber, itemNumberParam, uuid } from "../http/schemas.js";
 import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
   archivedItemSchema,
@@ -153,6 +153,7 @@ const pagesWithLabelSchema = z
     z
       .object({
         itemId: uuid("ID of the page."),
+        number: itemNumber("Number of the page in the addresses of the app."),
         title: z.string().describe("Title of the page."),
         parents: z
           .array(z.string().describe("Title of a parent."))
@@ -611,6 +612,7 @@ export class ItemsController {
       example: [
         {
           itemId: exampleItem.id,
+          number: exampleItem.number,
           title: "Onboarding new staff",
           spaceId: exampleItem.spaceId,
           spaceKey: "ITOPS",
@@ -760,6 +762,7 @@ export class ItemsController {
       example: [
         {
           itemId: exampleItem.id,
+          number: exampleItem.number,
           title: exampleItem.title,
           parents: ["Network"],
           contentUpdatedAt: "2026-10-05T08:10:00.000Z",
@@ -855,6 +858,7 @@ export class ItemsController {
       example: [
         {
           id: exampleItem.id,
+          number: exampleItem.number,
           kind: "page",
           title: "Printer list 2024",
           hasChildren: false,

@@ -517,7 +517,7 @@ describe.skipIf(!baseUrl)("meeting agenda", () => {
     expect(overview.columns).toEqual([["links", "topics"], ["attendance"]]);
     expect(overview.hidden).toEqual(["tasks", "decisions", "meetings"]);
     expect(overview.links).toEqual([
-      { id: page.id, title: "Network plan", kind: "page", spaceKey: context.space.key },
+      { id: page.id, number: page.number, title: "Network plan", kind: "page", spaceKey: context.space.key },
     ]);
     await test.services.pageAccess.change(context.lead, page.id, [{ action: "restrict", kind: "view" }]);
     expect((await test.services.meetings.details(context.reader, context.seriesId)).overview.links).toEqual(

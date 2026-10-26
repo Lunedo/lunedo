@@ -445,7 +445,7 @@ describe.skipIf(!baseUrl)("Confluence imports: people, comments, history and per
         .entries(principal, result.id, { limit: 100 })
         .catch(() => null);
       for (const entry of report?.entries ?? [])
-        if (entry.item?.id === secret) expect(entry.item.title).toBeNull();
+        if (entry.item?.id === secret) expect(entry.item).toMatchObject({ number: null, title: null });
       const permissions = await test.services.imports.resolution
         .permissions(principal, result.id, { limit: 100 })
         .catch(() => null);

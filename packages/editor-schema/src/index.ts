@@ -76,6 +76,7 @@ export type {
   SourceElement,
 } from "./importing.js";
 export { defaultImportTexts, type ImportText, importTexts } from "./importing.js";
+export { type InternalItemLink, internalItemLink } from "./internal-links.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";
 export {

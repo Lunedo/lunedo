@@ -26,6 +26,7 @@ export interface PrivateNotes {
 
 export interface PrivateNotesEntry {
   meetingId: string;
+  meetingNumber: number;
   meetingTitle: string;
   startsAt: Date | null;
   document: DocumentJson;
@@ -129,13 +130,14 @@ export class PrivateNotesService {
     const accountId = authorOf(actor);
     const result = await this.#database.execute<{
       meeting_id: string;
+      number: string;
       title: string;
       starts_at: Date | string | null;
       document: unknown;
       schema_version: number;
       updated_at: Date | string;
     }>(sql`
-      select n.meeting_id, t.title, m.starts_at, n.document, n.schema_version, n.updated_at
+      select n.meeting_id, t.number, t.title, m.starts_at, n.document, n.schema_version, n.updated_at
       from meeting_private_notes n join meetings m on m.item_id = n.meeting_id
       join tree_items t on t.id = n.meeting_id join spaces s on s.id = t.space_id
       where n.account_id = ${accountId} and m.series_id = ${seriesId}
@@ -144,6 +146,7 @@ export class PrivateNotesService {
       limit 500`);
     return result.rows.map((row) => ({
       meetingId: row.meeting_id,
+      meetingNumber: Number(row.number),
       meetingTitle: row.title,
       startsAt: row.starts_at === null ? null : new Date(row.starts_at),
       document: current(row.document, row.schema_version),

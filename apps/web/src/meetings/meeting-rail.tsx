@@ -126,8 +126,8 @@ export function MeetingRail({ meetingId, spaceKey }: { meetingId: string; spaceK
             )}
           </p>
           <Link
-            to="/spaces/$spaceKey/meetings/$seriesId"
-            params={{ spaceKey, seriesId }}
+            to="/spaces/$spaceKey/meetings/$number/{-$slug}"
+            params={{ spaceKey, number: agenda.data?.seriesNumber ?? 0 }}
             search={{ tab: "tasks" }}
             className="self-start text-sm text-accent hover:underline focus-visible:focus-ring"
           >

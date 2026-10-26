@@ -38,6 +38,7 @@ import { useDeleteItem } from "../../spaces/content-actions.js";
 import { draftQuery } from "../../spaces/content-queries.js";
 import { InlineTitle } from "../../spaces/inline-title.js";
 import { itemSlug } from "../../spaces/item-paths.js";
+import { useNumberedItem } from "../../spaces/numbered-item.js";
 import { PageBar } from "../../spaces/page-bar.js";
 import { PageLabels } from "../../spaces/page-labels.js";
 import { DraftBanner, DraftStatusLine, PublishButton } from "../../spaces/page-publishing.js";
@@ -45,7 +46,7 @@ import { PageContent, useLostEditPermission } from "../../spaces/page-screen.js"
 import { Redirect } from "../../spaces/redirect.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
-import { blogPostPath, type ItemDetails, itemQuery, spaceKeys } from "../../spaces/space-queries.js";
+import { blogPostPath, type ItemDetails, spaceKeys } from "../../spaces/space-queries.js";
 import { useContentCollaboration } from "../content-collaboration.js";
 import { type BlogPost, blogPostQuery, collaborationKeys } from "../queries.js";
 import { PageReactions } from "../reaction-bar.js";
@@ -54,19 +55,20 @@ import { PostBadges, PostMeta } from "./blog-list.js";
 import { FollowBlogButton } from "./follow-blog.js";
 import { HeldNotice } from "./held-notice.js";
 
-const route = getRouteApi("/app/spaces/$spaceKey/blog/$itemId/{-$slug}");
+const route = getRouteApi("/app/spaces/$spaceKey/blog/$number/{-$slug}");
 
 const EXCERPT_MAX = 500;
 
 export function BlogPostScreen() {
   const { t } = useTranslation();
-  const { itemId, slug } = route.useParams();
+  const { number, slug } = route.useParams();
   const search = route.useSearch();
   const { space } = useSpace();
-  const item = useQuery(itemQuery(itemId));
-  const post = useQuery(blogPostQuery(itemId));
+  const item = useNumberedItem(number);
+  const itemId = item.data?.id;
+  const post = useQuery({ ...blogPostQuery(itemId ?? ""), enabled: itemId !== undefined });
   useDocumentTitle(item.data?.title ?? "");
-  if (item.isPending || post.isPending) {
+  if (!item.isError && (item.isPending || post.isPending)) {
     return (
       <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 md:px-8">
         <Skeleton className="h-8 w-2/3" />
@@ -92,16 +94,16 @@ export function BlogPostScreen() {
   if (
     item.data.kind !== "blogPost" ||
     item.data.spaceKey !== space.key ||
-    slug !== itemSlug(item.data.title)
+    (slug ?? "") !== itemSlug(item.data.title)
   ) {
     return (
       <Redirect
-        to={blogPostPath(item.data.spaceKey, item.data.id, itemSlug(item.data.title))}
+        to={blogPostPath(item.data.spaceKey, item.data.number, itemSlug(item.data.title))}
         search={search}
       />
     );
   }
-  return <BlogPostView key={item.data.id} item={item.data} post={post.data} />;
+  return post.data ? <BlogPostView key={item.data.id} item={item.data} post={post.data} /> : null;
 }
 
 function ScheduleDialog({
@@ -288,7 +290,7 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
 
   const setEditing = (next: boolean) =>
     void navigate({
-      to: blogPostPath(space.key, item.id, itemSlug(item.title)),
+      to: blogPostPath(space.key, item.number, itemSlug(item.title)),
       search: next ? { edit: true } : {},
       replace: true,
     });
@@ -335,8 +337,8 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
 
   const openHistory = () =>
     void navigate({
-      to: "/spaces/$spaceKey/pages/$itemId/history",
-      params: { spaceKey: space.key, itemId: item.id },
+      to: "/spaces/$spaceKey/pages/$number/history",
+      params: { spaceKey: space.key, number: item.number },
     });
 
   const menuItems: MenuItem[] = [{ label: t("versions.history"), icon: History, onSelect: openHistory }];

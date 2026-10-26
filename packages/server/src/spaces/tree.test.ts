@@ -402,10 +402,11 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
         (await test.services.documents.backlinks(actor, target.id)).map((link) => link.title).sort(),
       ).toEqual(["Hidden source", "Open source"]);
       expect(
-        (await test.services.documents.backlinks(accountPrincipal(viewer), target.id)).map(
-          (link) => link.title,
-        ),
-      ).toEqual(["Open source"]);
+        (await test.services.documents.backlinks(accountPrincipal(viewer), target.id)).map((link) => [
+          link.title,
+          link.number,
+        ]),
+      ).toEqual([["Open source", openSource.number]]);
       const references = await test.services.documents.references(
         accountPrincipal(viewer),
         documentWith({
@@ -417,6 +418,7 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
         title: "",
         spaceKey: "",
         kind: "page",
+        number: null,
         accessible: false,
         inTrash: false,
       });
@@ -492,10 +494,11 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
         await test.services.documents.labelSuggestions(accountPrincipal(other), otherSpace.id, "rel"),
       ).toEqual([]);
       expect(
-        (await test.services.documents.pagesWithLabel(actor, created.id, "Release-Notes")).map(
-          (item) => item.title,
-        ),
-      ).toEqual(["Labelled"]);
+        (await test.services.documents.pagesWithLabel(actor, created.id, "Release-Notes")).map((item) => [
+          item.title,
+          item.number,
+        ]),
+      ).toEqual([["Labelled", target.number]]);
       expect(await test.services.documents.removeLabel(target.id, "release-notes")).toEqual([]);
       expect(editor).toBeTruthy();
     });

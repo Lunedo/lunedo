@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { api } from "../../api/client.js";
 import type { paths } from "../../api/generated/schema.js";
 import { request } from "../../api/request.js";
-import { itemHref } from "../item-paths.js";
+import { contentHref } from "../item-paths.js";
 
 export const shortcutKeys = {
   list: (spaceId: string) => ["spaces", spaceId, "shortcuts"] as const,
@@ -34,8 +34,8 @@ export function shortcutHref(
 ): { href: string; external: boolean } | null {
   if (shortcut.url) return { href: shortcut.url, external: true };
   if (!shortcut.item) return null;
-  const href = itemHref(
-    { id: shortcut.item.id, kind: shortcut.item.kind as never, title: shortcut.item.title, link: null },
+  const href = contentHref(
+    { kind: shortcut.item.kind as never, number: shortcut.item.number, title: shortcut.item.title },
     shortcut.item.spaceKey,
   );
   return href ? { href, external: false } : null;

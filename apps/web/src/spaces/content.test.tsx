@@ -43,14 +43,16 @@ const space = (role: Role) => ({
   ownerId: null,
   ownerName: null,
   overviewItemId: OVERVIEW,
+  overviewItemNumber: 1001,
   archived: false,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
   role,
 });
 
-const page = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
+const page = (id: string, number: number, title: string, extra: Record<string, unknown> = {}) => ({
   id,
+  number,
   spaceId: SPACE_ID,
   parentId: null,
   kind: "page",
@@ -133,12 +135,15 @@ function routes(
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
     [`GET /api/v1/spaces/${SPACE_ID}/items`]: () => ({
-      body: { items: [page(OVERVIEW, "IT Operations"), page(VPN, "VPN access")], nextCursor: null },
+      body: {
+        items: [page(OVERVIEW, 1001, "IT Operations"), page(VPN, 1002, "VPN access")],
+        nextCursor: null,
+      },
     }),
     [`GET /api/v1/spaces/${SPACE_ID}/archive`]: () => ({ body: [] }),
     [`GET /api/v1/items/${VPN}`]: () => ({
       body: {
-        ...page(VPN, "VPN access"),
+        ...page(VPN, 1002, "VPN access"),
         spaceKey: "ITOPS",
         spaceName: "IT Operations",
         spaceContentLanguage: "en",
@@ -147,7 +152,7 @@ function routes(
     }),
     [`GET /api/v1/items/${OVERVIEW}`]: () => ({
       body: {
-        ...page(OVERVIEW, "IT Operations"),
+        ...page(OVERVIEW, 1001, "IT Operations"),
         spaceKey: "ITOPS",
         spaceName: "IT Operations",
         ancestors: [],
@@ -212,13 +217,13 @@ describe("content language", () => {
       routes("editor", {
         [`PUT /api/v1/pages/${VPN}/content-language`]: (request) => ({
           body: {
-            ...page(VPN, "VPN access"),
+            ...page(VPN, 1002, "VPN access"),
             contentLanguage: (request.body as { language: string }).language,
           },
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByText("Published text");
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Content language" }));
@@ -254,7 +259,7 @@ describe("page bar", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByText("Published text")).toBeTruthy();
     const info = await screen.findByRole("button", {
       name: /^.+ Edited by Anna Berger on .+, .+ · Click to open the versions$/,
@@ -262,7 +267,7 @@ describe("page bar", () => {
     expect(screen.queryByText(/Published .* · version 7/)).toBeNull();
     expect(screen.getByRole("navigation", { name: "Path" }).textContent).toContain("IT Operations");
     await userEvent.click(info);
-    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${VPN}/history`));
+    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/1002/history`));
   });
 });
 
@@ -277,6 +282,7 @@ describe("page actions", () => {
               ? [
                   {
                     id: VPN,
+                    number: 1002,
                     kind: "page",
                     title: "VPN access",
                     spaceKey: "ITOPS",
@@ -296,7 +302,7 @@ describe("page actions", () => {
         [`PUT /api/v1/items/${VPN}/watch`]: () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByRole("radio", { name: "Draft · 3 changes" });
     expect(screen.queryByRole("button", { name: /^Star VPN access/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Watch/ })).toBeNull();
@@ -336,7 +342,7 @@ describe("page actions", () => {
 describe("publish mode", () => {
   it("shows readers the published version without any draft", async () => {
     const { requests } = mockApi(routes("reader"));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByText("Published text")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByText(/unpublished change/)).toBeNull();
@@ -357,7 +363,7 @@ describe("publish mode", () => {
         [`POST /api/v1/pages/${VPN}/discarded-drafts/${DRAFT_ID}/restore`]: () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByText("Published text")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
     await userEvent.click(await screen.findByRole("radio", { name: "Draft · 3 changes" }));
@@ -384,7 +390,7 @@ describe("publish mode", () => {
     const { requests } = mockApi(
       routes("editor", { [`PUT /api/v1/pages/${VPN}/mode`]: () => ({ status: 204 }) }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByRole("radio", { name: "Draft · 3 changes" });
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Switch to live mode" }));
@@ -428,21 +434,21 @@ describe("version history", () => {
             copiedVersion({
               itemId: source,
               title: "Remote access",
-              path: `/spaces/HR/pages/${source}/remote-access`,
+              path: "/spaces/HR/pages/1009/remote-access",
             }),
           ],
         }),
         [`GET /api/v1/pages/${VPN}/discarded-drafts`]: () => ({ body: [] }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/history`);
+    await renderAt(`/spaces/ITOPS/pages/1002/history`);
     expect(await screen.findByText("Copied from Remote access")).toBeTruthy();
     const link = await screen.findByRole(
       "link",
       { name: "Open the original Remote access" },
       { timeout: 8000 },
     );
-    expect(link.getAttribute("href")).toContain(`/spaces/HR/pages/${source}/`);
+    expect(link.getAttribute("href")).toBe("/spaces/HR/pages/1009/remote-access");
   });
 
   it("shows neither title nor link of a source the person cannot read", async () => {
@@ -454,7 +460,7 @@ describe("version history", () => {
         [`GET /api/v1/pages/${VPN}/discarded-drafts`]: () => ({ body: [] }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/history`);
+    await renderAt(`/spaces/ITOPS/pages/1002/history`);
     expect(await screen.findByText("Copied from another page")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Open the original/ })).toBeNull();
   });
@@ -514,7 +520,7 @@ describe("version history", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/history?from=6&to=7`);
+    await renderAt(`/spaces/ITOPS/pages/1002/history?from=6&to=7`);
     const changes = await screen.findByRole("region", { name: "Changes" });
     expect(changes.querySelector("ins.ld-diff-added")?.textContent).toContain("company");
     expect(changes.querySelector("del.ld-diff-removed")?.textContent).toContain("intranet");
@@ -526,7 +532,7 @@ describe("version history", () => {
     expect(screen.getAllByRole("button", { name: "Restore this version" })).toHaveLength(1);
     expect(screen.getByText("Restoring creates a new version. Nothing is lost.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Back to the page" }).getAttribute("href")).toBe(
-      `/spaces/ITOPS/pages/${VPN}/vpn-access`,
+      `/spaces/ITOPS/pages/1002/vpn-access`,
     );
     await userEvent.click(await screen.findByRole("button", { name: "Restore this version" }));
     const dialog = await screen.findByRole("dialog");
@@ -584,7 +590,7 @@ describe("the first version", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/history?to=1`);
+    await renderAt(`/spaces/ITOPS/pages/1002/history?to=1`);
     expect(await screen.findByText("This is the first version")).toBeTruthy();
     expect(await screen.findByText("The very first text")).toBeTruthy();
     expect(screen.queryByText("No differences")).toBeNull();
@@ -748,8 +754,8 @@ describe("trash", () => {
             items: request.path.includes("parentId=")
               ? []
               : [
-                  page(VPN, "VPN access"),
-                  { ...page("01929b1e-0000-7000-8000-0000000000f2", "Team board"), kind: "database" },
+                  page(VPN, 1002, "VPN access"),
+                  { ...page("01929b1e-0000-7000-8000-0000000000f2", 1005, "Team board"), kind: "database" },
                 ],
             nextCursor: null,
           },
@@ -799,10 +805,13 @@ describe("template gallery", () => {
     const { requests } = mockApi(
       routes("editor", {
         [`GET /api/v1/spaces/${SPACE_ID}/template-gallery`]: () => ({ body: [template] }),
-        [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({ status: 201, body: page(VPN, "Project Atlas") }),
+        [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+          status: 201,
+          body: page(VPN, 1002, "Project Atlas"),
+        }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    await renderAt(`/spaces/ITOPS/pages/1001/it-operations`);
     await userEvent.click(await screen.findByRole("button", { name: "Create in this space" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "New page" }));
     const dialog = await screen.findByRole("dialog", { name: "Create in IT Operations" });
@@ -832,10 +841,13 @@ describe("template gallery", () => {
     const { requests } = mockApi(
       routes("editor", {
         [`GET /api/v1/spaces/${SPACE_ID}/template-gallery`]: () => ({ body: [] }),
-        [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({ status: 201, body: page(VPN, "Printer setup") }),
+        [`POST /api/v1/spaces/${SPACE_ID}/items`]: () => ({
+          status: 201,
+          body: page(VPN, 1002, "Printer setup"),
+        }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    await renderAt(`/spaces/ITOPS/pages/1001/it-operations`);
     await screen.findByText("Welcome");
     await userEvent.keyboard("/");
     const search = await screen.findByRole("dialog", { name: "Search" });
@@ -854,7 +866,7 @@ describe("template gallery", () => {
 
   it("offers no page from the quick search to readers", async () => {
     mockApi(routes("reader"));
-    await renderAt(`/spaces/ITOPS/pages/${OVERVIEW}/it-operations`);
+    await renderAt(`/spaces/ITOPS/pages/1001/it-operations`);
     await screen.findByText("Welcome");
     await userEvent.keyboard("/");
     const search = await screen.findByRole("dialog", { name: "Search" });
@@ -887,7 +899,7 @@ describe("sharing and access", () => {
       routes("editor", {
         [`GET /api/v1/items/${VPN}`]: () => ({
           body: {
-            ...page(VPN, "VPN access", { editRestricted: true }),
+            ...page(VPN, 1002, "VPN access", { editRestricted: true }),
             spaceKey: "ITOPS",
             spaceName: "IT Operations",
             spaceAccess: true,
@@ -897,7 +909,7 @@ describe("sharing and access", () => {
         [`GET /api/v1/pages/${VPN}/access/mine`]: mine("reader", "editRestricted"),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(
       await screen.findByText(/Only people on the access list with "Can edit" can edit this page/),
     ).toBeTruthy();
@@ -907,7 +919,7 @@ describe("sharing and access", () => {
 
   it("shows a Share button to people who may share", async () => {
     mockApi(routes("editor", { [`GET /api/v1/pages/${VPN}/access/mine`]: mine("editor") }));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByRole("button", { name: "Share" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
@@ -918,7 +930,7 @@ describe("sharing and access", () => {
         [`GET /api/v1/pages/${VPN}/access/mine`]: (() => new Promise(() => undefined)) as never,
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByRole("button", { name: "Share" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
@@ -928,7 +940,7 @@ describe("sharing and access", () => {
       routes("editor", {
         [`GET /api/v1/items/${VPN}`]: () => ({
           body: {
-            ...page(VPN, "VPN access", { editRestricted: true }),
+            ...page(VPN, 1002, "VPN access", { editRestricted: true }),
             spaceKey: "ITOPS",
             spaceName: "IT Operations",
             spaceAccess: true,
@@ -938,14 +950,14 @@ describe("sharing and access", () => {
         [`GET /api/v1/pages/${VPN}/access/mine`]: (() => new Promise(() => undefined)) as never,
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByRole("heading", { name: "VPN access", level: 1 });
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
   });
 
   it("opens a page shared with someone outside the space without the space", async () => {
     const shareOnly = {
-      ...page(VPN, "VPN access", { mode: "live" }),
+      ...page(VPN, 1002, "VPN access", { mode: "live" }),
       spaceKey: "",
       spaceName: "",
       spaceAccess: false,
@@ -961,6 +973,7 @@ describe("sharing and access", () => {
         body: [
           {
             itemId: VPN,
+            number: 1002,
             title: "VPN access",
             kind: "page",
             role: "reader",
@@ -973,10 +986,10 @@ describe("sharing and access", () => {
         ],
       }),
     });
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByText("Shared with you by Lukas Hofer")).toBeTruthy();
     expect(await screen.findByText("Published text")).toBeTruthy();
-    expect(window.location.pathname).toBe(`/shared/${VPN}/vpn-access`);
+    expect(window.location.pathname).toBe(`/shared/1002/vpn-access`);
     expect(await screen.findByRole("button", { name: /Comments/ })).toBeTruthy();
     expect(screen.queryByText("IT Operations")).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
@@ -987,7 +1000,7 @@ describe("sharing and access", () => {
       ...routes("reader"),
       "GET /api/v1/space-keys/ITOPS": () => problem(404, "notFound"),
       [`GET /api/v1/items/${VPN}`]: () => problem(404, "notFound"),
-      [`POST /api/v1/pages/${VPN}/access-requests`]: () => ({ status: 202 }),
+      "POST /api/v1/pages/by-number/1002/access-requests": () => ({ status: 202 }),
       "GET /api/v1/access-requests/mine": () => ({
         body: [
           {
@@ -1007,7 +1020,7 @@ describe("sharing and access", () => {
         ],
       }),
     });
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(
       await screen.findByRole("heading", {
         name: "This page does not exist or you have no access",
@@ -1091,7 +1104,7 @@ describe("sharing and access", () => {
         "GET /api/v1/space-keys/ITOPS": () => ({ body: { space: space(role), redirected: false } }),
         [`GET /api/v1/items/${VPN}`]: () => ({
           body: {
-            ...page(VPN, "VPN access", { mode: "live" }),
+            ...page(VPN, 1002, "VPN access", { mode: "live" }),
             spaceKey: "ITOPS",
             spaceName: "IT Operations",
             spaceAccess: true,
@@ -1101,7 +1114,7 @@ describe("sharing and access", () => {
         [`GET /api/v1/pages/${VPN}/access/mine`]: () => mine(role)(),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access?edit=true`);
     expect(await screen.findByRole("textbox", { name: "Page content" })).toBeTruthy();
     role = "reader";
     for (const source of sources) {
@@ -1129,7 +1142,7 @@ describe("edit mode", () => {
         "PUT /api/v1/account/preferences/appearance.sidebarCollapsedWhileEditing": () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access?edit=true`);
     expect(await screen.findByRole("textbox", { name: "Page content" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
@@ -1174,7 +1187,7 @@ describe("edit mode", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access?edit=true`);
     await screen.findByRole("textbox", { name: "Page content" });
     await waitFor(() => expect(personName(mentioned)).toBe("Lena Hofer"));
   });
@@ -1185,7 +1198,7 @@ describe("edit mode", () => {
         [`POST /api/v1/pages/${VPN}/draft/discard`]: () => ({ body: { discardedDraftId: DRAFT_ID } }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access?edit=true`);
     await screen.findByRole("textbox", { name: "Page content" });
     await userEvent.click(screen.getByRole("button", { name: "More editor actions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Discard draft" }));
@@ -1204,7 +1217,7 @@ describe("edit mode", () => {
       routes("editor", {
         [`GET /api/v1/items/${VPN}`]: () => ({
           body: {
-            ...page(VPN, "VPN access", { published: false }),
+            ...page(VPN, 1002, "VPN access", { published: false }),
             spaceKey: "ITOPS",
             spaceName: "IT Operations",
             spaceContentLanguage: "en",
@@ -1226,7 +1239,7 @@ describe("edit mode", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?edit=true`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access?edit=true`);
     expect(await screen.findByRole("button", { name: "Publish" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "More editor actions" }));
@@ -1271,7 +1284,7 @@ describe("an empty page", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByText("This page is empty")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Start writing" }));
     await waitFor(() => expect(window.location.search).toContain("edit=true"));
@@ -1279,7 +1292,7 @@ describe("an empty page", () => {
 
   it("tells readers that nothing has been written yet and offers no action", async () => {
     mockApi(routes("reader", { [`GET /api/v1/pages/${VPN}/content`]: emptyContent }));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     expect(await screen.findByText("This page is empty")).toBeTruthy();
     expect(screen.getByText("Nothing has been written here yet.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Start writing" })).toBeNull();
@@ -1299,7 +1312,7 @@ describe("leaving a space", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
     await screen.findByText("Published text");
     await userEvent.keyboard("ga");
     await waitFor(() =>

@@ -254,7 +254,11 @@ describe.skipIf(!baseUrl)("ownership of content", () => {
 
     const listed = await test.services.ownership.spaceUnowned(context.admin, context.space.id);
     expect(listed.items).toEqual([
-      expect.objectContaining({ id: context.page.id, reason: "membershipEnded" }),
+      expect.objectContaining({
+        id: context.page.id,
+        number: context.page.number,
+        reason: "membershipEnded",
+      }),
     ]);
     const details = await test.services.tree.details(context.admin, context.page.id);
     expect(details?.owner?.active).toBe(false);

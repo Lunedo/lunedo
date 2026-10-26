@@ -6,11 +6,11 @@ import { PersonAvatar } from "../../components/person-avatar.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { CoverImage } from "../../files/cover.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
-import { itemHref } from "../../spaces/item-paths.js";
+import { contentHref } from "../../spaces/item-paths.js";
 import type { BlogPost } from "../queries.js";
 
-export function postHref(post: Pick<BlogPost, "id" | "title" | "spaceKey">): string {
-  return itemHref({ id: post.id, kind: "blogPost", title: post.title, link: null }, post.spaceKey) ?? "";
+export function postHref(post: Pick<BlogPost, "id" | "number" | "title" | "spaceKey">): string {
+  return contentHref({ kind: "blogPost", number: post.number, title: post.title }, post.spaceKey) ?? "";
 }
 
 export function PostMeta({ post }: { post: BlogPost }) {

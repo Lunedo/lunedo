@@ -114,6 +114,7 @@ export interface SeriesMember {
 
 export interface MeetingSummary {
   id: string;
+  number: number;
   title: string;
   state: MeetingState;
   startsAt: Date | null;
@@ -127,6 +128,7 @@ export interface MeetingSummary {
 
 export interface OverviewLink {
   id: string;
+  number: number;
   title: string;
   kind: string;
   spaceKey: string;
@@ -134,6 +136,7 @@ export interface OverviewLink {
 
 export interface SeriesDetails {
   id: string;
+  number: number;
   spaceId: string;
   title: string;
   parentId: string | null;
@@ -185,13 +188,16 @@ export interface MeetingAttendee {
 
 export interface AdjacentMeeting {
   id: string;
+  number: number;
   title: string;
   startsAt: Date | null;
 }
 
 export interface MeetingDetails {
   id: string;
+  number: number;
   seriesId: string | null;
+  seriesNumber: number | null;
   seriesTitle: string | null;
   title: string;
   state: MeetingState;
@@ -215,10 +221,12 @@ export interface MeetingDetails {
 
 export interface UpcomingMeeting {
   id: string;
+  number: number;
   title: string;
   startsAt: Date | null;
   durationMinutes: number;
   seriesId: string | null;
+  seriesNumber: number | null;
   seriesTitle: string | null;
   spaceId: string;
   spaceKey: string;
@@ -227,6 +235,7 @@ export interface UpcomingMeeting {
 
 type SeriesRow = {
   item_id: string;
+  number: string;
   space_id: string;
   organization_id: string | null;
   title: string;
@@ -242,6 +251,7 @@ type SeriesRow = {
 
 type MeetingRow = {
   item_id: string;
+  number: string;
   series_id: string;
   extra: boolean;
   recurrence_id: Date | string | null;
@@ -349,7 +359,7 @@ export class MeetingService {
 
   async #series(executor: Executor, seriesId: string, lock = false): Promise<SeriesRow> {
     const result = await executor.execute<SeriesRow>(sql`
-      select ms.item_id, t.space_id, s.organization_id, t.title, ms.recurrence, ms.starts_on, ms.start_time,
+      select ms.item_id, t.number, t.space_id, s.organization_id, t.title, ms.recurrence, ms.starts_on, ms.start_time,
         ms.time_zone, ms.duration_minutes, ms.template_id,
         (t.archived_root_id is not null or s.archived_at is not null) as archived,
         (t.trash_entry_id is not null or s.deleted_at is not null) as trashed
@@ -373,7 +383,7 @@ export class MeetingService {
 
   async #meeting(executor: Executor, meetingId: string, lock = false): Promise<MeetingRow> {
     const result = await executor.execute<MeetingRow>(sql`
-      select m.item_id, m.series_id, m.extra, m.recurrence_id, m.starts_at, m.duration_minutes, m.state,
+      select m.item_id, t.number, m.series_id, m.extra, m.recurrence_id, m.starts_at, m.duration_minutes, m.state,
         m.closed_at, m.closed_by, m.next_meeting_id, m.calendar_uid, t.title
       from meetings m join tree_items t on t.id = m.item_id
       where m.item_id = ${meetingId} and t.trash_entry_id is null ${lock ? sql`for update of m` : sql``}`);
@@ -615,6 +625,7 @@ export class MeetingService {
     const layout = overviewLayoutOf(row.overview_layout);
     return {
       id: series.item_id,
+      number: Number(series.number),
       spaceId: series.space_id,
       title: series.title,
       parentId: row.parent_id,
@@ -646,14 +657,22 @@ export class MeetingService {
 
   async #overviewLinks(viewer: Principal, ids: readonly string[]): Promise<OverviewLink[]> {
     if (ids.length === 0) return [];
-    const result = await this.#database.execute<{ id: string; title: string; kind: string; key: string }>(sql`
-      select t.id, t.title, t.kind, s.key from tree_items t join spaces s on s.id = t.space_id
+    const result = await this.#database.execute<{
+      id: string;
+      number: string;
+      title: string;
+      kind: string;
+      key: string;
+    }>(sql`
+      select t.id, t.number, t.title, t.kind, s.key from tree_items t join spaces s on s.id = t.space_id
       where t.id = any(${sql.param([...ids])}::uuid[]) and t.trash_entry_id is null
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
     const byId = new Map(result.rows.map((row) => [row.id, row]));
     return ids.flatMap((id) => {
       const row = byId.get(id);
-      return row ? [{ id: row.id, title: row.title, kind: row.kind, spaceKey: row.key }] : [];
+      return row
+        ? [{ id: row.id, number: Number(row.number), title: row.title, kind: row.kind, spaceKey: row.key }]
+        : [];
     });
   }
 
@@ -849,7 +868,7 @@ export class MeetingService {
 
   async #reschedule(tx: Transaction, actor: Principal, series: SeriesRow): Promise<void> {
     const upcoming = await tx.execute<MeetingRow>(sql`
-      select m.item_id, m.series_id, m.extra, m.recurrence_id, m.starts_at, m.duration_minutes, m.state,
+      select m.item_id, t.number, m.series_id, m.extra, m.recurrence_id, m.starts_at, m.duration_minutes, m.state,
         m.closed_at, m.closed_by, m.next_meeting_id, m.calendar_uid, t.title
       from meetings m join tree_items t on t.id = m.item_id
       where m.series_id = ${series.item_id} and m.state = 'upcoming' and not m.extra for update of m`);
@@ -932,6 +951,7 @@ export class MeetingService {
     const sortKey = sql`coalesce(m.starts_at, 'infinity'::timestamptz)`;
     const result = await this.#database.execute<{
       item_id: string;
+      number: string;
       title: string;
       state: MeetingState;
       starts_at: Date | string | null;
@@ -942,7 +962,7 @@ export class MeetingService {
       sort_key: string;
       extra: boolean;
     }>(sql`
-      select m.item_id, t.title, m.state, m.starts_at, m.recurrence_id, m.duration_minutes, m.extra,
+      select m.item_id, t.number, t.title, m.state, m.starts_at, m.recurrence_id, m.duration_minutes, m.extra,
         ${sortKey}::text as sort_key,
         (select count(*) from meeting_attendees a where a.meeting_id = m.item_id) as attendees,
         (select count(*) from meeting_attendees a where a.meeting_id = m.item_id and a.attendance = 'present') as present
@@ -958,6 +978,7 @@ export class MeetingService {
     return {
       items: rows.map((row) => ({
         id: row.item_id,
+        number: Number(row.number),
         title: row.title,
         state: row.state,
         next: row.item_id === nextId,
@@ -1025,7 +1046,9 @@ export class MeetingService {
       : { previous: null, following: null };
     return {
       id: meeting.item_id,
+      number: Number(meeting.number),
       seriesId: seriesVisible ? meeting.series_id : null,
+      seriesNumber: seriesVisible ? Number(series.number) : null,
       seriesTitle: seriesVisible ? series.title : null,
       title: meeting.title,
       state: meeting.state,
@@ -1074,17 +1097,20 @@ export class MeetingService {
         : sql``;
       const result = await this.#database.execute<{
         item_id: string;
+        number: string;
         title: string;
         starts_at: Date | string | null;
       }>(sql`
-        select m.item_id, t.title, m.starts_at from meetings m
+        select m.item_id, t.number, t.title, m.starts_at from meetings m
         join tree_items t on t.id = m.item_id join spaces s on s.id = t.space_id
         where m.series_id = ${seriesId} and m.item_id <> ${meetingId} and m.state <> 'skipped'
           and m.starts_at is not null and t.trash_entry_id is null ${bound}
           and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
         order by m.starts_at ${before ? sql`desc` : sql`asc`}, m.item_id limit 1`);
       const row = result.rows[0];
-      return row ? { id: row.item_id, title: row.title, startsAt: toDate(row.starts_at) } : null;
+      return row
+        ? { id: row.item_id, number: Number(row.number), title: row.title, startsAt: toDate(row.starts_at) }
+        : null;
     };
     return { previous: await find(true), following: await find(false) };
   }
@@ -1506,17 +1532,20 @@ export class MeetingService {
     const limit = Math.min(Math.max(options.limit ?? 10, 1), 50);
     const result = await this.#database.execute<{
       item_id: string;
+      number: string;
       title: string;
       starts_at: Date | string | null;
       duration_minutes: number;
       series_id: string;
+      series_number: string;
       series_title: string;
       series_visible: boolean;
       space_id: string;
       key: string;
       one_on_one: boolean;
     }>(sql`
-      select m.item_id, t.title, m.starts_at, m.duration_minutes, m.series_id, st.title as series_title,
+      select m.item_id, t.number, t.title, m.starts_at, m.duration_minutes, m.series_id,
+        st.number as series_number, st.title as series_title,
         ${visibleItem(this.#authorization, viewer, sql`st`, sql`s`)} as series_visible,
         s.id as space_id, s.key, s.one_on_one
       from meetings m join tree_items t on t.id = m.item_id join tree_items st on st.id = m.series_id
@@ -1528,10 +1557,12 @@ export class MeetingService {
       limit ${limit}`);
     return result.rows.map((row) => ({
       id: row.item_id,
+      number: Number(row.number),
       title: row.title,
       startsAt: toDate(row.starts_at),
       durationMinutes: row.duration_minutes,
       seriesId: row.series_visible ? row.series_id : null,
+      seriesNumber: row.series_visible ? Number(row.series_number) : null,
       seriesTitle: row.series_visible ? row.series_title : null,
       spaceId: row.space_id,
       spaceKey: row.key,
@@ -1542,14 +1573,15 @@ export class MeetingService {
   async listSeries(
     viewer: Principal,
     spaceId: string,
-  ): Promise<{ id: string; title: string; archived: boolean; upcomingAt: Date | null }[]> {
+  ): Promise<{ id: string; number: number; title: string; archived: boolean; upcomingAt: Date | null }[]> {
     const result = await this.#database.execute<{
       item_id: string;
+      number: string;
       title: string;
       archived: boolean;
       upcoming_at: Date | string | null;
     }>(sql`
-      select ms.item_id, t.title, t.archived_root_id is not null as archived,
+      select ms.item_id, t.number, t.title, t.archived_root_id is not null as archived,
         (select min(m.starts_at) from meetings m where m.series_id = ms.item_id and m.state = 'upcoming')
           as upcoming_at
       from meeting_series ms join tree_items t on t.id = ms.item_id join spaces s on s.id = t.space_id
@@ -1558,6 +1590,7 @@ export class MeetingService {
       limit 500`);
     return result.rows.map((row) => ({
       id: row.item_id,
+      number: Number(row.number),
       title: row.title,
       archived: row.archived,
       upcomingAt: toDate(row.upcoming_at),

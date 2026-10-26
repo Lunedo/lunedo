@@ -1,5 +1,5 @@
 import { Skeleton } from "@lunedo/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -11,19 +11,20 @@ import { usePageSharing } from "../sharing/page-sharing.js";
 import { useArchiveItem, useDeleteItem } from "../spaces/content-actions.js";
 import { InlineTitle } from "../spaces/inline-title.js";
 import { itemHref, itemSlug } from "../spaces/item-paths.js";
+import { useNumberedItem } from "../spaces/numbered-item.js";
 import { Redirect } from "../spaces/redirect.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
-import { type ItemDetails, itemQuery, spaceKeys, whiteboardPath } from "../spaces/space-queries.js";
+import { type ItemDetails, spaceKeys, whiteboardPath } from "../spaces/space-queries.js";
 import { WhiteboardView, whiteboardMenu } from "./whiteboard-view.js";
 
-const route = getRouteApi("/app/spaces/$spaceKey/whiteboards/$itemId/{-$slug}");
+const route = getRouteApi("/app/spaces/$spaceKey/whiteboards/$number/{-$slug}");
 
 export function WhiteboardScreen() {
   const { t } = useTranslation();
-  const { itemId, slug } = route.useParams();
+  const { number, slug } = route.useParams();
   const { space } = useSpace();
-  const item = useQuery(itemQuery(itemId));
+  const item = useNumberedItem(number);
   useDocumentTitle(item.data?.title ?? "");
   if (item.isPending) {
     return (
@@ -34,7 +35,7 @@ export function WhiteboardScreen() {
     );
   }
   if (item.isError) {
-    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess pageId={itemId} />;
+    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess number={number} />;
     return (
       <div className="p-6">
         <LoadError what={t("whiteboards.loadFailed")} error={item.error} onRetry={() => item.refetch()} />
@@ -42,7 +43,7 @@ export function WhiteboardScreen() {
     );
   }
   const board = item.data;
-  if (board.kind !== "whiteboard" || board.spaceKey !== space.key || slug !== itemSlug(board.title)) {
+  if (board.kind !== "whiteboard" || board.spaceKey !== space.key || (slug ?? "") !== itemSlug(board.title)) {
     const href = itemHref(board, board.spaceKey);
     if (href) return <Redirect to={href} />;
   }
@@ -78,7 +79,7 @@ function SpaceWhiteboard({ board }: { board: ItemDetails }) {
     );
     await queryClient.invalidateQueries({ queryKey: spaceKeys.item(board.id) });
     await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
-    await navigate({ to: whiteboardPath(space.key, board.id, itemSlug(title)), replace: true });
+    await navigate({ to: whiteboardPath(space.key, board.number, itemSlug(title)), replace: true });
   };
   const breadcrumbs = [
     { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
@@ -107,8 +108,8 @@ function SpaceWhiteboard({ board }: { board: ItemDetails }) {
       dialogs={sharing.dialog}
       onHistory={() =>
         void navigate({
-          to: "/spaces/$spaceKey/whiteboards/$itemId/history",
-          params: { spaceKey: space.key, itemId: board.id },
+          to: "/spaces/$spaceKey/whiteboards/$number/history",
+          params: { spaceKey: space.key, number: board.number },
         })
       }
       onUnarchive={() => void unarchive(board)}

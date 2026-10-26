@@ -23,7 +23,7 @@ const NO_REFERENCES = { people: {}, pages: {} };
 
 type State =
   | { kind: "opening" }
-  | { kind: "account"; itemId: string }
+  | { kind: "account"; number: number | null }
   | { kind: "anonymous"; unlock: string | null }
   | { kind: "password"; error: string | null }
   | { kind: "failed"; error: unknown };
@@ -361,7 +361,7 @@ export function LinkLandingScreen() {
       );
       setState(
         opened.kind === "account"
-          ? { kind: "account", itemId: opened.itemId }
+          ? { kind: "account", number: opened.number }
           : { kind: "anonymous", unlock: opened.unlock },
       );
     } catch (error) {
@@ -381,7 +381,8 @@ export function LinkLandingScreen() {
     started.current = true;
     void open();
   });
-  if (state.kind === "account") return <Redirect to={sharedPath(state.itemId, "")} />;
+  if (state.kind === "account")
+    return <Redirect to={state.number === null ? "/home" : sharedPath(state.number, "")} />;
   if (state.kind !== "anonymous") {
     return (
       <main id="main" tabIndex={-1} className="outline-none">

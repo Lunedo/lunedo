@@ -190,7 +190,10 @@ describe.skipIf(!baseUrl)("page, decision and task reports", () => {
     const modified = await test.services.reports.pages(w.reader, { ...request, sort: "modified" });
     expect(modified.map((page) => page.title)).toEqual(["Child", "Alpha"]);
     expect(modified[0]?.author?.name).toBe("Editor");
-    expect(modified[0]?.path).toBe(`/spaces/${w.shared.key}/pages/${w.child}/child`);
+    const child = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${w.child}`,
+    );
+    expect(modified[0]?.path).toBe(`/spaces/${w.shared.key}/pages/${child.rows[0]?.number}/child`);
     const created = await test.services.reports.pages(w.reader, {
       ...request,
       sort: "created",
@@ -302,6 +305,54 @@ describe.skipIf(!baseUrl)("page, decision and task reports", () => {
     };
     expect(await rendered(w.closedParent)).toBe(await rendered(unknown));
     expect(await rendered(w.closedParent)).not.toContain("Shared decision");
+  });
+
+  it("address listed pages, decisions and page links by the number of the page", async () => {
+    const w = await world();
+    const numbers = await test.database.execute<{ id: string; number: string }>(
+      sql`select id, number from tree_items where id in (${w.alpha}, ${w.child})`,
+    );
+    const numberOf = (id: string) => numbers.rows.find((row) => row.id === id)?.number;
+    const key = w.shared.key;
+    const pages = await test.services.reports.pages(w.reader, {
+      ...pageDefaults,
+      spaceId: w.shared.id,
+      labels: ["vpn"],
+      sort: "title",
+    });
+    expect(pages.map((page) => page.path)).toEqual([
+      `/spaces/${key}/pages/${numberOf(w.alpha)}/alpha`,
+      `/spaces/${key}/pages/${numberOf(w.child)}/child`,
+    ]);
+    const decisions = await test.services.reports.decisions(w.reader, {
+      ...decisionDefaults,
+      spaceId: w.shared.id,
+    });
+    expect(decisions.items.find((entry) => entry.text === "Use WireGuard")?.page.path).toBe(
+      `/spaces/${key}/pages/${numberOf(w.alpha)}/alpha`,
+    );
+    const document = doc(
+      { type: "paragraph", content: [{ type: "pageLink", attrs: { pageId: w.child } }] },
+      { type: "paragraph", content: [{ type: "pageLink", attrs: { pageId: w.secret } }] },
+      { type: "childPages", attrs: { pageId: w.alpha, depth: null, sort: "tree", reverse: false } },
+    );
+    const references = await test.services.documents.references(w.reader, document);
+    expect(references.pages[w.child]).toMatchObject({ accessible: true, number: Number(numberOf(w.child)) });
+    expect(references.pages[w.secret]).toEqual({
+      title: "",
+      spaceKey: "",
+      kind: "page",
+      number: null,
+      accessible: false,
+      inTrash: false,
+    });
+    const markdown = renderPageMarkdown(document, references, {
+      childPages: await test.services.documents.childPages(w.reader, w.alpha, document),
+      attachments: null,
+    });
+    expect(markdown).toContain(`(/spaces/${key}/pages/${numberOf(w.child)}/child)`);
+    expect(markdown).not.toContain("Secret");
+    expect(markdown.match(new RegExp(`/pages/${numberOf(w.child)}/child`, "g"))).toHaveLength(2);
   });
 
   it("render the reports of a page as Markdown with what the reader may see", async () => {

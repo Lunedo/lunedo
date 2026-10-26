@@ -514,6 +514,26 @@ We move the backup to Sunday`);
   });
 
   describe("delivery", () => {
+    it("links a blog post by its number in the blog address", async () => {
+      const context = await setup();
+      const channel = await connect(context, ["blogPostPublished"]);
+      const post = await test.services.blog.create(context.editor, context.space.id, {
+        title: "Launch notes",
+      });
+      await test.services.versions.publish(context.editor, post.id);
+      const numbered = await test.database.execute<{ number: string }>(
+        sql`select number from tree_items where id = ${post.id}`,
+      );
+      const [row] = await due(channel.channel.id);
+      expect(await test.services.chatChannels.deliver(row?.id ?? "", false)).toBe("delivered");
+      const body = JSON.parse(requests[0]?.body ?? "{}") as {
+        blocks: { type: string; elements?: { url?: string }[] }[];
+      };
+      expect(body.blocks[2]?.elements?.[0]?.url).toBe(
+        `https://wiki.example.org/spaces/${context.space.key}/blog/${numbered.rows[0]?.number}/launch-notes`,
+      );
+    });
+
     it("sends the format of the channel with a link to the page", async () => {
       const context = await setup();
       const channel = await connect(context, ["pagePublished"]);
@@ -527,7 +547,7 @@ We move the backup to Sunday`);
       expect(body.text).toContain(`New page in ${context.space.name}`);
       expect(body.blocks[1]?.text?.text).toBe("Restart the VPN gateway\nPublished by Editor");
       expect(body.blocks[2]?.elements?.[0]?.url).toBe(
-        `https://wiki.example.org/spaces/${context.space.key}/pages/${runbook.id}/restart-the-vpn-gateway`,
+        `https://wiki.example.org/spaces/${context.space.key}/pages/${runbook.number}/restart-the-vpn-gateway`,
       );
       const [listed] = await test.services.chatChannels.list(context.scope);
       expect(listed?.lastDeliveredAt).toBeInstanceOf(Date);

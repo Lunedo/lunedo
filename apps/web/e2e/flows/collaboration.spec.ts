@@ -1,3 +1,4 @@
+import { idIn, pagePath as numberedPagePath } from "../support/addresses.js";
 import { collaborationSpace, publishedPost, vpnPage } from "../support/collaboration.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
@@ -73,7 +74,7 @@ test("one task status in the editor, the read view, My tasks, the task report an
     title: "Rollout checklist",
     parentId: null,
     mode: "publish",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${checklist.id}/content`, {
     document: {
       type: "doc",
@@ -100,11 +101,11 @@ test("one task status in the editor, the read view, My tasks, the task report an
     title: "Rollout report",
     parentId: null,
     mode: "live",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${report.id}/content`, {
     document: { type: "doc", content: [{ type: "taskReport", attrs: { spaceId: space.id, status: "all" } }] },
   });
-  const checklistPath = `/spaces/${space.key}/pages/${checklist.id}/rollout-checklist`;
+  const checklistPath = numberedPagePath(space.key, checklist);
   const task = { name: /Update the firewall rules/ };
 
   const { page: other } = await organization.signIn(space.colleague);
@@ -127,7 +128,7 @@ test("one task status in the editor, the read view, My tasks, the task report an
   await expect(editorView).toBeChecked();
 
   const reportView = await page.context().newPage();
-  await reportView.goto(`/spaces/${space.key}/pages/${report.id}/rollout-report`);
+  await reportView.goto(numberedPagePath(space.key, report));
   await reportView.getByRole("checkbox", task).click();
   await expect(readView).not.toBeChecked();
   await expect(editorView).not.toBeChecked();
@@ -168,7 +169,7 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
     "true",
   );
   await expect(page.locator("[data-page-bar]").getByRole("button", { name: "Done" })).toBeVisible();
-  const postId = /\/blog\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
+  const postId = await idIn(page, "blog");
   await page.getByRole("textbox", { name: "Page content" }).click();
   await page.keyboard.type("The company portal ships the new client on Monday.");
   await expect(page.getByRole("status").getByText("Saved to draft", { exact: true })).toBeVisible({

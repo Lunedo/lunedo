@@ -130,7 +130,12 @@ const exampleChange = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0101",
   kind: "page",
   change: "conflict",
-  item: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102", title: "On-call rota", spaceKey: "ITOPS" },
+  item: {
+    id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102",
+    number: 1042,
+    title: "On-call rota",
+    spaceKey: "ITOPS",
+  },
   title: "On-call rota",
   sourceTitle: "On-call rota",
   reason: "both",
@@ -662,7 +667,7 @@ export class ImportsController {
             id: exampleImport.id,
             category: "attachments",
             code: "missingAttachment",
-            item: { id: exampleImport.organizationId, title: "Network overview" },
+            item: { id: exampleImport.organizationId, number: 1031, title: "Network overview" },
             restricted: false,
             template: null,
             details: { fileName: "diagram.png" },
@@ -689,7 +694,10 @@ export class ImportsController {
     return {
       items: page.entries.map(({ item, ...entry }) => ({
         ...entry,
-        item: item?.title == null ? null : { id: item.id, title: item.title },
+        item:
+          item?.title == null || item.number === null
+            ? null
+            : { id: item.id, number: item.number, title: item.title },
         restricted: item !== null && item.title === null,
       })),
       nextCursor: page.next ? encodeCursor({ id: page.next }) : null,
@@ -1387,6 +1395,7 @@ export class ImportsController {
       schema: confluenceLinkSchema,
       example: {
         itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102",
+        number: 1042,
         kind: "page",
         spaceKey: "ITOPS",
         title: "On-call rota",

@@ -65,6 +65,13 @@ describe.skipIf(!baseUrl)("knowledge base statistics", () => {
     return created.id;
   }
 
+  async function numberOf(itemId: string): Promise<number> {
+    const result = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${itemId}`,
+    );
+    return Number(result.rows[0]?.number);
+  }
+
   async function search(spaceId: string, term: string, results: number, times: number) {
     for (let index = 0; index < times; index++) {
       await test.services.portalStatistics.recordSearch(spaceId, { term, results, categoryId: null });
@@ -104,13 +111,15 @@ describe.skipIf(!baseUrl)("knowledge base statistics", () => {
     const forEditor = await service.overview(context.editor, context.kb.id, "7d");
     expect(forEditor.unhelpful).toEqual([
       {
-        article: { id: open, title: "Printer", categoryPath: [] },
+        article: { id: open, number: await numberOf(open), title: "Printer", categoryPath: [] },
         helpful: 1,
         unhelpful: 1,
         feedback: 1,
       },
     ]);
-    expect(forEditor.mostRead.map((entry) => entry.article.id)).toEqual([open]);
+    expect(forEditor.mostRead.map((entry) => [entry.article.id, entry.article.number])).toEqual([
+      [open, await numberOf(open)],
+    ]);
     expect(forEditor.ratings).toEqual({ helpful: 1, unhelpful: 1 });
     expect(forEditor.views).toBe(1);
     await expect(

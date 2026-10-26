@@ -11,6 +11,7 @@ const space = { id: "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a40", key: "IT", role: "ed
 const items = `GET /api/v1/spaces/${space.id}/items`;
 const folder = {
   id: "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+  number: 1041,
   kind: "folder",
   title: "Runbooks",
   parentId: null,
@@ -168,9 +169,7 @@ describe("PageTree", () => {
     ([...row.querySelectorAll("svg")].find((icon) => !icon.closest("button")) as SVGElement).dispatchEvent(
       new MouseEvent("click", { bubbles: true }),
     );
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe(`/spaces/IT/folders/${folder.id}/runbooks`),
-    );
+    await waitFor(() => expect(router.state.location.pathname).toBe("/spaces/IT/folders/1041/runbooks"));
   });
 
   it("is no longer busy once the first level has loaded", async () => {

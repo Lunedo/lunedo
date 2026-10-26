@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { pagePath } from "./addresses.js";
 import type { Organization } from "./fixtures.js";
 import { callApi } from "./helpers.js";
 import { unique } from "./people.js";
@@ -10,18 +11,18 @@ export interface Place {
   pagePath: string;
 }
 
-function slug(title: string): string {
-  return title.toLowerCase().split(" ").join("-");
-}
-
 export async function createPage(page: Page, spaceId: string, spaceKey: string, title: string) {
   const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
     kind: "page",
     title,
     parentId: null,
     mode: "live",
-  })) as { id: string };
-  return { id: created.id, path: `/spaces/${spaceKey}/pages/${created.id}/${slug(title)}` };
+  })) as { id: string; number: number };
+  return {
+    id: created.id,
+    number: created.number,
+    path: pagePath(spaceKey, { number: created.number, title }),
+  };
 }
 
 export async function place(page: Page, organization: Organization, title = "Network plan"): Promise<Place> {

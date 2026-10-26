@@ -24,6 +24,7 @@ export interface AccessRequest {
   spaceId: string;
   spaceName: string;
   itemId: string | null;
+  number: number | null;
   itemTitle: string | null;
   message: string;
   status: AccessRequestStatus;
@@ -43,6 +44,7 @@ interface RequestRow {
   space_key: string;
   organization_id: string | null;
   item_id: string | null;
+  item_number: string | null;
   item_title: string | null;
   item_kind: string | null;
   message: string;
@@ -87,7 +89,7 @@ export class AccessRequestService {
       select r.id, r.requester_id, ${this.#people.visibleName(viewer, sql`ra`)} as requester_name,
         case when ${this.#people.colleagueCondition(viewer, sql`ra.id`)} then ra.email end as requester_email,
         r.space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, s.organization_id, r.item_id,
-        t.title as item_title, t.kind::text as item_kind, r.message, r.status, r.role, r.decided_by,
+        t.number as item_number, t.title as item_title, t.kind::text as item_kind, r.message, r.status, r.role, r.decided_by,
         ${this.#people.visibleName(viewer, sql`da`)} as decided_by_name, r.decided_at, r.created_at
       from access_requests r join accounts ra on ra.id = r.requester_id join spaces s on s.id = r.space_id
       left join tree_items t on t.id = r.item_id left join accounts da on da.id = r.decided_by`;
@@ -100,6 +102,7 @@ export class AccessRequestService {
       spaceId: row.space_id,
       spaceName: options.hideSpace ? "" : row.space_name,
       itemId: row.item_id,
+      number: options.hideSpace || row.item_number === null ? null : Number(row.item_number),
       itemTitle: options.hideSpace ? null : row.item_title,
       message: row.message,
       status: row.status,

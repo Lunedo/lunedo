@@ -51,8 +51,8 @@ const document = {
 const references = {
   people: { [PERSON]: "Anna Berger" },
   pages: {
-    [PAGE]: { title: "Device naming", spaceKey: "ITOPS", kind: "page", accessible: true },
-    [SECRET]: { title: "", spaceKey: "", kind: "page", accessible: false },
+    [PAGE]: { number: 1001, title: "Device naming", spaceKey: "ITOPS", kind: "page", accessible: true },
+    [SECRET]: { number: null, title: "", spaceKey: "", kind: "page", accessible: false },
   },
 };
 
@@ -75,7 +75,7 @@ describe("page read view", () => {
     expect(headings[1]?.id).toBe("set-up-a-new-device-2");
     expect(container.querySelector('nav.ld-toc a[href="#set-up-a-new-device-2"]')).not.toBeNull();
     const link = screen.getByText("Device naming");
-    expect(link.getAttribute("href")).toBe(`/spaces/ITOPS/pages/${PAGE}/device-naming`);
+    expect(link.getAttribute("href")).toBe("/spaces/ITOPS/pages/1001/device-naming");
     expect(container.textContent).not.toContain("Salary bands");
     expect(container.querySelector('[data-access="none"]')?.textContent).toBe("No access");
     const missing = screen.getByText("Glossary");
@@ -85,6 +85,43 @@ describe("page read view", () => {
     expect(container.querySelector("[onmouseover]")).toBeNull();
     const column = screen.getByText("Left").closest(".ld-column") as HTMLElement;
     expect(column.style.getPropertyValue("--column-width")).toBe("30%");
+  });
+
+  it("renders a link stored with an old item address as the current address of the target", async () => {
+    await renderWithProviders(
+      <PreferencesProvider>
+        <PageReadView
+          document={{
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "naming rules",
+                    marks: [{ type: "link", attrs: { href: `/spaces/OLD/pages/${PAGE}/old-title#rules` } }],
+                  },
+                  text(" and "),
+                  {
+                    type: "text",
+                    text: "pay scale",
+                    marks: [{ type: "link", attrs: { href: `/spaces/HR/pages/${SECRET}/salary-bands` } }],
+                  },
+                ],
+              },
+            ],
+          }}
+          references={references}
+          pageId={PAGE}
+        />
+      </PreferencesProvider>,
+    );
+    const link = screen.getByRole("link", { name: "naming rules" });
+    expect(link.getAttribute("href")).toBe("/spaces/ITOPS/pages/1001/device-naming#rules");
+    const paragraph = link.closest("p") as HTMLElement;
+    expect(paragraph.textContent).toBe("naming rules and pay scale");
+    expect(paragraph.querySelectorAll("a")).toHaveLength(1);
   });
 
   it("shows the display version of an image and opens the original in a new tab", async () => {

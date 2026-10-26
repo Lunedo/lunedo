@@ -127,6 +127,7 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(await test.services.pageAccess.sharedWith(context.outsider)).toEqual([
         expect.objectContaining({
           itemId: context.shared.id,
+          number: context.shared.number,
           title: "Launch plan",
           role: "reader",
           sharedBy: { id: context.editorId, name: "Editor" },
@@ -258,7 +259,7 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(stored.rows[0]?.secret.includes(Buffer.from(token.slice(16)))).toBe(false);
       expect(await can(context.outsider, "item.view", { type: "item", id: context.shared.id })).toBe(false);
       const opened = await test.services.shareLinks.open(token, context.outsider, { clientIp: "192.0.2.1" });
-      expect(opened).toEqual({ kind: "account", itemId: context.shared.id });
+      expect(opened).toEqual({ kind: "account", itemId: context.shared.id, number: context.shared.number });
       expect(await can(context.outsider, "item.view", { type: "item", id: context.shared.id })).toBe(true);
       expect(await can(context.outsider, "item.comment", { type: "item", id: context.shared.id })).toBe(
         false,
@@ -312,7 +313,7 @@ describe.skipIf(!baseUrl)("sharing", () => {
       ).rejects.toMatchObject({ code: "expiryTooLate" });
       const { token } = await link(context, { scope: "anyone", expiresAt: new Date(Date.now() + 6 * DAY) });
       const opened = await test.services.shareLinks.open(token, ANONYMOUS, { clientIp: "192.0.2.3" });
-      expect(opened).toMatchObject({ kind: "anonymous", itemId: context.shared.id, unlock: null });
+      expect(opened).toEqual({ kind: "anonymous", itemId: context.shared.id, unlock: null });
       expect(await test.services.shareLinks.resolveAnonymous(token, undefined, "192.0.2.3")).toBe(
         context.shared.id,
       );
@@ -460,9 +461,16 @@ describe.skipIf(!baseUrl)("sharing", () => {
         "Need it for the launch",
       );
       const open = await test.services.accessRequests.forSpace(context.editor, context.space.id);
-      expect(open.map((request) => [request.requester.id, request.itemTitle])).toEqual([
-        [context.outsiderId, "Launch plan"],
+      expect(open.map((request) => [request.requester.id, request.itemTitle, request.number])).toEqual([
+        [context.outsiderId, "Launch plan", context.shared.number],
       ]);
+      expect(
+        (await test.services.accessRequests.mine(context.outsider)).map((request) => [
+          request.itemId,
+          request.itemTitle,
+          request.number,
+        ]),
+      ).toEqual([[context.shared.id, null, null]]);
       const editorNotices = await test.services.notifications.list(context.editorId, { limit: 10 });
       expect(editorNotices.items.map((item) => item.type)).toContain("access.requested");
       const decided = await test.services.accessRequests.decide(context.editor, open[0]?.id ?? "", {
@@ -470,6 +478,9 @@ describe.skipIf(!baseUrl)("sharing", () => {
         role: "commenter",
       });
       expect(decided).toMatchObject({ status: "approved", role: "commenter" });
+      expect(await test.services.accessRequests.mine(context.outsider)).toEqual([
+        expect.objectContaining({ itemTitle: "Launch plan", number: context.shared.number }),
+      ]);
       expect(await can(context.outsider, "item.comment", { type: "item", id: context.shared.id })).toBe(true);
       const notices = await test.services.notifications.list(context.outsiderId, { limit: 10 });
       expect(notices.items.map((item) => item.type)).toContain("access.requestDecided");
@@ -582,13 +593,21 @@ describe.skipIf(!baseUrl)("sharing", () => {
       const overview = await test.services.accessExplanations.personAccess(admin, context.outsiderId, {
         organizationId: context.org.id,
       });
-      expect(overview.entries.map((entry) => [entry.kind, entry.itemTitle, entry.count])).toEqual([
-        ["restrictedPages", null, 1],
-      ]);
+      expect(
+        overview.entries.map((entry) => [
+          entry.kind,
+          entry.itemId,
+          entry.number,
+          entry.itemTitle,
+          entry.count,
+        ]),
+      ).toEqual([["restrictedPages", null, null, null, 1]]);
       const own = await test.services.accessExplanations.personAccess(context.editor, context.outsiderId, {
         organizationId: context.org.id,
       });
-      expect(own.entries.map((entry) => [entry.kind, entry.itemTitle])).toEqual([["share", "Launch plan"]]);
+      expect(own.entries.map((entry) => [entry.kind, entry.itemTitle, entry.number])).toEqual([
+        ["share", "Launch plan", context.shared.number],
+      ]);
       const csv = await readText(
         await test.services.accessExplanations.overviewCsv(admin, context.org.id, context.outsiderId),
       );

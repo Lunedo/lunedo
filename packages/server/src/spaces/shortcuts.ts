@@ -18,6 +18,7 @@ export type ShortcutTarget = { itemId: string } | { url: string };
 
 export interface ShortcutItem {
   id: string;
+  number: number;
   kind: TreeItemKind;
   title: string;
   spaceKey: string;
@@ -39,6 +40,7 @@ type Row = {
   item_id: string | null;
   position: number;
   visible: boolean;
+  number: string | null;
   kind: TreeItemKind | null;
   title: string | null;
   key: string | null;
@@ -87,7 +89,7 @@ export class ShortcutService {
     const result = await executor.execute<Row>(sql`
       select sc.id, sc.label, sc.url, sc.item_id, sc.position,
         (sc.item_id is null or coalesce(${visibleItem(this.#authorization, viewer, sql`t`, sql`ts`)}, false)) as visible,
-        t.kind, t.title, ts.key
+        t.number, t.kind, t.title, ts.key
       from space_shortcuts sc
       left join tree_items t on t.id = sc.item_id left join spaces ts on ts.id = t.space_id
       where sc.space_id = ${spaceId}
@@ -101,8 +103,14 @@ export class ShortcutService {
       label: row.label,
       url: row.url,
       item:
-        row.item_id && row.visible && row.kind && row.title !== null && row.key
-          ? { id: row.item_id, kind: row.kind, title: row.title, spaceKey: row.key }
+        row.item_id && row.visible && row.number !== null && row.kind && row.title !== null && row.key
+          ? {
+              id: row.item_id,
+              number: Number(row.number),
+              kind: row.kind,
+              title: row.title,
+              spaceKey: row.key,
+            }
           : null,
       hidden: !row.visible,
       position: row.position,

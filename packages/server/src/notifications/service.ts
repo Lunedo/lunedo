@@ -62,7 +62,7 @@ export interface NotificationItem {
   id: string;
   type: string;
   organizationId: string | null;
-  target: { type: string; id: string | null };
+  target: { type: string; id: string | null; number: number | null };
   actor: { type: string; id: string | null; name: string | null } | null;
   actorCount: number;
   params: unknown;
@@ -77,6 +77,7 @@ export interface NotificationItem {
 export interface NotificationGroupMember {
   id: string;
   itemId: string | null;
+  number: number | null;
   itemTitle: string;
   actor: { id: string | null; name: string | null } | null;
   updatedAt: Date;
@@ -113,6 +114,8 @@ const listColumns = {
   organizationId: notifications.organizationId,
   targetType: notifications.targetType,
   targetId: notifications.targetId,
+  targetNumber: sql<string | null>`(select t.number::text from tree_items t
+    where ${notifications.targetType} = 'item' and t.id::text = ${notifications.targetId})`,
   actorType: notifications.actorType,
   actorId: notifications.actorId,
   actorName: accounts.name,
@@ -157,6 +160,7 @@ type ListRow = {
   organizationId: string | null;
   targetType: string;
   targetId: string | null;
+  targetNumber: string | null;
   actorType: string | null;
   actorId: string | null;
   actorName: string | null;
@@ -174,7 +178,11 @@ function toItem(row: ListRow): NotificationItem {
     id: row.id,
     type: row.type,
     organizationId: row.organizationId,
-    target: { type: row.targetType, id: row.targetId },
+    target: {
+      type: row.targetType,
+      id: row.targetId,
+      number: row.targetNumber === null ? null : Number(row.targetNumber),
+    },
     actor: row.actorType ? { type: row.actorType, id: row.actorId, name: row.actorName } : null,
     actorCount: Number(row.actorCount),
     params: row.params,
@@ -617,6 +625,7 @@ export class NotificationService {
         members: members.map((member) => ({
           id: member.id,
           itemId: member.targetId,
+          number: member.targetNumber === null ? null : Number(member.targetNumber),
           itemTitle: String((member.params as Record<string, unknown> | null)?.itemTitle ?? ""),
           actor: member.actorId || member.actorName ? { id: member.actorId, name: member.actorName } : null,
           updatedAt: member.updatedAt,

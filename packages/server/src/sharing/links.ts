@@ -70,7 +70,7 @@ export interface ShareLinkOptions {
 }
 
 export type OpenResult =
-  | { kind: "account"; itemId: string }
+  | { kind: "account"; itemId: string; number: number }
   | { kind: "anonymous"; itemId: string; unlock: string | null };
 
 interface LinkRow {
@@ -483,12 +483,12 @@ export class ShareLinkService {
     });
   }
 
-  async #find(token: string): Promise<LinkRow | null> {
+  async #find(token: string): Promise<(LinkRow & { item_number: string }) | null> {
     const parts = splitLinkToken(token);
     const lookup = parts?.lookup ?? randomBytes(LOOKUP_BYTES).toString("base64url");
-    const result = await this.#database.execute<LinkRow>(sql`
-      select l.id, l.item_id, l.scope, l.secret_hash, l.password_hash, l.expires_at, l.revoked_at,
-        t.space_id, s.organization_id, t.title,
+    const result = await this.#database.execute<LinkRow & { item_number: string }>(sql`
+      select l.id, l.item_id, t.number as item_number, l.scope, l.secret_hash, l.password_hash, l.expires_at,
+        l.revoked_at, t.space_id, s.organization_id, t.title,
         exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view') as restricted
       from share_links l join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
       where l.lookup = ${lookup} and ${activeLinkCondition(sql`l`)}
@@ -554,7 +554,7 @@ export class ShareLinkService {
           await signalSpaceChange(tx, { spaceId: link.space_id, kind: "access", itemId: link.item_id });
         }
       });
-      return { kind: "account", itemId: link.item_id };
+      return { kind: "account", itemId: link.item_id, number: Number(link.item_number) };
     }
     const unlock = link.password_hash
       ? await this.#signer.sign(

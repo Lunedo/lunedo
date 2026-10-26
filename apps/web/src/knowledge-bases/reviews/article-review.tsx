@@ -31,7 +31,7 @@ import { request } from "../../api/request.js";
 import { ActionFailure } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
-import { itemHref } from "../../spaces/item-paths.js";
+import { contentHref } from "../../spaces/item-paths.js";
 import {
   type ArticleReview,
   type ArticleSource,
@@ -276,7 +276,7 @@ function SourceLine({ itemId, editable }: { itemId: string; editable: boolean })
       {sources.isError ? <span>{t("reviews.sources.loadFailed")}</span> : null}
       {list.map((source) => {
         const href =
-          itemHref({ id: source.id, kind: "page", title: source.title, link: null }, source.spaceKey) ?? "";
+          contentHref({ kind: "page", number: source.number, title: source.title }, source.spaceKey) ?? "";
         const full = `${source.spaceName} › ${source.title}`;
         return (
           <span key={source.id} className="inline-flex min-w-0 max-w-full items-center gap-1">

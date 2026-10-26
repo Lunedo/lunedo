@@ -1,3 +1,4 @@
+import { internalItemLink } from "./internal-links.js";
 import type { DocumentJson, NodeJson } from "./json.js";
 import type { PageLinkTarget } from "./module.js";
 
@@ -25,6 +26,11 @@ export function extractPageLinks(doc: DocumentJson): PageLinkTarget[] {
     if (node.type === "roadmap") {
       for (const pageId of roadmapPages(node)) links.push({ pageId, spaceId: null, title: null });
       return;
+    }
+    for (const mark of node.marks ?? []) {
+      const href = mark.type === "link" ? stringOrNull(mark.attrs?.href) : null;
+      const target = href ? internalItemLink(href) : null;
+      if (target) links.push({ pageId: target.itemId, spaceId: null, title: null });
     }
     if (node.type !== "pageLink") return;
     links.push({

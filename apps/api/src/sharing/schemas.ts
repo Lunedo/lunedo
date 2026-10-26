@@ -1,6 +1,6 @@
 import { shareLinkScopes, shareRoles } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, itemNumber, timestamp, uuid } from "../http/schemas.js";
 import { exampleImpact, impactSchema } from "../spaces/schemas.js";
 
 const person = z
@@ -198,6 +198,7 @@ export const examplePageAccess = {
 export const restrictedPageSchema = z
   .object({
     itemId: uuid("ID of the page."),
+    number: itemNumber("Number of the page in the addresses of the app."),
     title: z.string().describe("Title of the page."),
     kind: z.string().describe("Kind of the item."),
     view: restrictionInfo.nullable().describe("The view restriction, if any."),
@@ -288,6 +289,11 @@ export const accessRequestSchema = z
     spaceId: uuid("The space."),
     spaceName: z.string().describe("Name of the space; empty when the requester cannot see it."),
     itemId: uuid("The page, or null for the whole space.").nullable(),
+    number: itemNumber("Number of the page in the addresses of the app.")
+      .nullable()
+      .describe(
+        "Number of the page in the addresses of the app, when the caller may see its title; null for the whole space.",
+      ),
     itemTitle: z.string().nullable().describe("Title of the page, when the caller may see it."),
     message: z.string().describe("Message of the requester."),
     status: extensibleEnum(
@@ -311,6 +317,7 @@ export const exampleAccessRequest = {
   spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
   spaceName: "IT Operations",
   itemId: null,
+  number: null,
   itemTitle: null,
   message: "I take over the on-call duty next month.",
   status: "open",
@@ -414,6 +421,9 @@ export const personAccessSchema = z
             spaceName: z.string().describe("Name of the space."),
             spaceKey: z.string().describe("Key of the space."),
             itemId: uuid("The page, for shares and links.").nullable(),
+            number: itemNumber("Number of the page in the addresses of the app.")
+              .nullable()
+              .describe("Number of the page in the addresses of the app, for shares and links."),
             itemTitle: z.string().nullable().describe("Title of the page."),
             role: z.enum(spaceRoleValues).nullable().describe("What the person may do."),
             count: z
@@ -470,6 +480,7 @@ export const giveEffectSchema = z
 export const sharedWithMeSchema = z
   .object({
     itemId: uuid("ID of the page."),
+    number: itemNumber("Number of the page in the addresses of the app."),
     title: z.string().describe("Title of the page."),
     kind: extensibleEnum(["page", "blogPost"], "Kind of the item."),
     role: shareRoleSchema,
@@ -483,6 +494,7 @@ export const sharedWithMeSchema = z
 
 export const exampleSharedWithMe = {
   itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+  number: 1042,
   title: "VPN access for remote staff",
   kind: "page",
   role: "reader",

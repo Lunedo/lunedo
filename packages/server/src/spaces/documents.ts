@@ -26,7 +26,6 @@ import {
   type ReportedDecision,
   type ReportedPage,
   renderMarkdown,
-  slugify,
   type ValidationProblem,
   validateDocument,
 } from "@lunedo/editor-schema";
@@ -37,6 +36,7 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import { type ContentActivity, claimTaskIds, syncCommentAnchors } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { itemAddress } from "./addresses.js";
 import { actorIdOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
 import type { PageMode } from "./schema.js";
@@ -110,7 +110,14 @@ export interface PageReferences {
   people: Record<string, string>;
   pages: Record<
     string,
-    { title: string; spaceKey: string; kind: string; accessible: boolean; inTrash: boolean }
+    {
+      title: string;
+      spaceKey: string;
+      kind: string;
+      number: number | null;
+      accessible: boolean;
+      inTrash: boolean;
+    }
   >;
   topics: Record<string, { title: string; status: "open" | "closed" }>;
   tooLargeImages: string[];
@@ -118,6 +125,7 @@ export interface PageReferences {
 
 export interface Backlink {
   itemId: string;
+  number: number;
   title: string;
   spaceId: string;
   spaceKey: string;
@@ -155,14 +163,6 @@ export async function recordClient(
   await executor.execute(sql`
     insert into collaboration_clients (item_id, client_id, account_id) values (${itemId}, ${clientId}, ${accountId})
     on conflict do nothing`);
-}
-
-export function pagePath(spaceKey: string, itemId: string, title: string): string {
-  return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slugify(title)}`;
-}
-
-export function whiteboardPath(spaceKey: string, itemId: string, title: string): string {
-  return `/spaces/${encodeURIComponent(spaceKey)}/whiteboards/${itemId}/${slugify(title)}`;
 }
 
 export const MAX_REFERENCED_WHITEBOARDS = 50;
@@ -266,15 +266,24 @@ export function renderPageMarkdown(
       const name = references.people[id];
       return name ? { name } : null;
     },
-    pageLink: (link) => {
-      if (!link.pageId) return null;
-      const page = references.pages[link.pageId];
-      if (page?.inTrash) return { href: "", title: page.title, accessible: false, inTrash: true };
-      return page?.accessible
-        ? { href: pagePath(page.spaceKey, link.pageId, page.title), title: page.title, accessible: true }
-        : { href: "", title: "", accessible: false };
-    },
+    pageLink: (link) => referencedPageLink(references, link.pageId),
   });
+}
+
+export function referencedPageLink(
+  references: PageReferences,
+  pageId: string | null,
+): { href: string; title: string; accessible: boolean; inTrash?: true } | null {
+  if (!pageId) return null;
+  const page = references.pages[pageId];
+  if (page?.inTrash) return { href: "", title: page.title, accessible: false, inTrash: true };
+  const href =
+    page?.accessible && page.number !== null
+      ? itemAddress(page.kind, page.spaceKey, page.number, page.title)
+      : null;
+  return page && href
+    ? { href, title: page.title, accessible: true }
+    : { href: "", title: "", accessible: false };
 }
 
 export function migrated(document: unknown, schemaVersion: number): DocumentJson {
@@ -620,13 +629,14 @@ export class PageDocumentService {
         : (
             await this.#database.execute<{
               id: string;
+              number: string;
               title: string;
               kind: string;
               key: string;
               accessible: boolean;
               in_trash: boolean;
             }>(sql`
-              select t.id, t.title, t.kind::text as kind, s.key,
+              select t.id, t.number, t.title, t.kind::text as kind, s.key,
                 ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} as accessible,
                 (t.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)}
                   and ${publishedFor(this.#authorization, viewer, sql`t`, sql`s`)}) as in_trash
@@ -681,14 +691,28 @@ export class PageDocumentService {
           if (page?.in_trash) {
             return [
               id,
-              { title: page.title, spaceKey: "", kind: page.kind, accessible: false, inTrash: true },
+              {
+                title: page.title,
+                spaceKey: "",
+                kind: page.kind,
+                number: null,
+                accessible: false,
+                inTrash: true,
+              },
             ];
           }
           return [
             id,
             page?.accessible
-              ? { title: page.title, spaceKey: page.key, kind: page.kind, accessible: true, inTrash: false }
-              : { title: "", spaceKey: "", kind: "page", accessible: false, inTrash: false },
+              ? {
+                  title: page.title,
+                  spaceKey: page.key,
+                  kind: page.kind,
+                  number: Number(page.number),
+                  accessible: true,
+                  inTrash: false,
+                }
+              : { title: "", spaceKey: "", kind: "page", number: null, accessible: false, inTrash: false },
           ];
         }),
       ),
@@ -718,17 +742,14 @@ export class PageDocumentService {
     );
     const result = new Map<string, ReferencedDiagram>();
     if (pageIds.length === 0) return result;
-    const pages = await this.#database.execute<{ id: string; kind: string; key: string }>(sql`
-      select t.id, t.kind::text as kind, s.key from tree_items t join spaces s on s.id = t.space_id
+    const pages = await this.#database.execute<{ id: string; number: string; kind: string; key: string }>(sql`
+      select t.id, t.number, t.kind::text as kind, s.key from tree_items t join spaces s on s.id = t.space_id
       where t.id = any(${sql.param(pageIds)}::uuid[]) and t.kind in ('page', 'blogPost')
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
     for (const page of pages.rows) {
       const readable = await this.readable(page.id);
       if (!readable) continue;
-      const href =
-        page.kind === "blogPost"
-          ? `/spaces/${encodeURIComponent(page.key)}/blog/${page.id}/${slugify(readable.title)}`
-          : pagePath(page.key, page.id, readable.title);
+      const href = itemAddress(page.kind, page.key, page.number, readable.title) ?? "";
       const diagrams = blocksOfType(readable.document, "drawio");
       for (const reference of wanted) {
         if (reference.pageId !== page.id) continue;
@@ -756,12 +777,13 @@ export class PageDocumentService {
     if (ids.length === 0) return result;
     const boards = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       key: string;
       file_id: string | null;
       size: string | number | null;
     }>(sql`
-      select t.id, t.title, s.key, f.id as file_id, f.size
+      select t.id, t.number, t.title, s.key, f.id as file_id, f.size
       from tree_items t join spaces s on s.id = t.space_id
       left join whiteboard_documents d on d.item_id = t.id
       left join whiteboard_previews p on p.id = d.preview_id
@@ -772,7 +794,7 @@ export class PageDocumentService {
       result.set(row.id, {
         id: row.id,
         title: row.title,
-        href: whiteboardPath(row.key, row.id, row.title),
+        href: itemAddress("whiteboard", row.key, row.number, row.title) ?? "",
         preview: row.file_id ? { fileId: row.file_id, size: Number(row.size ?? 0) } : null,
       });
     }
@@ -818,11 +840,12 @@ export class PageDocumentService {
     ) {
       const rows = await this.#database.execute<{
         id: string;
+        number: string;
         parent_id: string;
         title: string;
         key: string;
       }>(sql`
-        select t.id, t.parent_id, t.title, s.key from tree_items t
+        select t.id, t.number, t.parent_id, t.title, s.key from tree_items t
         join tree_items p on p.id = t.parent_id join spaces s on s.id = t.space_id
         where t.parent_id = any(${sql.param(parents)}::uuid[]) and t.kind = 'page'
           and t.archived_root_id is not distinct from p.archived_root_id
@@ -834,7 +857,7 @@ export class PageDocumentService {
       for (const row of rows.rows) {
         const page: MutablePage = {
           title: row.title,
-          href: pagePath(row.key, row.id, row.title),
+          href: itemAddress("page", row.key, row.number, row.title) ?? "",
           children: [],
         };
         listed.set(row.id, page);
@@ -850,12 +873,13 @@ export class PageDocumentService {
   async backlinks(viewer: Principal, itemId: string): Promise<Backlink[]> {
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       space_id: string;
       key: string;
       name: string;
     }>(sql`
-      select t.id, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+      select t.id, t.number, t.title, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as name
       from page_links l join tree_items t on t.id = l.source_item_id join spaces s on s.id = t.space_id
       where l.target_item_id = ${itemId} and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -863,6 +887,7 @@ export class PageDocumentService {
       limit 500`);
     return result.rows.map((row) => ({
       itemId: row.id,
+      number: Number(row.number),
       title: row.title,
       spaceId: row.space_id,
       spaceKey: row.key,
@@ -934,14 +959,15 @@ export class PageDocumentService {
     viewer: Principal,
     spaceId: string,
     label: string,
-  ): Promise<{ itemId: string; title: string; parents: string[]; contentUpdatedAt: Date }[]> {
+  ): Promise<{ itemId: string; number: number; title: string; parents: string[]; contentUpdatedAt: Date }[]> {
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       parents: string[] | null;
       content_updated_at: Date | string;
     }>(sql`
-      select t.id, t.title, t.content_updated_at, ${visibleParents(this.#authorization, viewer, sql`t`)} as parents
+      select t.id, t.number, t.title, t.content_updated_at, ${visibleParents(this.#authorization, viewer, sql`t`)} as parents
       from page_labels l join tree_items t on t.id = l.item_id
       join spaces s on s.id = t.space_id
       where t.space_id = ${spaceId} and l.label = ${label.trim().toLowerCase()}
@@ -949,6 +975,7 @@ export class PageDocumentService {
       order by lower(t.title), t.id limit 1000`);
     return result.rows.map((row) => ({
       itemId: row.id,
+      number: Number(row.number),
       title: row.title,
       parents: row.parents ?? [],
       contentUpdatedAt: new Date(row.content_updated_at),

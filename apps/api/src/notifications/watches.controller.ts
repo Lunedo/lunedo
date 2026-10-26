@@ -8,7 +8,7 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { actorOf, sessionOf } from "../http/request.js";
-import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, itemNumber, timestamp, uuid } from "../http/schemas.js";
 
 const TAG = "Watching";
 const item = { type: "item", param: "itemId" } as const;
@@ -81,6 +81,9 @@ const watchedSchema = z
       .object({
         type: z.enum(["item", "space"]).describe("Kind of target."),
         id: uuid("ID of the item or space."),
+        number: itemNumber("Number of the item in the addresses of the app.")
+          .nullable()
+          .describe("Number of the item in the addresses of the app, or null for a space."),
       })
       .describe("What is watched or muted."),
     state: z.enum(["watching", "muted"]).describe("Watched or muted."),

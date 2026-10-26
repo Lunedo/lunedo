@@ -39,7 +39,7 @@ import { itemSlug } from "../spaces/item-paths.js";
 import { PageBar } from "../spaces/page-bar.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
-import { pagePath } from "../spaces/space-queries.js";
+import { itemNumberQuery, pagePath } from "../spaces/space-queries.js";
 import { peopleWithoutAccess } from "./access.js";
 import { ExtraMeetingForm } from "./meeting-header.js";
 import { isToday, type Series, seriesNotesQuery, seriesQuery } from "./queries.js";
@@ -49,14 +49,20 @@ import { SeriesSettingsDialog } from "./series-settings-dialog.js";
 import { DecisionsTab, MeetingsTab, TasksTab, TopicsTab } from "./series-tabs.js";
 import { SuccessorDialog } from "./successor-dialog.js";
 
-const route = getRouteApi("/app/spaces/$spaceKey/meetings/$seriesId");
+const route = getRouteApi("/app/spaces/$spaceKey/meetings/$number/{-$slug}");
 
 export function SeriesScreen() {
   const { t } = useTranslation();
-  const { seriesId } = route.useParams();
-  const series = useQuery({ ...seriesQuery(seriesId), retry: false });
+  const { number } = route.useParams();
+  const resolved = useQuery({ ...itemNumberQuery(number), retry: false });
+  const series = useQuery({
+    ...seriesQuery(resolved.data?.id ?? ""),
+    enabled: resolved.data !== undefined,
+    retry: false,
+  });
+  const failed = resolved.isError ? resolved : series.isError ? series : null;
   useDocumentTitle(series.data?.title ?? t("meetings.title"));
-  if (series.isPending) {
+  if (!failed && series.isPending) {
     return (
       <div className="mx-auto flex w-full max-w-page flex-col gap-4 px-4 pt-6 md:px-8">
         <Skeleton className="h-field w-2/3" />
@@ -64,24 +70,24 @@ export function SeriesScreen() {
       </div>
     );
   }
-  if (series.isError) {
+  if (failed) {
     return (
       <div className="p-6">
-        {series.error instanceof ApiError && series.error.status === 404 ? (
+        {failed.error instanceof ApiError && failed.error.status === 404 ? (
           <Notice variant="warning" title={t("meetings.series.notFoundTitle")}>
             {t("meetings.series.notFoundDescription")}
           </Notice>
         ) : (
           <LoadError
             what={t("meetings.series.loadFailed")}
-            error={series.error}
-            onRetry={() => series.refetch()}
+            error={failed.error}
+            onRetry={() => failed.refetch()}
           />
         )}
       </div>
     );
   }
-  return <SeriesView series={series.data} />;
+  return series.data ? <SeriesView series={series.data} /> : null;
 }
 
 function SeriesView({ series }: { series: Series }) {
@@ -147,7 +153,13 @@ function SeriesView({ series }: { series: Series }) {
         danger: true,
         onSelect: () =>
           void deleteItem(
-            { id: series.id, title: series.title, kind: "meetingSeries", spaceId: series.spaceId },
+            {
+              id: series.id,
+              number: series.number,
+              title: series.title,
+              kind: "meetingSeries",
+              spaceId: series.spaceId,
+            },
             { leave: true },
           ),
       },
@@ -267,7 +279,7 @@ function SeriesView({ series }: { series: Series }) {
                 </Button>
               ) : null}
               <Link
-                to={pagePath(space.key, upcoming.id, itemSlug(upcoming.title))}
+                to={pagePath(space.key, upcoming.number, itemSlug(upcoming.title))}
                 className={buttonClassName({ variant: "primary" })}
               >
                 <NotebookPen aria-hidden className="size-icon-md" />
@@ -344,7 +356,7 @@ function OwnNotes({ seriesId, spaceKey }: { seriesId: string; spaceKey: string }
         {notes.data.map((entry) => (
           <li key={entry.meetingId} className="border-t border-border">
             <Link
-              to={pagePath(spaceKey, entry.meetingId, itemSlug(entry.meetingTitle))}
+              to={pagePath(spaceKey, entry.meetingNumber, itemSlug(entry.meetingTitle))}
               search={{ notes: true }}
               className="flex min-h-hit items-center gap-2 py-2 hover:bg-hover focus-visible:focus-ring"
             >

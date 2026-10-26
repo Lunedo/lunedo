@@ -18,7 +18,7 @@ import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { contentLanguageLabel } from "../../search/content-language.js";
-import { itemHref } from "../../spaces/item-paths.js";
+import { contentHref } from "../../spaces/item-paths.js";
 import { TransferOwnerDialog } from "../../spaces/ownership/owner-line.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
@@ -104,7 +104,7 @@ function ReviewRow({
   const format = useFormat();
   const { space } = useSpace();
   const Icon = articleTypeIcon(row.type);
-  const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, space.key) ?? "";
+  const href = contentHref({ kind: "page", number: row.number, title: row.title }, space.key) ?? "";
   const reviewed = row.reviewedAt
     ? t("reviews.list.lastReviewedOn", { date: format.date(row.reviewedAt) })
     : row.publishedAt

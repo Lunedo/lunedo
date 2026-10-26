@@ -62,7 +62,10 @@ export function TranslationsControl({
         description: t("knowledgeBase.translations.createdDescription"),
         variant: "success",
       });
-      await navigate({ to: pagePath(spaceKey, created.id, itemSlug(created.title)), search: { edit: true } });
+      await navigate({
+        to: pagePath(spaceKey, created.number, itemSlug(created.title)),
+        search: { edit: true },
+      });
     } catch (failure) {
       toast({
         title: t("knowledgeBase.translations.createFailed"),
@@ -119,9 +122,9 @@ export function TranslationsControl({
               <Badge variant={STATE_BADGES[entry.state]}>
                 {t(`knowledgeBase.translations.states.${entry.state}`)}
               </Badge>
-              {entry.itemId && entry.itemId !== itemId ? (
+              {entry.itemId && entry.itemNumber !== null && entry.itemId !== itemId ? (
                 <Link
-                  to={pagePath(spaceKey, entry.itemId, itemSlug(entry.title ?? ""))}
+                  to={pagePath(spaceKey, entry.itemNumber, itemSlug(entry.title ?? ""))}
                   className="inline-flex min-h-hit items-center rounded-sm px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
                   onClick={() => setOpen(false)}
                 >

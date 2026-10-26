@@ -22,7 +22,14 @@ import {
   weekdays,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, pictureRefField, timestamp, uuid } from "../http/schemas.js";
+import {
+  extensibleEnum,
+  inputTimestamp,
+  itemNumber,
+  pictureRefField,
+  timestamp,
+  uuid,
+} from "../http/schemas.js";
 import { documentSchema, exampleDocument } from "../spaces/schemas.js";
 
 const weekday = z.enum(weekdays).describe("Weekday as in iCalendar: `MO` to `SU`.");
@@ -181,6 +188,7 @@ export const meetingStateSchema = extensibleEnum(
 export const meetingSummarySchema = z
   .object({
     id: uuid("ID of the meeting page."),
+    number: itemNumber("Number of the meeting page in the addresses of the app."),
     title: z.string().describe("Title of the meeting page."),
     state: meetingStateSchema,
     startsAt: timestamp("Start of the meeting, or null when it is not scheduled yet.").nullable(),
@@ -199,6 +207,7 @@ export const meetingSummarySchema = z
 
 export const exampleMeetingSummary = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+  number: 1051,
   title: "Jour fixe IT · 12 Oct 2026",
   state: "upcoming",
   startsAt: "2026-10-12T07:30:00.000Z",
@@ -224,6 +233,7 @@ export const overviewSchema = z
         z
           .object({
             id: uuid("ID of the item."),
+            number: itemNumber("Number of the item in the addresses of the app."),
             title: z.string().describe("Title of the item."),
             kind: z.string().describe("Kind of the item, such as `page` or `folder`."),
             spaceKey: z.string().describe("Key of its space."),
@@ -276,6 +286,7 @@ export const extraMeetingSchema = z
 export const seriesSchema = z
   .object({
     id: uuid("ID of the series."),
+    number: itemNumber("Number of the series in the addresses of the app."),
     spaceId: uuid("Space of the series."),
     title: z.string().describe("Name of the series."),
     parentId: uuid("Parent page or folder, or null.").nullable(),
@@ -319,6 +330,7 @@ export const seriesSchema = z
 
 export const exampleSeries = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+  number: 1050,
   spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
   title: "Jour fixe IT",
   parentId: null,
@@ -363,6 +375,7 @@ export const seriesListSchema = z
     z
       .object({
         id: uuid("ID of the series."),
+        number: itemNumber("Number of the series in the addresses of the app."),
         title: z.string().describe("Name."),
         archived: z.boolean().describe("Whether the series has ended."),
         upcomingAt: timestamp("Start of the next meeting, or null.").nullable(),
@@ -374,6 +387,7 @@ export const seriesListSchema = z
 const adjacentMeetingSchema = z
   .object({
     id: uuid("ID of the meeting."),
+    number: itemNumber("Number of the meeting in the addresses of the app."),
     title: z.string().describe("Title."),
     startsAt: timestamp("Start.").nullable(),
   })
@@ -382,6 +396,7 @@ const adjacentMeetingSchema = z
 const historyEntrySchema = z
   .object({
     meetingId: uuid("Meeting of the update."),
+    meetingNumber: itemNumber("Number of that meeting in the addresses of the app."),
     meetingTitle: z.string().describe("Title of that meeting."),
     startsAt: timestamp("Start of that meeting.").nullable(),
     text: z.string().describe("The update as plain text."),
@@ -391,7 +406,11 @@ const historyEntrySchema = z
 export const meetingSchema = z
   .object({
     id: uuid("ID of the meeting page."),
+    number: itemNumber("Number of the meeting page in the addresses of the app."),
     seriesId: uuid("The series, or null when the caller cannot read it.").nullable(),
+    seriesNumber: itemNumber(
+      "Number of the series in the addresses of the app, or null when the caller cannot read it.",
+    ).nullable(),
     seriesTitle: z
       .string()
       .nullable()
@@ -474,7 +493,9 @@ export const meetingSchema = z
 
 export const exampleMeeting = {
   id: exampleMeetingSummary.id,
+  number: exampleMeetingSummary.number,
   seriesId: exampleSeries.id,
+  seriesNumber: exampleSeries.number,
   seriesTitle: exampleSeries.title,
   title: exampleMeetingSummary.title,
   state: "upcoming",
@@ -550,7 +571,9 @@ const agendaTaskSchema = z
 export const agendaSchema = z
   .object({
     meetingId: uuid("The meeting."),
+    meetingNumber: itemNumber("Number of the meeting in the addresses of the app."),
     seriesId: uuid("Its series."),
+    seriesNumber: itemNumber("Number of its series in the addresses of the app."),
     current: z
       .boolean()
       .describe(
@@ -561,6 +584,7 @@ export const agendaSchema = z
         z
           .object({
             id: uuid("ID of the topic."),
+            number: itemNumber("Number of the topic in the addresses of the app."),
             title: z.string().describe("Title."),
             status: extensibleEnum(topicStatuses, "Whether the topic is open."),
             outcome: extensibleEnum(topicOutcomes, "How a closed topic ended.").nullable(),
@@ -690,7 +714,9 @@ export const addAttendeeSchema = z
 export const topicSchema = z
   .object({
     id: uuid("ID of the topic."),
+    number: itemNumber("Number of the topic in the addresses of the app."),
     seriesId: uuid("The series."),
+    seriesNumber: itemNumber("Number of the series in the addresses of the app."),
     title: z.string().describe("Title."),
     status: extensibleEnum(topicStatuses, "Whether the topic is open."),
     outcome: extensibleEnum(topicOutcomes, "How a closed topic ended.").nullable(),
@@ -703,6 +729,7 @@ export const topicSchema = z
     raisedIn: z
       .object({
         id: uuid("Meeting ID."),
+        number: itemNumber("Number of the meeting in the addresses of the app."),
         title: z.string().describe("Title of the meeting."),
         startsAt: timestamp("Start of the meeting.").nullable(),
       })
@@ -723,7 +750,9 @@ export const topicSchema = z
 
 export const exampleTopic = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+  number: 1052,
   seriesId: exampleSeries.id,
+  seriesNumber: exampleSeries.number,
   title: "Positions in AD",
   status: "open",
   outcome: null,
@@ -732,6 +761,7 @@ export const exampleTopic = {
   oneOff: false,
   raisedIn: {
     id: exampleMeetingSummary.id,
+    number: exampleMeetingSummary.number,
     title: exampleMeetingSummary.title,
     startsAt: exampleMeetingSummary.startsAt,
   },
@@ -753,6 +783,7 @@ export const topicDetailsSchema = topicSchema
         z
           .object({
             meetingId: uuid("Meeting the update was written in."),
+            meetingNumber: itemNumber("Number of that meeting in the addresses of the app."),
             meetingTitle: z.string().describe("Title of that meeting."),
             startsAt: timestamp("Start of that meeting.").nullable(),
             content: z.array(z.json()).describe("The update as blocks of the editor schema."),
@@ -765,6 +796,7 @@ export const topicDetailsSchema = topicSchema
       .object({
         id: uuid("Decision ID."),
         itemId: uuid("Page that holds the decision."),
+        itemNumber: itemNumber("Number of that page in the addresses of the app."),
         itemTitle: z.string().describe("Title of that page."),
         statement: z.array(z.json()).describe("The statement as blocks of the editor schema."),
         text: z.string().describe("The statement as plain text."),
@@ -858,12 +890,17 @@ export const decisionEntrySchema = z
     meeting: z
       .object({
         id: uuid("Meeting ID."),
+        number: itemNumber("Number of the meeting in the addresses of the app."),
         title: z.string().describe("Title."),
         startsAt: timestamp("Start of the meeting.").nullable(),
       })
       .describe("The meeting it was recorded in."),
     topic: z
-      .object({ id: uuid("Topic ID."), title: z.string().describe("Title.") })
+      .object({
+        id: uuid("Topic ID."),
+        number: itemNumber("Number of the topic in the addresses of the app."),
+        title: z.string().describe("Title."),
+      })
       .nullable()
       .describe("The topic it closed, if visible."),
     recordedAt: timestamp("When the decision was first recorded."),
@@ -924,10 +961,14 @@ export const upcomingSchema = z
     z
       .object({
         id: uuid("Meeting ID."),
+        number: itemNumber("Number of the meeting in the addresses of the app."),
         title: z.string().describe("Title."),
         startsAt: timestamp("Start, or null when not scheduled yet.").nullable(),
         durationMinutes: z.number().int().describe("Duration in minutes."),
         seriesId: uuid("The series, or null when the caller cannot read it.").nullable(),
+        seriesNumber: itemNumber(
+          "Number of the series in the addresses of the app, or null when the caller cannot read it.",
+        ).nullable(),
         seriesTitle: z
           .string()
           .nullable()
@@ -978,6 +1019,7 @@ export const oneOnOneSchema = z
     spaceId: uuid("The confidential space."),
     spaceKey: z.string().describe("Its key."),
     seriesId: uuid("The series.").nullable(),
+    seriesNumber: itemNumber("Number of the series in the addresses of the app.").nullable(),
     partners: z
       .array(
         z
@@ -990,7 +1032,11 @@ export const oneOnOneSchema = z
       )
       .describe("The other people of the one-on-one."),
     nextMeeting: z
-      .object({ id: uuid("Meeting ID."), startsAt: timestamp("Start.").nullable() })
+      .object({
+        id: uuid("Meeting ID."),
+        number: itemNumber("Number of the meeting in the addresses of the app."),
+        startsAt: timestamp("Start.").nullable(),
+      })
       .nullable()
       .describe("The next meeting."),
   })
@@ -1009,6 +1055,7 @@ export const privateNotesListSchema = z
     z
       .object({
         meetingId: uuid("The meeting."),
+        meetingNumber: itemNumber("Number of the meeting in the addresses of the app."),
         meetingTitle: z.string().describe("Title of the meeting."),
         startsAt: timestamp("Start of the meeting.").nullable(),
         document: documentSchema,

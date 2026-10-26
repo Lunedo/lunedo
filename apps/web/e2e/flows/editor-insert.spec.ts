@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { pagePath } from "../support/addresses.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
 import { unique } from "../support/people.js";
@@ -28,9 +29,9 @@ async function pageWithLines(page: Page, organizationId: string): Promise<string
     title: "Lines",
     parentId: null,
     mode: "live",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, { document: LINES });
-  return `/spaces/${key}/pages/${created.id}/lines?edit=true`;
+  return `${pagePath(key, created)}?edit=true`;
 }
 
 async function cursorThreeLinesAbove(page: Page) {

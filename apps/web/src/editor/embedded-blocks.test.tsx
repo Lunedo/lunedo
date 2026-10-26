@@ -80,7 +80,7 @@ function routes(services = defaultEmbedServices) {
       body: {
         itemId: BOARD,
         title: "Network 2027",
-        href: `/spaces/IT/whiteboards/${BOARD}/network-2027`,
+        href: "/spaces/IT/whiteboards/1004/network-2027",
         preview: true,
       },
     }),
@@ -270,7 +270,7 @@ describe("whiteboard blocks in the read view", () => {
   it("show the preview and title and open the whiteboard", async () => {
     await read([{ type: "whiteboard", attrs: { whiteboardId: BOARD } }]);
     const link = await screen.findByRole("link", { name: /Network 2027/ });
-    expect(link?.getAttribute("href")).toBe(`/spaces/IT/whiteboards/${BOARD}/network-2027`);
+    expect(link?.getAttribute("href")).toBe("/spaces/IT/whiteboards/1004/network-2027");
     expect(link.querySelector("img")?.getAttribute("src")).toContain(`/api/v1/whiteboards/${BOARD}/preview`);
   });
 

@@ -530,6 +530,20 @@
                       ],
                       "description": "The page, or null for the whole space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Number of the page in the addresses of the app."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the page in the addresses of the app, when the caller may see its title; null for the whole space."
+                    },
                     "itemTitle": {
                       "description": "Title of the page, when the caller may see it.",
                       "type": [
@@ -624,6 +638,7 @@
                     "spaceId",
                     "spaceName",
                     "itemId",
+                    "number",
                     "itemTitle",
                     "message",
                     "status",
@@ -645,6 +660,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
+                  "number": null,
                   "itemTitle": null,
                   "message": "I take over the on-call duty next month.",
                   "status": "open",
@@ -914,6 +930,20 @@
                       ],
                       "description": "The page, or null for the whole space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Number of the page in the addresses of the app."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the page in the addresses of the app, when the caller may see its title; null for the whole space."
+                    },
                     "itemTitle": {
                       "description": "Title of the page, when the caller may see it.",
                       "type": [
@@ -1008,6 +1038,7 @@
                     "spaceId",
                     "spaceName",
                     "itemId",
+                    "number",
                     "itemTitle",
                     "message",
                     "status",
@@ -1029,6 +1060,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
+                  "number": null,
                   "itemTitle": null,
                   "message": "I take over the on-call duty next month.",
                   "status": "open",
@@ -1511,6 +1543,20 @@
                         ],
                         "description": "The page, or null for the whole space."
                       },
+                      "number": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the page in the addresses of the app."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the page in the addresses of the app, when the caller may see its title; null for the whole space."
+                      },
                       "itemTitle": {
                         "description": "Title of the page, when the caller may see it.",
                         "type": [
@@ -1605,6 +1651,7 @@
                       "spaceId",
                       "spaceName",
                       "itemId",
+                      "number",
                       "itemTitle",
                       "message",
                       "status",
@@ -1629,6 +1676,7 @@
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceName": "IT Operations",
                     "itemId": null,
+                    "number": null,
                     "itemTitle": null,
                     "message": "I take over the on-call duty next month.",
                     "status": "open",
@@ -3772,6 +3820,19 @@
                       ],
                       "description": "The overview page of the space, or null for a knowledge base."
                     },
+                    "overviewItemNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                    },
                     "archived": {
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
@@ -3810,6 +3871,7 @@
                     "ownerId",
                     "ownerName",
                     "overviewItemId",
+                    "overviewItemNumber",
                     "archived",
                     "exportEnabled",
                     "createdAt",
@@ -3837,6 +3899,7 @@
                   "ownerId": null,
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                  "overviewItemNumber": 1001,
                   "archived": false,
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
@@ -8898,11 +8961,26 @@
                                 "type": "string",
                                 "format": "uuid",
                                 "description": "ID of the item or space."
+                              },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of the item in the addresses of the app."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null for a space."
                               }
                             },
                             "required": [
                               "type",
-                              "id"
+                              "id",
+                              "number"
                             ],
                             "additionalProperties": false,
                             "description": "What is watched or muted."
@@ -16799,6 +16877,12 @@
                         "format": "uuid",
                         "description": "ID of the source page."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the source page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of the source page."
@@ -16826,6 +16910,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "title",
                       "spaceKey",
                       "spaceName",
@@ -16839,6 +16924,7 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                    "number": 1041,
                     "title": "VPN gateway",
                     "spaceKey": "OPS",
                     "spaceName": "IT operations",
@@ -17038,6 +17124,12 @@
                         "format": "uuid",
                         "description": "ID of the source page."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the source page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of the source page."
@@ -17065,6 +17157,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "title",
                       "spaceKey",
                       "spaceName",
@@ -17078,6 +17171,7 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                    "number": 1041,
                     "title": "VPN gateway",
                     "spaceKey": "OPS",
                     "spaceName": "IT operations",
@@ -17336,6 +17430,12 @@
                         "format": "uuid",
                         "description": "ID of the source page."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the source page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of the source page."
@@ -17363,6 +17463,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "title",
                       "spaceKey",
                       "spaceName",
@@ -17632,6 +17733,19 @@
                             ],
                             "description": "ID of the article in this language, or null."
                           },
+                          "itemNumber": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Number of the article in this language in the addresses of the app, or null."
+                          },
                           "title": {
                             "description": "Title in this language, or null.",
                             "type": [
@@ -17658,6 +17772,7 @@
                         "required": [
                           "language",
                           "itemId",
+                          "itemNumber",
                           "title",
                           "state",
                           "enabled"
@@ -17687,6 +17802,7 @@
                     {
                       "language": "de",
                       "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a61",
+                      "itemNumber": 123,
                       "title": "VPN einrichten",
                       "state": "original",
                       "enabled": true
@@ -17694,6 +17810,7 @@
                     {
                       "language": "en",
                       "itemId": null,
+                      "itemNumber": null,
                       "title": null,
                       "state": "missing",
                       "enabled": true
@@ -26059,6 +26176,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -26241,6 +26364,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -26265,6 +26389,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -26481,6 +26606,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -26663,6 +26794,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -26687,6 +26819,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -26967,6 +27100,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -27149,6 +27288,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -27173,6 +27313,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -27413,6 +27554,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -27595,6 +27742,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -27619,6 +27767,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -27863,6 +28012,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -28045,6 +28200,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -28069,6 +28225,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -28337,6 +28494,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -28519,6 +28682,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -28543,6 +28707,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -28787,6 +28952,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -28969,6 +29140,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -28993,6 +29165,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -29247,6 +29420,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -29429,6 +29608,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -29453,6 +29633,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -31712,6 +31893,12 @@
                       "format": "uuid",
                       "description": "ID of the page or blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the page or blog post in the addresses of the app."
+                    },
                     "kind": {
                       "type": "string",
                       "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -31735,6 +31922,7 @@
                   },
                   "required": [
                     "itemId",
+                    "number",
                     "kind",
                     "spaceKey",
                     "title",
@@ -31745,6 +31933,7 @@
                 },
                 "example": {
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102",
+                  "number": 1042,
                   "kind": "page",
                   "spaceKey": "ITOPS",
                   "title": "On-call rota",
@@ -32011,6 +32200,12 @@
                               "format": "uuid",
                               "description": "ID of the new item."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the new item in the addresses of the app."
+                            },
                             "spaceId": {
                               "type": "string",
                               "format": "uuid",
@@ -32040,6 +32235,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "spaceId",
                             "spaceKey",
                             "kind",
@@ -32113,6 +32309,7 @@
                   "skipped": 0,
                   "item": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a71",
+                    "number": 1071,
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "spaceKey": "OPS",
                     "kind": "page",
@@ -32309,6 +32506,19 @@
                         ],
                         "description": "The deleted item, or null for a space."
                       },
+                      "number": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                      },
                       "itemKind": {
                         "anyOf": [
                           {
@@ -32425,6 +32635,7 @@
                       "spaceName",
                       "kind",
                       "itemId",
+                      "number",
                       "itemKind",
                       "title",
                       "descendants",
@@ -32448,6 +32659,7 @@
                     "spaceName": "IT Operations",
                     "kind": "space",
                     "itemId": null,
+                    "number": 1041,
                     "itemKind": null,
                     "title": "Old VPN (OpenVPN) setup",
                     "descendants": 2,
@@ -32566,6 +32778,19 @@
                       ],
                       "description": "The restored item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the restored item in the addresses of the app, or null for a space."
+                    },
                     "parentId": {
                       "anyOf": [
                         {
@@ -32587,6 +32812,7 @@
                   },
                   "required": [
                     "itemId",
+                    "number",
                     "parentId",
                     "parentEntries"
                   ],
@@ -32595,6 +32821,7 @@
                 },
                 "example": {
                   "itemId": null,
+                  "number": null,
                   "parentId": null,
                   "parentEntries": 0
                 }
@@ -36058,6 +36285,12 @@
                             "format": "uuid",
                             "description": "ID of the page or blog post."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item in the addresses of the app."
+                          },
                           "kind": {
                             "type": "string",
                             "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -36100,6 +36333,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "kind",
                           "title",
                           "spaceId",
@@ -36125,6 +36359,12 @@
                                 "type": "string",
                                 "format": "uuid",
                                 "description": "ID of the page or blog post."
+                              },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the item in the addresses of the app."
                               },
                               "kind": {
                                 "type": "string",
@@ -36168,6 +36408,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceId",
@@ -36325,6 +36566,12 @@
                                 "format": "uuid",
                                 "description": "Page or blog post with the task."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of that item in the addresses of the app."
+                              },
                               "kind": {
                                 "type": "string",
                                 "description": "Kind of that item. New values can be added in later versions; handle unknown values.",
@@ -36353,6 +36600,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceId",
@@ -36396,6 +36644,12 @@
                                 "format": "uuid",
                                 "description": "ID of the page or blog post."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the item in the addresses of the app."
+                              },
                               "kind": {
                                 "type": "string",
                                 "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -36433,6 +36687,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceId",
@@ -36509,6 +36764,12 @@
                             "type": "string",
                             "format": "uuid",
                             "description": "ID of the blog post."
+                          },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the blog post in the addresses of the app."
                           },
                           "spaceId": {
                             "type": "string",
@@ -36692,6 +36953,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "spaceKey",
                           "spaceName",
@@ -36731,6 +36993,7 @@
                   "recent": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "number": 4711,
                       "kind": "page",
                       "title": "VPN access for remote staff",
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -36744,6 +37007,7 @@
                     "items": [
                       {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                        "number": 4711,
                         "kind": "page",
                         "title": "VPN access for remote staff",
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -36772,6 +37036,7 @@
                       },
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                        "number": 4711,
                         "kind": "page",
                         "title": "VPN access for remote staff",
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -36785,6 +37050,7 @@
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5e01",
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                        "number": 4711,
                         "kind": "page",
                         "title": "VPN access for remote staff",
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -36803,6 +37069,7 @@
                   "posts": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                      "number": 1077,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
@@ -42197,6 +42464,12 @@
                                     "format": "uuid",
                                     "description": "ID of the page."
                                   },
+                                  "number": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of the page in the addresses of the app."
+                                  },
                                   "title": {
                                     "type": "string",
                                     "description": "Title of the page in Lunedo."
@@ -42208,6 +42481,7 @@
                                 },
                                 "required": [
                                   "id",
+                                  "number",
                                   "title",
                                   "spaceKey"
                                 ],
@@ -42702,6 +42976,7 @@
                       "change": "conflict",
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0102",
+                        "number": 1042,
                         "title": "On-call rota",
                         "spaceKey": "ITOPS"
                       },
@@ -43327,6 +43602,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -43340,6 +43628,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -54425,6 +54714,12 @@
                                     "format": "uuid",
                                     "description": "ID of the page."
                                   },
+                                  "number": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of the page in the addresses of the app."
+                                  },
                                   "title": {
                                     "type": "string",
                                     "description": "Title of the page."
@@ -54432,6 +54727,7 @@
                                 },
                                 "required": [
                                   "id",
+                                  "number",
                                   "title"
                                 ],
                                 "additionalProperties": false
@@ -54519,6 +54815,7 @@
                       "code": "missingAttachment",
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0002",
+                        "number": 1031,
                         "title": "Network overview"
                       },
                       "restricted": false,
@@ -126845,6 +127142,19 @@
                       ],
                       "description": "The deleted item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                    },
                     "itemKind": {
                       "anyOf": [
                         {
@@ -126961,6 +127271,7 @@
                     "spaceName",
                     "kind",
                     "itemId",
+                    "number",
                     "itemKind",
                     "title",
                     "descendants",
@@ -126981,6 +127292,7 @@
                   "spaceName": "IT Operations",
                   "kind": "space",
                   "itemId": null,
+                  "number": 1041,
                   "itemKind": null,
                   "title": "Old VPN (OpenVPN) setup",
                   "descendants": 2,
@@ -127630,6 +127942,19 @@
                         ],
                         "description": "The deleted item, or null for a space."
                       },
+                      "number": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                      },
                       "itemKind": {
                         "anyOf": [
                           {
@@ -127746,6 +128071,7 @@
                       "spaceName",
                       "kind",
                       "itemId",
+                      "number",
                       "itemKind",
                       "title",
                       "descendants",
@@ -128114,6 +128440,19 @@
                       ],
                       "description": "The restored item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the restored item in the addresses of the app, or null for a space."
+                    },
                     "parentId": {
                       "anyOf": [
                         {
@@ -128135,6 +128474,7 @@
                   },
                   "required": [
                     "itemId",
+                    "number",
                     "parentId",
                     "parentEntries"
                   ],
@@ -128143,6 +128483,7 @@
                 },
                 "example": {
                   "itemId": null,
+                  "number": null,
                   "parentId": null,
                   "parentEntries": 0
                 }
@@ -141532,6 +141873,19 @@
                       ],
                       "description": "The deleted item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                    },
                     "itemKind": {
                       "anyOf": [
                         {
@@ -141648,6 +142002,7 @@
                     "spaceName",
                     "kind",
                     "itemId",
+                    "number",
                     "itemKind",
                     "title",
                     "descendants",
@@ -141668,6 +142023,7 @@
                   "spaceName": "IT Operations",
                   "kind": "items",
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                  "number": 1041,
                   "itemKind": "page",
                   "title": "Old VPN (OpenVPN) setup",
                   "descendants": 2,
@@ -144916,6 +145272,12 @@
                               "format": "uuid",
                               "description": "ID of the new item."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the new item in the addresses of the app."
+                            },
                             "spaceId": {
                               "type": "string",
                               "format": "uuid",
@@ -144945,6 +145307,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "spaceId",
                             "spaceKey",
                             "kind",
@@ -145018,6 +145381,7 @@
                   "skipped": 0,
                   "item": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a71",
+                    "number": 1071,
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "spaceKey": "OPS",
                     "kind": "page",
@@ -149924,6 +150288,12 @@
                       "format": "uuid",
                       "description": "ID of the series."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the series in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -150154,6 +150524,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting page."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting page in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title of the meeting page."
@@ -150221,6 +150597,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "state",
                             "startsAt",
@@ -150296,6 +150673,12 @@
                                 "format": "uuid",
                                 "description": "ID of the item."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the item in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title of the item."
@@ -150311,6 +150694,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title",
                               "kind",
                               "spaceKey"
@@ -150337,6 +150721,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "title",
                     "parentId",
@@ -150358,6 +150743,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "number": 1050,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "title": "Jour fixe IT",
                   "parentId": null,
@@ -150395,6 +150781,7 @@
                   "calendarUid": null,
                   "upcoming": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "state": "upcoming",
                     "startsAt": "2026-10-12T07:30:00.000Z",
@@ -150747,6 +151134,12 @@
                       "format": "uuid",
                       "description": "ID of the series."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the series in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -150977,6 +151370,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting page."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting page in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title of the meeting page."
@@ -151044,6 +151443,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "state",
                             "startsAt",
@@ -151119,6 +151519,12 @@
                                 "format": "uuid",
                                 "description": "ID of the item."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the item in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title of the item."
@@ -151134,6 +151540,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title",
                               "kind",
                               "spaceKey"
@@ -151160,6 +151567,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "title",
                     "parentId",
@@ -151181,6 +151589,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "number": 1050,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "title": "Jour fixe IT",
                   "parentId": null,
@@ -151218,6 +151627,7 @@
                   "calendarUid": null,
                   "upcoming": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "state": "upcoming",
                     "startsAt": "2026-10-12T07:30:00.000Z",
@@ -151795,6 +152205,12 @@
                             "format": "uuid",
                             "description": "Meeting ID."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the meeting in the addresses of the app."
+                          },
                           "title": {
                             "type": "string",
                             "description": "Title."
@@ -151814,6 +152230,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "title",
                           "startsAt"
                         ],
@@ -151830,6 +152247,12 @@
                                 "format": "uuid",
                                 "description": "Topic ID."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the topic in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title."
@@ -151837,6 +152260,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title"
                             ],
                             "additionalProperties": false
@@ -151883,6 +152307,7 @@
                     "text": "Laptops get BitLocker.",
                     "meeting": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                      "number": 1051,
                       "title": "Jour fixe IT · 12 Oct 2026",
                       "startsAt": "2026-10-12T07:30:00.000Z"
                     },
@@ -152313,6 +152738,12 @@
                             "format": "uuid",
                             "description": "ID of the meeting page."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the meeting page in the addresses of the app."
+                          },
                           "title": {
                             "type": "string",
                             "description": "Title of the meeting page."
@@ -152380,6 +152811,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "title",
                           "state",
                           "startsAt",
@@ -152414,6 +152846,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                      "number": 1051,
                       "title": "Jour fixe IT · 12 Oct 2026",
                       "state": "upcoming",
                       "startsAt": "2026-10-12T07:30:00.000Z",
@@ -152618,6 +153051,12 @@
                       "format": "uuid",
                       "description": "ID of the meeting page."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the meeting page in the addresses of the app."
+                    },
                     "seriesId": {
                       "anyOf": [
                         {
@@ -152629,6 +153068,19 @@
                         }
                       ],
                       "description": "The series, or null when the caller cannot read it."
+                    },
+                    "seriesNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the series in the addresses of the app, or null when the caller cannot read it."
                     },
                     "seriesTitle": {
                       "description": "Name of the series, or null when the caller cannot read it.",
@@ -152760,6 +153212,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title."
@@ -152779,6 +153237,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -152801,6 +153260,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title."
@@ -152820,6 +153285,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -152972,7 +153438,9 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "seriesId",
+                    "seriesNumber",
                     "seriesTitle",
                     "title",
                     "state",
@@ -152998,7 +153466,9 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                  "number": 1051,
                   "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050,
                   "seriesTitle": "Jour fixe IT",
                   "title": "Jour fixe IT · 12 Oct 2026",
                   "state": "upcoming",
@@ -153559,6 +154029,12 @@
                         "format": "uuid",
                         "description": "The meeting."
                       },
+                      "meetingNumber": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the meeting in the addresses of the app."
+                      },
                       "meetingTitle": {
                         "type": "string",
                         "description": "Title of the meeting."
@@ -153587,6 +154063,7 @@
                     },
                     "required": [
                       "meetingId",
+                      "meetingNumber",
                       "meetingTitle",
                       "startsAt",
                       "document",
@@ -153600,6 +154077,7 @@
                 "example": [
                   {
                     "meetingId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "meetingNumber": 1051,
                     "meetingTitle": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z",
                     "document": {
@@ -154117,10 +154595,22 @@
                         "format": "uuid",
                         "description": "ID of the topic."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the topic in the addresses of the app."
+                      },
                       "seriesId": {
                         "type": "string",
                         "format": "uuid",
                         "description": "The series."
+                      },
+                      "seriesNumber": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the series in the addresses of the app."
                       },
                       "title": {
                         "type": "string",
@@ -154201,6 +154691,12 @@
                                 "format": "uuid",
                                 "description": "Meeting ID."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the meeting in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title of the meeting."
@@ -154220,6 +154716,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title",
                               "startsAt"
                             ],
@@ -154294,7 +154791,9 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "seriesId",
+                      "seriesNumber",
                       "title",
                       "status",
                       "outcome",
@@ -154318,7 +154817,9 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                    "number": 1052,
                     "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                    "seriesNumber": 1050,
                     "title": "Positions in AD",
                     "status": "open",
                     "outcome": null,
@@ -154332,6 +154833,7 @@
                     "oneOff": false,
                     "raisedIn": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                      "number": 1051,
                       "title": "Jour fixe IT · 12 Oct 2026",
                       "startsAt": "2026-10-12T07:30:00.000Z"
                     },
@@ -154573,10 +155075,22 @@
                       "format": "uuid",
                       "description": "ID of the topic."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the topic in the addresses of the app."
+                    },
                     "seriesId": {
                       "type": "string",
                       "format": "uuid",
                       "description": "The series."
+                    },
+                    "seriesNumber": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the series in the addresses of the app."
                     },
                     "title": {
                       "type": "string",
@@ -154657,6 +155171,12 @@
                               "format": "uuid",
                               "description": "Meeting ID."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title of the meeting."
@@ -154676,6 +155196,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -154766,6 +155287,12 @@
                             "format": "uuid",
                             "description": "Meeting the update was written in."
                           },
+                          "meetingNumber": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of that meeting in the addresses of the app."
+                          },
                           "meetingTitle": {
                             "type": "string",
                             "description": "Title of that meeting."
@@ -154797,6 +155324,7 @@
                         },
                         "required": [
                           "meetingId",
+                          "meetingNumber",
                           "meetingTitle",
                           "startsAt",
                           "content",
@@ -154822,6 +155350,12 @@
                               "format": "uuid",
                               "description": "Page that holds the decision."
                             },
+                            "itemNumber": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of that page in the addresses of the app."
+                            },
                             "itemTitle": {
                               "type": "string",
                               "description": "Title of that page."
@@ -154841,6 +155375,7 @@
                           "required": [
                             "id",
                             "itemId",
+                            "itemNumber",
                             "itemTitle",
                             "statement",
                             "text"
@@ -154856,7 +155391,9 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "seriesId",
+                    "seriesNumber",
                     "title",
                     "status",
                     "outcome",
@@ -154881,7 +155418,9 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                  "number": 1052,
                   "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050,
                   "title": "Positions in AD",
                   "status": "open",
                   "outcome": null,
@@ -154895,6 +155434,7 @@
                   "oneOff": false,
                   "raisedIn": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z"
                   },
@@ -155174,6 +155714,12 @@
                       "format": "uuid",
                       "description": "ID of the meeting page."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the meeting page in the addresses of the app."
+                    },
                     "seriesId": {
                       "anyOf": [
                         {
@@ -155185,6 +155731,19 @@
                         }
                       ],
                       "description": "The series, or null when the caller cannot read it."
+                    },
+                    "seriesNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the series in the addresses of the app, or null when the caller cannot read it."
                     },
                     "seriesTitle": {
                       "description": "Name of the series, or null when the caller cannot read it.",
@@ -155316,6 +155875,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title."
@@ -155335,6 +155900,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -155357,6 +155923,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title."
@@ -155376,6 +155948,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -155528,7 +156101,9 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "seriesId",
+                    "seriesNumber",
                     "seriesTitle",
                     "title",
                     "state",
@@ -155554,7 +156129,9 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                  "number": 1051,
                   "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050,
                   "seriesTitle": "Jour fixe IT",
                   "title": "Jour fixe IT · 12 Oct 2026",
                   "state": "upcoming",
@@ -155760,10 +156337,22 @@
                       "format": "uuid",
                       "description": "The meeting."
                     },
+                    "meetingNumber": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the meeting in the addresses of the app."
+                    },
                     "seriesId": {
                       "type": "string",
                       "format": "uuid",
                       "description": "Its series."
+                    },
+                    "seriesNumber": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of its series in the addresses of the app."
                     },
                     "current": {
                       "type": "boolean",
@@ -155778,6 +156367,12 @@
                             "type": "string",
                             "format": "uuid",
                             "description": "ID of the topic."
+                          },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the topic in the addresses of the app."
                           },
                           "title": {
                             "type": "string",
@@ -155889,6 +156484,12 @@
                                   "format": "uuid",
                                   "description": "Meeting of the update."
                                 },
+                                "meetingNumber": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991,
+                                  "description": "Number of that meeting in the addresses of the app."
+                                },
                                 "meetingTitle": {
                                   "type": "string",
                                   "description": "Title of that meeting."
@@ -155912,6 +156513,7 @@
                               },
                               "required": [
                                 "meetingId",
+                                "meetingNumber",
                                 "meetingTitle",
                                 "startsAt",
                                 "text"
@@ -155931,6 +156533,12 @@
                                   "format": "uuid",
                                   "description": "Meeting of the update."
                                 },
+                                "meetingNumber": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991,
+                                  "description": "Number of that meeting in the addresses of the app."
+                                },
                                 "meetingTitle": {
                                   "type": "string",
                                   "description": "Title of that meeting."
@@ -155954,6 +156562,7 @@
                               },
                               "required": [
                                 "meetingId",
+                                "meetingNumber",
                                 "meetingTitle",
                                 "startsAt",
                                 "text"
@@ -156046,6 +156655,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "title",
                           "status",
                           "outcome",
@@ -156192,7 +156802,9 @@
                   },
                   "required": [
                     "meetingId",
+                    "meetingNumber",
                     "seriesId",
+                    "seriesNumber",
                     "current",
                     "topics",
                     "closedTopics",
@@ -156204,11 +156816,14 @@
                 },
                 "example": {
                   "meetingId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                  "meetingNumber": 1051,
                   "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050,
                   "current": true,
                   "topics": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                      "number": 1052,
                       "title": "Positions in AD",
                       "status": "open",
                       "outcome": null,
@@ -160205,6 +160820,12 @@
                         "format": "uuid",
                         "description": "Meeting ID."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the meeting in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title."
@@ -160239,6 +160860,19 @@
                         ],
                         "description": "The series, or null when the caller cannot read it."
                       },
+                      "seriesNumber": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the series in the addresses of the app, or null when the caller cannot read it."
+                      },
                       "seriesTitle": {
                         "description": "Name of the series, or null when the caller cannot read it.",
                         "type": [
@@ -160262,10 +160896,12 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "title",
                       "startsAt",
                       "durationMinutes",
                       "seriesId",
+                      "seriesNumber",
                       "seriesTitle",
                       "spaceId",
                       "spaceKey",
@@ -160279,10 +160915,12 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z",
                     "durationMinutes": 45,
                     "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                    "seriesNumber": 1050,
                     "seriesTitle": "Jour fixe IT",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceKey": "ITOPS",
@@ -160434,6 +161072,12 @@
                             "format": "uuid",
                             "description": "ID of the page or blog post."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item in the addresses of the app."
+                          },
                           "kind": {
                             "type": "string",
                             "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -160471,6 +161115,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "kind",
                           "title",
                           "spaceId",
@@ -160543,6 +161188,7 @@
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5e01",
                     "item": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "number": 4711,
                       "kind": "page",
                       "title": "VPN access for remote staff",
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -160789,11 +161435,26 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of the item in the addresses of the app."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null when the target is no item or is gone."
                               }
                             },
                             "required": [
                               "type",
-                              "id"
+                              "id",
+                              "number"
                             ],
                             "additionalProperties": false
                           },
@@ -160937,6 +161598,20 @@
                                             "null"
                                           ]
                                         },
+                                        "number": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 9007199254740991,
+                                              "description": "Number of the item in the addresses of the app."
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ],
+                                          "description": "Number of the item in the addresses of the app, or null when the item is gone."
+                                        },
                                         "itemTitle": {
                                           "type": "string"
                                         },
@@ -160993,6 +161668,7 @@
                                       "required": [
                                         "id",
                                         "itemId",
+                                        "number",
                                         "itemTitle",
                                         "actor",
                                         "updatedAt",
@@ -161181,11 +161857,26 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "number": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the item in the addresses of the app."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Number of the item in the addresses of the app, or null when the target is no item or is gone."
                         }
                       },
                       "required": [
                         "type",
-                        "id"
+                        "id",
+                        "number"
                       ],
                       "additionalProperties": false
                     },
@@ -161329,6 +162020,20 @@
                                       "null"
                                     ]
                                   },
+                                  "number": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 9007199254740991,
+                                        "description": "Number of the item in the addresses of the app."
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Number of the item in the addresses of the app, or null when the item is gone."
+                                  },
                                   "itemTitle": {
                                     "type": "string"
                                   },
@@ -161385,6 +162090,7 @@
                                 "required": [
                                   "id",
                                   "itemId",
+                                  "number",
                                   "itemTitle",
                                   "actor",
                                   "updatedAt",
@@ -162633,6 +163339,19 @@
                         ],
                         "description": "The series."
                       },
+                      "seriesNumber": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the series in the addresses of the app."
+                      },
                       "partners": {
                         "type": "array",
                         "items": {
@@ -162678,6 +163397,12 @@
                                 "format": "uuid",
                                 "description": "Meeting ID."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the meeting in the addresses of the app."
+                              },
                               "startsAt": {
                                 "anyOf": [
                                   {
@@ -162693,6 +163418,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "startsAt"
                             ],
                             "additionalProperties": false
@@ -162708,6 +163434,7 @@
                       "spaceId",
                       "spaceKey",
                       "seriesId",
+                      "seriesNumber",
                       "partners",
                       "nextMeeting"
                     ],
@@ -162721,6 +163448,7 @@
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b00",
                     "spaceKey": "MSAB",
                     "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                    "seriesNumber": 1050,
                     "partners": [
                       {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -162730,6 +163458,7 @@
                     ],
                     "nextMeeting": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                      "number": 1051,
                       "startsAt": "2026-10-15T12:00:00.000Z"
                     }
                   }
@@ -163011,18 +163740,33 @@
                         }
                       ],
                       "description": "The series."
+                    },
+                    "seriesNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the series in the addresses of the app."
                     }
                   },
                   "required": [
                     "spaceId",
-                    "seriesId"
+                    "seriesId",
+                    "seriesNumber"
                   ],
                   "additionalProperties": false,
                   "description": "The one-on-one."
                 },
                 "example": {
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b00",
-                  "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00"
+                  "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050
                 }
               }
             }
@@ -167131,6 +167875,12 @@
                             "format": "uuid",
                             "description": "ID of the blog post."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the blog post in the addresses of the app."
+                          },
                           "spaceId": {
                             "type": "string",
                             "format": "uuid",
@@ -167313,6 +168063,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "spaceKey",
                           "spaceName",
@@ -167356,6 +168107,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                      "number": 1077,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
@@ -167589,6 +168341,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -167771,6 +168529,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -167795,6 +168554,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -173958,6 +174718,12 @@
                               "format": "uuid",
                               "description": "ID of the page or blog post."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the item in the addresses of the app."
+                            },
                             "kind": {
                               "type": "string",
                               "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -173995,6 +174761,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "kind",
                             "title",
                             "spaceId",
@@ -174021,6 +174788,7 @@
                 "example": {
                   "page": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "kind": "page",
                     "title": "VPN access for remote staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -174232,6 +175000,12 @@
                               "format": "uuid",
                               "description": "ID of the page or blog post."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the item in the addresses of the app."
+                            },
                             "kind": {
                               "type": "string",
                               "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -174269,6 +175043,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "kind",
                             "title",
                             "spaceId",
@@ -174295,6 +175070,7 @@
                 "example": {
                   "page": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "kind": "page",
                     "title": "VPN access for remote staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -182881,6 +183657,20 @@
                             ],
                             "description": "The page, for shares and links."
                           },
+                          "number": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the page in the addresses of the app."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Number of the page in the addresses of the app, for shares and links."
+                          },
                           "itemTitle": {
                             "description": "Title of the page.",
                             "type": [
@@ -183031,6 +183821,7 @@
                           "spaceName",
                           "spaceKey",
                           "itemId",
+                          "number",
                           "itemTitle",
                           "role",
                           "count",
@@ -183070,6 +183861,7 @@
                       "spaceName": "IT Operations",
                       "spaceKey": "ITOPS",
                       "itemId": null,
+                      "number": null,
                       "itemTitle": null,
                       "role": "reader",
                       "count": 1,
@@ -186923,6 +187715,12 @@
                             "format": "uuid",
                             "description": "ID of the page, blog post or running topic the result belongs to; for a decision, the meeting it was recorded in."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item `itemId` names, in the addresses of the app."
+                          },
                           "itemType": {
                             "type": "string",
                             "description": "What `itemId` is: `page`, `blogPost` or `topic` (a running topic), so that clients open the right screen. New values can be added in later versions; handle unknown values.",
@@ -187042,6 +187840,12 @@
                                   "format": "uuid",
                                   "description": "ID of the page."
                                 },
+                                "number": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991,
+                                  "description": "Number of the page in the addresses of the app."
+                                },
                                 "title": {
                                   "type": "string",
                                   "description": "Title of the page."
@@ -187049,6 +187853,7 @@
                               },
                               "required": [
                                 "id",
+                                "number",
                                 "title"
                               ],
                               "additionalProperties": false,
@@ -187205,6 +188010,12 @@
                                     "format": "uuid",
                                     "description": "ID of the running topic."
                                   },
+                                  "number": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of the running topic in the addresses of the app."
+                                  },
                                   "title": {
                                     "type": "string",
                                     "description": "Title of the running topic."
@@ -187212,6 +188023,7 @@
                                 },
                                 "required": [
                                   "id",
+                                  "number",
                                   "title"
                                 ],
                                 "additionalProperties": false,
@@ -187233,6 +188045,12 @@
                                     "format": "uuid",
                                     "description": "ID of the meeting series."
                                   },
+                                  "number": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of the meeting series in the addresses of the app."
+                                  },
                                   "title": {
                                     "type": "string",
                                     "description": "Title of the meeting series."
@@ -187240,6 +188058,7 @@
                                 },
                                 "required": [
                                   "id",
+                                  "number",
                                   "title"
                                 ],
                                 "additionalProperties": false,
@@ -187261,6 +188080,7 @@
                           "type",
                           "id",
                           "itemId",
+                          "number",
                           "itemType",
                           "title",
                           "heading",
@@ -187637,6 +188457,7 @@
                       "type": "page",
                       "id": "01929b1e-7c1a-7000-8000-000000000020",
                       "itemId": "01929b1e-7c1a-7000-8000-000000000020",
+                      "number": 1042,
                       "itemType": "page",
                       "title": "VPN access",
                       "heading": "Setup",
@@ -194017,6 +194838,19 @@
                       ],
                       "description": "The overview page of the space, or null for a knowledge base."
                     },
+                    "overviewItemNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                    },
                     "archived": {
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
@@ -194055,6 +194889,7 @@
                     "ownerId",
                     "ownerName",
                     "overviewItemId",
+                    "overviewItemNumber",
                     "archived",
                     "exportEnabled",
                     "createdAt",
@@ -194082,6 +194917,7 @@
                   "ownerId": null,
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                  "overviewItemNumber": 1001,
                   "archived": false,
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
@@ -194523,6 +195359,19 @@
                             ],
                             "description": "The overview page of the space, or null for a knowledge base."
                           },
+                          "overviewItemNumber": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                          },
                           "archived": {
                             "type": "boolean",
                             "description": "Whether the space is archived. Archived spaces are read-only."
@@ -194561,6 +195410,7 @@
                           "ownerId",
                           "ownerName",
                           "overviewItemId",
+                          "overviewItemNumber",
                           "archived",
                           "exportEnabled",
                           "createdAt",
@@ -194607,6 +195457,7 @@
                       "ownerId": null,
                       "ownerName": null,
                       "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                      "overviewItemNumber": 1001,
                       "archived": false,
                       "exportEnabled": true,
                       "createdAt": "2026-10-05T08:00:00.000Z",
@@ -201486,6 +202337,19 @@
                         ],
                         "description": "The deleted item, or null for a space."
                       },
+                      "number": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                      },
                       "itemKind": {
                         "anyOf": [
                           {
@@ -201602,6 +202466,7 @@
                       "spaceName",
                       "kind",
                       "itemId",
+                      "number",
                       "itemKind",
                       "title",
                       "descendants",
@@ -201625,6 +202490,7 @@
                     "spaceName": "IT Operations",
                     "kind": "items",
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                    "number": 1041,
                     "itemKind": "page",
                     "title": "Old VPN (OpenVPN) setup",
                     "descendants": 2,
@@ -202041,6 +202907,19 @@
                       ],
                       "description": "The restored item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the restored item in the addresses of the app, or null for a space."
+                    },
                     "parentId": {
                       "anyOf": [
                         {
@@ -202062,6 +202941,7 @@
                   },
                   "required": [
                     "itemId",
+                    "number",
                     "parentId",
                     "parentEntries"
                   ],
@@ -202070,6 +202950,7 @@
                 },
                 "example": {
                   "itemId": null,
+                  "number": null,
                   "parentId": null,
                   "parentEntries": 0
                 }
@@ -202483,6 +203364,12 @@
                             "format": "uuid",
                             "description": "ID of the item."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item in the addresses of the app."
+                          },
                           "spaceId": {
                             "type": "string",
                             "format": "uuid",
@@ -202556,6 +203443,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "spaceKey",
                           "spaceName",
@@ -202595,6 +203483,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "number": 1042,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
@@ -207506,6 +208395,12 @@
                         "format": "uuid",
                         "description": "Page that links here."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of that page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of that page."
@@ -207526,6 +208421,7 @@
                     },
                     "required": [
                       "itemId",
+                      "number",
                       "title",
                       "spaceId",
                       "spaceKey",
@@ -207539,6 +208435,7 @@
                 "example": [
                   {
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "title": "Onboarding new staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "spaceKey": "ITOPS",
@@ -208756,6 +209653,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -208769,6 +209679,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -209137,6 +210048,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -209150,6 +210074,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -209538,6 +210463,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -209551,6 +210489,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -210609,7 +211548,7 @@
                 "example": {
                   "pageId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "title": "Network",
-                  "path": "/spaces/NET/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20/network",
+                  "path": "/spaces/NET/pages/1020/network",
                   "found": true,
                   "previewId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
                   "previewVersion": 3
@@ -211785,6 +212724,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -211798,6 +212750,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -212382,6 +213335,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -212395,6 +213361,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -215803,6 +216770,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -215816,6 +216796,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -215893,7 +216874,7 @@
                   "page": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
                     "title": "VPN access for remote staff",
-                    "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+                    "path": "/spaces/ITOPS/pages/1042/vpn-access-for-remote-staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"
                   },
                   "document": {
@@ -221473,6 +222454,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -221486,6 +222480,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -221964,6 +222959,209 @@
         }
       }
     },
+    "/api/v1/pages/by-number/{number}/access-requests": {
+      "post": {
+        "operationId": "accessRequests.requestPageByNumber",
+        "summary": "Ask for access to a page by its number",
+        "description": "Like `POST /pages/{pageId}/access-requests`, for a page found by the number in its address in the app. The answer is the same whether or not the page exists.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Access requests"
+        ],
+        "x-lunedo-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "Number of the page, as shown in the addresses of the app.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,14}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "default": "",
+                    "description": "Why the access is needed, up to 1000 characters.",
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                },
+                "additionalProperties": false,
+                "description": "A request for access."
+              },
+              "example": {
+                "message": "I need the runbook for the migration."
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `messageTooLong`: The message is too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "messageTooLong": {
+                    "value": {
+                      "type": "urn:lunedo:problem:messageTooLong",
+                      "title": "The message is too long",
+                      "status": 400,
+                      "code": "messageTooLong"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:lunedo:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`tooManyRequests`: Too many access requests today.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "tooManyRequests": {
+                    "value": {
+                      "type": "urn:lunedo:problem:tooManyRequests",
+                      "title": "Too many access requests today",
+                      "status": 429,
+                      "code": "tooManyRequests"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/people": {
       "get": {
         "operationId": "personalSpaces.people",
@@ -222225,6 +223423,12 @@
                         "format": "uuid",
                         "description": "ID of the page or blog post."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the item in the addresses of the app."
+                      },
                       "kind": {
                         "type": "string",
                         "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -222267,6 +223471,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "kind",
                       "title",
                       "spaceId",
@@ -222283,6 +223488,7 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "kind": "page",
                     "title": "VPN access for remote staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -222921,7 +224127,7 @@
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
                     "title": "VPN access for remote staff",
                     "kind": "page",
-                    "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+                    "path": "/spaces/ITOPS/pages/1042/vpn-access-for-remote-staff",
                     "space": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "name": "IT operations"
@@ -223214,7 +224420,7 @@
                       "page": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
                         "title": "VPN access for remote staff",
-                        "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff"
+                        "path": "/spaces/ITOPS/pages/1042/vpn-access-for-remote-staff"
                       },
                       "date": "2026-09-01T08:00:00.000Z"
                     }
@@ -223490,7 +224696,7 @@
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
                     "title": "VPN access for remote staff",
-                    "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+                    "path": "/spaces/ITOPS/pages/1042/vpn-access-for-remote-staff",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "author": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -223883,6 +225089,19 @@
                                 "type": "string",
                                 "description": "Kind of the item."
                               },
+                              "number": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Number of the item in the addresses of the app, or null without access."
+                              },
                               "accessible": {
                                 "type": "boolean",
                                 "description": "Whether the caller can open the page."
@@ -223896,6 +225115,7 @@
                               "title",
                               "spaceKey",
                               "kind",
+                              "number",
                               "accessible",
                               "inTrash"
                             ],
@@ -223980,7 +225200,7 @@
                       "page": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
                         "title": "Site Graz",
-                        "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/site-graz",
+                        "path": "/spaces/ITOPS/pages/1042/site-graz",
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"
                       },
                       "creator": {
@@ -224167,6 +225387,12 @@
                             "format": "uuid",
                             "description": "ID of the article."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the article in the addresses of the app."
+                          },
                           "title": {
                             "type": "string",
                             "description": "Title of the article."
@@ -224232,6 +225458,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "title",
                           "type",
                           "spaceKey",
@@ -224263,6 +225490,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                      "number": 4711,
                       "title": "Set up the VPN at home",
                       "type": "howTo",
                       "spaceKey": "ITOPS",
@@ -230357,6 +231585,20 @@
                       "format": "uuid",
                       "description": "The page the link opens."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Number of the page in the addresses of the app."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For `account`: number of the page in the addresses of the app, where the person now opens it. Null for anonymous visitors."
+                    },
                     "unlock": {
                       "description": "For anonymous visitors of links with a password: proof to send with the following requests.",
                       "type": [
@@ -230368,6 +231610,7 @@
                   "required": [
                     "kind",
                     "itemId",
+                    "number",
                     "unlock"
                   ],
                   "additionalProperties": false,
@@ -230376,6 +231619,7 @@
                 "example": {
                   "kind": "account",
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "number": 1042,
                   "unlock": null
                 }
               }
@@ -230953,6 +232197,12 @@
                         "format": "uuid",
                         "description": "ID of the page."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of the page."
@@ -231025,6 +232275,7 @@
                     },
                     "required": [
                       "itemId",
+                      "number",
                       "title",
                       "kind",
                       "role",
@@ -231042,6 +232293,7 @@
                 "example": [
                   {
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "number": 1042,
                     "title": "VPN access for remote staff",
                     "kind": "page",
                     "role": "reader",
@@ -231278,6 +232530,19 @@
                           ],
                           "description": "The overview page of the space, or null for a knowledge base."
                         },
+                        "overviewItemNumber": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                        },
                         "archived": {
                           "type": "boolean",
                           "description": "Whether the space is archived. Archived spaces are read-only."
@@ -231338,6 +232603,7 @@
                         "ownerId",
                         "ownerName",
                         "overviewItemId",
+                        "overviewItemNumber",
                         "archived",
                         "exportEnabled",
                         "createdAt",
@@ -231380,6 +232646,7 @@
                     "ownerId": null,
                     "ownerName": null,
                     "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                    "overviewItemNumber": 1001,
                     "archived": false,
                     "exportEnabled": true,
                     "createdAt": "2026-10-05T08:00:00.000Z",
@@ -231768,6 +233035,19 @@
                             ],
                             "description": "The overview page of the space, or null for a knowledge base."
                           },
+                          "overviewItemNumber": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                          },
                           "archived": {
                             "type": "boolean",
                             "description": "Whether the space is archived. Archived spaces are read-only."
@@ -231806,6 +233086,7 @@
                           "ownerId",
                           "ownerName",
                           "overviewItemId",
+                          "overviewItemNumber",
                           "archived",
                           "exportEnabled",
                           "createdAt",
@@ -231852,6 +233133,7 @@
                       "ownerId": null,
                       "ownerName": null,
                       "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                      "overviewItemNumber": 1001,
                       "archived": false,
                       "exportEnabled": true,
                       "createdAt": "2026-10-05T08:00:00.000Z",
@@ -232129,6 +233411,19 @@
                       ],
                       "description": "The overview page of the space, or null for a knowledge base."
                     },
+                    "overviewItemNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                    },
                     "archived": {
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
@@ -232189,6 +233484,7 @@
                     "ownerId",
                     "ownerName",
                     "overviewItemId",
+                    "overviewItemNumber",
                     "archived",
                     "exportEnabled",
                     "createdAt",
@@ -232218,6 +233514,7 @@
                   "ownerId": null,
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                  "overviewItemNumber": 1001,
                   "archived": false,
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
@@ -232543,6 +233840,19 @@
                       ],
                       "description": "The overview page of the space, or null for a knowledge base."
                     },
+                    "overviewItemNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                    },
                     "archived": {
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
@@ -232581,6 +233891,7 @@
                     "ownerId",
                     "ownerName",
                     "overviewItemId",
+                    "overviewItemNumber",
                     "archived",
                     "exportEnabled",
                     "createdAt",
@@ -232608,6 +233919,7 @@
                   "ownerId": null,
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                  "overviewItemNumber": 1001,
                   "archived": false,
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
@@ -232879,6 +234191,20 @@
                         ],
                         "description": "The page, or null for the whole space."
                       },
+                      "number": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the page in the addresses of the app."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the page in the addresses of the app, when the caller may see its title; null for the whole space."
+                      },
                       "itemTitle": {
                         "description": "Title of the page, when the caller may see it.",
                         "type": [
@@ -232973,6 +234299,7 @@
                       "spaceId",
                       "spaceName",
                       "itemId",
+                      "number",
                       "itemTitle",
                       "message",
                       "status",
@@ -232997,6 +234324,7 @@
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceName": "IT Operations",
                     "itemId": null,
+                    "number": null,
                     "itemTitle": null,
                     "message": "I take over the on-call duty next month.",
                     "status": "open",
@@ -233243,6 +234571,20 @@
                       ],
                       "description": "The page, or null for the whole space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Number of the page in the addresses of the app."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the page in the addresses of the app, when the caller may see its title; null for the whole space."
+                    },
                     "itemTitle": {
                       "description": "Title of the page, when the caller may see it.",
                       "type": [
@@ -233337,6 +234679,7 @@
                     "spaceId",
                     "spaceName",
                     "itemId",
+                    "number",
                     "itemTitle",
                     "message",
                     "status",
@@ -233358,6 +234701,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
+                  "number": null,
                   "itemTitle": null,
                   "message": "I take over the on-call duty next month.",
                   "status": "open",
@@ -233991,6 +235335,12 @@
                         "format": "uuid",
                         "description": "ID of the archived item."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the archived item in the addresses of the app."
+                      },
                       "kind": {
                         "type": "string",
                         "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -234058,6 +235408,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "kind",
                       "title",
                       "hasChildren",
@@ -234072,6 +235423,7 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "kind": "page",
                     "title": "Printer list 2024",
                     "hasChildren": false,
@@ -236575,6 +237927,12 @@
                             "format": "uuid",
                             "description": "ID of the blog post."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the blog post in the addresses of the app."
+                          },
                           "spaceId": {
                             "type": "string",
                             "format": "uuid",
@@ -236757,6 +238115,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "spaceKey",
                           "spaceName",
@@ -236800,6 +238159,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                      "number": 1077,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
@@ -237028,6 +238388,12 @@
                       "format": "uuid",
                       "description": "ID of the blog post."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the blog post in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -237210,6 +238576,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "spaceKey",
                     "spaceName",
@@ -237234,6 +238601,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                  "number": 1077,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
@@ -237499,6 +238867,12 @@
                             "format": "uuid",
                             "description": "ID of the blog post."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the blog post in the addresses of the app."
+                          },
                           "spaceId": {
                             "type": "string",
                             "format": "uuid",
@@ -237681,6 +239055,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "spaceKey",
                           "spaceName",
@@ -237716,6 +239091,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+                      "number": 1077,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
@@ -241098,6 +242474,19 @@
                       ],
                       "description": "The deleted item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                    },
                     "itemKind": {
                       "anyOf": [
                         {
@@ -241214,6 +242603,7 @@
                     "spaceName",
                     "kind",
                     "itemId",
+                    "number",
                     "itemKind",
                     "title",
                     "descendants",
@@ -241234,6 +242624,7 @@
                   "spaceName": "IT Operations",
                   "kind": "space",
                   "itemId": null,
+                  "number": 1041,
                   "itemKind": null,
                   "title": "Old VPN (OpenVPN) setup",
                   "descendants": 2,
@@ -245651,6 +247042,19 @@
                       ],
                       "description": "The overview page of the space, or null for a knowledge base."
                     },
+                    "overviewItemNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                    },
                     "archived": {
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
@@ -245689,6 +247093,7 @@
                     "ownerId",
                     "ownerName",
                     "overviewItemId",
+                    "overviewItemNumber",
                     "archived",
                     "exportEnabled",
                     "createdAt",
@@ -245716,6 +247121,7 @@
                   "ownerId": null,
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                  "overviewItemNumber": 1001,
                   "archived": false,
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
@@ -253080,6 +254486,12 @@
                         "format": "uuid",
                         "description": "ID of the page."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of the page."
@@ -253100,6 +254512,7 @@
                     },
                     "required": [
                       "itemId",
+                      "number",
                       "title",
                       "parents",
                       "contentUpdatedAt"
@@ -253112,6 +254525,7 @@
                 "example": [
                   {
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "number": 4711,
                     "title": "VPN access for remote staff",
                     "parents": [
                       "Network"
@@ -253289,6 +254703,12 @@
                         "format": "uuid",
                         "description": "ID of the series."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the series in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Name."
@@ -253312,6 +254732,7 @@
                     },
                     "required": [
                       "id",
+                      "number",
                       "title",
                       "archived",
                       "upcomingAt"
@@ -253324,6 +254745,7 @@
                 "example": [
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                    "number": 1050,
                     "title": "Jour fixe IT",
                     "archived": false,
                     "upcomingAt": "2026-10-12T07:30:00.000Z"
@@ -253675,6 +255097,12 @@
                       "format": "uuid",
                       "description": "ID of the series."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the series in the addresses of the app."
+                    },
                     "spaceId": {
                       "type": "string",
                       "format": "uuid",
@@ -253905,6 +255333,12 @@
                               "format": "uuid",
                               "description": "ID of the meeting page."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting page in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title of the meeting page."
@@ -253972,6 +255406,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "state",
                             "startsAt",
@@ -254047,6 +255482,12 @@
                                 "format": "uuid",
                                 "description": "ID of the item."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the item in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title of the item."
@@ -254062,6 +255503,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title",
                               "kind",
                               "spaceKey"
@@ -254088,6 +255530,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "spaceId",
                     "title",
                     "parentId",
@@ -254109,6 +255552,7 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "number": 1050,
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "title": "Jour fixe IT",
                   "parentId": null,
@@ -254146,6 +255590,7 @@
                   "calendarUid": null,
                   "upcoming": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "state": "upcoming",
                     "startsAt": "2026-10-12T07:30:00.000Z",
@@ -254517,18 +255962,33 @@
                         }
                       ],
                       "description": "The series."
+                    },
+                    "seriesNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the series in the addresses of the app."
                     }
                   },
                   "required": [
                     "spaceId",
-                    "seriesId"
+                    "seriesId",
+                    "seriesNumber"
                   ],
                   "additionalProperties": false,
                   "description": "The one-on-one."
                 },
                 "example": {
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b00",
-                  "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00"
+                  "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050
                 }
               }
             }
@@ -259686,6 +261146,12 @@
                         "format": "uuid",
                         "description": "ID of the page."
                       },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the page in the addresses of the app."
+                      },
                       "title": {
                         "type": "string",
                         "description": "Title of the page."
@@ -259811,6 +261277,7 @@
                     },
                     "required": [
                       "itemId",
+                      "number",
                       "title",
                       "kind",
                       "view",
@@ -259825,6 +261292,7 @@
                 "example": [
                   {
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "number": 1077,
                     "title": "Salaries 2027",
                     "kind": "page",
                     "view": {
@@ -260279,6 +261747,12 @@
                             "format": "uuid",
                             "description": "ID of the article."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the article in the addresses of the app."
+                          },
                           "title": {
                             "type": "string",
                             "description": "Title of the article."
@@ -260506,6 +261980,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "title",
                           "type",
                           "categoryPath",
@@ -260591,6 +262066,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                      "number": 4711,
                       "title": "Set up the VPN at home",
                       "type": "howTo",
                       "categoryPath": [
@@ -261281,6 +262757,12 @@
                                 "format": "uuid",
                                 "description": "ID of the content."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the content in the addresses of the app."
+                              },
                               "kind": {
                                 "type": "string",
                                 "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
@@ -261305,6 +262787,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceKey"
@@ -261348,6 +262831,7 @@
                     "url": null,
                     "item": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                      "number": 1051,
                       "kind": "page",
                       "title": "On-call rota 2026",
                       "spaceKey": "OPS"
@@ -261605,6 +263089,12 @@
                               "format": "uuid",
                               "description": "ID of the content."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the content in the addresses of the app."
+                            },
                             "kind": {
                               "type": "string",
                               "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
@@ -261629,6 +263119,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "kind",
                             "title",
                             "spaceKey"
@@ -261669,6 +263160,7 @@
                   "url": null,
                   "item": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                    "number": 1051,
                     "kind": "page",
                     "title": "On-call rota 2026",
                     "spaceKey": "OPS"
@@ -262194,6 +263686,12 @@
                               "format": "uuid",
                               "description": "ID of the content."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the content in the addresses of the app."
+                            },
                             "kind": {
                               "type": "string",
                               "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
@@ -262218,6 +263716,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "kind",
                             "title",
                             "spaceKey"
@@ -262258,6 +263757,7 @@
                   "url": null,
                   "item": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                    "number": 1051,
                     "kind": "page",
                     "title": "On-call rota 2026",
                     "spaceKey": "OPS"
@@ -262508,6 +264008,12 @@
                                 "format": "uuid",
                                 "description": "ID of the content."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the content in the addresses of the app."
+                              },
                               "kind": {
                                 "type": "string",
                                 "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
@@ -262532,6 +264038,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceKey"
@@ -262575,6 +264082,7 @@
                     "url": null,
                     "item": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                      "number": 1051,
                       "kind": "page",
                       "title": "On-call rota 2026",
                       "spaceKey": "OPS"
@@ -262806,6 +264314,12 @@
                                 "format": "uuid",
                                 "description": "ID of the content."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the content in the addresses of the app."
+                              },
                               "kind": {
                                 "type": "string",
                                 "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
@@ -262830,6 +264344,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceKey"
@@ -262873,6 +264388,7 @@
                     "url": null,
                     "item": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                      "number": 1051,
                       "kind": "page",
                       "title": "On-call rota 2026",
                       "spaceKey": "OPS"
@@ -263260,6 +264776,12 @@
                                 "format": "uuid",
                                 "description": "ID of the article."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the article in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title of the article."
@@ -263291,6 +264813,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title",
                               "categoryPath"
                             ],
@@ -263340,6 +264863,12 @@
                                 "format": "uuid",
                                 "description": "ID of the article."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of the article in the addresses of the app."
+                              },
                               "title": {
                                 "type": "string",
                                 "description": "Title of the article."
@@ -263371,6 +264900,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "title",
                               "categoryPath"
                             ],
@@ -263441,6 +264971,7 @@
                     {
                       "article": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                        "number": 4711,
                         "title": "Set up the VPN at home",
                         "categoryPath": [
                           {
@@ -263458,6 +264989,7 @@
                     {
                       "article": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                        "number": 4711,
                         "title": "Set up the VPN at home",
                         "categoryPath": [
                           {
@@ -271159,6 +272691,19 @@
                         ],
                         "description": "The deleted item, or null for a space."
                       },
+                      "number": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Number of the deleted item in the addresses of the app, or null for a space."
+                      },
                       "itemKind": {
                         "anyOf": [
                           {
@@ -271275,6 +272820,7 @@
                       "spaceName",
                       "kind",
                       "itemId",
+                      "number",
                       "itemKind",
                       "title",
                       "descendants",
@@ -271298,6 +272844,7 @@
                     "spaceName": "IT Operations",
                     "kind": "items",
                     "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                    "number": 1041,
                     "itemKind": "page",
                     "title": "Old VPN (OpenVPN) setup",
                     "descendants": 2,
@@ -271510,6 +273057,19 @@
                       ],
                       "description": "The restored item, or null for a space."
                     },
+                    "number": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the restored item in the addresses of the app, or null for a space."
+                    },
                     "parentId": {
                       "anyOf": [
                         {
@@ -271531,6 +273091,7 @@
                   },
                   "required": [
                     "itemId",
+                    "number",
                     "parentId",
                     "parentEntries"
                   ],
@@ -271539,6 +273100,7 @@
                 },
                 "example": {
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                  "number": 1041,
                   "parentId": null,
                   "parentEntries": 0
                 }
@@ -271980,6 +273542,12 @@
                             "format": "uuid",
                             "description": "ID of the item."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item in the addresses of the app."
+                          },
                           "spaceId": {
                             "type": "string",
                             "format": "uuid",
@@ -272053,6 +273621,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "spaceId",
                           "spaceKey",
                           "spaceName",
@@ -272092,6 +273661,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "number": 1042,
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations",
@@ -272425,6 +273995,19 @@
                       ],
                       "description": "The overview page of the space, or null for a knowledge base."
                     },
+                    "overviewItemNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of the overview page in the addresses of the app, or null for a knowledge base."
+                    },
                     "archived": {
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
@@ -272463,6 +274046,7 @@
                     "ownerId",
                     "ownerName",
                     "overviewItemId",
+                    "overviewItemNumber",
                     "archived",
                     "exportEnabled",
                     "createdAt",
@@ -272490,6 +274074,7 @@
                   "ownerId": null,
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
+                  "overviewItemNumber": 1001,
                   "archived": false,
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
@@ -273909,6 +275494,12 @@
                             "format": "uuid",
                             "description": "ID of the page or blog post."
                           },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the item in the addresses of the app."
+                          },
                           "kind": {
                             "type": "string",
                             "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
@@ -273951,6 +275542,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "kind",
                           "title",
                           "spaceId",
@@ -274021,6 +275613,7 @@
                   "items": [
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "number": 4711,
                       "kind": "page",
                       "title": "VPN access for remote staff",
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -275206,6 +276799,12 @@
                                 "format": "uuid",
                                 "description": "Page or blog post with the task."
                               },
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991,
+                                "description": "Number of that item in the addresses of the app."
+                              },
                               "kind": {
                                 "type": "string",
                                 "description": "Kind of that item. New values can be added in later versions; handle unknown values.",
@@ -275234,6 +276833,7 @@
                             },
                             "required": [
                               "id",
+                              "number",
                               "kind",
                               "title",
                               "spaceId",
@@ -275323,6 +276923,7 @@
                       },
                       "item": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                        "number": 4711,
                         "kind": "page",
                         "title": "VPN access for remote staff",
                         "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
@@ -275771,10 +277372,22 @@
                       "format": "uuid",
                       "description": "ID of the topic."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the topic in the addresses of the app."
+                    },
                     "seriesId": {
                       "type": "string",
                       "format": "uuid",
                       "description": "The series."
+                    },
+                    "seriesNumber": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the series in the addresses of the app."
                     },
                     "title": {
                       "type": "string",
@@ -275855,6 +277468,12 @@
                               "format": "uuid",
                               "description": "Meeting ID."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title of the meeting."
@@ -275874,6 +277493,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -275964,6 +277584,12 @@
                             "format": "uuid",
                             "description": "Meeting the update was written in."
                           },
+                          "meetingNumber": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of that meeting in the addresses of the app."
+                          },
                           "meetingTitle": {
                             "type": "string",
                             "description": "Title of that meeting."
@@ -275995,6 +277621,7 @@
                         },
                         "required": [
                           "meetingId",
+                          "meetingNumber",
                           "meetingTitle",
                           "startsAt",
                           "content",
@@ -276020,6 +277647,12 @@
                               "format": "uuid",
                               "description": "Page that holds the decision."
                             },
+                            "itemNumber": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of that page in the addresses of the app."
+                            },
                             "itemTitle": {
                               "type": "string",
                               "description": "Title of that page."
@@ -276039,6 +277672,7 @@
                           "required": [
                             "id",
                             "itemId",
+                            "itemNumber",
                             "itemTitle",
                             "statement",
                             "text"
@@ -276054,7 +277688,9 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "seriesId",
+                    "seriesNumber",
                     "title",
                     "status",
                     "outcome",
@@ -276079,7 +277715,9 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                  "number": 1052,
                   "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050,
                   "title": "Positions in AD",
                   "status": "open",
                   "outcome": null,
@@ -276093,6 +277731,7 @@
                   "oneOff": false,
                   "raisedIn": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z"
                   },
@@ -276317,10 +277956,22 @@
                       "format": "uuid",
                       "description": "ID of the topic."
                     },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the topic in the addresses of the app."
+                    },
                     "seriesId": {
                       "type": "string",
                       "format": "uuid",
                       "description": "The series."
+                    },
+                    "seriesNumber": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the series in the addresses of the app."
                     },
                     "title": {
                       "type": "string",
@@ -276401,6 +278052,12 @@
                               "format": "uuid",
                               "description": "Meeting ID."
                             },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of the meeting in the addresses of the app."
+                            },
                             "title": {
                               "type": "string",
                               "description": "Title of the meeting."
@@ -276420,6 +278077,7 @@
                           },
                           "required": [
                             "id",
+                            "number",
                             "title",
                             "startsAt"
                           ],
@@ -276510,6 +278168,12 @@
                             "format": "uuid",
                             "description": "Meeting the update was written in."
                           },
+                          "meetingNumber": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of that meeting in the addresses of the app."
+                          },
                           "meetingTitle": {
                             "type": "string",
                             "description": "Title of that meeting."
@@ -276541,6 +278205,7 @@
                         },
                         "required": [
                           "meetingId",
+                          "meetingNumber",
                           "meetingTitle",
                           "startsAt",
                           "content",
@@ -276566,6 +278231,12 @@
                               "format": "uuid",
                               "description": "Page that holds the decision."
                             },
+                            "itemNumber": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "Number of that page in the addresses of the app."
+                            },
                             "itemTitle": {
                               "type": "string",
                               "description": "Title of that page."
@@ -276585,6 +278256,7 @@
                           "required": [
                             "id",
                             "itemId",
+                            "itemNumber",
                             "itemTitle",
                             "statement",
                             "text"
@@ -276600,7 +278272,9 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "seriesId",
+                    "seriesNumber",
                     "title",
                     "status",
                     "outcome",
@@ -276625,7 +278299,9 @@
                 },
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6b00",
+                  "number": 1052,
                   "seriesId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a00",
+                  "seriesNumber": 1050,
                   "title": "Positions in AD",
                   "status": "open",
                   "outcome": null,
@@ -276639,6 +278315,7 @@
                   "oneOff": false,
                   "raisedIn": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+                    "number": 1051,
                     "title": "Jour fixe IT · 12 Oct 2026",
                     "startsAt": "2026-10-12T07:30:00.000Z"
                   },
@@ -278192,7 +279869,7 @@
                 "example": {
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
                   "title": "Network 2027",
-                  "href": "/spaces/IT/whiteboards/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21/network-2027",
+                  "href": "/spaces/IT/whiteboards/1021/network-2027",
                   "preview": true
                 }
               }

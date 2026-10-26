@@ -42,7 +42,7 @@ function routes(extra: Record<string, Parameters<typeof mockApi>[0][string]> = {
         {
           id: ALPHA,
           title: "Alpha",
-          path: `/spaces/OPS/pages/${ALPHA}/alpha`,
+          path: "/spaces/OPS/pages/1010/alpha",
           spaceId: SPACE,
           author: { id: SPACE, name: "Anna Berger" },
           createdAt: "2026-09-01T08:00:00.000Z",
@@ -61,7 +61,7 @@ function routes(extra: Record<string, Parameters<typeof mockApi>[0][string]> = {
     [`GET /api/v1/spaces/${SPACE}/template-gallery`]: () => ({ body: [template] }),
     [`POST /api/v1/spaces/${SPACE}/items`]: () => ({
       status: 201,
-      body: { id: CREATED, spaceId: SPACE, kind: "page", title: "2 Oct 2026 Launch notes" },
+      body: { id: CREATED, number: 1005, spaceId: SPACE, kind: "page", title: "2 Oct 2026 Launch notes" },
     }),
     ...extra,
   });
@@ -71,7 +71,7 @@ function decision(id: string, text: string) {
   return {
     id: `01929b1e-0000-7000-8000-00000000010${id}`,
     text,
-    page: { id: ALPHA, title: "Alpha", path: `/spaces/OPS/pages/${ALPHA}/alpha` },
+    page: { id: ALPHA, title: "Alpha", path: "/spaces/OPS/pages/1010/alpha" },
     date: "2026-09-01T08:00:00.000Z",
   };
 }
@@ -113,7 +113,7 @@ describe("page report in the read view", () => {
       { type: "pageReport", attrs: { spaceId: SPACE, labels: ["vpn", "network"], sort: "title", limit: 5 } },
     ]);
     const link = await screen.findByRole("link", { name: "Alpha" });
-    expect(link.getAttribute("href")).toBe(`/spaces/OPS/pages/${ALPHA}/alpha`);
+    expect(link.getAttribute("href")).toBe("/spaces/OPS/pages/1010/alpha");
     expect(screen.getByText("Anna Berger")).toBeTruthy();
     const query = new URL(
       requests.find((request) => request.path.startsWith("/api/v1/reports/pages"))?.path ?? "",
@@ -187,7 +187,7 @@ describe("template button in the read view", () => {
       template: { id: TEMPLATE, values: { topic: "Launch" }, titlePattern: "{currentDate} {topic}" },
     });
     await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith(`/spaces/OPS/pages/${CREATED}/2-oct-2026-launch-notes?edit=true`),
+      expect(assign).toHaveBeenCalledWith("/spaces/OPS/pages/1005/2-oct-2026-launch-notes?edit=true"),
     );
   });
 

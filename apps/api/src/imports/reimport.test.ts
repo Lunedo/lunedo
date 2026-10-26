@@ -331,8 +331,9 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
 
   it("resolves old Confluence links and answers alike for unknown and hidden pages", async () => {
     const { importId, key } = await acceptedSpace();
-    const steady = await test.runtime.pool.query<{ target_id: string }>(
-      "select target_id from import_items where import_id = $1 and kind = 'page' and source_id = $2",
+    const steady = await test.runtime.pool.query<{ target_id: string; number: string }>(
+      `select i.target_id, t.number from import_items i join tree_items t on t.id = i.target_id
+        where i.import_id = $1 and i.kind = 'page' and i.source_id = $2`,
       [importId, RE.steady],
     );
     const url = (link: string) => `/api/v1/confluence-links?url=${encodeURIComponent(link)}`;
@@ -345,6 +346,7 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
       expect(response.statusCode, response.body).toBe(200);
       expect(response.json()).toMatchObject({
         itemId: steady.rows[0]?.target_id,
+        number: Number(steady.rows[0]?.number),
         spaceKey: key,
         kind: "page",
       });

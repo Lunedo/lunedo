@@ -359,7 +359,13 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
         ).allowed,
       ).toBe(true);
       expect((await test.services.tree.details(context.editor, branch.child.id))?.ancestors).toEqual([
-        { id: branch.parent.id, kind: "page", title: "Unpublished parent", published: false },
+        {
+          id: branch.parent.id,
+          number: branch.parent.number,
+          kind: "page",
+          title: "Unpublished parent",
+          published: false,
+        },
       ]);
     });
 
@@ -387,7 +393,13 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
         JSON.stringify((await test.services.documents.readable(branch.child.id))?.document),
       ).not.toContain("Draft only");
       expect((await test.services.tree.details(context.reader, branch.child.id))?.ancestors).toEqual([
-        { id: branch.parent.id, kind: "page", title: "Unpublished parent", published: true },
+        {
+          id: branch.parent.id,
+          number: branch.parent.number,
+          kind: "page",
+          title: "Unpublished parent",
+          published: true,
+        },
       ]);
     });
 

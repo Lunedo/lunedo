@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { itemPath } from "../support/addresses.js";
 import { expect, type Organization, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { type Person, unique } from "../support/people.js";
@@ -33,9 +34,9 @@ async function handbook(page: Page, organization: Organization, document?: unkno
     title: "VPN access",
     parentId: null,
     mode: "live",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   if (document) await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, { document });
-  return { spaceId: space.id, spaceKey, pagePath: `/spaces/${spaceKey}/pages/${created.id}/vpn-access` };
+  return { spaceId: space.id, spaceKey, pagePath: itemPath(spaceKey, "pages", created) };
 }
 
 async function editors(page: Page, spaceId: string, people: Person[]): Promise<void> {

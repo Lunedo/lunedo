@@ -51,6 +51,7 @@ export interface PersonAccessEntry {
   spaceName: string;
   spaceKey: string;
   itemId: string | null;
+  number: number | null;
   itemTitle: string | null;
   role: SpaceRole | null;
   count: number;
@@ -121,6 +122,7 @@ interface ShareRow {
   space_name: string;
   space_key: string;
   item_id: string;
+  number: string;
   title: string;
   readable: boolean;
   role: SpaceRole;
@@ -138,6 +140,7 @@ interface LinkRow {
   space_name: string;
   space_key: string;
   item_id: string;
+  number: string;
   title: string;
   readable: boolean;
   link_id: string;
@@ -191,6 +194,7 @@ function spaceEntries(
         spaceName: space.name,
         spaceKey: space.key,
         itemId: null,
+        number: null,
         itemTitle: null,
         role: role ?? highestSpaceRole(inactive.map((row) => row.role)),
         count: 1,
@@ -223,6 +227,7 @@ function pageEntries(shares: ShareRow[], links: LinkRow[]): PersonAccessEntry[] 
       spaceName: row.space_name,
       spaceKey: row.space_key,
       itemId: null,
+      number: null,
       itemTitle: null,
       role: null,
       count: 0,
@@ -243,6 +248,7 @@ function pageEntries(shares: ShareRow[], links: LinkRow[]): PersonAccessEntry[] 
       spaceName: row.space_name,
       spaceKey: row.space_key,
       itemId: row.item_id,
+      number: Number(row.number),
       itemTitle: row.title,
       role: row.role,
       count: row.include_descendants ? 2 : 1,
@@ -274,6 +280,7 @@ function pageEntries(shares: ShareRow[], links: LinkRow[]): PersonAccessEntry[] 
       spaceName: row.space_name,
       spaceKey: row.space_key,
       itemId: row.item_id,
+      number: Number(row.number),
       itemTitle: row.title,
       role: "reader",
       count: 1,
@@ -589,7 +596,7 @@ export class AccessExplanationService {
         where ps.principal_kind = 'group' and gm.account_id = any(${ids()})
           and (gm.expires_at is null or gm.expires_at > now())
       ), ranked as (
-        select h.account_id, s.id as space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.id as item_id, t.title,
+        select h.account_id, s.id as space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.id as item_id, t.number, t.title,
           ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable,
           ps.role, ps.principal_kind, ps.principal_id, g.name as group_name, ps.include_descendants,
           ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`h.account_id`, sql`s.organization_id`)} as active,
@@ -602,7 +609,7 @@ export class AccessExplanationService {
       select * from ranked where position <= 5000 order by account_id, position`);
     const links = await this.#database.execute<LinkRow>(sql`
       with ranked as (
-        select la.account_id, s.id as space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.id as item_id, t.title,
+        select la.account_id, s.id as space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.id as item_id, t.number, t.title,
           ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable, l.id as link_id, l.scope::text as scope,
           (l.scope not in ('people', 'organization')
             or ${organizationMembership(sql`s.organization_id`, sql`la.account_id`)}) as active,

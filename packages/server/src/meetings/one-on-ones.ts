@@ -21,8 +21,9 @@ export interface OneOnOneSummary {
   spaceId: string;
   spaceKey: string;
   seriesId: string | null;
+  seriesNumber: number | null;
   partners: { id: string; name: string | null; pictureRef: string | null }[];
-  nextMeeting: { id: string; startsAt: Date | null } | null;
+  nextMeeting: { id: string; number: number; startsAt: Date | null } | null;
 }
 
 function partnerOf(actor: Principal): string {
@@ -85,7 +86,7 @@ export class OneOnOneService {
     actor: Principal,
     input: SeriesScheduleInput & { otherId: string; organizationId: string },
     options: { tx?: Transaction } = {},
-  ): Promise<{ spaceId: string; seriesId: string }> {
+  ): Promise<{ spaceId: string; seriesId: string; seriesNumber: number }> {
     const accountId = partnerOf(actor);
     const otherId = input.otherId.toLowerCase();
     if (otherId === accountId)
@@ -139,7 +140,10 @@ export class OneOnOneService {
         actor,
         params: { itemTitle: name, spaceKey: space.key, startedBy: accountId },
       });
-      return { spaceId: space.id, seriesId };
+      const numbered = await tx.execute<{ number: string }>(
+        sql`select number from tree_items where id = ${seriesId}`,
+      );
+      return { spaceId: space.id, seriesId, seriesNumber: Number(numbered.rows[0]?.number) };
     };
     return options.tx ? run(options.tx) : this.#database.transaction(run);
   }
@@ -150,16 +154,20 @@ export class OneOnOneService {
       space_id: string;
       key: string;
       series_id: string | null;
+      series_number: string | null;
       meeting_id: string | null;
+      meeting_number: string | null;
       starts_at: Date | string | null;
     }>(sql`
-      select s.id as space_id, s.key, ms.item_id as series_id, m.item_id as meeting_id, m.starts_at
+      select s.id as space_id, s.key, ms.item_id as series_id, ms.number as series_number,
+        m.item_id as meeting_id, m.number as meeting_number, m.starts_at
       from spaces s
       join space_permissions sp on sp.space_id = s.id and sp.principal_kind = 'account' and sp.principal_id = ${accountId}
-      left join lateral (select ms.item_id from meeting_series ms join tree_items t on t.id = ms.item_id
+      left join lateral (select ms.item_id, t.number from meeting_series ms join tree_items t on t.id = ms.item_id
         where t.space_id = s.id and t.trash_entry_id is null and t.archived_root_id is null
         order by t.created_at limit 1) ms on true
-      left join lateral (select m.item_id, m.starts_at from meetings m where m.series_id = ms.item_id
+      left join lateral (select m.item_id, mi.number, m.starts_at from meetings m
+        join tree_items mi on mi.id = m.item_id where m.series_id = ms.item_id
         and m.state = 'upcoming' order by coalesce(m.starts_at, 'infinity'::timestamptz), m.item_id limit 1) m on true
       where s.one_on_one and s.deleted_at is null and s.archived_at is null
         and ${organizationMembership(sql`s.organization_id`, sql`${accountId}::uuid`)}
@@ -183,13 +191,18 @@ export class OneOnOneService {
         spaceId: row.space_id,
         spaceKey: row.key,
         seriesId: row.series_id,
+        seriesNumber: row.series_number === null ? null : Number(row.series_number),
         partners: partners.rows.map((partner) => ({
           id: partner.id,
           name: partner.name,
           pictureRef: partner.picture_ref,
         })),
         nextMeeting: row.meeting_id
-          ? { id: row.meeting_id, startsAt: row.starts_at === null ? null : new Date(row.starts_at) }
+          ? {
+              id: row.meeting_id,
+              number: Number(row.meeting_number),
+              startsAt: row.starts_at === null ? null : new Date(row.starts_at),
+            }
           : null,
       });
     }
@@ -200,7 +213,7 @@ export class OneOnOneService {
     actor: Principal,
     spaceId: string,
     input: { previousId: string; successorId: string; mode: "add" | "new" } & Partial<SeriesScheduleInput>,
-  ): Promise<{ spaceId: string; seriesId: string | null }> {
+  ): Promise<{ spaceId: string; seriesId: string | null; seriesNumber: number | null }> {
     const accountId = partnerOf(actor);
     const space = await this.#spaces.require(spaceId);
     if (!space.oneOnOne || !space.organizationId) {
@@ -260,8 +273,8 @@ export class OneOnOneService {
           { action: "remove", permissionId: previous.id },
           { tx },
         );
-      const series = await tx.execute<{ item_id: string }>(sql`
-        select ms.item_id from meeting_series ms join tree_items t on t.id = ms.item_id
+      const series = await tx.execute<{ item_id: string; number: string }>(sql`
+        select ms.item_id, t.number from meeting_series ms join tree_items t on t.id = ms.item_id
         where t.space_id = ${spaceId} and t.trash_entry_id is null`);
       for (const row of series.rows) {
         await tx.execute(sql`
@@ -295,7 +308,8 @@ export class OneOnOneService {
         },
       });
       await signalSpaceChange(tx, { spaceId, kind: "meetings", itemId: null });
-      return { spaceId, seriesId: series.rows[0]?.item_id ?? null };
+      const first = series.rows[0];
+      return { spaceId, seriesId: first?.item_id ?? null, seriesNumber: first ? Number(first.number) : null };
     });
   }
 }

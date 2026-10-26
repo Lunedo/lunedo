@@ -18,9 +18,12 @@ const BACKUP = "01929b1e-0000-7000-8000-000000000005";
 const OTHER = "01929b1e-0000-7000-8000-000000000006";
 const FILE = "01929b1e-0000-7000-8000-000000000007";
 
+const NUMBERS: Record<string, number> = { [PAGE]: 1001, [NETWORK]: 1003, [FIREWALL]: 1004, [BACKUP]: 1005 };
+
 function item(id: string, title: string, extra: Record<string, unknown> = {}) {
   return {
     id,
+    number: NUMBERS[id] ?? 1009,
     spaceId: SPACE,
     kind: "page",
     title,
@@ -80,7 +83,7 @@ describe("child pages in the read view", () => {
   it("list the child pages of the current page down to the chosen depth, without folders", async () => {
     await read([{ type: "childPages", attrs: { depth: 2 } }]);
     const firewall = await screen.findByRole("link", { name: "Firewall" });
-    expect(firewall.getAttribute("href")).toBe(`/spaces/OPS/pages/${FIREWALL}/firewall`);
+    expect(firewall.getAttribute("href")).toBe("/spaces/OPS/pages/1004/firewall");
     const list = firewall.closest("nav.ld-child-pages") as HTMLElement;
     expect(Array.from(list.querySelectorAll("a")).map((link) => link.textContent)).toEqual([
       "Network",

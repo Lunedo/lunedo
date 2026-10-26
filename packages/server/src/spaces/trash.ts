@@ -29,6 +29,7 @@ export interface TrashEntry {
   spaceName: string;
   kind: TrashEntryKind;
   itemId: string | null;
+  number: number | null;
   itemKind: TreeItemKind | null;
   title: string;
   descendants: number;
@@ -50,6 +51,7 @@ type EntryRow = {
   confidential: boolean;
   kind: TrashEntryKind;
   root_item_id: string | null;
+  item_number: string | null;
   item_kind: TreeItemKind | null;
   title: string;
   descendants: number;
@@ -62,7 +64,8 @@ type EntryRow = {
 };
 
 const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name, s.organization_id,
-  s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
+  s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id,
+  (select rn.number from tree_items rn where rn.id = e.root_item_id) as item_number, e.item_kind, e.title, e.descendants, e.stage,
   e.purging, e.deleted_at, e.deleted_by, e.stage_two_at,
   (select pe.id from tree_items root
     join tree_items parent on parent.id = root.restore_parent_id
@@ -163,6 +166,7 @@ export class TrashService {
         spaceName: row.space_name,
         kind: row.kind,
         itemId: row.root_item_id,
+        number: row.item_number === null ? null : Number(row.item_number),
         itemKind: row.item_kind,
         title: row.title,
         descendants: Number(row.descendants),
@@ -351,7 +355,12 @@ export class TrashService {
     actor: Principal,
     entryId: string,
     options: ReturnOptions = {},
-  ): Promise<{ itemId: string | null; parentId: string | null; parentEntries: number }> {
+  ): Promise<{
+    itemId: string | null;
+    number: number | null;
+    parentId: string | null;
+    parentEntries: number;
+  }> {
     return this.#database.transaction(async (tx) => {
       const located = await this.#entry(tx, entryId);
       if (!located) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
@@ -373,7 +382,7 @@ export class TrashService {
         });
         await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "space", itemId: null });
         await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "access", itemId: null });
-        return { itemId: null, parentId: null, parentEntries: 0 };
+        return { itemId: null, number: null, parentId: null, parentEntries: 0 };
       }
       return this.#restoreItems(tx, actor, entry, options);
     });
@@ -384,15 +393,16 @@ export class TrashService {
     actor: Principal,
     entry: EntryRow,
     options: ReturnOptions,
-  ): Promise<{ itemId: string; parentId: string | null; parentEntries: number }> {
+  ): Promise<{ itemId: string; number: number; parentId: string | null; parentEntries: number }> {
     const rootId = entry.root_item_id;
     if (!rootId) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
     const root = await tx.execute<{
+      number: string;
       restore_parent_id: string | null;
       restore_position: string | null;
       archived_root_id: string | null;
     }>(
-      sql`select restore_parent_id, restore_position, archived_root_id from tree_items where id = ${rootId}`,
+      sql`select number, restore_parent_id, restore_position, archived_root_id from tree_items where id = ${rootId}`,
     );
     const rootRow = root.rows[0];
     if (!rootRow) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
@@ -425,7 +435,7 @@ export class TrashService {
       scope: auditScopeOf({ organizationId: entry.organization_id }),
     });
     await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "tree", itemId: rootId });
-    return { itemId: rootId, parentId, parentEntries };
+    return { itemId: rootId, number: Number(rootRow.number), parentId, parentEntries };
   }
 
   async returnBelowParents(

@@ -483,6 +483,7 @@ export class PageAccessController {
       example: [
         {
           itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+          number: 1077,
           title: "Salaries 2027",
           kind: "page",
           view: {

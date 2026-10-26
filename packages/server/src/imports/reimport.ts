@@ -64,7 +64,12 @@ export interface ChangeEntryView {
   readonly id: string;
   readonly kind: string;
   readonly change: ChangeType;
-  readonly item: { readonly id: string; readonly title: string; readonly spaceKey: string } | null;
+  readonly item: {
+    readonly id: string;
+    readonly number: number;
+    readonly title: string;
+    readonly spaceKey: string;
+  } | null;
   readonly title: string | null;
   readonly sourceTitle: string | null;
   readonly reason: "both" | "editing" | "restricted" | null;
@@ -130,6 +135,7 @@ interface ChangeRowData {
   target_id: string | null;
   title: string | null;
   item_title: string | null;
+  item_number: string | null;
   space_key: string | null;
   details: Record<string, unknown>;
   decision: ChangeDecision | null;
@@ -385,7 +391,8 @@ export class ReimportService {
   ): Promise<{ entries: ChangeEntryView[]; next: string | null }> {
     const reimport = await this.#readable(viewer, importId);
     const result = await this.#database.execute<ChangeRowData>(sql`
-      select c.id, c.kind, c.change, c.item_id, c.target_id, c.title, t.title as item_title, s.key as space_key,
+      select c.id, c.kind, c.change, c.item_id, c.target_id, c.title, t.title as item_title, t.number as item_number,
+        s.key as space_key,
         c.details, c.decision, c.decided_by, da.name as decided_by_name, c.decided_at, c.applied_at,
         d.updated_by, ua.name as updated_by_name, d.updated_at, ${heldCondition(sql`c`)} as held,
         hf.id as held_for_id, hf.title as held_for_title
@@ -781,8 +788,13 @@ export class ReimportService {
       kind: row.kind,
       change: row.change,
       item:
-        row.item_id && row.item_title !== null
-          ? { id: row.item_id, title: row.item_title, spaceKey: row.space_key ?? "" }
+        row.item_id && row.item_title !== null && row.item_number !== null
+          ? {
+              id: row.item_id,
+              number: Number(row.item_number),
+              title: row.item_title,
+              spaceKey: row.space_key ?? "",
+            }
           : null,
       title: row.item_title ?? row.title,
       sourceTitle: text(source.sourceTitle),

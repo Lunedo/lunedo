@@ -86,7 +86,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       mode: "live",
     });
     expect(response.statusCode, response.body).toBe(201);
-    return response.json() as { id: string; position: string };
+    return response.json() as { id: string; number: number; position: string };
   }
 
   it("creates a space with defaults from the organization and finds it by key", async () => {
@@ -164,9 +164,14 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json()).toMatchObject({ code: "invalidDocument", problems: [{ code: "unknownNode" }] });
     const markdown = await creator.client.get(`/api/v1/pages/${source.id}/markdown`);
-    expect(markdown.json().markdown).toContain(`[Target](/spaces/${space.key}/pages/${target.id}/target)`);
+    expect(markdown.json().markdown).toContain(
+      `[Target](/spaces/${space.key}/pages/${target.number}/target)`,
+    );
+    expect(stored.json().references.pages[target.id]).toMatchObject({ number: target.number });
     const backlinks = await creator.client.get(`/api/v1/pages/${target.id}/backlinks`);
-    expect(backlinks.json().map((link: { itemId: string }) => link.itemId)).toEqual([source.id]);
+    expect(
+      backlinks.json().map((link: { itemId: string; number: number }) => [link.itemId, link.number]),
+    ).toEqual([[source.id, source.number]]);
   });
 
   it("lists child pages and attachments in Markdown with only what the reader may see", async () => {
@@ -203,19 +208,20 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       },
     });
     expect(stored.statusCode, stored.body).toBe(200);
-    const path = (id: string, title: string) => `/spaces/${space.key}/pages/${id}/${title.toLowerCase()}`;
+    const path = (number: number, title: string) =>
+      `/spaces/${space.key}/pages/${number}/${title.toLowerCase()}`;
     const ofCreator = (await creator.client.get(`/api/v1/pages/${parent.id}/markdown`)).json().markdown;
     expect(ofCreator).toContain(
-      `- [Network](${path(network.id, "Network")})\n- [Secret](${path(secret.id, "Secret")})\n\n`,
+      `- [Network](${path(network.number, "Network")})\n- [Secret](${path(secret.number, "Secret")})\n\n`,
     );
     expect(ofCreator).toContain(
-      `- [Secret](${path(secret.id, "Secret")})\n- [Network](${path(network.id, "Network")})\n  - [Firewall](${path(firewall.id, "Firewall")})\n\n`,
+      `- [Secret](${path(secret.number, "Secret")})\n- [Network](${path(network.number, "Network")})\n  - [Firewall](${path(firewall.number, "Firewall")})\n\n`,
     );
     const ofReader = (await reader.client.get(`/api/v1/pages/${parent.id}/markdown`)).json().markdown;
     expect(ofReader).not.toContain("Secret");
     expect(ofReader.trimEnd().split("\n\n")).toEqual([
-      `- [Network](${path(network.id, "Network")})`,
-      `- [Network](${path(network.id, "Network")})\n  - [Firewall](${path(firewall.id, "Firewall")})`,
+      `- [Network](${path(network.number, "Network")})`,
+      `- [Network](${path(network.number, "Network")})\n  - [Firewall](${path(firewall.number, "Firewall")})`,
       "*No child pages*",
       expect.stringMatching(/^- \[handbook\.pdf\]\(\/api\/v1\/attachments\/[0-9a-f-]+\/content\) \(12 B\)$/),
     ]);
@@ -370,7 +376,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       expect.objectContaining({
         id: open.id,
         title: "Kick-off",
-        path: `/spaces/${space.key}/pages/${open.id}/kick-off`,
+        path: `/spaces/${space.key}/pages/${open.number}/kick-off`,
         spaceId: space.id,
       }),
     ]);
@@ -401,7 +407,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     });
     expect(overview.statusCode, overview.body).toBe(200);
     const markdown = (await reader.client.get(`/api/v1/pages/${project.id}/markdown`)).json().markdown;
-    expect(markdown).toContain(`| [Kick-off](/spaces/${space.key}/pages/${open.id}/kick-off) |`);
+    expect(markdown).toContain(`| [Kick-off](/spaces/${space.key}/pages/${open.number}/kick-off) |`);
     expect(markdown).toContain("- Ship in May");
     expect(markdown).toContain("*New notes*");
     expect(markdown).not.toMatch(/Secret|rival/);

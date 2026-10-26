@@ -101,6 +101,7 @@ describe.skipIf(!baseUrl)("exports", () => {
       expect(all).not.toContain("Confidential numbers");
       expect(all).not.toContain("Secret task");
       expect(all).not.toContain(context.pages.salaries.id);
+      expect(all).not.toContain(`/${context.pages.salaries.number}/`);
       expect(textOf(files, "Welcome/Welcome.html")).toContain('data-access="none">No access</span>');
     });
 
@@ -121,7 +122,7 @@ describe.skipIf(!baseUrl)("exports", () => {
       expect(html).toContain('href="notes.txt"');
       expect(markdown).toContain("[notes.txt](notes.txt)");
       expect(html).toContain(`href="${INSTANCE}/spaces/`);
-      expect(html).toContain(`/pages/${context.pages.remote.id}/remote-page"`);
+      expect(html).toContain(`/pages/${context.pages.remote.number}/remote-page"`);
       expect(html).toContain('<a href="../index.html">Contents</a>');
       expect(textOf(files, "index.html")).toContain('<a href="Welcome/Welcome.html">Welcome</a>');
     });
@@ -161,6 +162,7 @@ describe.skipIf(!baseUrl)("exports", () => {
     expect(all).not.toContain("Unpublished idea");
     expect(all).not.toContain("Never published");
     expect(all).not.toContain(context.pages.unpublished.id);
+    expect(all).not.toContain(`/${context.pages.unpublished.number}/`);
   });
 
   it("exports a page with its subpages and audits it", async () => {

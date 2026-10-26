@@ -142,6 +142,10 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
   async function idOf(viewer: string, importId: string, tab: ChangeTab, itemId: string) {
     const entry = (await changes(viewer, importId, tab)).find((candidate) => candidate.item?.id === itemId);
     if (!entry) throw new Error(`No change for ${itemId}`);
+    const numbered = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${itemId}`,
+    );
+    expect(entry.item?.number).toBe(Number(numbered.rows[0]?.number));
     return entry.id;
   }
 
@@ -612,6 +616,9 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const w = await world();
     const links = test.services.imports.links;
     const steady = await w.item(RE.steady);
+    const numbered = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${steady}`,
+    );
     for (const url of [
       `https://example.atlassian.net/wiki/spaces/REI/pages/${RE.steady}/Steady`,
       `https://wiki.example.org/pages/viewpage.action?pageId=${RE.steady}`,
@@ -620,6 +627,7 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     ]) {
       expect(await links.resolve(as(w.admin), url)).toMatchObject({
         itemId: steady,
+        number: Number(numbered.rows[0]?.number),
         spaceKey: w.key,
         kind: "page",
       });

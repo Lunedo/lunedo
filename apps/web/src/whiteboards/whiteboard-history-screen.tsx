@@ -11,9 +11,10 @@ import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { itemSlug } from "../spaces/item-paths.js";
+import { useNumberedItem } from "../spaces/numbered-item.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
-import { type ItemDetails, itemQuery, whiteboardPath } from "../spaces/space-queries.js";
+import { type ItemDetails, whiteboardPath } from "../spaces/space-queries.js";
 import { CopiedFrom } from "../spaces/versions/copied-from.js";
 import type { FileStore } from "./scene-sync.js";
 import {
@@ -30,12 +31,12 @@ const ExcalidrawBoard = lazy(() =>
   import("./excalidraw-board.js").then((module) => ({ default: module.ExcalidrawBoard })),
 );
 
-const route = getRouteApi("/app/spaces/$spaceKey/whiteboards/$itemId/history");
+const route = getRouteApi("/app/spaces/$spaceKey/whiteboards/$number/history");
 
 export function WhiteboardHistoryScreen() {
   const { t } = useTranslation();
-  const { itemId } = route.useParams();
-  const item = useQuery(itemQuery(itemId));
+  const { number } = route.useParams();
+  const item = useNumberedItem(number);
   useDocumentTitle(item.data ? t("versions.historyOf", { title: item.data.title }) : "");
   if (item.isPending) return <Skeleton className="m-6 h-field" />;
   if (item.isError) {
@@ -81,12 +82,12 @@ function BoardHistory({ board }: { board: ItemDetails }) {
     }),
     [],
   );
-  const boardPath = whiteboardPath(space.key, board.id, itemSlug(board.title));
+  const boardPath = whiteboardPath(space.key, board.number, itemSlug(board.title));
   const select = (number: number) => {
     setViewing(false);
     void navigate({
-      to: "/spaces/$spaceKey/whiteboards/$itemId/history",
-      params: { spaceKey: space.key, itemId: board.id },
+      to: "/spaces/$spaceKey/whiteboards/$number/history",
+      params: { spaceKey: space.key, number: board.number },
       search: { version: number },
       replace: true,
     });
