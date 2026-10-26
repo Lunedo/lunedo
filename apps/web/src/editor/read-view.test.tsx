@@ -105,6 +105,17 @@ describe("page read view", () => {
                   text(" and "),
                   {
                     type: "text",
+                    text: "absolute",
+                    marks: [
+                      {
+                        type: "link",
+                        attrs: { href: `${globalThis.location.origin}/spaces/OLD/pages/${PAGE}/x#top` },
+                      },
+                    ],
+                  },
+                  text(" and "),
+                  {
+                    type: "text",
                     text: "pay scale",
                     marks: [{ type: "link", attrs: { href: `/spaces/HR/pages/${SECRET}/salary-bands` } }],
                   },
@@ -119,9 +130,12 @@ describe("page read view", () => {
     );
     const link = screen.getByRole("link", { name: "naming rules" });
     expect(link.getAttribute("href")).toBe("/spaces/ITOPS/pages/1001/device-naming#rules");
+    expect(screen.getByRole("link", { name: "absolute" }).getAttribute("href")).toBe(
+      "/spaces/ITOPS/pages/1001/device-naming#top",
+    );
     const paragraph = link.closest("p") as HTMLElement;
-    expect(paragraph.textContent).toBe("naming rules and pay scale");
-    expect(paragraph.querySelectorAll("a")).toHaveLength(1);
+    expect(paragraph.textContent).toBe("naming rules and absolute and pay scale");
+    expect(paragraph.querySelectorAll("a")).toHaveLength(2);
   });
 
   it("shows the display version of an image and opens the original in a new tab", async () => {

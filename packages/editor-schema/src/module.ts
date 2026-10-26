@@ -298,6 +298,7 @@ export interface RenderContext {
   nodeTitle?: (type: string) => string | null;
   mention?: (id: string) => { name: string } | null;
   pageLink?: (link: PageLinkTarget) => ResolvedPageLink | null;
+  instanceUrl?: string;
   attachment?: (id: string, version?: number) => ResolvedAttachment | null;
   diagramReference?: (pageId: string, diagramId: string) => ReferencedDiagram | null;
   formatDate?: (iso: string) => string;

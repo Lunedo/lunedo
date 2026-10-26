@@ -13,12 +13,13 @@ import { type ContentColor, colorValue, hrefValue, uuidValue } from "../values.j
 
 function linkHref(
   renderer: {
+    readonly context: { instanceUrl?: string };
     pageLink(link: PageLinkTarget): ResolvedPageLink | null;
     safeHref(href: string): string | null;
   },
   href: string,
 ): string | null {
-  const internal = internalItemLink(href);
+  const internal = internalItemLink(href, renderer.context.instanceUrl);
   if (!internal) return renderer.safeHref(href);
   const resolved = renderer.pageLink({ pageId: internal.itemId, spaceId: null, title: null });
   return resolved?.accessible && resolved.href

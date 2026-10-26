@@ -833,6 +833,7 @@ export class PageExportRenderer {
       },
       topic: (id) => references.topics[id] ?? null,
       pageLink: (link) => referencedPageLink(references, link.pageId),
+      ...(this.#origin ? { instanceUrl: this.#origin } : {}),
       attachment: (id) => ({
         href: `/api/v1/attachments/${id}/content`,
         display: `/api/v1/attachments/${id}/content?size=display`,

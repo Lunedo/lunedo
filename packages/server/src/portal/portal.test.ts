@@ -543,6 +543,22 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
                 { type: "pageLink", attrs: { pageId: internal, spaceId: other.id, title: "Intern" } },
               ],
             },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Verlinktes Ziel",
+                  marks: [{ type: "link", attrs: { href: `/spaces/HILFE/pages/${target}/alt#schritt` } }],
+                },
+                { type: "text", text: " und " },
+                {
+                  type: "text",
+                  text: "Verlinkt intern",
+                  marks: [{ type: "link", attrs: { href: `/spaces/OPS/pages/${internal}/gehalt` } }],
+                },
+              ],
+            },
             { type: "image", attrs: { attachmentId, alt: "Bild" } },
             { type: "image", attrs: { attachmentId: foreignId, alt: "Fremd" } },
             { type: "includePage", attrs: { pageId: internal } },
@@ -566,6 +582,9 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
       sql`select number from tree_items where id = ${target}`,
     );
     expect(rendered.html).toContain(`href="/__portal__/${number.rows[0]?.number}"`);
+    expect(rendered.html).toContain(`href="/__portal__/${number.rows[0]?.number}#schritt"`);
+    expect(rendered.html).toContain("Verlinkt intern");
+    expect(rendered.html).not.toContain("/spaces/OPS/pages/");
     expect(rendered.html).toContain(`src="/__portal__/files/${attachmentId}?size=display"`);
     expect(rendered.html).not.toContain("Interner Text");
     expect(rendered.html).not.toContain(internal);

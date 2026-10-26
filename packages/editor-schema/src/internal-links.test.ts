@@ -61,6 +61,32 @@ describe("internal item links in link marks", () => {
     expect(renderMarkdown(document, {})).not.toContain(HIDDEN);
   });
 
+  it("resolves absolute links to this instance, with and without anchor", () => {
+    const withUrl: RenderContext = { ...context, instanceUrl: "https://wiki.example.org" };
+    const absolute = `https://wiki.example.org/spaces/OLD/pages/${VISIBLE}/old-title`;
+    expect(renderHtml(linked(`${absolute}#setup`), withUrl)).toContain(
+      'href="/spaces/OPS/pages/4711/runbook#setup"',
+    );
+    expect(renderHtml(linked(absolute), withUrl)).toContain('href="/spaces/OPS/pages/4711/runbook"');
+    expect(renderHtml(linked(`https://WIKI.example.org/shared/${VISIBLE}`), withUrl)).toContain(
+      'href="/spaces/OPS/pages/4711/runbook"',
+    );
+    const hidden = renderHtml(
+      linked(`https://wiki.example.org/spaces/HR/pages/${HIDDEN}/salary-bands`, "Bands"),
+      withUrl,
+    );
+    expect(hidden).not.toContain("href");
+  });
+
+  it("leaves absolute links to other hosts and links without an instance address unchanged", () => {
+    const other = `https://other.example.org/spaces/OPS/pages/${VISIBLE}/runbook`;
+    expect(renderHtml(linked(other), { ...context, instanceUrl: "https://wiki.example.org" })).toContain(
+      `href="${other}"`,
+    );
+    const absolute = `https://wiki.example.org/spaces/OPS/pages/${VISIBLE}/runbook`;
+    expect(renderHtml(linked(absolute), context)).toContain(`href="${absolute}"`);
+  });
+
   it("leaves other links unchanged", () => {
     expect(renderHtml(linked("https://example.org/a"), context)).toContain('href="https://example.org/a"');
     expect(renderHtml(linked("/spaces/OPS/pages/4711/runbook"), context)).toContain(
@@ -68,8 +94,11 @@ describe("internal item links in link marks", () => {
     );
   });
 
-  it("counts link marks to items as page links", () => {
+  it("counts link marks to items as page links, also absolute ones", () => {
     const links = extractPageLinks(linked(`/spaces/OPS/pages/${VISIBLE}/x`));
     expect(links).toEqual([{ pageId: VISIBLE, spaceId: null, title: null }]);
+    expect(extractPageLinks(linked(`https://wiki.example.org/spaces/OPS/pages/${HIDDEN}/x#a`))).toEqual([
+      { pageId: HIDDEN, spaceId: null, title: null },
+    ]);
   });
 });

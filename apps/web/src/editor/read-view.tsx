@@ -86,6 +86,7 @@ export function readViewContext(
   return {
     ...(services ? { embed: (url: string) => resolveEmbed(url, services) } : {}),
     ...(options.numberHeadings ? { numberHeadings: true } : {}),
+    instanceUrl: globalThis.location.origin,
     attachment: (id, version) => ({
       href: attachmentUrl(id, version),
       display: attachmentUrl(id, version, "display"),

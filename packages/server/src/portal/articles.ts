@@ -6,6 +6,7 @@ import {
   type IncludedContent,
   type IncludeRequest,
   includeRequest,
+  linkedItemId,
   MAX_INCLUDE_DEPTH,
   type NodeJson,
   type RenderContext,
@@ -126,6 +127,9 @@ function references(document: DocumentJson): {
     for (const mark of node.marks ?? []) {
       const markAttrs = (mark.attrs ?? {}) as Record<string, unknown>;
       if (typeof markAttrs.pageId === "string") pages.add(markAttrs.pageId);
+      const linked =
+        mark.type === "link" && typeof markAttrs.href === "string" ? linkedItemId(markAttrs.href) : null;
+      if (linked) pages.add(linked);
     }
     if (typeof attrs.pageId === "string" && !INCLUDES.has(node.type)) pages.add(attrs.pageId);
   });
@@ -141,6 +145,7 @@ export class ArticleRenderer {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
   readonly #jobs: JobQueue | undefined;
+  readonly #instanceUrl: (() => Promise<string | null>) | undefined;
   readonly #embeds: EmbedServices | undefined;
 
   constructor(options: {
@@ -148,10 +153,12 @@ export class ArticleRenderer {
     authorization: AuthorizationService;
     jobs?: JobQueue | undefined;
     embeds?: EmbedServices | undefined;
+    instanceUrl?: (() => Promise<string | null>) | undefined;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#jobs = options.jobs;
+    this.#instanceUrl = options.instanceUrl;
     this.#embeds = options.embeds;
   }
 
@@ -396,7 +403,9 @@ export class ArticleRenderer {
       for (const entry of result.rows) names.set(entry.id, entry.name);
     }
     const included = await this.#includes(source, language, addresses, embeds, reader, chain, budget);
+    const instanceUrl = (await this.#instanceUrl?.()) ?? null;
     return {
+      ...(instanceUrl ? { instanceUrl } : {}),
       labels: exportTexts(language).labels,
       mention: (id) => {
         const name = names.get(id);
