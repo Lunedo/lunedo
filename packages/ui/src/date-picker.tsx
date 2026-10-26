@@ -134,6 +134,8 @@ export function DatePicker({
     setFocused(step());
   };
 
+  const shown = selected ? formatDate(selected) : (placeholder ?? labels.chooseDate);
+
   return (
     <PopoverPrimitive.Root
       open={open}
@@ -151,7 +153,9 @@ export function DatePicker({
           {...(max ? { "data-max": max } : {})}
           {...field}
           {...(invalid ? { "aria-invalid": true } : {})}
-          {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
+          {...(props["aria-label"]
+            ? { "aria-label": shown === props["aria-label"] ? shown : `${props["aria-label"]}: ${shown}` }
+            : {})}
           className={classNames(
             controlWidth(className),
             "inline-flex h-control-field items-center justify-between gap-2 text-left",
@@ -159,7 +163,7 @@ export function DatePicker({
           )}
         >
           <span className={classNames("min-w-0 flex-1 truncate", !selected && "text-text-muted")}>
-            {selected ? formatDate(selected) : (placeholder ?? labels.chooseDate)}
+            {shown}
           </span>
           <Icon icon={CalendarDays} size="sm" className="text-text-muted" />
         </button>

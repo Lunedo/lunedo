@@ -32,7 +32,7 @@ describe("date and time in a dialog", () => {
     act(() => {
       vi.runAllTimers();
     });
-    fireEvent.click(screen.getByRole("button", { name: "First" }));
+    fireEvent.click(screen.getByRole("button", { name: /^First: / }));
     act(() => {
       vi.runAllTimers();
     });

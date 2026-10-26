@@ -103,7 +103,7 @@ describe("the announcement settings", () => {
     expect(screen.getByText("People cannot dismiss this banner. It disappears at its end.")).toBeTruthy();
 
     expect(document.querySelector('input[type="date"]')).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "End date" }));
+    await userEvent.click(screen.getByRole("button", { name: /^End date: / }));
     await userEvent.keyboard("{ArrowRight}{ArrowRight}{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Show banner" }));
     await waitFor(() => expect(requests.some((request) => request.method === "PUT")).toBe(true));

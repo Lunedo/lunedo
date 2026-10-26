@@ -224,7 +224,7 @@ describe("the audit log", () => {
       "GET /api/v1/instance/audit-events": () => ({ body: { items: [rule, signIn], nextCursor: null } }),
     });
     const table = await renderLog();
-    expect(screen.queryByRole("button", { name: "From" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^From/ })).toBeNull();
     await userEvent.click(screen.getByRole("combobox", { name: "Period" }));
     await userEvent.click(await screen.findByRole("option", { name: "Custom period …" }));
     expect(document.querySelector('input[type="date"]')).toBeNull();

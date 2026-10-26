@@ -98,7 +98,7 @@ async function setPasswordSignIn(request: APIRequestContext, value: boolean | un
 async function signInThroughProvider(page: Page, provider: IdentityProviderFixture, user: NewTestUser) {
   await page.goto("/sign-in");
   await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
-  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByText(`${TEST_DOMAIN} signs in with E2E ${provider.name}`)).toBeVisible();
   await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
   await provider.signIn(page, user.username);
@@ -155,7 +155,7 @@ for (const provider of identityProviders) {
       const { context, page } = await freshContext(browser);
       await page.goto("/sign-in");
       await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
-      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
       await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
       await provider.signIn(page, outsider.username);
       await expect(page).toHaveURL(/\/sign-in\/refused/);
@@ -319,7 +319,7 @@ test.describe("linking an existing account", () => {
     const page = await context.newPage();
     await page.goto("/sign-in");
     await page.getByLabel("Work e-mail address or sign-in name").fill(email());
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
     await signInAtKeycloak(page, username);
     await expect(page.getByRole("heading", { name: `Link your E2E ${provider.name} account` })).toBeVisible();

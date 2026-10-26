@@ -94,6 +94,7 @@ describe("the agenda of a meeting", () => {
     expect(screen.getByText("Leasing is cheaper").parentElement?.textContent).toMatch(/^Today/);
     expect(screen.getByText("this meeting only")).toBeTruthy();
     expect(screen.getByText("No entry yet.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "archive of the series" }).className.split(" ")).toContain("underline");
     await userEvent.click(screen.getByRole("button", { name: "History (2)" }));
     const history = screen.getByRole("list", { name: "History of Firewall" });
     expect(
@@ -284,6 +285,7 @@ describe("the head of a meeting", () => {
     expect(screen.getByRole("link", { name: /Oct 26/ }).getAttribute("href")).toContain(`/spaces/ITOPS/`);
     expect(screen.getByRole("link", { name: /Nov 9/ })).toBeTruthy();
     expect(screen.getByText(/^Previous:/)).toBeTruthy();
+    for (const link of screen.getAllByRole("link")) expect(link.className.split(" ")).toContain("underline");
   });
 
   it("calls a later upcoming meeting planned, not next", async () => {

@@ -177,11 +177,11 @@ export function OnThisPage({
                 onClick={(event) => jump(event, entry.id)}
                 title={entry.title}
                 className={classNames(
-                  "block truncate rounded-sm border-l-2 border-transparent py-1 pr-2 text-sm text-text-muted hover:text-text focus-visible:focus-ring aria-[current=location]:border-accent aria-[current=location]:font-medium aria-[current=location]:text-text",
+                  "flex min-h-row items-center rounded-sm border-l-2 border-transparent py-1 pr-2 text-sm text-text-muted hover:text-text focus-visible:focus-ring aria-[current=location]:border-accent aria-[current=location]:font-medium aria-[current=location]:text-text",
                   entry.level === 1 ? "pl-2" : entry.level === 2 ? "pl-4" : "pl-6",
                 )}
               >
-                {entry.title}
+                <span className="truncate">{entry.title}</span>
               </a>
             </li>
           ))}

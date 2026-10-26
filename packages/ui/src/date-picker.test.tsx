@@ -26,7 +26,7 @@ describe("DatePicker", () => {
         aria-label="From"
       />,
     );
-    const trigger = screen.getByRole("button", { name: "From" });
+    const trigger = screen.getByRole("button", { name: "From: 14.10.2026" });
     expect(trigger.textContent).toContain("14.10.2026");
     await userEvent.click(trigger);
     expect(screen.getByRole("table", { name: "October 2026" })).toBeTruthy();
@@ -58,7 +58,7 @@ describe("DatePicker", () => {
         aria-label="Until"
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Until" }));
+    await userEvent.click(screen.getByRole("button", { name: "Until: 14.10.2026" }));
     const before = document.querySelector<HTMLButtonElement>('[data-date="2026-10-09"]');
     expect(before?.disabled).toBe(true);
     await userEvent.click(screen.getByRole("button", { name: "Next month" }));

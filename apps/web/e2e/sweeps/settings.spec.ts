@@ -95,12 +95,12 @@ for (const language of ["en", "de"] as const) {
     );
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: de ? /^Benachrichtigungen(,|$)/ : /^Notifications(,|$)/ }).click();
-    const close = page.getByRole("button", {
-      name: de ? "Benachrichtigungen schließen" : "Close notifications",
-    });
-    const closeBox = await close.boundingBox();
-    expect(closeBox && closeBox.x + closeBox.width).toBeLessThanOrEqual(width);
-    await close.click();
+    const panel = page.getByRole("dialog", { name: de ? "Benachrichtigungen" : "Notifications" });
+    const panelBox = await panel.boundingBox();
+    expect(panelBox && panelBox.x).toBeGreaterThanOrEqual(0);
+    expect(panelBox && panelBox.x + panelBox.width).toBeLessThanOrEqual(width);
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
     await setAppearance(page, { language: "en", textSize: 1 });
   });
 }

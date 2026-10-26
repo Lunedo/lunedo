@@ -1030,7 +1030,7 @@ export const auditCatalog = {
     visibility: "organization",
   }),
   "instance.addressChanged": event({
-    actor: ["account"],
+    actor: ["account", "system"],
     target: "instance",
     fields: z.object({
       url: z.string(),

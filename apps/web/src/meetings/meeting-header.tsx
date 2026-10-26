@@ -82,7 +82,7 @@ function AdjacentLink({
       {label}{" "}
       <Link
         to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
-        className="text-accent hover:underline focus-visible:focus-ring"
+        className="text-accent underline focus-visible:focus-ring"
       >
         {meeting.startsAt ? format.calendarDate(meeting.startsAt) : meeting.title}
       </Link>

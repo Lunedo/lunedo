@@ -71,7 +71,7 @@ test("re-import screens pass the accessibility check in English and German, ligh
 
   await sweepAppearances(page, "reimport-imports-list", async () => {
     await page.goto(base);
-    await expect(page.getByRole("list", { name: /Imports|Importe/ })).toBeVisible();
+    await expect(page.getByRole("table", { name: /Imports|Importe/ })).toBeVisible();
   });
   await sweepAppearances(page, "reimport-accepted-import", async () => {
     await page.goto(`${base}/${first}`);

@@ -279,7 +279,7 @@ export function AgendaSection({
           to="/spaces/$spaceKey/meetings/$seriesId"
           params={{ spaceKey, seriesId: data.seriesId }}
           search={{ tab: "topics", status: "closed" }}
-          className="text-accent hover:underline focus-visible:focus-ring"
+          className="text-accent underline focus-visible:focus-ring"
         >
           {t("meetings.agenda.archiveLink")}
         </Link>

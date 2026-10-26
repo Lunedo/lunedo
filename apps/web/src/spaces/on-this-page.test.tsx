@@ -77,6 +77,7 @@ describe("On this page", () => {
     expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
     expect(window.location.hash).toBe("#section-4");
     expect(screen.getByRole("link", { name: "Section 4" }).getAttribute("aria-current")).toBe("location");
+    expect(screen.getByRole("link", { name: "Section 4" }).className).toContain("min-h-row");
   });
 
   it("marks the last section that has scrolled past the top", () => {
