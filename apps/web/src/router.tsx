@@ -877,7 +877,15 @@ const organizationGeneralRoute = organizationScreen(
 const membersRoute = organizationScreen("/members", MembersScreen, (queryClient, organizationId) => [
   queryClient.ensureQueryData(membersQuery(organizationId)),
 ]);
-const memberRoute = organizationScreen("/members/$accountId", MemberScreen);
+const tabSearch = z.object({ tab: z.string().max(40).optional().catch(undefined) });
+
+const memberRoute = createRoute({
+  getParentRoute: () => organizationRoute,
+  path: "/members/$accountId",
+  validateSearch: tabSearch,
+  loader: organizationLoader(undefined),
+  component: MemberScreen,
+});
 const groupsRoute = organizationScreen("/groups", GroupsScreen);
 const groupRoute = organizationScreen("/groups/$groupId", GroupScreen);
 const rolesRoute = organizationScreen("/roles", OrganizationRolesScreen, (queryClient, organizationId) => [
@@ -1023,7 +1031,13 @@ const instanceMaintenanceRoute = instanceScreen("/maintenance", InstanceMaintena
 const instanceGeneralRoute = instanceScreen("/general", InstanceGeneralScreen, withInstanceSettings);
 const instanceOrganizationsRoute = instanceScreen("/organizations", InstanceOrganizationsScreen);
 const instanceAccountsRoute = instanceScreen("/accounts", InstanceAccountsScreen);
-const instanceAccountRoute = instanceScreen("/accounts/$accountId", InstanceAccountScreen);
+const instanceAccountRoute = createRoute({
+  getParentRoute: () => instanceRoute,
+  path: "/accounts/$accountId",
+  validateSearch: tabSearch,
+  loader: instanceLoader(undefined),
+  component: InstanceAccountScreen,
+});
 const instanceRolesRoute = instanceScreen("/roles", InstanceRolesScreen, (queryClient) => [
   queryClient.ensureQueryData(instanceRolesQuery),
 ]);

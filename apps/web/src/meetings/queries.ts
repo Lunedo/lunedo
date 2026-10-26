@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import { api } from "../api/client.js";
 import type { paths } from "../api/generated/schema.js";
 import { request } from "../api/request.js";
+import { localDateInZone } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
 
 type Json<T> = T extends { content: { "application/json": infer Body } } ? Body : never;
@@ -144,10 +145,33 @@ export function seriesNotesQuery(seriesId: string) {
   });
 }
 
-export function meetingStateLabel(t: TFunction, meeting: { state: string; next: boolean }): string {
-  return meeting.state === "upcoming" && !meeting.next
-    ? t("meetings.state.planned")
-    : translateKey(t, `meetings.state.${meeting.state}`);
+export interface MeetingStateInput {
+  state: string;
+  next: boolean;
+  startsAt: string | null;
+}
+
+export function isToday(startsAt: string, timeZone: string, now: Date = new Date()): boolean {
+  return localDateInZone(new Date(startsAt), timeZone) === localDateInZone(now, timeZone);
+}
+
+export function meetingState(meeting: MeetingStateInput, timeZone: string, now: Date = new Date()): string {
+  if (meeting.state !== "upcoming") return meeting.state;
+  if (!meeting.startsAt) return meeting.next ? "upcoming" : "planned";
+  const day = localDateInZone(new Date(meeting.startsAt), timeZone);
+  const today = localDateInZone(now, timeZone);
+  if (day === today) return "today";
+  if (day < today) return "open";
+  return meeting.next ? "upcoming" : "planned";
+}
+
+export function meetingStateLabel(t: TFunction, meeting: MeetingStateInput, timeZone: string): string {
+  return translateKey(t, `meetings.state.${meetingState(meeting, timeZone)}`);
+}
+
+export function meetingStateAccent(meeting: MeetingStateInput, timeZone: string): boolean {
+  const state = meetingState(meeting, timeZone);
+  return state === "today" || state === "upcoming";
 }
 
 export function upcomingQuery(oneOnOne?: boolean) {

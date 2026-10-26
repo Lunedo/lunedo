@@ -10,7 +10,7 @@ import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
 import { CreateSeriesDialog } from "./create-series-dialog.js";
-import { seriesPath, spaceSeriesQuery } from "./queries.js";
+import { isToday, seriesPath, spaceSeriesQuery } from "./queries.js";
 
 export function SeriesListScreen() {
   const { t } = useTranslation();
@@ -74,7 +74,9 @@ export function SeriesListScreen() {
                   <span className="flex items-center gap-1 text-sm text-text-muted">
                     <CalendarClock aria-hidden className="size-icon-md" />
                     {entry.upcomingAt
-                      ? t("meetings.list.next", { date: format.weekdayDateTime(entry.upcomingAt) })
+                      ? isToday(entry.upcomingAt, format.settings.timeZone)
+                        ? t("meetings.list.today", { time: format.time(entry.upcomingAt) })
+                        : t("meetings.list.next", { date: format.weekdayDateTime(entry.upcomingAt) })
                       : t("meetings.notScheduled")}
                   </span>
                 ) : null}

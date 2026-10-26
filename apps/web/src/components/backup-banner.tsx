@@ -92,21 +92,17 @@ export function BackupBanner() {
   if (!data || !onInstancePage) return null;
   if (data.restoredAt) return <RestoredBanner data={data} onSettings={onSettings} />;
   const kind = data.alert !== "none" ? data.alert : data.warning;
-  if (!kind) return null;
+  if (!kind || onSettings) return null;
   return (
     <div className="px-4 pt-3 md:px-8">
       <Notice
         variant={kind === "failing" ? "danger" : "warning"}
         title={translateKey(t, `backups.banner.${kind}.title`)}
-        {...(onSettings
-          ? {}
-          : {
-              action: (
-                <Link to={BACKUP_SETTINGS} className="font-medium text-accent hover:underline">
-                  {t("backups.banner.open")}
-                </Link>
-              ),
-            })}
+        action={
+          <Link to={BACKUP_SETTINGS} className="font-medium text-accent hover:underline">
+            {t("backups.banner.open")}
+          </Link>
+        }
       >
         {translateKey(t, `backups.banner.${kind}.body`, { count: data.settings.missingDays })}
       </Notice>

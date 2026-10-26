@@ -26,7 +26,7 @@ import { Info, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { instanceKeys, instanceOrganizationsQuery } from "../../api/instance-queries.js";
+import { instanceKeys, instanceOrganizationsQuery, instanceRolesQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AuditLog } from "../../components/audit-log.js";
 import { formerUser } from "../../components/audit-presentation.js";
@@ -47,6 +47,7 @@ import {
   MergePlaceholder,
   PlaceholderDialog,
 } from "./account-lifecycle.js";
+import { AssignInstanceRoleDialog } from "./roles-screen.js";
 
 const STATE_BADGES = {
   active: "success",
@@ -291,6 +292,9 @@ export function InstanceAccountScreen() {
     throwOnError: false,
   });
   const back = { label: t("instance.accounts.title"), href: "/settings/instance/accounts" };
+  const manageRoles = useOrganizationState().can("instance.roles.manage");
+  const roles = useQuery({ ...instanceRolesQuery, enabled: manageRoles });
+  const [changingRole, setChangingRole] = useState(false);
   if (!detail.data) {
     return (
       <SettingsPage title={detail.isError ? t("instance.accounts.account") : ""} back={back}>
@@ -302,8 +306,36 @@ export function InstanceAccountScreen() {
       </SettingsPage>
     );
   }
+  const account = detail.data.account;
   return (
-    <SettingsPage title={accountName(t, detail.data.account)} back={back} wide>
+    <SettingsPage
+      title={accountName(t, account)}
+      back={back}
+      wide
+      leading={<PersonAvatar id={account.id} name={account.name} size="lg" />}
+      status={<Badge variant="neutral">{t(`instance.accounts.types.${account.type}`)}</Badge>}
+      description={account.email ?? "—"}
+      {...(manageRoles
+        ? {
+            actions: (
+              <Button variant="secondary" onClick={() => setChangingRole(true)}>
+                {t("instance.accounts.changeInstanceRole")}
+              </Button>
+            ),
+          }
+        : {})}
+    >
+      {changingRole ? (
+        <AssignInstanceRoleDialog
+          roles={roles.data ?? []}
+          person={{
+            id: account.id,
+            name: accountName(t, account),
+            owner: account.instanceRoles.some((role) => role.builtInRole === "owner"),
+          }}
+          onClose={() => setChangingRole(false)}
+        />
+      ) : null}
       <AccountDetails
         detail={detail.data}
         onRefetch={async () => {
@@ -370,7 +402,15 @@ function AccountDetails({
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const { toast } = useToast();
-  const [tab, setTab] = useState<AccountTab>("overview");
+  const search = accountRoute.useSearch();
+  const navigateTab = accountRoute.useNavigate();
+  const tab = (search.tab ?? "overview") as AccountTab;
+  const setTab = (next: AccountTab) =>
+    void navigateTab({
+      to: ".",
+      search: { tab: next === "overview" ? undefined : next },
+      replace: true,
+    });
   const [action, setAction] = useState<PanelAction | null>(null);
   const [ending, setEnding] = useState<AccountDetail["sessions"][number] | null>(null);
   const account = detail.account;
@@ -445,17 +485,6 @@ function AccountDetails({
 
   return (
     <>
-      <div className="flex min-w-0 items-center gap-4">
-        <PersonAvatar id={account.id} name={account.name} size="lg" />
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <Badge variant="neutral">{t(`instance.accounts.types.${account.type}`)}</Badge>
-            <span className="truncate text-text-muted" title={account.email ?? ""}>
-              {account.email ?? "—"}
-            </span>
-          </span>
-        </div>
-      </div>
       {manage && own ? <p className="text-sm text-text-muted">{t("instance.accounts.ownAccount")}</p> : null}
       <Tabs
         label={t("instance.accounts.page.tabs")}

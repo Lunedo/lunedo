@@ -75,6 +75,7 @@ describe("the agenda of a meeting", () => {
           topic(FIREWALL, "Firewall", {
             meetings: 4,
             history: [
+              { meetingId: FIREWALL, meetingTitle: "28 Sep", startsAt: null, text: "" },
               { meetingId: SERIES, meetingTitle: "5 Oct", startsAt: null, text: "Two offers" },
               { meetingId: SPACE, meetingTitle: "19 Oct", startsAt: null, text: "Rules reviewed" },
               { meetingId: LENA.id, meetingTitle: "26 Oct", startsAt: null, text: "" },
@@ -93,13 +94,13 @@ describe("the agenda of a meeting", () => {
     expect(screen.getByText("Leasing is cheaper").parentElement?.textContent).toMatch(/^Today/);
     expect(screen.getByText("this meeting only")).toBeTruthy();
     expect(screen.getByText("No entry yet.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "History (3)" }));
+    await userEvent.click(screen.getByRole("button", { name: "History (2)" }));
     const history = screen.getByRole("list", { name: "History of Firewall" });
     expect(
       within(history)
         .getAllByRole("listitem")
         .map((item) => item.textContent),
-    ).toEqual(["5 Oct · StartTwo offers", "19 OctRules reviewed", "26 Oct(empty)"]);
+    ).toEqual(["5 Oct · StartTwo offers", "19 OctRules reviewed"]);
   });
 
   it("adds a topic with a description in a dialog that stays open for the next one", async () => {
@@ -288,11 +289,22 @@ describe("the head of a meeting", () => {
   it("calls a later upcoming meeting planned, not next", async () => {
     mockApi({
       [`GET /api/v1/meetings/${MEETING}`]: () => ({
-        body: { ...meeting, next: false, startsAt: "2020-11-02T08:30:00.000Z" },
+        body: { ...meeting, next: false, startsAt: "2999-11-02T08:30:00.000Z" },
       }),
     });
     await renderWithProviders(inRouter(<MeetingHeader meetingId={MEETING} spaceKey="ITOPS" writable />));
     expect(await screen.findByText("Planned")).toBeTruthy();
+    expect(screen.queryByText("Next")).toBeNull();
+  });
+
+  it("calls an earlier meeting that was not closed open, and lets it be closed", async () => {
+    mockApi({
+      [`GET /api/v1/meetings/${MEETING}`]: () => ({
+        body: { ...meeting, next: true, startsAt: "2020-11-02T08:30:00.000Z" },
+      }),
+    });
+    await renderWithProviders(inRouter(<MeetingHeader meetingId={MEETING} spaceKey="ITOPS" writable />));
+    expect(await screen.findByText("Open")).toBeTruthy();
     expect(screen.queryByText("Next")).toBeNull();
     expect(screen.getByRole("button", { name: "Close meeting" }).hasAttribute("disabled")).toBe(false);
   });

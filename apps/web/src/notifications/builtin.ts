@@ -26,6 +26,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   UserCog,
+  UserMinus,
   UserPlus,
   UserRound,
   UserRoundX,
@@ -248,6 +249,14 @@ notificationTypes.register(
   {
     id: "space.memberAddedByAdministration",
     icon: UserPlus,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;
+    },
+  },
+  {
+    id: "space.memberRemovedByAdministration",
+    icon: UserMinus,
     link: (item) => {
       const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
       return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/permissions` } : null;

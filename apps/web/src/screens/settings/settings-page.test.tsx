@@ -71,10 +71,10 @@ describe("wizard steps in settings", () => {
   });
 });
 
-describe("settings pages that always list their sections", () => {
-  it("show what is on the page from two sections on", async () => {
+describe("settings pages with fewer than five sections", () => {
+  it("do not list them, also with two sections", async () => {
     await renderWithProviders(
-      <SettingsPage title="Security" contents>
+      <SettingsPage title="Security">
         <Section title="Sign-in">
           <p>Rows</p>
         </Section>
@@ -83,7 +83,7 @@ describe("settings pages that always list their sections", () => {
         </Section>
       </SettingsPage>,
     );
-    const nav = await screen.findByRole("navigation", { name: "On this page" });
-    expect(Array.from(nav.querySelectorAll("a")).map((link) => link.textContent)).toEqual(["Sign-in", "API tokens"]);
+    expect(await screen.findByRole("heading", { name: "API tokens" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "On this page" })).toBeNull();
   });
 });

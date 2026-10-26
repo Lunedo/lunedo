@@ -11,6 +11,7 @@ import {
   Menu,
   Notice,
   Section,
+  Skeleton,
   Table,
 } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -304,11 +305,30 @@ export function InstanceRolesScreen() {
   );
 }
 
-function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; roles: CustomRole[] }) {
+export function AssignInstanceRoleDialog({
+  onClose,
+  roles,
+  person,
+}: {
+  onClose: () => void;
+  roles: CustomRole[];
+  person?: { id: string; name: string; owner: boolean };
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [role, setRole] = useState<string | null>("builtIn:administrator");
-  const [people, setPeople] = useState<ComboboxItem[]>([]);
+  const [people, setPeople] = useState<ComboboxItem[]>(
+    person ? [{ value: person.id, label: person.name }] : [],
+  );
+  const assignments = useQuery({ ...instanceAssignmentsQuery, enabled: Boolean(person) });
+  const held = person
+    ? (assignments.data ?? []).filter(
+        (assignment) => assignment.principalKind === "account" && assignment.principalId === person.id,
+      )
+    : [];
+  const unassign = useUnassignWithUndo("instance", () =>
+    queryClient.invalidateQueries({ queryKey: instanceKeys.assignments }),
+  );
   const loader = useMemo(() => accountLoader(), []);
   const [expiry, setExpiry] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -340,6 +360,7 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
         }),
       );
       await queryClient.invalidateQueries({ queryKey: instanceKeys.assignments });
+      await queryClient.invalidateQueries({ queryKey: instanceKeys.accounts });
       onClose();
     } catch (failure) {
       setError(problemMessage(t, failure));
@@ -354,10 +375,52 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={t("roles.assign")}
+      title={person ? t("instance.accounts.changeInstanceRoleOf", { name: person.name }) : t("roles.assign")}
       size="md"
     >
       <div className="flex flex-col gap-4">
+        {person ? (
+          <section aria-labelledby="held-instance-roles" className="flex flex-col gap-2">
+            <h3 id="held-instance-roles" className="font-medium">
+              {t("instance.accounts.heldInstanceRoles")}
+            </h3>
+            {assignments.isPending ? (
+              <Skeleton className="h-8 w-full" />
+            ) : held.length === 0 && !person.owner ? (
+              <p className="text-sm text-text-muted">{t("instance.accounts.noInstanceRole")}</p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-border">
+                {person.owner ? (
+                  <li className="flex items-center justify-between gap-3 py-2">
+                    <span>{t("roles.builtIn.owner")}</span>
+                    <span className="text-sm text-text-muted">{t("instance.accounts.ownerKept")}</span>
+                  </li>
+                ) : null}
+                {held.map((assignment) => (
+                  <li key={assignment.id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate" title={roleName(t, assignment)}>
+                      {roleName(t, assignment)}
+                    </span>
+                    {assignment.builtInRole === "owner" ? null : (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() =>
+                          void unassign(
+                            assignment,
+                            t("roles.unassignedNamed", { name: person.name, role: roleName(t, assignment) }),
+                          )
+                        }
+                      >
+                        {t("roles.unassign")}
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
         {error ? (
           <Notice variant="danger" title={t("failures.assignRole")}>
             {error}
@@ -386,20 +449,22 @@ function AssignInstanceRoleDialog({ onClose, roles }: { onClose: () => void; rol
             ]}
           />
         </Field>
-        <Field
-          label={t("roles.peopleLabel")}
-          hint={t("roles.instancePrincipalsHint")}
-          {...(missing.people && people.length === 0 ? { error: t("roles.choosePeopleFirst") } : {})}
-        >
-          <Combobox
-            multiple
-            placeholder={t("roles.choosePeople")}
-            value={people.map((item) => item.value)}
-            selectedItems={people}
-            load={loader}
-            onValueChange={(_values, items) => setPeople(items)}
-          />
-        </Field>
+        {person ? null : (
+          <Field
+            label={t("roles.peopleLabel")}
+            hint={t("roles.instancePrincipalsHint")}
+            {...(missing.people && people.length === 0 ? { error: t("roles.choosePeopleFirst") } : {})}
+          >
+            <Combobox
+              multiple
+              placeholder={t("roles.choosePeople")}
+              value={people.map((item) => item.value)}
+              selectedItems={people}
+              load={loader}
+              onValueChange={(_values, items) => setPeople(items)}
+            />
+          </Field>
+        )}
         <Field label={t("roles.expires")} hint={t("roles.expiresHint")}>
           <AppDatePicker value={expiry} clearable onValueChange={setExpiry} />
         </Field>

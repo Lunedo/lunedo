@@ -228,6 +228,7 @@ export const notificationEvents: readonly NotificationEvent[] = [
       "space.personalWithoutAdministrator",
       "space.administratorAppointed",
       "space.memberAddedByAdministration",
+      "space.memberRemovedByAdministration",
       "blogPost.scheduleHeld",
       "chatChannel.failing",
     ],
@@ -357,6 +358,14 @@ export const contentNotificationParamSchemas = {
   "space.confidentialWithoutAdministrator": z.object({ spaceKey: z.string() }),
   "space.personalWithoutAdministrator": z.object({ spaceKey: z.string() }),
   "space.memberAddedByAdministration": z.object({
+    organizationName: z.string(),
+    spaceName: z.string(),
+    spaceKey: z.string(),
+    actorName: z.string(),
+    memberName: z.string(),
+    role: z.string(),
+  }),
+  "space.memberRemovedByAdministration": z.object({
     organizationName: z.string(),
     spaceName: z.string(),
     spaceKey: z.string(),

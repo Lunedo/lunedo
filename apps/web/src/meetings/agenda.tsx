@@ -322,6 +322,7 @@ function TopicRow({
   const bodyId = `topic-body-${topic.id}`;
   const own = topic.update?.text.trim() ? topic.update.text : null;
   const latest = [...topic.history].reverse().find((entry) => entry.text.trim().length > 0);
+  const writtenCount = topic.history.filter((entry) => entry.text.trim().length > 0).length;
   const meta = topic.oneOff
     ? [t("meetings.agenda.forThisMeeting")]
     : [
@@ -429,7 +430,7 @@ function TopicRow({
           ) : (
             <span className="text-text-muted">{t("meetings.agenda.noEntry")}</span>
           )}
-          {topic.history.length > 1 ? (
+          {writtenCount > 1 ? (
             <>
               {" · "}
               <button
@@ -439,7 +440,7 @@ function TopicRow({
                 onClick={onToggle}
                 className="text-accent hover:underline focus-visible:focus-ring"
               >
-                {t("meetings.agenda.historyCount", { count: topic.history.length })}
+                {t("meetings.agenda.historyCount", { count: writtenCount })}
               </button>
             </>
           ) : null}
@@ -584,26 +585,23 @@ function TopicBody({
     }
   };
 
+  const written = topic.history.filter((entry) => entry.text.trim() !== "");
   return (
     <>
-      {topic.history.length > 0 ? (
+      {written.length > 0 ? (
         <div className="flex flex-col gap-1">
           <h3 className={LABEL}>{t("meetings.agenda.history")}</h3>
           <ol
             aria-label={t("meetings.agenda.historyOf", { title: topic.title })}
             className="flex flex-col text-sm"
           >
-            {topic.history.map((entry, index) => (
+            {written.map((entry, index) => (
               <li key={entry.meetingId} className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-3 py-1">
                 <span className="text-text-muted">
                   {entry.startsAt ? format.calendarDate(entry.startsAt) : entry.meetingTitle}
                   {index === 0 ? ` · ${t("meetings.agenda.start")}` : ""}
                 </span>
-                <span
-                  className={classNames("break-words whitespace-pre-line", !entry.text && "text-text-muted")}
-                >
-                  {entry.text || t("meetings.agenda.emptyUpdate")}
-                </span>
+                <span className="break-words whitespace-pre-line">{entry.text}</span>
               </li>
             ))}
           </ol>

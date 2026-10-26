@@ -186,6 +186,9 @@ function memberApi(options: { factorRequired?: boolean; permissions?: string[] }
     }),
     "GET /api/v1/spaces": () => ({ body: { items: [], nextCursor: null } }),
     [`POST /api/v1/organizations/${ORGANIZATION.id}/members/${FELIX}/spaces`]: () => ({ status: 204 }),
+    [`DELETE /api/v1/organizations/${ORGANIZATION.id}/members/${FELIX}/spaces/${HELP}`]: () => ({
+      body: { spaceId: HELP, role: "reader" },
+    }),
     [`GET /api/v1/organizations/${ORGANIZATION.id}/audit-events`]: () => ({
       body: { items: [], nextCursor: null },
     }),
@@ -282,6 +285,29 @@ describe("the member page", () => {
         api.requests.find((request) => request.method === "POST" && request.path.endsWith("/spaces"))?.body,
       ).toEqual({ spaces: [{ spaceId: STORE, role: "editor" }] }),
     );
+  });
+
+  it("removes the person's own role in a space at once and adds it again on undo", async () => {
+    const api = memberApi();
+    await open(path, "Felix Gruber");
+    await userEvent.click(screen.getByRole("tab", { name: /Spaces/ }));
+    expect(window.location.search).toBe("?tab=spaces");
+    await userEvent.click(await screen.findByRole("button", { name: "Remove" }));
+    const toast = await screen.findByText("Removed from Help center");
+    await userEvent.click(within(toast.closest("li") ?? document.body).getByRole("button", { name: "Undo" }));
+    await waitFor(() =>
+      expect(
+        api.requests
+          .filter((request) => request.path.endsWith(`/members/${FELIX}/spaces`))
+          .map((request) => request.body),
+      ).toEqual([{ spaces: [{ spaceId: HELP, role: "reader" }] }]),
+    );
+  });
+
+  it("opens the tab named in the address", async () => {
+    memberApi();
+    await open(`${path}?tab=groups`, "Felix Gruber");
+    expect(screen.getByRole("tab", { name: /Groups/ }).getAttribute("aria-selected")).toBe("true");
   });
 
   it("lists the activity of the person in this organization", async () => {

@@ -95,6 +95,10 @@ const en: Texts = {
     title: "The administration added someone to a space",
     body: `${text(params.memberName)} · ${text(params.spaceName)}`,
   }),
+  "space.memberRemovedByAdministration": ({ params }) => ({
+    title: "The administration removed someone from a space",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
   "space.administratorAppointed": ({ params }) => ({
     title: "You are now space admin",
     body: text(params.spaceName),
@@ -271,6 +275,10 @@ const de: Texts = {
   }),
   "space.memberAddedByAdministration": ({ params }) => ({
     title: "Die Verwaltung hat jemanden zu einem Space hinzugefügt",
+    body: `${text(params.memberName)} · ${text(params.spaceName)}`,
+  }),
+  "space.memberRemovedByAdministration": ({ params }) => ({
+    title: "Die Verwaltung hat jemanden aus einem Space entfernt",
     body: `${text(params.memberName)} · ${text(params.spaceName)}`,
   }),
   "space.administratorAppointed": ({ params }) => ({

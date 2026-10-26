@@ -295,4 +295,13 @@ describe("the backup settings", () => {
     expect(await screen.findByText("Backups are not set up")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open the backup settings" })).toBeTruthy();
   });
+
+  it("does not repeat the warning as a banner on the backup settings", async () => {
+    api({
+      "GET /api/v1/instance/backups": () => ({ body: overview({ target: null, warning: "noTarget" }) }),
+    });
+    await renderAt("/settings/instance/backups");
+    expect(await screen.findByRole("heading", { name: "Backups", level: 1 })).toBeTruthy();
+    expect(screen.queryByText("Backups are not set up")).toBeNull();
+  });
 });

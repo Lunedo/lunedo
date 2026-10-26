@@ -240,6 +240,64 @@ describe("the accounts page", () => {
     );
   });
 
+  it("changes the instance role of the account from its page and keeps the tab in the address", async () => {
+    const { requests } = api(() => ({ status: 204 }), {
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.accounts.view", "instance.accounts.manage", "instance.roles.manage"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+      "GET /api/v1/instance/roles": () => ({ body: [] }),
+      "GET /api/v1/instance/role-assignments": () => ({ body: { items: [], nextCursor: null } }),
+      "POST /api/v1/instance/role-assignments/batch": () => ({ status: 201, body: [] }),
+    });
+    window.history.replaceState(null, "", `/settings/instance/accounts/${MAX}?tab=security`);
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const panel = await accountPage("Max Member");
+    expect(
+      within(panel).getByRole("tab", { name: "Sign-in and security" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    await userEvent.click(within(panel).getByRole("button", { name: "Change instance role" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change the instance role of Max Member" });
+    expect(await within(dialog).findByText("No instance role.")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Give role" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.path === "/api/v1/instance/role-assignments/batch")?.body,
+      ).toMatchObject({
+        role: { builtIn: "administrator" },
+        principals: [{ kind: "account", id: MAX }],
+      }),
+    );
+  });
+
+  it("lists the owner role among the held instance roles, without removing it", async () => {
+    api(() => ({ status: 204 }), {
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.accounts.view", "instance.accounts.manage", "instance.roles.manage"],
+          organization: [],
+          grantableAreas: { instance: {}, organization: {} },
+        },
+      }),
+      "GET /api/v1/instance/roles": () => ({ body: [] }),
+      "GET /api/v1/instance/role-assignments": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    window.history.replaceState(null, "", `/settings/instance/accounts/${OLIVIA.id}`);
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    const panel = await accountPage("Olivia Owner");
+    await userEvent.click(within(panel).getByRole("button", { name: "Change instance role" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change the instance role of Olivia Owner" });
+    expect(await within(dialog).findByText("Owner")).toBeTruthy();
+    expect(within(dialog).getByText("Changes only when another account becomes owner")).toBeTruthy();
+    expect(within(dialog).queryByText("No instance role.")).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Remove" })).toBeNull();
+  });
+
   it("searches on the server and opens an account on its own page", async () => {
     const { requests } = api(() => ({ body: { endedSessions: 1 } }));
     const table = await renderAccounts();

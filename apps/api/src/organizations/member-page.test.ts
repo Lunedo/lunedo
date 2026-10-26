@@ -186,6 +186,45 @@ describe.skipIf(!databaseBaseUrl)("the page of a member", () => {
     expect(events.json().items).toHaveLength(2);
   });
 
+  it("lets organization administrators remove a member's own role, telling the space admins, but never a space admin", async () => {
+    const admin = await administrator();
+    const spaceAdmin = await person();
+    const member = await person();
+    const managed = await space(spaceAdmin.client, `MPR${counter}`);
+    const path = `/api/v1/organizations/${organizationId}/members/${member.id}/spaces`;
+    expect(
+      (await admin.client.post(path, { spaces: [{ spaceId: managed.id, role: "editor" }] })).statusCode,
+    ).toBe(204);
+    const removed = await admin.client.delete(`${path}/${managed.id}`);
+    expect(removed.statusCode, removed.body).toBe(200);
+    expect(removed.json()).toEqual({ spaceId: managed.id, role: "editor" });
+    expect(await roleIn(managed.id, member.id)).toBeNull();
+    const notified = await test.runtime.pool.query<{ recipient_id: string }>(
+      "select recipient_id from notifications where type = 'space.memberRemovedByAdministration' and target_id = $1",
+      [managed.id],
+    );
+    expect(notified.rows.map((row) => row.recipient_id)).toEqual([spaceAdmin.id]);
+    const events = await owner.get(
+      `/api/v1/organizations/${organizationId}/audit-events?name=space.memberRemovedByAdministration&personId=${member.id}`,
+    );
+    expect(events.json().items).toHaveLength(1);
+    expect((await admin.client.delete(`${path}/${managed.id}`)).json()).toMatchObject({
+      code: "permissionNotFound",
+    });
+    const kept = await admin.client.delete(
+      `/api/v1/organizations/${organizationId}/members/${spaceAdmin.id}/spaces/${managed.id}`,
+    );
+    expect(kept.statusCode).toBe(409);
+    expect(kept.json()).toMatchObject({ code: "administratorKept" });
+    expect(await roleIn(managed.id, spaceAdmin.id)).toBe("admin");
+    const outsider = await person();
+    expect(
+      (await admin.client.post(path, { spaces: [{ spaceId: managed.id, role: "reader" }] })).statusCode,
+    ).toBe(204);
+    expect((await outsider.client.delete(`${path}/${managed.id}`)).statusCode).toBe(403);
+    expect(await roleIn(managed.id, member.id)).toBe("reader");
+  });
+
   it("refuses confidential and personal spaces, oneself, a role held already and other organizations, all or none", async () => {
     const admin = await administrator();
     const member = await person();

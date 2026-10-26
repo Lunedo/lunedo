@@ -221,6 +221,7 @@ export const problems = {
   alreadyGranted: { status: 409, title: "The holder already has a role in the space" },
   invalidSpaces: { status: 400, title: "Choose between 1 and 50 different spaces" },
   administratorBySpaceAdmins: { status: 403, title: "Only space admins appoint space admins" },
+  administratorKept: { status: 409, title: "Space admins are removed in the permissions of the space" },
   permissionNotFound: { status: 404, title: "The permission does not exist" },
   lastSpaceAdmin: { status: 409, title: "A space needs at least one space admin" },
   selfExtension: { status: 403, title: "Nobody can extend their own permissions" },

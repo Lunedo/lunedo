@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Menu, Table, Tabs, useToast } from "@lunedo/ui";
+import { Badge, Button, IconButton, Menu, Table, Tabs, useToast, VisuallyHidden } from "@lunedo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { MoreHorizontal, Plus } from "lucide-react";
@@ -16,6 +16,7 @@ import { request } from "../../api/request.js";
 import { AuditLog } from "../../components/audit-log.js";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
+import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -62,10 +63,19 @@ export function MemberScreen() {
   const details = useQuery({ ...memberDetailsQuery(organizationId, accountId), throwOnError: false });
   const organization = useQuery(organizationQuery(organizationId));
   const members = useQuery(membersQuery(organizationId));
-  const [tab, setTab] = useState<Tab>("overview");
+  const search = route.useSearch();
+  const navigate = route.useNavigate();
+  const tab = (search.tab ?? "overview") as Tab;
+  const setTab = (next: Tab) =>
+    void navigate({
+      to: ".",
+      search: { tab: next === "overview" ? undefined : next },
+      replace: true,
+    });
   const [action, setAction] = useState<MemberAction | null>(null);
   const [adding, setAdding] = useState<"groups" | "spaces" | null>(null);
   const memberMenu = useMemberMenu(organizationId, setAction);
+  const removeFromSpace = useRemoveFromSpace(organizationId, accountId);
   const membersHref = `/settings/organizations/${organizationId}/members`;
   if (details.isPending) return <SettingsPending />;
   if (details.isError) {
@@ -98,6 +108,15 @@ export function MemberScreen() {
       wide
       title={member.name}
       back={{ label: t("members.title"), href: membersHref }}
+      leading={
+        <PersonAvatar id={member.accountId} name={member.name} pictureRef={member.pictureRef} size="lg" />
+      }
+      {...(member.kind === "member"
+        ? {}
+        : { status: <Badge variant="neutral">{t(`members.kinds.${member.kind}`)}</Badge> })}
+      {...(member.email || member.jobTitle
+        ? { description: [member.email, member.jobTitle].filter(Boolean).join(" · ") }
+        : {})}
       actions={
         <div className="flex flex-wrap gap-2">
           {member.kind === "guest" ? (
@@ -115,19 +134,6 @@ export function MemberScreen() {
         </div>
       }
     >
-      <div className="flex min-w-0 items-center gap-4">
-        <PersonAvatar id={member.accountId} name={member.name} pictureRef={member.pictureRef} size="lg" />
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-2">
-            {member.kind === "member" ? null : (
-              <Badge variant="neutral">{t(`members.kinds.${member.kind}`)}</Badge>
-            )}
-            <span className="truncate text-text-muted" title={member.email ?? ""}>
-              {[member.email, member.jobTitle].filter(Boolean).join(" · ")}
-            </span>
-          </span>
-        </div>
-      </div>
       <Tabs
         label={t("members.page.tabs")}
         value={tab}
@@ -303,6 +309,16 @@ export function MemberScreen() {
                   header: t("members.page.source"),
                   cell: (space) => <span className="text-text-muted">{sourceText(t, space.sources)}</span>,
                 },
+                {
+                  key: "remove",
+                  header: <VisuallyHidden>{t("members.page.removeFromSpaceColumn")}</VisuallyHidden>,
+                  cell: (space) =>
+                    space.sources.some((source) => source.kind === "direct") && space.role !== "admin" ? (
+                      <Button variant="secondary" size="sm" onClick={() => void removeFromSpace(space)}>
+                        {t("members.page.removeFromSpace")}
+                      </Button>
+                    ) : null,
+                },
               ]}
             />
             <p className="text-sm text-text-muted">{t("members.page.protectedSpaces")}</p>
@@ -356,6 +372,55 @@ export function MemberScreen() {
 }
 
 type MemberSpace = NonNullable<MemberDetails["spaces"]>[number];
+
+function useRemoveFromSpace(organizationId: string, accountId: string) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: organizationKeys.member(organizationId, accountId) }),
+      queryClient.invalidateQueries({ queryKey: organizationKeys.members(organizationId) }),
+    ]);
+  const path = { organizationId, accountId };
+  return async (space: MemberSpace) => {
+    try {
+      const removed = await request(() =>
+        api.DELETE("/api/v1/organizations/{organizationId}/members/{accountId}/spaces/{spaceId}", {
+          params: { path: { ...path, spaceId: space.id } },
+        }),
+      );
+      await refresh();
+      toast({
+        title: t("members.page.removedFromSpace", { space: space.name }),
+        undo: {
+          onUndo: () => {
+            request(() =>
+              api.POST("/api/v1/organizations/{organizationId}/members/{accountId}/spaces", {
+                params: { path },
+                body: { spaces: [{ spaceId: removed.spaceId, role: removed.role }] },
+              }),
+            ).then(
+              () => refresh(),
+              (failure: unknown) =>
+                toast({
+                  variant: "error",
+                  title: t("members.page.undoRemoveFailed", { space: space.name }),
+                  description: problemMessage(t, failure),
+                }),
+            );
+          },
+        },
+      });
+    } catch (failure) {
+      toast({
+        variant: "error",
+        title: t("members.page.removeFromSpaceFailed", { space: space.name }),
+        description: problemMessage(t, failure),
+      });
+    }
+  };
+}
 
 export function sourceText(t: Parameters<typeof translateKey>[0], sources: MemberSpace["sources"]): string {
   return sources

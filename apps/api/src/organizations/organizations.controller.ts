@@ -154,6 +154,17 @@ const domainItem = z
 
 const memberParams = organizationIdParams.extend({ accountId: uuid("ID of the member's account.") });
 
+const memberSpaceParams = memberParams.extend({ spaceId: uuid("ID of the space.") });
+
+const removedSpaceRoleSchema = z
+  .object({
+    spaceId: uuid("ID of the space."),
+    role: z
+      .enum(["reader", "commenter", "editor", "admin"])
+      .describe("The role the member held of their own."),
+  })
+  .describe("The role that was removed.");
+
 const memberUpdateSchema = z
   .object({
     expiresAt: optionalExpiry("When the membership ends."),
@@ -657,6 +668,31 @@ export class OrganizationsController {
     @Req() request: FastifyRequest,
   ) {
     await this.#services.memberSpaces.add(actorOf(request), organizationId, accountId, body.spaces);
+  }
+
+  @Delete(":organizationId/members/:accountId/spaces/:spaceId")
+  @Permission("organization.view", organization)
+  @ApiRoute({
+    summary: "Remove a member's own role in a space",
+    description:
+      "Removes the role the member holds in the space of their own; roles through groups or all members stay. The caller must be space admin of the space or manage the spaces of the organization. When an organization administrator removes someone from a space they do not administer, its space admins are notified and the audit log records it. Space admins are never removed this way.",
+    tags: [MEMBERS],
+    status: 200,
+    params: memberSpaceParams,
+    response: {
+      description: "The removed role, to add it again for undo.",
+      schema: removedSpaceRoleSchema,
+      example: { spaceId: "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e60", role: "editor" },
+    },
+    errors: ["permissionNotFound", "administratorKept", "invalidHolder"],
+  })
+  async removeFromSpace(
+    @Param("organizationId") organizationId: string,
+    @Param("accountId") accountId: string,
+    @Param("spaceId") spaceId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.memberSpaces.remove(actorOf(request), organizationId, accountId, spaceId);
   }
 
   @Get(":organizationId/members/:accountId/permissions")

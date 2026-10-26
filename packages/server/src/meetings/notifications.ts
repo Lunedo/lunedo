@@ -64,6 +64,16 @@ const memberAddedByAdministration = defineNotificationType({
   },
 });
 
+const memberRemovedByAdministration = defineNotificationType({
+  type: "space.memberRemovedByAdministration",
+  targetType: "space",
+  params: contentNotificationParamSchemas["space.memberRemovedByAdministration"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
+  async visible(context) {
+    return context.targetId !== null && context.can("space.manage", { type: "space", id: context.targetId });
+  },
+});
+
 export const meetingNotificationTypes = [
   notesAvailable,
   meetingReminder,
@@ -71,4 +81,5 @@ export const meetingNotificationTypes = [
   confidentialWithoutAdministrator,
   personalWithoutAdministrator,
   memberAddedByAdministration,
+  memberRemovedByAdministration,
 ];

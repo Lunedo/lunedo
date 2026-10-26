@@ -10,7 +10,7 @@ import { useFormat } from "../preferences/preferences-provider.js";
 import { itemSlug } from "../spaces/item-paths.js";
 import { pagePath } from "../spaces/space-queries.js";
 import { OneOnOneDialog } from "./one-on-one-dialog.js";
-import { oneOnOnesQuery, seriesPath, upcomingQuery } from "./queries.js";
+import { isToday, oneOnOnesQuery, seriesPath, upcomingQuery } from "./queries.js";
 
 export function UpcomingMeetings() {
   const { t } = useTranslation();
@@ -80,7 +80,9 @@ export function OneOnOnes() {
             title={name}
             meta={
               entry.nextMeeting?.startsAt
-                ? t("meetings.home.next", { date: format.weekdayDateTime(entry.nextMeeting.startsAt) })
+                ? isToday(entry.nextMeeting.startsAt, format.settings.timeZone)
+                  ? t("meetings.home.today", { time: format.time(entry.nextMeeting.startsAt) })
+                  : t("meetings.home.next", { date: format.weekdayDateTime(entry.nextMeeting.startsAt) })
                 : t("meetings.notScheduled")
             }
           />

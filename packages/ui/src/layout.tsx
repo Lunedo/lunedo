@@ -22,6 +22,7 @@ export interface PageHeaderProps {
   actions?: ReactNode;
   breadcrumbs?: Breadcrumb[];
   status?: ReactNode;
+  leading?: ReactNode;
   variant?: "content" | "settings";
 }
 
@@ -34,12 +35,14 @@ export function PageHeader({
   actions,
   breadcrumbs,
   status,
+  leading,
   variant = "content",
 }: PageHeaderProps) {
   const labels = useUiLabels();
   const showIcon = icon && variant === "content";
   return (
     <header className="flex flex-wrap items-end gap-4">
+      {leading && <div className="flex shrink-0 self-center">{leading}</div>}
       <div className="flex min-w-0 flex-1 basis-field flex-col gap-2">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label={labels.breadcrumbs}>

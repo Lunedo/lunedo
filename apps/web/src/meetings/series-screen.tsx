@@ -42,7 +42,7 @@ import { useSpace } from "../spaces/space-context.js";
 import { pagePath } from "../spaces/space-queries.js";
 import { peopleWithoutAccess } from "./access.js";
 import { ExtraMeetingForm } from "./meeting-header.js";
-import { type Series, seriesNotesQuery, seriesQuery } from "./queries.js";
+import { isToday, type Series, seriesNotesQuery, seriesQuery } from "./queries.js";
 import { describeRhythm, type Rhythm } from "./rhythm.js";
 import { SeriesOverview, type SeriesTab } from "./series-overview.js";
 import { SeriesSettingsDialog } from "./series-settings-dialog.js";
@@ -253,7 +253,11 @@ function SeriesView({ series }: { series: Series }) {
             className="flex flex-wrap items-center gap-4 border-y border-border border-l-4 border-l-accent py-3 pl-4"
           >
             <div className="flex min-w-0 flex-1 basis-field flex-col">
-              <span className="text-sm text-text-muted">{t("meetings.series.next")}</span>
+              <span className="text-sm text-text-muted">
+                {upcoming.startsAt && isToday(upcoming.startsAt, format.settings.timeZone)
+                  ? t("meetings.series.today")
+                  : t("meetings.series.next")}
+              </span>
               <h2 id="next-meeting" className="text-lg font-semibold">
                 {upcoming.startsAt ? format.weekdayDateTime(upcoming.startsAt) : t("meetings.notScheduled")}
               </h2>

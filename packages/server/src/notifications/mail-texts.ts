@@ -107,6 +107,8 @@ const english: Record<ContentNotificationType, Line> = {
     `The personal space ${text(p.spaceKey)} of a deactivated person has no space admin. You can appoint one of its remaining members.`,
   "space.memberAddedByAdministration": (p) =>
     `${text(p.actorName)} added ${text(p.memberName)} to ${text(p.spaceName)} through the administration of ${text(p.organizationName)}.`,
+  "space.memberRemovedByAdministration": (p) =>
+    `${text(p.actorName)} removed ${text(p.memberName)} from ${text(p.spaceName)} through the administration of ${text(p.organizationName)}.`,
   "space.administratorAppointed": (p, c) =>
     `${c.actor ?? "An administrator"} made you space admin of ${text(p.spaceName)}. You now manage its permissions and settings.`,
   "blogPost.published": (p) => `New post in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
@@ -207,6 +209,8 @@ const german: Record<ContentNotificationType, Line> = {
     `Der persönliche Space ${text(p.spaceKey)} einer deaktivierten Person hat keinen Space-Admin. Du kannst eines der verbliebenen Mitglieder ernennen.`,
   "space.memberAddedByAdministration": (p) =>
     `${text(p.actorName)} hat ${text(p.memberName)} über die Verwaltung von ${text(p.organizationName)} zu ${text(p.spaceName)} hinzugefügt.`,
+  "space.memberRemovedByAdministration": (p) =>
+    `${text(p.actorName)} hat ${text(p.memberName)} über die Verwaltung von ${text(p.organizationName)} aus ${text(p.spaceName)} entfernt.`,
   "space.administratorAppointed": (p, c) =>
     `${c.actor ?? "Die Administration"} hat dich zum Space-Admin von ${text(p.spaceName)} ernannt. Du verwaltest jetzt seine Berechtigungen und Einstellungen.`,
   "blogPost.published": (p) => `Neuer Beitrag in ${text(p.spaceName)}: ${text(p.itemTitle)}`,

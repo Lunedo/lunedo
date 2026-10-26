@@ -33,6 +33,7 @@ import {
   attendanceQuery,
   decisionsQuery,
   meetingKeys,
+  meetingStateAccent,
   meetingStateLabel,
   type Series,
   topicPath,
@@ -221,7 +222,11 @@ function useModule(id: string, series: Series, spaceKey: string) {
                       : t("meetings.series.attended", { count: meeting.present, total: meeting.attendees })
                 }
                 value={
-                  <Badge variant={meeting.next ? "accent" : "neutral"}>{meetingStateLabel(t, meeting)}</Badge>
+                  <Badge
+                    variant={meetingStateAccent(meeting, format.settings.timeZone) ? "accent" : "neutral"}
+                  >
+                    {meetingStateLabel(t, meeting, format.settings.timeZone)}
+                  </Badge>
                 }
               />
             )),

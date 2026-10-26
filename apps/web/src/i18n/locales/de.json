@@ -1746,7 +1746,8 @@
     "categoryGroupsMissing": "Wähle mindestens eine Gruppe, die den Bereich lesen darf.",
     "categoryWidensParent": "Ein Unterbereich kann nur Gruppen des Bereichs darüber nennen. Wähle unter diesen Gruppen oder ändere zuerst den Bereich darüber.",
     "categoryVisibilityWidening": "Mehr Personen würden die Artikel dieses Bereichs lesen. Bestätige die Änderung, um sie zu übernehmen.",
-    "categoryAccessManaged": "Wer einen Bereich liest und pflegt, wird im Dialog „Zugriff“ festgelegt. Öffne den Bereich und wähle „Zugriff“."
+    "categoryAccessManaged": "Wer einen Bereich liest und pflegt, wird im Dialog „Zugriff“ festgelegt. Öffne den Bereich und wähle „Zugriff“.",
+    "administratorKept": "Space-Admins werden in den Berechtigungen des Space entfernt, wo seine Space-Admins entscheiden."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3231,7 +3232,8 @@
         "personalWithoutAdministrator": "Der persönliche Space {spaceKey} einer deaktivierten Person hat keinen Space-Admin. Du kannst eines der verbliebenen Mitglieder ernennen.",
         "administratorAppointed": "{actor} hat dich zum Space-Admin von {spaceName} ernannt.",
         "administratorTaken": "{actorName} ist über die Verwaltung von {organizationName} Space-Admin von {spaceName} geworden: {reason}",
-        "memberAddedByAdministration": "{actorName} hat {memberName} über die Verwaltung von {organizationName} zu {spaceName} hinzugefügt."
+        "memberAddedByAdministration": "{actorName} hat {memberName} über die Verwaltung von {organizationName} zu {spaceName} hinzugefügt.",
+        "memberRemovedByAdministration": "{actorName} hat {memberName} über die Verwaltung von {organizationName} aus {spaceName} entfernt."
       },
       "import": {
         "finished": "Der Import in {spaceName} ({spaceKey}) ist bereit zur Prüfung. {problems, plural, =0 {Nichts ist zu prüfen.} one {# Punkt ist zu prüfen.} other {# Punkte sind zu prüfen.}}",
@@ -3983,7 +3985,12 @@
       "spacesImpact": "bekommt eine Rolle in {spaces}.",
       "spacesAdded": "{count, plural, one {{name} zu # Space hinzugefügt} other {{name} zu # Spaces hinzugefügt}}",
       "spacesFailed": "Die Person wurde nicht zu den Spaces hinzugefügt",
-      "administratorNotice": "Als Organisations-Admin: Die Space-Admins der gewählten Spaces bekommen eine Benachrichtigung, und die Änderung steht im Audit-Log."
+      "administratorNotice": "Als Organisations-Admin: Die Space-Admins der gewählten Spaces bekommen eine Benachrichtigung, und die Änderung steht im Audit-Log.",
+      "removeFromSpace": "Entfernen",
+      "removeFromSpaceColumn": "Aktionen",
+      "removedFromSpace": "Aus {space} entfernt",
+      "removeFromSpaceFailed": "Aus {space} entfernen hat nicht geklappt",
+      "undoRemoveFailed": "Rückgängig machen in {space} hat nicht geklappt"
     }
   },
   "roles": {
@@ -4395,7 +4402,12 @@
         "tokenExpires": "Läuft ab",
         "tokenUsed": "Zuletzt genutzt",
         "activityHint": "Anmeldungen, Sicherheit und Kontoänderungen aus dem Instanz-Audit-Log. Inhalte einer Organisation erscheinen hier nicht."
-      }
+      },
+      "changeInstanceRole": "Instanzrolle ändern",
+      "changeInstanceRoleOf": "Instanzrolle von {name} ändern",
+      "heldInstanceRoles": "Aktuelle Instanzrollen",
+      "noInstanceRole": "Keine Instanzrolle.",
+      "ownerKept": "Ändert sich nur, wenn ein anderes Konto Owner wird"
     },
     "roles": {
       "title": "Rollen",
@@ -4641,7 +4653,8 @@
         "cleanupDeleted": "Space ohne Mitglieder gelöscht",
         "exported": "Space exportiert",
         "shortcutsChanged": "Verknüpfungen des Space geändert",
-        "memberAddedByAdministration": "Person von der Verwaltung zu einem Space hinzugefügt"
+        "memberAddedByAdministration": "Person von der Verwaltung zu einem Space hinzugefügt",
+        "memberRemovedByAdministration": "Person von der Verwaltung aus einem Space entfernt"
       },
       "page": {
         "updateRejected": "Seitenänderung abgelehnt",
@@ -7944,7 +7957,9 @@
       "planned": "Geplant",
       "closed": "Abgehalten",
       "reopened": "Wieder geöffnet",
-      "skipped": "Ausgelassen"
+      "skipped": "Ausgelassen",
+      "today": "Heute",
+      "open": "Offen"
     },
     "list": {
       "documentTitle": "Besprechungen · {space}",
@@ -7954,7 +7969,8 @@
       "emptyTitle": "Noch keine Besprechungsserie",
       "emptyEditor": "Eine Serie plant regelmäßige Besprechungen und legt für jede Besprechung die Notizseite an.",
       "emptyReader": "Hier erscheinen die Besprechungsserien dieses Space.",
-      "next": "Nächste: {date}"
+      "next": "Nächste: {date}",
+      "today": "Heute: {time}"
     },
     "create": {
       "title": "Neue Besprechungsserie in {space}",
@@ -8048,6 +8064,7 @@
       "noTasksTitle": "Keine offenen Aufgaben",
       "noTasksDescription": "Aufgaben aus den Besprechungen dieser Serie erscheinen hier, bis sie erledigt sind.",
       "next": "Nächste Besprechung",
+      "today": "Heute",
       "settingsShort": "Serie"
     },
     "settings": {
@@ -8239,6 +8256,7 @@
       "oneOnOnes": "1:1-Gespräche",
       "noOneOnOnes": "Noch keine 1:1-Gespräche. Starte eines, um dich regelmäßig mit einer Person zu treffen.",
       "next": "nächstes am {date}",
+      "today": "heute um {time}",
       "alone": "Noch keine andere Person"
     },
     "oneOnOne": {
@@ -8318,7 +8336,6 @@
       "runningSince": "laufend seit {date}",
       "lastUpdate": "zuletzt: {text}",
       "noUpdate": "noch kein Update",
-      "emptyUpdate": "(leer)",
       "updateLabel": "Update zu {title} in dieser Besprechung",
       "updatePlaceholder": "Update in dieser Besprechung …",
       "saveFailed": "Das Update wurde nicht gespeichert",

@@ -37,7 +37,7 @@ import {
   useMeetingRefresh,
   useReopenMeeting,
 } from "./meeting-actions.js";
-import { type Meeting, meetingKeys, meetingQuery, meetingStateLabel } from "./queries.js";
+import { type Meeting, meetingKeys, meetingQuery, meetingStateAccent, meetingStateLabel } from "./queries.js";
 
 const ATTENDANCE = ["unset", "present", "excused", "absent"] as const;
 type AttendanceChoice = (typeof ATTENDANCE)[number];
@@ -133,12 +133,14 @@ export function MeetingHeader({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge
           variant={
-            data.state === "upcoming" && !data.next
-              ? "neutral"
+            data.state === "upcoming"
+              ? meetingStateAccent(data, target.timeZone)
+                ? "accent"
+                : "neutral"
               : (STATE_BADGE[data.state as keyof typeof STATE_BADGE] ?? "neutral")
           }
         >
-          {meetingStateLabel(t, data)}
+          {meetingStateLabel(t, data, target.timeZone)}
         </Badge>
         {data.extra ? <Badge variant="neutral">{t("meetings.meeting.extra")}</Badge> : null}
         <span className="text-text-muted">

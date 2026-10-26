@@ -1746,7 +1746,8 @@
     "categoryGroupsMissing": "Choose at least one group that may read the category.",
     "categoryWidensParent": "A subcategory can only name groups of the category above it. Choose among those groups, or change the category above first.",
     "categoryVisibilityWidening": "More people would read the articles of this category. Confirm the change to apply it.",
-    "categoryAccessManaged": "Who reads and maintains a category is set in its Access dialog. Open the category and choose Access."
+    "categoryAccessManaged": "Who reads and maintains a category is set in its Access dialog. Open the category and choose Access.",
+    "administratorKept": "Space admins are removed in the permissions of the space, where its space admins decide."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3231,7 +3232,8 @@
         "personalWithoutAdministrator": "The personal space {spaceKey} of a deactivated person has no space admin. You can appoint one of its remaining members.",
         "administratorAppointed": "{actor} made you space admin of {spaceName}.",
         "administratorTaken": "{actorName} became space admin of {spaceName} through the administration of {organizationName}: {reason}",
-        "memberAddedByAdministration": "{actorName} added {memberName} to {spaceName} through the administration of {organizationName}."
+        "memberAddedByAdministration": "{actorName} added {memberName} to {spaceName} through the administration of {organizationName}.",
+        "memberRemovedByAdministration": "{actorName} removed {memberName} from {spaceName} through the administration of {organizationName}."
       },
       "import": {
         "finished": "The import into {spaceName} ({spaceKey}) is ready for review. {problems, plural, =0 {Nothing needs attention.} one {# item needs attention.} other {# items need attention.}}",
@@ -3983,7 +3985,12 @@
       "spacesImpact": "gets a role in {spaces}.",
       "spacesAdded": "{count, plural, one {{name} added to # space} other {{name} added to # spaces}}",
       "spacesFailed": "The person was not added to the spaces",
-      "administratorNotice": "As an organization administrator: the space admins of the chosen spaces are notified, and the change is in the audit log."
+      "administratorNotice": "As an organization administrator: the space admins of the chosen spaces are notified, and the change is in the audit log.",
+      "removeFromSpace": "Remove",
+      "removeFromSpaceColumn": "Actions",
+      "removedFromSpace": "Removed from {space}",
+      "removeFromSpaceFailed": "Could not remove from {space}",
+      "undoRemoveFailed": "Could not undo the removal from {space}"
     }
   },
   "roles": {
@@ -4395,7 +4402,12 @@
         "tokenExpires": "Expires",
         "tokenUsed": "Last used",
         "activityHint": "Sign-ins, security and account changes from the instance audit log. Content of organizations does not appear here."
-      }
+      },
+      "changeInstanceRole": "Change instance role",
+      "changeInstanceRoleOf": "Change the instance role of {name}",
+      "heldInstanceRoles": "Current instance roles",
+      "noInstanceRole": "No instance role.",
+      "ownerKept": "Changes only when another account becomes owner"
     },
     "roles": {
       "title": "Roles",
@@ -4641,7 +4653,8 @@
         "pageStatusValuesChanged": "Page status values changed",
         "exported": "Space exported",
         "shortcutsChanged": "Space shortcuts changed",
-        "memberAddedByAdministration": "Person added to a space by the administration"
+        "memberAddedByAdministration": "Person added to a space by the administration",
+        "memberRemovedByAdministration": "Person removed from a space by the administration"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -7944,7 +7957,9 @@
       "planned": "Planned",
       "closed": "Held",
       "reopened": "Reopened",
-      "skipped": "Skipped"
+      "skipped": "Skipped",
+      "today": "Today",
+      "open": "Open"
     },
     "list": {
       "documentTitle": "Meetings · {space}",
@@ -7954,7 +7969,8 @@
       "emptyTitle": "No meeting series yet",
       "emptyEditor": "A series plans recurring meetings and creates each meeting's notes page for you.",
       "emptyReader": "Meeting series of this space will appear here.",
-      "next": "Next: {date}"
+      "next": "Next: {date}",
+      "today": "Today: {time}"
     },
     "create": {
       "title": "New meeting series in {space}",
@@ -8048,6 +8064,7 @@
       "noTasksTitle": "No open tasks",
       "noTasksDescription": "Tasks written in the meetings of this series appear here until they are done.",
       "next": "Next meeting",
+      "today": "Today",
       "settingsShort": "Series"
     },
     "settings": {
@@ -8239,6 +8256,7 @@
       "oneOnOnes": "One-on-ones",
       "noOneOnOnes": "No one-on-ones yet. Start one to meet regularly with one person.",
       "next": "next {date}",
+      "today": "today at {time}",
       "alone": "No other person yet"
     },
     "oneOnOne": {
@@ -8318,7 +8336,6 @@
       "runningSince": "running since {date}",
       "lastUpdate": "last: {text}",
       "noUpdate": "no update yet",
-      "emptyUpdate": "(empty)",
       "updateLabel": "Update on {title} in this meeting",
       "updatePlaceholder": "Update in this meeting …",
       "saveFailed": "The update was not saved",

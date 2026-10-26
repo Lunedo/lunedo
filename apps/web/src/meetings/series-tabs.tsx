@@ -25,6 +25,7 @@ import { pagePath } from "../spaces/space-queries.js";
 import {
   decisionsQuery,
   type MeetingSummary,
+  meetingStateAccent,
   meetingStateLabel,
   type Series,
   type Topic,
@@ -552,7 +553,9 @@ export function MeetingsTab({ series, spaceKey }: { series: Series; spaceKey: st
               </span>
             </span>
             {meeting.extra ? <Badge variant="neutral">{t("meetings.meeting.extra")}</Badge> : null}
-            <Badge variant={meeting.next ? "accent" : "neutral"}>{meetingStateLabel(t, meeting)}</Badge>
+            <Badge variant={meetingStateAccent(meeting, format.settings.timeZone) ? "accent" : "neutral"}>
+              {meetingStateLabel(t, meeting, format.settings.timeZone)}
+            </Badge>
           </li>
         ))}
       </ul>

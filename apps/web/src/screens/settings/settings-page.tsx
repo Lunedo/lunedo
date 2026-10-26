@@ -18,7 +18,8 @@ export function SettingsPage({
   back,
   wide = false,
   steps = false,
-  contents: forceContents = false,
+  leading,
+  status,
   children,
 }: {
   title: string;
@@ -27,7 +28,8 @@ export function SettingsPage({
   back?: { label: string; href: string };
   wide?: boolean;
   steps?: boolean;
-  contents?: boolean;
+  leading?: ReactNode;
+  status?: ReactNode;
   children: ReactNode;
 }) {
   useDocumentTitle(title);
@@ -52,6 +54,8 @@ export function SettingsPage({
           title={title}
           {...(description ? { description } : {})}
           {...(actions ? { actions } : {})}
+          {...(leading ? { leading } : {})}
+          {...(status ? { status } : {})}
         />
       </div>
       {wide || steps ? (
@@ -67,12 +71,7 @@ export function SettingsPage({
           <div ref={content} className={contents ? "flex min-w-0 flex-col gap-8" : "contents"}>
             <FieldLayoutProvider layout="row">{children}</FieldLayoutProvider>
           </div>
-          <OnThisPage
-            content={content}
-            source="sections"
-            {...(forceContents ? { minimum: 2 } : {})}
-            onShownChange={setContents}
-          />
+          <OnThisPage content={content} source="sections" onShownChange={setContents} />
         </div>
       )}
     </div>

@@ -181416,6 +181416,280 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/members/{accountId}/spaces/{spaceId}": {
+      "delete": {
+        "operationId": "organizations.removeFromSpace",
+        "summary": "Remove a member's own role in a space",
+        "description": "Removes the role the member holds in the space of their own; roles through groups or all members stay. The caller must be space admin of the space or manage the spaces of the organization. When an organization administrator removes someone from a space they do not administer, its space admins are notified and the audit log records it. Space admins are never removed this way.\n\nRequires the permission `organization.view` on the organization in `organizationId`.",
+        "tags": [
+          "Members"
+        ],
+        "x-lunedo-permission": {
+          "action": "organization.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the member's account.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The removed role, to add it again for undo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the space."
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "reader",
+                        "commenter",
+                        "editor",
+                        "admin"
+                      ],
+                      "description": "The role the member held of their own."
+                    }
+                  },
+                  "required": [
+                    "spaceId",
+                    "role"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The role that was removed."
+                },
+                "example": {
+                  "spaceId": "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e60",
+                  "role": "editor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidHolder": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidHolder",
+                      "title": "The holder cannot get a role in this space",
+                      "status": 400,
+                      "code": "invalidHolder"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:lunedo:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `permissionNotFound`: The permission does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "permissionNotFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:permissionNotFound",
+                      "title": "The permission does not exist",
+                      "status": 404,
+                      "code": "permissionNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`administratorKept`: Space admins are removed in the permissions of the space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "administratorKept": {
+                    "value": {
+                      "type": "urn:lunedo:problem:administratorKept",
+                      "title": "Space admins are removed in the permissions of the space",
+                      "status": 409,
+                      "code": "administratorKept"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:lunedo:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{organizationId}/membership": {
       "delete": {
         "operationId": "organizations.leave",
