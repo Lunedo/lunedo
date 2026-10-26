@@ -491,6 +491,7 @@ const spaceRoute = createRoute({
   loader: ({ context: { queryClient }, params }) =>
     settle(queryClient.ensureQueryData(spaceByKeyQuery(params.spaceKey))),
   pendingComponent: SpaceLoading,
+  notFoundComponent: AppNotFoundScreen,
   component: SpaceLayout,
 });
 

@@ -230,6 +230,7 @@ describe("content addresses", () => {
     const { requests } = mockApi(routes());
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     expect(await screen.findByText("Page not found")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Notifications/ })).toBeTruthy();
     expect(screen.queryByText("Connect first")).toBeNull();
     expect(window.location.pathname).toBe(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
     expect(
