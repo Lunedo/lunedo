@@ -43,7 +43,10 @@ export function NotificationsButton() {
           <IconButton
             label={
               count > 0
-                ? t("rail.notificationsUnread", { count, label: unreadCountLabel(unread.data ?? { count, capped: false }) })
+                ? t("rail.notificationsUnread", {
+                    count,
+                    label: unreadCountLabel(unread.data ?? { count, capped: false }),
+                  })
                 : t("rail.notifications")
             }
             icon={Bell}

@@ -159,6 +159,6 @@ test("restores a backup of this instance from the server folder into a new, empt
     await cleanup.connect();
     await cleanup.query(`drop database if exists ${database} with (force)`);
     await cleanup.end();
-    test.info().attach("restore-server.log", { body: log.join(""), contentType: "text/plain" });
+    await test.info().attach("restore-server.log", { body: log.join(""), contentType: "text/plain" });
   }
 });

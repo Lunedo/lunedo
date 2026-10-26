@@ -13,7 +13,10 @@ export function clientApiLevel(value: string | undefined | null): number | null 
   return Number(value.trim());
 }
 
-export function acceptsClientApiLevel(value: string | undefined | null, required = CLIENT_API_LEVEL): boolean {
+export function acceptsClientApiLevel(
+  value: string | undefined | null,
+  required = CLIENT_API_LEVEL,
+): boolean {
   const level = clientApiLevel(value);
   return level === null || level >= required;
 }

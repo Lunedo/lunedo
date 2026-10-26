@@ -507,7 +507,6 @@ export function PageReadView({
     <div className="relative">
       <CommentHighlights scope={`[data-comment-scope="${scope}"]`} open={openThreads} active={activeThread} />
       {/* biome-ignore lint/a11y/noStaticElementInteractions: clicks come from the links and checkboxes inside, which are keyboard operable */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the links and checkboxes inside handle their own keyboard input */}
       <div
         ref={container}
         className="ld-content ld-read-view"

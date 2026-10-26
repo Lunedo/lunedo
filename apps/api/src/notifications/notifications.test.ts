@@ -101,16 +101,25 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       count: 1,
       readAt: null,
     });
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 2, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 2,
+      capped: false,
+    });
 
     expect((await owner.post(`/api/v1/notifications/${list.items[0].id}/read`)).statusCode).toBe(204);
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
     expect((await owner.get("/api/v1/notifications?unread=true")).json().items).toHaveLength(1);
 
     const before = new Date(Date.now() - 60_000).toISOString();
     expect((await owner.post("/api/v1/notifications/read-all", { before })).json()).toEqual({ marked: 0 });
     expect((await owner.post("/api/v1/notifications/read-all", {})).json()).toEqual({ marked: 1 });
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 0,
+      capped: false,
+    });
   });
 
   it("marks notifications unread and several read at once, only the caller's own", async () => {
@@ -122,9 +131,15 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       .items.slice(0, 2)
       .map((item: { id: string }) => item.id);
     expect((await owner.post("/api/v1/notifications/read", { ids })).json()).toEqual({ marked: 2 });
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 0,
+      capped: false,
+    });
     expect((await owner.post(`/api/v1/notifications/${ids[0]}/unread`)).statusCode).toBe(204);
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
     expect((await owner.get("/api/v1/notifications/unread-count?kind=mentions")).json()).toEqual({
       count: 0,
       capped: false,
@@ -136,7 +151,10 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     expect((await client.post("/api/v1/notifications/read", { ids: [ids[0]] })).json()).toEqual({
       marked: 0,
     });
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
     await owner.post("/api/v1/notifications/read-all", {});
   });
 
@@ -196,7 +214,10 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const ownerItems = (await owner.get("/api/v1/notifications")).json().items;
     const response = await client.post(`/api/v1/notifications/${ownerItems[0].id}/read`);
     expect(response.statusCode).toBe(404);
-    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 1, capped: false });
+    expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({
+      count: 1,
+      capped: false,
+    });
   });
 
   it("lets accounts choose channels per event type in their preferences", async () => {

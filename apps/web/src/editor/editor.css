@@ -799,6 +799,10 @@ details.ld-expand > summary {
   @apply min-w-0 max-w-full;
 }
 
+.ld-content .ld-task-hint {
+  @apply mt-1 text-sm text-text-muted;
+}
+
 .ld-content .ld-task-body > .ld-task-hint {
   @apply basis-full;
 }
@@ -813,10 +817,6 @@ details.ld-expand > summary {
 
 .ld-task-add {
   @apply my-1 inline-flex h-control-sm cursor-pointer items-center rounded-sm px-1 text-sm text-text-muted hover:bg-hover hover:text-text focus-visible:focus-ring;
-}
-
-.ld-content .ld-task-hint {
-  @apply mt-1 text-sm text-text-muted;
 }
 
 .ld-content .ld-task-report-block,
@@ -1270,17 +1270,17 @@ details.ld-expand > summary {
   @apply mr-2 inline-block size-icon-md align-text-bottom text-text-muted;
 }
 
-.ld-section[data-framed] .ld-image:not([data-frame="off"]) img,
-.ld-content .ld-image[data-frame="on"] img {
-  @apply rounded-md border border-solid border-border bg-surface-sunken p-2 shadow-card;
-}
-
 .ld-content .ld-image {
   @apply relative;
 }
 
 .ld-image-frame {
   @apply relative inline-block max-w-full align-top;
+}
+
+/* biome-ignore lint/style/noDescendingSpecificity: file previews and image frames never contain each other */
+.ld-image-frame img {
+  @apply block h-auto max-w-full;
 }
 
 .ld-image[data-width] .ld-image-frame,
@@ -1290,13 +1290,9 @@ details.ld-expand > summary {
 }
 
 .ld-image[data-width] .ld-image-frame img,
-.ld-content .ld-image[data-width] > .ld-image-full img,
-.ld-content .ld-image[data-width] > img {
+.ld-content .ld-image[data-width] > img,
+.ld-content .ld-image[data-width] > :where(.ld-image-full) img {
   @apply w-full;
-}
-
-.ld-image-frame img {
-  @apply block h-auto max-w-full;
 }
 
 .ld-image-handle {
@@ -1357,4 +1353,9 @@ details.ld-expand > summary {
 .ld-read-view .ld-image[data-attachment-id] > img,
 .ld-read-view .ld-image[data-attachment-id] > .ld-image-full {
   @apply cursor-zoom-in rounded-sm focus-visible:focus-ring;
+}
+
+.ld-content .ld-image[data-frame="on"] img,
+.ld-section[data-framed] .ld-image:not([data-frame="off"]) img {
+  @apply rounded-md border border-solid border-border bg-surface-sunken p-2 shadow-card;
 }

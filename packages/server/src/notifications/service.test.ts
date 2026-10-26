@@ -419,7 +419,10 @@ describe.skipIf(!baseUrl)("notifications", () => {
        from notifications, generate_series(1, 99) as n where recipient_id = $1`,
       [org.owner.id],
     );
-    expect(await test.services.notifications.unreadCount(org.owner.id)).toEqual({ count: 100, capped: false });
+    expect(await test.services.notifications.unreadCount(org.owner.id)).toEqual({
+      count: 100,
+      capped: false,
+    });
   });
 
   it("counts visible notifications behind more than 100 hidden ones", async () => {

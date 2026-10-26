@@ -4,7 +4,6 @@ import { unique } from "../support/people.js";
 
 test("creates a knowledge base and publishes a how-to only once its required section has content", async ({
   page,
-  organization,
 }) => {
   const name = `Help ${unique()}`;
   await page.goto("/spaces");

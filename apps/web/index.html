@@ -17,22 +17,22 @@
       </div>
     </div>
     <script>
-      (function () {
+      (() => {
         var languages = ["en", "de"];
         var signedOutPaths = /^\/(sign-in|setup|reset-password|confirm-email|accept-invitation|register|complete-registration|second-factor-setup|unsubscribe|s|print|help|dev)(\/|$)/;
         var localeChunks = "__LUNEDO_LOCALE_CHUNKS__";
         var root = document.documentElement;
-        var read = function (key) {
+        var read = (key) => {
           try {
             return window.localStorage.getItem(key);
-          } catch (error) {
+          } catch {
             return null;
           }
         };
         var appearance = {};
         try {
           appearance = JSON.parse(read("lunedo.appearance") || "{}") || {};
-        } catch (error) {
+        } catch {
           appearance = {};
         }
         var mode = appearance.colorMode;
@@ -47,9 +47,9 @@
         var language = read("lunedo.language");
         if (languages.indexOf(language) < 0) {
           language = "en";
-          var preferred = navigator.languages || [navigator.language];
-          for (var index = 0; index < preferred.length; index++) {
-            var base = String(preferred[index]).toLowerCase().split("-")[0];
+          const preferred = navigator.languages || [navigator.language];
+          for (let index = 0; index < preferred.length; index++) {
+            const base = String(preferred[index]).toLowerCase().split("-")[0];
             if (languages.indexOf(base) >= 0) {
               language = base;
               break;
@@ -59,7 +59,7 @@
         root.lang = language;
         var chunk = typeof localeChunks === "object" ? localeChunks[language] : null;
         if (chunk) {
-          var preload = document.createElement("link");
+          const preload = document.createElement("link");
           preload.rel = "modulepreload";
           preload.crossOrigin = "";
           preload.href = chunk;

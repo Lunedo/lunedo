@@ -227,7 +227,9 @@ export function Table<T>({
       data-table-frame=""
       className={classNames(
         "@container flex flex-col",
-        framed ? "rounded-lg border border-border max-sm:overflow-x-auto sm:overflow-x-clip" : "overflow-x-auto",
+        framed
+          ? "rounded-lg border border-border max-sm:overflow-x-auto sm:overflow-x-clip"
+          : "overflow-x-auto",
       )}
     >
       {bulk ? (

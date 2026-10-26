@@ -308,8 +308,19 @@ describe.skipIf(!baseUrl)("backups", () => {
     });
 
     it("records who confirmed that the backup key is stored elsewhere", async () => {
+      await test.pool.query("update instance set setup_completed_at = $1", [
+        new Date(now.getTime() - 60_000),
+      ]);
       const confirmed = await backups().confirmKey(actor(), true);
-      expect(confirmed.keyConfirmed).toEqual({ at: now, by: { id: owner, name: "Administrator" } });
+      expect(confirmed.keyConfirmed).toEqual({
+        at: now,
+        by: { id: owner, name: "Administrator" },
+        inSetup: false,
+      });
+      await test.pool.query("update instance set setup_completed_at = $1", [
+        new Date(now.getTime() + 60_000),
+      ]);
+      expect((await backups().overview()).keyConfirmed?.inSetup).toBe(true);
       expect((await backups().confirmKey(actor(), false)).keyConfirmed).toBeNull();
       expect(await audited("backup.keyConfirmed")).toEqual([{ confirmed: true }, { confirmed: false }]);
     });

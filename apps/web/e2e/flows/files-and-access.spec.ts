@@ -376,7 +376,10 @@ test("shows a large photo as its display version and opens the original in full 
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(2048);
   await page.getByRole("link", { name: "Open Site survey large" }).click();
   const lightbox = page.getByRole("dialog");
-  await expect(lightbox.getByRole("img")).toHaveAttribute("src", `/api/v1/attachments/${file.id}/content?version=1`);
+  await expect(lightbox.getByRole("img")).toHaveAttribute(
+    "src",
+    `/api/v1/attachments/${file.id}/content?version=1`,
+  );
   await expectAccessible(page, "image lightbox");
   const opened = page.waitForEvent("popup");
   await lightbox.getByRole("link", { name: "Open in a new tab" }).click();

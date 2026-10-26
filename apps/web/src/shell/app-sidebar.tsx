@@ -109,7 +109,7 @@ function useInOwnPersonalSpace(): boolean {
   const found = space.data?.space;
   return (
     location.pathname === "/personal-space" ||
-    (found !== undefined && found.personal && found.ownerId === session.account?.id)
+    (found?.personal === true && found.ownerId === session.account?.id)
   );
 }
 

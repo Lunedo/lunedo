@@ -23,15 +23,19 @@ body {
   }
 
   [data-vivliostyle-spread-container] {
+    /* biome-ignore lint/complexity/noImportantStyles: Vivliostyle sets these as inline styles */
     display: flex !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Vivliostyle sets these as inline styles */
     flex-direction: column !important;
     align-items: center;
     gap: 1.5rem;
+    /* biome-ignore lint/complexity/noImportantStyles: Vivliostyle sets these as inline styles */
     height: auto !important;
     padding: 1.5rem 0;
   }
 
   [data-vivliostyle-page-container] {
+    /* biome-ignore lint/complexity/noImportantStyles: Vivliostyle sets these as inline styles */
     display: block !important;
     flex: none;
     outline: 1px solid var(--ld-color-border);

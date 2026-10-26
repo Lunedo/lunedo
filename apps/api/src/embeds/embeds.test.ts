@@ -25,6 +25,12 @@ const custom = {
   ],
 };
 
+function frameDirective(policy: string | string[] | number | undefined): string | undefined {
+  return String(policy)
+    .split("; ")
+    .find((directive) => directive.startsWith("frame-src "));
+}
+
 describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options through the API", () => {
   let test: AuthTestApp;
   let owner: TestClient;
@@ -147,9 +153,13 @@ describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options th
     expect(before.headers["content-security-policy"]).toContain("https://www.youtube-nocookie.com");
     await owner.put("/api/v1/instance/settings/embeds.services", { value: [custom] });
     const after = await owner.get("/spaces/docs");
-    expect(after.headers["content-security-policy"]).toBe("frame-src 'self' https://videos.example.org");
+    expect(frameDirective(after.headers["content-security-policy"])).toBe(
+      "frame-src 'self' https://videos.example.org",
+    );
     await owner.put("/api/v1/instance/settings/embeds.services", { value: [] });
-    expect((await owner.get("/")).headers["content-security-policy"]).toBe("frame-src 'self'");
+    expect(frameDirective((await owner.get("/")).headers["content-security-policy"])).toBe(
+      "frame-src 'self'",
+    );
     await owner.put("/api/v1/instance/settings/embeds.services", { clear: true });
   });
 

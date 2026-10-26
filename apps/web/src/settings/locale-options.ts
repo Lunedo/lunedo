@@ -8,6 +8,7 @@ import {
   weekStarts,
 } from "@lunedo/shared";
 import type { TFunction } from "i18next";
+import { timeFormatSample } from "../format/clock-time.js";
 import { createFormatter, defaultFormatSettings, type Formatter } from "../format/format.js";
 import { timeZoneOptions } from "../format/time-zones.js";
 import { supportedLanguages } from "../i18n/index.js";
@@ -31,13 +32,7 @@ export function dateFormatLabel(_t: TFunction, value: string, language: string, 
 }
 
 export function timeFormatLabel(_t: TFunction, value: string, now = new Date()): string {
-  const twelve = value === "12h";
-  return new Intl.DateTimeFormat("en", {
-    timeZone: "UTC",
-    hour: twelve ? "numeric" : "2-digit",
-    minute: "2-digit",
-    hour12: twelve,
-  }).format(sampleOf(now));
+  return timeFormatSample(value === "12h", sampleOf(now));
 }
 
 export function numberFormatLabel(_t: TFunction, value: string): string {

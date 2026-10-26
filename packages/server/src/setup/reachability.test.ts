@@ -18,10 +18,16 @@ describe.skipIf(!baseUrl)("the reachability check", () => {
     server = createServer((request, response) => {
       hits.push(request.headers.host ?? "");
       const challenge = (request.url ?? "").slice(PROBE_PATH.length);
-      probeAnswer(test.database, challenge).then((answer) => {
-        response.writeHead(answer ? 200 : 404, { "content-type": "application/json" });
-        response.end(JSON.stringify(answer ? { answer } : {}));
-      });
+      probeAnswer(test.database, challenge).then(
+        (answer) => {
+          response.writeHead(answer ? 200 : 404, { "content-type": "application/json" });
+          response.end(JSON.stringify(answer ? { answer } : {}));
+        },
+        () => {
+          response.writeHead(500);
+          response.end();
+        },
+      );
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
