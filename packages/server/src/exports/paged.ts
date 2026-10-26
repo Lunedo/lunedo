@@ -124,6 +124,10 @@ export class PagedExport {
   }
 
   async #threads(pageId: string): Promise<{ threads: Thread[]; people: CommentList["people"] }> {
+    const overview = await this.#database.execute<{ id: string }>(
+      sql`select id from spaces where overview_item_id = ${pageId}`,
+    );
+    if (overview.rows.length > 0) return { threads: [], people: {} };
     const { threads, people } = await this.#comments.list(this.#viewer, pageId);
     const { texts, format } = this.#renderer;
     const name = (person: { name: string | null } | null, deleted: boolean) =>

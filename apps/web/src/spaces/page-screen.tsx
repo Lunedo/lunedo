@@ -626,7 +626,7 @@ function PageArticle({
                       saveState.current = state;
                       setShownSaveState(state);
                     }}
-                    {...collaboration.editor}
+                    {...(overview ? {} : collaboration.editor)}
                   />
                 </div>
               ) : writable && publishMode && !page.published ? (
@@ -648,7 +648,7 @@ function PageArticle({
                   publishMode={publishMode}
                   meta={false}
                   numberHeadings={page.numberHeadings}
-                  collaboration={collaboration.readView}
+                  collaboration={overview ? {} : collaboration.readView}
                   {...(writable ? { onEdit: () => setEditing(true) } : {})}
                 />
               )}
@@ -664,10 +664,10 @@ function PageArticle({
               )}
               <Backlinks pageId={page.id} />
               <AttachmentsSection pageId={page.id} canEdit={writable} />
-              {collaboration.section}
+              {overview ? null : collaboration.section}
             </>
           )}
-          {collaboration.popover}
+          {overview ? null : collaboration.popover}
           {meta.dialogs}
           {writable ? (
             <input

@@ -1,6 +1,7 @@
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { crc32 } from "node:zlib";
+import { sql } from "drizzle-orm";
 import mammoth from "mammoth";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -186,6 +187,32 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(commented).toContain("Please add the VLAN plan");
       expect(commented).toContain('<p class="ld-comment-meta">Rita Reader · ');
       expect(commented).not.toContain('<section class="ld-appendix"');
+    });
+
+    it("leaves the comments of the overview page of a space out", async () => {
+      const { space, pages } = context;
+      const previous = await test.database.execute<{ overview_item_id: string | null }>(
+        sql`select overview_item_id from spaces where id = ${space.id}`,
+      );
+      await test.database.execute(
+        sql`update spaces set overview_item_id = ${pages.welcome.id} where id = ${space.id}`,
+      );
+      try {
+        const printed = (
+          await bytesOf(
+            await test.services.exports.page(context.reader, pages.welcome.id, "print", {
+              ...defaultExportOptions,
+              comments: true,
+            }),
+          )
+        ).toString("utf8");
+        expect(printed).toContain('<h1 class="ld-page-title">Welcome</h1>');
+        expect(printed).not.toContain("Please add the VLAN plan");
+      } finally {
+        await test.database.execute(
+          sql`update spaces set overview_item_id = ${previous.rows[0]?.overview_item_id ?? null} where id = ${space.id}`,
+        );
+      }
     });
 
     it("names the space and the ancestors in the path", async () => {

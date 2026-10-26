@@ -706,6 +706,8 @@ describe("spaces", () => {
     ).searchParams;
     expect(Object.fromEntries(search)).toMatchObject({ spaceIds: SPACE_ID, sort: "newest" });
     expect(search.has("q")).toBe(false);
+    expect(screen.queryByRole("heading", { name: /^Comments/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /comment/i })).toBeNull();
   });
 
   it("leads an outdated title in the address to the current one and keeps the edit mode", async () => {
