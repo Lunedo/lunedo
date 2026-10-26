@@ -499,6 +499,20 @@ describe.skipIf(!baseUrl)("sharing", () => {
       ).resolves.toBeUndefined();
     });
 
+    it("creates no request once the membership in the organization of the page has ended", async () => {
+      const context = await setup();
+      await test.database.execute(
+        sql`update memberships set expires_at = now() - interval '1 minute' where account_id = ${context.outsiderId}`,
+      );
+      await test.services.accessRequests.requestPage(context.outsider, context.shared.id, "");
+      expect(await test.services.accessRequests.mine(context.outsider)).toEqual([]);
+      await test.database.execute(
+        sql`update memberships set expires_at = now() + interval '1 day' where account_id = ${context.outsiderId}`,
+      );
+      await test.services.accessRequests.requestPage(context.outsider, context.shared.id, "");
+      expect(await test.services.accessRequests.mine(context.outsider)).toHaveLength(1);
+    });
+
     it("closes by itself when the person gets access another way, without expiry", async () => {
       const context = await setup();
       await test.services.accessRequests.requestPage(context.outsider, context.shared.id, "");

@@ -187,6 +187,24 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
     }
   });
 
+  it("creates no access request for content of an organization the person does not belong to", async () => {
+    const team = await space();
+    const hidden = await item(team, "page", "Board minutes");
+    const elsewhere = await owner.post("/api/v1/organizations", { name: `Elsewhere ${counter}` });
+    const stranger = await person(elsewhere.json().id);
+    const requested = await stranger.client.post(`/api/v1/pages/by-number/${hidden.number}/access-requests`, {
+      message: "Please",
+    });
+    const unknown = await stranger.client.post(
+      `/api/v1/pages/by-number/${hidden.number + 1_000_000}/access-requests`,
+      { message: "Please" },
+    );
+    expect(requested.statusCode, requested.body).toBe(202);
+    expect(requested.body).toBe(unknown.body);
+    expect((await stranger.client.get("/api/v1/access-requests/mine")).json()).toEqual([]);
+    expect((await owner.get(`/api/v1/spaces/${team}/access-requests`)).body).not.toContain(hidden.id);
+  });
+
   it("numbers new items in creation order from 1000 on", async () => {
     const team = await space();
     const first = await item(team, "page", "First");
