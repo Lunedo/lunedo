@@ -499,6 +499,20 @@ describe.skipIf(!baseUrl)("sharing", () => {
       ).resolves.toBeUndefined();
     });
 
+    it("counts requests for missing pages towards the daily limit like requests for existing ones", async () => {
+      const context = await setup();
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        await test.services.accessRequests.requestPage(context.outsider, randomUUID(), "");
+      }
+      await expect(
+        test.services.accessRequests.requestPage(context.outsider, randomUUID(), ""),
+      ).rejects.toMatchObject({ code: "tooManyRequests" });
+      await expect(
+        test.services.accessRequests.requestPage(context.outsider, context.shared.id, ""),
+      ).rejects.toMatchObject({ code: "tooManyRequests" });
+      expect(await test.services.accessRequests.mine(context.outsider)).toEqual([]);
+    });
+
     it("creates no request once the membership in the organization of the page has ended", async () => {
       const context = await setup();
       await test.database.execute(

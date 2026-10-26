@@ -807,6 +807,7 @@ export function createAccountServices(options: {
     notifications,
     pageAccess,
     spacePermissions,
+    rateLimiter,
   });
   const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
   const giveAccessDrafts = new GiveAccessDraftService({ database });

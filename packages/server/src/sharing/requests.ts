@@ -2,6 +2,7 @@ import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { RateLimiter } from "../auth/throttle.js";
 import { accountItemCondition } from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { spaceRoleConditionFor } from "../authorization/space-access.js";
@@ -17,6 +18,14 @@ import type { AccessRequestStatus, ShareRole } from "./schema.js";
 
 export const ACCESS_REQUEST_MESSAGE_MAX_LENGTH = 1000;
 const REQUESTS_PER_DAY = 30;
+const DAY_SECONDS = 24 * 60 * 60;
+
+function tooManyRequests(): SpaceError {
+  return new SpaceError(
+    "tooManyRequests",
+    "You sent many requests today; wait for answers or try again tomorrow",
+  );
+}
 
 export interface AccessRequest {
   id: string;
@@ -59,6 +68,7 @@ interface RequestRow {
 
 export class AccessRequestService {
   readonly #database: Database;
+  readonly #rateLimiter: RateLimiter;
   readonly #authorization: AuthorizationService;
   readonly #audit: AuditLog;
   readonly #people: PeopleService;
@@ -74,8 +84,10 @@ export class AccessRequestService {
     notifications: NotificationService;
     pageAccess: PageAccessService;
     spacePermissions: SpacePermissionService;
+    rateLimiter: RateLimiter;
   }) {
     this.#database = options.database;
+    this.#rateLimiter = options.rateLimiter;
     this.#authorization = options.authorization;
     this.#audit = options.audit;
     this.#people = options.people;
@@ -193,7 +205,12 @@ export class AccessRequestService {
           )
         )`);
     const spaceId = item.rows[0]?.space_id;
-    await this.#checkDailyLimit(this.#database, actor.id);
+    const attempt = await this.#rateLimiter.consume(
+      `accessRequest.page:${actor.id}`,
+      REQUESTS_PER_DAY,
+      DAY_SECONDS,
+    );
+    if (!attempt.allowed) throw tooManyRequests();
     if (!spaceId || (await this.#hasAccess(this.#database, actor.id, spaceId, itemId))) return;
     await this.#create(actor, spaceId, itemId, message);
   }
@@ -219,7 +236,7 @@ export class AccessRequestService {
         select id from access_requests where requester_id = ${actor.id} and space_id = ${spaceId}
           and item_id is not distinct from ${itemId} and status = 'open'`);
       if (existing.rows[0]) return { id: existing.rows[0].id, mailIds: [] };
-      await this.#checkDailyLimit(tx, actor.id);
+      if (itemId === null) await this.#checkDailyLimit(tx, actor.id);
       const id = uuidv7();
       await tx.execute(sql`
         insert into access_requests (id, requester_id, space_id, item_id, message)
@@ -255,12 +272,7 @@ export class AccessRequestService {
     const recent = await executor.execute<{ count: string }>(sql`
       select count(*) as count from access_requests
       where requester_id = ${accountId} and created_at > now() - interval '1 day'`);
-    if (Number(recent.rows[0]?.count ?? 0) >= REQUESTS_PER_DAY) {
-      throw new SpaceError(
-        "tooManyRequests",
-        "You sent many requests today; wait for answers or try again tomorrow",
-      );
-    }
+    if (Number(recent.rows[0]?.count ?? 0) >= REQUESTS_PER_DAY) throw tooManyRequests();
   }
 
   async deciders(executor: Executor, spaceId: string, itemId: string | null): Promise<string[]> {
