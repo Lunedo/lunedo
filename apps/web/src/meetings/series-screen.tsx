@@ -218,14 +218,6 @@ function SeriesView({ series }: { series: Series }) {
             </span>
           </p>
         </header>
-        {series.oneOnOne ? (
-          <Notice variant="info" title={t("meetings.oneOnOne.privateTitle")}>
-            <span className="inline-flex items-start gap-2">
-              <Lock aria-hidden className="size-icon-md shrink-0" />
-              {t("meetings.oneOnOne.privateDescription")}
-            </span>
-          </Notice>
-        ) : null}
         {withoutAccess.length > 0 ? (
           <Notice
             variant="warning"

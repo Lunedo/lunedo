@@ -507,6 +507,7 @@ describe("setting up a provider as a draft", () => {
     });
     await renderPath("/settings/instance/sign-in-providers/new");
     expect(await screen.findByText(/saves the setup as a draft from the next step on/)).toBeTruthy();
+    expect(screen.getAllByText("Opens after the current step is saved")).toHaveLength(1);
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     const redirect = await screen.findByDisplayValue(
       `https://wiki.example.org/api/v1/auth/providers/${PROVIDER}/callback`,

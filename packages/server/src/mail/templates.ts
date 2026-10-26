@@ -253,9 +253,9 @@ const catalogs: Record<Language, Catalog> = {
       ],
     }),
     spaceAdministratorTaken: ({ instanceName, organizationName, spaceName, actorName, reason, takenAt }) => ({
-      subject: `${actorName} became space admin of ${spaceName} on ${instanceName}`,
+      subject: `${actorName} made themselves space admin of ${spaceName} on ${instanceName}`,
       paragraphs: [
-        `${actorName} used the administration of ${organizationName} on ${takenAt} to become space admin of ${spaceName}. You receive this because you are a space admin there.`,
+        `${actorName} made themselves space admin of ${spaceName} on ${takenAt}, as an organization admin of ${organizationName}. You receive this because you are a space admin there.`,
         `Reason: ${reason}`,
         "The role gives full access to the content of the space. If you did not expect this, remove it in the permissions of the space and talk to the administrators of the organization. The step is recorded in the audit log.",
       ],
@@ -465,10 +465,10 @@ const catalogs: Record<Language, Catalog> = {
       ],
     }),
     spaceAdministratorTaken: ({ instanceName, organizationName, spaceName, actorName, reason, takenAt }) => ({
-      subject: `${actorName} ist Space-Admin von ${spaceName} auf ${instanceName} geworden`,
+      subject: `${actorName} hat sich zum Space-Admin von ${spaceName} auf ${instanceName} gemacht`,
       paragraphs: [
-        `${actorName} hat sich am ${takenAt} über die Verwaltung von ${organizationName} zum Space-Admin von ${spaceName} gemacht. Du bekommst diese Nachricht, weil du dort Space-Admin bist.`,
-        `Begründung: ${reason}`,
+        `${actorName} hat sich am ${takenAt} als Organisations-Admin von ${organizationName} zum Space-Admin von ${spaceName} gemacht. Du bekommst diese Nachricht, weil du dort Space-Admin bist.`,
+        `Grund: ${reason}`,
         "Die Rolle gibt vollen Zugriff auf die Inhalte des Space. Wenn du das nicht erwartet hast, entferne sie in den Berechtigungen des Space und sprich mit der Administration der Organisation. Der Schritt steht im Audit-Log.",
       ],
     }),

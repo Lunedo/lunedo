@@ -32,7 +32,9 @@ test("an organization administrator becomes space admin with a reason and the sp
 
   await ownerPage.goto("/notifications");
   await expect(
-    ownerPage.getByText(/became space admin of Field notes .* The team asked for help with its permissions/),
+    ownerPage.getByText(
+      /made themselves space admin of Field notes .* as an organization admin. Reason: The team asked for help with its permissions/,
+    ),
   ).toBeVisible();
 
   await page.goto(`/settings/organizations/${organization.id}/spaces`);

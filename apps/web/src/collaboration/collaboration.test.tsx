@@ -512,6 +512,8 @@ describe("My tasks", () => {
     expect(await screen.findByRole("heading", { name: "My tasks" })).toBeTruthy();
     const table = await screen.findByRole("table", { name: "Tasks" });
     await within(table).findByText("Rotate the key");
+    const filters = document.querySelector("[data-filter-row]") as HTMLElement;
+    for (const control of filters.children) expect(control.className).toContain("shrink-0");
     const groups = within(table)
       .getAllByRole("columnheader")
       .filter((cell) => cell.getAttribute("scope") === "colgroup")

@@ -167,6 +167,7 @@ test("schedules a blog post that the job publishes, and pins it in the organizat
     "contenteditable",
     "true",
   );
+  await expect(page.locator("[data-page-bar]").getByRole("button", { name: "Done" })).toBeVisible();
   const postId = /\/blog\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
   await page.getByRole("textbox", { name: "Page content" }).click();
   await page.keyboard.type("The company portal ships the new client on Monday.");

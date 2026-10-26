@@ -199,3 +199,24 @@ describe("Disabled radio options", () => {
     expect(chosen).toEqual([]);
   });
 });
+
+describe("RadioGroup", () => {
+  it("shows its heading and takes its name from it", () => {
+    renderUi(
+      <RadioGroup
+        label="Format"
+        heading="Format"
+        value="pdf"
+        onValueChange={() => {}}
+        options={[
+          { value: "pdf", label: "PDF" },
+          { value: "docx", label: "Word" },
+        ]}
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: "Format" });
+    expect(group.getAttribute("aria-label")).toBeNull();
+    const heading = document.getElementById(group.getAttribute("aria-labelledby") ?? "");
+    expect(heading?.textContent).toBe("Format");
+  });
+});

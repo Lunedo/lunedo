@@ -796,7 +796,7 @@ describe("synchronized groups", () => {
     await renderPath(`/settings/organizations/${ORGANIZATION}/groups`);
     const table = await screen.findByRole("table");
     expect(await within(table).findByText("synchronized from Entra ID · not editable")).toBeTruthy();
-    expect(within(table).getByText("Lunedo")).toBeTruthy();
+    expect(within(table).getByText("In Lunedo")).toBeTruthy();
   });
 
   it("keeps the members of a synchronized group read-only", async () => {

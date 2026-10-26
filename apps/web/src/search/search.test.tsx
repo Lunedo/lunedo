@@ -408,6 +408,15 @@ describe("the search page", () => {
     expect(new URL(window.location.href).searchParams.get("sort")).toBe("newest");
   });
 
+  it("keeps the language filter under More, so the filter row fits one line", async () => {
+    await renderApp("/search?q=gateway", () => ({ body: response([hit(ids(5), "Gateway restart")]) }));
+    expect(await screen.findByText("1 result")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Language/ })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^English/ }));
+    await waitFor(() => expect(new URL(window.location.href).searchParams.get("languages")).toBe("en"));
+  });
+
   it("explains the first use and offers ways out when nothing is found", async () => {
     await renderApp("/search", () => ({ body: response([]) }));
     const field = await screen.findByRole("searchbox", { name: "Search" });

@@ -1,4 +1,13 @@
-import { Dialog, IconButton, Menu, type MenuItem, Table, TableToolbar, TruncatedText } from "@lunedo/ui";
+import {
+  Dialog,
+  FirstAndMore,
+  IconButton,
+  Menu,
+  type MenuItem,
+  Table,
+  TableToolbar,
+  TruncatedText,
+} from "@lunedo/ui";
 import { Info, KeyRound, MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -36,13 +45,8 @@ export function tokenRights(
   ];
 }
 
-export function shortRights(t: Parameters<typeof translateKey>[0], rights: readonly TokenRight[]): string {
-  if (rights.length === 0) return t("tokens.noRights");
-  const shown = rights
-    .slice(0, 2)
-    .map((right) => t("tokens.right", { area: right.area, level: right.level }));
-  const rest = rights.length - shown.length;
-  return [...shown, ...(rest > 0 ? [t("tokens.moreRights", { count: rest })] : [])].join(" · ");
+export function rightLabels(t: Parameters<typeof translateKey>[0], rights: readonly TokenRight[]): string[] {
+  return rights.map((right) => t("tokens.right", { area: right.area, level: right.level }));
 }
 
 export function TokenTable({
@@ -139,7 +143,14 @@ export function TokenTable({
                   <KeyRound aria-hidden="true" className="size-icon-sm shrink-0 text-text-muted" />
                   <TruncatedText text={token.name} />
                 </span>
-                <TruncatedText text={shortRights(t, rights(token))} className="text-xs text-text-muted" />
+                <span className="text-xs text-text-muted">
+                  <FirstAndMore
+                    values={rightLabels(t, rights(token)).map((label) => ({ id: label, label }))}
+                    title={t("tokens.rightsTitle", { name: token.name })}
+                    moreLabel={(count) => t("tokens.moreRightsLabel", { count })}
+                    empty={t("tokens.noRights")}
+                  />
+                </span>
               </div>
             ),
           },

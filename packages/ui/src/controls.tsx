@@ -272,16 +272,24 @@ export interface RadioGroupProps {
   onValueChange: (value: string) => void;
   options: ChoiceOption[];
   label: string;
+  heading?: ReactNode;
   variant?: "default" | "card";
 }
 
-export function RadioGroup({ value, onValueChange, options, label, variant = "default" }: RadioGroupProps) {
+export function RadioGroup({
+  value,
+  onValueChange,
+  options,
+  label,
+  heading,
+  variant = "default",
+}: RadioGroupProps) {
   const id = useId();
-  return (
+  const group = (
     <RadioGroupPrimitive.Root
       value={value}
       onValueChange={onValueChange}
-      aria-label={label}
+      {...(heading ? { "aria-labelledby": `${id}-heading` } : { "aria-label": label })}
       className="flex flex-col gap-2"
     >
       {options.map((option) => {
@@ -326,6 +334,15 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
         );
       })}
     </RadioGroupPrimitive.Root>
+  );
+  if (!heading) return group;
+  return (
+    <div className="flex flex-col gap-2">
+      <span id={`${id}-heading`} className="font-medium text-text">
+        {heading}
+      </span>
+      {group}
+    </div>
   );
 }
 

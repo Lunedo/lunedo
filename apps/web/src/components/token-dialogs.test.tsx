@@ -5,7 +5,7 @@ import type { ApiToken } from "../api/account-queries.js";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { CreateTokenDialog, expiryChoices, type TokenRequest, TokenRightsDialog } from "./token-dialogs.js";
-import { shortRights, tokenRights } from "./token-table.js";
+import { rightLabels, TokenTable, tokenRights } from "./token-table.js";
 
 beforeEach(() => {
   mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
@@ -265,11 +265,11 @@ describe("token summary", () => {
     const { i18n } = await renderWithProviders(<span />);
     const t = i18n.getFixedT("en");
     const named = tokenRights(t, token, new Map([["01929b1e-0000-7000-8000-0000000000a1", "Help Center"]]));
-    expect(shortRights(t, named)).toBe("Content: Write drafts in Help Center");
-    expect(shortRights(t, tokenRights(t, token))).toBe("Content: Write drafts in 1 knowledge base");
+    expect(rightLabels(t, named)).toEqual(["Content: Write drafts in Help Center"]);
+    expect(rightLabels(t, tokenRights(t, token))).toEqual(["Content: Write drafts in 1 knowledge base"]);
   });
 
-  it("names two rights and counts the rest", async () => {
+  it("names every right, the content first", async () => {
     const { i18n } = await renderWithProviders(<span />);
     const t = i18n.getFixedT("en");
     const rights = tokenRights(t, {
@@ -281,8 +281,43 @@ describe("token summary", () => {
       knowledgeBaseIds: null,
     });
     expect(rights).toHaveLength(4);
-    expect(shortRights(t, rights)).toMatch(/^Content: .+ · .+ · 2 more rights$/);
-    expect(shortRights(t, [])).toBe("No rights");
+    expect(rightLabels(t, rights)).toHaveLength(4);
+    expect(rightLabels(t, rights)[0]).toMatch(/^Content: /);
+  });
+});
+
+describe("the rights of a token in the list", () => {
+  it("shows the first right and the others in a popover", async () => {
+    const token = {
+      id: "01929b1e-0000-7000-8000-0000000000c1",
+      accountId: "01929b1e-0000-7000-8000-0000000000c2",
+      organizationId: "01929b1e-0000-7000-8000-0000000000c3",
+      name: "Importer",
+      prefix: "ld_abc",
+      scopes: { organization: { spaces: "manage", membersAndGroups: "manage", settings: "view" } },
+      contentLevel: "publish",
+      knowledgeBaseIds: null,
+      expiresAt: null,
+      lastUsedAt: null,
+      createdAt: "2026-10-01T09:00:00.000Z",
+    } as unknown as ApiToken;
+    const onRevoke = vi.fn();
+    await renderWithProviders(
+      <PreferencesProvider>
+        <TokenTable
+          tokens={[token]}
+          loading={false}
+          caption="Tokens"
+          knowledgeBaseNames={new Map()}
+          canManage
+          onRevoke={onRevoke}
+        />
+      </PreferencesProvider>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Show 2 more rights" }));
+    const popover = await screen.findByRole("dialog", { name: "Rights of Importer" });
+    expect(within(popover).getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByRole("dialog", { name: "Importer" })).toBeNull();
   });
 });
 

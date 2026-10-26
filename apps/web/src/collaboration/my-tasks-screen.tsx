@@ -309,22 +309,24 @@ export function MyTasksScreen() {
             />
           </span>
           {view === "created" ? null : (
-            <FilterMenu
-              label={t("tasks.filters.assignedBy")}
-              value={search.by ?? ""}
-              {...(search.by ? { valueLabel: personName ?? t("tasks.filters.chosen") } : {})}
-              options={personOptions}
-              search={{
-                value: personSearch,
-                onChange: setPersonSearch,
-                placeholder: t("tasks.searchPerson"),
-              }}
-              emptyText={personTerm ? t("tasks.filters.nobodyFound") : t("tasks.filters.typeName")}
-              onValueChange={(value) => {
-                remember(value, personOptions);
-                change({ by: value || undefined });
-              }}
-            />
+            <span className="shrink-0">
+              <FilterMenu
+                label={t("tasks.filters.assignedBy")}
+                value={search.by ?? ""}
+                {...(search.by ? { valueLabel: personName ?? t("tasks.filters.chosen") } : {})}
+                options={personOptions}
+                search={{
+                  value: personSearch,
+                  onChange: setPersonSearch,
+                  placeholder: t("tasks.searchPerson"),
+                }}
+                emptyText={personTerm ? t("tasks.filters.nobodyFound") : t("tasks.filters.typeName")}
+                onValueChange={(value) => {
+                  remember(value, personOptions);
+                  change({ by: value || undefined });
+                }}
+              />
+            </span>
           )}
           <span className="ml-auto shrink-0">
             <FilterMenu

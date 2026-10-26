@@ -148,7 +148,7 @@ const en: Texts = {
     body: text(params.requesterName),
   }),
   "space.administratorTaken": ({ params }) => ({
-    title: "An administrator became space admin",
+    title: "An organization admin made themselves space admin",
     body: `${text(params.actorName)} · ${text(params.spaceName)}`,
   }),
   "auth.emergencySignIn": ({ params }) => ({
@@ -336,7 +336,7 @@ const de: Texts = {
     body: text(params.requesterName),
   }),
   "space.administratorTaken": ({ params }) => ({
-    title: "Ein Administrator ist Space-Admin geworden",
+    title: "Organisations-Admin hat sich zum Space-Admin gemacht",
     body: `${text(params.actorName)} · ${text(params.spaceName)}`,
   }),
   "auth.emergencySignIn": ({ params }) => ({

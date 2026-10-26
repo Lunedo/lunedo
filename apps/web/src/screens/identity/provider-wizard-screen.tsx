@@ -391,11 +391,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                       {marker}
                       <span className="flex flex-col">
                         <span>{stepName}</span>
-                        <span className="text-xs">
-                          {providerId && position === 0
-                            ? t("identityProviders.wizard.typeFixed")
-                            : t("identityProviders.wizard.stepLater")}
-                        </span>
+                        {providerId && position === 0 ? (
+                          <span className="text-xs">{t("identityProviders.wizard.typeFixed")}</span>
+                        ) : null}
                       </span>
                     </div>
                   )}
@@ -403,6 +401,9 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
               );
             })}
           </ol>
+          {providerId ? null : (
+            <p className="mt-2 px-2 text-xs text-text-muted">{t("identityProviders.wizard.stepLater")}</p>
+          )}
         </nav>
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {!canManage ? <Notice variant="warning">{t("identityProviders.noPermission")}</Notice> : null}
@@ -618,7 +619,7 @@ function TypeStep({
     <>
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 font-semibold text-lg">{t("identityProviders.wizard.typeTitle")}</legend>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {CHOICES.map((choice) => (
             <button
               key={choice}

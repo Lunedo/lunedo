@@ -2460,7 +2460,7 @@
     "keys": {
       "auth_passwordSignIn": {
         "label": "Password sign-in",
-        "description": "Off: only through a provider or passkey.",
+        "description": "When off, only through a provider or a passkey.",
         "help": "When off, people sign in only through a provider or a passkey. The emergency sign-in of the instance owner always works."
       },
       "appearance_colorMode": {
@@ -3038,7 +3038,7 @@
     "noExpiryWarning": "A token without expiry works until someone revokes it. If it leaks, it stays usable. Choose an expiry where you can.",
     "noRights": "No rights",
     "right": "{area}: {level}",
-    "moreRights": "{count, plural, one {# more right} other {# more rights}}",
+    "moreRightsLabel": "Show {count, plural, one {# more right} other {# more rights}}",
     "showRights": "Show rights",
     "search": "Search tokens",
     "showRightsFor": "Show the rights of {name}",
@@ -3231,7 +3231,7 @@
         "confidentialWithoutAdministrator": "The confidential space {spaceKey} has no space admin anymore. You can appoint one of its remaining members.",
         "personalWithoutAdministrator": "The personal space {spaceKey} of a deactivated person has no space admin. You can appoint one of its remaining members.",
         "administratorAppointed": "{actor} made you space admin of {spaceName}.",
-        "administratorTaken": "{actorName} became space admin of {spaceName} through the administration of {organizationName}: {reason}",
+        "administratorTaken": "{actorName} made themselves space admin of {spaceName} as an organization admin. Reason: {reason}",
         "memberAddedByAdministration": "{actorName} added {memberName} to {spaceName} through the administration of {organizationName}.",
         "memberRemovedByAdministration": "{actorName} removed {memberName} from {spaceName} through the administration of {organizationName}."
       },
@@ -4124,7 +4124,7 @@
   },
   "groups": {
     "managedBy": "Managed by",
-    "managedByLunedo": "Lunedo",
+    "managedByLunedo": "In Lunedo",
     "formerlySynchronized": "Lunedo, formerly synchronized from {provider}",
     "formerlySynchronizedDescription": "This group was formerly synchronized from {provider}. The provider was removed, so the group is an ordinary group now: its members and permissions stayed and are managed in Lunedo.",
     "managedByTitle": "Managed by {provider}",
@@ -6284,7 +6284,7 @@
       "keyHelp": "2 to 10 letters or digits. It appears in the addresses of the space and its pages, for example /spaces/ITOPS."
     },
     "permissions": {
-      "visibilityTitle": "Readers through visibility",
+      "visibilityTitle": "Reading through the visibility of the space",
       "visibilityPrivate": "The space is private: only the holders below have access.",
       "holders": "People and groups",
       "holdersDescription": "Every change shows first who gains or loses access.",
@@ -7655,7 +7655,7 @@
       "shareConfirm": "Share page",
       "shared": "Shared with {name}",
       "listTitle": "Who has access",
-      "empty": "Nobody is on the list yet. Everyone with a role in the space has access.",
+      "empty": "Not shared with individual people yet.",
       "groupMembers": "{count, plural, one {Group with # member} other {Group with # members}}",
       "spaceRole": "{role} in the space",
       "notInSpace": "Not in the space",
@@ -8282,9 +8282,7 @@
       "privacyDescription": "Space and organization administrators cannot open it or give anyone access. Server administrators with access to the database or backups are not restricted by this.",
       "create": "Start one-on-one",
       "created": "One-on-one with {name} started. They were notified.",
-      "failed": "The one-on-one could not be started",
-      "privateTitle": "Private between the people of this one-on-one",
-      "privateDescription": "Space and organization administrators cannot open it or give anyone access."
+      "failed": "The one-on-one could not be started"
     },
     "successor": {
       "action": "Change person",
@@ -10347,7 +10345,7 @@
     "start": "Start",
     "startDate": "Start date",
     "startTime": "Start time",
-    "startHint": "Empty: at once. Time zone: {timeZone}.",
+    "startHint": "When empty, at once. Time zone: {timeZone}.",
     "end": "End",
     "endDate": "End date",
     "endTime": "End time",
@@ -11033,7 +11031,7 @@
       "patternHint": "An https address with placeholders.",
       "patternInvalid": "Enter an https address that ends with a fixed domain, with placeholders that fill whole parts of the address, such as https://videos.example.org/watch?v='{video}'.",
       "embed": "Embed address",
-      "embedHint": "Empty: embed the link as it is.",
+      "embedHint": "When empty, the link is embedded as it is.",
       "add": "Add service",
       "remove": "Remove",
       "removeNamed": "Remove {name}",
@@ -11116,7 +11114,7 @@
   },
   "knowledgeBase": {
     "articles": "Articles",
-    "treeTitle": "Areas, topics and articles",
+    "treeTitle": "Contents",
     "newArticle": "New article",
     "newCategory": "New area",
     "newArticleInside": "New article here",

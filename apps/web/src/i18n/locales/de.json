@@ -2460,7 +2460,7 @@
     "keys": {
       "auth_passwordSignIn": {
         "label": "Anmeldung mit Passwort",
-        "description": "Aus: nur über Anbieter oder Passkey.",
+        "description": "Wenn aus, nur über Anbieter oder mit Passkey.",
         "help": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
       },
       "appearance_colorMode": {
@@ -3038,7 +3038,7 @@
     "noExpiryWarning": "Ein Token ohne Ablauf gilt, bis jemand es widerruft. Gerät es in falsche Hände, bleibt es gültig. Wähle wenn möglich ein Ablaufdatum.",
     "noRights": "Keine Rechte",
     "right": "{area}: {level}",
-    "moreRights": "{count, plural, one {# weiteres Recht} other {# weitere Rechte}}",
+    "moreRightsLabel": "{count, plural, one {# weiteres Recht} other {# weitere Rechte}} anzeigen",
     "showRights": "Rechte ansehen",
     "search": "Tokens suchen",
     "showRightsFor": "Rechte von {name} ansehen",
@@ -3231,7 +3231,7 @@
         "confidentialWithoutAdministrator": "Der vertrauliche Space {spaceKey} hat keinen Space-Admin mehr. Du kannst eines der verbliebenen Mitglieder ernennen.",
         "personalWithoutAdministrator": "Der persönliche Space {spaceKey} einer deaktivierten Person hat keinen Space-Admin. Du kannst eines der verbliebenen Mitglieder ernennen.",
         "administratorAppointed": "{actor} hat dich zum Space-Admin von {spaceName} ernannt.",
-        "administratorTaken": "{actorName} ist über die Verwaltung von {organizationName} Space-Admin von {spaceName} geworden: {reason}",
+        "administratorTaken": "{actorName} hat sich als Organisations-Admin zum Space-Admin von {spaceName} gemacht. Grund: {reason}",
         "memberAddedByAdministration": "{actorName} hat {memberName} über die Verwaltung von {organizationName} zu {spaceName} hinzugefügt.",
         "memberRemovedByAdministration": "{actorName} hat {memberName} über die Verwaltung von {organizationName} aus {spaceName} entfernt."
       },
@@ -4124,7 +4124,7 @@
   },
   "groups": {
     "managedBy": "Verwaltet von",
-    "managedByLunedo": "Lunedo",
+    "managedByLunedo": "In Lunedo",
     "formerlySynchronized": "Lunedo, früher synchronisiert aus {provider}",
     "formerlySynchronizedDescription": "Diese Gruppe wurde früher aus {provider} synchronisiert. Der Anbieter wurde entfernt, deshalb ist sie jetzt eine normale Gruppe: Mitglieder und Berechtigungen sind geblieben und werden in Lunedo verwaltet.",
     "managedByTitle": "Verwaltet von {provider}",
@@ -6284,7 +6284,7 @@
       "keyHelp": "2 bis 10 Buchstaben oder Ziffern. Er steht in den Adressen des Space und seiner Seiten, zum Beispiel /spaces/ITOPS."
     },
     "permissions": {
-      "visibilityTitle": "Leser über die Sichtbarkeit",
+      "visibilityTitle": "Lesen über die Sichtbarkeit des Space",
       "visibilityPrivate": "Der Space ist privat: Nur die Inhaber unten haben Zugriff.",
       "holders": "Personen und Gruppen",
       "holdersDescription": "Jede Änderung zeigt vorher, wer Zugriff bekommt oder verliert.",
@@ -7655,7 +7655,7 @@
       "shareConfirm": "Seite teilen",
       "shared": "Mit {name} geteilt",
       "listTitle": "Wer Zugriff hat",
-      "empty": "Noch niemand steht auf der Liste. Alle mit einer Rolle im Space haben Zugriff.",
+      "empty": "Noch nicht mit einzelnen Personen geteilt.",
       "groupMembers": "{count, plural, one {Gruppe mit # Mitglied} other {Gruppe mit # Mitgliedern}}",
       "spaceRole": "{role} im Space",
       "notInSpace": "Nicht im Space",
@@ -8282,9 +8282,7 @@
       "privacyDescription": "Space- und Organisations-Admins können es nicht öffnen und niemandem Zugriff geben. Server-Administrierende mit Zugriff auf die Datenbank oder Backups schränkt das nicht ein.",
       "create": "1:1 starten",
       "created": "1:1 mit {name} gestartet. Die Person wurde benachrichtigt.",
-      "failed": "Das 1:1 konnte nicht gestartet werden",
-      "privateTitle": "Privat zwischen den Personen dieses 1:1",
-      "privateDescription": "Space- und Organisations-Admins können es nicht öffnen und niemandem Zugriff geben."
+      "failed": "Das 1:1 konnte nicht gestartet werden"
     },
     "successor": {
       "action": "Person wechseln",
@@ -10347,7 +10345,7 @@
     "start": "Beginn",
     "startDate": "Datum des Beginns",
     "startTime": "Uhrzeit des Beginns",
-    "startHint": "Leer: sofort. Zeitzone: {timeZone}.",
+    "startHint": "Wenn leer, sofort. Zeitzone: {timeZone}.",
     "end": "Ende",
     "endDate": "Datum des Endes",
     "endTime": "Uhrzeit des Endes",
@@ -11033,7 +11031,7 @@
       "patternHint": "Eine https-Adresse mit Platzhaltern.",
       "patternInvalid": "Gib eine https-Adresse ein, die mit einer festen Domain endet und deren Platzhalter ganze Teile der Adresse füllen, etwa https://videos.example.org/watch?v='{video}'.",
       "embed": "Einbettungsadresse",
-      "embedHint": "Leer: Link unverändert einbetten.",
+      "embedHint": "Wenn leer, wird der Link unverändert eingebettet.",
       "add": "Dienst hinzufügen",
       "remove": "Entfernen",
       "removeNamed": "{name} entfernen",
@@ -11116,7 +11114,7 @@
   },
   "knowledgeBase": {
     "articles": "Artikel",
-    "treeTitle": "Bereiche, Themen und Artikel",
+    "treeTitle": "Inhalt",
     "newArticle": "Neuer Artikel",
     "newCategory": "Neuer Bereich",
     "newArticleInside": "Neuer Artikel hier",

@@ -117,11 +117,17 @@ export function SearchFilterChips({
       filters.statusIds.map((id) => `status:${id}`),
       () => t("search.filters.otherStatus"),
     ).map((option) => ({ ...option, group: t("search.filters.status") })),
+    ...languages.map((option) => ({
+      ...option,
+      value: `language:${option.value}`,
+      group: t("search.filters.language"),
+    })),
     { value: ARCHIVED, label: t("search.filters.includeArchived"), group: t("search.filters.options") },
   ];
   const moreSelected = [
     ...filters.labels.map((label) => `label:${label}`),
     ...filters.statusIds.map((id) => `status:${id}`),
+    ...filters.languages.map((language) => `language:${language}`),
     ...(filters.includeArchived ? [ARCHIVED] : []),
   ];
 
@@ -173,15 +179,6 @@ export function SearchFilterChips({
         }}
         onToggle={toggle("authorIds")}
       />
-      {languages.length > 0 ? (
-        <FilterMenu
-          multiple
-          label={t("search.filters.language")}
-          selected={filters.languages}
-          options={languages}
-          onToggle={toggle("languages")}
-        />
-      ) : null}
       <FilterMenu
         multiple
         label={t("search.filters.more")}
@@ -191,6 +188,11 @@ export function SearchFilterChips({
           if (value === ARCHIVED) onChange({ ...filters, includeArchived: on });
           else if (value.startsWith("label:"))
             onChange({ ...filters, labels: toggled(filters.labels, value.slice("label:".length), on) });
+          else if (value.startsWith("language:"))
+            onChange({
+              ...filters,
+              languages: toggled(filters.languages, value.slice("language:".length), on),
+            });
           else
             onChange({
               ...filters,

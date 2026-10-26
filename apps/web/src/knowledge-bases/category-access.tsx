@@ -303,6 +303,12 @@ export function CategoryAccessDialog({
           <p className="-mt-3 text-sm text-text-muted">{t("categoryAccess.responsibleEmpty")}</p>
           <RadioGroup
             label={t("categoryAccess.visibleTo")}
+            heading={
+              <span className="inline-flex items-center gap-1">
+                <Eye aria-hidden="true" className="size-icon-sm" />
+                {t("categoryAccess.visibleTo")}
+              </span>
+            }
             variant="card"
             value={restricted ? "groups" : "knowledgeBase"}
             onValueChange={(value) => setRestricted(value === "groups")}
