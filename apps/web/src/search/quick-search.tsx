@@ -103,7 +103,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   const createTarget = useShell().spaceCreateTarget;
   const canCreatePage = createTarget?.kinds.includes("page") ?? false;
 
-  const typedNumber = itemNumberOf(typed);
+  const typedNumber = settled ? itemNumberOf(debounced) : null;
   const numbered = useQuery({
     ...itemNumberQuery(typedNumber ?? 0),
     enabled: typedNumber !== null,
