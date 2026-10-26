@@ -159,10 +159,21 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     const network = byTitle.get("Network")?.id as string;
     const links = all.flatMap((node) => node.marks ?? []).filter((mark) => mark.type === "link");
     const pageLinks = all.filter((node) => node.type === "pageLink");
-    expect([
+    const networkNumber = (
+      await test.database.execute<{ number: string }>(
+        sql`select number from tree_items where id = ${network}`,
+      )
+    ).rows[0]?.number;
+    const targets = [
       ...links.map((mark) => String(mark.attrs?.href)),
       ...pageLinks.map((node) => node.attrs?.pageId),
-    ]).toEqual(expect.arrayContaining([expect.stringContaining(network)]));
+    ];
+    expect(targets).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(new RegExp(`^(${network}|/spaces/[^/]+/pages/${networkNumber}(/|$))`)),
+      ]),
+    );
+    expect(targets.some((target) => /\/pages\/[0-9a-f]{8}-/.test(String(target)))).toBe(false);
     expect(all.some((node) => node.type === "image")).toBe(true);
     expect(all.find((node) => node.type === "mermaid")?.attrs?.source).toBe("graph TD; A-->B");
     expect(all.find((node) => node.type === "codeBlock")?.attrs?.language).toBe("typescript");
