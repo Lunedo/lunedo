@@ -24,6 +24,7 @@ export function OrganizationSecurityScreen() {
   const name = organization.data?.name ?? "";
   return (
     <SettingsPage
+      contents
       title={t("organization.security.title")}
       description={t("organization.security.description", { name })}
     >

@@ -658,7 +658,7 @@ describe("the sign-in settings of the instance", () => {
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add credential" })).toBeTruthy();
     await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
-    expect(await screen.findByText("Existing accounts")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Existing accounts" })).toBeTruthy();
     expect(screen.queryByText(/Organizations/)).toBeNull();
   });
 

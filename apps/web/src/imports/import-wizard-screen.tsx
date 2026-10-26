@@ -458,6 +458,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
 
   return (
     <SettingsPage
+      steps
       title={t(`imports.wizard.stepNames.${step}`)}
       description={
         reimport

@@ -351,6 +351,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
 
   return (
     <SettingsPage
+      steps
       title={t("identityProviders.wizard.title")}
       back={{ label: t("identityProviders.title"), href: "/settings/instance/sign-in-providers" }}
       actions={

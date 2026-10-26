@@ -3,9 +3,13 @@ import { type MouseEvent, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export const MIN_HEADINGS = 6;
+export const MIN_SECTIONS = 5;
 export const MAX_ALL_LEVELS = 20;
 const SELECTOR = ".ld-read-view :is(h1, h2, h3)[id]";
+const SECTIONS = "section:is([data-section], [data-danger-zone])";
 const ACTIVE_OFFSET = 96;
+
+export type OnThisPageSource = "headings" | "sections";
 
 interface Entry {
   id: string;
@@ -13,12 +17,46 @@ interface Entry {
   level: number;
 }
 
-function entriesOf(root: HTMLElement): Entry[] {
+function headingEntries(root: HTMLElement): Entry[] {
   return Array.from(root.querySelectorAll<HTMLElement>(SELECTOR)).map((heading) => ({
     id: heading.id,
     title: heading.textContent?.trim() ?? "",
     level: Number(heading.tagName.slice(1)),
   }));
+}
+
+export function anchorOf(title: string): string {
+  return (
+    title
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "section"
+  );
+}
+
+function sectionEntries(root: HTMLElement): Entry[] {
+  const used = new Set<string>();
+  return Array.from(root.querySelectorAll<HTMLElement>(SECTIONS))
+    .filter((section) => section.parentElement?.closest(SECTIONS) === null)
+    .flatMap((section) => {
+      const title = section.querySelector("h2")?.textContent?.trim() ?? "";
+      if (!title) return [];
+      if (!section.id) {
+        let id = anchorOf(title);
+        for (let index = 2; used.has(id) || root.ownerDocument.getElementById(id); index += 1) {
+          id = `${anchorOf(title)}-${index}`;
+        }
+        section.id = id;
+      }
+      used.add(section.id);
+      return [{ id: section.id, title, level: 2 }];
+    });
+}
+
+function entriesOf(root: HTMLElement, source: OnThisPageSource): Entry[] {
+  return source === "sections" ? sectionEntries(root) : headingEntries(root);
 }
 
 function shownEntries(entries: Entry[]): Entry[] {
@@ -44,28 +82,52 @@ export function activeHeading(
   return current;
 }
 
-export function OnThisPage({ content }: { content: RefObject<HTMLElement | null> }) {
+export function OnThisPage({
+  content,
+  source = "headings",
+  minimum = source === "sections" ? MIN_SECTIONS : MIN_HEADINGS,
+  onShownChange,
+}: {
+  content: RefObject<HTMLElement | null>;
+  source?: OnThisPageSource;
+  minimum?: number;
+  onShownChange?: (shown: boolean) => void;
+}) {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const shown = entries.length >= minimum;
+
+  useEffect(() => {
+    onShownChange?.(shown);
+  }, [shown, onShownChange]);
+
+  useEffect(() => {
+    if (!shown) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (id && entries.some((entry) => entry.id === id)) {
+      document.getElementById(id)?.scrollIntoView({ block: "start" });
+      setActive(id);
+    }
+  }, [shown, entries]);
 
   useEffect(() => {
     const root = content.current;
     if (!root) return;
     const scan = () =>
       setEntries((current) => {
-        const next = shownEntries(entriesOf(root));
+        const next = source === "sections" ? entriesOf(root, source) : shownEntries(entriesOf(root, source));
         return sameEntries(current, next) ? current : next;
       });
     scan();
     const observer = new MutationObserver(scan);
     observer.observe(root, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
-  }, [content]);
+  }, [content, source]);
 
   useEffect(() => {
     const root = content.current;
-    if (!root || entries.length < MIN_HEADINGS) return;
+    if (!root || !shown) return;
     let frame = 0;
     const update = () => {
       cancelAnimationFrame(frame);
@@ -85,9 +147,9 @@ export function OnThisPage({ content }: { content: RefObject<HTMLElement | null>
       document.removeEventListener("scroll", update, { capture: true });
       window.removeEventListener("resize", update);
     };
-  }, [content, entries]);
+  }, [content, entries, shown]);
 
-  if (entries.length < MIN_HEADINGS) return null;
+  if (!shown) return null;
   const jump = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     const target = document.getElementById(id);
     if (!target) return;
