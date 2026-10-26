@@ -247,6 +247,7 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     const first = await knowledgeBase("portal");
     const second = await knowledgeBase("portal");
     const marker = (kb: { id: string }) => `Lager${kb.id.replaceAll("-", "").slice(-12)}`;
+    const numbers: number[] = [];
     for (const kb of [first, second]) {
       const article = await owner.post(`/api/v1/spaces/${kb.id}/articles`, {
         title: "Lieferzeiten",
@@ -254,7 +255,9 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
         publish: true,
       });
       expect(article.statusCode, article.body).toBe(201);
+      numbers.push((article.json() as { number: number }).number);
     }
+    const [firstNumber, secondNumber] = numbers;
     await services().search.indexer.drain();
     const onlyFirstEmail = `nur-eins-${marker(first).toLowerCase()}@example.org`;
     const firstInvite = await invite(first.id, onlyFirstEmail);
@@ -265,15 +268,18 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     expect((await reader.get("/api/v1/account/portals")).json()).toEqual([
       expect.objectContaining({ spaceId: first.id }),
     ]);
-    expect((await reader.get(`${first.path}/1-lieferzeiten`)).statusCode).toBe(200);
-    const hidden = await reader.get(`${second.path}/1-lieferzeiten`);
+    expect((await reader.get(`${first.path}/${firstNumber}-lieferzeiten`)).statusCode).toBe(200);
+    const hidden = await reader.get(`${second.path}/${secondNumber}-lieferzeiten`);
     expect(hidden.statusCode).toBe(404);
     expect(hidden.body).not.toContain(marker(second));
+    const crossed = await reader.get(`${first.path}/${secondNumber}-lieferzeiten`);
+    expect(crossed.statusCode).toBe(404);
+    expect(crossed.body).not.toContain(second.path);
     const search = await reader.get(`${second.path}/search?q=Lieferzeiten`);
     expect(search.body).not.toContain(marker(second));
-    expect(search.body).not.toContain(`${second.path}/1-lieferzeiten`);
+    expect(search.body).not.toContain(`${second.path}/${secondNumber}-lieferzeiten`);
     const ownSearch = await reader.get(`${first.path}/search?q=Lieferzeiten`);
-    expect(ownSearch.body).toContain(`${first.path}/1-lieferzeiten`);
+    expect(ownSearch.body).toContain(`${first.path}/${firstNumber}-lieferzeiten`);
     expect(ownSearch.body).toContain(marker(first));
     const listedFirst = (await owner.get(`/api/v1/spaces/${first.id}/portal-accounts`)).json().accounts as {
       id: string;
@@ -290,14 +296,14 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     ).toBe(404);
     const again = await invite(second.id, onlyFirstEmail);
     await accept(again.token, "Nur Eins");
-    expect((await reader.get(`${second.path}/1-lieferzeiten`)).statusCode).toBe(200);
+    expect((await reader.get(`${second.path}/${secondNumber}-lieferzeiten`)).statusCode).toBe(200);
     expect(
       (await owner.delete(`/api/v1/spaces/${second.id}/portal-accounts/${onlyFirst.accountId}`)).statusCode,
     ).toBe(204);
     const back = await invite(second.id, onlyFirstEmail);
     const rejoined = await new TestClient(test.app).post("/api/v1/invitations/accept", { token: back.token });
     expect(rejoined.statusCode, rejoined.body).toBe(200);
-    expect((await reader.get(`${first.path}/1-lieferzeiten`)).statusCode).toBe(404);
+    expect((await reader.get(`${first.path}/${firstNumber}-lieferzeiten`)).statusCode).toBe(404);
   });
 
   it("keeps an open member invitation when the same address gets a portal invitation", async () => {

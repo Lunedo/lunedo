@@ -166,10 +166,14 @@ describe.skipIf(!databaseBaseUrl)("knowledge bases through the API", () => {
     const read = await reader.client.get(`/api/v1/articles/${article.id}`);
     expect(read.statusCode, read.body).toBe(200);
     const body = read.json();
+    const itemNumber = await test.runtime.pool.query<{ number: string }>(
+      "select number from tree_items where id = $1",
+      [article.id],
+    );
     expect(body).toMatchObject({
       title: "Set up the VPN connection",
       type: "howTo",
-      number: 1,
+      number: Number(itemNumber.rows[0]?.number),
       slug: "set-up-the-vpn-connection",
       categoryPath: [{ id: categoryId, title: "IT" }],
       contactEmail: "it@example.org",
@@ -191,6 +195,44 @@ describe.skipIf(!databaseBaseUrl)("knowledge bases through the API", () => {
     const categories = await reader.client.get(`/api/v1/spaces/${kb.id}/categories`);
     expect(categories.json()).toMatchObject([{ id: categoryId, icon: "monitor", articles: 1, level: 1 }]);
     expect((await reader.client.get(`/api/v1/articles/${article.id}?draft=true`)).statusCode).toBe(403);
+  });
+
+  it("returns the numbers of the article and its translations for the addresses of the app", async () => {
+    const author = await person();
+    const kb = await knowledgeBase(author.client);
+    const languages = await author.client.put(`/api/v1/spaces/${kb.id}/knowledge-base/languages`, {
+      defaultLanguage: "de",
+      languages: ["de", "en", "fr"],
+    });
+    expect(languages.statusCode, languages.body).toBe(200);
+    const created = await author.client.post(`/api/v1/spaces/${kb.id}/items`, {
+      kind: "page",
+      title: "Drucker einrichten",
+      parentId: null,
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const original = created.json() as { id: string; number: number };
+    const translation = await author.client.post(`/api/v1/articles/${original.id}/translations`, {
+      language: "en",
+    });
+    expect(translation.statusCode, translation.body).toBe(201);
+    const english = translation.json() as { id: string; number: number };
+    const numbers = await test.runtime.pool.query<{ id: string; number: string }>(
+      "select id, number from tree_items where id = any($1::uuid[])",
+      [[original.id, english.id]],
+    );
+    const numberOf = (id: string) => Number(numbers.rows.find((row) => row.id === id)?.number);
+    expect(english.number).toBe(numberOf(english.id));
+    const listed = await author.client.get(`/api/v1/articles/${english.id}/translations`);
+    expect(listed.statusCode, listed.body).toBe(200);
+    expect(listed.json().translations).toEqual([
+      expect.objectContaining({ language: "de", itemId: original.id, itemNumber: numberOf(original.id) }),
+      expect.objectContaining({ language: "en", itemId: english.id, itemNumber: numberOf(english.id) }),
+      expect.objectContaining({ language: "fr", itemId: null, itemNumber: null, state: "missing" }),
+    ]);
+    const articles = await author.client.get(`/api/v1/spaces/${kb.id}/articles`);
+    expect(articles.statusCode, articles.body).toBe(200);
+    expect(articles.json().items).toMatchObject([{ id: original.id, number: numberOf(original.id) }]);
   });
 
   it("keeps the article type of knowledge base templates and refuses it elsewhere", async () => {

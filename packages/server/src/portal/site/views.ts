@@ -36,7 +36,7 @@ export interface LanguageLink {
 export interface PortalLinks {
   home: string;
   article(article: { number: number; slug: string; language?: string }): string;
-  category(id: string): string;
+  category(category: { number: number; slug: string }): string;
   search(query?: string): string;
   searchAction: string;
   contact(query?: string): string;
@@ -47,7 +47,7 @@ export function portalLinks(base: string, origin: string): PortalLinks {
   return {
     home: `${base}/`,
     article: (article) => articlePath(base, article),
-    category: (id) => categoryPath(base, id),
+    category: (category) => categoryPath(base, category),
     search: (query) => (query === undefined ? `${base}/search` : searchPath(base, query)),
     searchAction: `${base}/search`,
     contact: (query) => `${base}/contact${query ? `?q=${encodeURIComponent(query)}` : ""}`,
@@ -90,12 +90,16 @@ export interface PortalView {
   categories: PortalCategory[];
 }
 
-export function articlePath(base: string, article: { number: number; slug: string }): string {
-  return `${base}/${article.number}${article.slug ? `-${article.slug}` : ""}`;
+export function numberedSegment(entry: { number: number; slug: string }): string {
+  return `${entry.number}${entry.slug ? `-${encodeURIComponent(entry.slug)}` : ""}`;
 }
 
-export function categoryPath(base: string, id: string): string {
-  return `${base}/topics/${id}`;
+export function articlePath(base: string, article: { number: number; slug: string }): string {
+  return `${base}/${numberedSegment(article)}`;
+}
+
+export function categoryPath(base: string, category: { number: number; slug: string }): string {
+  return `${base}/topics/${numberedSegment(category)}`;
 }
 
 export function searchPath(base: string, query: string): string {
@@ -248,7 +252,7 @@ function areasMenu(view: PortalView, current: string | null): Html {
   return html`<details class="dd areas" data-menu><summary>${view.t.areas}${icon("chevron-down")}</summary>
     <div class="menu mega"><nav aria-label="${view.t.categoriesNavigation}">${areasOf(view).map(
       (area) =>
-        html`<a href="${view.links.category(area.id)}"${raw(area.id === current ? ' aria-current="page"' : "")}>${folderIcon(area, 32)}<span class="trunc" title="${area.title}">${area.title}</span><span class="n">${area.articles}</span></a>`,
+        html`<a href="${view.links.category(area)}"${raw(area.id === current ? ' aria-current="page"' : "")}>${folderIcon(area, 32)}<span class="trunc" title="${area.title}">${area.title}</span><span class="n">${area.articles}</span></a>`,
     )}</nav></div></details>`;
 }
 
@@ -321,7 +325,7 @@ function header(view: PortalView, options: { current?: string | null; navigation
       ${searchForm(view, "phone-search", "", { button: false })}
       <nav aria-label="${view.t.categoriesNavigation}">${areas.map(
         (area) =>
-          html`<a href="${view.links.category(area.id)}">${folderIcon(area, 32)}<span class="trunc">${area.title}</span><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
+          html`<a href="${view.links.category(area)}">${folderIcon(area, 32)}<span class="trunc">${area.title}</span><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
       )}</nav>
       ${when(!account && view.signInUrl, () => html`<p class="gap-top"><a class="btn primary" href="${view.signInUrl ?? ""}">${icon("log-in")}${view.t.signIn}</a></p>`)}
     </div></div>`,
@@ -394,7 +398,7 @@ function articleRow(view: PortalView, article: PortalArticleSummary, options: { 
 function areaGrid(view: PortalView): Html {
   return html`<div class="areas">${areasOf(view).map(
     (area) =>
-      html`<a class="area" href="${view.links.category(area.id)}">${folderIcon(area, 40)}<b class="clamp2" title="${area.title}">${area.title}</b><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
+      html`<a class="area" href="${view.links.category(area)}">${folderIcon(area, 40)}<b class="clamp2" title="${area.title}">${area.title}</b><span class="n">${view.t.articleCount(area.articles)}</span></a>`,
   )}</div>`;
 }
 
@@ -454,7 +458,7 @@ function treeItem(view: PortalView, folder: PortalCategory, current: string | nu
     children.length > 0
       ? html`<button class="tg" type="button" hidden data-tree-toggle aria-controls="${listId}" aria-expanded="${String(expanded)}" aria-label="${expanded ? view.t.collapse(folder.title) : view.t.expand(folder.title)}" data-expand="${view.t.expand(folder.title)}" data-collapse="${view.t.collapse(folder.title)}">${icon("chevron-right")}</button>`
       : html`<span class="tg" aria-hidden="true"></span>`
-  }<a href="${view.links.category(folder.id)}"${raw(folder.id === current ? ' aria-current="page"' : "")}>${when(folder.restricted, () => html`<span class="lock" title="${view.t.restricted}">${icon("lock")}<span class="sr">${view.t.restricted}</span></span>`)}<span class="trunc" title="${folder.title}">${folder.title}</span><span class="n">${folder.articles}</span></a></div>${when(
+  }<a href="${view.links.category(folder)}"${raw(folder.id === current ? ' aria-current="page"' : "")}>${when(folder.restricted, () => html`<span class="lock" title="${view.t.restricted}">${icon("lock")}<span class="sr">${view.t.restricted}</span></span>`)}<span class="trunc" title="${folder.title}">${folder.title}</span><span class="n">${folder.articles}</span></a></div>${when(
     children.length > 0,
     () =>
       html`<ul id="${listId}"${raw(expanded ? "" : " hidden")}>${children.map((child) => treeItem(view, child, current, open))}</ul>`,
@@ -468,7 +472,7 @@ function treeNav(view: PortalView, current: string | null, trail: readonly Porta
   return html`<div class="side"><button class="btn sm treebtn" type="button" hidden data-tree-drawer aria-expanded="false" aria-controls="ptree" data-open-label="${view.t.showTopics}" data-close-label="${view.t.hideTopics}">${icon("folder")}<span>${view.t.showTopics}</span></button>
     <nav class="ptree" id="ptree" aria-label="${view.t.topicsIn(area.title)}">
       <a class="back" href="${view.links.home}">${icon("chevron-left")}${view.t.allAreas}</a>
-      <a class="troot" href="${view.links.category(area.id)}"${raw(area.id === current ? ' aria-current="page"' : "")}>${folderIcon(area, 32)}<span class="trunc" title="${area.title}">${area.title}</span><span class="n">${area.articles}</span></a>
+      <a class="troot" href="${view.links.category(area)}"${raw(area.id === current ? ' aria-current="page"' : "")}>${folderIcon(area, 32)}<span class="trunc" title="${area.title}">${area.title}</span><span class="n">${area.articles}</span></a>
       <ul>${childrenOf(view, area.id).map((folder) => treeItem(view, folder, current, open))}</ul>
     </nav></div>`;
 }
@@ -509,7 +513,7 @@ export function categoryPage(
   const { t } = view;
   const trail = ancestorsOf(view.categories, category);
   const subfolders = childrenOf(view, category.id);
-  const path = view.links.category(category.id);
+  const path = view.links.category(category);
   const dynamic = !view.static;
   const filters: [PortalArticleFilter | null, string][] = [
     [null, t.filters.all],
@@ -534,7 +538,7 @@ export function categoryPage(
         trail.map((entry) =>
           entry.id === category.id
             ? { label: entry.title }
-            : { label: entry.title, href: view.links.category(entry.id) },
+            : { label: entry.title, href: view.links.category(entry) },
         ),
       )}
       <header class="chead">${category.restricted ? html`<span class="cicon s40" aria-hidden="true">${icon("lock")}</span>` : folderIcon(category, 40)}<h1>${category.title}</h1></header>
@@ -546,7 +550,7 @@ export function categoryPage(
           html`<section class="sec s8" aria-labelledby="subs-heading"><h2 class="h4" id="subs-heading">${t.topicsIn(category.title)}</h2><div class="subgrid">${subfolders.map(
             (sub) => {
               const below = childrenOf(view, sub.id).length;
-              return html`<a class="subtile" href="${view.links.category(sub.id)}">${sub.restricted ? html`<span class="cicon s32" aria-hidden="true">${icon("lock")}</span>` : folderIcon(sub, 32)}<span class="g"><b class="trunc" title="${sub.title}">${sub.title}</b><span class="n">${t.articleCount(sub.articles)}${when(below > 0, () => html` · ${t.subtopicCount(below)}`)}</span></span></a>`;
+              return html`<a class="subtile" href="${view.links.category(sub)}">${sub.restricted ? html`<span class="cicon s32" aria-hidden="true">${icon("lock")}</span>` : folderIcon(sub, 32)}<span class="g"><b class="trunc" title="${sub.title}">${sub.title}</b><span class="n">${t.articleCount(sub.articles)}${when(below > 0, () => html` · ${t.subtopicCount(below)}`)}</span></span></a>`;
             },
           )}</div></section>`,
       )}
@@ -635,7 +639,7 @@ export function articlePage(
   const shared = articleUrl(view, article);
   const mail = contact ? mailto(contact, subject, shared ? t.mailBody(shared) : undefined) : null;
   const toc = article.headings.filter((heading) => heading.level <= 2);
-  const trail = folders.map((folder) => ({ label: folder.title, href: view.links.category(folder.id) }));
+  const trail = folders.map((folder) => ({ label: folder.title, href: view.links.category(folder) }));
   const others = article.fallback
     ? []
     : view.languageLinks.filter(
@@ -826,7 +830,7 @@ function noResultsPage(
       <p class="lead">${t.noResultsLead}</p>
       ${when(result.suggestion, () => html`<p class="suggest">${t.didYouMean} <a href="${view.links.search(result.suggestion ?? "")}">${result.suggestion ?? ""}</a></p>`)}
       <div class="tips"><div><b>${t.tipSpelling}</b>${t.tipSpellingText}</div><div><b>${t.tipGeneral}</b>${t.tipGeneralText}</div>
-        <div><b>${t.tipBrowse}</b>${areasOf(view).map((category, index) => html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`)}</div></div>
+        <div><b>${t.tipBrowse}</b>${areasOf(view).map((category, index) => html`${index > 0 ? ", " : ""}<a href="${view.links.category(category)}">${category.title}</a>`)}</div></div>
       <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${t.areaHeading}</h2><p>${t.areaText}</p>
         ${areaChoice(view, t.searchSubject(state.query))}
         <p class="hint">${t.zeroResultsCounted}</p></section>
@@ -1011,7 +1015,7 @@ export function staticSearchPage(view: PortalView, data: StaticSearchData): stri
           <div class="tips"><div><b>${t.tipSpelling}</b>${t.tipSpellingText}</div><div><b>${t.tipGeneral}</b>${t.tipGeneralText}</div>
             <div><b>${t.tipBrowse}</b>${areasOf(view).map(
               (category, index) =>
-                html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`,
+                html`${index > 0 ? ", " : ""}<a href="${view.links.category(category)}">${category.title}</a>`,
             )}</div></div>
           <p class="gap-top"><a class="btn" href="${view.links.contact()}">${icon("mail")}${t.contactByArea}</a></p></div>
         <div class="alert" role="alert" data-failed hidden>${icon("circle-alert")}<div><b>${t.searchFailedHeading}</b><p>${t.staticSearchFailed}</p></div></div>
@@ -1048,7 +1052,7 @@ export function quickSearchResult(
           .map((entry) => entry.title),
       ),
       count: folder.articles,
-      href: view.links.category(folder.id),
+      href: view.links.category(folder),
     }));
   const articles = result.results.slice(0, limit).map((hit) => ({
     title: hit.title,

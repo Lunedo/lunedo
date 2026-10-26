@@ -10,7 +10,7 @@ import { originOf } from "../http/instance-url.js";
 import { nameCursor, pageQuery, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { timestamp, uuid } from "../http/schemas.js";
+import { itemNumber, timestamp, uuid } from "../http/schemas.js";
 import {
   articleTypeSchema,
   audienceSchema,
@@ -97,6 +97,9 @@ const translationsSchema = z
           .object({
             language: languageSchema,
             itemId: uuid("ID of the article in this language, or null.").nullable(),
+            itemNumber: itemNumber(
+              "Number of the article in this language in the addresses of the app, or null.",
+            ).nullable(),
             title: z.string().nullable().describe("Title in this language, or null."),
             state: translationStateSchema,
             enabled: z
@@ -790,11 +793,19 @@ export class KnowledgeBasesController {
           {
             language: "de",
             itemId: exampleArticle.id,
+            itemNumber: 123,
             title: "VPN einrichten",
             state: "original" as const,
             enabled: true,
           },
-          { language: "en", itemId: null, title: null, state: "missing" as const, enabled: true },
+          {
+            language: "en",
+            itemId: null,
+            itemNumber: null,
+            title: null,
+            state: "missing" as const,
+            enabled: true,
+          },
         ],
       },
     },

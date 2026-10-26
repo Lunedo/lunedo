@@ -79,12 +79,11 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
     return result.rows.map((row) => row.name);
   }
 
-  async function numberOf(itemId: string): Promise<number | null> {
-    const result = await test.database.execute<{ number: number }>(
-      sql`select an.number from article_numbers an join tree_items t on t.id = an.item_id and t.space_id = an.space_id
-        where an.item_id = ${itemId}`,
+  async function numberOf(itemId: string): Promise<number> {
+    const result = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${itemId}`,
     );
-    return result.rows[0] ? Number(result.rows[0].number) : null;
+    return Number(result.rows[0]?.number);
   }
 
   describe("space type", () => {
@@ -536,20 +535,21 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
   });
 
   describe("article addresses", () => {
-    it("numbers articles per knowledge base, keeps numbers on moves and never reuses them", async () => {
+    it("uses the instance-wide number, keeps it on moves and never reuses it", async () => {
       const { editor, kb } = await setup();
       const other = await knowledgeBase(kb.organizationId ?? "", editor.type === "account" ? editor.id : "");
       const first = await create(editor, kb.id);
       const second = await create(editor, kb.id);
       const elsewhere = await create(editor, other.id);
-      expect([await numberOf(first.id), await numberOf(second.id), await numberOf(elsewhere.id)]).toEqual([
-        1, 2, 1,
-      ]);
+      const numbers = [await numberOf(first.id), await numberOf(second.id), await numberOf(elsewhere.id)];
+      expect(numbers.every((number) => number >= 1000)).toBe(true);
+      expect(new Set(numbers).size).toBe(3);
       const folder = await create(editor, kb.id, { kind: "folder", title: "IT" });
+      expect(await numberOf(folder.id)).toBeGreaterThan(Math.max(...numbers));
       await test.services.tree.move(editor, first.id, { parentId: folder.id });
-      expect(await numberOf(first.id)).toBe(1);
+      expect(await numberOf(first.id)).toBe(numbers[0]);
       await test.database.execute(sql`delete from tree_items where id = ${second.id}`);
-      expect(await numberOf((await create(editor, kb.id)).id)).toBe(3);
+      expect(await numberOf((await create(editor, kb.id)).id)).toBeGreaterThan(await numberOf(folder.id));
       const impact = await test.services.tree.moveImpact(editor, first.id, {
         spaceId: other.id,
         parentId: null,
@@ -559,11 +559,9 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
         parentId: null,
         confirmation: impact.confirmation ?? undefined,
       });
-      expect(await numberOf(first.id)).toBe(2);
-      const kept = await test.database.execute<{ item_id: string }>(
-        sql`select item_id from article_numbers where space_id = ${kb.id} and number = 1`,
-      );
-      expect(kept.rows[0]?.item_id).toBe(first.id);
+      expect(await numberOf(first.id)).toBe(numbers[0]);
+      const article = await test.services.knowledgeBases.article(editor, first.id);
+      expect(article?.number).toBe(numbers[0]);
     });
 
     it("gives parallel articles different numbers", async () => {
@@ -571,7 +569,6 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
       const created = await Promise.all(Array.from({ length: 6 }, () => create(editor, kb.id)));
       const numbers = await Promise.all(created.map((item) => numberOf(item.id)));
       expect(new Set(numbers).size).toBe(6);
-      expect([...numbers].sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([1, 2, 3, 4, 5, 6]);
     });
 
     it("keeps old titles as slugs that redirect", async () => {
@@ -589,23 +586,26 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
       expect((await test.services.knowledgeBases.article(editor, article.id))?.slug).toBe(
         "stoerung-drucker-fuer-buero",
       );
-      const slugs = await test.database.execute<{ slug: string }>(
-        sql`select slug from article_slugs where item_id = ${article.id} order by created_at, slug`,
+      const titles = await test.database.execute<{ title: string }>(
+        sql`select title from article_titles where item_id = ${article.id} order by created_at, title`,
       );
-      expect(slugs.rows.map((row) => row.slug)).toEqual([
-        "vpn-verbindung-einrichten",
-        "stoerung-drucker-fuer-buero",
+      expect(titles.rows.map((row) => row.title)).toEqual([
+        "VPN-Verbindung einrichten",
+        "Störung: Drucker für Büro",
       ]);
     });
 
     it("makes slugs from titles with accents, symbols and other scripts", async () => {
-      const slug = async (title: string) =>
-        (await test.database.execute<{ slug: string }>(sql`select article_slug(${title}) as slug`)).rows[0]
-          ?.slug;
+      const { editor, kb } = await setup();
+      const slug = async (title: string) => {
+        const article = await create(editor, kb.id, { title });
+        await test.services.versions.publish(editor, article.id);
+        return (await test.services.knowledgeBases.article(editor, article.id))?.slug;
+      };
       expect(await slug("  Ärger mit Outlook?! Größe ändern  ")).toBe("aerger-mit-outlook-groesse-aendern");
       expect(await slug("Café & Crème brûlée")).toBe("cafe-creme-brulee");
-      expect(await slug("Привет")).toBe("");
-      expect((await slug(`${"a".repeat(79)} b`))?.length).toBeLessThanOrEqual(80);
+      expect(await slug("Привет, мир")).toBe("привет-мир");
+      expect(await slug("?!")).toBe("");
     });
   });
 });

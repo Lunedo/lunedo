@@ -156,11 +156,19 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
       const published = await owner.post(`/api/v1/pages/${id}/publish`, {});
       expect(published.statusCode, published.body).toBe(200);
     }
-    const number = await test.runtime.pool.query<{ number: number }>(
-      "select number from article_numbers where item_id = $1 and space_id = $2",
-      [id, spaceId],
+    return { id, number: await numberOf(id) };
+  }
+
+  async function numberOf(itemId: string): Promise<number> {
+    const found = await test.runtime.pool.query<{ number: string }>(
+      "select number from tree_items where id = $1",
+      [itemId],
     );
-    return { id, number: Number(number.rows[0]?.number) };
+    return Number(found.rows[0]?.number);
+  }
+
+  async function topic(itemId: string, slug: string): Promise<string> {
+    return `/topics/${await numberOf(itemId)}-${slug}`;
   }
 
   async function index() {
@@ -189,7 +197,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const found = await reader.get(`${kb.path}/search?q=VPN`);
     expect(found.statusCode).toBe(200);
     expect(found.body).toContain(`/${vpn.number}-vpn-einrichten`);
-    const category = await reader.get(`${kb.path}/topics/${it}`);
+    const category = await reader.get(`${kb.path}${await topic(it, "it")}`);
     expect(category.statusCode).toBe(200);
     expect(category.body).toContain("VPN einrichten");
   });
@@ -213,9 +221,15 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     await article(kb.id, outlook, "Welche Version habe ich", "Version ansehen.");
     await index();
     const reader = anonymous();
-    const page = await reader.get(`${kb.path}/topics/${web}`);
+    const page = await reader.get(`${kb.path}${await topic(web, "web-app")}`);
     expect(page.statusCode, page.body).toBe(200);
-    for (const id of [it, microsoft, outlook]) expect(page.body).toContain(`${kb.path}/topics/${id}"`);
+    for (const [id, slug] of [
+      [it, "it"],
+      [microsoft, "microsoft"],
+      [outlook, "outlook"],
+    ] as const) {
+      expect(page.body).toContain(`${kb.path}${await topic(id, slug)}"`);
+    }
     expect(page.body).toContain("Outlook <strong>im Browser</strong>, siehe ");
     expect(page.body).toContain('<a href="https://example.org/owa">Anleitung</a>');
     expect(page.body).toContain('<div class="callout">Nie &lt;script&gt; speichern</div>');
@@ -223,7 +237,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(page.body).toContain("Wie melde ich mich an");
     const entry = await reader.get(`${kb.path}/${signIn.number}-wie-melde-ich-mich-an`);
     expect(entry.body).toContain("mailto:m365@example.org?subject=");
-    expect(entry.body).toContain(`${kb.path}/topics/${web}"`);
+    expect(entry.body).toContain(`${kb.path}${await topic(web, "web-app")}"`);
     const categories = await owner.get(`/api/v1/spaces/${kb.id}/categories`);
     expect(
       (
@@ -445,24 +459,25 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(start.body).not.toContain("Geschlossen");
     const hidden = await visitor.get(`${kb.path}/${hiddenEntry.number}-versteckt`);
     expect(hidden.statusCode).toBe(404);
-    const unknown = await visitor.get(`${kb.path}/topics/01929b1e-0000-7000-8000-00000000ffff`);
-    const restrictedPage = await visitor.get(`${kb.path}/topics/${closed}`);
+    const closedNumber = String(await numberOf(closed));
+    const unknown = await visitor.get(`${kb.path}/topics/999999999999-geschlossen`);
+    const restrictedPage = await visitor.get(`${kb.path}/topics/${closedNumber}-geschlossen`);
     expect(restrictedPage.statusCode).toBe(404);
     expect(restrictedPage.body).toContain(messagesFor("en").signInRestrictedHeading);
     expect(restrictedPage.body).not.toContain("Geschlossen");
-    expect(comparable(restrictedPage.body).replaceAll(closed, "ID")).toBe(
-      comparable(unknown.body).replaceAll("01929b1e-0000-7000-8000-00000000ffff", "ID"),
+    expect(comparable(restrictedPage.body).replaceAll(closedNumber, "ID")).toBe(
+      comparable(unknown.body).replaceAll("999999999999", "ID"),
     );
     const search = await visitor.get(`${kb.path}/search?q=wenige`);
     expect(search.body).not.toContain("Versteckt");
     const quick = await visitor.get(`${kb.path}/search/quick?q=Geschlossen`);
     expect(quick.json()).toMatchObject({ topics: [], articles: [] });
-    const editor = await owner.get(`${kb.path}/topics/${open}`);
+    const editor = await owner.get(`${kb.path}${await topic(open, "offen")}`);
     expect(editor.body).not.toContain('class="lock"');
-    const locked = await owner.get(`${kb.path}/topics/${closed}`);
+    const locked = await owner.get(`${kb.path}${await topic(closed, "geschlossen")}`);
     expect(locked.statusCode).toBe(200);
     expect(locked.body).toMatch(/aria-current="page"><span class="cicon s32"[\s\S]*?Geschlossen/);
-    const signedIn = await (await person()).client.get(`${kb.path}/topics/${closed}`);
+    const signedIn = await (await person()).client.get(`${kb.path}${await topic(closed, "geschlossen")}`);
     expect(signedIn.statusCode).toBe(404);
     expect(signedIn.body).toContain("find this page");
     expect(signedIn.body).not.toContain(messagesFor("en").signInRestrictedHeading);
@@ -482,18 +497,18 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     await index();
     const reader = anonymous();
     const t = messagesFor("en");
-    const direct = await reader.get(`${kb.path}/topics/${microsoft}`);
+    const direct = await reader.get(`${kb.path}${await topic(microsoft, "microsoft")}`);
     expect(direct.statusCode).toBe(200);
     expect(direct.body).toContain(t.noDirectArticles);
     expect(direct.body).toContain(t.topicsIn("Microsoft"));
     expect(direct.body).toContain('aria-pressed="false" role="button"');
     expect(direct.body).not.toContain("Outlook intern");
-    const deep = await reader.get(`${kb.path}/topics/${microsoft}?deep=1`);
+    const deep = await reader.get(`${kb.path}${await topic(microsoft, "microsoft")}?deep=1`);
     expect(deep.body).toContain("Outlook im Browser anmelden");
     expect(deep.body).toContain("Outlook startet nicht");
     expect(deep.body).toContain('<span class="path">Outlook › Web App</span>');
     expect(deep.body).not.toContain("Outlook Geheimnis");
-    const outlookPage = await reader.get(`${kb.path}/topics/${outlook}`);
+    const outlookPage = await reader.get(`${kb.path}${await topic(outlook, "outlook")}`);
     expect(outlookPage.body).toContain("Outlook startet nicht");
     expect(outlookPage.body).not.toContain("Outlook im Browser anmelden");
     expect(outlookPage.body).toMatch(/<nav class="ptree" id="ptree" aria-label="Topics in IT">/);
@@ -507,7 +522,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
       all: string;
     };
     expect(found.topics).toEqual([
-      { title: "Outlook", path: "IT › Microsoft", count: 2, href: `${kb.path}/topics/${outlook}` },
+      {
+        title: "Outlook",
+        path: "IT › Microsoft",
+        count: 2,
+        href: `${kb.path}${await topic(outlook, "outlook")}`,
+      },
     ]);
     expect(found.articles.map((entry) => [entry.title, entry.path]).sort()).toEqual([
       ["Outlook im Browser anmelden", "IT › … › Outlook › Web App"],
@@ -598,12 +618,88 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect((await visitor.get("/help/does-not-exist/")).statusCode).toBe(404);
   });
 
+  it("redirects a category address with an outdated or missing slug to the current one", async () => {
+    const kb = await knowledgeBase("public");
+    const it = await folder(kb.id, "IT");
+    await article(kb.id, it, "Drucker", "Text.");
+    await index();
+    const visitor = anonymous();
+    const number = await numberOf(it);
+    expect((await visitor.get(`${kb.path}/topics/${number}-it`)).statusCode).toBe(200);
+    for (const path of [`/topics/${number}`, `/topics/${number}-informatik`]) {
+      const moved = await visitor.get(`${kb.path}${path}?deep=1`);
+      expect(moved.statusCode, path).toBe(301);
+      expect(moved.headers.location).toBe(`${kb.path}/topics/${number}-it?deep=1`);
+    }
+    expect((await owner.patch(`/api/v1/items/${it}`, { title: "IT und Geräte" })).statusCode).toBe(200);
+    const renamed = await visitor.get(`${kb.path}/topics/${number}-it`);
+    expect(renamed.statusCode).toBe(301);
+    expect(renamed.headers.location).toBe(`${kb.path}/topics/${number}-it-und-geraete`);
+    expect((await visitor.get(`${kb.path}/topics/${number}-it-und-geraete`)).statusCode).toBe(200);
+  });
+
+  it("answers unknown numbers, internal items and hidden articles with the same not-found page", async () => {
+    const kb = await knowledgeBase("public");
+    const category = await folder(kb.id, "Intern");
+    const restricted = await article(kb.id, null, "Geheim", "Text.");
+    const access = await owner.post(`/api/v1/pages/${restricted.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(access.statusCode, access.body).toBe(200);
+    const unpublished = await article(kb.id, null, "Entwurf", "Text.", { publish: false });
+    const other = await knowledgeBase("signedIn");
+    const foreign = await article(other.id, null, "Fremd", "Text.");
+    counter += 1;
+    const internal = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: `Internal ${counter}`,
+      key: `IN${counter}X`,
+      visibility: "private",
+      grants: [],
+    });
+    expect(internal.statusCode, internal.body).toBe(201);
+    const page = await owner.post(`/api/v1/spaces/${internal.json().id as string}/items`, {
+      kind: "page",
+      title: "Gehaltsliste",
+      parentId: null,
+    });
+    expect(page.statusCode, page.body).toBe(201);
+    await index();
+    const visitor = anonymous();
+    const answer = async (client: TestClient, number: number, slug: string) => {
+      const response = await client.get(`${kb.path}/${number}-${slug}`);
+      expect(response.statusCode, `${number}-${slug}`).toBe(404);
+      return comparable(response.body).replaceAll(String(number), "N");
+    };
+    const unknown = 999_999_999_999;
+    for (const [number, slug] of [
+      [await numberOf(category), "intern"],
+      [restricted.number, "geheim"],
+      [unpublished.number, "entwurf"],
+      [foreign.number, "fremd"],
+      [await numberOf(page.json().id as string), "gehaltsliste"],
+    ] as const) {
+      expect(await answer(visitor, number, slug), slug).toBe(await answer(visitor, unknown, slug));
+    }
+    expect(await answer(owner, await numberOf(page.json().id as string), "gehaltsliste")).toBe(
+      await answer(owner, unknown, "gehaltsliste"),
+    );
+    const elsewhere = await owner.get(`${kb.path}/${foreign.number}-fremd`);
+    expect(elsewhere.statusCode).toBe(301);
+    expect(elsewhere.headers.location).toBe(`${TEST_ORIGIN}${other.path}/${foreign.number}-fremd`);
+    expect((await owner.get(`${kb.path}/${foreign.number}-erfunden`)).statusCode).toBe(404);
+  });
+
   it("shows the edit link only to editors and links back to the app editor", async () => {
     const kb = await knowledgeBase("signedIn");
     const entry = await article(kb.id, null, "Bearbeitbar", "Text.");
     await index();
     const page = await owner.get(`${kb.path}/${entry.number}-bearbeitbar`);
-    expect(page.body).toContain(`/pages/${entry.id}?edit=true`);
+    const key = (
+      await test.runtime.pool.query<{ key: string }>("select key from spaces where id = $1", [kb.id])
+    ).rows[0]?.key;
+    expect(page.body).toContain(
+      `href="${TEST_ORIGIN}/spaces/${key}/pages/${entry.number}/bearbeitbar?edit=true"`,
+    );
     expect(page.body).not.toContain("Account settings");
     const reader = await person();
     const readerPage = await reader.client.get(`${kb.path}/${entry.number}-bearbeitbar`);
@@ -925,6 +1021,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const reader = anonymous();
     const english = await reader.get(`${kb.path}/en/${original.number}-change-the-password`);
     expect(english.statusCode, english.body).toBe(200);
+    expect(english.body).not.toContain("?edit=true");
+    const edited = await owner.get(`${kb.path}/en/${original.number}-change-the-password`);
+    expect(edited.body).toContain(`/pages/${await numberOf(translationId)}/change-the-password?edit=true"`);
+    expect(
+      (await reader.get(`${kb.path}/en/${await numberOf(translationId)}-change-the-password`)).statusCode,
+    ).toBe(404);
     expect(english.body).toContain('<html lang="en"');
     expect(english.body).toContain("Choose a new password.");
     expect(english.body).toContain(messagesFor("en").onThisPage);

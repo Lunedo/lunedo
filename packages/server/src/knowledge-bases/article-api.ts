@@ -10,6 +10,7 @@ import { convertStorage, parseStorage } from "../imports/confluence/storage.js";
 import { convertMarkdown } from "../imports/markdown/convert.js";
 import type { ArticleRenderer } from "../portal/articles.js";
 import { interfaceLanguage, type PortalService } from "../portal/portals.js";
+import { numberedSegment } from "../portal/site/views.js";
 import { SpaceError } from "../spaces/common.js";
 import type { PageDocumentService } from "../spaces/documents.js";
 import type { TreeService } from "../spaces/items.js";
@@ -253,7 +254,7 @@ export class ArticleApiService {
     const root = config?.domain ? `https://${config.domain}` : `${origin}/help/${config?.path ?? ""}`;
     const base = config && article.language !== config.defaultLanguage ? `${root}/${article.language}` : root;
     return {
-      article: (number: number, slug: string) => `${base}/${number}${slug ? `-${slug}` : ""}`,
+      article: (number: number, slug: string) => `${base}/${numberedSegment({ number, slug })}`,
       renderer: {
         page: (number: number) => `${base}/${number}`,
         file: (attachmentId: string, display: boolean) =>
@@ -298,7 +299,7 @@ export class ArticleApiService {
           greatest(d.changed_at, t.updated_at) as changed_at
         from tree_items t join page_documents d on d.item_id = t.id
         join knowledge_bases kb on kb.space_id = t.space_id
-        left join article_numbers n on n.item_id = coalesce(t.translation_of, t.id) and n.space_id = t.space_id
+        join tree_items n on n.id = coalesce(t.translation_of, t.id)
         where t.space_id = ${spaceId} and t.kind = 'page' and t.trash_entry_id is null and t.archived_root_id is null`
       : sql``;
     const listed = await this.#database.execute<{

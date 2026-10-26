@@ -269,17 +269,16 @@ export class ArticleRenderer {
     if (!request.pageId || !source.itemId) return null;
     const result = await this.#database.execute<{
       id: string;
-      number: number | null;
+      number: number | string;
       title: string;
       document: unknown;
       schema_version: number;
     }>(sql`
-      select coalesce(tr.id, t.id) as id, n.number, coalesce(tv.title, v.title) as title,
+      select coalesce(tr.id, t.id) as id, t.number, coalesce(tv.title, v.title) as title,
         coalesce(tv.document, v.document) as document,
         coalesce(tv.schema_version, v.schema_version) as schema_version
       from tree_items t
       join page_versions v on v.id = t.published_version_id
-      left join article_numbers n on n.item_id = t.id and n.space_id = t.space_id
       left join lateral (select x.id, x.published_version_id from tree_items x
         where x.translation_of = t.id and x.content_language = ${source.language}
           and ${this.#shareable(sql`x`, source)}
@@ -287,7 +286,7 @@ export class ArticleRenderer {
       left join page_versions tv on tv.id = tr.published_version_id
       where t.id = ${request.pageId} and t.translation_of is null and ${this.#shareable(sql`t`, source)}`);
     const row = result.rows[0];
-    if (!row || row.number === null) return null;
+    if (!row) return null;
     return {
       id: row.id,
       number: Number(row.number),
@@ -369,10 +368,9 @@ export class ArticleRenderer {
     const targets = new Map<string, { number: number; title: string }>();
     if (pages.size > 0) {
       const result = await this.#database.execute<{ item_id: string; number: number; title: string }>(sql`
-        select t.id as item_id, n.number, v.title
+        select t.id as item_id, t.number, v.title
         from tree_items t join spaces s on s.id = t.space_id
         join page_versions v on v.id = t.published_version_id
-        join article_numbers n on n.item_id = t.id and n.space_id = t.space_id
         where t.id = any(${sql.param([...pages])}::uuid[]) and t.space_id = ${spaceId}
           and t.kind = 'page' and t.translation_of is null and t.reader_visible
           and ${this.#authorization.portalFilter(reader, sql`t`, sql`s`)}`);

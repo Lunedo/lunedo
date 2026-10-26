@@ -68,6 +68,13 @@ describe.skipIf(!baseUrl)("knowledge base data migrations", () => {
     return id;
   }
 
+  async function ownNumber(target: DatabasePool, itemId: string): Promise<number> {
+    const result = await target.query<{ number: string }>("select number from tree_items where id = $1", [
+      itemId,
+    ]);
+    return Number(result.rows[0]?.number);
+  }
+
   async function knowledgeBase(target: DatabasePool, organizationId: string) {
     const id = randomUUID();
     await target.query(
@@ -212,13 +219,109 @@ describe.skipIf(!baseUrl)("knowledge base data migrations", () => {
 
     await runMigrations(target, { logger: createLogger({ service: "test", level: "silent" }) });
 
-    const slugs = await target.query<{ item_id: string; space_id: string; slug: string }>(
-      "select item_id, space_id, slug from article_slugs where item_id = any($1::uuid[]) order by slug",
+    const titles = await target.query<{ item_id: string; space_id: string; title: string }>(
+      "select item_id, space_id, title from article_titles where item_id = any($1::uuid[]) order by title",
       [[draft, published]],
     );
-    expect(slugs.rows).toEqual([
-      { item_id: published, space_id: space, slug: "alter-titel" },
-      { item_id: published, space_id: space, slug: "neuer-titel" },
+    expect(titles.rows).toEqual([
+      { item_id: published, space_id: space, title: "Alter Titel" },
+      { item_id: published, space_id: space, title: "Neuer Titel" },
+    ]);
+  });
+
+  it("moves portal addresses to the instance-wide numbers and keeps published titles per knowledge base", async () => {
+    const target = await migratedBefore("0105_portal_instance_numbers");
+    const organizationId = await organization(target);
+    const first = await knowledgeBase(target, organizationId);
+    const second = await knowledgeBase(target, organizationId);
+    for (const space of [first, second]) {
+      await target.query("insert into knowledge_bases (space_id, portal_path) values ($1, $2)", [
+        space,
+        `kb-${space.slice(0, 8)}`,
+      ]);
+    }
+    const page = async (space: string, title: string, translationOf: string | null = null) => {
+      const id = randomUUID();
+      await target.query(
+        `insert into tree_items (id, space_id, kind, position, title, mode, translation_of, content_language, parent_id)
+         values ($1, $2, 'page', $3, $4, 'publish', $5, $6, $5)`,
+        [id, space, `a${id.slice(0, 4)}`, title, translationOf, translationOf ? "de" : null],
+      );
+      return id;
+    };
+    const publish = async (itemId: string, number: number, title: string) => {
+      const version = randomUUID();
+      await target.query(
+        `insert into page_versions (id, item_id, number, title, document, schema_version, reason, revision, state_vector)
+         values ($1, $2, $3, $4, '{"type":"doc","content":[]}'::jsonb, 1, 'published', 0, decode('00', 'hex'))`,
+        [version, itemId, number, title],
+      );
+      await target.query("update tree_items set published_version_id = $1 where id = $2", [version, itemId]);
+    };
+    const article = await page(first, "Drucker einrichten");
+    await publish(article, 1, "Drucker verbinden");
+    await publish(article, 2, "Drucker einrichten");
+    const translation = await page(first, "Set up the printer", article);
+    await publish(translation, 1, "Set up the printer");
+    const moved = await page(first, "Größe ändern");
+    await publish(moved, 1, "Größe ändern");
+    await target.query("update tree_items set space_id = $1 where id = $2", [second, moved]);
+    const before = await target.query<{ space_id: string; number: number; item_id: string }>(
+      "select space_id, number, item_id from article_numbers where item_id = any($1::uuid[]) order by number",
+      [[article, translation, moved]],
+    );
+    expect(before.rows.length).toBeGreaterThan(0);
+
+    await runMigrations(target, { logger: createLogger({ service: "test", level: "silent" }) });
+
+    const numbers = new Map(
+      (
+        await target.query<{ id: string; number: string }>(
+          "select id, number from tree_items where id = any($1::uuid[])",
+          [[article, translation, moved]],
+        )
+      ).rows.map((row) => [row.id, Number(row.number)]),
+    );
+    const synced = await target.query<{ item_id: string; number: string }>(
+      "select item_id, number from article_sync where item_id = any($1::uuid[])",
+      [[article, translation, moved]],
+    );
+    for (const row of synced.rows) {
+      const own = row.item_id === translation ? article : row.item_id;
+      expect(Number(row.number), row.item_id).toBe(numbers.get(own));
+    }
+    expect(synced.rows.map((row) => row.item_id)).toEqual(expect.arrayContaining([article, translation]));
+    const titles = await target.query<{ item_id: string; space_id: string; title: string }>(
+      "select item_id, space_id, title from article_titles where item_id = any($1::uuid[]) order by item_id, space_id, title",
+      [[article, translation, moved]],
+    );
+    expect(titles.rows).toEqual(
+      expect.arrayContaining([
+        { item_id: article, space_id: first, title: "Drucker einrichten" },
+        { item_id: article, space_id: first, title: "Drucker verbinden" },
+        { item_id: translation, space_id: first, title: "Set up the printer" },
+        { item_id: moved, space_id: first, title: "Größe ändern" },
+        { item_id: moved, space_id: second, title: "Größe ändern" },
+      ]),
+    );
+    expect(titles.rows).toHaveLength(5);
+    const dropped = await target.query<{ name: string }>(
+      `select table_name as name from information_schema.tables where table_name in ('article_numbers', 'article_slugs')
+       union all select column_name from information_schema.columns
+         where table_name = 'knowledge_bases' and column_name = 'next_article_number'
+       union all select proname from pg_proc where proname in ('article_slug', 'tree_items_article_address')`,
+    );
+    expect(dropped.rows).toEqual([]);
+
+    const later = await page(first, "Neu");
+    await publish(later, 1, "Neu veröffentlicht");
+    const added = await target.query<{ title: string; number: string | null }>(
+      `select h.title, a.number from article_titles h
+       left join article_sync a on a.item_id = h.item_id where h.item_id = $1`,
+      [later],
+    );
+    expect(added.rows).toEqual([
+      { title: "Neu veröffentlicht", number: String(await ownNumber(target, later)) },
     ]);
   });
 });

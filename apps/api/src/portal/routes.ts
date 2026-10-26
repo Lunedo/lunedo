@@ -9,6 +9,7 @@ import {
   brandValues,
   type CategoryState,
   categoryPage,
+  categoryPath,
   clientSubject,
   consentPage,
   contactPage,
@@ -67,7 +68,8 @@ const FEEDBACK_WINDOW_SECONDS = 600;
 const SEARCH_COUNT_LIMIT = 60;
 const SEARCH_COUNT_WINDOW_SECONDS = 600;
 const QUICK_COUNT_BODY_LIMIT = 1024;
-const ARTICLE = /^\/(\d{1,9})(?:-([a-z0-9-]{0,200}))?$/;
+const ARTICLE = /^\/(\d{1,15})(?:-([^/]{1,800}))?$/;
+const TOPIC = /^\/topics\/(\d{1,15})(?:-([^/]{1,800}))?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SORTS = ["views", "updated", "title"] as const;
 const FILTERS: readonly PortalArticleFilter[] = ["howTo", "troubleshooting"];
@@ -552,11 +554,15 @@ async function route(
   if (rest === "/search/quick") return quickSearch(request, reply, services, target, viewer, view, query);
   if (rest === "/contact")
     return sendPage(reply, view, contactPage(view, (query.get("q") ?? "").slice(0, 200)));
-  const topic = /^\/topics\/([0-9a-f-]{36})$/i.exec(rest);
-  if (topic?.[1]) return category(reply, services, target, viewer, view, topic[1].toLowerCase(), query);
+  const topic = TOPIC.exec(rest);
+  const topicSlug = topic ? decodedSlug(topic[2]) : null;
+  if (topic?.[1] && topicSlug !== null) {
+    return category(request, reply, services, target, viewer, view, Number(topic[1]), topicSlug, query);
+  }
   const article = ARTICLE.exec(rest);
-  if (article?.[1])
-    return articleRoute(request, reply, services, target, viewer, view, Number(article[1]), article[2] ?? "");
+  const articleSlug = article ? decodedSlug(article[2]) : null;
+  if (article?.[1] && articleSlug !== null)
+    return articleRoute(request, reply, services, target, viewer, view, Number(article[1]), articleSlug);
   return sendPage(reply, view, notFoundPage(view), 404);
 }
 
@@ -592,17 +598,36 @@ async function start(
   );
 }
 
+function decodedSlug(raw: string | undefined): string | null {
+  if (raw === undefined) return "";
+  try {
+    return decodeURIComponent(raw).normalize("NFC");
+  } catch {
+    return null;
+  }
+}
+
 async function category(
+  request: FastifyRequest,
   reply: FastifyReply,
   services: AccountServices,
   target: Target,
   viewer: Viewer,
   view: PortalView,
-  id: string,
+  number: number,
+  slug: string,
   query: URLSearchParams,
 ): Promise<FastifyReply> {
-  const found = view.categories.find((entry) => entry.id === id);
+  const found = view.categories.find((entry) => entry.number === number);
   if (!found) return sendPage(reply, view, notFoundPage(view), 404);
+  if (slug !== found.slug) {
+    const search = request.url.includes("?") ? request.url.slice(request.url.indexOf("?")) : "";
+    return reply
+      .code(301)
+      .header("cache-control", "no-cache")
+      .redirect(`${categoryPath(target.base, found)}${search}`);
+  }
+  const id = found.id;
   const type = FILTERS.find((filter) => filter === query.get("type")) ?? null;
   const sort = SORTS.find((entry) => entry === query.get("sort")) ?? "views";
   const page = Math.min(Math.max(Number.parseInt(query.get("page") ?? "1", 10) || 1, 1), 1000);
@@ -859,7 +884,7 @@ async function articleRoute(
     ).articles;
   }
   const editUrl = article.canEdit
-    ? `${target.instanceUrl}/spaces/${encodeURIComponent(article.spaceKey)}/pages/${article.itemId}?edit=true`
+    ? `${target.instanceUrl}/spaces/${encodeURIComponent(article.spaceKey)}/pages/${article.itemNumber}${article.slug ? `/${encodeURIComponent(article.slug)}` : ""}?edit=true`
     : null;
   return sendPage(reply, articleView, articlePage(articleView, article, { related, similar, editUrl }));
 }

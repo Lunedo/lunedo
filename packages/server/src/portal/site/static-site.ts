@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { type DocumentJson, extractSections, type NodeJson, plainText } from "@lunedo/editor-schema";
+import { type DocumentJson, extractSections, type NodeJson, plainText, slugify } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
 import { ANONYMOUS } from "../../accounts/principal.js";
@@ -35,6 +35,7 @@ import {
   folderTrail,
   type LanguageLink,
   notFoundPage,
+  numberedSegment,
   type PortalLinks,
   type PortalView,
   startPage,
@@ -164,42 +165,43 @@ export class StaticSiteBuilder {
     const result = await this.#database.execute<{
       id: string;
       version_id: string;
-      number: number;
-      slug: string;
+      number: number | string;
       language: string;
       title: string;
       article_type: PortalArticleSummary["type"];
       path: string[];
-      old_slugs: string[];
+      old_titles: string[];
       document: unknown;
       schema_version: number;
     }>(sql`
-      select t.id, v.id as version_id, n.number, coalesce(article_slug(v.title), '') as slug,
+      select t.id, v.id as version_id, o.number,
         case when t.translation_of is null then ${config.defaultLanguage} else t.content_language end as language,
         v.title, t.article_type, array_remove(t.path, t.translation_of) as path,
-        array(select sl.slug from article_slugs sl where sl.item_id = t.id and sl.space_id = t.space_id
-          and sl.slug <> coalesce(article_slug(v.title), '') and sl.slug <> '' order by sl.slug) as old_slugs,
+        array(select h.title from article_titles h where h.item_id = t.id and h.space_id = t.space_id) as old_titles,
         v.document, v.schema_version
       from tree_items t
       join page_versions v on v.id = t.published_version_id
-      join article_numbers n on n.item_id = coalesce(t.translation_of, t.id) and n.space_id = t.space_id
+      join tree_items o on o.id = coalesce(t.translation_of, t.id)
       where t.space_id = ${config.spaceId} and t.kind = 'page' and t.reader_visible
         and (t.translation_of is null or t.content_language = any(${sql.param([...config.languages])}::text[]))
-      order by n.number, t.id`);
+      order by o.number, t.id`);
     const articles: SiteArticle[] = [];
     for (const row of result.rows) {
-      const found = await this.#reader.article(ANONYMOUS, config, Number(row.number), row.slug, row.language);
+      const slug = slugify(row.title);
+      const found = await this.#reader.article(ANONYMOUS, config, Number(row.number), slug, row.language);
       if (found?.type !== "found" || found.article.itemId !== row.id || found.article.fallback) continue;
       articles.push({
         itemId: row.id,
         versionId: row.version_id,
         number: Number(row.number),
-        slug: row.slug,
+        slug,
         language: row.language,
         title: row.title,
         type: row.article_type,
         folderIds: found.article.folderIds,
-        oldSlugs: row.old_slugs,
+        oldSlugs: [...new Set(row.old_titles.map((title) => slugify(title)))]
+          .filter((old) => old !== "" && old !== slug)
+          .sort(),
         document: migrated(row.document, row.schema_version),
         found: found.article,
       });
@@ -242,7 +244,12 @@ export class StaticSiteBuilder {
     const entries: ArchiveEntry[] = [];
     const mtime = options.now;
     const text = (path: string, content: string, compress = true) =>
-      entries.push({ path, mtime, compress, content: async () => Buffer.from(content, "utf8") });
+      entries.push({
+        path: decodeURIComponent(path),
+        mtime,
+        compress,
+        content: async () => Buffer.from(content, "utf8"),
+      });
     const languages = [
       config.defaultLanguage,
       ...config.languages.filter((language) => language !== config.defaultLanguage).sort(),
@@ -267,7 +274,9 @@ export class StaticSiteBuilder {
       byNumber.set(article.number, versions);
     }
     const articleFile = (article: { number: number; slug: string; language: string }) =>
-      `${folder(article.language)}${article.number}${article.slug ? `-${article.slug}` : ""}.html`;
+      `${folder(article.language)}${numberedSegment(article)}.html`;
+    const categoryFile = (category: { number: number; slug: string }) =>
+      `topics/${numberedSegment(category)}.html`;
     const fileOf = (attachmentId: string, display: boolean) => {
       const info = names.get(attachmentId);
       if (!info) return null;
@@ -304,7 +313,7 @@ export class StaticSiteBuilder {
         home: `${base}/index.html`,
         article: (article) =>
           `${root}/${articleFile({ ...article, language: article.language ?? language })}`,
-        category: (id) => `${base}/topics/${id}.html`,
+        category: (category) => `${base}/${categoryFile(category)}`,
         search: (query) => `${base}/search.html${query ? `?q=${encodeURIComponent(query)}` : ""}`,
         searchAction: `${base}/search.html`,
         contact: (query) => `${base}/contact.html${query ? `?q=${encodeURIComponent(query)}` : ""}`,
@@ -411,7 +420,7 @@ export class StaticSiteBuilder {
       );
       for (const category of categories) {
         const list = listed(category.id);
-        const path = `topics/${category.id}.html`;
+        const path = categoryFile(category);
         text(
           pageFor(language, path),
           categoryPage(
@@ -508,7 +517,7 @@ export class StaticSiteBuilder {
       });
       text(path, articlePage(pageView, page, { related: [], similar: [], editUrl: null }));
       for (const old of [...article.oldSlugs, ""]) {
-        const redirect = `${folder(article.language)}${article.number}${old ? `-${old}` : ""}.html`;
+        const redirect = `${folder(article.language)}${numberedSegment({ number: article.number, slug: old })}.html`;
         if (redirect === path) continue;
         text(redirect, redirectPage(`${root}/${path}`, article.title));
       }
@@ -524,7 +533,7 @@ export class StaticSiteBuilder {
     for (const article of articles) {
       const target = `/${articleFile(article).replace(/\.html$/, "")}`;
       for (const old of [...article.oldSlugs, ""]) {
-        const source = `/${folder(article.language)}${article.number}${old ? `-${old}` : ""}`;
+        const source = `/${folder(article.language)}${numberedSegment({ number: article.number, slug: old })}`;
         if (source === target) continue;
         redirects.push(`${source} ${target} 301`, `${source}.html ${target} 301`);
       }

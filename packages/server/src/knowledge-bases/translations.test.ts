@@ -62,10 +62,18 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
   }
 
   async function numbers(itemId: string): Promise<number[]> {
-    const result = await test.database.execute<{ number: number }>(
-      sql`select number from article_numbers where item_id = ${itemId}`,
+    const result = await test.database.execute<{ number: string }>(
+      sql`select o.number from tree_items t join tree_items o on o.id = coalesce(t.translation_of, t.id)
+        where t.id = ${itemId}`,
     );
     return result.rows.map((row) => Number(row.number));
+  }
+
+  async function ownNumber(itemId: string): Promise<number> {
+    const result = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${itemId}`,
+    );
+    return Number(result.rows[0]?.number);
   }
 
   async function ageVersion(itemId: string, minutes: number) {
@@ -163,6 +171,14 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
     expect(hidden.details).toEqual({});
     const shown = await test.services.translations.create(editor, original, "en").catch((error) => error);
     expect(shown.details).toEqual({ translationId: english.id });
+    expect((await test.services.translations.translations(colleague, original))?.translations).toMatchObject([
+      { language: "de", itemId: original, itemNumber: await ownNumber(original) },
+      { language: "en", itemId: null, itemNumber: null, title: null, state: "missing" },
+    ]);
+    expect((await test.services.translations.translations(editor, original))?.translations).toMatchObject([
+      { language: "de", itemId: original, itemNumber: await ownNumber(original) },
+      { language: "en", itemId: english.id, itemNumber: await ownNumber(english.id) },
+    ]);
   });
 
   it("copies an article with its translations into a knowledge base", async () => {
@@ -237,8 +253,9 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
     const source = await article(editor, kb.id, "VPN einrichten", "Öffne den Client.", category.id);
     const translation = await test.services.translations.create(editor, source, "en");
     expect(translation.parentId).toBe(source);
-    expect(await numbers(translation.id)).toEqual([]);
-    expect(await numbers(source)).toHaveLength(1);
+    expect(await numbers(translation.id)).toEqual(await numbers(source));
+    expect(await ownNumber(translation.id)).not.toBe(await ownNumber(source));
+    expect(translation.number).toBe(await ownNumber(translation.id));
     const draft = await test.database.execute<{ snapshot: unknown }>(
       sql`select snapshot from page_documents where item_id = ${translation.id}`,
     );
@@ -261,6 +278,7 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
     const listed = await test.services.knowledgeBases.articles(editor, kb.id);
     expect(listed.items.map((entry) => entry.id)).toEqual([source]);
     expect(listed.items[0]).toMatchObject({
+      number: await ownNumber(source),
       language: "de",
       categoryPath: [{ id: category.id, title: "IT" }],
       translations: [{ language: "en", itemId: translation.id, state: "unpublished" }],
@@ -387,6 +405,14 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
           { language: "en", slug: "change-the-password" },
         ],
       });
+      const own = await test.services.portalReader.article(
+        ANONYMOUS,
+        portal,
+        await ownNumber(english.id),
+        "",
+        "en",
+      );
+      expect(own).toBeNull();
       const german = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "", "de");
       expect(german?.type === "found" && german.article).toMatchObject({
         itemId: translated,
