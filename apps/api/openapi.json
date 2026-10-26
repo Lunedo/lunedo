@@ -3685,6 +3685,10 @@
                       "type": "string",
                       "description": "Name of the space. Empty for a personal space that has no name of its own."
                     },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                    },
                     "description": {
                       "type": "string",
                       "description": "Short description, up to 1000 characters."
@@ -3793,6 +3797,7 @@
                     "type",
                     "audience",
                     "name",
+                    "displayName",
                     "description",
                     "visibility",
                     "discoverable",
@@ -3819,6 +3824,7 @@
                   "type": "standard",
                   "audience": null,
                   "name": "",
+                  "displayName": "IT Operations",
                   "description": "Runbooks and how-tos of the IT team",
                   "visibility": "organization",
                   "discoverable": false,
@@ -186112,6 +186118,10 @@
                                     "type": "string",
                                     "description": "Name of the space. Empty for personal spaces, which clients name themselves."
                                   },
+                                  "displayName": {
+                                    "type": "string",
+                                    "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                                  },
                                   "personal": {
                                     "type": "boolean",
                                     "description": "Whether this is a personal space."
@@ -186129,6 +186139,7 @@
                                   "id",
                                   "key",
                                   "name",
+                                  "displayName",
                                   "personal",
                                   "knowledgeBase",
                                   "mine"
@@ -186486,6 +186497,13 @@
                                       "null"
                                     ]
                                   },
+                                  "displayName": {
+                                    "description": "Name to show, as `displayName` of a space in a result, or null.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
                                   "personal": {
                                     "type": "boolean",
                                     "description": "Whether this is a personal space."
@@ -186505,6 +186523,7 @@
                                   "id",
                                   "key",
                                   "name",
+                                  "displayName",
                                   "personal",
                                   "mine",
                                   "count"
@@ -186769,6 +186788,7 @@
                         "id": "01929b1e-7c1a-7000-8000-000000000010",
                         "key": "ITOPS",
                         "name": "IT Operations",
+                        "displayName": "IT Operations",
                         "personal": false,
                         "knowledgeBase": false,
                         "mine": false
@@ -186810,6 +186830,7 @@
                         "id": "01929b1e-7c1a-7000-8000-000000000010",
                         "key": "ITOPS",
                         "name": "IT Operations",
+                        "displayName": "IT Operations",
                         "personal": false,
                         "mine": false,
                         "count": 1
@@ -193038,6 +193059,10 @@
                       "type": "string",
                       "description": "Name of the space. Empty for a personal space that has no name of its own."
                     },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                    },
                     "description": {
                       "type": "string",
                       "description": "Short description, up to 1000 characters."
@@ -193146,6 +193171,7 @@
                     "type",
                     "audience",
                     "name",
+                    "displayName",
                     "description",
                     "visibility",
                     "discoverable",
@@ -193172,6 +193198,7 @@
                   "type": "standard",
                   "audience": null,
                   "name": "IT Operations",
+                  "displayName": "IT Operations",
                   "description": "Runbooks and how-tos of the IT team",
                   "visibility": "organization",
                   "discoverable": false,
@@ -193538,6 +193565,10 @@
                             "type": "string",
                             "description": "Name of the space. Empty for a personal space that has no name of its own."
                           },
+                          "displayName": {
+                            "type": "string",
+                            "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                          },
                           "description": {
                             "type": "string",
                             "description": "Short description, up to 1000 characters."
@@ -193646,6 +193677,7 @@
                           "type",
                           "audience",
                           "name",
+                          "displayName",
                           "description",
                           "visibility",
                           "discoverable",
@@ -193691,6 +193723,7 @@
                       "type": "standard",
                       "audience": null,
                       "name": "IT Operations",
+                      "displayName": "IT Operations",
                       "description": "Runbooks and how-tos of the IT team",
                       "visibility": "organization",
                       "discoverable": false,
@@ -230272,6 +230305,10 @@
                           "type": "string",
                           "description": "Name of the space. Empty for a personal space that has no name of its own."
                         },
+                        "displayName": {
+                          "type": "string",
+                          "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                        },
                         "description": {
                           "type": "string",
                           "description": "Short description, up to 1000 characters."
@@ -230402,6 +230439,7 @@
                         "type",
                         "audience",
                         "name",
+                        "displayName",
                         "description",
                         "visibility",
                         "discoverable",
@@ -230443,6 +230481,7 @@
                     "type": "standard",
                     "audience": null,
                     "name": "IT Operations",
+                    "displayName": "IT Operations",
                     "description": "Runbooks and how-tos of the IT team",
                     "visibility": "organization",
                     "discoverable": false,
@@ -230756,6 +230795,10 @@
                             "type": "string",
                             "description": "Name of the space. Empty for a personal space that has no name of its own."
                           },
+                          "displayName": {
+                            "type": "string",
+                            "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                          },
                           "description": {
                             "type": "string",
                             "description": "Short description, up to 1000 characters."
@@ -230864,6 +230907,7 @@
                           "type",
                           "audience",
                           "name",
+                          "displayName",
                           "description",
                           "visibility",
                           "discoverable",
@@ -230909,6 +230953,7 @@
                       "type": "standard",
                       "audience": null,
                       "name": "IT Operations",
+                      "displayName": "IT Operations",
                       "description": "Runbooks and how-tos of the IT team",
                       "visibility": "organization",
                       "discoverable": false,
@@ -231111,6 +231156,10 @@
                       "type": "string",
                       "description": "Name of the space. Empty for a personal space that has no name of its own."
                     },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                    },
                     "description": {
                       "type": "string",
                       "description": "Short description, up to 1000 characters."
@@ -231241,6 +231290,7 @@
                     "type",
                     "audience",
                     "name",
+                    "displayName",
                     "description",
                     "visibility",
                     "discoverable",
@@ -231269,6 +231319,7 @@
                   "type": "standard",
                   "audience": null,
                   "name": "IT Operations",
+                  "displayName": "IT Operations",
                   "description": "Runbooks and how-tos of the IT team",
                   "visibility": "organization",
                   "discoverable": false,
@@ -231519,6 +231570,10 @@
                       "type": "string",
                       "description": "Name of the space. Empty for a personal space that has no name of its own."
                     },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                    },
                     "description": {
                       "type": "string",
                       "description": "Short description, up to 1000 characters."
@@ -231627,6 +231682,7 @@
                     "type",
                     "audience",
                     "name",
+                    "displayName",
                     "description",
                     "visibility",
                     "discoverable",
@@ -231653,6 +231709,7 @@
                   "type": "standard",
                   "audience": null,
                   "name": "IT Operations",
+                  "displayName": "IT Operations",
                   "description": "Runbooks and how-tos of the IT team",
                   "visibility": "organization",
                   "discoverable": false,
@@ -237501,7 +237558,13 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991,
-                        "description": "Number of articles in the folder and below that the caller can read."
+                        "description": "Number of articles in the folder and below that the caller can read: published or live, in the default language, neither archived nor in the trash."
+                      },
+                      "drafts": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of articles in the folder and below that the caller can read and that were never published."
                       }
                     },
                     "required": [
@@ -237515,7 +237578,8 @@
                       "effectiveContactEmail",
                       "contactSource",
                       "position",
-                      "articles"
+                      "articles",
+                      "drafts"
                     ],
                     "additionalProperties": false,
                     "description": "A folder of a knowledge base, at any depth."
@@ -237534,7 +237598,8 @@
                     "effectiveContactEmail": "it@example.org",
                     "contactSource": "category",
                     "position": "a0",
-                    "articles": 12
+                    "articles": 12,
+                    "drafts": 2
                   }
                 ]
               }
@@ -244583,6 +244648,10 @@
                       "type": "string",
                       "description": "Name of the space. Empty for a personal space that has no name of its own."
                     },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                    },
                     "description": {
                       "type": "string",
                       "description": "Short description, up to 1000 characters."
@@ -244691,6 +244760,7 @@
                     "type",
                     "audience",
                     "name",
+                    "displayName",
                     "description",
                     "visibility",
                     "discoverable",
@@ -244717,6 +244787,7 @@
                   "type": "standard",
                   "audience": null,
                   "name": "IT Operations",
+                  "displayName": "IT Operations",
                   "description": "Runbooks and how-tos of the IT team",
                   "visibility": "organization",
                   "discoverable": false,
@@ -271351,6 +271422,10 @@
                       "type": "string",
                       "description": "Name of the space. Empty for a personal space that has no name of its own."
                     },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language."
+                    },
                     "description": {
                       "type": "string",
                       "description": "Short description, up to 1000 characters."
@@ -271459,6 +271534,7 @@
                     "type",
                     "audience",
                     "name",
+                    "displayName",
                     "description",
                     "visibility",
                     "discoverable",
@@ -271485,6 +271561,7 @@
                   "type": "standard",
                   "audience": null,
                   "name": "IT Operations",
+                  "displayName": "IT Operations",
                   "description": "Runbooks and how-tos of the IT team",
                   "visibility": "organization",
                   "discoverable": false,

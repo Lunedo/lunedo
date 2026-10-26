@@ -187,6 +187,7 @@ describe.skipIf(!baseUrl)("search", () => {
           count: 2,
           key: w.shared.key,
           name: "Shared space",
+          displayName: "Shared space",
           personal: false,
           mine: false,
         },
@@ -195,6 +196,7 @@ describe.skipIf(!baseUrl)("search", () => {
           count: 1,
           key: w.second.key,
           name: "Second space",
+          displayName: "Second space",
           personal: false,
           mine: false,
         },
@@ -558,7 +560,15 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(own.results.map((hit) => hit.itemId)).toEqual([diary.id]);
     expect(own.results[0]?.space).toMatchObject({ id: personal.id, personal: true, mine: true });
     expect(own.facets?.spaces).toEqual([
-      { value: personal.id, count: 1, key: personal.key, name: personal.name, personal: true, mine: true },
+      {
+        value: personal.id,
+        count: 1,
+        key: personal.key,
+        name: personal.name,
+        displayName: personal.displayName,
+        personal: true,
+        mine: true,
+      },
     ]);
     const elsewhere = await organization();
     await join(elsewhere.id, w.authorId);

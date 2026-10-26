@@ -253,7 +253,7 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
           const href = `/spaces/${encodeURIComponent(entry.key)}`;
           return {
             id: `space:${entry.id}`,
-            label: entry.name || entry.key,
+            label: entry.displayName || entry.key,
             description: entry.key,
             icon: Layers,
             href,

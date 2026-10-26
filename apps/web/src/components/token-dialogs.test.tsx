@@ -130,7 +130,12 @@ describe("token templates", () => {
 
 describe("content access of a token", () => {
   const organizationId = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
-  const knowledgeBase = { id: "01929b1e-0000-7000-8000-0000000000b1", name: "Hilfe", key: "HELP" };
+  const knowledgeBase = {
+    id: "01929b1e-0000-7000-8000-0000000000b1",
+    name: "Hilfe",
+    displayName: "Hilfe",
+    key: "HELP",
+  };
 
   async function open(onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ld_secret" }))) {
     mockApi({

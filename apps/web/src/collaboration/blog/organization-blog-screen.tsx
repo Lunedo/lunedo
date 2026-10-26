@@ -94,7 +94,7 @@ export function OrganizationBlogScreen() {
                   { value: "all", label: t("blog.allSpaces") },
                   ...(spaces.data ?? []).map((space) => ({
                     value: space.id,
-                    label: space.name || space.key,
+                    label: space.displayName || space.key,
                   })),
                 ]}
               />

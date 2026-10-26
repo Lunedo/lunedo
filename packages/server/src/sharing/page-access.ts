@@ -22,6 +22,7 @@ import {
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import { lockSpaces } from "../spaces/items.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { SpaceRole, TreeItemKind } from "../spaces/schema.js";
@@ -165,7 +166,7 @@ export class PageAccessService {
 
   async #item(executor: Executor, itemId: string): Promise<ItemRow> {
     const result = await executor.execute<ItemRow>(sql`
-      select t.id, t.space_id, t.title, t.kind, s.organization_id, s.name as space_name, s.key as space_key
+      select t.id, t.space_id, t.title, t.kind, s.organization_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key
       from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
@@ -934,7 +935,7 @@ export class PageAccessService {
       where t.id = r.item_id and r.orphaned_at is null
         and ${restrictionListedBy(sql`r`, (kind, id) => holderMatches(kind, id, sql`${accountId}::uuid`))}
         and not ${restrictionHasActiveHolder(sql`r`, sql`s.organization_id`)}
-      returning r.item_id, r.kind, t.title, t.space_id, s.name as space_name, s.key as space_key, s.organization_id`);
+      returning r.item_id, r.kind, t.title, t.space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, s.organization_id`);
     const notified = new Set<string>();
     for (const row of affected.rows) {
       if (notified.has(row.item_id)) continue;

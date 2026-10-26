@@ -120,7 +120,10 @@ function SpaceFilter({ value, onChange }: { value: string; onChange: (value: str
   });
   const options = [
     { value: "", label: t("notifications.allSpaces") },
-    ...(spaces.data?.items ?? []).map((space) => ({ value: space.id, label: space.name || space.key })),
+    ...(spaces.data?.items ?? []).map((space) => ({
+      value: space.id,
+      label: space.displayName || space.key,
+    })),
   ];
   return (
     <FilterMenu

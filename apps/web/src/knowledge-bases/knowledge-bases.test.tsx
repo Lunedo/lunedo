@@ -1,15 +1,18 @@
+import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getSchema } from "@tiptap/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requiredSectionDecorations } from "../editor/extensions/required-sections.js";
 import { schemaExtensions } from "../editor/schema/extensions.js";
+import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { SpaceContext, type SpaceContextValue } from "../spaces/space-context.js";
 import type { SpaceWithRole } from "../spaces/space-queries.js";
 import { canContain, creatableKinds } from "../spaces/space-types.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { articleTypeIcon, articleTypeLabel, knownArticleType } from "./article-types.js";
 import { NamedIcon } from "./icons.js";
+import { KnowledgeBaseScreen } from "./knowledge-base-screen.js";
 import { PortalLink } from "./portal-link.js";
 import type { PortalSettings } from "./queries.js";
 import { AddressPanel } from "./settings/address-screen.js";
@@ -390,5 +393,65 @@ describe("the article templates of a knowledge base", () => {
         required: true,
       }),
     );
+  });
+});
+
+describe("the article list of a knowledge base", () => {
+  async function showList(canEdit: boolean) {
+    const category = {
+      id: "01929b1e-0000-7000-8000-0000000000d1",
+      parentId: null,
+      level: 1,
+      title: "IT",
+      description: "",
+      icon: null,
+      contactEmail: null,
+      effectiveContactEmail: null,
+      contactSource: null,
+      position: "a0",
+      articles: 46,
+      drafts: 3,
+    };
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/categories`]: () => ({ body: [category] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/articles`]: () => ({ body: { items: [], nextCursor: null } }),
+      [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/languages`]: () => ({
+        body: {
+          spaceId: SPACE_ID,
+          defaultLanguage: "en",
+          languages: ["en"],
+          articles: 46,
+          progress: [],
+          searchUpdate: null,
+        },
+      }),
+    });
+    const context: SpaceContextValue = {
+      space: knowledgeBase(),
+      canEdit,
+      openMove: () => undefined,
+      openCopy: () => undefined,
+      openCreate: () => undefined,
+    };
+    const root = createRootRoute({
+      component: () => (
+        <PreferencesProvider>
+          <SpaceContext value={context}>
+            <KnowledgeBaseScreen />
+          </SpaceContext>
+        </PreferencesProvider>
+      ),
+    });
+    const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+    await renderWithProviders(<RouterProvider router={router} />);
+    return screen.findByRole("heading", { name: /^IT/ });
+  }
+
+  it("counts the published articles of a category and the drafts as their own number for editors", async () => {
+    expect((await showList(true)).textContent).toBe("IT46 articles · 3 drafts");
+  });
+
+  it("does not count drafts for readers", async () => {
+    expect((await showList(false)).textContent).toBe("IT46 articles");
   });
 });

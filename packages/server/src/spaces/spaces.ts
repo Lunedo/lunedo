@@ -23,6 +23,7 @@ import {
   mergeGrants,
   SpaceError,
 } from "./common.js";
+import { spaceDisplayName } from "./display-name.js";
 import { defaultPageMode, insertPage } from "./items.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "./keys.js";
 import {
@@ -51,6 +52,7 @@ export interface Space {
   type: SpaceType;
   audience: KnowledgeBaseAudience | null;
   name: string;
+  displayName: string;
   description: string;
   visibility: SpaceVisibility;
   discoverable: boolean;
@@ -91,6 +93,7 @@ type SpaceRow = {
   personal_of: string | null;
   owner_account_id: string | null;
   owner_name: string | null;
+  display_name: string;
   overview_item_id: string | null;
   archived: boolean;
   export_enabled: boolean;
@@ -101,7 +104,7 @@ type SpaceRow = {
 const SPACE_COLUMNS = sql`s.id, s.key, s.type, s.audience, s.name, s.description, s.visibility, s.discoverable,
   s.confidential, s.one_on_one, s.quarantined, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
-  s.overview_item_id, s.archived_at is not null as archived,
+  ${spaceDisplayName(sql`s`)} as display_name, s.overview_item_id, s.archived_at is not null as archived,
   coalesce((select (sv.value)::boolean from setting_values sv
     where sv.key = ${exportEnabledSetting.key} and sv.level = 'space' and sv.scope_id = s.id
       and sv.value is not null), true) as export_enabled,
@@ -118,6 +121,7 @@ function toSpace(row: SpaceRow): Space {
     type: row.type,
     audience: row.audience,
     name: row.name,
+    displayName: row.display_name,
     description: row.description,
     visibility: row.visibility,
     discoverable: row.discoverable,

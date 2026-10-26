@@ -144,7 +144,7 @@ export function SpacesField({
           );
           const items: ComboboxItem[] = spaces.items.map((space) => ({
             value: space.id,
-            label: space.name,
+            label: space.displayName,
             description: space.key,
           }));
           return { items };

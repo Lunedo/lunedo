@@ -16,6 +16,7 @@ import {
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { visibleItem } from "../spaces/visibility.js";
+import { countedArticle } from "./rules.js";
 
 export const MAX_CATEGORY_GROUPS = 50;
 
@@ -156,8 +157,7 @@ export class CategoryAccessService {
         (select count(*)::int from page_restriction_holders h
           where h.item_id = t.id and h.kind = 'view' and h.principal_kind = 'account') as visible_people,
         (select count(*)::int from tree_items a join spaces sa on sa.id = a.space_id
-          where a.space_id = t.space_id and a.kind = 'page' and t.id = any(a.path) and a.trash_entry_id is null
-            and a.translation_of is null
+          where a.space_id = t.space_id and t.id = any(a.path) and ${countedArticle(sql`a`)}
             and (${manages} or ${visibleItem(this.#authorization, actor, sql`a`, sql`sa`)})) as articles,
         (select count(*)::int from tree_items c join spaces sc on sc.id = c.space_id
           where c.parent_id = t.id and c.kind = 'folder' and c.trash_entry_id is null
@@ -354,8 +354,8 @@ export class CategoryAccessService {
       changes.filter((change) => change.before === 3 && change.after < 3).map((change) => change.accountId),
     );
     const articles = await tx.execute<{ count: number }>(sql`
-      select count(*)::int as count from tree_items where kind = 'page' and trash_entry_id is null
-        and translation_of is null and ${itemId}::uuid = any(path)`);
+      select count(*)::int as count from tree_items t where ${countedArticle(sql`t`)}
+        and ${itemId}::uuid = any(t.path)`);
     const audience = await tx.execute<{ audience: string | null }>(
       sql`select audience from spaces where id = ${spaceId}`,
     );
@@ -403,8 +403,8 @@ export class CategoryAccessService {
         return;
       const widened = visibilityWidens(before.visible, next.visible);
       const articles = await tx.execute<{ count: number }>(sql`
-        select count(*)::int as count from tree_items where kind = 'page' and trash_entry_id is null
-          and translation_of is null and ${itemId}::uuid = any(path)`);
+        select count(*)::int as count from tree_items t where ${countedArticle(sql`t`)}
+          and ${itemId}::uuid = any(t.path)`);
       const count = Number(articles.rows[0]?.count ?? 0);
       if (widened && change.confirmWidening !== true) {
         throw new SpaceError(

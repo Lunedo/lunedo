@@ -184,6 +184,7 @@ function RecentRequests() {
 
 export function NoPageAccess({ pageId }: { pageId: string }) {
   const { t } = useTranslation();
+  useDocumentTitle(t("errors.notFoundTitle"));
   const [sent, setSent] = useState(false);
   const [showMine, setShowMine] = useState(false);
   return (

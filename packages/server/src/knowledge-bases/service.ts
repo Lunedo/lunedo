@@ -22,6 +22,7 @@ import { audienceVisibility, type Space, type SpaceService } from "../spaces/spa
 import { visibleItem } from "../spaces/visibility.js";
 import type { PageTemplate, TemplateService } from "../templates/templates.js";
 import { folderIds, folderTitles } from "./folders.js";
+import { countedArticle, draftArticle } from "./rules.js";
 import { type TranslationState, translationState } from "./translations.js";
 
 export const MAX_AUDIENCE_GROUPS = 100;
@@ -60,6 +61,7 @@ export interface Category {
   contactSource: ContactSource | null;
   position: string;
   articles: number;
+  drafts: number;
 }
 
 export interface CategoryReference {
@@ -234,7 +236,7 @@ export class KnowledgeBaseService {
   async #openArticles(executor: Executor, spaceId: string): Promise<number> {
     const result = await executor.execute<{ articles: number }>(sql`
       select count(*)::int as articles from tree_items t
-      where t.space_id = ${spaceId} and t.kind = 'page' and t.trash_entry_id is null
+      where t.space_id = ${spaceId} and ${countedArticle(sql`t`)}
         and not exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view')`);
     return Number(result.rows[0]?.articles ?? 0);
   }
@@ -376,12 +378,16 @@ export class KnowledgeBaseService {
       icon: string | null;
       contact_email: string | null;
       articles: number;
+      drafts: number;
     }>(sql`
       select c.id, c.parent_id, cardinality(c.path) as level, c.title, c.description, c.position,
         kc.icon, kc.contact_email,
         (select count(*)::int from tree_items a join spaces sa on sa.id = a.space_id
-          where a.space_id = c.space_id and a.kind = 'page' and c.id = any(a.path) and a.archived_root_id is null
-            and ${visibleItem(this.#authorization, viewer, sql`a`, sql`sa`)}) as articles
+          where a.space_id = c.space_id and c.id = any(a.path) and ${countedArticle(sql`a`)}
+            and ${visibleItem(this.#authorization, viewer, sql`a`, sql`sa`)}) as articles,
+        (select count(*)::int from tree_items a join spaces sa on sa.id = a.space_id
+          where a.space_id = c.space_id and c.id = any(a.path) and ${draftArticle(sql`a`)}
+            and ${visibleItem(this.#authorization, viewer, sql`a`, sql`sa`)}) as drafts
       from tree_items c join spaces s on s.id = c.space_id
       left join knowledge_base_categories kc on kc.item_id = c.id
       where c.space_id = ${spaceId} and c.kind = 'folder'
@@ -421,6 +427,7 @@ export class KnowledgeBaseService {
         contactSource: source,
         position: row.position,
         articles: Number(row.articles),
+        drafts: Number(row.drafts),
       };
     });
   }

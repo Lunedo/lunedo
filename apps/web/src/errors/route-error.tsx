@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, isApiError } from "../api/request.js";
 import { isChunkLoadError, reloadAfterChunkError } from "../app-update/app-update.js";
+import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { isRetryable } from "./failure.js";
 import { problemMessage } from "./problem-message.js";
 
@@ -15,6 +16,7 @@ export function AppNotFoundScreen() {
 
 export function NotFoundScreen({ inShell = false }: { inShell?: boolean }) {
   const { t } = useTranslation();
+  useDocumentTitle(t("errors.notFoundTitle"));
   return (
     <main
       {...(inShell ? { id: "main" } : {})}
@@ -40,6 +42,7 @@ export function NotFoundScreen({ inShell = false }: { inShell?: boolean }) {
 
 function ForbiddenScreen() {
   const { t } = useTranslation();
+  useDocumentTitle(t("errors.forbiddenTitle"));
   return (
     <div className="flex min-h-full items-center justify-center p-6">
       <EmptyState

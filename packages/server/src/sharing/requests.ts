@@ -8,6 +8,7 @@ import { spaceRoleConditionFor } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { SpacePermissionService } from "../spaces/permissions.js";
 import type { SpaceRole } from "../spaces/schema.js";
@@ -85,7 +86,7 @@ export class AccessRequestService {
     return sql`
       select r.id, r.requester_id, ${this.#people.visibleName(viewer, sql`ra`)} as requester_name,
         case when ${this.#people.colleagueCondition(viewer, sql`ra.id`)} then ra.email end as requester_email,
-        r.space_id, s.name as space_name, s.key as space_key, s.organization_id, r.item_id,
+        r.space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, s.organization_id, r.item_id,
         t.title as item_title, t.kind::text as item_kind, r.message, r.status, r.role, r.decided_by,
         ${this.#people.visibleName(viewer, sql`da`)} as decided_by_name, r.decided_at, r.created_at
       from access_requests r join accounts ra on ra.id = r.requester_id join spaces s on s.id = r.space_id

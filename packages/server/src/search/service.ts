@@ -5,6 +5,7 @@ import { holderMatches } from "../authorization/item-access.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { actorIdOf } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { PeopleService } from "../spaces/people.js";
 import { type PageStatus, pageStatusEnabledCondition } from "../spaces/status.js";
 import { visibleItem } from "../spaces/visibility.js";
@@ -67,6 +68,7 @@ export interface SearchSpace {
   id: string;
   key: string;
   name: string;
+  displayName: string;
   personal: boolean;
   knowledgeBase: boolean;
   mine: boolean;
@@ -116,6 +118,7 @@ export interface SearchFacets {
   spaces: (FacetCount<string | null> & {
     key: string | null;
     name: string | null;
+    displayName: string | null;
     personal: boolean;
     mine: boolean;
   })[];
@@ -395,7 +398,7 @@ export class SearchService {
 
   async #visibleSpaces(principal: Principal, organizationId: string): Promise<Map<string, SearchSpace>> {
     const result = await this.#database.execute<SearchSpace & Record<string, unknown>>(sql`
-      select s.id, s.key, s.name, s.personal_of is not null as personal, s.type = 'knowledgeBase' as "knowledgeBase",
+      select s.id, s.key, s.name, ${spaceDisplayName(sql`s`)} as "displayName", s.personal_of is not null as personal, s.type = 'knowledgeBase' as "knowledgeBase",
         coalesce(s.personal_of = ${actorIdOf(principal)}, false) as mine
       from spaces s
       where (s.organization_id = ${organizationId} or s.personal_of is not null)
@@ -654,6 +657,7 @@ export class SearchService {
           count: facet.count,
           key: space?.key ?? null,
           name: space?.name ?? null,
+          displayName: space?.displayName ?? null,
           personal: space?.personal ?? false,
           mine: space?.mine ?? false,
         };

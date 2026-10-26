@@ -28,12 +28,14 @@ function ArticleGroup({
   heading,
   icon,
   count,
+  drafts,
   categoryId,
   type,
 }: {
   heading: string;
   icon: string | null;
   count: number | null;
+  drafts: number;
   categoryId: string | null;
   type: ArticleTypeFilter;
 }) {
@@ -161,6 +163,9 @@ function ArticleGroup({
         {count !== null ? (
           <span className="text-sm font-normal text-text-muted">
             {t("knowledgeBase.list.articleCount", { count, formatted: format.number(count) })}
+            {drafts > 0
+              ? ` · ${t("knowledgeBase.list.draftCount", { count: drafts, formatted: format.number(drafts) })}`
+              : null}
           </span>
         ) : null}
       </h2>
@@ -302,6 +307,7 @@ export function KnowledgeBaseScreen() {
             heading={category.title}
             icon={category.icon}
             count={type === "all" ? category.articles : null}
+            drafts={type === "all" && canEdit ? category.drafts : 0}
             categoryId={category.id}
             type={type}
           />
@@ -312,6 +318,7 @@ export function KnowledgeBaseScreen() {
             heading={t("knowledgeBase.list.withoutCategory")}
             icon={null}
             count={null}
+            drafts={0}
             categoryId={null}
             type={type}
           />

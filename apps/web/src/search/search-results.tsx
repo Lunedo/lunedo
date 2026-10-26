@@ -94,7 +94,7 @@ export function hitTitle(t: TFunction, hit: SearchHit): string {
 export function spaceName(t: TFunction, space: NonNullable<SearchHit["space"]>): string {
   if (space.name) return space.name;
   if (space.mine) return t("spaces.personal.mine");
-  return space.personal ? t("spaces.personal.label") : space.key;
+  return space.displayName || space.key;
 }
 
 export function hitPathEntries(t: TFunction, hit: SearchHit): { id: string; title: string }[] {

@@ -58,12 +58,7 @@ export function SearchFilterChips({
         ? {
             value: entry.id,
             label:
-              entry.name ||
-              (entry.mine
-                ? t("spaces.personal.mine")
-                : entry.personal
-                  ? t("spaces.personal.label")
-                  : (entry.key ?? "")),
+              entry.name || (entry.mine ? t("spaces.personal.mine") : entry.displayName || (entry.key ?? "")),
             count: entry.count,
           }
         : null,

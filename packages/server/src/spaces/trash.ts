@@ -8,6 +8,7 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
+import { spaceDisplayName } from "./display-name.js";
 import { formerAdministratorCondition } from "./former-administrators.js";
 import { positionBetween } from "./fractional-index.js";
 import { lockSpaces } from "./items.js";
@@ -60,7 +61,7 @@ type EntryRow = {
   former_parent_entry_id: string | null;
 };
 
-const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, s.name as space_name, s.organization_id,
+const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name, s.organization_id,
   s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
   e.purging, e.deleted_at, e.deleted_by, e.stage_two_at,
   (select pe.id from tree_items root

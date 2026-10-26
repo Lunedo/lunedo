@@ -11161,7 +11161,8 @@
       "total": "{count, plural, one {# article} other {# articles}} in areas",
       "emptyFiltered": "No articles of this type here.",
       "languages": "Translations",
-      "articleCount": "{count, plural, one {{formatted} article} other {{formatted} articles}}"
+      "articleCount": "{count, plural, one {{formatted} article} other {{formatted} articles}}",
+      "draftCount": "{count, plural, one {{formatted} draft} other {{formatted} drafts}}"
     },
     "create": {
       "typeLabel": "Type of space",

@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { spaceRoleCondition } from "../authorization/space-access.js";
+import { languageSetting } from "../settings/builtin.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
@@ -564,6 +565,24 @@ describe.skipIf(!baseUrl)("spaces", () => {
         sql`select count(*) as count from spaces where personal_of = ${owner}`,
       );
       expect(Number(count.rows[0]?.count)).toBe(1);
+    });
+
+    it("names a personal space without a name of its own after its owner, in the owner's language", async () => {
+      const owner = await account();
+      const personal = await test.services.personalSpaces.ensure(accountPrincipal(owner), "Personal space");
+      if (!personal) throw new Error("no personal space");
+      const ownerName = (
+        await test.database.execute<{ name: string }>(sql`select name from accounts where id = ${owner}`)
+      ).rows[0]?.name;
+      const shown = async () => (await test.services.spaces.get(personal.id))?.displayName;
+      expect(await shown()).toBe(`Personal space of ${ownerName}`);
+      await test.settings.set(languageSetting, { user: owner }, "user", "de");
+      expect(await shown()).toBe(`Persönlicher Space von ${ownerName}`);
+      await test.services.spaces.update(accountPrincipal(owner), personal.id, { name: "Notizen" });
+      expect(await shown()).toBe("Notizen");
+      const org = await organization();
+      const other = await space(org.id, org.owner);
+      expect(other.displayName).toBe(other.name);
     });
 
     it("follows the instance setting and is only for standard accounts", async () => {

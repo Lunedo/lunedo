@@ -240,7 +240,7 @@ export function MyTasksScreen() {
 
   const spaceOptions = [
     { value: "", label: t("tasks.filters.all") },
-    ...(spaces.data?.items ?? []).map((space) => ({ value: space.id, label: space.name })),
+    ...(spaces.data?.items ?? []).map((space) => ({ value: space.id, label: space.displayName })),
   ];
   const spaceName =
     search.space &&

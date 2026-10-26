@@ -29,6 +29,7 @@ function hit(id: string, title: string, spaceId = SPACE) {
       id: spaceId,
       key: spaceId === SPACE ? "OPS" : "SEC",
       name: spaceId === SPACE ? "Operations" : "Security",
+      displayName: spaceId === SPACE ? "Operations" : "Security",
       personal: false,
       knowledgeBase: false,
       mine: false,

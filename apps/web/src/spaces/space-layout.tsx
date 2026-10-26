@@ -37,6 +37,7 @@ import { ReviewNavLink } from "../knowledge-bases/reviews/home-reviews.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
 import { useWatchEntries } from "../notifications/watch-menu.js";
+import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
 import { SidebarEntry } from "../shell/app-sidebar.js";
 import { ContentPending, useShownLocation } from "../shell/navigation-pending.js";
@@ -104,14 +105,7 @@ export function SpaceLayout() {
     return (
       <main id="main" tabIndex={-1} className="flex-1 p-6 outline-none">
         {isApiError(resolved.error, "notFound") ? (
-          <Notice variant="warning" title={t("spaces.notFound.title")}>
-            <p>{t("spaces.notFound.description", { key: spaceKey })}</p>
-            <p className="mt-2">
-              <Link to="/spaces" className="text-accent underline">
-                {t("spaces.notFound.back")}
-              </Link>
-            </p>
-          </Notice>
+          <SpaceNotFound spaceKey={spaceKey} />
         ) : (
           <LoadError
             what={t("spaces.loadFailed")}
@@ -626,5 +620,20 @@ export function SpaceOverviewRedirect() {
         </Button>
       </Notice>
     </div>
+  );
+}
+
+function SpaceNotFound({ spaceKey }: { spaceKey: string }) {
+  const { t } = useTranslation();
+  useDocumentTitle(t("spaces.notFound.title"));
+  return (
+    <Notice variant="warning" title={t("spaces.notFound.title")}>
+      <p>{t("spaces.notFound.description", { key: spaceKey })}</p>
+      <p className="mt-2">
+        <Link to="/spaces" className="text-accent underline">
+          {t("spaces.notFound.back")}
+        </Link>
+      </p>
+    </Notice>
   );
 }

@@ -819,5 +819,6 @@ describe("an address that does not exist", () => {
     expect(await screen.findByText("Page not found")).toBeTruthy();
     expect(screen.getByRole("link", { name: "My tasks" })).toBeTruthy();
     expect(screen.getByRole("main").id).toBe("main");
+    await waitFor(() => expect(document.title).toBe("Page not found · Lunedo"));
   });
 });

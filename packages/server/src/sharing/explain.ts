@@ -6,6 +6,7 @@ import type { AuthorizationService, Decision, Grant } from "../authorization/ser
 import { organizationMembership } from "../authorization/space-access.js";
 import type { Database, Executor } from "../database/database.js";
 import { SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { PeopleService } from "../spaces/people.js";
 import { highestSpaceRole } from "../spaces/roles.js";
 import type { SpaceRole } from "../spaces/schema.js";
@@ -588,7 +589,7 @@ export class AccessExplanationService {
         where ps.principal_kind = 'group' and gm.account_id = any(${ids()})
           and (gm.expires_at is null or gm.expires_at > now())
       ), ranked as (
-        select h.account_id, s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
+        select h.account_id, s.id as space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.id as item_id, t.title,
           ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable,
           ps.role, ps.principal_kind, ps.principal_id, g.name as group_name, ps.include_descendants,
           ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`h.account_id`, sql`s.organization_id`)} as active,
@@ -601,7 +602,7 @@ export class AccessExplanationService {
       select * from ranked where position <= 5000 order by account_id, position`);
     const links = await this.#database.execute<LinkRow>(sql`
       with ranked as (
-        select la.account_id, s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
+        select la.account_id, s.id as space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, t.id as item_id, t.title,
           ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable, l.id as link_id, l.scope::text as scope,
           (l.scope not in ('people', 'organization')
             or ${organizationMembership(sql`s.organization_id`, sql`la.account_id`)}) as active,

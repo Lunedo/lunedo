@@ -24,6 +24,7 @@ import type { NotificationService } from "../notifications/service.js";
 import { timeFormatSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { PageDocumentService } from "../spaces/documents.js";
 import type { IncludeService } from "../spaces/includes.js";
 import type { PeopleService } from "../spaces/people.js";
@@ -790,7 +791,9 @@ export class ExportService {
         name: string;
         key: string;
         organization_id: string | null;
-      }>(sql`select id, name, key, organization_id from spaces where id = ${target.spaceId}`);
+      }>(
+        sql`select s.id, ${spaceDisplayName(sql`s`)} as name, s.key, s.organization_id from spaces s where s.id = ${target.spaceId}`,
+      );
       const row = result.rows[0];
       return row
         ? {
@@ -810,7 +813,7 @@ export class ExportService {
       key: string;
       organization_id: string | null;
     }>(sql`
-      select t.space_id, s.name, s.key, s.organization_id from tree_items t join spaces s on s.id = t.space_id
+      select t.space_id, ${spaceDisplayName(sql`s`)} as name, s.key, s.organization_id from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${target.pageId}`);
     const row = result.rows[0];
     if (!row || !readable) return null;

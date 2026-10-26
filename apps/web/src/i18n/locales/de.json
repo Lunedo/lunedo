@@ -11161,7 +11161,8 @@
       "total": "{count, plural, one {# Artikel} other {# Artikel}} in Bereichen",
       "emptyFiltered": "Hier gibt es keine Artikel dieser Art.",
       "languages": "Übersetzungen",
-      "articleCount": "{count, plural, one {{formatted} Artikel} other {{formatted} Artikel}}"
+      "articleCount": "{count, plural, one {{formatted} Artikel} other {{formatted} Artikel}}",
+      "draftCount": "{count, plural, one {{formatted} Entwurf} other {{formatted} Entwürfe}}"
     },
     "create": {
       "typeLabel": "Art des Space",

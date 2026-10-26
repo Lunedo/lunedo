@@ -218,7 +218,15 @@ const categorySchema = z
     articles: z
       .number()
       .int()
-      .describe("Number of articles in the folder and below that the caller can read."),
+      .describe(
+        "Number of articles in the folder and below that the caller can read: published or live, in the default language, neither archived nor in the trash.",
+      ),
+    drafts: z
+      .number()
+      .int()
+      .describe(
+        "Number of articles in the folder and below that the caller can read and that were never published.",
+      ),
   })
   .describe("A folder of a knowledge base, at any depth.");
 
@@ -234,6 +242,7 @@ const exampleCategory = {
   contactSource: "category" as const,
   position: "a0",
   articles: 12,
+  drafts: 2,
 };
 
 const categoryUpdateSchema = z

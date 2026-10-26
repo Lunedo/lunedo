@@ -74,6 +74,46 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
       where id = (select published_version_id from tree_items where id = ${itemId})`);
   }
 
+  it("counts the same articles of a category in the list, the access dialog and the portal", async () => {
+    const { editor, kb } = await setup();
+    const area = await test.services.tree.create(editor, kb.id, {
+      kind: "folder",
+      title: "Geräte",
+      placement: { parentId: null },
+    });
+    const topic = await test.services.tree.create(editor, kb.id, {
+      kind: "folder",
+      title: "Drucker",
+      placement: { parentId: area.id },
+    });
+    const translated = await article(editor, kb.id, "Drucker einrichten", "Treiber laden.", topic.id);
+    await test.services.translations.create(editor, translated, "en");
+    await article(editor, kb.id, "Laptop tauschen", "Termin buchen.", area.id);
+    const archived = await article(editor, kb.id, "Altes Telefon", "Nicht mehr nutzen.", area.id);
+    await test.services.archive.archive(editor, archived);
+    const trashed = await article(editor, kb.id, "Fax", "Abgeschaltet.", area.id);
+    await test.services.trash.deleteItem(editor, trashed);
+    await test.services.tree.create(editor, kb.id, {
+      kind: "page",
+      title: "Monitor",
+      placement: { parentId: topic.id },
+    });
+    await test.services.search.indexer.drain();
+
+    const listed = (await test.services.knowledgeBases.categories(editor, kb.id)).find(
+      (c) => c.id === area.id,
+    );
+    const dialog = (await test.services.categoryAccess.list(editor, kb.id)).find((c) => c.itemId === area.id);
+    const portal = await test.services.portals.config(kb.id);
+    if (!portal) throw new Error("no portal");
+    const shown = (await test.services.portalReader.categories(ANONYMOUS, portal)).find(
+      (c) => c.id === area.id,
+    );
+    expect(listed).toMatchObject({ articles: 2, drafts: 1 });
+    expect(dialog?.articles).toBe(2);
+    expect(shown?.articles).toBe(2);
+  });
+
   it("starts a new knowledge base in the language of its organization", async () => {
     const org = await organization();
     const owner = accountPrincipal(org.owner);

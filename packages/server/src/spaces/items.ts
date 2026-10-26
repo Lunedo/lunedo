@@ -19,6 +19,7 @@ import type { SettingsService } from "../settings/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import { insertInitialWhiteboard } from "../whiteboards/initial.js";
 import { actorIdOf, SpaceError } from "./common.js";
+import { spaceDisplayName } from "./display-name.js";
 import { insertInitialDocument, type PageDocumentService } from "./documents.js";
 import { positionBetween } from "./fractional-index.js";
 import {
@@ -1076,7 +1077,7 @@ export class TreeService {
     const limit = Math.min(Math.max(options.limit ?? 20, 1), 50);
     const kinds = options.kinds ?? ["page", "folder"];
     const result = await this.#database.execute<ItemRow & { space_key: string; space_name: string }>(sql`
-      select found.*, s.key as space_key, s.name as space_name from (${this.#select(viewer)}
+      select found.*, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name from (${this.#select(viewer)}
         where t.archived_root_id is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`ts`)}) found
       join spaces s on s.id = found.space_id
       where ${this.#authorization.spaceFilter(viewer, sql`s`)}

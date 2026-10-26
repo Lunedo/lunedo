@@ -21,6 +21,7 @@ import { supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
 import { formatSettings } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
+import { spaceDisplayName } from "../spaces/display-name.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { helpKnowledgeBaseSetting } from "./settings.js";
 
@@ -535,7 +536,7 @@ export class PortalService {
       space_name: string | null;
       created_at: Date;
     }>(sql`
-      select d.domain, d.organization_id, o.name as organization_name, kb.space_id, s.name as space_name, d.created_at
+      select d.domain, d.organization_id, o.name as organization_name, kb.space_id, ${spaceDisplayName(sql`s`)} as space_name, d.created_at
       from portal_domains d join organizations o on o.id = d.organization_id
       left join knowledge_bases kb on kb.portal_domain = d.domain
       left join spaces s on s.id = kb.space_id

@@ -519,6 +519,15 @@ function TreeNode({
           tree.drop(item, target ?? "after");
         }}
         onDragEnd={() => tree.setDropTarget(null)}
+        onClick={(event) => {
+          const clicked = event.target as HTMLElement;
+          if (!href || !event.currentTarget.contains(clicked) || clicked.closest("a, button")) return;
+          if (external) {
+            window.open(href, "_blank", "noopener,noreferrer");
+            return;
+          }
+          void navigate({ to: href });
+        }}
         onKeyDown={(event) => {
           if ((event.key === "F10" && event.shiftKey) || event.key === "ContextMenu") {
             event.preventDefault();
@@ -527,6 +536,7 @@ function TreeNode({
         }}
         className={classNames(
           "group/row relative flex h-row items-center gap-1 rounded-sm pe-1 outline-none focus-visible:focus-ring",
+          href && "cursor-pointer",
           current ? "bg-accent text-on-accent [&_svg]:text-on-accent" : "hover:bg-hover",
           target === "inside" && "bg-accent-soft",
         )}

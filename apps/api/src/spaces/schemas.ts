@@ -62,6 +62,11 @@ export const spaceSchema = z
       .nullable()
       .describe("Who may read the knowledge base, or null for other spaces."),
     name: z.string().describe("Name of the space. Empty for a personal space that has no name of its own."),
+    displayName: z
+      .string()
+      .describe(
+        "Name to show: the name of the space, or for a personal space without a name of its own \"Personal space of\" and the owner's name, in the owner's language.",
+      ),
     description: z.string().describe("Short description, up to 1000 characters."),
     visibility: visibilitySchema,
     discoverable: z
@@ -117,6 +122,7 @@ export const exampleSpace = {
   type: "standard",
   audience: null,
   name: "IT Operations",
+  displayName: "IT Operations",
   description: "Runbooks and how-tos of the IT team",
   visibility: "organization",
   discoverable: false,

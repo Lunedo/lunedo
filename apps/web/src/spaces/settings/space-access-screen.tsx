@@ -14,7 +14,7 @@ import { ExplanationView } from "../../sharing/explanation.js";
 import { GiveAccessButton } from "../../sharing/give-access.js";
 import { type RestrictedPage, sharingKeys } from "../../sharing/sharing-api.js";
 import { HolderPicker } from "../access/holders.js";
-import { itemSlug } from "../item-paths.js";
+import { itemHref, itemSlug } from "../item-paths.js";
 import { useSpace } from "../space-context.js";
 import { pagePath } from "../space-queries.js";
 import { Panel } from "./panel.js";
@@ -64,7 +64,10 @@ function RestrictedPages() {
             <div className="flex flex-wrap items-center gap-2">
               <Lock aria-hidden="true" className="size-icon-md text-text-muted" />
               <Link
-                to={pagePath(space.key, page.itemId, itemSlug(page.title))}
+                to={
+                  itemHref({ id: page.itemId, kind: page.kind, title: page.title, link: null }, space.key) ??
+                  pagePath(space.key, page.itemId, itemSlug(page.title))
+                }
                 className="min-w-0 flex-1 truncate font-medium text-accent hover:underline focus-visible:focus-ring"
                 title={page.title}
               >

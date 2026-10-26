@@ -1237,6 +1237,25 @@ describe("space access", () => {
     expect(stored.draft).toBeNull();
   });
 
+  it("links a restricted folder to the folder, not to a page", async () => {
+    const folderId = "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a77";
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("admin"),
+      ...draftRoutes({ draft: null }),
+      [`GET /api/v1/spaces/${SPACE_ID}/access-requests`]: () => ({ body: [] }),
+      [`GET /api/v1/spaces/${SPACE_ID}/restricted-pages`]: () => ({
+        body: [
+          { itemId: folderId, title: "Payroll", kind: "folder", view: null, edit: null, orphaned: false },
+        ],
+      }),
+    });
+    await renderAt("/spaces/ITOPS/settings/access");
+    expect((await screen.findByRole("link", { name: "Payroll" })).getAttribute("href")).toBe(
+      `/spaces/ITOPS/folders/${folderId}/payroll`,
+    );
+  });
+
   it("keeps an unfinished assistant as a draft on the server", async () => {
     const stored = { draft: null as unknown };
     mockApi({

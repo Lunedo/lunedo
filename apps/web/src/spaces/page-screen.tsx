@@ -713,7 +713,7 @@ function PageArticle({
             space={{
               id: space.id,
               key: space.key,
-              name: space.name,
+              name: spaceDisplayName(t, space),
               exportEnabled: space.exportEnabled,
               admin: space.role === "admin",
               mayExportPages: space.mayExport,

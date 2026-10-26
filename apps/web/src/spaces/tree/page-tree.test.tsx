@@ -144,6 +144,35 @@ describe("PageTree", () => {
     expect(toggle.className).not.toContain("hover:bg-hover");
   });
 
+  it("opens a folder from anywhere on its row, but not from its expand button", async () => {
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes("parentId=")
+          ? { body: { items: [], nextCursor: null } }
+          : { body: { items: [folder], nextCursor: null } },
+    });
+    const context = { space, canEdit: true, openMove: () => {}, openCopy: () => {}, openCreate: () => {} };
+    const root = createRootRoute({
+      component: () => (
+        <SpaceContext value={context}>
+          <PageTree space={space} currentId={null} ancestors={[]} />
+        </SpaceContext>
+      ),
+    });
+    const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+    await renderWithProviders(<RouterProvider router={router} />);
+    const row = await screen.findByRole("treeitem", { name: "Runbooks" });
+    (row.querySelector("button") as HTMLButtonElement).click();
+    await waitFor(() => expect(row.getAttribute("aria-expanded")).toBe("true"));
+    expect(router.state.location.pathname).toBe("/");
+    ([...row.querySelectorAll("svg")].find((icon) => !icon.closest("button")) as SVGElement).dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(`/spaces/IT/folders/${folder.id}/runbooks`),
+    );
+  });
+
   it("is no longer busy once the first level has loaded", async () => {
     mockApi({ [items]: () => ({ body: { items: [], nextCursor: null } }) });
     await renderWithProviders(<PageTree space={space} currentId={null} ancestors={[]} />);
