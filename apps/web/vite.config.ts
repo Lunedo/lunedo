@@ -1,9 +1,10 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { cp } from "node:fs/promises";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
+import { collectNotices, packageDirectoryOf, renderNotices } from "../../scripts/third-party-notices.js";
 import { type BundledChunk, ICON_MODULES, precompress, withLocaleChunks } from "./src/dev/build-assets.js";
 import { drawioContentType, drawioFile, ensureDrawio, isServedDrawioFile } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
@@ -112,6 +113,37 @@ function drawioAssets(): Plugin {
   };
 }
 
+function thirdPartyNotices(): Plugin {
+  let root = "";
+  return {
+    name: "lunedo-third-party-notices",
+    apply: "build",
+    configResolved(config) {
+      root = config.root;
+    },
+    generateBundle() {
+      const directories = new Set<string>();
+      for (const id of this.getModuleIds()) {
+        const file = id.split("?")[0] ?? "";
+        if (file.startsWith("\0") || !file.includes("node_modules")) continue;
+        const directory = packageDirectoryOf(file);
+        if (directory) directories.add(directory);
+      }
+      const drawio = {
+        name: "draw.io",
+        version: DRAWIO_VERSION,
+        license: "Apache-2.0",
+        texts: [{ file: "LICENSE", text: readFileSync(path.join(root, "drawio", "LICENSE"), "utf8").trim() }],
+      };
+      this.emitFile({
+        type: "asset",
+        fileName: "THIRD_PARTY_NOTICES.txt",
+        source: renderNotices("Lunedo", collectNotices(directories, [drawio])),
+      });
+    },
+  };
+}
+
 function localeChunks(): Plugin {
   return {
     name: "lunedo-locale-chunks",
@@ -149,6 +181,7 @@ export default defineConfig({
     drawioAssets(),
     localeChunks(),
     compressedAssets(),
+    thirdPartyNotices(),
   ],
   resolve: {
     conditions: ["@lunedo/source", ...defaultClientConditions],

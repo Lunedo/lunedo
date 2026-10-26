@@ -54,7 +54,7 @@ check() {
   fi
 }
 
-in_lunedo() { compose exec -T -w /app/api lunedo "$@"; }
+in_lunedo() { compose exec -T lunedo sh -c 'cd /app/api 2>/dev/null || cd /app; exec "$@"' sh "$@"; }
 
 psql_in() { compose exec -T postgres psql -v ON_ERROR_STOP=1 -qAt -U lunedo -d lunedo -c "$1"; }
 
@@ -76,7 +76,9 @@ check "the setup code is in the environment file" grep -Eq '^LUNEDO_SETUP_CODE=[
 
 echo "Adding synthetic content"
 in_lunedo node --input-type=module -e '
-  import { accountPrincipal, createServerRuntime, SYSTEM } from "@lunedo/server";
+  const { accountPrincipal, createServerRuntime, SYSTEM } = await import("/app/server/server.js").catch(() =>
+    import("@lunedo/server"),
+  );
   const runtime = await createServerRuntime({ role: "api", env: { ...process.env, LUNEDO_LOG_LEVEL: "warn" } });
   try {
     const { services } = runtime;

@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import { resourcePath } from "../../resources.js";
 
 const ICONS = {
   "favicon.svg": "image/svg+xml",
@@ -12,10 +14,10 @@ export const PORTAL_ICONS = {
   ico: "favicon.ico",
 } as const satisfies Record<string, PortalIconName>;
 
-const DIRECTORY = new URL("../../../data/portal/", import.meta.url);
+const DIRECTORY = resourcePath("data", "portal");
 
 export function portalIconByName(name: string): { type: string; data: Buffer } | null {
   if (!Object.hasOwn(ICONS, name)) return null;
   const icon = name as PortalIconName;
-  return { type: ICONS[icon], data: readFileSync(new URL(icon, DIRECTORY)) };
+  return { type: ICONS[icon], data: readFileSync(path.join(DIRECTORY, icon)) };
 }

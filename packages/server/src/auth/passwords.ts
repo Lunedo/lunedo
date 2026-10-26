@@ -1,6 +1,7 @@
 import { argon2, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { PASSWORD_MAX_LENGTH } from "@lunedo/shared";
+import { resourcePath } from "../resources.js";
 import { ConcurrencyLimiter } from "./concurrency.js";
 
 export { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH_FLOOR } from "@lunedo/shared";
@@ -104,7 +105,7 @@ export class PasswordHasher {
   }
 }
 
-const commonPasswordsFile = new URL("../../data/common-passwords.txt", import.meta.url);
+const commonPasswordsFile = resourcePath("data", "common-passwords.txt");
 let commonPasswords: Set<string> | undefined;
 
 export function isCommonPassword(password: string): boolean {

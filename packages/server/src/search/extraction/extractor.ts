@@ -19,7 +19,7 @@ export const DEFAULT_EXTRACTION_LIMITS: ExtractionLimits = {
   maxHeapMb: 256,
 };
 
-const WORKER_URL = new URL(`./worker${extname(fileURLToPath(import.meta.url))}`, import.meta.url);
+const WORKER_URL = new URL(`./extraction-worker${extname(fileURLToPath(import.meta.url))}`, import.meta.url);
 const YOUNG_GENERATION_MB = 32;
 const STACK_MB = 4;
 const MEMORY_CHECK_MS = 25;

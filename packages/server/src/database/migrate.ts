@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { Logger } from "../logging/logger.js";
+import { resourcePath } from "../resources.js";
 import type { DatabasePool } from "./pool.js";
 
-export const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
+export const migrationsFolder = resourcePath("drizzle");
 
 const MIGRATIONS_SCHEMA = "drizzle";
 const MIGRATIONS_TABLE = "__drizzle_migrations";

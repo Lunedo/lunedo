@@ -5,15 +5,15 @@ roles=(api collab worker)
 role="${1:-all}"
 
 start_role() {
-  node "/app/$1/dist/main.js"
+  node "/app/server/$1.js"
 }
 
 case "$role" in
   backup | keys | audit | search | maintenance | version | release-notes | help)
-    exec node /app/worker/dist/cli/main.js "$@"
+    exec node /app/server/cli.js "$@"
     ;;
   api | collab | worker)
-    exec node "/app/$role/dist/main.js"
+    exec node "/app/server/$role.js"
     ;;
   all)
     pids=()

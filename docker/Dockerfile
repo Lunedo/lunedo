@@ -22,28 +22,25 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
 RUN --mount=type=cache,id=drawio,target=/repo/.cache/drawio \
     pnpm turbo run build --filter=@lunedo/api --filter=@lunedo/collab --filter=@lunedo/worker --filter=@lunedo/web
-# One production deploy shared by the API, the collaboration server and the worker, without files
-# that only serve building, type checking or documentation. Licence files stay.
+# The API, collaboration server and worker are bundled into /out/app/server. Only packages that load
+# native code or read their own files at runtime are deployed next to them, without files that only serve
+# building, type checking or documentation. Licence files stay.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm --filter=@lunedo/runtime deploy --prod /out/app \
+    && rm -f /out/app/pnpm-lock.yaml /out/app/pnpm-workspace.yaml \
     && find /out/app/node_modules/.pnpm -type f \( \
       -name "*.map" -o -name "*.d.ts" -o -name "*.d.mts" -o -name "*.d.cts" -o -name "*.tsbuildinfo" \
       -o \( -iname "*.md" ! -iname "licen*" ! -iname "notice*" ! -iname "copying*" \) \) -delete \
-    && find /out/app/node_modules/.pnpm -path "*/node_modules/@lunedo/server/drizzle/meta/*_snapshot.json" -delete \
     && find /out/app/node_modules/.pnpm -mindepth 3 -type d \( -name test -o -name tests -o -name __tests__ \
-      -o -name coverage -o -name example -o -name examples -o -name .github -o -name .playwright-mcp \) -prune \
+      -o -name coverage -o -name example -o -name examples -o -name .github \) -prune \
       -exec rm -rf {} + \
     && cd /out/app/node_modules/.pnpm \
-    && rm -rf docx@*/node_modules/docx/dist/*.cjs docx@*/node_modules/docx/dist/*.iife.js \
-      xml2js@*/node_modules/xml2js/lib/xml2js.bc.js mammoth@*/node_modules/mammoth/mammoth.browser*.js \
-      lucide@*/node_modules/lucide/dist/esm lucide@*/node_modules/lucide/dist/umd \
-      highlight.js@*/node_modules/highlight.js/scss highlight.js@*/node_modules/highlight.js/styles \
-      pdfjs-dist@*/node_modules/pdfjs-dist/build pdfjs-dist@*/node_modules/pdfjs-dist/web \
+    && rm -rf pdfjs-dist@*/node_modules/pdfjs-dist/build pdfjs-dist@*/node_modules/pdfjs-dist/web \
       pdfjs-dist@*/node_modules/pdfjs-dist/image_decoders pdfjs-dist@*/node_modules/pdfjs-dist/types \
       pdfjs-dist@*/node_modules/pdfjs-dist/legacy/web pdfjs-dist@*/node_modules/pdfjs-dist/legacy/image_decoders \
       pdfjs-dist@*/node_modules/pdfjs-dist/legacy/build/*.min.mjs \
-    && cd / \
-    && for app in api collab worker; do ln -s "node_modules/@lunedo/$app" "/out/app/$app" || exit 1; done
+    && cd /repo \
+    && node scripts/bundle-server.ts /out/app
 
 # PostgreSQL clients for backups. pg_dump must be at least as new as the server,
 # so every supported major version is shipped and the matching one is chosen at runtime.
@@ -101,9 +98,7 @@ COPY --chown=root:root CHANGELOG.md ./CHANGELOG.md
 COPY --chown=root:root --chmod=644 scripts/install.sh ./install.sh
 COPY --chmod=755 docker/start.sh /usr/local/bin/lunedo
 # sharp loads its prebuilt libvips for the architecture of this image; fail the build if it cannot.
-RUN for app in api worker; do \
-      (cd "/app/$app" && node -e "require('node:module').createRequire(require.resolve('@lunedo/server'))('sharp')") || exit 1; \
-    done
+RUN cd /app/server && node --input-type=module -e "await import('sharp')"
 USER node
 VOLUME /var/lib/lunedo
 EXPOSE 3000 3001 3002
