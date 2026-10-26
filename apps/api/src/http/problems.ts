@@ -245,6 +245,14 @@ export const problems = {
   audienceWidening: { status: 409, title: "The change lets more people read the knowledge base" },
   audienceGroupsMissing: { status: 400, title: "Choose at least one group" },
   tooManyGroups: { status: 400, title: "Too many groups" },
+  categoryAccessForSpaceAdmins: {
+    status: 403,
+    title: "Only space admins of the knowledge base change the access of a category",
+  },
+  categoryGroupsMissing: { status: 400, title: "Choose at least one group that may read the category" },
+  categoryWidensParent: { status: 409, title: "A subcategory can only name groups of the category above" },
+  categoryVisibilityWidening: { status: 409, title: "The change lets more people read the category" },
+  categoryAccessManaged: { status: 409, title: "The access of a category is set in its own dialog" },
   requiredSectionsEmpty: { status: 409, title: "Required sections are empty" },
   invalidPortalPath: { status: 400, title: "The portal path is not valid" },
   portalPathTaken: { status: 409, title: "Another knowledge base uses this path" },
@@ -615,7 +623,9 @@ export const problemSchema = z
       .number()
       .int()
       .optional()
-      .describe("Number of articles more people could read, for `audienceWidening`."),
+      .describe(
+        "Number of articles more people could read, for `audienceWidening` and `categoryVisibilityWidening`.",
+      ),
     translations: z
       .number()
       .int()

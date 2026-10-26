@@ -534,6 +534,14 @@ export {
   TOMBSTONE_DAYS,
 } from "./knowledge-bases/article-api.js";
 export {
+  type CategoryAccess,
+  type CategoryAccessChange,
+  type CategoryAccessEffect,
+  CategoryAccessService,
+  type CategoryGroup,
+  MAX_CATEGORY_GROUPS,
+} from "./knowledge-bases/category-access.js";
+export {
   type PortalAccount,
   PortalAccountService,
   type PortalAccounts,

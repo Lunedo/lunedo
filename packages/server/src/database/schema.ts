@@ -135,6 +135,8 @@ export {
   articleSlugs,
   articleSources,
   articleSync,
+  categoryResponsibilities,
+  categoryResponsibleGroups,
   knowledgeBaseCategories,
   knowledgeBaseLogos,
   knowledgeBasePaths,

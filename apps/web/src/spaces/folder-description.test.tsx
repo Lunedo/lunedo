@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../testing/render.js";
-import { FolderDescription } from "./folder-description.js";
+import { FolderDescription, ReadOnlyFolderDescription } from "./folder-description.js";
 
 describe("the folder description", () => {
   it("reads as text with a placeholder and becomes a field on click", async () => {
@@ -39,5 +39,31 @@ describe("the folder description", () => {
     await userEvent.tab();
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Description" })).toBeTruthy());
     expect(screen.getByRole("textbox", { name: "Description" }).getAttribute("aria-invalid")).toBe("true");
+  });
+});
+
+describe("the introduction of a knowledge base category", () => {
+  const intro =
+    "Notebooks and software.\n\n> Urgent: call **+43 1 555 0100** or [write](mailto:it@example.org).";
+
+  it("shows the text without markup on the edit button", async () => {
+    await renderWithProviders(<FolderDescription value={intro} formatted onSave={vi.fn()} />);
+    const button = screen.getByRole("button", {
+      name: "Edit the description of the folder: Notebooks and software. Urgent: call +43 1 555 0100 or write.",
+    });
+    expect(button.textContent).not.toContain("**");
+    expect(button.textContent).not.toContain(">");
+  });
+
+  it("shows bold text, links and the note to readers", async () => {
+    await renderWithProviders(<ReadOnlyFolderDescription value={intro} formatted />);
+    expect(screen.getByText("+43 1 555 0100").tagName).toBe("STRONG");
+    expect(screen.getByRole("link", { name: "write" }).getAttribute("href")).toBe("mailto:it@example.org");
+    expect(document.body.textContent).not.toContain("**");
+  });
+
+  it("keeps the text of an ordinary folder as written", async () => {
+    await renderWithProviders(<ReadOnlyFolderDescription value="Use **bold** here" formatted={false} />);
+    expect(screen.getByText("Use **bold** here")).toBeTruthy();
   });
 });

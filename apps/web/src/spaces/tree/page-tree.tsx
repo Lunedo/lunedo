@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { type CategoryAccess, CategoryIcons } from "../../knowledge-bases/category-access.js";
 import { contentLanguageLabel } from "../../search/content-language.js";
 import { WhiteboardPreview } from "../../whiteboards/whiteboard-preview.js";
 import { itemIcon } from "../item-icons.js";
@@ -62,6 +63,12 @@ interface TreeState {
   dragged: React.RefObject<Dragged | null>;
   drop: (target: TreeItem, zone: Zone) => void;
   loading: () => () => void;
+  categories: CategoryView | null;
+}
+
+export interface CategoryView {
+  entries: ReadonlyMap<string, CategoryAccess>;
+  shown: ((item: TreeItem) => boolean) | null;
 }
 
 const TreeContext = createContext<TreeState | null>(null);
@@ -123,10 +130,12 @@ export function PageTree({
   space,
   currentId,
   ancestors,
+  categories = null,
 }: {
   space: SpaceWithRole;
   currentId: string | null;
   ancestors: readonly string[];
+  categories?: CategoryView | null;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -245,8 +254,9 @@ export function PageTree({
       dragged,
       drop,
       loading,
+      categories,
     }),
-    [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop, loading],
+    [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop, loading, categories],
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -312,7 +322,9 @@ export function PageTree({
       >
         {levels.every((level) => level.isSuccess) ? (
           <LevelNodes
-            items={homeId === null ? itemsOf(root) : [...itemsOf(home), ...itemsOf(root, homeId)]}
+            items={(homeId === null ? itemsOf(root) : [...itemsOf(home), ...itemsOf(root, homeId)]).filter(
+              (item) => categories?.shown?.(item) ?? true,
+            )}
             depth={1}
             sources={levels}
           />
@@ -603,6 +615,9 @@ function TreeNode({
               {item.viewRestriction === "own" ? t("tree.viewRestricted") : t("tree.editRestricted")}
             </VisuallyHidden>
           </span>
+        ) : null}
+        {item.kind === "folder" ? (
+          <CategoryIcons entry={tree.categories?.entries.get(item.id)} canEdit={tree.canEdit} />
         ) : null}
         {draft ? " " : null}
         {draft ? <Badge variant="warning">{t("versions.draftBadge")}</Badge> : null}

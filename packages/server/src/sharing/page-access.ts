@@ -390,6 +390,17 @@ export class PageAccessService {
     await lockSpaces(tx, [located.space_id]);
     const item = await this.#item(tx, itemId);
     await this.#requireShare(tx, actor, itemId);
+    if (actor.type !== "system" && item.kind === "folder") {
+      const space = await tx.execute<{ type: string }>(
+        sql`select type from spaces where id = ${item.space_id}`,
+      );
+      if (space.rows[0]?.type === "knowledgeBase") {
+        throw new SpaceError(
+          "categoryAccessManaged",
+          "Who reads and who maintains a category is set in its Access dialog by the space admins",
+        );
+      }
+    }
     const notified = await this.#apply(tx, actor, item, changes, { ...options, audit: true });
     await this.#afterChange(tx, item.space_id, itemId);
     const mailIds: string[] = [];

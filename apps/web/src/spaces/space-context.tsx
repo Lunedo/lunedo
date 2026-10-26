@@ -6,6 +6,7 @@ export interface SpaceContextValue {
   canEdit: boolean;
   openMove: (item: Pick<TreeItem, "id" | "title" | "kind" | "spaceId" | "parentId">) => void;
   openCopy: (item: CopiedItem) => void;
+  openCategoryAccess?: (itemId: string) => void;
   openCreate: (
     kind: "page" | "folder" | "link" | "whiteboard",
     parentId: string | null,

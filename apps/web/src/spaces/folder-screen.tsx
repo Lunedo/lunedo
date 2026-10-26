@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Move,
   Plus,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import { useState } from "react";
@@ -21,12 +22,13 @@ import { request } from "../api/request.js";
 
 import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
+import { CategoryAccessSummary, useCategoryAccess } from "../knowledge-bases/category-access.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { useFormat, usePreferences } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { WhiteboardPreview } from "../whiteboards/whiteboard-preview.js";
-import { FolderDescription } from "./folder-description.js";
+import { FolderDescription, folderDescriptionText, ReadOnlyFolderDescription } from "./folder-description.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemIcon } from "./item-icons.js";
 import { itemKindLabel } from "./item-kinds.js";
@@ -46,7 +48,7 @@ const route = getRouteApi("/app/spaces/$spaceKey/folders/$itemId/{-$slug}");
 export function FolderScreen() {
   const { t } = useTranslation();
   const { itemId, slug } = route.useParams();
-  const { space, canEdit, openCreate, openMove, openCopy } = useSpace();
+  const { space, canEdit: canEditSpace, openCreate, openMove, openCopy, openCategoryAccess } = useSpace();
   const queryClient = useQueryClient();
   const item = useQuery(itemQuery(itemId));
   const convert = useConvert();
@@ -54,6 +56,9 @@ export function FolderScreen() {
   const updatePreference = useUpdatePreference();
   const view = preferences.folderView;
   const knowledgeBase = isKnowledgeBase(space);
+  const categories = useCategoryAccess(space.id, knowledgeBase);
+  const accessEntry = categories.data?.find((entry) => entry.itemId === itemId) ?? null;
+  const canEdit = canEditSpace && (!knowledgeBase || accessEntry?.writable !== false);
   const [transferring, setTransferring] = useState(false);
   useDocumentTitle(item.data?.title ?? "");
 
@@ -143,6 +148,11 @@ export function FolderScreen() {
           { label: folder.title },
         ]}
       >
+        {knowledgeBase && openCategoryAccess ? (
+          <Button variant="outline" icon={ShieldCheck} onClick={() => openCategoryAccess(folder.id)}>
+            {t("categoryAccess.action")}
+          </Button>
+        ) : null}
         {canEdit ? (
           <Menu
             align="end"
@@ -173,11 +183,16 @@ export function FolderScreen() {
             )}
           </h1>
           {canEdit ? (
-            <FolderDescription value={folder.description} onSave={(description) => save({ description })} />
-          ) : folder.description ? (
-            <p className="text-text-muted">{folder.description}</p>
-          ) : null}
+            <FolderDescription
+              value={folder.description}
+              formatted={knowledgeBase}
+              onSave={(description) => save({ description })}
+            />
+          ) : (
+            <ReadOnlyFolderDescription value={folder.description} formatted={knowledgeBase} />
+          )}
         </header>
+        {knowledgeBase && accessEntry ? <CategoryAccessSummary entry={accessEntry} /> : null}
         <FolderContents folderId={folder.id} view={view} />
       </div>
       {transferring ? (
@@ -353,7 +368,9 @@ function FolderTile({ item }: { item: TreeItem }) {
         {title}
       </span>
       {item.kind === "folder" && item.description ? (
-        <span className="line-clamp-2 w-full text-sm text-text-muted">{item.description}</span>
+        <span className="line-clamp-2 w-full text-sm text-text-muted">
+          {folderDescriptionText(item.description, isKnowledgeBase(space))}
+        </span>
       ) : null}
     </>
   );

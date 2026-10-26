@@ -12,6 +12,7 @@ import {
   Link as LinkIcon,
   Move,
   Presentation,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -103,6 +104,10 @@ export function useItemActions(
             },
       );
     }
+  }
+  if (knowledgeBase && item.kind === "folder" && context.openCategoryAccess) {
+    const open = context.openCategoryAccess;
+    items.push({ label: t("categoryAccess.action"), icon: ShieldCheck, onSelect: () => open(item.id) });
   }
   if (item.kind === "page" || item.kind === "folder" || item.kind === "whiteboard") {
     items.push({ label: t("tree.copy"), icon: Copy, onSelect: () => context.openCopy(item) });

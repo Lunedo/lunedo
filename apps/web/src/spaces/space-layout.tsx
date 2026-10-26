@@ -28,6 +28,8 @@ import { CreatePostDialog } from "../collaboration/blog/space-blog-screen.js";
 import { useStar } from "../collaboration/star.js";
 import { LoadError } from "../errors/failure.js";
 import { SpaceExportDialog } from "../exports/space-export.js";
+import { CategoryAccessDialog, useCategoryAccess } from "../knowledge-bases/category-access.js";
+import { CategoryTree } from "../knowledge-bases/category-tree.js";
 import { KnowledgeBaseScreen } from "../knowledge-bases/knowledge-base-screen.js";
 import { PortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
@@ -172,6 +174,9 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
   const knowledgeBase = isKnowledgeBase(space);
   const [moving, setMoving] = useState<Parameters<SpaceContextValue["openMove"]>[0] | null>(null);
+  const [accessFor, setAccessFor] = useState<string | null>(null);
+  const categoryAccess = useCategoryAccess(space.id, knowledgeBase && space.role === "admin");
+  const accessEntry = categoryAccess.data?.find((entry) => entry.itemId === accessFor) ?? null;
   const [copying, setCopying] = useState<Parameters<SpaceContextValue["openCopy"]>[0] | null>(null);
   const [creating, setCreating] = useState<{ kind: CreatedKind; parentId: string | null } | null>(null);
   const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
@@ -185,6 +190,9 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
       canEdit,
       openMove: (item) => setMoving(item),
       openCopy: (item) => setCopying(item),
+      ...(knowledgeBase && space.role === "admin"
+        ? { openCategoryAccess: (itemId: string) => setAccessFor(itemId) }
+        : {}),
       openCreate: (kind, requestedParent, title) => {
         const parentId = requestedParent ?? space.overviewItemId;
         if (kind === "page") {
@@ -193,7 +201,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
         } else setCreating({ kind, parentId });
       },
     }),
-    [space, canEdit],
+    [space, canEdit, knowledgeBase],
   );
   const create = useCallback(
     (kind: CreateKind, title?: string) => {
@@ -248,6 +256,15 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
         </>
       )}
       <MoveDialog space={space} item={moving} onOpenChange={(open) => !open && setMoving(null)} />
+      {accessEntry ? (
+        <CategoryAccessDialog
+          key={accessEntry.itemId}
+          space={space}
+          entry={accessEntry}
+          open
+          onOpenChange={(open) => !open && setAccessFor(null)}
+        />
+      ) : null}
       <CopyDialog space={space} item={copying} onOpenChange={(open) => !open && setCopying(null)} />
       <CreateItemDialog
         space={space}
@@ -548,7 +565,11 @@ function SpaceNavigation({
               />
             ) : null}
           </div>
-          <PageTree space={space} currentId={currentId} ancestors={ancestors} />
+          {knowledgeBase ? (
+            <CategoryTree space={space} currentId={currentId} ancestors={ancestors} />
+          ) : (
+            <PageTree space={space} currentId={currentId} ancestors={ancestors} />
+          )}
           <ArchiveSection space={space} currentId={currentId} />
         </>
       )}

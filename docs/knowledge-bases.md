@@ -94,6 +94,19 @@ A folder's contact address is what readers use when an article did not help. A f
 
 API: `GET /api/v1/spaces/{spaceId}/categories` lists every folder the caller can read, with its depth (`level`), introduction (`description`), icon and the contact address that applies. `PUT /api/v1/categories/{itemId}` sets the icon, `PUT /api/v1/categories/{itemId}/contact` the contact address, both at any depth, and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact` the address of the knowledge base. Title, introduction and order change like for every folder. Articles carry the whole folder path above them as `categoryPath`.
 
+### Who maintains and who reads an area
+
+Every folder has two access settings, set in its **Access** dialog (menu **···** in the tree or the button on the folder page). Only space admins of the knowledge base change them; organization admins first become space admin of it.
+
+- **Responsible** names one or more groups. They create, edit, publish, move and delete the articles in the folder and everything below it. Space admins always can. Without groups, everyone with the editor role can. A folder below can only name groups of the folder above it. When every group of a folder is deleted, only space admins write there until new groups are set.
+- **Visible to** is either like the knowledge base or only certain groups. It is a view restriction of the folder, so it applies wherever content is read: the portal with its pages, search, area lists, counts and feedback, the app with its tree, search, **For you** and notifications, the article API for external readers and tokens, includes and exports. A restricted folder is never part of the static website. Space admins see that it exists and can change or remove the restriction without reading the content. A folder below can only name groups of the folder above it.
+
+The sharing dialog of pages does not change folders of a knowledge base; it answers `409` with `categoryAccessManaged`. Before saving, the dialog shows who can no longer change articles, how many people lose or gain read access and how many articles are affected; a change that lets more people read asks for confirmation with the number of articles. Every change is recorded as `knowledgeBase.categoryAccessChanged`. Moving an article between folders with different responsible groups asks for confirmation like any move that changes access.
+
+People responsible for at least one area see **Mine · All** above the tree: **Mine** shows only the areas that contain their folders, with the number of further areas to read. The choice is stored with the person's preferences (`appearance.categoryView`); it filters the view and grants nothing. Search in the app finds every article the person may read and marks articles in areas they cannot change as **other category · read only** (`otherCategory`).
+
+API: `GET /api/v1/spaces/{spaceId}/knowledge-base/category-access` lists the folders with their settings and whether the caller belongs to them (`mine`) or may change their articles (`writable`). `POST …/knowledge-base/categories/{itemId}/access/preview` returns the effect of a change, `PUT …/knowledge-base/categories/{itemId}/access` saves it (`responsibleGroupIds`, `visibleGroupIds`, `confirmWidening`).
+
 ## Languages
 
 A knowledge base has a default language and can enable further languages under **Space settings → Languages**. While only one language is enabled, nothing about languages is visible to readers. The default language is chosen from the organization's language when the knowledge base is created.

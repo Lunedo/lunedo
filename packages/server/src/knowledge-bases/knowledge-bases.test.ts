@@ -441,7 +441,11 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
       const open = await create(editor, kb.id, { title: "Holidays" });
       await test.services.versions.publish(editor, salary.id);
       await test.services.versions.publish(editor, open.id);
-      await test.services.pageAccess.change(editor, hr.id, [{ action: "restrict", kind: "view" }]);
+      const readers = await fixtures.group(org.id, [editor.id]);
+      await test.services.categoryAccess.change(editor, kb.id, hr.id, {
+        responsibleGroupIds: [],
+        visibleGroupIds: [readers],
+      });
       const titles = async (viewer: ReturnType<typeof accountPrincipal>) =>
         (await test.services.knowledgeBases.articles(viewer, kb.id)).items
           .map((article) => article.title)

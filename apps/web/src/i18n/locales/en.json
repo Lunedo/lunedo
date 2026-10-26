@@ -1737,7 +1737,12 @@
     "settingNotAtLevel": "This setting no longer exists at this level. Change it in the settings of the organization.",
     "invalidSpaces": "Choose between 1 and 50 spaces, each only once, and try again.",
     "administratorBySpaceAdmins": "Only the space admins of this space can make someone space admin. Choose another role, or ask a space admin.",
-    "clientOutdated": "Lunedo was updated. Reload the page to continue."
+    "clientOutdated": "Lunedo was updated. Reload the page to continue.",
+    "categoryAccessForSpaceAdmins": "Only space admins of the knowledge base change who maintains and reads a category. Ask one of them, or become space admin first.",
+    "categoryGroupsMissing": "Choose at least one group that may read the category.",
+    "categoryWidensParent": "A subcategory can only name groups of the category above it. Choose among those groups, or change the category above first.",
+    "categoryVisibilityWidening": "More people would read the articles of this category. Confirm the change to apply it.",
+    "categoryAccessManaged": "Who reads and maintains a category is set in its Access dialog. Open the category and choose Access."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -4709,6 +4714,7 @@
       },
       "knowledgeBase": {
         "audienceChanged": "Readers of a knowledge base changed",
+        "categoryAccessChanged": "Access to a knowledge base category changed",
         "reviewSettingsChanged": "Review settings of a knowledge base changed",
         "portalAddressChanged": "Portal address of a knowledge base changed",
         "languagesChanged": "Languages of a knowledge base changed"
@@ -5012,6 +5018,7 @@
     "unpublished": "It is not published yet",
     "restricted": "The page is restricted and they are not on its access list",
     "editRestricted": "Editing is restricted and they are not allowed to edit on its access list",
+    "notResponsible": "Only the groups responsible for this category and space admins change its articles.",
     "ruleNotMet": "A condition of this action is not met",
     "exportDisabled": "Export is turned off in this space"
   },
@@ -12163,5 +12170,62 @@
     "reload": "Reload",
     "saveAndReload": "Save and reload",
     "saving": "Saving…"
+  },
+  "categoryAccess": {
+    "restrictedTitle": "Visible to certain groups only",
+    "restrictedNote": "Only {groups} can see this category. Others find it nowhere, neither in the app nor in the portal.",
+    "responsible": "Responsible",
+    "visibleTo": "Visible to",
+    "onlySpaceAdmins": "Only space admins: the responsible groups were deleted.",
+    "allEditors": "Everyone with the role Editor",
+    "likeKnowledgeBase": "Like the knowledge base",
+    "dialogTitle": "Access to “{name}”",
+    "dialogDescription": "Applies to {articles, plural, one {# article} other {# articles}} and {subcategories, plural, one {# subcategory} other {# subcategories}}. Subcategories can only narrow it.",
+    "audited": "Recorded in the audit log",
+    "save": "Save access",
+    "saveFailed": "The access could not be saved",
+    "saved": "Access to “{name}” saved",
+    "responsibleHint": "They create, edit, publish, move and delete articles. Space admins always can.",
+    "responsibleInherited": "Inherited from the category above: {groups}. Name some of them to narrow it.",
+    "responsibleEmpty": "Without a group, everyone with the role Editor writes here.",
+    "addGroup": "Add a group…",
+    "visibleGroups": "Groups that see the category",
+    "visibleGroupsMissing": "Choose at least one group that may see the category.",
+    "visibility": {
+      "knowledgeBase": {
+        "title": "Like the knowledge base",
+        "description": "Everyone who reads the knowledge base, in the portal and in the app."
+      },
+      "groups": {
+        "title": "Only certain groups",
+        "description": "Everywhere: portal, app, search and exports."
+      },
+      "inherited": "Like the category above: only {groups}."
+    },
+    "peopleTitle": "Single people keep their access",
+    "people": "{count, plural, one {# person was} other {# people were}} given access before categories had this dialog. Saving with groups removes them.",
+    "effect": {
+      "title": "What changes",
+      "nothing": "Nothing changes for anyone.",
+      "losingWriteNamed": "{names} can only read the {articles, plural, one {# article} other {# articles}} afterwards.",
+      "losingWrite": "{count, plural, one {# person} other {# people}} with the role Editor can only read the {articles, plural, one {# article} other {# articles}} afterwards.",
+      "losingRead": "{count, plural, one {# person loses} other {# people lose}} read access to the {articles, plural, one {# article} other {# articles}}, also in the portal and in search.",
+      "publicPortal": "The category disappears from the public portal and the static website.",
+      "gainingRead": "{count, plural, one {# person} other {# people}} can newly read the {articles, plural, one {# article} other {# articles}}."
+    },
+    "widenTitle": "Let more people read the category?",
+    "widenDescription": "{count, plural, one {# article} other {# articles}} in “{name}” become readable for more people, in the portal, the app and search.",
+    "widenConfirm": "Let more people read",
+    "lockTitle": "Visible only to {groups}",
+    "readOnly": "Read only: you are not responsible for this category",
+    "action": "Access…",
+    "mine": "Mine",
+    "all": "All",
+    "viewLabel": "Categories shown",
+    "moreToRead": "{count, plural, one {# more category to read} other {# more categories to read}}",
+    "showAll": "Show all",
+    "hiddenTitle": "Categories hidden from you",
+    "hiddenHint": "Restricted to groups you are not in. As space admin you change who sees them, but cannot read them.",
+    "otherCategory": "other category · read only"
   }
 }

@@ -169,6 +169,11 @@ const resultSchema = z
       .describe(
         "Whether the caller can read the page only through a share. Space and path stay hidden then.",
       ),
+    otherCategory: z
+      .boolean()
+      .describe(
+        "Whether the article lies in a category of a knowledge base that the caller may read but not change, while the caller is responsible for other categories there.",
+      ),
     path: z
       .array(
         z
@@ -308,6 +313,7 @@ const exampleResponse = {
         mine: false,
       },
       sharedWithYou: false,
+      otherCategory: false,
       path: [],
       labels: ["vpn"],
       status: examplePageStatus,

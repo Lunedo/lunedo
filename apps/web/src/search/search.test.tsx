@@ -34,6 +34,7 @@ function hit(id: string, title: string, spaceId = SPACE) {
       mine: false,
     },
     sharedWithYou: false,
+    otherCategory: false,
     path: [],
     labels: [],
     status: null,

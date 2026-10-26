@@ -33,6 +33,8 @@ export async function representativeItems(
         select t.id, d.depth, concat_ws('|',
           coalesce((select string_agg(r.item_id::text, ',' order by r.item_id) from page_restrictions r
             where r.kind = 'view' and r.item_id = any(${below})), ''),
+          coalesce((select string_agg(cr.item_id::text, ',' order by cr.item_id) from category_responsibilities cr
+            where cr.item_id = any(${below})), ''),
           coalesce((select string_agg(distinct ps.item_id::text, ',') from page_shares ps
             where ps.include_descendants and ps.item_id <> t.id and ps.item_id = any(${below})), ''),
           case when exists (select 1 from page_shares ps where ps.item_id = t.id)

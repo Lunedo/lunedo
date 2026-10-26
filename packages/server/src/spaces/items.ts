@@ -392,6 +392,15 @@ export async function checkParent(
   }
   if (knowledgeBase && row.kind !== "folder" && parentId !== translationOf)
     throw knowledgeBasePlacementError();
+  if (knowledgeBase && row.kind === "folder") {
+    const writable = await authorization.explain(
+      actor,
+      "item.edit",
+      { type: "item", id: parentId },
+      { executor: tx, fresh: true },
+    );
+    if (!writable.allowed) throw new ForbiddenError(writable);
+  }
   const meeting = await tx.execute<{ item_id: string }>(
     sql`select item_id from meetings where item_id = ${parentId}`,
   );
@@ -856,6 +865,10 @@ export class TreeService {
     const targetSpaceId = target.spaceId ?? sourceSpaceId;
     await this.#requireEdit(actor, sourceSpaceId);
     if (targetSpaceId !== sourceSpaceId) await this.#requireEdit(actor, targetSpaceId);
+    if (await isKnowledgeBase(this.#database, sourceSpaceId)) {
+      const movable = await this.#authorization.explain(actor, "item.edit", { type: "item", id: itemId });
+      if (!movable.allowed) throw new ForbiddenError(movable);
+    }
 
     await this.#database
       .transaction(async (tx) => {

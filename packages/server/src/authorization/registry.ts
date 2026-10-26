@@ -40,6 +40,7 @@ export const restrictionDenials = [
   "unpublished",
   "restricted",
   "editRestricted",
+  "notResponsible",
   "exportDisabled",
 ] as const;
 

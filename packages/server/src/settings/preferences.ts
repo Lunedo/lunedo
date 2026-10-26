@@ -128,6 +128,16 @@ export const folderViewSetting = defineSetting({
   lockable: false,
 });
 
+export const categoryViews = ["automatic", "mine", "all"] as const;
+
+export const categoryViewSetting = defineSetting({
+  key: "appearance.categoryView",
+  schema: z.enum(categoryViews),
+  default: "automatic",
+  levels: ["user"],
+  lockable: false,
+});
+
 export const tablePageSizes = [25, 50, 100] as const;
 
 export const tablePageSizeSetting = defineSetting({
@@ -180,6 +190,7 @@ export const preferenceSettings = [
   sidebarCollapsedWhileEditingSetting,
   editorToolbarSetting,
   folderViewSetting,
+  categoryViewSetting,
   tablePageSizeSetting,
   accentColorSetting,
 ];

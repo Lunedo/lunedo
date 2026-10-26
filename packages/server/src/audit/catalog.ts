@@ -1191,6 +1191,19 @@ export const auditCatalog = {
     }),
     visibility: "organization",
   }),
+  "knowledgeBase.categoryAccessChanged": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({
+      responsibleGroupIds: z.array(z.uuid()).max(50),
+      previousResponsibleGroupIds: z.array(z.uuid()).max(500),
+      visibleGroupIds: z.array(z.uuid()).max(50).nullable(),
+      previousVisibleGroupIds: z.array(z.uuid()).max(500).nullable(),
+      widened: z.boolean(),
+      articles: z.number().int().min(0),
+    }),
+    visibility: "organization",
+  }),
   "knowledgeBase.reviewSettingsChanged": event({
     actor: ["account"],
     target: "space",

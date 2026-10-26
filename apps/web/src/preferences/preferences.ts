@@ -42,6 +42,7 @@ export interface PreferenceValues {
   sidebarCollapsedWhileEditing: boolean;
   editorToolbar: boolean;
   folderView: "list" | "tiles";
+  categoryView: CategoryView;
   tablePageSize: TablePageSize;
   startPage: "forYou" | "organizationHome";
 }
@@ -62,11 +63,14 @@ export const preferenceKeys: Record<keyof PreferenceValues, string> = {
   sidebarCollapsedWhileEditing: "appearance.sidebarCollapsedWhileEditing",
   editorToolbar: "appearance.editorToolbar",
   folderView: "appearance.folderView",
+  categoryView: "appearance.categoryView",
   tablePageSize: "appearance.tablePageSize",
   startPage: "appearance.startPage",
 };
 
 export const TABLE_PAGE_SIZES = [25, 50, 100] as const;
+export const CATEGORY_VIEWS = ["automatic", "mine", "all"] as const;
+export type CategoryView = (typeof CATEGORY_VIEWS)[number];
 export type TablePageSize = (typeof TABLE_PAGE_SIZES)[number];
 
 const STORAGE_KEY = "lunedo.appearance";
@@ -89,6 +93,7 @@ export function defaultPreferences(language: Language): PreferenceValues {
     sidebarCollapsedWhileEditing: true,
     editorToolbar: true,
     folderView: "list",
+    categoryView: "automatic",
     tablePageSize: 25,
     startPage: "forYou",
   };
@@ -118,6 +123,7 @@ export function toPreferenceValues(
     sidebarCollapsedWhileEditing: value("sidebarCollapsedWhileEditing") !== false,
     editorToolbar: value("editorToolbar") !== false,
     folderView: value("folderView") === "tiles" ? "tiles" : "list",
+    categoryView: oneOf(CATEGORY_VIEWS, value("categoryView"), fallback.categoryView),
     tablePageSize: oneOf(TABLE_PAGE_SIZES, value("tablePageSize"), fallback.tablePageSize),
     startPage: value("startPage") === "organizationHome" ? "organizationHome" : "forYou",
   };

@@ -1737,7 +1737,12 @@
     "settingNotAtLevel": "Diese Einstellung gibt es auf dieser Ebene nicht mehr. Ändere sie in den Einstellungen der Organisation.",
     "invalidSpaces": "Wähle 1 bis 50 Spaces, jeden nur einmal, und versuche es erneut.",
     "administratorBySpaceAdmins": "Nur die Space-Admins dieses Space können jemanden zum Space-Admin machen. Wähle eine andere Rolle oder frag einen Space-Admin.",
-    "clientOutdated": "Lunedo wurde aktualisiert. Lade die Seite neu, um weiterzuarbeiten."
+    "clientOutdated": "Lunedo wurde aktualisiert. Lade die Seite neu, um weiterzuarbeiten.",
+    "categoryAccessForSpaceAdmins": "Nur Space-Admins der Wissensdatenbank ändern, wer einen Bereich pflegt und liest. Frag eine von ihnen, oder werde zuerst Space-Admin.",
+    "categoryGroupsMissing": "Wähle mindestens eine Gruppe, die den Bereich lesen darf.",
+    "categoryWidensParent": "Ein Unterbereich kann nur Gruppen des Bereichs darüber nennen. Wähle unter diesen Gruppen oder ändere zuerst den Bereich darüber.",
+    "categoryVisibilityWidening": "Mehr Personen würden die Artikel dieses Bereichs lesen. Bestätige die Änderung, um sie zu übernehmen.",
+    "categoryAccessManaged": "Wer einen Bereich liest und pflegt, wird im Dialog „Zugriff“ festgelegt. Öffne den Bereich und wähle „Zugriff“."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -4709,6 +4714,7 @@
       },
       "knowledgeBase": {
         "audienceChanged": "Lesende einer Wissensdatenbank geändert",
+        "categoryAccessChanged": "Zugriff auf einen Bereich einer Wissensdatenbank geändert",
         "reviewSettingsChanged": "Überprüfungseinstellungen einer Wissensdatenbank geändert",
         "portalAddressChanged": "Portal-Adresse einer Wissensdatenbank geändert",
         "languagesChanged": "Sprachen einer Wissensdatenbank geändert"
@@ -5012,6 +5018,7 @@
     "unpublished": "Es ist noch nicht veröffentlicht",
     "restricted": "Die Seite ist beschränkt und die Person steht nicht auf ihrer Zugriffsliste",
     "editRestricted": "Das Bearbeiten ist beschränkt und die Person darf laut Zugriffsliste nicht bearbeiten",
+    "notResponsible": "Nur die zuständigen Gruppen dieses Bereichs und Space-Admins ändern seine Artikel.",
     "ruleNotMet": "Eine Bedingung dieser Aktion ist nicht erfüllt",
     "exportDisabled": "Der Export ist in diesem Space ausgeschaltet"
   },
@@ -12163,5 +12170,62 @@
     "reload": "Neu laden",
     "saveAndReload": "Speichern und neu laden",
     "saving": "Wird gespeichert …"
+  },
+  "categoryAccess": {
+    "restrictedTitle": "Nur für bestimmte Gruppen sichtbar",
+    "restrictedNote": "Nur {groups} sehen diesen Bereich. Andere finden ihn nirgends, weder in der App noch im Portal.",
+    "responsible": "Zuständig",
+    "visibleTo": "Sichtbar für",
+    "onlySpaceAdmins": "Nur Space-Admins: Die zuständigen Gruppen wurden gelöscht.",
+    "allEditors": "Alle mit der Rolle Bearbeiter",
+    "likeKnowledgeBase": "Wie die Wissensdatenbank",
+    "dialogTitle": "Zugriff auf „{name}“",
+    "dialogDescription": "Gilt für {articles, plural, one {# Artikel} other {# Artikel}} und {subcategories, plural, one {# Unterbereich} other {# Unterbereiche}}. Unterbereiche können nur weiter einschränken.",
+    "audited": "Wird im Audit-Log festgehalten",
+    "save": "Zugriff speichern",
+    "saveFailed": "Der Zugriff konnte nicht gespeichert werden",
+    "saved": "Zugriff auf „{name}“ gespeichert",
+    "responsibleHint": "Sie legen Artikel an, bearbeiten, veröffentlichen, verschieben und löschen sie. Space-Admins können es immer.",
+    "responsibleInherited": "Geerbt vom Bereich darüber: {groups}. Nenne einige davon, um einzuschränken.",
+    "responsibleEmpty": "Ohne Gruppe schreiben hier alle mit der Rolle Bearbeiter.",
+    "addGroup": "Gruppe hinzufügen …",
+    "visibleGroups": "Gruppen, die den Bereich sehen",
+    "visibleGroupsMissing": "Wähle mindestens eine Gruppe, die den Bereich sehen darf.",
+    "visibility": {
+      "knowledgeBase": {
+        "title": "Wie die Wissensdatenbank",
+        "description": "Alle, die die Wissensdatenbank lesen, im Portal und in der App."
+      },
+      "groups": {
+        "title": "Nur bestimmte Gruppen",
+        "description": "Überall: Portal, App, Suche und Exporte."
+      },
+      "inherited": "Wie der Bereich darüber: nur {groups}."
+    },
+    "peopleTitle": "Einzelne Personen behalten ihren Zugriff",
+    "people": "{count, plural, one {# Person hat} other {# Personen haben}} schon vor diesem Dialog Zugriff bekommen. Speichern mit Gruppen entfernt sie.",
+    "effect": {
+      "title": "Was sich ändert",
+      "nothing": "Für niemanden ändert sich etwas.",
+      "losingWriteNamed": "{names} können die {articles, plural, one {# Artikel} other {# Artikel}} danach nur noch lesen.",
+      "losingWrite": "{count, plural, one {# Person} other {# Personen}} mit der Rolle Bearbeiter können die {articles, plural, one {# Artikel} other {# Artikel}} danach nur noch lesen.",
+      "losingRead": "{count, plural, one {# Person verliert} other {# Personen verlieren}} den Lesezugriff auf die {articles, plural, one {# Artikel} other {# Artikel}}, auch im Portal und in der Suche.",
+      "publicPortal": "Der Bereich verschwindet aus dem öffentlichen Portal und der statischen Website.",
+      "gainingRead": "{count, plural, one {# Person kann} other {# Personen können}} die {articles, plural, one {# Artikel} other {# Artikel}} neu lesen."
+    },
+    "widenTitle": "Mehr Personen lesen lassen?",
+    "widenDescription": "{count, plural, one {# Artikel} other {# Artikel}} in „{name}“ werden für mehr Personen lesbar, im Portal, in der App und in der Suche.",
+    "widenConfirm": "Mehr Personen lesen lassen",
+    "lockTitle": "Nur sichtbar für {groups}",
+    "readOnly": "Nur lesen: Du bist für diesen Bereich nicht zuständig",
+    "action": "Zugriff …",
+    "mine": "Meine",
+    "all": "Alle",
+    "viewLabel": "Angezeigte Bereiche",
+    "moreToRead": "{count, plural, one {# weiterer Bereich zum Lesen} other {# weitere Bereiche zum Lesen}}",
+    "showAll": "Alle zeigen",
+    "hiddenTitle": "Für dich ausgeblendete Bereiche",
+    "hiddenHint": "Auf Gruppen eingeschränkt, in denen du nicht bist. Als Space-Admin änderst du, wer sie sieht, lesen kannst du sie nicht.",
+    "otherCategory": "anderer Bereich · nur lesen"
   }
 }

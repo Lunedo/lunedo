@@ -17,7 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { bytes, timestamps } from "../database/columns.js";
-import { invitations } from "../organizations/access-schema.js";
+import { groups, invitations } from "../organizations/access-schema.js";
 import { organizations } from "../organizations/schema.js";
 import { spaces, treeItems } from "../spaces/schema.js";
 
@@ -176,6 +176,32 @@ export const knowledgeBaseCategories = pgTable(
     ),
     check("knowledge_base_categories_contact_length", sql`length(${table.contactEmail}) <= 254`),
   ],
+);
+
+export const categoryResponsibilities = pgTable(
+  "category_responsibilities",
+  {
+    itemId: uuid()
+      .primaryKey()
+      .references(() => treeItems.id, { onDelete: "cascade" }),
+    setBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    ...timestamps(),
+  },
+  (table) => [index().on(table.setBy)],
+);
+
+export const categoryResponsibleGroups = pgTable(
+  "category_responsible_groups",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => categoryResponsibilities.itemId, { onDelete: "cascade" }),
+    groupId: uuid()
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.itemId, table.groupId] }), index().on(table.groupId)],
 );
 
 export const articleNumbers = pgTable(

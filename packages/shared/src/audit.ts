@@ -138,6 +138,7 @@ export const auditEventNames = [
   "audit.exported",
   "space.created",
   "knowledgeBase.audienceChanged",
+  "knowledgeBase.categoryAccessChanged",
   "knowledgeBase.reviewSettingsChanged",
   "knowledgeBase.portalAddressChanged",
   "knowledgeBase.languagesChanged",

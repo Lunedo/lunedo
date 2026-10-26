@@ -4,7 +4,7 @@ import type { paths } from "../api/generated/schema.js";
 import { request } from "../api/request.js";
 
 type Json<T> = T extends { content: { "application/json": infer Body } } ? Body : never;
-type Ok<Path extends keyof paths, Method extends "get" | "post" | "put"> = Json<
+export type Ok<Path extends keyof paths, Method extends "get" | "post" | "put"> = Json<
   NonNullable<paths[Path][Method]> extends { responses: infer Responses }
     ? Responses[keyof Responses & (200 | 201)]
     : never

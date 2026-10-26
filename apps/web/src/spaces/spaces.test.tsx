@@ -646,6 +646,7 @@ describe("spaces", () => {
       excerpt: [],
       space: { id: SPACE_ID, key: "ITOPS", name: "IT Operations", personal: false },
       sharedWithYou: false,
+      otherCategory: false,
       path: [],
       labels: [],
       status: null,

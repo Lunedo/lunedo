@@ -1,6 +1,7 @@
 import { cleanLabel } from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import { holderMatches } from "../authorization/item-access.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { actorIdOf } from "../spaces/common.js";
@@ -97,6 +98,7 @@ export interface SearchHit {
   excerpt: ExcerptPart[];
   space: SearchSpace | null;
   sharedWithYou: boolean;
+  otherCategory: boolean;
   path: { id: string; title: string }[];
   labels: string[];
   status: PageStatus | null;
@@ -546,6 +548,7 @@ export class SearchService {
     );
     const statuses = await this.#statuses(hits.flatMap((hit) => (hit.status ? [hit.status] : [])));
     const meetings = await this.#meetingContext(principal, hits);
+    const otherCategory = await this.#otherCategory(principal, hits, spaces);
     return hits.map((hit) => {
       const space = spaces.get(hit.spaceId) ?? null;
       const authorName = hit.authorId ? authors.get(hit.authorId) : undefined;
@@ -560,6 +563,7 @@ export class SearchService {
         excerpt: excerptParts(hit.excerpt),
         space,
         sharedWithYou: space === null,
+        otherCategory: otherCategory.has(hit.itemId),
         path: space ? (paths.get(hit.itemId) ?? []) : [],
         labels: hit.labels,
         status: (hit.status && statuses.get(hit.status)) || null,
@@ -575,6 +579,32 @@ export class SearchService {
         cursor: { score: hit.score, updatedAt: hit.contentUpdatedAt, sourceId: hit.sourceId },
       };
     });
+  }
+
+  async #otherCategory(
+    principal: Principal,
+    hits: AdapterHit[],
+    spaces: Map<string, SearchSpace>,
+  ): Promise<Set<string>> {
+    const accountId = actorIdOf(principal);
+    const knowledgeBases = [...new Set(hits.map((hit) => hit.spaceId))].filter(
+      (spaceId) => spaces.get(spaceId)?.knowledgeBase,
+    );
+    if (!accountId || knowledgeBases.length === 0) return new Set();
+    const responsible = await this.#database.execute<{ space_id: string }>(sql`
+      select distinct f.space_id from tree_items f
+      join category_responsible_groups cg on cg.item_id = f.id
+      where f.space_id = any(${sql.param(knowledgeBases)}::uuid[])
+        and ${holderMatches(sql`'group'`, sql`cg.group_id`, sql`${accountId}::uuid`)}`);
+    const theirs = new Set(responsible.rows.map((row) => row.space_id));
+    const candidates = [...new Set(hits.filter((hit) => theirs.has(hit.spaceId)).map((hit) => hit.itemId))];
+    if (candidates.length === 0) return new Set();
+    const decisions = await this.#authorization.explainMany(
+      principal,
+      "item.edit",
+      candidates.map((id) => ({ type: "item", id })),
+    );
+    return new Set(candidates.filter((_id, index) => decisions[index]?.allowed !== true));
   }
 
   async #meetingContext(

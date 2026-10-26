@@ -362,6 +362,14 @@ export class AuthorizationService {
           decided.push(decision([], ["editRestricted"]));
           continue;
         }
+        const administers = grants.some(
+          (grant) =>
+            (grant.kind === "spaceRole" || grant.kind === "share") && grantsSpaceRole(grant.role, "admin"),
+        );
+        if (editsItem && item.responsibility && !item.responsibility.listed && !administers) {
+          decided.push(decision([], ["notResponsible"]));
+          continue;
+        }
       }
       decided.push({
         id,

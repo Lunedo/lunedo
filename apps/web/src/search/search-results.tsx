@@ -166,6 +166,7 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
         </time>
         {hit.status ? <StatusBadge status={hit.status} /> : null}
         {hit.archived ? <Badge>{t("search.archived")}</Badge> : null}
+        {hit.otherCategory ? <Badge>{t("categoryAccess.otherCategory")}</Badge> : null}
         {hit.labels.slice(0, 3).map((label) => (
           <Badge key={label}>{label}</Badge>
         ))}

@@ -107,6 +107,23 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     return created.json().id as string;
   }
 
+  async function restrictCategory(spaceId: string, itemId: string) {
+    const group = await owner.post(`/api/v1/organizations/${organizationId}/groups`, {
+      name: `Readers ${itemId.slice(-8)}`,
+    });
+    const groupId = (group.json() as { id: string }).id;
+    const session = (await owner.get("/api/v1/auth/session")).json() as { account: { id: string } };
+    await owner.post(`/api/v1/groups/${groupId}/members`, { accountId: session.account.id });
+    const restricted = await owner.put(
+      `/api/v1/spaces/${spaceId}/knowledge-base/categories/${itemId}/access`,
+      {
+        responsibleGroupIds: [],
+        visibleGroupIds: [groupId],
+      },
+    );
+    expect(restricted.statusCode, restricted.body).toBe(200);
+  }
+
   async function article(
     spaceId: string,
     parentId: string | null,
@@ -420,10 +437,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const closed = await folder(kb.id, "Geschlossen");
     await article(kb.id, open, "Sichtbar", "Für alle.");
     const hiddenEntry = await article(kb.id, closed, "Versteckt", "Nur für wenige.");
-    const restricted = await owner.post(`/api/v1/pages/${closed}/access`, {
-      changes: [{ action: "restrict", kind: "view" }],
-    });
-    expect(restricted.statusCode, restricted.body).toBe(200);
+    await restrictCategory(kb.id, closed);
     await index();
     const visitor = anonymous();
     const start = await visitor.get(`${kb.path}/`);
@@ -447,7 +461,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(editor.body).not.toContain('class="lock"');
     const locked = await owner.get(`${kb.path}/topics/${closed}`);
     expect(locked.statusCode).toBe(200);
-    expect(locked.body).toMatch(/aria-current="page"><span class="cicon s32"[^]*?Geschlossen/);
+    expect(locked.body).toMatch(/aria-current="page"><span class="cicon s32"[\s\S]*?Geschlossen/);
     const signedIn = await (await person()).client.get(`${kb.path}/topics/${closed}`);
     expect(signedIn.statusCode).toBe(404);
     expect(signedIn.body).toContain("find this page");
@@ -461,12 +475,10 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const outlook = await folder(kb.id, "Outlook", microsoft);
     const web = await folder(kb.id, "Web App", outlook);
     const restricted = await folder(kb.id, "Outlook intern", microsoft);
-    await owner.post(`/api/v1/pages/${restricted}/access`, {
-      changes: [{ action: "restrict", kind: "view" }],
-    });
     await article(kb.id, web, "Outlook im Browser anmelden", "Mit dem Browser anmelden.", { type: "howTo" });
     await article(kb.id, outlook, "Outlook startet nicht", "Neu starten hilft.", { type: "troubleshooting" });
     await article(kb.id, restricted, "Outlook Geheimnis", "Nur intern.");
+    await restrictCategory(kb.id, restricted);
     await index();
     const reader = anonymous();
     const t = messagesFor("en");
@@ -918,7 +930,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(english.body).toContain(messagesFor("en").onThisPage);
     expect(english.body).toContain('class="dd lang"');
     expect(english.body).toMatch(
-      /hreflang="en" lang="en" aria-current="true"><span class="cur"><svg[^]*?<\/svg><\/span><span class="trunc" title="English">English<\/span><span class="n" lang="en">1 of 2 translated<\/span>/,
+      /hreflang="en" lang="en" aria-current="true"><span class="cur"><svg[\s\S]*?<\/svg><\/span><span class="trunc" title="English">English<\/span><span class="n" lang="en">1 of 2 translated<\/span>/,
     );
     expect(english.body).toMatch(
       /hreflang="de" lang="de"><span class="cur"><\/span><span class="trunc" title="Deutsch">Deutsch<\/span><span class="n" lang="en">all 2<\/span><\/a>/,

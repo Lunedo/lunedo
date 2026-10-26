@@ -132,6 +132,7 @@ import { WordReader } from "./imports/word/reader.js";
 import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import { ArticleApiService } from "./knowledge-bases/article-api.js";
+import { CategoryAccessService } from "./knowledge-bases/category-access.js";
 import { knowledgeBaseNotificationTypes } from "./knowledge-bases/notifications.js";
 import { PortalAccountService } from "./knowledge-bases/portal-accounts.js";
 import { ReviewService } from "./knowledge-bases/reviews.js";
@@ -334,6 +335,7 @@ export interface AccountServices {
   archive: ArchiveService;
   templates: TemplateService;
   knowledgeBases: KnowledgeBaseService;
+  categoryAccess: CategoryAccessService;
   translations: ArticleTranslationService;
   articleApi: ArticleApiService;
   portalAccounts: PortalAccountService;
@@ -941,6 +943,7 @@ export function createAccountServices(options: {
     people,
     templates,
   });
+  const categoryAccess = new CategoryAccessService({ database, authorization, audit, people });
   const translations = new ArticleTranslationService({ database, authorization, audit, spaces, tree });
   const portalAccounts = new PortalAccountService({ database, audit, spaces, invitations, memberships });
   const whiteboards = new WhiteboardService({
@@ -1310,6 +1313,7 @@ export function createAccountServices(options: {
     archive,
     templates,
     knowledgeBases,
+    categoryAccess,
     translations,
     articleApi,
     portalAccounts,

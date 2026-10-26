@@ -93,6 +93,15 @@ export function editRestrictionCondition(account: SQL, item: SQL, space: SQL): S
       and not ${restrictionListedCondition(sql`r`, account, sql`${space}.organization_id`)})`;
 }
 
+export function responsibilityCondition(account: SQL, item: SQL, space: SQL): SQL {
+  return sql`(not exists (select 1 from category_responsibilities cr
+      where cr.item_id = any(${item}.path)
+        and not exists (select 1 from category_responsible_groups cg
+          where cg.item_id = cr.item_id
+            and ${holderMatches(sql`'group'`, sql`cg.group_id`, account)}))
+    or ${spaceRoleConditionFor(account, space, "admin")})`;
+}
+
 export function itemRoleCondition(
   principal: Principal,
   item: SQL,
@@ -124,7 +133,12 @@ export function accountItemCondition(
     sql`(${internal} and (${sql.join(itemSources, sql` or `)}))`,
   ];
   const restrictions = [viewRestrictionCondition(account, item, space)];
-  if (options.editRestriction) restrictions.push(editRestrictionCondition(account, item, space));
+  if (options.editRestriction) {
+    restrictions.push(
+      editRestrictionCondition(account, item, space),
+      responsibilityCondition(account, item, space),
+    );
+  }
   return sql`(${space}.deleted_at is null and ${active}
     and (${sql.join(sources, sql` or `)}) and ${sql.join(restrictions, sql` and `)})`;
 }
@@ -194,6 +208,7 @@ export interface ItemFacts {
   inactiveSources: ItemGrantSource[];
   viewRestrictions: ViewRestriction[];
   editRestriction: { listed: boolean } | null;
+  responsibility: { listed: boolean } | null;
 }
 
 export async function itemFacts(
@@ -237,6 +252,10 @@ export async function itemFactsMany(
   }
   await Promise.all(pending);
   return found;
+}
+
+function responsibilityOf(rows: { listed: boolean }[]): { listed: boolean } | null {
+  return rows.length === 0 ? null : { listed: rows.every((row) => row.listed) };
 }
 
 async function loadItemFacts(
@@ -288,6 +307,12 @@ async function loadItemFacts(
     from targets x join page_restrictions r
       on (r.kind = 'view' and r.item_id = any(x.path)) or (r.kind = 'edit' and r.item_id = x.target)
     order by x.target, array_position(x.path, r.item_id)`);
+  const responsibilities = await executor.execute<{ target: string; listed: boolean }>(sql`
+    with ${targets}
+    select x.target, exists (select 1 from category_responsible_groups cg
+      where cg.item_id = cr.item_id
+        and ${holderMatches(sql`'group'`, sql`cg.group_id`, account)}) as listed
+    from targets x join category_responsibilities cr on cr.item_id = any(x.path)`);
   const facts = new Map<string, ItemFacts>();
   for (const row of items.rows) {
     const itemId = row.target;
@@ -322,6 +347,7 @@ async function loadItemFacts(
         .filter((restriction) => restriction.kind === "view")
         .map((restriction) => ({ itemId: restriction.item_id, listed: restriction.listed })),
       editRestriction: edit ? { listed: edit.listed } : null,
+      responsibility: responsibilityOf(own(responsibilities.rows)),
     });
   }
   return facts;
