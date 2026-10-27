@@ -78,3 +78,12 @@ export class SameEmailError extends AuthError {
     super("sameEmail", "This is already the e-mail address of the account");
   }
 }
+
+export class ManagedAccountError extends AuthError {
+  constructor(
+    readonly providerId: string,
+    readonly providerName: string,
+  ) {
+    super("managedAccount", `This account signs in through ${providerName}`);
+  }
+}

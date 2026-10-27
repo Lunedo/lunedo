@@ -3,8 +3,10 @@ import "reflect-metadata";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
+import { ManagedAccountError } from "../auth/errors.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
+import { VirtualAuthenticator } from "../testing/webauthn.js";
 import { managedAccountCounts, managedStateOf, refreshManagedAccounts } from "./managed.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -279,5 +281,38 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
     ]);
     expect(rows.rows).toEqual([{ provider_id: created.id }]);
     expect((await events(person.id)).filter((event) => event.name === "account.managed")).toHaveLength(2);
+  });
+
+  it("refuses passkey sign-in for managed accounts, also for directory accounts", async () => {
+    const domain = uniqueDomain();
+    const person = await account(`person@${domain}`);
+    const authenticator = new VirtualAuthenticator();
+    const origin = "https://wiki.example.org";
+    const options = await test.services.webauthn.registrationOptions({
+      id: person.id,
+      email: person.email ?? "",
+      name: person.name,
+    });
+    await test.services.webauthn.register(test.database, {
+      accountId: person.id,
+      response: authenticator.register(options, origin),
+      expectedChallenge: options.challenge,
+      name: "Laptop",
+    });
+    const signInWithPasskey = async () => {
+      const started = await test.services.signIn.passkeyOptions("203.0.113.80");
+      return test.services.signIn.signInWithPasskey({
+        token: started.token,
+        response: authenticator.assert(started.options, origin),
+        client: { ip: "203.0.113.80" },
+      });
+    };
+    await expect(signInWithPasskey()).resolves.toMatchObject({ status: "signedIn" });
+
+    const created = await provider([domain]);
+    await test.pool.query("update identity_providers set type = 'ldap' where id = $1", [created.id]);
+    await expect(signInWithPasskey()).rejects.toThrow(ManagedAccountError);
+    const sessions = await test.pool.query("select 1 from sessions where account_id = $1", [person.id]);
+    expect(sessions.rows).toHaveLength(1);
   });
 });

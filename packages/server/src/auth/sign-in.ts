@@ -6,7 +6,12 @@ import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { refreshManagedAccounts } from "../identity/managed.js";
+import {
+  managedStateOf,
+  refreshManagedAccounts,
+  refuseManaged,
+  signsInOnlyThroughProvider,
+} from "../identity/managed.js";
 import { identities } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { knownDevices } from "../notifications/schema.js";
@@ -207,6 +212,7 @@ export class SignInService {
     executor: Executor = this.#database,
   ): Promise<SecondFactorRequirement | null> {
     if ((await this.#accounts.ownerId(executor)) === accountId) return "instanceOwner";
+    if (signsInOnlyThroughProvider(await managedStateOf(executor, accountId))) return null;
     const [reset] = await executor
       .select({ at: accounts.secondFactorResetAt })
       .from(accounts)
@@ -487,6 +493,7 @@ export class SignInService {
       await this.#recordFailure(subjects, account?.id ?? null, "password", "invalidCredentials");
       throw new InvalidCredentialsError();
     }
+    await refuseManaged(this.#database, account.id, "any");
 
     const factors = await secondFactorsOf(this.#database, account.id);
     if (hasSecondFactor(factors)) {
@@ -553,6 +560,7 @@ export class SignInService {
   }): Promise<SignedIn> {
     const started = await this.#databaseNow();
     const { pending, account } = await this.#pending(input.pendingToken);
+    if (!providerOfPending(pending.payload)) await refuseManaged(this.#database, account.id, "any");
     const method: SignInMethod = input.factor.type;
     const subjects = { email: account.email, clientIp: input.client.ip };
     await this.#checkAttempt(subjects, account.id, method);
@@ -866,6 +874,7 @@ export class SignInService {
       });
       throw new LockedError(secondsUntil(lockout.lockedUntil));
     }
+    await refuseManaged(this.#database, account.id, "any");
     await this.#throttle.recordSuccess(account.email);
     return this.#signedIn((tx, mailIds) =>
       this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds, started),
@@ -889,6 +898,7 @@ export class SignInService {
   async reauthenticate(session: Session, input: ReauthenticationInput, client: ClientInfo): Promise<string> {
     const account = await this.#accounts.get(session.accountId);
     if (!canSignIn(account)) throw new InvalidCredentialsError();
+    await refuseManaged(this.#database, account.id, input.method === "password" ? "any" : "providerOnly");
     const subjects = { email: account.email, clientIp: client.ip };
     const rate = await this.#throttle.attempt(subjects);
     if (!rate.allowed) throw new RateLimitedError(rate.retryAfterSeconds);

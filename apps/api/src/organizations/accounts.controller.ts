@@ -192,7 +192,7 @@ export class AccountsController {
     params: z.object({ accountId: idSchema }).strict(),
     body: secondFactorResetSchema,
     response: { description: "Sessions that ended.", schema: z.object({ endedSessions: z.number().int() }) },
-    errors: ["resetOwnSecondFactor", "notFound"],
+    errors: ["managedAccount", "resetOwnSecondFactor", "notFound"],
   })
   async resetSecondFactor(
     @Param("accountId") accountId: string,

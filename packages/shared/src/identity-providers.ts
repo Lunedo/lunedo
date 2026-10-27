@@ -91,7 +91,7 @@ const syncDefaults = {
   deactivationLimitAccounts: SYNC_DEACTIVATION_LIMIT_ACCOUNTS.default,
 };
 
-export const secondFactorModes = ["provider", "providerProof", "lunedo"] as const;
+export const secondFactorModes = ["provider", "providerProof"] as const;
 export type SecondFactorMode = (typeof secondFactorModes)[number];
 
 const secondFactorSchema = z

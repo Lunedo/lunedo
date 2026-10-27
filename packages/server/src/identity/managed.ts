@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { ManagedAccountError } from "../auth/errors.js";
 import type { Executor, Transaction } from "../database/database.js";
 import { identityProviders, type ManagedSource, managedAccounts } from "./schema.js";
 
@@ -39,6 +40,16 @@ export async function managedStateOf(executor: Executor, accountId: string): Pro
     .innerJoin(identityProviders, eq(identityProviders.id, managedAccounts.providerId))
     .where(eq(managedAccounts.accountId, accountId));
   return row ?? null;
+}
+
+export async function refuseManaged(
+  executor: Executor,
+  accountId: string,
+  which: "any" | "providerOnly",
+): Promise<void> {
+  const state = await managedStateOf(executor, accountId);
+  if (!state || (which === "providerOnly" && !signsInOnlyThroughProvider(state))) return;
+  throw new ManagedAccountError(state.providerId, state.providerName);
 }
 
 const setUpProvider = sql`p.setup_completed_at is not null`;

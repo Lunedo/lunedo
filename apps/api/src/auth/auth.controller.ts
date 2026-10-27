@@ -80,11 +80,13 @@ export class AuthController {
   @PublicRoute()
   @ApiRoute({
     summary: "Sign in with a password",
+    description:
+      "For local accounts and guests. An account managed by an identity provider is refused with `managedAccount` after a correct password, and with `invalidCredentials` otherwise; it signs in through its provider.",
     tags: ["Authentication"],
     status: 200,
     body: signInSchema,
     response: { description: "The result.", schema: signInResultSchema },
-    errors: ["invalidCredentials", "locked", "rateLimited", "setupIncomplete"],
+    errors: ["managedAccount", "invalidCredentials", "locked", "rateLimited", "setupIncomplete"],
   })
   async signIn(
     @Body() body: z.output<typeof signInSchema>,
@@ -126,7 +128,7 @@ export class AuthController {
     status: 200,
     body: secondFactorSchema,
     response: { description: "The session.", schema: signedInSchema },
-    errors: ["challengeExpired", "invalidSecondFactor", "locked", "rateLimited"],
+    errors: ["managedAccount", "challengeExpired", "invalidSecondFactor", "locked", "rateLimited"],
   })
   async secondFactor(
     @Body() body: z.output<typeof secondFactorSchema>,
@@ -171,7 +173,7 @@ export class AuthController {
     status: 200,
     body: passkeySignInSchema,
     response: { description: "The session.", schema: signedInSchema },
-    errors: ["challengeExpired", "invalidSecondFactor", "rateLimited"],
+    errors: ["managedAccount", "challengeExpired", "invalidSecondFactor", "rateLimited"],
   })
   async passkeySignIn(
     @Body() body: z.output<typeof passkeySignInSchema>,
@@ -232,7 +234,13 @@ export class AuthController {
     summary: "Confirm the identity",
     tags: ["Authentication"],
     body: reauthenticationSchema,
-    errors: ["invalidCredentials", "invalidSecondFactor", "challengeExpired", "rateLimited"],
+    errors: [
+      "managedAccount",
+      "invalidCredentials",
+      "invalidSecondFactor",
+      "challengeExpired",
+      "rateLimited",
+    ],
   })
   async reauthenticate(
     @Body() body: z.output<typeof reauthenticationSchema>,
@@ -251,6 +259,8 @@ export class AuthController {
   @PublicRoute()
   @ApiRoute({
     summary: "Request a password reset",
+    description:
+      "Sends a reset link to active local accounts and guests. Accounts managed by an identity provider get no link, also while the provider is deactivated. The answer is the same for every address.",
     tags: ["Authentication"],
     status: 202,
     body: passwordResetRequestSchema,

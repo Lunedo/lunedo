@@ -750,6 +750,13 @@
       "when": 1793122207673,
       "tag": "0106_managed_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1793124033301,
+      "tag": "0107_provider_second_factor",
+      "breakpoints": true
     }
   ]
 }

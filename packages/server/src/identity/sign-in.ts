@@ -79,13 +79,12 @@ export interface StartedFlow {
   browserToken: string;
 }
 
-export function needsLunedoFactor(
-  setting: { mode: "provider" | "providerProof" | "lunedo"; proofValues?: readonly string[] },
+export function providerProvedSecondFactor(
+  setting: { mode: "provider" | "providerProof"; proofValues?: readonly string[] },
   methods: readonly string[],
 ): boolean {
-  if (setting.mode === "lunedo") return true;
-  if (setting.mode === "provider") return false;
-  return !methods.some((method) => setting.proofValues?.includes(method));
+  if (setting.mode === "provider") return true;
+  return methods.some((method) => setting.proofValues?.includes(method));
 }
 
 export class DirectorySignInRefusedError extends AuthError {
@@ -472,6 +471,12 @@ export class ProviderSignInService {
       );
     }
 
+    if (
+      provider.type !== "ldap" &&
+      !providerProvedSecondFactor(provider.config.secondFactor, result.methods)
+    ) {
+      return this.#refuse({ providerId: provider.id, reason: "secondFactorMissing", profile });
+    }
     const { groups, failed: groupsFailed } = await this.#groups(provider, credentials, profile);
     await this.#trackGroupsClaim(provider.id, profile);
     for (let attempt = 0; ; attempt++) {
@@ -482,7 +487,7 @@ export class ProviderSignInService {
           groups,
           groupsFailed,
           emailVerified,
-          secondFactor: needsLunedoFactor(provider.config.secondFactor, result.methods),
+          secondFactor: "policy",
           providerSessionId: result.providerSessionId,
           client: input.client,
           returnTo: flow.returnTo,
@@ -1005,10 +1010,14 @@ export class ProviderSignInService {
       });
       throw new ChallengeExpiredError();
     }
+    if (provider.type !== "ldap" && !providerProvedSecondFactor(provider.config.secondFactor, methods)) {
+      await this.#challenges.recordFailure(pending.id);
+      throw new ChallengeExpiredError();
+    }
     const outcome = await this.#finishLink(
       pending.id,
       account,
-      needsLunedoFactor(provider.config.secondFactor, methods),
+      await this.#signIn.secondFactorRequired(account.id),
       client,
       started,
     );

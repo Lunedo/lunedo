@@ -16,7 +16,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { VirtualAuthenticator } from "../testing/webauthn.js";
-import { type CallbackResult, needsLunedoFactor } from "./sign-in.js";
+import { type CallbackResult, providerProvedSecondFactor } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const BASE = "https://lunedo.test";
@@ -63,7 +63,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     requiredGroups?: string[];
     domains?: string[];
     issuer?: FakeOidcProvider;
-    secondFactor?: { mode: "provider" | "providerProof" | "lunedo"; proofValues?: string[] };
+    secondFactor?: { mode: "provider" | "providerProof"; proofValues?: string[] };
   }) {
     const source = options.issuer ?? idp;
     const domains = options.domains ?? ["example.org"];
@@ -289,16 +289,6 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(identities.rows).toEqual([]);
   });
 
-  async function enableTotp(accountId: string) {
-    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
-    if (!setup) throw new Error("TOTP was not started");
-    const secret = Secret.fromBase32(setup.secret);
-    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
-      confirming: true,
-    });
-    return secret;
-  }
-
   it("creates accounts without an organization, tells the administrators and lets them assign one", async () => {
     const administrator = await account(null);
     await test.services.roles.assign(SYSTEM, {
@@ -349,56 +339,45 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(audited.rows).toEqual([{ fields: { organizationId: org } }]);
   });
 
-  it("asks for a Lunedo second factor when the provider shows no proof of one", async () => {
+  it("refuses a sign-in without proof of a second factor when the provider is set to require one", async () => {
     const id = await provider({ accountCreation: true, secondFactor: { mode: "providerProof" } });
     const subject = randomUUID();
     const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org` };
-    const first = await signIn(id, claims);
-    if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
-    expect(first.signedIn.session.kind).toBe("secondFactorSetup");
-    const accountId = first.signedIn.session.accountId;
-
-    const secret = await enableTotp(accountId);
-    const second = await signIn(id, claims);
-    if (second.kind !== "secondFactorRequired") throw new Error(`Second factor expected, got ${second.kind}`);
-    expect(second.factors).toEqual(["totp"]);
-    const completed = await test.services.signIn.completeSecondFactor({
-      pendingToken: second.pendingToken,
-      factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
-      client: {},
-    });
-    expect(completed.session).toMatchObject({
-      accountId,
-      kind: "full",
-      methods: ["identityProvider", "totp"],
-    });
-    const stored = await test.pool.query<{ identity_id: string | null }>(
-      "select identity_id from sessions where id = $1",
-      [completed.session.id],
+    const refused = await signIn(id, claims);
+    expect(refused).toMatchObject({ kind: "refused", reason: "secondFactorMissing" });
+    const audited = await test.pool.query(
+      "select fields from audit_events where name = 'auth.signInRefused' and target_id = $1",
+      [id],
     );
-    expect(stored.rows[0]?.identity_id).not.toBeNull();
+    expect(audited.rows.map((row) => row.fields.reason)).toEqual(["secondFactorMissing"]);
+    const created = await test.pool.query("select 1 from identities where subject = $1", [subject]);
+    expect(created.rows).toEqual([]);
 
     const proven = await signIn(id, { ...claims, amr: ["pwd", "mfa"] });
     if (proven.kind !== "signedIn") throw new Error(`Signed in expected, got ${proven.kind}`);
     expect(proven.signedIn.session).toMatchObject({ kind: "full", methods: ["identityProvider"] });
   });
 
-  it("always asks for a Lunedo second factor when the provider is set to", async () => {
-    const id = await provider({ accountCreation: true, secondFactor: { mode: "lunedo" } });
+  it("never asks managed accounts of a provider for a Lunedo second factor, also when 2FA is enforced", async () => {
+    const id = await provider({ accountCreation: true });
     const subject = randomUUID();
-    const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org`, amr: ["mfa"] };
-    const first = await signIn(id, claims);
-    if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
-    await enableTotp(first.signedIn.session.accountId);
-    expect((await signIn(id, claims)).kind).toBe("secondFactorRequired");
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org` };
+    await test.settings.set(twoFactorRequiredSetting, {}, "instance", true);
+    try {
+      const first = await signIn(id, claims);
+      if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
+      expect(first.signedIn.session.kind).toBe("full");
+      expect(await test.services.signIn.secondFactorRequirement(first.signedIn.session.accountId)).toBeNull();
+    } finally {
+      await test.settings.clear(twoFactorRequiredSetting, {}, "instance");
+    }
   });
 
   it("accepts the configured proof values of a provider", () => {
     const setting = { mode: "providerProof" as const, proofValues: ["hwk", "otp"] };
-    expect(needsLunedoFactor(setting, ["pwd", "otp"])).toBe(false);
-    expect(needsLunedoFactor(setting, ["pwd", "mfa"])).toBe(true);
-    expect(needsLunedoFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(false);
-    expect(needsLunedoFactor({ mode: "lunedo", proofValues: ["mfa"] }, ["mfa"])).toBe(true);
+    expect(providerProvedSecondFactor(setting, ["pwd", "otp"])).toBe(true);
+    expect(providerProvedSecondFactor(setting, ["pwd", "mfa"])).toBe(false);
+    expect(providerProvedSecondFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(true);
   });
 
   it("keeps a pending link for 15 minutes and refuses it afterwards", async () => {
@@ -474,7 +453,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(again.kind === "signedIn" && again.signedIn.session.accountId).toBe(existing.id);
   });
 
-  it("asks to set up the required second factor after linking an account that has none", async () => {
+  it("drops the enforced second factor once linking makes the account managed", async () => {
     const org = await organization();
     await test.settings.set(twoFactorRequiredSetting, { organization: org }, "organization", true);
     const existing = await account(org);
@@ -487,10 +466,11 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       factor: null,
       client: {},
     });
-    expect(linked.session).toMatchObject({ accountId: existing.id, kind: "secondFactorSetup" });
+    expect(linked.session).toMatchObject({ accountId: existing.id, kind: "full" });
+    expect(await test.services.signIn.secondFactorRequirement(existing.id)).toBeNull();
   });
 
-  async function accountFromProvider(secondFactor?: { mode: "provider" | "lunedo" }) {
+  async function accountFromProvider(secondFactor?: { mode: "provider" | "providerProof" }) {
     const domain = `${randomUUID().slice(0, 8)}.example`;
     const first = await provider({
       accountCreation: true,
@@ -574,45 +554,6 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       kind: "full",
       methods: ["identityProvider"],
     });
-    expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
-  });
-
-  it("asks for the Lunedo second factor after a provider confirmed a link and the provider needs one", async () => {
-    const moved = await accountFromProvider({ mode: "lunedo" });
-    const setup = await test.services.totp.begin(moved.accountId, { issuer: "Test", account: moved.email });
-    if (!setup) throw new Error("TOTP was not started");
-    const secret = Secret.fromBase32(setup.secret);
-    await test.services.totp.verify(test.database, moved.accountId, TOTP.generate({ secret }), {
-      confirming: true,
-    });
-    const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
-    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
-
-    const confirmed = await confirmThrough(
-      moved.first,
-      result.pendingToken,
-      moved.subject,
-      Math.floor(Date.now() / 1000),
-    );
-    expect(confirmed).toEqual({ kind: "linkConfirmed" });
-    expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
-      confirmed: true,
-      factors: ["totp"],
-    });
-    expect(await linkedProviders(moved.accountId)).toEqual([moved.first]);
-    await expect(
-      test.services.signIn.confirmIdentityLink({
-        pendingToken: result.pendingToken,
-        factor: null,
-        client: {},
-      }),
-    ).rejects.toThrow(InvalidSecondFactorError);
-    const linked = await test.services.signIn.confirmIdentityLink({
-      pendingToken: result.pendingToken,
-      factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
-      client: {},
-    });
-    expect(linked.session).toMatchObject({ kind: "full", methods: ["identityProvider", "totp"] });
     expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
   });
 

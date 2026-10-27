@@ -11,7 +11,7 @@ import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import { emptyReport, type GroupMappingService } from "../identity/groups.js";
-import { managedStateOf, refreshManagedAccounts } from "../identity/managed.js";
+import { managedStateOf, refreshManagedAccounts, refuseManaged } from "../identity/managed.js";
 import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import { accountsWithoutOtherSignIn } from "../identity/sign-in-ways.js";
@@ -236,13 +236,14 @@ export class AccountAdministrationService {
       .from(identities)
       .where(and(eq(identities.id, identityId), eq(identities.accountId, target.id)));
     if (!identity) throw new OrganizationError("notFound", "The identity does not exist");
+    const managedBefore = own ? await managedStateOf(tx, target.id) : null;
+    const managedIdentity = () =>
+      new OrganizationError(
+        "managedIdentity",
+        "This identity provider manages the account; only an administrator can unlink it",
+      );
     if (own) {
-      if ((await managedStateOf(tx, target.id))?.providerId === identity.providerId) {
-        throw new OrganizationError(
-          "managedIdentity",
-          "This identity provider manages the account; only an administrator can unlink it",
-        );
-      }
+      if (managedBefore?.providerId === identity.providerId) throw managedIdentity();
       const stranded = await accountsWithoutOtherSignIn(tx, [target.id], { identityId: identity.id });
       if (stranded.length > 0) {
         throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
@@ -254,7 +255,8 @@ export class AccountAdministrationService {
       .returning({ id: sessions.id });
     await tx.delete(identities).where(eq(identities.id, identity.id));
     await this.#mapping.reconcile(tx, target.id, emptyReport());
-    await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
+    const [change] = await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
+    if (managedBefore && change && !change.after) throw managedIdentity();
     await this.#audit.record(tx, {
       name: "identity.unlinked",
       actor,
@@ -286,6 +288,7 @@ export class AccountAdministrationService {
         { executor: tx },
       );
       await checkRankOverAccount(this.#authorization, tx, actor, target, SECOND_FACTOR_RESET_ACTION);
+      await refuseManaged(tx, accountId, "providerOnly");
       const factors = await secondFactorsOf(tx, accountId);
       await tx.delete(totpCredentials).where(eq(totpCredentials.accountId, accountId));
       await tx.delete(webauthnCredentials).where(eq(webauthnCredentials.accountId, accountId));

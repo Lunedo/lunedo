@@ -1828,7 +1828,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1841,6 +1841,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -2863,7 +2871,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2876,6 +2884,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -3271,7 +3287,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3284,6 +3300,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -3437,7 +3461,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3450,6 +3474,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -5798,7 +5830,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5811,6 +5843,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -8678,7 +8718,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8691,6 +8731,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -8869,7 +8917,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8882,6 +8930,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -11081,7 +11137,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `managedAccount`: The account signs in through its identity provider. `reauthenticationRequired`: Confirm your identity first. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11102,6 +11158,14 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "reauthenticationRequired": {
@@ -22265,6 +22329,7 @@
       "post": {
         "operationId": "auth.requestPasswordReset",
         "summary": "Request a password reset",
+        "description": "Sends a reset link to active local accounts and guests. Accounts managed by an identity provider get no link, also while the provider is deactivated. The answer is the same for every address.",
         "tags": [
           "Authentication"
         ],
@@ -22914,7 +22979,8 @@
                             "accountInactive",
                             "linkDeclined",
                             "linkUnavailable",
-                            "invalidResponse"
+                            "invalidResponse",
+                            "secondFactorMissing"
                           ],
                           "description": "Why the sign-in was refused."
                         }
@@ -23741,7 +23807,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider. `sessionRequired`: This endpoint needs a signed-in session.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23754,6 +23820,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   },
                   "sessionRequired": {
@@ -24398,6 +24472,7 @@
       "post": {
         "operationId": "auth.signIn",
         "summary": "Sign in with a password",
+        "description": "For local accounts and guests. An account managed by an identity provider is refused with `managedAccount` after a correct password, and with `invalidCredentials` otherwise; it signs in through its provider.",
         "tags": [
           "Authentication"
         ],
@@ -24585,7 +24660,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24598,6 +24673,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   }
                 }
@@ -25277,7 +25360,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -25290,6 +25373,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   }
                 }
@@ -25765,7 +25856,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `managedAccount`: The account signs in through its identity provider.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -25778,6 +25869,14 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  },
+                  "managedAccount": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedAccount",
+                      "title": "The account signs in through its identity provider",
+                      "status": 403,
+                      "code": "managedAccount"
                     }
                   }
                 }
@@ -71681,8 +71780,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -71845,8 +71943,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -72031,8 +72128,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -72304,8 +72400,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -72499,8 +72594,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -72736,8 +72830,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -75192,8 +75285,7 @@
                                         "type": "string",
                                         "enum": [
                                           "provider",
-                                          "providerProof",
-                                          "lunedo"
+                                          "providerProof"
                                         ]
                                       },
                                       "proofValues": {
@@ -75374,8 +75466,7 @@
                                         "type": "string",
                                         "enum": [
                                           "provider",
-                                          "providerProof",
-                                          "lunedo"
+                                          "providerProof"
                                         ]
                                       },
                                       "proofValues": {
@@ -75583,8 +75674,7 @@
                                         "type": "string",
                                         "enum": [
                                           "provider",
-                                          "providerProof",
-                                          "lunedo"
+                                          "providerProof"
                                         ]
                                       },
                                       "proofValues": {
@@ -76068,8 +76158,7 @@
                                         "type": "string",
                                         "enum": [
                                           "provider",
-                                          "providerProof",
-                                          "lunedo"
+                                          "providerProof"
                                         ]
                                       },
                                       "proofValues": {
@@ -76283,8 +76372,7 @@
                                         "type": "string",
                                         "enum": [
                                           "provider",
-                                          "providerProof",
-                                          "lunedo"
+                                          "providerProof"
                                         ]
                                       },
                                       "proofValues": {
@@ -76546,8 +76634,7 @@
                                         "type": "string",
                                         "enum": [
                                           "provider",
-                                          "providerProof",
-                                          "lunedo"
+                                          "providerProof"
                                         ]
                                       },
                                       "proofValues": {
@@ -77751,8 +77838,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -77915,8 +78001,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -78101,8 +78186,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -78480,8 +78564,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -78675,8 +78758,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -78912,8 +78994,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -80016,8 +80097,7 @@
                                           "type": "string",
                                           "enum": [
                                             "provider",
-                                            "providerProof",
-                                            "lunedo"
+                                            "providerProof"
                                           ]
                                         },
                                         "proofValues": {
@@ -80198,8 +80278,7 @@
                                           "type": "string",
                                           "enum": [
                                             "provider",
-                                            "providerProof",
-                                            "lunedo"
+                                            "providerProof"
                                           ]
                                         },
                                         "proofValues": {
@@ -80407,8 +80486,7 @@
                                           "type": "string",
                                           "enum": [
                                             "provider",
-                                            "providerProof",
-                                            "lunedo"
+                                            "providerProof"
                                           ]
                                         },
                                         "proofValues": {
@@ -80892,8 +80970,7 @@
                                           "type": "string",
                                           "enum": [
                                             "provider",
-                                            "providerProof",
-                                            "lunedo"
+                                            "providerProof"
                                           ]
                                         },
                                         "proofValues": {
@@ -81107,8 +81184,7 @@
                                           "type": "string",
                                           "enum": [
                                             "provider",
-                                            "providerProof",
-                                            "lunedo"
+                                            "providerProof"
                                           ]
                                         },
                                         "proofValues": {
@@ -81370,8 +81446,7 @@
                                           "type": "string",
                                           "enum": [
                                             "provider",
-                                            "providerProof",
-                                            "lunedo"
+                                            "providerProof"
                                           ]
                                         },
                                         "proofValues": {
@@ -83085,8 +83160,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -83267,8 +83341,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -83476,8 +83549,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -83961,8 +84033,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -84176,8 +84247,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -84439,8 +84509,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -85679,8 +85748,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -85843,8 +85911,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -86029,8 +86096,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -86274,8 +86340,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -86469,8 +86534,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -86706,8 +86770,7 @@
                                     "type": "string",
                                     "enum": [
                                       "provider",
-                                      "providerProof",
-                                      "lunedo"
+                                      "providerProof"
                                     ]
                                   },
                                   "proofValues": {
@@ -87536,8 +87599,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -87718,8 +87780,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -87927,8 +87988,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -88412,8 +88472,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -88627,8 +88686,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -88890,8 +88948,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -90358,8 +90415,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -90540,8 +90596,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -90749,8 +90804,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -91234,8 +91288,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -91449,8 +91502,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -91712,8 +91764,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -93153,8 +93204,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -93335,8 +93385,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -93544,8 +93593,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -94029,8 +94077,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -94244,8 +94291,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -94507,8 +94553,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -95969,8 +96014,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -96151,8 +96195,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -96360,8 +96403,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -96845,8 +96887,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -97060,8 +97101,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -97323,8 +97363,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -98780,8 +98819,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -98962,8 +99000,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -99171,8 +99208,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -99656,8 +99692,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -99871,8 +99906,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -100134,8 +100168,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -102313,8 +102346,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -102495,8 +102527,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -102704,8 +102735,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -103189,8 +103219,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -103404,8 +103433,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -103667,8 +103695,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -105128,8 +105155,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -105310,8 +105336,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -105519,8 +105544,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -106004,8 +106028,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -106219,8 +106242,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -106482,8 +106504,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -109356,8 +109377,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -109538,8 +109558,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -109747,8 +109766,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -110232,8 +110250,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -110447,8 +110464,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -110710,8 +110726,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -114619,8 +114634,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -114801,8 +114815,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -115010,8 +115023,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -115495,8 +115507,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -115710,8 +115721,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -115973,8 +115983,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -117433,8 +117442,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -117615,8 +117623,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -117824,8 +117831,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -118309,8 +118315,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -118524,8 +118529,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -118787,8 +118791,7 @@
                                       "type": "string",
                                       "enum": [
                                         "provider",
-                                        "providerProof",
-                                        "lunedo"
+                                        "providerProof"
                                       ]
                                     },
                                     "proofValues": {
@@ -132727,7 +132730,8 @@
                         "accountInactive",
                         "linkDeclined",
                         "linkUnavailable",
-                        "invalidResponse"
+                        "invalidResponse",
+                        "secondFactorMissing"
                       ],
                       "description": "Why the sign-in was refused."
                     },
@@ -281287,6 +281291,14 @@
           },
           "instanceUrl": {
             "description": "The current address of the instance, for `instanceMoved`.",
+            "type": "string"
+          },
+          "providerId": {
+            "description": "ID of the identity provider that manages the account, for `managedAccount`.",
+            "type": "string"
+          },
+          "providerName": {
+            "description": "Name of the identity provider that manages the account, for `managedAccount`.",
             "type": "string"
           },
           "accounts": {

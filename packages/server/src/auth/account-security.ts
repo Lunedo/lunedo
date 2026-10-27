@@ -6,7 +6,7 @@ import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
-import { refreshManagedAccounts } from "../identity/managed.js";
+import { managedStateOf, refreshManagedAccounts, refuseManaged } from "../identity/managed.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { SettingsService } from "../settings/service.js";
@@ -155,6 +155,7 @@ export class AccountSecurityService {
   }
 
   async beginTotp(session: Session) {
+    await refuseManaged(this.#database, session.accountId, "providerOnly");
     const account = await this.#account(session.accountId);
     const issuer = await this.#settings.get(instanceNameSetting, {});
     const setup = await this.#totp.begin(account.id, { issuer, account: account.email });
@@ -165,6 +166,7 @@ export class AccountSecurityService {
   async confirmTotp(session: Session, code: string): Promise<FactorAdded> {
     return this.#database.transaction(async (tx) => {
       await this.#accounts.lock(tx, session.accountId);
+      await refuseManaged(tx, session.accountId, "providerOnly");
       if (!(await this.#totp.verify(tx, session.accountId, code, { confirming: true }))) {
         throw new InvalidSecondFactorError();
       }
@@ -180,6 +182,7 @@ export class AccountSecurityService {
   }
 
   async passkeyRegistrationOptions(session: Session) {
+    await refuseManaged(this.#database, session.accountId, "providerOnly");
     const account = await this.#account(session.accountId);
     const options = await this.#webauthn.registrationOptions(account);
     await this.#challenges.replaceForSession(
@@ -201,6 +204,7 @@ export class AccountSecurityService {
     const expectedChallenge = challenge.challenge;
     return this.#database.transaction(async (tx) => {
       await this.#accounts.lock(tx, session.accountId);
+      await refuseManaged(tx, session.accountId, "providerOnly");
       const passkey = await this.#webauthn.register(tx, {
         accountId: session.accountId,
         response,
@@ -259,6 +263,7 @@ export class AccountSecurityService {
   async generateRecoveryCodes(session: Session): Promise<string[]> {
     return this.#database.transaction(async (tx) => {
       await this.#accounts.lock(tx, session.accountId);
+      await refuseManaged(tx, session.accountId, "providerOnly");
       if (!hasSecondFactor(await secondFactorsOf(tx, session.accountId))) throw new NoSecondFactorError();
       const codes = await this.#recoveryCodes.generate(tx, session.accountId);
       await this.#audit.record(tx, {
@@ -275,6 +280,7 @@ export class AccountSecurityService {
     const passwordHash = await this.#accounts.hashPassword(newPassword, session.accountId);
     return this.#database.transaction(async (tx) => {
       await this.#accounts.lock(tx, session.accountId);
+      await refuseManaged(tx, session.accountId, "any");
       await this.#accounts.setPasswordHash(tx, session.accountId, passwordHash);
       const ended = await this.#sessions.endAll(tx, session.accountId, { keep: session.id });
       await tx.delete(authChallenges).where(eq(authChallenges.accountId, session.accountId));
@@ -314,7 +320,9 @@ export class AccountSecurityService {
 
   handlePasswordResetRequest = async (job: JobContext<{ email: string }>): Promise<void> => {
     const account = await this.#accounts.findByEmail(job.payload.email);
-    if (!account?.email || account.state !== "active" || !account.passwordHash) return;
+    if (!account?.email || account.state !== "active") return;
+    if (!account.passwordHash && account.type !== "standard" && account.type !== "guest") return;
+    if (await managedStateOf(this.#database, account.id)) return;
     const email = account.email;
     const token = generateToken();
     const link = await this.#link("/reset-password", token);
@@ -387,6 +395,7 @@ export class AccountSecurityService {
       const { accountId } = await this.#redeemToken(tx, token, "passwordReset");
       const account = await this.#accounts.lock(tx, accountId);
       if (!account?.email || account.state !== "active") throw new InvalidTokenError();
+      if (await managedStateOf(tx, accountId)) throw new InvalidTokenError();
       await this.#accounts.setPasswordHash(
         tx,
         accountId,
@@ -407,6 +416,7 @@ export class AccountSecurityService {
   async requestEmailChange(session: Session, newEmail: string): Promise<void> {
     const email = emailSchema.parse(newEmail.trim());
     const account = await this.#account(session.accountId);
+    await refuseManaged(this.#database, account.id, "any");
     if (email.toLowerCase() === account.email.toLowerCase()) throw new SameEmailError();
     for (const [key, limit] of [
       [`emailChange:account:${account.id}`, EMAIL_CHANGES_PER_ACCOUNT],
@@ -464,6 +474,7 @@ export class AccountSecurityService {
       const { accountId, newEmail } = await this.#redeemToken(tx, token, "emailChange");
       const account = await this.#accounts.lock(tx, accountId);
       if (!newEmail || !account?.email || account.state !== "active") throw new InvalidTokenError();
+      if (await managedStateOf(tx, accountId)) throw new InvalidTokenError();
       const previousEmail = account.email;
       await withUniqueEmail(() =>
         tx.update(accounts).set({ email: newEmail, updatedAt: new Date() }).where(eq(accounts.id, accountId)),

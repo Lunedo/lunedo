@@ -121,6 +121,7 @@ export {
   InvalidTokenError,
   LastFactorError,
   LockedError,
+  ManagedAccountError,
   RateLimitedError,
   SetupIncompleteError,
 } from "./auth/errors.js";

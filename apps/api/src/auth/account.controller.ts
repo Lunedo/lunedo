@@ -308,7 +308,7 @@ export class AccountController {
     summary: "Change the password",
     tags: ["Account"],
     body: newPasswordSchema,
-    errors: ["passwordPolicy"],
+    errors: ["managedAccount", "passwordPolicy"],
   })
   async changePassword(
     @Body() body: z.output<typeof newPasswordSchema>,
@@ -326,7 +326,7 @@ export class AccountController {
     tags: ["Account"],
     status: 202,
     body: newEmailSchema,
-    errors: ["emailInUse", "sameEmail", "rateLimited"],
+    errors: ["managedAccount", "emailInUse", "sameEmail", "rateLimited"],
   })
   async changeEmail(@Body() body: z.output<typeof newEmailSchema>, @Req() request: FastifyRequest) {
     await this.#services.security.requestEmailChange(sessionOf(request), body.email);
@@ -339,7 +339,7 @@ export class AccountController {
     tags: ["Account"],
     status: 200,
     response: { description: "Secret and URI for the app.", schema: totpSetupSchema },
-    errors: ["secondFactorExists"],
+    errors: ["managedAccount", "secondFactorExists"],
   })
   async beginTotp(@Req() request: FastifyRequest) {
     return this.#services.security.beginTotp(sessionOf(request));
@@ -353,7 +353,7 @@ export class AccountController {
     status: 200,
     body: totpConfirmationSchema,
     response: { description: "New recovery codes, if any.", schema: recoveryCodesSchema },
-    errors: ["invalidSecondFactor"],
+    errors: ["managedAccount", "invalidSecondFactor"],
   })
   async confirmTotp(
     @Body() body: z.output<typeof totpConfirmationSchema>,
@@ -377,7 +377,7 @@ export class AccountController {
     tags: ["Account"],
     status: 200,
     response: { description: "Options for the browser.", schema: creationOptionsSchema },
-    errors: ["instanceUrlMissing"],
+    errors: ["managedAccount", "instanceUrlMissing"],
   })
   async passkeyRegistrationOptions(@Req() request: FastifyRequest) {
     return this.#services.security.passkeyRegistrationOptions(sessionOf(request));
@@ -391,7 +391,7 @@ export class AccountController {
     status: 201,
     body: passkeyRegistrationSchema,
     response: { description: "The passkey and new recovery codes, if any.", schema: passkeyAddedSchema },
-    errors: ["challengeExpired", "invalidSecondFactor"],
+    errors: ["managedAccount", "challengeExpired", "invalidSecondFactor"],
   })
   async registerPasskey(
     @Body() body: z.output<typeof passkeyRegistrationSchema>,
@@ -423,6 +423,7 @@ export class AccountController {
   @ApiRoute({
     summary: "Generate recovery codes",
     tags: ["Account"],
+    errors: ["managedAccount"],
     status: 200,
     response: { description: "The new codes.", schema: recoveryCodesSchema },
   })

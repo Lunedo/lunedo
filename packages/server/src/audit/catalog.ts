@@ -66,6 +66,7 @@ const refusalReasons = [
   "linkDeclined",
   "linkUnavailable",
   "invalidResponse",
+  "secondFactorMissing",
 ] as const;
 const credentialKinds = ["clientSecret", "certificate", "samlSigning", "bindPassword"] as const;
 const sessionReference = z.object({ sessionId: z.uuid() });

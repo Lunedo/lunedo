@@ -93,7 +93,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     });
     expect(taken.statusCode).toBe(409);
     expect(taken.json()).toMatchObject({ code: "domainInUse" });
-    const member = await createAccount(test, "plain.member@lunedo.test");
+    const member = await createAccount(test, "plain.member@members.test");
     const client = await signedInClient(test, member.email, member.password);
     expect((await client.get("/api/v1/instance/identity-providers")).statusCode).toBe(403);
     expect((await owner.get("/api/v1/instance/identity-providers")).json()).toEqual([
@@ -188,7 +188,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     );
     expect(chosen.statusCode).toBe(200);
     expect(inUse(chosen.json())).toEqual([original.id]);
-    const member = await createAccount(test, "credential.viewer@lunedo.test");
+    const member = await createAccount(test, "credential.viewer@members.test");
     const client = await signedInClient(test, member.email, member.password);
     expect(
       (
@@ -248,51 +248,55 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(withheld.json()).toEqual([]);
   });
 
-  it("sends people to the second factor of Lunedo when the provider asks for it", async () => {
+  it("requires proof of a second factor from the provider instead of a Lunedo factor", async () => {
+    const config = {
+      preset: "generic",
+      issuer: idp.issuer,
+      clientId: idp.clientId,
+      domains: ["factor.lunedo.test"],
+      accountCreation: { enabled: true, requiredGroups: [] },
+    };
+    const lunedo = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
+      name: "Second factor login",
+      config: { ...config, secondFactor: { mode: "lunedo" } },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    expect(lunedo.statusCode).toBe(400);
     const created = await owner.post("/api/v1/instance/identity-providers", {
       type: "oidc",
       name: "Second factor login",
-      config: {
-        preset: "generic",
-        issuer: idp.issuer,
-        clientId: idp.clientId,
-        domains: ["factor.lunedo.test"],
-        accountCreation: { enabled: true, requiredGroups: [] },
-        secondFactor: { mode: "lunedo" },
-      },
+      config: { ...config, secondFactor: { mode: "providerProof" } },
       credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
     });
-    expect(created.json().provider.config.secondFactor).toEqual({ mode: "lunedo", proofValues: ["mfa"] });
+    expect(created.json().provider.config.secondFactor).toEqual({
+      mode: "providerProof",
+      proofValues: ["mfa"],
+    });
     const factorProvider = created.json().provider.id;
-    const signInOnce = async (client: TestClient) => {
+    const signInOnce = async (client: TestClient, amr: string[]) => {
       const started = await client.post(`/api/v1/auth/providers/${factorProvider}/start`, {
         returnTo: "/settings/security",
       });
       const callback = await idp.authorize(started.json().url, {
         sub: "factor-person",
         email: "person@factor.lunedo.test",
-        amr: ["mfa"],
+        amr,
       });
       return client.get(`${callback.pathname}${callback.search}`);
     };
     const first = new TestClient(test.app);
-    expect((await signInOnce(first)).headers.location).toBe("/settings/security");
-    expect((await first.get("/api/v1/auth/session")).json()).toMatchObject({
-      sessionKind: "secondFactorSetup",
-    });
-    await addTotp(first);
+    const refused = await signInOnce(first, ["pwd"]);
+    expect(refused.headers.location).toContain("secondFactorMissing");
+    expect((await first.get("/api/v1/auth/session")).statusCode).toBe(401);
 
     const second = new TestClient(test.app);
-    const response = await signInOnce(second);
-    expect(response.statusCode).toBe(303);
-    expect(response.headers.location).toBe(
-      `/sign-in/verify?${new URLSearchParams({ factors: '["totp","recoveryCode"]', redirect: "/settings/security" })}`,
-    );
-    expect(String(response.headers["set-cookie"])).toContain("__Host-lunedo-pending=");
-    expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
-    const refused = await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`);
-    expect(refused.statusCode).toBe(409);
-    expect(refused.json()).toMatchObject({ code: "providerHasAccounts", accounts: 1 });
+    expect((await signInOnce(second, ["pwd", "mfa"])).headers.location).toBe("/settings/security");
+    expect((await second.get("/api/v1/auth/session")).json()).toMatchObject({ sessionKind: "full" });
+    expect((await second.post("/api/v1/account/totp")).json()).toMatchObject({ code: "managedAccount" });
+    const removal = await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`);
+    expect(removal.statusCode).toBe(409);
+    expect(removal.json()).toMatchObject({ code: "providerHasAccounts", accounts: 1 });
     expect(
       (await owner.post(`/api/v1/instance/identity-providers/${factorProvider}/deactivate`, {})).statusCode,
     ).toBe(200);

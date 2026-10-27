@@ -75,6 +75,7 @@ export const refusalReasons: readonly RefusalReason[] = [
   "linkDeclined",
   "linkUnavailable",
   "invalidResponse",
+  "secondFactorMissing",
 ];
 
 export function isRefusalReason(value: unknown): value is RefusalReason {

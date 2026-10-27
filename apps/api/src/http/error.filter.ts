@@ -17,6 +17,7 @@ import {
   ImportError,
   MaintenanceInputError,
   MaintenanceModeError,
+  ManagedAccountError,
   MissingTargetSecretError,
   OrganizationError,
   PasswordPolicyError,
@@ -136,6 +137,13 @@ function map(error: unknown): Mapped | null {
   }
   if (error instanceof SetupNotFoundError) return { code: "notFound" };
   if (error instanceof TokenRejectedError) return { code: "invalidApiToken", detail: error.message };
+  if (error instanceof ManagedAccountError) {
+    return {
+      code: "managedAccount",
+      detail: error.message,
+      extensions: { providerId: error.providerId, providerName: error.providerName },
+    };
+  }
   if (error instanceof AuthError) {
     return {
       code: codeOf(error.code, "invalidInput"),

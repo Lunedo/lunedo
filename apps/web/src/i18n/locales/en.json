@@ -209,13 +209,11 @@
       "mode": "Second factor after a sign-in through this provider",
       "modes": {
         "provider": "Handled by the provider",
-        "providerProof": "Require proof from the provider",
-        "lunedo": "Always ask for a Lunedo second factor"
+        "providerProof": "Require proof from the provider"
       },
       "hints": {
-        "provider": "A sign-in through this provider is complete. Set up multi-factor authentication in the provider.",
-        "providerProof": "The provider must report multi-factor authentication in its sign-in token. Without it, Lunedo asks for its own second factor; people without one set one up first.",
-        "lunedo": "After every sign-in through this provider, Lunedo asks for its own second factor; people without one set one up first."
+        "provider": "A sign-in through this provider is complete. Set up multi-factor authentication in the provider; accounts it manages have no second factor in Lunedo.",
+        "providerProof": "The provider must report multi-factor authentication in its sign-in token. Without it, the sign-in is refused, because accounts it manages have no second factor in Lunedo."
       },
       "proofValues": "Accepted proof values",
       "proofValuesHint": "Values of the amr claim, usually mfa.",
@@ -1253,6 +1251,8 @@
   "problems": {
     "lastSignInMethod": "This is the last working way to sign in to the account. Another identity of an active provider, a passkey or a password would keep it reachable. Add one of them first, then unlink again.",
     "managedIdentity": "This identity provider manages your account, so you cannot unlink it yourself. Ask an administrator if your account should sign in another way.",
+    "managedAccount": "This account signs in through its identity provider, not with a password or passkey in Lunedo. Use the provider's button on the sign-in page.",
+    "managedAccountNamed": "This account signs in through {provider}, not with a password or passkey in Lunedo. Use the button of {provider} on the sign-in page.",
     "providerHasAccounts": "Accounts are still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
     "providerHasAccountsCount": "{count, plural, one {One account is} other {# accounts are}} still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
     "ownerManaged": "This account signs in through an identity provider, and the instance owner needs a local account with a password and second factor for emergencies. Choose an administrator with a local account.",
@@ -1810,6 +1810,11 @@
           "title": "Your provider sent an answer Lunedo could not accept",
           "cause": "The response did not pass the security checks, for example because it expired or was meant for another application.",
           "action": "try again; if it fails again, send the reference below to your administrator."
+        },
+        "secondFactorMissing": {
+          "title": "Your provider did not confirm a second factor",
+          "cause": "This provider must prove that you signed in with a second factor, such as an authenticator app, but its answer did not include that proof.",
+          "action": "sign in again and complete the second step at your provider; if it keeps failing, send the reference below to your administrator."
         }
       }
     },

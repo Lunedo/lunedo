@@ -209,13 +209,11 @@
       "mode": "Zweiter Faktor nach einer Anmeldung über diesen Anbieter",
       "modes": {
         "provider": "Übernimmt der Anbieter",
-        "providerProof": "Nachweis vom Anbieter verlangen",
-        "lunedo": "Immer den zweiten Faktor von Lunedo abfragen"
+        "providerProof": "Nachweis vom Anbieter verlangen"
       },
       "hints": {
-        "provider": "Eine Anmeldung über diesen Anbieter ist vollständig. Richte die Mehrfaktor-Authentifizierung im Anbieter ein.",
-        "providerProof": "Der Anbieter muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, fragt Lunedo den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
-        "lunedo": "Nach jeder Anmeldung über diesen Anbieter fragt Lunedo den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein."
+        "provider": "Eine Anmeldung über diesen Anbieter ist vollständig. Richte die Mehrfaktor-Authentifizierung im Anbieter ein; Konten, die er verwaltet, haben keinen zweiten Faktor in Lunedo.",
+        "providerProof": "Der Anbieter muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, wird die Anmeldung abgelehnt, weil Konten, die er verwaltet, keinen zweiten Faktor in Lunedo haben."
       },
       "proofValues": "Anerkannte Nachweise",
       "proofValuesHint": "Werte des amr-Claims, meist mfa.",
@@ -1253,6 +1251,8 @@
   "problems": {
     "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Anbieter, ein Passkey oder ein Passwort hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
     "managedIdentity": "Dieser Identitätsanbieter verwaltet dein Konto, deshalb kannst du die Verknüpfung nicht selbst trennen. Frag eine Person aus der Administration, wenn sich dein Konto anders anmelden soll.",
+    "managedAccount": "Dieses Konto meldet sich über seinen Identitätsanbieter an, nicht mit Passwort oder Passkey in Lunedo. Nutze die Schaltfläche des Anbieters auf der Anmeldeseite.",
+    "managedAccountNamed": "Dieses Konto meldet sich über {provider} an, nicht mit Passwort oder Passkey in Lunedo. Nutze die Schaltfläche von {provider} auf der Anmeldeseite.",
     "providerHasAccounts": "Mit diesem Identitätsanbieter sind noch Konten verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
     "providerHasAccountsCount": "{count, plural, one {Ein Konto ist} other {# Konten sind}} noch mit diesem Identitätsanbieter verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
     "ownerManaged": "Dieses Konto meldet sich über einen Identitätsanbieter an, der Owner der Instanz braucht aber ein lokales Konto mit Passwort und zweitem Faktor für Notfälle. Wähle eine Person aus der Administration mit lokalem Konto.",
@@ -1810,6 +1810,11 @@
           "title": "Dein Anbieter hat eine Antwort geschickt, die Lunedo nicht annehmen kann",
           "cause": "Die Antwort hat die Sicherheitsprüfungen nicht bestanden, zum Beispiel weil sie abgelaufen war oder für eine andere Anwendung bestimmt war.",
           "action": "Versuche es noch einmal; klappt es wieder nicht, schick die Referenz unten an deine Administration."
+        },
+        "secondFactorMissing": {
+          "title": "Dein Anbieter hat keinen zweiten Faktor bestätigt",
+          "cause": "Dieser Anbieter muss nachweisen, dass du dich mit einem zweiten Faktor angemeldet hast, etwa einer Authenticator-App, aber seine Antwort enthielt diesen Nachweis nicht.",
+          "action": "melde dich erneut an und schließe den zweiten Schritt bei deinem Anbieter ab; wenn es weiter fehlschlägt, schick die Referenz unten an deine Administration."
         }
       }
     },
