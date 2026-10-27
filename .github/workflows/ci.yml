@@ -104,6 +104,7 @@ jobs:
       - run: pnpm patches:check
       - run: pnpm playwright-image:check
       - run: pnpm i18n:check
+      - run: pnpm docs:check
       - run: pnpm shell:check
       - run: pnpm release-jobs:check
       - run: pnpm container-users:check

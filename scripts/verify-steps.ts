@@ -17,6 +17,7 @@ export function verifySteps(base: string): VerifyStep[] {
     { name: "Patched dependencies", command: "pnpm", args: ["patches:check"] },
     { name: "Playwright image", command: "pnpm", args: ["playwright-image:check"] },
     { name: "Translations", command: "pnpm", args: ["i18n:check"] },
+    { name: "Documentation", command: "pnpm", args: ["docs:check"] },
     { name: "Shell scripts", command: "pnpm", args: ["shell:check"] },
     { name: "Release jobs", command: "pnpm", args: ["release-jobs:check"] },
     { name: "Container users", command: "pnpm", args: ["container-users:check"] },
