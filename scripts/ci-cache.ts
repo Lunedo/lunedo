@@ -15,7 +15,7 @@ export interface CacheFileSystem {
 }
 
 const SETUP_HINT =
-  'Set it up once as described in "Caches on self-hosted runners" in docs/development.md, or point the repository variable CI_CACHE_DIR at a prepared directory.';
+  'Set it up once as described in "Caches on self-hosted runners" in docs/development/self-hosted-runners.md, or point the repository variable CI_CACHE_DIR at a prepared directory.';
 
 export const nodeFileSystem: CacheFileSystem = {
   stat: (target) => statSync(target, { throwIfNoEntry: false }),

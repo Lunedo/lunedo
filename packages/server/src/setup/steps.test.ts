@@ -17,7 +17,7 @@ describe("checkFileStorage", () => {
     expect(result).toMatchObject({
       cause: null,
       fixCommand: null,
-      docs: "setup.md#file-storage",
+      docs: "admin/system-check.md#file-storage",
       path: directory,
       exists: true,
       writable: true,

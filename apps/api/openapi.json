@@ -126171,7 +126171,7 @@
                         "version": "1.4.2"
                       },
                       "page": null,
-                      "docs": "operations.md#updates"
+                      "docs": "admin/system-status.md#version"
                     },
                     {
                       "id": "storage",
@@ -126185,7 +126185,7 @@
                         "level": 1
                       },
                       "page": "/settings/instance/storage",
-                      "docs": "storage.md"
+                      "docs": "admin/system-status.md#storage"
                     }
                   ],
                   "queues": [

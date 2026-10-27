@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 function checks(patch: Record<string, unknown> = {}) {
-  const help = { cause: null, fixCommand: null, docs: "setup.md#system-check" };
+  const help = { cause: null, fixCommand: null, docs: "admin/system-check.md" };
   return {
     database: { status: "ok", ...help, version: "16.4", migrationsUpToDate: true },
     clock: { status: "ok", ...help, offsetMs: 120, toleranceMs: 5000 },
@@ -52,7 +52,7 @@ function checks(patch: Record<string, unknown> = {}) {
       status: "error",
       cause: "notWritable",
       fixCommand: "chown -R 1000:1000 /var/lib/lunedo/files",
-      docs: "setup.md#file-storage",
+      docs: "admin/system-check.md#file-storage",
       path: "/var/lib/lunedo/files",
       exists: true,
       writable: false,
@@ -74,7 +74,7 @@ function checks(patch: Record<string, unknown> = {}) {
       status: "warning",
       ...help,
       cause: "unreachable",
-      docs: "setup.md#address-reachable",
+      docs: "admin/system-check.md#address-reachable",
       url: "https://wiki.example.org",
     },
     https: { status: "ok", ...help, instanceUrl: true, request: true },
@@ -105,7 +105,7 @@ describe("the system check", () => {
     expect(screen.getByText("chown -R 1000:1000 /var/lib/lunedo/files")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy command" })).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Read the documentation/ })[0]?.getAttribute("href")).toBe(
-      "https://github.com/lunedo/lunedo/blob/main/docs/setup.md#file-storage",
+      "https://github.com/lunedo/lunedo/blob/main/docs/admin/system-check.md#file-storage",
     );
     expect(screen.getByText(/^The server got no answer at https:\/\/wiki\.example\.org,/)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Check again" })).toHaveLength(1);
@@ -136,7 +136,7 @@ describe("the system check", () => {
                   status: "warning",
                   cause: "instanceUrlNotHttps",
                   fixCommand: null,
-                  docs: "reverse-proxy.md#tls-and-the-instance-address",
+                  docs: "admin/reverse-proxy.md#tls-and-the-instance-address",
                   instanceUrl: false,
                   request: false,
                 },
@@ -152,7 +152,7 @@ describe("the system check", () => {
     expect(screen.getByText("https://wiki.example.org can be reached")).toBeTruthy();
     expect(screen.getByText(/does not start with https:\/\//)).toBeTruthy();
     expect(screen.getByRole("link", { name: /How to set up HTTPS/ }).getAttribute("href")).toBe(
-      "https://github.com/lunedo/lunedo/blob/main/docs/reverse-proxy.md#tls-and-the-instance-address",
+      "https://github.com/lunedo/lunedo/blob/main/docs/admin/reverse-proxy.md#tls-and-the-instance-address",
     );
     expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(false);
   });

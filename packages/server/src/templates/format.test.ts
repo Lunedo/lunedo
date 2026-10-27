@@ -9,7 +9,7 @@ import {
   templateManifestSchema,
 } from "./format.js";
 
-const schemaFile = new URL("../../../../docs/template-format.schema.json", import.meta.url);
+const schemaFile = new URL("../../../../docs/api/template-format.schema.json", import.meta.url);
 
 const hash = "a".repeat(64);
 

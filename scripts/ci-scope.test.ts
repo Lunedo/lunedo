@@ -39,7 +39,10 @@ describe("scopeOf", () => {
   });
 
   it("runs no expensive job for changes outside their areas", () => {
-    assert.deepEqual(ready(["packages/shared/src/settings.ts", "docs/api.md"]), { lane: "full", ...none });
+    assert.deepEqual(ready(["packages/shared/src/settings.ts", "docs/api/conventions.md"]), {
+      lane: "full",
+      ...none,
+    });
   });
 
   it("runs the browser tests for the web client, ui and tokens", () => {
@@ -127,9 +130,9 @@ describe("scopeOf", () => {
       "docker/compose.yml",
       "scripts/install.sh",
       "scripts/reverse-proxy-check.sh",
-      "docs/reverse-proxy.md",
+      "docs/admin/reverse-proxy/nginx.md",
       "scripts/backup-network-check.sh",
-      "docs/backup.md",
+      "docs/admin/backups/s3.md",
       "packages/server/src/operations/status.ts",
       "packages/server/src/portal/portals.ts",
       "packages/server/drizzle/0094_operations.sql",
@@ -138,7 +141,7 @@ describe("scopeOf", () => {
     ]) {
       assert.equal(ready([file]).operations, true, file);
     }
-    for (const file of ["docs/setup.md", "apps/web/src/app.tsx", "docker/compose.dev.yml"]) {
+    for (const file of ["docs/admin/installation.md", "apps/web/src/app.tsx", "docker/compose.dev.yml"]) {
       assert.equal(ready([file]).operations, false, file);
     }
   });

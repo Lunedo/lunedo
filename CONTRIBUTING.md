@@ -13,7 +13,7 @@ pnpm install
 pnpm dev
 ```
 
-The development environment runs in Docker and watches files by polling, so it works with bind mounts on Windows and macOS. See [docs/development.md](docs/development.md) for the processes, ports and configuration.
+The development environment runs in Docker and watches files by polling, so it works with bind mounts on Windows and macOS. See [docs/development/environment.md](docs/development/environment.md) for the processes, ports and configuration.
 
 ## Branches and pull requests
 

@@ -6,7 +6,7 @@ import { PreferencesProvider } from "../../../preferences/preferences-provider.j
 import { mockApi, renderWithProviders } from "../../../testing/render.js";
 import { SystemCheckStep } from "./system-check-step.js";
 
-const CHECK = { status: "ok" as const, cause: null, fixCommand: null, docs: "setup.md" };
+const CHECK = { status: "ok" as const, cause: null, fixCommand: null, docs: "admin/system-check.md" };
 
 function checks(): SetupStepDetails<"systemCheck">["checks"] {
   return {
@@ -31,7 +31,7 @@ function checks(): SetupStepDetails<"systemCheck">["checks"] {
       ...CHECK,
       status: "warning",
       cause: "instanceUrlNotHttps",
-      docs: "reverse-proxy.md#tls",
+      docs: "admin/reverse-proxy.md#tls-and-the-instance-address",
       instanceUrl: false,
       request: false,
     },

@@ -14,7 +14,7 @@ describe("findFormerName", () => {
       `@${former}/server`,
     ].join("\n");
     assert.deepEqual(
-      findFormerName(content, "docs/setup.md").map((finding) => finding.line),
+      findFormerName(content, "docs/admin/installation/compose.md").map((finding) => finding.line),
       [2, 3, 4],
     );
   });
@@ -76,8 +76,8 @@ describe("imageNameProblems", () => {
 
   it("rejects image names with capitals anywhere", () => {
     const image = ["ghcr.io", "Lunedo", "lunedo:1.0"].join("/");
-    assert.deepEqual(imageNameProblems(`image: ${image}`, "docs/setup.md"), [
-      `docs/setup.md:1: image name ${image} must be lowercase`,
+    assert.deepEqual(imageNameProblems(`image: ${image}`, "docs/admin/installation/compose.md"), [
+      `docs/admin/installation/compose.md:1: image name ${image} must be lowercase`,
     ]);
   });
 

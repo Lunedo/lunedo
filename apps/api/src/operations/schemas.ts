@@ -1,5 +1,5 @@
 import { statusItemIds } from "@lunedo/server";
-import { idSchema } from "@lunedo/shared";
+import { documentationTargets, idSchema } from "@lunedo/shared";
 import { z } from "zod";
 
 const level = z.enum(["ok", "warning", "error"]);
@@ -80,7 +80,7 @@ export const exampleOperationsStatus: z.input<typeof operationsStatusSchema> = {
       reason: null,
       facts: { version: "1.4.2" },
       page: null,
-      docs: "operations.md#updates",
+      docs: documentationTargets.statusVersion,
     },
     {
       id: "storage",
@@ -94,7 +94,7 @@ export const exampleOperationsStatus: z.input<typeof operationsStatusSchema> = {
         level: 1,
       },
       page: "/settings/instance/storage",
-      docs: "storage.md",
+      docs: documentationTargets.statusStorage,
     },
   ],
   queues: [

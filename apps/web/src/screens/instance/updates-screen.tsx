@@ -1,3 +1,4 @@
+import { documentationTargets } from "@lunedo/shared";
 import { Badge, Button, CopyButton, Notice, Section, SettingRow, Skeleton, useToast } from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpCircle, RefreshCw } from "lucide-react";
@@ -175,7 +176,7 @@ function AvailableSection({ updates }: { updates: Updates }) {
               ))}
             </ol>
             <a
-              href={docsUrl("setup.md#updates")}
+              href={docsUrl(documentationTargets.updates)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-accent underline focus-visible:focus-ring"

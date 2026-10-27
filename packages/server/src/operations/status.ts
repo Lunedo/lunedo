@@ -1,3 +1,4 @@
+import { documentationTargets } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { BackupStatus } from "../backup/service.js";
@@ -84,7 +85,7 @@ function worst(levels: readonly StatusLevel[]): StatusLevel {
 }
 
 export function backupItem(backup: BackupStatus): StatusItem {
-  const links = { page: `${INSTANCE_PAGE}/backups`, docs: "backup.md" };
+  const links = { page: `${INSTANCE_PAGE}/backups`, docs: documentationTargets.statusBackups };
   const facts = {
     enabled: backup.enabled,
     targetConfigured: backup.targetConfigured,
@@ -109,7 +110,7 @@ export function jobsItem(queues: readonly QueueStatus[]): StatusItem {
   const failed = queues.reduce((sum, queue) => sum + queue.failed, 0);
   const queued = queues.reduce((sum, queue) => sum + queue.queued, 0);
   const facts = { failed, queued, active: queues.reduce((sum, queue) => sum + queue.active, 0) };
-  const links = { docs: "operations.md#jobs" };
+  const links = { docs: documentationTargets.statusJobs };
   if (failed > 0) return item("jobs", "warning", "failedJobs", facts, links);
   if (queued >= QUEUE_BACKLOG_WARNING) return item("jobs", "warning", "backlog", facts, links);
   return item("jobs", "ok", null, facts, links);
@@ -210,7 +211,9 @@ export class OperationsStatusService {
       await this.#maintenanceItem(),
       await this.#databaseItem(database),
       await this.#storageItem(),
-      queues ? jobsItem(queues) : item("jobs", "error", "unreachable", {}, { docs: "operations.md#jobs" }),
+      queues
+        ? jobsItem(queues)
+        : item("jobs", "error", "unreachable", {}, { docs: documentationTargets.statusJobs }),
       await this.#collaborationItem(),
       backupItem(await this.#backups.status()),
       await this.#searchItem(),
@@ -223,7 +226,7 @@ export class OperationsStatusService {
         clock.status,
         clock.cause,
         { offsetMs: numberOrNull(clock.offsetMs) },
-        { docs: "setup.md#clock" },
+        { docs: documentationTargets.checkClock },
       ),
     ];
     if (this.#fileStore === "local") items.push(await this.#fileStorageItem());
@@ -251,12 +254,12 @@ export class OperationsStatusService {
       sizeBytes:
         check.status === "error" && check.cause === "unreachable" ? null : await this.databaseSizeBytes(),
     };
-    return item("database", check.status, check.cause, facts, { docs: "setup.md#database" });
+    return item("database", check.status, check.cause, facts, { docs: documentationTargets.checkDatabase });
   }
 
   async #versionItem(): Promise<StatusItem> {
     const version = this.#version;
-    const links = { page: `${INSTANCE_PAGE}/updates`, docs: "operations.md#updates" };
+    const links = { page: `${INSTANCE_PAGE}/updates`, docs: documentationTargets.statusVersion };
     const updates = await this.#updates?.status();
     if (!updates?.enabled) return item("version", "ok", updates ? "checkOff" : null, { version }, links);
     const facts = {
@@ -273,7 +276,7 @@ export class OperationsStatusService {
 
   async #maintenanceItem(): Promise<StatusItem> {
     const status = await this.#maintenance.status();
-    const links = { page: `${INSTANCE_PAGE}/maintenance`, docs: "operations.md#maintenance-mode" };
+    const links = { page: `${INSTANCE_PAGE}/maintenance`, docs: documentationTargets.statusMaintenance };
     if (!status.enabled) return item("maintenance", "ok", null, {}, links);
     return item(
       "maintenance",
@@ -293,7 +296,7 @@ export class OperationsStatusService {
       percent: status.percent,
       level: status.level,
     };
-    const links = { page: `${INSTANCE_PAGE}/storage`, docs: "storage.md" };
+    const links = { page: `${INSTANCE_PAGE}/storage`, docs: documentationTargets.statusStorage };
     if (!status.measured) return item("storage", "ok", status.inactiveReason, facts, links);
     if (status.level === 3) return item("storage", "error", "critical", facts, links);
     if (status.level === 2) return item("storage", "warning", "largeWritesPaused", facts, links);
@@ -302,7 +305,7 @@ export class OperationsStatusService {
   }
 
   async #collaborationItem(): Promise<StatusItem> {
-    const links = { docs: "operations.md#collaboration" };
+    const links = { docs: documentationTargets.statusCollaboration };
     if (!this.#collaboration) return item("collaboration", "ok", "notChecked", {}, links);
     const ready = await this.#collaboration().catch(() => false);
     return ready
@@ -323,7 +326,7 @@ export class OperationsStatusService {
       pendingItems: state.pendingItems,
       failingItems,
     };
-    const links = { docs: "operations.md#search-index" };
+    const links = { docs: documentationTargets.statusSearchIndex };
     if (state.building) return item("searchIndex", "warning", "building", facts, links);
     if (failingItems > 0) return item("searchIndex", "warning", "failingItems", facts, links);
     return item("searchIndex", "ok", null, facts, links);
@@ -332,7 +335,7 @@ export class OperationsStatusService {
   #errorsItem(recent: readonly RecentErrorType[]): StatusItem {
     const count = recent.reduce((sum, entry) => sum + entry.count, 0);
     const facts = { count, types: recent.length, hours: RECENT_ERRORS_HOURS };
-    const links = { docs: "operations.md#recent-errors" };
+    const links = { docs: documentationTargets.statusRecentErrors };
     return count > 0
       ? item("recentErrors", "warning", "errorsLogged", facts, links)
       : item("recentErrors", "ok", null, facts, links);
@@ -341,7 +344,7 @@ export class OperationsStatusService {
   async #tlsItem(): Promise<StatusItem> {
     const stored = await this.#settings.get(instanceUrlSetting, {});
     const url = stored || this.#configuredInstanceUrl || "";
-    const links = { page: `${INSTANCE_PAGE}/general`, docs: "reverse-proxy.md" };
+    const links = { page: `${INSTANCE_PAGE}/general`, docs: documentationTargets.statusHttps };
     if (!url) return item("tls", "warning", "instanceUrlNotSet", { url: null }, links);
     return url.startsWith("https:")
       ? item("tls", "ok", null, { url }, links)
@@ -357,7 +360,7 @@ export class OperationsStatusService {
       lastFailureAt: delivery.lastFailure?.at.toISOString() ?? null,
       lastFailureCode: delivery.lastFailure?.code ?? null,
     };
-    const links = { page: `${INSTANCE_PAGE}/mail`, docs: "email.md" };
+    const links = { page: `${INSTANCE_PAGE}/mail`, docs: documentationTargets.statusEmail };
     if (!method) return item("email", "warning", "notConfigured", facts, links);
     const failure = delivery.lastFailure;
     if (failure && (!delivery.lastSuccessAt || failure.at > delivery.lastSuccessAt)) {
@@ -367,7 +370,7 @@ export class OperationsStatusService {
   }
 
   async #encryptionItem(): Promise<StatusItem> {
-    const links = { docs: "encryption.md" };
+    const links = { docs: documentationTargets.statusEncryption };
     if (!this.#keyRing.loaded) return item("encryption", "error", "masterKeyMissing", {}, links);
     const rotation = this.#keyRotation ? await this.#keyRotation.status() : null;
     const facts = {

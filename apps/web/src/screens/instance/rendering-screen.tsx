@@ -1,3 +1,4 @@
+import { documentationTargets } from "@lunedo/shared";
 import {
   Badge,
   type BadgeVariant,
@@ -129,7 +130,7 @@ function PdfSection({
           />
           {pdf.image ? null : <p className="text-sm text-text-muted">{t("rendering.pdf.notRelease")}</p>}
           <a
-            href={docsUrl("rendering.md")}
+            href={docsUrl(documentationTargets.rendering)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-accent underline focus-visible:focus-ring"
