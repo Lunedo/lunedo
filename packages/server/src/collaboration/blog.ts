@@ -23,6 +23,7 @@ const SCHEDULE_BATCH = 50;
 
 export interface BlogPost {
   id: string;
+  number: number;
   spaceId: string;
   spaceKey: string;
   spaceName: string;
@@ -47,6 +48,7 @@ export type BlogCursor = [pinned: string, date: string, id: string];
 
 type PostRow = {
   id: string;
+  number: string;
   space_id: string;
   key: string;
   space_name: string;
@@ -95,6 +97,7 @@ function date(value: Date | string | null): Date | null {
 function toPost(row: PostRow): BlogPost {
   return {
     id: row.id,
+    number: Number(row.number),
     spaceId: row.space_id,
     spaceKey: row.key,
     spaceName: row.space_name,
@@ -151,7 +154,7 @@ export class BlogService {
 
   #select(viewer: Principal, pinned: SQL): SQL {
     return sql`
-      select t.id, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
+      select t.id, t.number, t.space_id, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key,
         ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name, t.title, b.excerpt,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         t.creator_id, ${this.#people.visibleName(viewer, sql`a`)} as creator_name, b.published_at, b.scheduled_at, b.scheduled_time_zone,

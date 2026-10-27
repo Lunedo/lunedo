@@ -15,6 +15,7 @@ export type PersonKey = keyof typeof PEOPLE;
 
 export interface PlacedPage {
   id: string;
+  number: number;
   path: string;
 }
 
@@ -25,7 +26,7 @@ export interface ScreenWorld {
   rich: PlacedPage;
   whiteboard: PlacedPage;
   templateName: string;
-  seriesId: string;
+  seriesPath: string;
   general: { key: string; homePath: string };
   empty: { key: string };
   personal: { key: string; salary: PlacedPage };
@@ -33,7 +34,7 @@ export interface ScreenWorld {
     id: string;
     key: string;
     portal: string;
-    categoryId: string;
+    categoryAddress: string;
     article: PlacedPage & { address: string };
     englishAddress: string;
   };

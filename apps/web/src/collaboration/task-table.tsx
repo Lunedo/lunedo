@@ -5,7 +5,7 @@ import { AlertTriangle, ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { type TaskEntry, type TaskQuery, tasksQuery } from "./queries.js";
 import { useSetTaskStatus } from "./task-actions.js";
 
@@ -32,8 +32,8 @@ function TaskRow({ task, showAssignee }: { task: TaskEntry; showAssignee: boolea
   const { t } = useTranslation();
   const format = useFormat();
   const setStatus = useSetTaskStatus(task.item.id);
-  const href = itemHref(
-    { id: task.item.id, kind: task.item.kind, title: task.item.title, link: null },
+  const href = contentHref(
+    { kind: task.item.kind, number: task.item.number, title: task.item.title },
     task.item.spaceKey,
   );
   return (

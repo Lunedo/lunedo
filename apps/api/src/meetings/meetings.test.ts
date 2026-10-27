@@ -79,6 +79,10 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
     expect(created.statusCode, created.body).toBe(201);
     const seriesId: string = created.json().id;
     const meetingId: string = created.json().upcoming.id;
+    const seriesNumber: number = created.json().number;
+    const meetingNumber: number = created.json().upcoming.number;
+    expect(Number.isInteger(seriesNumber) && Number.isInteger(meetingNumber)).toBe(true);
+    expect(meetingNumber).not.toBe(seriesNumber);
     expect(created.json().overview.hidden).toEqual(["attendance", "links"]);
     const first = (
       await lead.client.post(`/api/v1/meeting-series/${seriesId}/topics`, { title: "Firewall" })
@@ -115,6 +119,7 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
 
     const agenda = await reader.client.get(`/api/v1/meetings/${meetingId}/agenda`);
     expect(agenda.statusCode, agenda.body).toBe(200);
+    expect(agenda.json()).toMatchObject({ meetingNumber, seriesNumber });
     expect(agenda.json().topics.map((topic: { title: string }) => topic.title)).toEqual([
       "Printers",
       "Firewall",
@@ -136,6 +141,7 @@ describe.skipIf(!databaseBaseUrl)("meetings through the API", () => {
     expect((await reader.client.put(guestPath, { attendance: "present" })).statusCode).toBe(403);
     expect((await lead.client.put(guestPath, { attendance: "present" })).statusCode).toBe(204);
     const meeting = await reader.client.get(`/api/v1/meetings/${meetingId}`);
+    expect(meeting.json()).toMatchObject({ number: meetingNumber, seriesNumber });
     expect(meeting.json().guests).toEqual([{ ...guestBody, id: guest.json().id, attendance: "present" }]);
     expect((await reader.client.delete(guestPath)).statusCode).toBe(403);
     expect((await lead.client.delete(guestPath)).statusCode).toBe(204);

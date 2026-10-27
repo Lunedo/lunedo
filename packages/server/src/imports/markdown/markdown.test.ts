@@ -159,10 +159,21 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     const network = byTitle.get("Network")?.id as string;
     const links = all.flatMap((node) => node.marks ?? []).filter((mark) => mark.type === "link");
     const pageLinks = all.filter((node) => node.type === "pageLink");
-    expect([
+    const networkNumber = (
+      await test.database.execute<{ number: string }>(
+        sql`select number from tree_items where id = ${network}`,
+      )
+    ).rows[0]?.number;
+    const targets = [
       ...links.map((mark) => String(mark.attrs?.href)),
       ...pageLinks.map((node) => node.attrs?.pageId),
-    ]).toEqual(expect.arrayContaining([expect.stringContaining(network)]));
+    ];
+    expect(targets).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(new RegExp(`^(${network}|/spaces/[^/]+/pages/${networkNumber}(/|$))`)),
+      ]),
+    );
+    expect(targets.some((target) => /\/pages\/[0-9a-f]{8}-/.test(String(target)))).toBe(false);
     expect(all.some((node) => node.type === "image")).toBe(true);
     expect(all.find((node) => node.type === "mermaid")?.attrs?.source).toBe("graph TD; A-->B");
     expect(all.find((node) => node.type === "codeBlock")?.attrs?.language).toBe("typescript");
@@ -426,10 +437,8 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
         parent_id: string | null;
         translation_of: string | null;
         content_language: string | null;
-        numbered: boolean;
       }>(sql`
-        select t.id, t.title, t.kind, t.parent_id, t.translation_of, t.content_language,
-          exists (select 1 from article_numbers n where n.item_id = t.id) as numbered
+        select t.id, t.title, t.kind, t.parent_id, t.translation_of, t.content_language
         from tree_items t where t.space_id = ${spaceId} and t.trash_entry_id is null`);
       return {
         first,
@@ -450,7 +459,6 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
         parent_id: original,
         translation_of: original,
         content_language: "en",
-        numbered: false,
       });
     });
 
@@ -481,12 +489,15 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
       );
       const category = result.item("Geräte");
       expect(category?.kind).toBe("folder");
-      expect(result.item("Scanner")).toMatchObject({ kind: "page", parent_id: category?.id, numbered: true });
+      expect(result.item("Scanner")).toMatchObject({
+        kind: "page",
+        parent_id: category?.id,
+        translation_of: null,
+      });
       expect(result.item("Wartung")).toMatchObject({
         kind: "page",
         parent_id: category?.id,
         translation_of: null,
-        numbered: true,
       });
       expect(result.item("Imprimante")).toBeUndefined();
       expect(result.item("Phone again")).toMatchObject({ parent_id: category?.id, translation_of: null });

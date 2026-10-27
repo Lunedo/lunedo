@@ -30,7 +30,6 @@ import {
   renderHtml,
   renderMarkdown,
   renderWord,
-  slugify,
   type TaskReportRequest,
   taskReportRequest,
   type WordBlock,
@@ -43,14 +42,15 @@ import type { TaskService } from "../collaboration/tasks.js";
 import type { Database } from "../database/database.js";
 import type { AttachmentService } from "../files/attachments.js";
 import type { Logger } from "../logging/logger.js";
+import { itemAddress } from "../spaces/addresses.js";
 import {
   blocksOfType,
   childPagesKey,
   diagramKey,
   type PageDocumentService,
   type PageReferences,
-  pagePath,
   type ReferencedBoard,
+  referencedPageLink,
   relatedLabelsKey,
   reportKey,
 } from "../spaces/documents.js";
@@ -69,6 +69,8 @@ const PAGE_ADDRESS = new RegExp(
   `^/spaces/[^/?#]*/(?:pages|blog)/(${UUID})(?:/[^?#]*)?(?:\\?[^#]*)?(#.*)?$`,
   "i",
 );
+const NUMBERED_ADDRESS =
+  /^\/(?:spaces\/[^/?#]*\/(?:pages|blog|whiteboards|folders|meetings|topics)|shared)\/([1-9][0-9]{0,14})(?:\/[^?#]*)?(?:\?[^#]*)?(#.*)?$/;
 const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content(\\?size=display)?$`, "i");
 const WHITEBOARD_PREVIEW_ADDRESS = new RegExp(`^/api/v1/whiteboards/(${UUID})/preview$`, "i");
 const MAX_REPORTED_TASKS = 200;
@@ -137,6 +139,7 @@ export interface PreparedPage {
   updatedAt: Date;
   document: DocumentJson;
   references: PageReferences;
+  numbers: ReadonlyMap<number, string>;
   childPages: ReadonlyMap<string, readonly ListedPage[]> | null;
   attachments: readonly ListedAttachment[] | null;
   pageReports: ReadonlyMap<string, readonly ReportedPage[]> | null;
@@ -162,23 +165,42 @@ export interface RenderedPage {
   html: string;
 }
 
-function pageIdOf(href: string): string | null {
-  return PAGE_ADDRESS.exec(href)?.[1]?.toLowerCase() ?? null;
+function numberOf(href: string): number | null {
+  const found = NUMBERED_ADDRESS.exec(href)?.[1];
+  return found ? Number(found) : null;
 }
 
-function keepVisiblePages(pages: readonly ListedPage[], visible: ReadonlySet<string>): ListedPage[] {
+function pageIdOf(href: string, numbers: ReadonlyMap<number, string>): string | null {
+  const id = PAGE_ADDRESS.exec(href)?.[1]?.toLowerCase();
+  if (id) return id;
+  const number = numberOf(href);
+  return number === null ? null : (numbers.get(number) ?? null);
+}
+
+function listedVisible(
+  href: string,
+  visible: ReadonlySet<string>,
+  numbers: ReadonlyMap<number, string>,
+): boolean {
+  const id = pageIdOf(href, numbers);
+  return id === null ? numberOf(href) === null : visible.has(id);
+}
+
+function keepVisiblePages(
+  pages: readonly ListedPage[],
+  visible: ReadonlySet<string>,
+  numbers: ReadonlyMap<number, string>,
+): ListedPage[] {
   return pages.flatMap((page) => {
-    const id = pageIdOf(page.href);
-    if (id && !visible.has(id)) return [];
-    return [{ ...page, children: keepVisiblePages(page.children, visible) }];
+    if (!listedVisible(page.href, visible, numbers)) return [];
+    return [{ ...page, children: keepVisiblePages(page.children, visible, numbers) }];
   });
 }
 
-function collectListedIds(pages: readonly ListedPage[], into: Set<string>): void {
+function collectListedHrefs(pages: readonly ListedPage[], into: string[]): void {
   for (const page of pages) {
-    const id = pageIdOf(page.href);
-    if (id) into.add(id);
-    collectListedIds(page.children, into);
+    into.push(page.href);
+    collectListedHrefs(page.children, into);
   }
 }
 
@@ -262,6 +284,14 @@ export class PageExportRenderer {
     const result = await this.#database.execute<{ id: string }>(sql`
       select id from tree_items where id = any(${sql.param(list)}::uuid[]) and reader_visible`);
     return new Set(result.rows.map((row) => row.id));
+  }
+
+  async #numbered(hrefs: Iterable<string>): Promise<Map<number, string>> {
+    const wanted = [...new Set([...hrefs].flatMap((href) => numberOf(href) ?? []))];
+    if (wanted.length === 0) return new Map();
+    const result = await this.#database.execute<{ id: string; number: string }>(sql`
+      select id, number from tree_items where number = any(${sql.param(wanted)}::bigint[])`);
+    return new Map(result.rows.map((row) => [Number(row.number), row.id]));
   }
 
   async path(pageId: string): Promise<string[]> {
@@ -395,29 +425,43 @@ export class PageExportRenderer {
         topics: references.topics,
         tooLargeImages: references.tooLargeImages,
       };
-      const referenced = new Set<string>(Object.keys(merged.pages));
+      const listed: string[] = [];
       for (const report of reports?.propertiesReports.values() ?? []) {
-        for (const row of report.rows) referenced.add(pageIdOf(row.href) ?? "");
+        for (const row of report.rows) listed.push(row.href);
       }
       for (const items of reports?.contentByLabel.values() ?? []) {
-        for (const item of items) referenced.add(pageIdOf(item.href) ?? "");
+        for (const item of items) listed.push(item.href);
       }
-      for (const pages of childPages?.values() ?? []) collectListedIds(pages, referenced);
+      for (const pages of childPages?.values() ?? []) collectListedHrefs(pages, listed);
       for (const pages of reports?.pageReports.values() ?? []) {
-        for (const page of pages) referenced.add(pageIdOf(page.href) ?? "");
+        for (const page of pages) listed.push(page.href);
       }
       for (const decisions of reports?.decisionReports.values() ?? []) {
-        for (const decision of decisions) referenced.add(pageIdOf(decision.page.href) ?? "");
+        for (const decision of decisions) listed.push(decision.page.href);
       }
       for (const tasks of taskReports?.values() ?? []) {
-        for (const task of tasks) referenced.add(pageIdOf(task.page.href) ?? "");
+        for (const task of tasks) listed.push(task.page.href);
       }
+      const linked = [
+        ...[...(included?.values() ?? [])].flatMap((inclusion) =>
+          inclusion.state === "visible" ? [inclusion.href] : [],
+        ),
+        ...[...diagrams.values()].map((diagram) => diagram.href),
+        ...[...whiteboards.values()].map((board) => board.href),
+      ];
+      const numbers = await this.#numbered([...listed, ...linked]);
+      for (const [id, page] of Object.entries(merged.pages)) {
+        if (page.number !== null) numbers.set(page.number, id);
+      }
+      for (const inclusion of included?.values() ?? []) {
+        if (inclusion.state !== "visible") continue;
+        for (const [number, id] of inclusion.page.numbers) numbers.set(number, id);
+      }
+      const referenced = new Set<string>(Object.keys(merged.pages));
+      for (const href of listed) referenced.add(pageIdOf(href, numbers) ?? "");
       referenced.delete("");
       const visible = await this.#readerVisible(referenced);
-      const listedVisible = (href: string) => {
-        const id = pageIdOf(href);
-        return id === null || visible.has(id);
-      };
+      const shown = (href: string) => listedVisible(href, visible, numbers);
       return {
         id: pageId,
         title: readable.title,
@@ -432,43 +476,38 @@ export class PageExportRenderer {
             Object.entries(merged.pages).map(([id, page]) => [
               id,
               page.accessible && !visible.has(id)
-                ? { title: "", spaceKey: "", kind: "page", accessible: false, inTrash: false }
+                ? { title: "", spaceKey: "", kind: "page", number: null, accessible: false, inTrash: false }
                 : page,
             ]),
           ),
         },
+        numbers,
         childPages: childPages
-          ? new Map([...childPages].map(([key, pages]) => [key, keepVisiblePages(pages, visible)]))
+          ? new Map([...childPages].map(([key, pages]) => [key, keepVisiblePages(pages, visible, numbers)]))
           : null,
         attachments,
         pageReports: reports
           ? new Map(
-              [...reports.pageReports].map(([key, pages]) => [
-                key,
-                pages.filter((page) => listedVisible(page.href)),
-              ]),
+              [...reports.pageReports].map(([key, pages]) => [key, pages.filter((page) => shown(page.href))]),
             )
           : null,
         decisionReports: reports
           ? new Map(
               [...reports.decisionReports].map(([key, decisions]) => [
                 key,
-                decisions.filter((decision) => listedVisible(decision.page.href)),
+                decisions.filter((decision) => shown(decision.page.href)),
               ]),
             )
           : null,
         taskReports: taskReports
           ? new Map(
-              [...taskReports].map(([key, tasks]) => [
-                key,
-                tasks.filter((task) => listedVisible(task.page.href)),
-              ]),
+              [...taskReports].map(([key, tasks]) => [key, tasks.filter((task) => shown(task.page.href))]),
             )
           : null,
         propertiesReports: reports
           ? new Map(
               [...reports.propertiesReports].map(([key, report]) => {
-                const rows = report.rows.filter((row) => listedVisible(row.href));
+                const rows = report.rows.filter((row) => shown(row.href));
                 return [key, { ...report, rows, total: report.total - (report.rows.length - rows.length) }];
               }),
             )
@@ -477,7 +516,7 @@ export class PageExportRenderer {
           ? new Map(
               [...reports.contentByLabel].map(([key, items]) => [
                 key,
-                items.filter((item) => listedVisible(item.href)),
+                items.filter((item) => shown(item.href)),
               ]),
             )
           : null,
@@ -505,6 +544,7 @@ export class PageExportRenderer {
         updatedAt: readable.updatedAt,
         document,
         references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
+        numbers: new Map(),
         childPages: null,
         attachments: null,
         pageReports: null,
@@ -594,6 +634,7 @@ export class PageExportRenderer {
       updatedAt: new Date(row.changed_at),
       document: { type: "doc", content: [] },
       references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
+      numbers: new Map(),
       childPages: null,
       attachments: null,
       pageReports: null,
@@ -654,10 +695,7 @@ export class PageExportRenderer {
           dueDate: task.dueDate,
           page: {
             title: task.item.title,
-            href:
-              task.item.kind === "blogPost"
-                ? `/spaces/${encodeURIComponent(task.item.spaceKey)}/blog/${task.item.id}/${slugify(task.item.title)}`
-                : pagePath(task.item.spaceKey, task.item.id, task.item.title),
+            href: itemAddress(task.item.kind, task.item.spaceKey, task.item.number, task.item.title) ?? "",
           },
         })),
       );
@@ -751,10 +789,10 @@ export class PageExportRenderer {
     };
   }
 
-  #address(format: ExportFormat, locator: Locator) {
+  #address(format: ExportFormat, locator: Locator, numbers: ReadonlyMap<number, string>) {
     return (address: string): string => {
-      const page = PAGE_ADDRESS.exec(address);
-      const pageId = page?.[1]?.toLowerCase();
+      const page = PAGE_ADDRESS.exec(address) ?? NUMBERED_ADDRESS.exec(address);
+      const pageId = pageIdOf(address, numbers);
       if (pageId) {
         const local = locator.page(pageId, format);
         if (local) return `${local}${page?.[2] ?? ""}`;
@@ -786,7 +824,7 @@ export class PageExportRenderer {
       ...(target === "word" ? { svgPalette } : {}),
       nodeTitle: (type) => this.#texts.nodeTitles[type] ?? this.#texts.someContent,
       labels: this.#labels(page),
-      href: this.#address(format, locator),
+      href: this.#address(format, locator, page.numbers),
       formatDate: (iso) => this.#format.day(iso),
       formatSize: formatBytes,
       mention: (id) => {
@@ -794,18 +832,8 @@ export class PageExportRenderer {
         return name ? { name } : null;
       },
       topic: (id) => references.topics[id] ?? null,
-      pageLink: (link) => {
-        if (!link.pageId) return null;
-        const target = references.pages[link.pageId];
-        if (target?.inTrash) return { href: "", title: target.title, accessible: false, inTrash: true };
-        return target?.accessible
-          ? {
-              href: pagePath(target.spaceKey, link.pageId, target.title),
-              title: target.title,
-              accessible: true,
-            }
-          : { href: "", title: "", accessible: false };
-      },
+      pageLink: (link) => referencedPageLink(references, link.pageId),
+      ...(this.#origin ? { instanceUrl: this.#origin } : {}),
       attachment: (id) => ({
         href: `/api/v1/attachments/${id}/content`,
         display: `/api/v1/attachments/${id}/content?size=display`,

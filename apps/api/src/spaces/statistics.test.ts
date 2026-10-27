@@ -31,6 +31,14 @@ describe.skipIf(!databaseBaseUrl)("knowledge base statistics through the API", (
     await test?.close();
   });
 
+  async function numberOf(itemId: string): Promise<number> {
+    const result = await test.runtime.pool.query<{ number: string }>(
+      "select number from tree_items where id = $1",
+      [itemId],
+    );
+    return Number(result.rows[0]?.number);
+  }
+
   async function person() {
     counter += 1;
     const account = await createAccount(test, `statistics${counter}@lunedo.test`);
@@ -79,7 +87,13 @@ describe.skipIf(!databaseBaseUrl)("knowledge base statistics through the API", (
     expect(shown.json()).toMatchObject({
       searches: { total: 3, zeroResults: 3 },
       zeroResultTerms: [{ term: "parkausweis", searches: 3 }],
-      unhelpful: [{ article: { id: context.articleId }, unhelpful: 1, feedback: 1 }],
+      unhelpful: [
+        {
+          article: { id: context.articleId, number: await numberOf(context.articleId) },
+          unhelpful: 1,
+          feedback: 1,
+        },
+      ],
     });
     expect((await context.admin.client.get(`${url.split("?")[0]}?period=1y`)).statusCode).toBe(400);
   });

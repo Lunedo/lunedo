@@ -6,7 +6,6 @@ import {
   type ImportText,
   narrowEmbedServices,
   resolveEmbed,
-  slugify,
 } from "@lunedo/editor-schema";
 import { yDocFromDocument } from "@lunedo/editor-schema/yjs";
 import { uuidv7 } from "@lunedo/shared";
@@ -25,6 +24,7 @@ import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
 import { isArticleLanguage } from "../knowledge-bases/translations.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
+import { itemAddress } from "../spaces/addresses.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
 import { cleanLinkUrl, endPosition, ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
 import { syncReusableContent } from "../spaces/properties.js";
@@ -1069,12 +1069,9 @@ export class ImportPipeline {
               : (byTitle.get(title) ?? (reference.formerTitles ? formerTitles.get(title) : undefined)));
           const target = sourceId ? pageTargets.get(sourceId) : undefined;
           const info = target ? pageInfo.get(target) : undefined;
-          if (target && info) {
-            return {
-              kind: "page" as const,
-              pageId: target,
-              path: `${spacePath}/pages/${target}/${slugify(info)}`,
-            };
+          const path = info ? itemAddress("page", run.spaceKey, info.number, info.title) : null;
+          if (target && path) {
+            return { kind: "page" as const, pageId: target, path };
           }
           return {
             kind: "external" as const,
@@ -1892,11 +1889,11 @@ export class ImportPipeline {
     return new Set(result.rows.map((row) => row.item_id));
   }
 
-  async #pageInfo(itemIds: readonly string[]): Promise<Map<string, string>> {
+  async #pageInfo(itemIds: readonly string[]): Promise<Map<string, { title: string; number: number }>> {
     if (itemIds.length === 0) return new Map();
-    const rows = await this.#database.execute<{ id: string; title: string }>(sql`
-      select id, title from tree_items where id = any(${sql.param([...new Set(itemIds)])}::uuid[])`);
-    return new Map(rows.rows.map((row) => [row.id, row.title]));
+    const rows = await this.#database.execute<{ id: string; title: string; number: string | number }>(sql`
+      select id, title, number from tree_items where id = any(${sql.param([...new Set(itemIds)])}::uuid[])`);
+    return new Map(rows.rows.map((row) => [row.id, { title: row.title, number: Number(row.number) }]));
   }
 
   async #attachmentNames(ids: readonly string[]): Promise<Map<string, { name: string; version: number }>> {

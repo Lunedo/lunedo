@@ -112,7 +112,14 @@ export interface CopySummary {
   copied: number;
   hidden: number;
   skipped: number;
-  item: { id: string; spaceId: string; spaceKey: string; kind: TreeItemKind; title: string } | null;
+  item: {
+    id: string;
+    number: number;
+    spaceId: string;
+    spaceKey: string;
+    kind: TreeItemKind;
+    title: string;
+  } | null;
   errorCode: string | null;
   createdAt: Date;
   finishedAt: Date | null;
@@ -223,6 +230,7 @@ type CopyRow = {
   finished_at: Date | string | null;
   done: number | null;
   item_space_id: string | null;
+  item_number: string | null;
   item_space_key: string | null;
   item_kind: TreeItemKind | null;
   item_title: string | null;
@@ -361,7 +369,7 @@ export class CopyService {
 
   async get(viewer: Principal, copyId: string): Promise<CopySummary | null> {
     const result = await this.#database.execute<CopyRow>(sql`
-      select c.*, p.done, t.space_id as item_space_id, s.key as item_space_key, t.kind as item_kind,
+      select c.*, p.done, t.space_id as item_space_id, t.number as item_number, s.key as item_space_key, t.kind as item_kind,
         t.title as item_title
       from item_copies c
       left join job_progress p on p.job_id = c.job_id
@@ -1058,12 +1066,14 @@ export class CopyService {
       skipped: row.skipped,
       item:
         row.root_copy_id &&
+        row.item_number !== null &&
         row.item_space_id &&
         row.item_space_key &&
         row.item_kind &&
         row.item_title !== null
           ? {
               id: row.root_copy_id,
+              number: Number(row.item_number),
               spaceId: row.item_space_id,
               spaceKey: row.item_space_key,
               kind: row.item_kind,

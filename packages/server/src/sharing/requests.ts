@@ -2,6 +2,7 @@ import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { RateLimiter } from "../auth/throttle.js";
 import { accountItemCondition } from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { spaceRoleConditionFor } from "../authorization/space-access.js";
@@ -17,6 +18,14 @@ import type { AccessRequestStatus, ShareRole } from "./schema.js";
 
 export const ACCESS_REQUEST_MESSAGE_MAX_LENGTH = 1000;
 const REQUESTS_PER_DAY = 30;
+const DAY_SECONDS = 24 * 60 * 60;
+
+function tooManyRequests(): SpaceError {
+  return new SpaceError(
+    "tooManyRequests",
+    "You sent many requests today; wait for answers or try again tomorrow",
+  );
+}
 
 export interface AccessRequest {
   id: string;
@@ -24,6 +33,7 @@ export interface AccessRequest {
   spaceId: string;
   spaceName: string;
   itemId: string | null;
+  number: number | null;
   itemTitle: string | null;
   message: string;
   status: AccessRequestStatus;
@@ -43,6 +53,7 @@ interface RequestRow {
   space_key: string;
   organization_id: string | null;
   item_id: string | null;
+  item_number: string | null;
   item_title: string | null;
   item_kind: string | null;
   message: string;
@@ -57,6 +68,7 @@ interface RequestRow {
 
 export class AccessRequestService {
   readonly #database: Database;
+  readonly #rateLimiter: RateLimiter;
   readonly #authorization: AuthorizationService;
   readonly #audit: AuditLog;
   readonly #people: PeopleService;
@@ -72,8 +84,10 @@ export class AccessRequestService {
     notifications: NotificationService;
     pageAccess: PageAccessService;
     spacePermissions: SpacePermissionService;
+    rateLimiter: RateLimiter;
   }) {
     this.#database = options.database;
+    this.#rateLimiter = options.rateLimiter;
     this.#authorization = options.authorization;
     this.#audit = options.audit;
     this.#people = options.people;
@@ -87,7 +101,7 @@ export class AccessRequestService {
       select r.id, r.requester_id, ${this.#people.visibleName(viewer, sql`ra`)} as requester_name,
         case when ${this.#people.colleagueCondition(viewer, sql`ra.id`)} then ra.email end as requester_email,
         r.space_id, ${spaceDisplayName(sql`s`)} as space_name, s.key as space_key, s.organization_id, r.item_id,
-        t.title as item_title, t.kind::text as item_kind, r.message, r.status, r.role, r.decided_by,
+        t.number as item_number, t.title as item_title, t.kind::text as item_kind, r.message, r.status, r.role, r.decided_by,
         ${this.#people.visibleName(viewer, sql`da`)} as decided_by_name, r.decided_at, r.created_at
       from access_requests r join accounts ra on ra.id = r.requester_id join spaces s on s.id = r.space_id
       left join tree_items t on t.id = r.item_id left join accounts da on da.id = r.decided_by`;
@@ -100,6 +114,7 @@ export class AccessRequestService {
       spaceId: row.space_id,
       spaceName: options.hideSpace ? "" : row.space_name,
       itemId: row.item_id,
+      number: options.hideSpace || row.item_number === null ? null : Number(row.item_number),
       itemTitle: options.hideSpace ? null : row.item_title,
       message: row.message,
       status: row.status,
@@ -178,9 +193,24 @@ export class AccessRequestService {
     if (actor.type !== "account") throw new SpaceError("signInRequired", "Sign in to request access");
     const item = await this.#database.execute<{ space_id: string }>(sql`
       select t.space_id from tree_items t join spaces s on s.id = t.space_id
-      where t.id = ${itemId} and t.trash_entry_id is null and s.deleted_at is null and t.kind in ('page', 'folder', 'blogPost', 'whiteboard')`);
+      where t.id = ${itemId} and t.trash_entry_id is null and s.deleted_at is null and t.kind in ('page', 'folder', 'blogPost', 'whiteboard')
+        and (
+          exists (select 1 from memberships m where m.organization_id = s.organization_id and m.account_id = ${actor.id}
+            and (m.expires_at is null or m.expires_at > now()))
+          or exists (
+            select 1 from memberships mine join memberships theirs on theirs.organization_id = mine.organization_id
+            where mine.account_id = ${actor.id} and theirs.account_id = s.personal_of
+              and (mine.expires_at is null or mine.expires_at > now())
+              and (theirs.expires_at is null or theirs.expires_at > now())
+          )
+        )`);
     const spaceId = item.rows[0]?.space_id;
-    await this.#checkDailyLimit(this.#database, actor.id);
+    const attempt = await this.#rateLimiter.consume(
+      `accessRequest.page:${actor.id}`,
+      REQUESTS_PER_DAY,
+      DAY_SECONDS,
+    );
+    if (!attempt.allowed) throw tooManyRequests();
     if (!spaceId || (await this.#hasAccess(this.#database, actor.id, spaceId, itemId))) return;
     await this.#create(actor, spaceId, itemId, message);
   }
@@ -206,7 +236,7 @@ export class AccessRequestService {
         select id from access_requests where requester_id = ${actor.id} and space_id = ${spaceId}
           and item_id is not distinct from ${itemId} and status = 'open'`);
       if (existing.rows[0]) return { id: existing.rows[0].id, mailIds: [] };
-      await this.#checkDailyLimit(tx, actor.id);
+      if (itemId === null) await this.#checkDailyLimit(tx, actor.id);
       const id = uuidv7();
       await tx.execute(sql`
         insert into access_requests (id, requester_id, space_id, item_id, message)
@@ -242,12 +272,7 @@ export class AccessRequestService {
     const recent = await executor.execute<{ count: string }>(sql`
       select count(*) as count from access_requests
       where requester_id = ${accountId} and created_at > now() - interval '1 day'`);
-    if (Number(recent.rows[0]?.count ?? 0) >= REQUESTS_PER_DAY) {
-      throw new SpaceError(
-        "tooManyRequests",
-        "You sent many requests today; wait for answers or try again tomorrow",
-      );
-    }
+    if (Number(recent.rows[0]?.count ?? 0) >= REQUESTS_PER_DAY) throw tooManyRequests();
   }
 
   async deciders(executor: Executor, spaceId: string, itemId: string | null): Promise<string[]> {

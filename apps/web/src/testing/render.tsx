@@ -109,6 +109,23 @@ function parseBody(text: string): unknown {
   }
 }
 
+const NUMBERED_ITEM = /^\/api\/v1\/items\/by-number\/(\d+)$/;
+const ITEM_ROUTE = /^GET \/api\/v1\/items\/[0-9a-f-]{36}$/;
+
+function numberedItemHandler(routes: Record<string, Handler>, method: string, url: URL): Handler | undefined {
+  const number = method === "GET" ? NUMBERED_ITEM.exec(url.pathname)?.[1] : undefined;
+  if (!number) return undefined;
+  return async (request) => {
+    for (const [route, handler] of Object.entries(routes)) {
+      if (!ITEM_ROUTE.test(route)) continue;
+      const answer = await handler(request);
+      const body = answer.body as { number?: unknown } | undefined;
+      if ((answer.status ?? 200) < 300 && body?.number === Number(number)) return answer;
+    }
+    return problem(404, "notFound");
+  };
+}
+
 export function mockApi(routes: Record<string, Handler>) {
   const requests: RecordedRequest[] = [];
   const fetch = vi.fn(async (resource: Request | string, init?: RequestInit) => {
@@ -123,7 +140,8 @@ export function mockApi(routes: Record<string, Handler>) {
       headers: input.headers,
     };
     requests.push(recorded);
-    const handler = routes[`${input.method} ${url.pathname}`];
+    const handler =
+      routes[`${input.method} ${url.pathname}`] ?? numberedItemHandler(routes, input.method, url);
     if (!handler) {
       return new Response(
         JSON.stringify({

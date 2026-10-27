@@ -17,7 +17,7 @@ import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { collaborationKeys, organizationHomePageQuery } from "./queries.js";
 
 const pageLoader: ComboboxLoader = async (query) => {
@@ -73,7 +73,7 @@ export function OrganizationHomePage({
   }
   const page = current.data.page;
   const href = page
-    ? itemHref({ id: page.id, kind: page.kind, title: page.title, link: null }, page.spaceKey)
+    ? contentHref({ kind: page.kind, number: page.number, title: page.title }, page.spaceKey)
     : null;
   return (
     <div className="flex flex-col gap-3">

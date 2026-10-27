@@ -133,6 +133,7 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
     );
     await sourcePool.query("create table test_blobs (id int primary key, content bytea)");
     await sourcePool.query("insert into test_blobs values (1, $1)", [secret]);
+    await sourcePool.query("select setval('tree_item_numbers', 4711)");
     await sourcePool.end();
 
     const backupKeys = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
@@ -176,6 +177,8 @@ describe.skipIf(!baseUrl || !hasTools)("PostgresArchiver", () => {
       ]);
       const blobs = await targetPool.query<{ content: Buffer }>("select content from test_blobs");
       expect(blobs.rows[0]?.content.equals(secret)).toBe(true);
+      const number = await targetPool.query<{ next: string }>("select nextval('tree_item_numbers') as next");
+      expect(Number(number.rows[0]?.next)).toBe(4712);
       const migrations = await targetPool.query(
         'select count(*)::int as count from "drizzle"."__drizzle_migrations"',
       );

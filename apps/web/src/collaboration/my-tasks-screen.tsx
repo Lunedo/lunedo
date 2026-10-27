@@ -21,7 +21,7 @@ import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { peopleQuery, spacesQuery } from "../search/search-api.js";
 import { useOrganizationState } from "../shell/shell-context.js";
-import { itemHref } from "../spaces/item-paths.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { type TaskEntry, type TaskQuery, tasksQuery } from "./queries.js";
 import { useSetTaskStatus } from "./task-actions.js";
 
@@ -189,8 +189,8 @@ export function MyTasksScreen() {
       header: t("tasks.columns.page"),
       sortable: true,
       cell: (task) => {
-        const href = itemHref(
-          { id: task.item.id, kind: task.item.kind, title: task.item.title, link: null },
+        const href = contentHref(
+          { kind: task.item.kind, number: task.item.number, title: task.item.title },
           task.item.spaceKey,
         );
         return (

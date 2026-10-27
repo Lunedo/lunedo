@@ -7,7 +7,7 @@ import { AppDatePicker } from "../../components/date-fields.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useEditable, useOpenPath, usePageContext } from "../context.js";
-import { followTitleLink, pagePath, usePageReference, usePersonName } from "../references.js";
+import { followTitleLink, referenceHref, usePageReference, usePersonName } from "../references.js";
 
 export function MentionView({ node, selected }: NodeViewProps) {
   const { t } = useTranslation();
@@ -45,7 +45,7 @@ export function PageLinkView({ node, selected }: NodeViewProps) {
   const follow = async () => {
     if (!accessible) return;
     if (pageId && reference) {
-      open(pagePath(reference.spaceKey, pageId, reference.title));
+      open(referenceHref(reference));
       return;
     }
     if (!page || !node.attrs.spaceId || !node.attrs.title) return;

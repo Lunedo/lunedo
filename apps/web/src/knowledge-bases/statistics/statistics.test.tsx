@@ -33,7 +33,12 @@ function inSpace(ui: ReactNode, role: "admin" | "editor", openCreate: SpaceConte
   return <RouterProvider router={router} />;
 }
 
-const article = { id: ARTICLE, title: "Set up the VPN", categoryPath: [{ id: SPACE_ID, title: "IT" }] };
+const article = {
+  id: ARTICLE,
+  number: 1020,
+  title: "Set up the VPN",
+  categoryPath: [{ id: SPACE_ID, title: "IT" }],
+};
 
 const statistics: Statistics = {
   period: { from: "2026-09-20", to: "2026-10-19" },

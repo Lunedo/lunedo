@@ -17,6 +17,7 @@ export type ConfluenceLink =
 
 export interface ResolvedLink {
   readonly itemId: string;
+  readonly number: number;
   readonly kind: "page" | "blogPost";
   readonly spaceKey: string;
   readonly title: string;
@@ -141,12 +142,13 @@ export class ConfluenceLinkService {
         : importedTitleCandidates(link.spaceKey, link.title, link.blog ? "blogPost" : "page");
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       kind: "page" | "blogPost";
       title: string;
       space_key: string;
     }>(sql`
       with candidates as (${candidates})
-      select t.id, t.kind::text as kind, t.title, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as space_key
+      select t.id, t.number, t.kind::text as kind, t.title, ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as space_key
       from candidates c join tree_items t on t.id = c.id join spaces s on s.id = t.space_id
       where t.kind in ('page', 'blogPost') and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
       order by c.rank, c.at desc, t.id
@@ -155,6 +157,7 @@ export class ConfluenceLinkService {
     return row
       ? {
           itemId: row.id,
+          number: Number(row.number),
           kind: row.kind,
           spaceKey: row.space_key,
           title: row.title,

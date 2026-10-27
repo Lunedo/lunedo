@@ -16,16 +16,17 @@ import { UploadsProvider } from "../files/uploads.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { draftQuery } from "../spaces/content-queries.js";
 import { itemHref, itemSlug } from "../spaces/item-paths.js";
+import { useNumberedItem } from "../spaces/numbered-item.js";
 import { DraftStatusLine, PublishButton } from "../spaces/page-publishing.js";
 import { PageContent, useLostEditPermission } from "../spaces/page-screen.js";
 import { Redirect } from "../spaces/redirect.js";
-import { type ItemDetails, itemQuery, sharedPath } from "../spaces/space-queries.js";
+import { type ItemDetails, sharedPath } from "../spaces/space-queries.js";
 import { WhiteboardView } from "../whiteboards/whiteboard-view.js";
 import { NoPageAccess } from "./access-requests.js";
 import { accessRoleLabel } from "./explanation.js";
 import { myAccessQuery, sharedWithMeQuery } from "./sharing-api.js";
 
-const route = getRouteApi("/app/shared/$itemId/{-$slug}");
+const route = getRouteApi("/app/shared/$number/{-$slug}");
 
 const EDITING = new Set(["editor", "admin"]);
 
@@ -64,13 +65,13 @@ function SharedPage({ page }: { page: ItemDetails }) {
   const draft = useQuery({ ...draftQuery(page.id), enabled: canEdit && publishMode, throwOnError: false });
   const setEditing = (next: boolean) =>
     void navigate({
-      to: sharedPath(page.id, itemSlug(page.title)),
+      to: sharedPath(page.number, itemSlug(page.title)),
       search: next ? { edit: true } : {},
       replace: true,
     });
   const breadcrumbs = page.ancestors.map((ancestor) => ({
     label: ancestor.title,
-    href: sharedPath(ancestor.id, itemSlug(ancestor.title)),
+    href: sharedPath(ancestor.number, itemSlug(ancestor.title)),
   }));
   return (
     <UploadsProvider pageId={page.id}>
@@ -152,9 +153,9 @@ function SharedPage({ page }: { page: ItemDetails }) {
 
 export function SharedPageScreen() {
   const { t } = useTranslation();
-  const { itemId } = route.useParams();
+  const { number } = route.useParams();
   const search = route.useSearch();
-  const item = useQuery({ ...itemQuery(itemId), throwOnError: false });
+  const item = useNumberedItem(number);
   useDocumentTitle(item.data?.title ?? "");
   if (item.isPending) {
     return (
@@ -165,7 +166,7 @@ export function SharedPageScreen() {
     );
   }
   if (item.isError) {
-    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess pageId={itemId} />;
+    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess number={number} />;
     return (
       <div className="p-6">
         <LoadError what={t("page.loadFailed")} error={item.error} onRetry={() => item.refetch()} />
@@ -187,7 +188,7 @@ function SharedWhiteboard({ board }: { board: ItemDetails }) {
   const role = mine.data?.role ?? null;
   const breadcrumbs = board.ancestors.map((ancestor) => ({
     label: ancestor.title,
-    href: sharedPath(ancestor.id, itemSlug(ancestor.title)),
+    href: sharedPath(ancestor.number, itemSlug(ancestor.title)),
   }));
   return (
     <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 outline-none">

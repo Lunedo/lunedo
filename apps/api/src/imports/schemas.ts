@@ -14,7 +14,7 @@ import {
   reportCategoryNames,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, itemNumber, timestamp, uuid } from "../http/schemas.js";
 import { pageImpactSchema } from "../sharing/schemas.js";
 import {
   documentSchema,
@@ -472,7 +472,11 @@ export const reportEntriesSchema = z
             category: z.string().describe("Area of the problem."),
             code: z.string().describe("Kind of problem."),
             item: z
-              .object({ id: uuid("ID of the page."), title: z.string().describe("Title of the page.") })
+              .object({
+                id: uuid("ID of the page."),
+                number: itemNumber("Number of the page in the addresses of the app."),
+                title: z.string().describe("Title of the page."),
+              })
               .nullable()
               .describe(
                 "The affected page, or null when the problem concerns the export as a whole or a page the caller cannot read.",
@@ -935,6 +939,7 @@ export const changeEntrySchema = z
     item: z
       .object({
         id: uuid("ID of the page."),
+        number: itemNumber("Number of the page in the addresses of the app."),
         title: z.string().describe("Title of the page in Lunedo."),
         spaceKey: z.string().describe("Key of its space."),
       })
@@ -1059,6 +1064,7 @@ export const decidedSchema = z
 export const confluenceLinkSchema = z
   .object({
     itemId: uuid("ID of the page or blog post."),
+    number: itemNumber("Number of the page or blog post in the addresses of the app."),
     kind: extensibleEnum(["page", "blogPost"], "Kind of the item."),
     spaceKey: z
       .string()

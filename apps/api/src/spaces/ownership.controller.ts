@@ -13,7 +13,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, nameCursor } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
-import { extensibleEnum, organizationIdParams, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, itemNumber, organizationIdParams, timestamp, uuid } from "../http/schemas.js";
 import { examplePageStatus, pageStatusColorSchema, pageStatusSchema } from "./schemas.js";
 
 const TAG = "Ownership and status";
@@ -64,6 +64,7 @@ const candidateSchema = z
 const unownedItemSchema = z
   .object({
     id: uuid("ID of the item."),
+    number: itemNumber("Number of the item in the addresses of the app."),
     spaceId: uuid("Space of the item."),
     spaceKey: z.string().describe("Key of the space."),
     spaceName: z.string().describe("Name of the space."),
@@ -95,6 +96,7 @@ const exampleUnowned = {
   items: [
     {
       id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+      number: 1042,
       spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
       spaceKey: "ITOPS",
       spaceName: "IT Operations",

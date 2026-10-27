@@ -180,11 +180,12 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     expect(files.get(pages[0] ?? "")?.toString("utf8")).toContain(
       '<link rel="icon" href="./_assets/favicon.ico" sizes="48x48"><link rel="icon" href="./_assets/favicon.svg" type="image/svg+xml">',
     );
-    const numbers = await test.database.execute<{ number: number; item_id: string }>(
-      sql`select number, item_id from article_numbers where space_id = ${spaceId}`,
+    const numbers = await test.database.execute<{ number: string; item_id: string }>(
+      sql`select number, id as item_id from tree_items where space_id = ${spaceId}`,
     );
     const renamedNumber = numbers.rows.find((row) => row.item_id === renamed)?.number;
     const backupNumber = numbers.rows.find((row) => row.item_id === backup)?.number;
+    expect(Number(backupNumber)).toBeGreaterThanOrEqual(1000);
 
     const root = await mkdtemp(join(tmpdir(), "lunedo-site-"));
     try {
@@ -215,11 +216,13 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
         const start = await (await fetch(`${origin}/index.html`)).text();
         expect(start).toContain("Operations");
         const category = (
-          await test.database.execute<{ id: string }>(sql`
-            select id from tree_items where space_id = ${spaceId} and kind = 'folder' and title = 'Operations'`)
-        ).rows[0]?.id;
-        const topic = await (await fetch(`${origin}/topics/${category}.html`)).text();
+          await test.database.execute<{ number: string }>(sql`
+            select number from tree_items where space_id = ${spaceId} and kind = 'folder' and title = 'Operations'`)
+        ).rows[0]?.number;
+        expect(start).toContain(`href="./topics/${category}-operations.html"`);
+        const topic = await (await fetch(`${origin}/topics/${category}-operations.html`)).text();
         expect(topic).toContain(">Backups<");
+        expect(topic).toContain(`href="../${backupNumber}-backups.html"`);
         expect(topic).not.toContain("data-autosubmit");
 
         const index = MiniSearch.loadJSON(
@@ -247,6 +250,12 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
 
         const sitemap = files.get("sitemap.xml")?.toString("utf8") ?? "";
         expect(sitemap).toContain(`<loc>https://help.example.org/docs/${backupNumber}-backups.html</loc>`);
+        expect(sitemap).toContain(
+          `<loc>https://help.example.org/docs/topics/${category}-operations.html</loc>`,
+        );
+        expect(sitemap).toContain(
+          `<loc>https://help.example.org/docs/de/${backupNumber}-sicherung.html</loc>`,
+        );
         expect(files.get("robots.txt")?.toString("utf8")).toContain(
           "Sitemap: https://help.example.org/docs/sitemap.xml",
         );
@@ -324,9 +333,9 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     return created.id;
   }
 
-  async function numberOf(itemId: string, spaceId: string) {
-    const found = await test.database.execute<{ number: number }>(
-      sql`select number from article_numbers where item_id = ${itemId} and space_id = ${spaceId}`,
+  async function numberOf(itemId: string) {
+    const found = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${itemId}`,
     );
     return Number(found.rows[0]?.number);
   }
@@ -347,10 +356,11 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     await test.services.versions.publish(owner, moved);
     await test.services.tree.update(owner, moved, { title: "Abmahnung Vorlage" });
     await test.services.versions.publish(owner, moved);
-    const internalNumber = await numberOf(moved, internal.id);
+    const internalNumber = await numberOf(moved);
     await test.services.tree.move(owner, moved, { spaceId: open.id, parentId: null });
-    const draftedNumber = await numberOf(drafted, open.id);
-    const movedNumber = await numberOf(moved, open.id);
+    const draftedNumber = await numberOf(drafted);
+    const movedNumber = await numberOf(moved);
+    expect(movedNumber).toBe(internalNumber);
 
     const files = await site(owner, open.id, null);
     const names = [...files.keys()].join("\n");
@@ -379,6 +389,44 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     expect(
       await reader.article(owner, internalPortal, internalNumber, "abmahnung-fall-huber-vorlage", "en"),
     ).toMatchObject({ type: "redirect", number: movedNumber });
+  }, 120_000);
+
+  it("names files of articles and categories with titles in other scripts and links them encoded", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const folder = await test.services.tree.create(owner, open.id, {
+      kind: "folder",
+      title: "Почта",
+      placement: { parentId: null },
+    });
+    const entry = await test.services.tree.create(owner, open.id, {
+      kind: "page",
+      title: "Настройка почты",
+      placement: { parentId: folder.id },
+    });
+    await test.services.documents.replace(owner, entry.id, {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Текст" }] }],
+    });
+    await test.services.versions.publish(owner, entry.id);
+    const number = await numberOf(entry.id);
+    const topicNumber = await numberOf(folder.id);
+
+    const files = await site(owner, open.id, "https://help.example.org/");
+    expect(files.has(`${number}-настройка-почты.html`)).toBe(true);
+    expect(files.has(`topics/${topicNumber}-почта.html`)).toBe(true);
+    const encoded = `${number}-${encodeURIComponent("настройка-почты")}.html`;
+    const topic = files.get(`topics/${topicNumber}-почта.html`)?.toString("utf8") ?? "";
+    expect(topic).toContain(`href="../${encoded}"`);
+    expect(files.get("sitemap.xml")?.toString("utf8")).toContain(
+      `<loc>https://help.example.org/${encoded}</loc>`,
+    );
+    const index = MiniSearch.loadJSON(
+      files.get("search-index.json")?.toString("utf8") ?? "",
+      STATIC_SEARCH_OPTIONS,
+    );
+    expect(index.search("текст", { prefix: true })[0]?.url).toBe(encoded);
   }, 120_000);
 
   it("keeps titles of linked pages out of both search indexes", async () => {
@@ -532,7 +580,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
       expect(everything, hidden).not.toContain(hidden);
     }
     expect([...files.keys()].some((path) => path.startsWith("de/"))).toBe(false);
-    const topic = files.get(`topics/${category.id}.html`)?.toString("utf8") ?? "";
+    const topic = files.get(`topics/${await numberOf(category.id)}-hardware.html`)?.toString("utf8") ?? "";
     expect(topic).toContain(">Drucker einrichten<");
     const start = files.get("index.html")?.toString("utf8") ?? "";
     expect(start).toContain("1 article");

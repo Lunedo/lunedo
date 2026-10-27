@@ -216,7 +216,11 @@ export interface ReportEntry {
   readonly id: string;
   readonly category: string;
   readonly code: string;
-  readonly item: { readonly id: string; readonly title: string | null } | null;
+  readonly item: {
+    readonly id: string;
+    readonly number: number | null;
+    readonly title: string | null;
+  } | null;
   readonly template: { readonly id: string; readonly name: string } | null;
   readonly details: Readonly<Record<string, unknown>>;
 }
@@ -1754,12 +1758,14 @@ export class ImportService {
       category: string;
       code: string;
       item_id: string | null;
+      item_number: string | null;
       title: string | null;
       template_id: string | null;
       template_name: string | null;
       details: Record<string, unknown>;
     }>(sql`
       select p.id, p.category, p.code, p.item_id,
+        case when ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} then t.number end as item_number,
         case when ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} then t.title end as title,
         pt.id as template_id, pt.name as template_name, p.details
       from import_problems p
@@ -1779,7 +1785,13 @@ export class ImportService {
       id: row.id,
       category: row.category,
       code: row.code,
-      item: row.item_id ? { id: row.item_id, title: row.title } : null,
+      item: row.item_id
+        ? {
+            id: row.item_id,
+            number: row.item_number === null ? null : Number(row.item_number),
+            title: row.title,
+          }
+        : null,
       template: row.template_id ? { id: row.template_id, name: row.template_name ?? "" } : null,
       details: row.details,
     }));

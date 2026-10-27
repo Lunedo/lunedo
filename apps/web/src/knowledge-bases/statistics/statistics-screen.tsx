@@ -21,7 +21,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
-import { itemHref } from "../../spaces/item-paths.js";
+import { contentHref } from "../../spaces/item-paths.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import {
@@ -78,7 +78,7 @@ function Block({
 }
 
 function ArticleCell({ article, spaceKey }: { article: Article; spaceKey: string }) {
-  const href = itemHref({ id: article.id, kind: "page", title: article.title, link: null }, spaceKey) ?? "";
+  const href = contentHref({ kind: "page", number: article.number, title: article.title }, spaceKey) ?? "";
   const path = article.categoryPath.map((category) => category.title).join(" › ");
   return (
     <span className="flex min-w-0 flex-col">
@@ -348,7 +348,7 @@ export function StatisticsScreen() {
   ];
 
   const openArticle = (article: Article) => {
-    const href = itemHref({ id: article.id, kind: "page", title: article.title, link: null }, space.key);
+    const href = contentHref({ kind: "page", number: article.number, title: article.title }, space.key);
     if (href) void navigate({ to: href });
   };
   const ratings = data ? data.ratings.helpful + data.ratings.unhelpful : 0;

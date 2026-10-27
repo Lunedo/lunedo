@@ -7,7 +7,9 @@ import { PORTAL_ICONS, portalIconByName } from "./brand-icon.js";
 import { html, raw } from "./html.js";
 import {
   ancestorsOf,
+  articlePath,
   brandStyle,
+  categoryPath,
   decorateArticleHtml,
   favicon,
   folderTrail,
@@ -20,6 +22,8 @@ import {
 function category(): PortalCategory {
   return {
     id: "category",
+    number: 1000,
+    slug: "category",
     parentId: null,
     level: 1,
     title: "Category",
@@ -34,6 +38,8 @@ function category(): PortalCategory {
 function categories(count: number): PortalCategory[] {
   return Array.from({ length: count }, (_, index) => ({
     id: `category-${index + 1}`,
+    number: 1001 + index,
+    slug: `category-${index + 1}`,
     parentId: null,
     level: 1,
     title: `Category ${index + 1}`,
@@ -44,6 +50,25 @@ function categories(count: number): PortalCategory[] {
     articles: 1,
   }));
 }
+
+describe("portal addresses", () => {
+  it("builds article and category addresses from the number and the slug", () => {
+    expect(articlePath("/help/hilfe", { number: 1040, slug: "daten-exportieren" })).toBe(
+      "/help/hilfe/1040-daten-exportieren",
+    );
+    expect(categoryPath("/help/hilfe", { number: 1012, slug: "it-und-geraete" })).toBe(
+      "/help/hilfe/topics/1012-it-und-geraete",
+    );
+  });
+
+  it("leaves out an empty slug and encodes letters of other scripts", () => {
+    expect(articlePath("", { number: 1040, slug: "" })).toBe("/1040");
+    expect(categoryPath("", { number: 1012, slug: "" })).toBe("/topics/1012");
+    expect(articlePath("/help/kb", { number: 1041, slug: "почта" })).toBe(
+      `/help/kb/1041-${encodeURIComponent("почта")}`,
+    );
+  });
+});
 
 describe("folders of any depth in the portal", () => {
   const folders: PortalCategory[] = [

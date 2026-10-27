@@ -65,6 +65,7 @@ export interface Space {
   ownerId: string | null;
   ownerName: string | null;
   overviewItemId: string | null;
+  overviewItemNumber: number | null;
   archived: boolean;
   exportEnabled: boolean;
   createdAt: Date;
@@ -95,6 +96,7 @@ type SpaceRow = {
   owner_name: string | null;
   display_name: string;
   overview_item_id: string | null;
+  overview_item_number: string | null;
   archived: boolean;
   export_enabled: boolean;
   created_at: Date | string;
@@ -104,7 +106,9 @@ type SpaceRow = {
 const SPACE_COLUMNS = sql`s.id, s.key, s.type, s.audience, s.name, s.description, s.visibility, s.discoverable,
   s.confidential, s.one_on_one, s.quarantined, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
-  ${spaceDisplayName(sql`s`)} as display_name, s.overview_item_id, s.archived_at is not null as archived,
+  ${spaceDisplayName(sql`s`)} as display_name, s.overview_item_id,
+  (select ov.number from tree_items ov where ov.id = s.overview_item_id) as overview_item_number,
+  s.archived_at is not null as archived,
   coalesce((select (sv.value)::boolean from setting_values sv
     where sv.key = ${exportEnabledSetting.key} and sv.level = 'space' and sv.scope_id = s.id
       and sv.value is not null), true) as export_enabled,
@@ -134,6 +138,7 @@ function toSpace(row: SpaceRow): Space {
     ownerId: row.owner_account_id,
     ownerName: row.owner_name,
     overviewItemId: row.overview_item_id,
+    overviewItemNumber: row.overview_item_number === null ? null : Number(row.overview_item_number),
     archived: row.archived,
     exportEnabled: row.export_enabled,
     createdAt: new Date(row.created_at),

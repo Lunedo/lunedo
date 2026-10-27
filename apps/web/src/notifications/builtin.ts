@@ -1,4 +1,3 @@
-import { slugify } from "@lunedo/editor-schema";
 import {
   ArrowUpCircle,
   AtSign,
@@ -32,7 +31,7 @@ import {
   UserRoundX,
   Users,
 } from "lucide-react";
-import { blogPostPath, folderPath, pagePath, whiteboardPath } from "../spaces/space-queries.js";
+import { contentHref } from "../spaces/item-paths.js";
 import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -45,19 +44,17 @@ function contentLink(item: NotificationItem) {
     spaceKey?: string;
     commentId?: string;
   };
-  if (!item.target.id) return null;
-  const slug = slugify(params.itemTitle ?? "");
-  const spaceKey = params.spaceKey ?? "";
+  const kind = params.itemKind === "blogPost" || params.itemKind === "whiteboard" ? params.itemKind : "page";
+  const to = contentHref(
+    { kind, number: item.target.number, title: params.itemTitle ?? "" },
+    params.spaceKey ?? "",
+  );
+  if (!to) return null;
   return {
     ...(params.commentId && params.itemKind !== "whiteboard"
       ? { search: { comment: params.commentId } }
       : {}),
-    to:
-      params.itemKind === "blogPost"
-        ? blogPostPath(spaceKey, item.target.id, slug)
-        : params.itemKind === "whiteboard"
-          ? whiteboardPath(spaceKey, item.target.id, slug)
-          : pagePath(spaceKey, item.target.id, slug),
+    to,
   };
 }
 
@@ -195,9 +192,10 @@ notificationTypes.register(
     icon: Users,
     link: (item) => {
       const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
-      return spaceKey && item.target.id
-        ? { to: `/spaces/${encodeURIComponent(spaceKey)}/meetings/${item.target.id}` }
+      const to = spaceKey
+        ? contentHref({ kind: "meetingSeries", number: item.target.number, title: "" }, spaceKey)
         : null;
+      return to ? { to } : null;
     },
   },
   {
@@ -223,8 +221,12 @@ notificationTypes.register(
     icon: Copy,
     link: (item) => {
       const params = item.params as { itemKind?: string; itemTitle?: string; spaceKey?: string };
-      if (params.itemKind !== "folder" || !item.target.id) return contentLink(item);
-      return { to: folderPath(params.spaceKey ?? "", item.target.id, slugify(params.itemTitle ?? "")) };
+      if (params.itemKind !== "folder") return contentLink(item);
+      const to = contentHref(
+        { kind: "folder", number: item.target.number, title: params.itemTitle ?? "" },
+        params.spaceKey ?? "",
+      );
+      return to ? { to } : null;
     },
   },
   { id: "copy.failed", icon: Copy, link: () => null },

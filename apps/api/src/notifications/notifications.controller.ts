@@ -24,6 +24,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, pageQuery, pageSchema } from "../http/pagination.js";
 import { notFound, ProblemException } from "../http/problems.js";
 import { sessionOf } from "../http/request.js";
+import { itemNumber } from "../http/schemas.js";
 import { SpaceSignals } from "./space-signals.js";
 
 const TAG = "Notifications";
@@ -105,7 +106,15 @@ const notificationSchema = z.object({
   id: idSchema,
   type: z.string(),
   organizationId: idSchema.nullable(),
-  target: z.object({ type: z.string(), id: z.string().nullable() }),
+  target: z.object({
+    type: z.string(),
+    id: z.string().nullable(),
+    number: itemNumber("Number of the item in the addresses of the app.")
+      .nullable()
+      .describe(
+        "Number of the item in the addresses of the app, or null when the target is no item or is gone.",
+      ),
+  }),
   actor: z.object({ type: z.string(), id: idSchema.nullable(), name: z.string().nullable() }).nullable(),
   actorCount: z
     .number()
@@ -136,6 +145,9 @@ const notificationSchema = z.object({
           z.object({
             id: idSchema,
             itemId: z.string().nullable(),
+            number: itemNumber("Number of the item in the addresses of the app.")
+              .nullable()
+              .describe("Number of the item in the addresses of the app, or null when the item is gone."),
             itemTitle: z.string(),
             actor: z.object({ id: idSchema.nullable(), name: z.string().nullable() }).nullable(),
             updatedAt: z.iso.datetime(),

@@ -77,6 +77,7 @@ import { draftQuery } from "./content-queries.js";
 import { EditorBar } from "./editor-bar.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
+import { useNumberedItem } from "./numbered-item.js";
 import { OnThisPage } from "./on-this-page.js";
 import { EditInfo, PageBar } from "./page-bar.js";
 import { PageEditors } from "./page-editors.js";
@@ -92,26 +93,19 @@ import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
 import { SpaceNews } from "./space-news.js";
-import {
-  backlinksQuery,
-  contentQuery,
-  type ItemDetails,
-  itemQuery,
-  pagePath,
-  spaceKeys,
-} from "./space-queries.js";
+import { backlinksQuery, contentQuery, type ItemDetails, pagePath, spaceKeys } from "./space-queries.js";
 import { SaveTemplateDialog } from "./templates/save-template-dialog.js";
 import { useConvert } from "./tree/item-actions.js";
 import { DraftChanges } from "./versions/diff-view.js";
 
-const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/{-$slug}");
+const route = getRouteApi("/app/spaces/$spaceKey/pages/$number/{-$slug}");
 
 export function PageScreen() {
   const { t } = useTranslation();
-  const { itemId, slug } = route.useParams();
+  const { number, slug } = route.useParams();
   const search = route.useSearch();
   const { space } = useSpace();
-  const item = useQuery(itemQuery(itemId));
+  const item = useNumberedItem(number);
   useDocumentTitle(item.data?.title ?? "");
   if (item.isPending) {
     return (
@@ -122,7 +116,7 @@ export function PageScreen() {
     );
   }
   if (item.isError) {
-    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess pageId={itemId} />;
+    if (item.error instanceof ApiError && item.error.status === 404) return <NoPageAccess number={number} />;
     return (
       <div className="p-6">
         <LoadError what={t("page.loadFailed")} error={item.error} onRetry={() => item.refetch()} />
@@ -130,7 +124,7 @@ export function PageScreen() {
     );
   }
   const page = item.data;
-  if (page.kind !== "page" || page.spaceKey !== space.key || slug !== itemSlug(page.title)) {
+  if (page.kind !== "page" || page.spaceKey !== space.key || (slug ?? "") !== itemSlug(page.title)) {
     const href = itemHref(page, page.spaceKey);
     if (href) return <Redirect to={href} search={search} />;
   }
@@ -224,7 +218,7 @@ function PageArticle({
 
   const setEditing = (next: boolean) =>
     void navigate({
-      to: pagePath(space.key, page.id, itemSlug(page.title)),
+      to: pagePath(space.key, page.number, itemSlug(page.title)),
       search: next ? { edit: true } : {},
       replace: true,
     });
@@ -261,15 +255,15 @@ function PageArticle({
   const width = page.width;
   const openHistory = () =>
     void navigate({
-      to: "/spaces/$spaceKey/pages/$itemId/history",
-      params: { spaceKey: space.key, itemId: page.id },
+      to: "/spaces/$spaceKey/pages/$number/history",
+      params: { spaceKey: space.key, number: page.number },
     });
 
   const star = useStar({ itemId: page.id }, title);
   const watch = useWatchEntries({ type: "item", id: page.id }, title);
   const meta = usePageMeta({ page, writable });
   const copyLink = async () => {
-    const url = new URL(pagePath(space.key, page.id, itemSlug(page.title)), globalThis.location.origin);
+    const url = new URL(pagePath(space.key, page.number, itemSlug(page.title)), globalThis.location.origin);
     try {
       await navigator.clipboard.writeText(url.toString());
       toast({ title: t("page.linkCopied") });
@@ -505,7 +499,7 @@ function PageArticle({
                     await save({ title: next });
                     if (!publishMode || !page.published) {
                       await navigate({
-                        to: pagePath(space.key, page.id, itemSlug(next)),
+                        to: pagePath(space.key, page.number, itemSlug(next)),
                         search,
                         replace: true,
                       });
@@ -835,7 +829,7 @@ function Backlinks({ pageId }: { pageId: string }) {
         {backlinks.data.map((link) => (
           <li key={link.itemId}>
             <Link
-              to={pagePath(link.spaceKey, link.itemId, itemSlug(link.title))}
+              to={pagePath(link.spaceKey, link.number, itemSlug(link.title))}
               className="inline-flex min-h-hit items-center gap-2 rounded-sm text-accent hover:underline focus-visible:focus-ring"
             >
               <FileText aria-hidden="true" className="size-icon-md" />

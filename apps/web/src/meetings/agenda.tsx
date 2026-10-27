@@ -276,8 +276,8 @@ export function AgendaSection({
       <p className="border-t border-border py-2 text-sm text-text-muted">
         {t("meetings.agenda.archiveBefore")}{" "}
         <Link
-          to="/spaces/$spaceKey/meetings/$seriesId"
-          params={{ spaceKey, seriesId: data.seriesId }}
+          to="/spaces/$spaceKey/meetings/$number/{-$slug}"
+          params={{ spaceKey, number: data.seriesNumber }}
           search={{ tab: "topics", status: "closed" }}
           className="text-accent underline focus-visible:focus-ring"
         >

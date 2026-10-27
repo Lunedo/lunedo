@@ -29,6 +29,7 @@ export interface AgendaTask {
 
 export interface AgendaTopic {
   id: string;
+  number: number;
   title: string;
   status: TopicStatus;
   outcome: TopicOutcome | null;
@@ -45,6 +46,7 @@ export interface AgendaTopic {
 
 export interface AgendaHistoryEntry {
   meetingId: string;
+  meetingNumber: number;
   meetingTitle: string;
   startsAt: Date | null;
   text: string;
@@ -52,7 +54,9 @@ export interface AgendaHistoryEntry {
 
 export interface Agenda {
   meetingId: string;
+  meetingNumber: number;
   seriesId: string;
+  seriesNumber: number;
   current: boolean;
   topics: AgendaTopic[];
   closedTopics: number;
@@ -182,12 +186,14 @@ export class AgendaService {
 
   async #meeting(meetingId: string) {
     const result = await this.#database.execute<{
+      number: string;
       series_id: string;
+      series_number: string;
       state: MeetingState;
       starts_at: Date | string | null;
       archived: boolean;
     }>(sql`
-      select m.series_id, m.state, m.starts_at,
+      select t.number, m.series_id, st.number as series_number, m.state, m.starts_at,
         (st.archived_root_id is not null or s.archived_at is not null) as archived
       from meetings m join tree_items t on t.id = m.item_id join tree_items st on st.id = m.series_id
       join spaces s on s.id = t.space_id
@@ -235,6 +241,7 @@ export class AgendaService {
     const start = toDate(meeting.starts_at);
     const topics = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       status: TopicStatus;
       outcome: TopicOutcome | null;
@@ -245,7 +252,7 @@ export class AgendaService {
       created_at: Date | string;
       meetings: string;
     }>(sql`
-      select mt.item_id as id, t.title, mt.status, mt.outcome, mt.one_off, t.owner_id,
+      select mt.item_id as id, t.number, t.title, mt.status, mt.outcome, mt.one_off, t.owner_id,
         ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
         (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
         t.created_at,
@@ -274,11 +281,12 @@ export class AgendaService {
         : await this.#database.execute<{
             topic_id: string;
             item_id: string;
+            number: string;
             title: string;
             starts_at: Date | string | null;
             content: NodeJson[];
           }>(sql`
-            select u.topic_id, u.item_id, t.title, m.starts_at, u.content
+            select u.topic_id, u.item_id, t.number, t.title, m.starts_at, u.content
             from meeting_topic_updates u join meetings m on m.item_id = u.item_id
             join tree_items t on t.id = u.item_id join spaces s on s.id = t.space_id
             where u.topic_id = any(${sql.param(ids)}::uuid[]) and m.state <> 'skipped' and t.trash_entry_id is null
@@ -319,7 +327,9 @@ export class AgendaService {
       where d.item_id = ${meetingId} and d.published order by d.position, d.id`);
     return {
       meetingId,
+      meetingNumber: Number(meeting.number),
       seriesId: meeting.series_id,
+      seriesNumber: Number(meeting.series_number),
       current,
       closedTopics: Number(closed.rows[0]?.count ?? 0),
       topics: topics.rows.map((row) => {
@@ -329,12 +339,14 @@ export class AgendaService {
           .filter((update) => update.topic_id === row.id && update.item_id !== meetingId)
           .map((update) => ({
             meetingId: update.item_id,
+            meetingNumber: Number(update.number),
             meetingTitle: update.title,
             startsAt: toDate(update.starts_at),
             text: updateTextOf({ type: "topicUpdate", content: update.content }).text,
           }));
         return {
           id: row.id,
+          number: Number(row.number),
           title: row.title,
           status: row.status,
           outcome: row.outcome,

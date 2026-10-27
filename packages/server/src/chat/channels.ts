@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { slugify } from "@lunedo/editor-schema";
 import {
   type ChatChannelKind,
   type ChatChannelState,
@@ -29,6 +28,7 @@ import {
 } from "../outbound/guarded-request.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
+import { itemAddress } from "../spaces/addresses.js";
 import { actorIdOf } from "../spaces/common.js";
 import { spaceDisplayName } from "../spaces/display-name.js";
 import { STORAGE_TEAMS_SECRET, storageTeamsSecretContext } from "../storage/webhook-secret.js";
@@ -218,6 +218,7 @@ export function shareableItemCondition(item: ReturnType<typeof sql>, space: Retu
 
 type ShareableItem = {
   id: string;
+  number: string;
   title: string;
   kind: string;
   space_id: string;
@@ -652,7 +653,7 @@ export class ChatChannelService {
 
   async #shareable(executor: Executor, itemId: string): Promise<ShareableItem | null> {
     const result = await executor.execute<ShareableItem>(sql`
-      select t.id, t.title, t.kind, s.id as space_id, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name,
+      select t.id, t.number, t.title, t.kind, s.id as space_id, s.key as space_key, ${spaceDisplayName(sql`s`)} as space_name,
         s.organization_id
       from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId} and ${shareableItemCondition(sql`t`, sql`s`)}`);
@@ -897,10 +898,8 @@ export class ChatChannelService {
           : null,
       channelName: channel.name,
     });
-    const section = item.kind === "blogPost" ? "blog" : item.kind === "whiteboard" ? "whiteboards" : "pages";
-    const url = await this.#link(
-      `spaces/${encodeURIComponent(item.space_key)}/${section}/${item.id}/${slugify(item.title)}`,
-    );
+    const address = itemAddress(item.kind, item.space_key, item.number, item.title);
+    const url = address ? await this.#link(address.slice(1)) : null;
     return {
       event,
       heading: texts.heading,

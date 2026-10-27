@@ -1,5 +1,5 @@
 import { Button, EmptyState, IconButton, Menu, type MenuItem, Skeleton, Table } from "@lunedo/ui";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRightLeft,
@@ -33,24 +33,26 @@ import { InlineTitle } from "./inline-title.js";
 import { itemIcon } from "./item-icons.js";
 import { itemKindLabel } from "./item-kinds.js";
 import { itemHref, itemSlug } from "./item-paths.js";
+import { useNumberedItem } from "./numbered-item.js";
 import { TransferOwnerDialog } from "./ownership/owner-line.js";
 import { PageBar } from "./page-bar.js";
 import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
-import { itemQuery, spaceKeys, type TreeItem } from "./space-queries.js";
+import { spaceKeys, type TreeItem } from "./space-queries.js";
 import { creatableKinds } from "./space-types.js";
 import { useConvert } from "./tree/item-actions.js";
 import { useChildren } from "./tree/page-tree.js";
 
-const route = getRouteApi("/app/spaces/$spaceKey/folders/$itemId/{-$slug}");
+const route = getRouteApi("/app/spaces/$spaceKey/folders/$number/{-$slug}");
 
 export function FolderScreen() {
   const { t } = useTranslation();
-  const { itemId, slug } = route.useParams();
+  const { number, slug } = route.useParams();
   const { space, canEdit: canEditSpace, openCreate, openMove, openCopy, openCategoryAccess } = useSpace();
   const queryClient = useQueryClient();
-  const item = useQuery(itemQuery(itemId));
+  const item = useNumberedItem(number);
+  const itemId = item.data?.id ?? "";
   const convert = useConvert();
   const preferences = usePreferences();
   const updatePreference = useUpdatePreference();
@@ -71,7 +73,7 @@ export function FolderScreen() {
     );
   }
   const folder = item.data;
-  if (folder.kind !== "folder" || folder.spaceKey !== space.key || slug !== itemSlug(folder.title)) {
+  if (folder.kind !== "folder" || folder.spaceKey !== space.key || (slug ?? "") !== itemSlug(folder.title)) {
     const href = itemHref(folder, folder.spaceKey);
     if (href) return <Redirect to={href} />;
   }

@@ -27,8 +27,8 @@ import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
-import { itemHref, itemSlug } from "../spaces/item-paths.js";
-import { pagePath } from "../spaces/space-queries.js";
+import { contentHref, itemSlug } from "../spaces/item-paths.js";
+import { pagePath, topicPath } from "../spaces/space-queries.js";
 import {
   attendanceQuery,
   decisionsQuery,
@@ -36,7 +36,6 @@ import {
   meetingStateAccent,
   meetingStateLabel,
   type Series,
-  topicPath,
   topicsQuery,
 } from "./queries.js";
 import {
@@ -144,7 +143,7 @@ function useModule(id: string, series: Series, spaceKey: string) {
           rows: (topics.data ?? []).slice(0, MODULE_ROWS).map((topic) => (
             <ModuleRow
               key={topic.id}
-              to={topicPath(spaceKey, topic.id)}
+              to={topicPath(spaceKey, topic.number, itemSlug(topic.title))}
               lead={
                 topic.owner ? (
                   <PersonAvatar id={topic.owner.id} name={topic.owner.name ?? "?"} size="sm" decorative />
@@ -186,7 +185,7 @@ function useModule(id: string, series: Series, spaceKey: string) {
             .map((decision) => (
               <ModuleRow
                 key={decision.id}
-                to={pagePath(spaceKey, decision.meeting.id, itemSlug(decision.meeting.title))}
+                to={pagePath(spaceKey, decision.meeting.number, itemSlug(decision.meeting.title))}
                 lead={<Flag aria-hidden="true" className="size-icon-md text-success" />}
                 title={decision.text || t("meetings.decisions.noStatement")}
                 meta={[
@@ -211,7 +210,7 @@ function useModule(id: string, series: Series, spaceKey: string) {
             .map((meeting) => (
               <ModuleRow
                 key={meeting.id}
-                to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
+                to={pagePath(spaceKey, meeting.number, itemSlug(meeting.title))}
                 lead={<CalendarDays aria-hidden="true" className="size-icon-md" />}
                 title={meeting.startsAt ? format.weekdayDate(meeting.startsAt) : t("meetings.notScheduled")}
                 meta={
@@ -266,25 +265,20 @@ function useModule(id: string, series: Series, spaceKey: string) {
           loading: false,
           count: series.overview.links.length,
           tab: null,
-          rows: series.overview.links.slice(0, MODULE_ROWS).map((link) => (
-            <ModuleRow
-              key={link.id}
-              to={
-                itemHref(
-                  {
-                    id: link.id,
-                    kind: link.kind as Parameters<typeof itemHref>[0]["kind"],
-                    title: link.title,
-                    link: null,
-                  },
-                  link.spaceKey,
-                ) ?? undefined
-              }
-              lead={<Link2 aria-hidden="true" className="size-icon-md" />}
-              title={link.title}
-              meta={translateKey(t, `meetings.overview.kinds.${link.kind}`)}
-            />
-          )),
+          rows: series.overview.links
+            .slice(0, MODULE_ROWS)
+            .map((link) => (
+              <ModuleRow
+                key={link.id}
+                to={
+                  contentHref({ kind: link.kind, number: link.number, title: link.title }, link.spaceKey) ??
+                  undefined
+                }
+                lead={<Link2 aria-hidden="true" className="size-icon-md" />}
+                title={link.title}
+                meta={translateKey(t, `meetings.overview.kinds.${link.kind}`)}
+              />
+            )),
         };
       default:
         return { loading: false, count: null, tab: null, rows: [] };

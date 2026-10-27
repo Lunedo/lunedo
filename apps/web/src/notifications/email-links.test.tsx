@@ -127,7 +127,7 @@ describe("a notification link from an e-mail", () => {
           id: NOTIFICATION,
           type: "content.mentioned",
           organizationId: null,
-          target: { type: "item", id: PAGE },
+          target: { type: "item", id: PAGE, number: 1040 },
           actor: null,
           actorCount: 1,
           params: { itemTitle: "Runbook", itemKind: "page", spaceKey: "OPS", commentId: null },
@@ -140,7 +140,7 @@ describe("a notification link from an e-mail", () => {
       [`POST /api/v1/notifications/${NOTIFICATION}/read`]: () => ({ status: 204 }),
     });
     await open(`/notifications/${NOTIFICATION}`);
-    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/OPS/pages/${PAGE}/runbook`));
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/OPS/pages/1040/runbook"));
     expect(requests.some((request) => request.path === `/api/v1/notifications/${NOTIFICATION}/read`)).toBe(
       true,
     );

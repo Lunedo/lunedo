@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { SidebarEntry } from "../../shell/app-sidebar.js";
-import { itemHref } from "../../spaces/item-paths.js";
+import { contentHref } from "../../spaces/item-paths.js";
 import { articleTypeIcon } from "../article-types.js";
 import { homeReviewsQuery, reviewCountsQuery } from "./queries.js";
 import { ReviewStatus, useReviewAction } from "./review-status.js";
@@ -52,7 +52,7 @@ export function DueForReview() {
           {items.map((item, index) => {
             const Icon = articleTypeIcon(item.type);
             const href =
-              itemHref({ id: item.id, kind: "page", title: item.title, link: null }, item.spaceKey) ?? "";
+              contentHref({ kind: "page", number: item.number, title: item.title }, item.spaceKey) ?? "";
             return (
               <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2">
                 <Icon aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />

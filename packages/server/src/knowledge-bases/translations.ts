@@ -44,6 +44,7 @@ export interface LanguageSettings {
 export interface ArticleTranslation {
   language: ArticleLanguage;
   itemId: string | null;
+  itemNumber: number | null;
   title: string | null;
   state: TranslationState;
   enabled: boolean;
@@ -231,11 +232,12 @@ export class ArticleTranslationService {
     const languages = await this.#languages(this.#database, row.space_id);
     const result = await this.#database.execute<{
       id: string;
+      number: number | string;
       language: ArticleLanguage;
       title: string;
       state: TranslationState;
     }>(sql`
-      select tr.id, tr.content_language as language, coalesce(v.title, tr.title) as title,
+      select tr.id, tr.number, tr.content_language as language, coalesce(v.title, tr.title) as title,
         ${translationState(sql`src`, sql`tr`)} as state
       from tree_items tr join tree_items src on src.id = tr.translation_of
       join spaces s on s.id = tr.space_id
@@ -243,8 +245,13 @@ export class ArticleTranslationService {
       where tr.translation_of = ${row.source_id} and tr.trash_entry_id is null and tr.archived_root_id is null
         and ${visibleItem(this.#authorization, viewer, sql`tr`, sql`s`)}
       order by tr.content_language`);
-    const source = await this.#database.execute<{ id: string; title: string; visible: boolean }>(sql`
-      select t.id, coalesce(v.title, t.title) as title,
+    const source = await this.#database.execute<{
+      id: string;
+      number: number | string;
+      title: string;
+      visible: boolean;
+    }>(sql`
+      select t.id, t.number, coalesce(v.title, t.title) as title,
         ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} as visible
       from tree_items t join spaces s on s.id = t.space_id left join page_versions v on v.id = t.published_version_id
       where t.id = ${row.source_id}`);
@@ -256,6 +263,7 @@ export class ArticleTranslationService {
       {
         language: languages.default_language,
         itemId: original?.visible ? original.id : null,
+        itemNumber: original?.visible ? Number(original.number) : null,
         title: original?.visible ? original.title : null,
         state: "original",
         enabled: true,
@@ -265,6 +273,7 @@ export class ArticleTranslationService {
         return {
           language,
           itemId: entry?.id ?? null,
+          itemNumber: entry ? Number(entry.number) : null,
           title: entry?.title ?? null,
           state: entry?.state ?? ("missing" as const),
           enabled: languages.languages.includes(language),

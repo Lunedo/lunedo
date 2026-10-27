@@ -142,20 +142,32 @@ describe.skipIf(!baseUrl)("search over meetings", () => {
     return response.results.map((hit) => [hit.type, hit.id]);
   }
 
+  async function numberOf(itemId: string): Promise<number> {
+    const result = await test.pool.query<{ number: string }>("select number from tree_items where id = $1", [
+      itemId,
+    ]);
+    return Number(result.rows[0]?.number);
+  }
+
   async function anything(viewer: Principal, organizationId: string, query: string) {
     return (await search(viewer, organizationId, query)).results.map((hit) => [hit.type, hit.id]);
   }
 
   it("finds running topics with their updates and comments, and decisions, in their series", async () => {
     const context = await setup();
-    const series = { id: context.seriesId, title: "Jour fixe IT" };
-    const topic = { id: context.topicId, title: `Rollout ${context.words.topic}` };
+    const series = { id: context.seriesId, number: await numberOf(context.seriesId), title: "Jour fixe IT" };
+    const topic = {
+      id: context.topicId,
+      number: await numberOf(context.topicId),
+      title: `Rollout ${context.words.topic}`,
+    };
     const byTitle = await search(context.reader, context.org.id, context.words.topic);
     expect(byTitle.results).toHaveLength(1);
     expect(byTitle.results[0]).toMatchObject({
       type: "topic",
       id: context.topicId,
       itemId: context.topicId,
+      number: topic.number,
       itemType: "topic",
       topic,
       series,
@@ -179,6 +191,7 @@ describe.skipIf(!baseUrl)("search over meetings", () => {
       type: "decision",
       id: context.decisionId,
       itemId: context.meetingId,
+      number: await numberOf(context.meetingId),
       topic,
       series,
     });

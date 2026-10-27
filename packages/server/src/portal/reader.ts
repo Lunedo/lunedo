@@ -1,3 +1,4 @@
+import { slugify } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -21,6 +22,8 @@ export type PortalArticleFilter = (typeof portalArticleFilters)[number];
 
 export interface PortalCategory {
   id: string;
+  number: number;
+  slug: string;
   parentId: string | null;
   level: number;
   title: string;
@@ -51,6 +54,7 @@ export interface ArticleAlternate {
 }
 
 export interface PortalArticle extends PortalArticleSummary {
+  itemNumber: number;
   spaceKey: string;
   lead: string;
   html: string;
@@ -142,6 +146,7 @@ export class PortalReader {
     if (counted.size === 0) return [];
     const result = await this.#database.execute<{
       id: string;
+      number: number | string;
       parent_id: string | null;
       level: number;
       title: string;
@@ -150,7 +155,7 @@ export class PortalReader {
       contact_email: string | null;
       restricted: boolean;
     }>(sql`
-      select c.id, c.parent_id, cardinality(c.path) as level, c.title, c.description, kc.icon, kc.contact_email,
+      select c.id, c.number, c.parent_id, cardinality(c.path) as level, c.title, c.description, kc.icon, kc.contact_email,
         exists (select 1 from page_restrictions r where r.item_id = c.id and r.kind = 'view') as restricted
       from tree_items c join spaces s on s.id = c.space_id
       left join knowledge_base_categories kc on kc.item_id = c.id
@@ -165,6 +170,8 @@ export class PortalReader {
       if (row.parent_id !== null && !parent) continue;
       const category: PortalCategory = {
         id: row.id,
+        number: Number(row.number),
+        slug: slugify(row.title),
         parentId: row.parent_id,
         level: Number(row.level),
         title: row.title,
@@ -227,16 +234,16 @@ export class PortalReader {
     if (itemIds.length === 0) return new Map();
     const result = await this.#database.execute<{
       item_id: string;
-      number: number;
-      slug: string;
+      number: number | string;
+      title: string | null;
       language: string;
       reviewed_at: Date | string | null;
     }>(sql`
-      select t.id as item_id, n.number, coalesce(article_slug(v.title), '') as slug,
+      select t.id as item_id, o.number, v.title,
         case when t.translation_of is null then ${config.defaultLanguage} else t.content_language end as language,
         ${lastReviewedAt(sql`t`)} as reviewed_at
       from tree_items t
-      join article_numbers n on n.item_id = coalesce(t.translation_of, t.id) and n.space_id = t.space_id
+      join tree_items o on o.id = coalesce(t.translation_of, t.id)
       left join page_versions v on v.id = t.published_version_id
       where t.space_id = ${config.spaceId} and t.id = any(${sql.param(itemIds)}::uuid[])`);
     return new Map(
@@ -244,7 +251,7 @@ export class PortalReader {
         row.item_id,
         {
           number: Number(row.number),
-          slug: row.slug,
+          slug: slugify(row.title ?? ""),
           language: row.language,
           reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
         },
@@ -288,6 +295,7 @@ export class PortalReader {
     if (!Number.isSafeInteger(number) || number < 1) return null;
     const found = await this.#database.execute<{
       id: string;
+      item_number: number | string;
       space_id: string;
       space_key: string;
       title: string;
@@ -299,42 +307,31 @@ export class PortalReader {
       version_id: string;
       updated_at: Date;
       reviewed_at: Date | string | null;
-      slug: string;
-      own_number: number | null;
-      known_slug: boolean;
+      known_titles: string[];
     }>(sql`
-      select t.id, t.space_id, s.key as space_key, v.title, t.description, t.article_type,
+      select t.id, t.number as item_number, t.space_id, s.key as space_key, v.title, t.description, t.article_type,
         array_remove(t.path, t.translation_of) as path, t.translation_of,
         case when t.translation_of is null then kb.default_language else t.content_language end as language,
         v.id as version_id, v.created_at as updated_at, ${lastReviewedAt(sql`t`)} as reviewed_at,
-        coalesce(article_slug(v.title), '') as slug,
-        (select n2.number from article_numbers n2 where n2.item_id = coalesce(t.translation_of, t.id)
-          and n2.space_id = t.space_id) as own_number,
-        (${slug} = '' or ${slug} = coalesce(article_slug(v.title), '')
-          or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.space_id = n.space_id
-            and sl.slug = ${slug})) as known_slug
-      from article_numbers n
-      join tree_items src on src.id = n.item_id
+        array(select h.title from article_titles h where h.item_id = t.id and h.space_id = ${config.spaceId})
+          as known_titles
+      from tree_items src
       join tree_items t on t.id = src.id or (t.translation_of = src.id and t.space_id = src.space_id)
       join spaces s on s.id = t.space_id
       join knowledge_bases kb on kb.space_id = t.space_id
       join page_versions v on v.id = t.published_version_id
-      where n.space_id = ${config.spaceId} and n.number = ${number}
+      where src.number = ${number} and src.kind = 'page' and src.translation_of is null
         and t.kind = 'page' and t.reader_visible
         and (t.translation_of is null or t.content_language = any(kb.languages))
         and ${this.#authorization.portalFilter(principal, sql`t`, sql`s`)}`);
-    const rows = found.rows;
-    if (!rows.some((row) => row.known_slug)) return null;
+    const rows = found.rows.map((row) => ({ ...row, slug: slugify(row.title) }));
+    const known = rows.some(
+      (row) => slug === "" || slug === row.slug || row.known_titles.some((title) => slugify(title) === slug),
+    );
+    if (!known) return null;
     const source = rows.find((row) => row.translation_of === null);
     if (source && source.space_id !== config.spaceId) {
-      return source.own_number === null
-        ? null
-        : {
-            type: "redirect",
-            spaceId: source.space_id,
-            number: Number(source.own_number),
-            slug: source.slug,
-          };
+      return { type: "redirect", spaceId: source.space_id, number, slug: source.slug };
     }
     const local = rows.filter((row) => row.space_id === config.spaceId);
     const chosen =
@@ -364,6 +361,7 @@ export class PortalReader {
         updatedAt: new Date(chosen.updated_at),
         reviewedAt: chosen.reviewed_at ? new Date(chosen.reviewed_at) : null,
         views: 0,
+        itemNumber: Number(chosen.item_number),
         spaceKey: chosen.space_key,
         lead: chosen.description,
         html: rendered.html,

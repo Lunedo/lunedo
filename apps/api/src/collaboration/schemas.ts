@@ -28,7 +28,14 @@ import {
   treeItemKinds,
 } from "@lunedo/server";
 import { z } from "zod";
-import { extensibleEnum, inputTimestamp, pictureRefField, timestamp, uuid } from "../http/schemas.js";
+import {
+  extensibleEnum,
+  inputTimestamp,
+  itemNumber,
+  pictureRefField,
+  timestamp,
+  uuid,
+} from "../http/schemas.js";
 import { documentSchema, exampleItem, exampleSpace, pageReferencesSchema } from "../spaces/schemas.js";
 
 const person = (description: string) =>
@@ -219,6 +226,7 @@ export const setTaskStatusSchema = z
 
 const contentReferenceShape = {
   id: uuid("ID of the page or blog post."),
+  number: itemNumber("Number of the item in the addresses of the app."),
   kind: extensibleEnum(treeItemKinds, "Kind of the item."),
   title: z.string().describe("Title readers see."),
   spaceId: uuid("Space of the item."),
@@ -255,6 +263,7 @@ export const taskEntrySchema = z
     item: z
       .object({
         id: uuid("Page or blog post with the task."),
+        number: itemNumber("Number of that item in the addresses of the app."),
         kind: extensibleEnum(["page", "blogPost"], "Kind of that item."),
         title: z.string().describe("Its title."),
         spaceId: uuid("Its space."),
@@ -275,6 +284,7 @@ export const exampleTask = {
   assignedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21", name: "Mira Klein" },
   item: {
     id: exampleItem.id,
+    number: exampleItem.number,
     kind: "page",
     title: exampleItem.title,
     spaceId: exampleSpace.id,
@@ -343,6 +353,7 @@ export const taskQuerySchema = z
 export const blogPostSchema = z
   .object({
     id: uuid("ID of the blog post."),
+    number: itemNumber("Number of the blog post in the addresses of the app."),
     spaceId: uuid("Space of the post."),
     spaceKey: z.string().describe("Key of that space."),
     spaceName: z.string().describe("Name of that space."),
@@ -385,6 +396,7 @@ export const blogPostSchema = z
 
 export const exampleBlogPost = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01",
+  number: 1077,
   spaceId: exampleSpace.id,
   spaceKey: "ITOPS",
   spaceName: "IT Operations",
@@ -607,7 +619,7 @@ export const reportPageSchema = z
 export const exampleReportPage = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
   title: "VPN access for remote staff",
-  path: "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+  path: "/spaces/ITOPS/pages/1042/vpn-access-for-remote-staff",
   spaceId: exampleSpace.id,
   author: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
   createdAt: "2026-09-01T08:00:00.000Z",
@@ -779,7 +791,7 @@ export const examplePropertiesReport = {
       page: {
         id: exampleReportPage.id,
         title: "Site Graz",
-        path: `/spaces/ITOPS/pages/${exampleReportPage.id}/site-graz`,
+        path: "/spaces/ITOPS/pages/1042/site-graz",
         spaceId: exampleSpace.id,
       },
       creator: exampleReportPage.author,

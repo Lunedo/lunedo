@@ -724,7 +724,7 @@ function EntriesList({
               ? {
                   actions: (
                     <Link
-                      to={pagePath(spaceKey, item.item.id, slugify(item.item.title))}
+                      to={pagePath(spaceKey, item.item.number, slugify(item.item.title))}
                       className="font-medium text-accent hover:underline focus-visible:focus-ring"
                     >
                       {t("imports.report.openPage")}
@@ -827,7 +827,7 @@ function MacroPages({ entry, name }: { entry: ImportView; name: string }) {
             title={item.item.title}
             actions={
               <Link
-                to={pagePath(spaceKey, item.item.id, slugify(item.item.title))}
+                to={pagePath(spaceKey, item.item.number, slugify(item.item.title))}
                 className="font-medium text-accent hover:underline focus-visible:focus-ring"
               >
                 {t("imports.report.openPage")}

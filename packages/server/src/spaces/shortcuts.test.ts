@@ -73,7 +73,13 @@ describe.skipIf(!baseUrl)("space shortcuts", () => {
     expect(rota).toMatchObject({
       label: "On-call rota",
       url: null,
-      item: { id: context.rota.id, kind: "page", title: "On-call rota", spaceKey: context.space.key },
+      item: {
+        id: context.rota.id,
+        number: context.rota.number,
+        kind: "page",
+        title: "On-call rota",
+        spaceKey: context.space.key,
+      },
       hidden: false,
       position: 0,
     });
@@ -126,7 +132,11 @@ describe.skipIf(!baseUrl)("space shortcuts", () => {
 
     const forInsider = await test.services.shortcuts.list(context.insider, context.space.id);
     expect(forInsider.map((shortcut) => shortcut.label)).toEqual(["Pay bands", "Remote runbook"]);
-    expect(forInsider[1]?.item).toMatchObject({ id: context.remote.id, spaceKey: context.elsewhere.key });
+    expect(forInsider[1]?.item).toMatchObject({
+      id: context.remote.id,
+      number: context.remote.number,
+      spaceKey: context.elsewhere.key,
+    });
 
     const managed = await test.services.shortcuts.manage(context.admin, context.space.id);
     expect(managed.map((shortcut) => [shortcut.label, shortcut.hidden, shortcut.item])).toEqual([

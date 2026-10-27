@@ -1190,12 +1190,17 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       await test.services.home.star(context.reader, { itemId: created.id }, true);
       await test.services.home.star(context.reader, { spaceId: context.space.id }, true);
       const home = await test.services.home.forYou(context.reader);
-      expect(home.recent.map((entry) => entry.id)).toEqual([created.id]);
-      expect(home.starred.items.map((entry) => entry.id)).toEqual([created.id]);
+      const postNumber = (await test.services.tree.get(context.editor, post.id))?.number;
+      expect(home.recent.map((entry) => [entry.id, entry.number])).toEqual([[created.id, created.number]]);
+      expect(home.starred.items.map((entry) => [entry.id, entry.number])).toEqual([
+        [created.id, created.number],
+      ]);
       expect(home.starred.spaces.map((entry) => entry.id)).toEqual([context.space.id]);
       expect(home.tasks.map((entry) => entry.id)).toEqual([taskId]);
-      expect(home.mentions.map((entry) => entry.item.id)).toEqual([created.id]);
-      expect(home.posts.map((entry) => entry.id)).toEqual([post.id]);
+      expect(home.mentions.map((entry) => [entry.item.id, entry.item.number])).toEqual([
+        [created.id, created.number],
+      ]);
+      expect(home.posts.map((entry) => [entry.id, entry.number])).toEqual([[post.id, postNumber]]);
       expect((await test.services.home.forYou(context.editor)).recent).toEqual([]);
 
       await test.database.execute(
@@ -1213,9 +1218,10 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         test.services.home.setOrganizationHomePage(owner, context.org.id, randomUUID()),
       ).rejects.toMatchObject({ code: "invalidHomePage" });
       await test.services.home.setOrganizationHomePage(context.editor, context.org.id, created.id);
-      expect((await test.services.home.organizationHomePage(context.reader, context.org.id))?.id).toBe(
-        created.id,
-      );
+      expect(await test.services.home.organizationHomePage(context.reader, context.org.id)).toMatchObject({
+        id: created.id,
+        number: created.number,
+      });
       expect(await test.services.home.organizationHomePage(context.outsider, context.org.id)).toBeNull();
       const events = await test.database.execute<{ target_id: string }>(
         sql`select target_id from audit_events where name = 'settings.changed' and target_id = 'home.organizationPage'

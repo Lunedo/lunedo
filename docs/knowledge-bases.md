@@ -82,7 +82,7 @@ Images in the sections **Steps**, **What you see** and **Solution** are framed b
 
 ### Addresses
 
-Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. Only titles that were published in this knowledge base count: working titles before the first publication never become addresses, and an article moved into another knowledge base starts there without the short forms of its old knowledge base. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
+Every article has the number of its page, the same number as in the app (see [Content numbers and addresses](spaces.md#content-numbers-and-addresses)). It comes from the one sequence of the instance, so the numbers in a knowledge base are large and have gaps, because pages of other spaces use the same sequence. The number never changes and is not reused, also when the article moves or is renamed. Translations share the number of their original; the language is part of the address. The address of an article is the number followed by a short form of its title, such as `1040-vpn-verbindung-einrichten`, and shows the same article as `/spaces/<key>/pages/1040/vpn-verbindung-einrichten` in the app. The short form follows the same rule as in the app; letters of non-Latin scripts stay and are percent-encoded in addresses. An old short form of the same number redirects to the current address, so renamed articles keep their links.
 
 ## Areas and topics
 
@@ -111,7 +111,7 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base/category-access` lists the fol
 
 A knowledge base has a default language and can enable further languages under **Space settings → Languages**. While only one language is enabled, nothing about languages is visible to readers. The default language is chosen from the organization's language when the knowledge base is created.
 
-- **Translations** are articles of their own, linked to their original. Open an article, choose its language next to the article type and **Translate into …** for an enabled language. The translation starts as a copy of the original, sits below it in the page tree, shares its number and category and gets its own address from its own title, for example `/help/help/en/12-change-the-password`. It has its own versions, owner and review. Moving the original moves its translations; a translation cannot be moved on its own.
+- **Translations** are articles of their own, linked to their original. Open an article, choose its language next to the article type and **Translate into …** for an enabled language. The translation starts as a copy of the original, sits below it in the page tree, shares its number and category and gets its own address from its own title, for example `/help/help/en/1040-change-the-password`. It has its own versions, owner and review. Moving the original moves its translations; a translation cannot be moved on its own.
 - Articles in the default language always have the default language. The page language of the page menu is not offered in knowledge bases.
 - A translation is **outdated** when its original was published after it. Outdated translations are marked at the article and in the article list, and the review list has the filter **Translations**. **Space settings → Languages** shows per language how many articles are translated, outdated or missing.
 - Turning a language off keeps its translations but hides them from readers. A language that already has translations cannot become the default language.
@@ -214,7 +214,7 @@ Readers open a knowledge base in its portal: a start page with the search and th
 ### Addresses
 
 - Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way.
-- Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Every folder, at any depth, is at `topics/<id>`, the search at `search?q=…`.
+- Articles have the address `<number>-<short form of the title>`, for example `/help/help/1040-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. Every category, at any depth, is at `topics/<number>-<short form>` with the number of the category folder; a wrong or missing short form redirects to the current one. The search is at `search?q=…`. Addresses from before numbers were shared with the app (small numbers per knowledge base, `topics/<id>`) do not redirect.
 - An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404. A signed-in person who can read nothing in a knowledge base that is not public gets the same answer as for a portal that does not exist, without its name or welcome text.
 - The change of a path or domain is recorded in the audit log as `knowledgeBase.portalAddressChanged`.
 
@@ -283,8 +283,8 @@ Space admins start the download on the export page of the knowledge base setting
 
 The ZIP contains:
 
-- every published article that anonymous readers can read, in each enabled language (`<number>-<slug>.html`, translations in a folder per language such as `de/`), rendered like in the portal, with includes from the same knowledge base and allowed embeds;
-- the start page (`index.html`), a page per category (`topics/<id>.html`), the contact page and a search page per language;
+- every published article that anonymous readers can read, in each enabled language (`<number>-<slug>.html` with the number of the page in the instance, translations in a folder per language such as `de/`), rendered like in the portal, with includes from the same knowledge base and allowed embeds;
+- the start page (`index.html`), a page per category (`topics/<number>-<slug>.html`, with the number of the category folder), the contact page and a search page per language;
 - a search index per language (`search-index.json`), built with [MiniSearch](https://github.com/lucaong/minisearch); the search page loads it in the browser, searches the reader's language first and falls back to the default language with a note;
 - images in their display versions (`files/`), fonts, styles and scripts (`_assets/`);
 - redirects from earlier addresses of an article: a small HTML page per old address and a `_redirects` file that Cloudflare Pages and Netlify understand;

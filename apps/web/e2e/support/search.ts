@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { itemPath } from "./addresses.js";
 import { paragraph } from "./collaboration.js";
 import { docx } from "./files.js";
 import type { Organization } from "./fixtures.js";
@@ -19,20 +20,20 @@ async function page(
   title: string,
   text: string,
   labels: string[] = [],
-): Promise<string> {
+): Promise<{ id: string; number: number; title: string }> {
   const created = (await callApi(browserPage, "POST", `/api/v1/spaces/${spaceId}/items`, {
     kind: "page",
     title,
     parentId: null,
     mode: "publish",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(browserPage, "PUT", `/api/v1/pages/${created.id}/content`, {
     document: { type: "doc", content: [paragraph(text)] },
   });
   for (const label of labels)
     await callApi(browserPage, "POST", `/api/v1/pages/${created.id}/labels`, { label });
   await callApi(browserPage, "POST", `/api/v1/pages/${created.id}/publish`, {});
-  return created.id;
+  return created;
 }
 
 export async function searchWorld(browserPage: Page, organization: Organization): Promise<SearchWorld> {
@@ -87,8 +88,8 @@ export async function searchWorld(browserPage: Page, organization: Organization)
     word,
     operations,
     security,
-    gatewayId: gateway,
-    gatewayPath: `/spaces/${operations.key}/pages/${gateway}`,
+    gatewayId: gateway.id,
+    gatewayPath: itemPath(operations.key, "pages", gateway),
   };
 }
 
@@ -134,7 +135,7 @@ export async function meetingAndFileHits(
   const topicTitle = `Gateway ${word}`;
   const topic = (await callApi(browserPage, "POST", `/api/v1/meeting-series/${series.id}/topics`, {
     title: topicTitle,
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(browserPage, "POST", `/api/v1/topics/${topic.id}/decision`, {
     statement: `The ${word} starts after the maintenance window.`,
   });
@@ -150,5 +151,10 @@ export async function meetingAndFileHits(
       { timeout: 30_000 },
     )
     .toEqual(["attachment", "decision", "topic"]);
-  return { word, fileName, topicTitle, topicPath: `/spaces/${world.operations.key}/topics/${topic.id}` };
+  return {
+    word,
+    fileName,
+    topicTitle,
+    topicPath: itemPath(world.operations.key, "topics", topic),
+  };
 }

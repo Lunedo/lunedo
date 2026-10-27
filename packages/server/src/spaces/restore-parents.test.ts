@@ -75,7 +75,7 @@ describe.skipIf(!baseUrl)("restoring below restricted pages", () => {
 
     expect(
       await test.services.trash.restore(as, own.id, { withParents: true, mayRestore: anyEntry }),
-    ).toEqual({ itemId: salaries.id, parentId: hr.id, parentEntries: 1 });
+    ).toEqual({ itemId: salaries.id, number: salaries.number, parentId: hr.id, parentEntries: 1 });
     expect(await test.services.trash.get(parent.id)).toBeNull();
     expect(await parentOf(hr.id)).toBeNull();
     expect(await canView(reader, salaries.id)).toBe(false);
@@ -90,6 +90,7 @@ describe.skipIf(!baseUrl)("restoring below restricted pages", () => {
     await test.services.trash.deleteItem(as, hr.id);
     expect(await test.services.trash.restore(as, own.id)).toEqual({
       itemId: salaries.id,
+      number: salaries.number,
       parentId: null,
       parentEntries: 0,
     });
@@ -121,7 +122,7 @@ describe.skipIf(!baseUrl)("restoring below restricted pages", () => {
     });
     expect(
       await test.services.trash.restore(as, own.id, { withParents: true, mayRestore: anyEntry }),
-    ).toEqual({ itemId: salaries.id, parentId: team.id, parentEntries: 2 });
+    ).toEqual({ itemId: salaries.id, number: salaries.number, parentId: team.id, parentEntries: 2 });
     expect(await test.services.trash.get(middle.id)).toBeNull();
     expect(await test.services.trash.get(top.id)).toBeNull();
     expect(await parentOf(team.id)).toBe(hr.id);

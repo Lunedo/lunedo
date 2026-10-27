@@ -7,7 +7,7 @@ function linkFor(type: string, params: Record<string, unknown>) {
   const definition = notificationTypes.list().find((entry) => entry.id === type);
   return definition?.link({
     type,
-    target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d1" },
+    target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000d1", number: 1040 },
     params,
   } as unknown as NotificationItem);
 }
@@ -20,7 +20,7 @@ describe("links of notifications", () => {
       spaceKey: "OPS",
       commentId: "01929b1e-0000-7000-8000-0000000000e1",
     });
-    expect(link?.to).toBe("/spaces/OPS/pages/01929b1e-0000-7000-8000-0000000000d1/restart-the-vpn-gateway");
+    expect(link?.to).toBe("/spaces/OPS/pages/1040/restart-the-vpn-gateway");
     expect(link?.search).toEqual({ comment: "01929b1e-0000-7000-8000-0000000000e1" });
   });
 

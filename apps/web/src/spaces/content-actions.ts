@@ -9,7 +9,7 @@ import { itemHref } from "./item-paths.js";
 import type { SpaceWithRole, TreeItem } from "./space-queries.js";
 import { useRestoreFailure, withParentsQuery } from "./trash/restore-with-parents.js";
 
-type Item = Pick<TreeItem, "id" | "title" | "kind" | "spaceId">;
+type Item = Pick<TreeItem, "id" | "number" | "title" | "kind" | "spaceId">;
 
 export function useContentRefresh() {
   const queryClient = useQueryClient();

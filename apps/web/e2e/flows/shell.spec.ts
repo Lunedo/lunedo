@@ -1,3 +1,4 @@
+import { itemPath } from "../support/addresses.js";
 import { expect, test } from "../support/fixtures.js";
 import {
   callApi,
@@ -178,7 +179,7 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
     title: "Long page",
     parentId: null,
     mode: "publish",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   const paragraphs = Array.from({ length: 120 }, (_, index) => ({
     type: "paragraph",
     content: [{ type: "text", text: `Paragraph ${index + 1} of a long page about the network.` }],
@@ -208,7 +209,7 @@ test("scrolls only the content area while rail, sidebar and editor toolbar stay 
     ).toEqual(before.map((box) => box?.y));
   };
 
-  const pagePath = `/spaces/${key}/pages/${created.id}/long-page`;
+  const pagePath = itemPath(key, "pages", created);
   await page.goto(pagePath);
   await expect(page.getByText("Paragraph 120 of a long page about the network.")).toBeAttached();
   await expectOnlyContentScrolls(pagePath, ["nav[aria-label='Main navigation']", "header"]);

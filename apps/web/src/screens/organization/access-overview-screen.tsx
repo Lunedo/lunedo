@@ -44,9 +44,9 @@ function EntryRow({ entry }: { entry: Entry }) {
               <Lock aria-hidden="true" className="size-icon-sm" />
               {where}
             </span>
-          ) : entry.itemId && entry.itemTitle ? (
+          ) : entry.number !== null && entry.itemTitle ? (
             <Link
-              to={pagePath(entry.spaceKey, entry.itemId, itemSlug(entry.itemTitle))}
+              to={pagePath(entry.spaceKey, entry.number, itemSlug(entry.itemTitle))}
               className="text-accent underline focus-visible:focus-ring"
             >
               {where}

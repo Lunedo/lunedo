@@ -247,6 +247,7 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
 
   it("deletes, restores and archives through the API with read-only archived pages", async () => {
     const { editor, reader, spaceId, targetId } = await setup();
+    const targetNumber = (await editor.client.get(`/api/v1/items/${targetId}`)).json().number as number;
     expect((await reader.client.delete(`/api/v1/items/${targetId}`)).statusCode).toBe(403);
     const deleted = await editor.client.delete(`/api/v1/items/${targetId}`);
     expect(deleted.json()).toMatchObject({ title: "Target", stage: 1 });
@@ -259,6 +260,7 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
       (await editor.client.post(`/api/v1/spaces/${spaceId}/trash/${entryId}/restore`, {})).json(),
     ).toEqual({
       itemId: targetId,
+      number: targetNumber,
       parentId: null,
       parentEntries: 0,
     });
@@ -271,7 +273,9 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
     expect((await editor.client.patch(`/api/v1/items/${targetId}`, { title: "Renamed" })).statusCode).toBe(
       403,
     );
-    expect((await reader.client.get(`/api/v1/spaces/${spaceId}/archive`)).json()).toHaveLength(1);
+    expect((await reader.client.get(`/api/v1/spaces/${spaceId}/archive`)).json()).toEqual([
+      expect.objectContaining({ id: targetId, number: targetNumber }),
+    ]);
     expect((await editor.client.post(`/api/v1/items/${targetId}/unarchive`, {})).json()).toEqual({
       parentId: null,
       parentEntries: 0,
@@ -319,7 +323,13 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
       `/api/v1/spaces/${spaceId}/trash/${own}/restore?withParents=true`,
       {},
     );
-    expect(restored.json()).toEqual({ itemId: salariesId, parentId: hrId, parentEntries: 1 });
+    const salariesNumber = (await editor.client.get(`/api/v1/items/${salariesId}`)).json().number as number;
+    expect(restored.json()).toEqual({
+      itemId: salariesId,
+      number: salariesNumber,
+      parentId: hrId,
+      parentEntries: 1,
+    });
     expect((await editor.client.get(`/api/v1/spaces/${spaceId}/trash`)).json()).toEqual([]);
     expect((await reader.client.get(`/api/v1/items/${salariesId}`)).statusCode).toBe(404);
   });

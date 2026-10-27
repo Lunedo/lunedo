@@ -9,8 +9,8 @@ export interface DecisionEntry {
   id: string;
   statement: NodeJson[];
   text: string;
-  meeting: { id: string; title: string; startsAt: Date | null };
-  topic: { id: string; title: string } | null;
+  meeting: { id: string; number: number; title: string; startsAt: Date | null };
+  topic: { id: string; number: number; title: string } | null;
   recordedAt: Date;
 }
 
@@ -45,14 +45,17 @@ export class DecisionService {
       statement: NodeJson[];
       text: string;
       item_id: string;
+      number: string;
       title: string;
       starts_at: Date | string | null;
       topic_id: string | null;
+      topic_number: string | null;
       topic_title: string | null;
       created_at: Date | string;
     }>(sql`
-      select d.id, d.statement, d.text, d.item_id, t.title, m.starts_at, d.created_at,
+      select d.id, d.statement, d.text, d.item_id, t.number, t.title, m.starts_at, d.created_at,
         case when tt.id is not null and ${visibleItem(this.#authorization, viewer, sql`tt`, sql`s`)} then tt.id end as topic_id,
+        case when tt.id is not null and ${visibleItem(this.#authorization, viewer, sql`tt`, sql`s`)} then tt.number end as topic_number,
         case when tt.id is not null and ${visibleItem(this.#authorization, viewer, sql`tt`, sql`s`)} then tt.title end as topic_title
       from decisions d join meetings m on m.item_id = d.item_id join tree_items t on t.id = d.item_id
       join spaces s on s.id = t.space_id left join tree_items tt on tt.id = d.topic_id
@@ -68,8 +71,15 @@ export class DecisionService {
       id: row.id,
       statement: row.statement,
       text: row.text,
-      meeting: { id: row.item_id, title: row.title, startsAt: toDate(row.starts_at) },
-      topic: row.topic_id ? { id: row.topic_id, title: row.topic_title ?? "" } : null,
+      meeting: {
+        id: row.item_id,
+        number: Number(row.number),
+        title: row.title,
+        startsAt: toDate(row.starts_at),
+      },
+      topic: row.topic_id
+        ? { id: row.topic_id, number: Number(row.topic_number), title: row.topic_title ?? "" }
+        : null,
       recordedAt: new Date(row.created_at),
     }));
   }

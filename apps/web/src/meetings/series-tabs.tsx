@@ -21,7 +21,7 @@ import { LoadError } from "../errors/failure.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { itemSlug } from "../spaces/item-paths.js";
-import { pagePath } from "../spaces/space-queries.js";
+import { pagePath, topicPath } from "../spaces/space-queries.js";
 import {
   decisionsQuery,
   type MeetingSummary,
@@ -29,7 +29,6 @@ import {
   meetingStateLabel,
   type Series,
   type Topic,
-  topicPath,
   topicsQuery,
 } from "./queries.js";
 import { seriesMeetingsQuery } from "./series-overview.js";
@@ -113,7 +112,7 @@ export function TopicsTab({
       cell: (topic) => (
         <span className="flex min-w-0 flex-col">
           <Link
-            to={topicPath(spaceKey, topic.id)}
+            to={topicPath(spaceKey, topic.number, itemSlug(topic.title))}
             className="truncate font-medium text-text hover:underline focus-visible:focus-ring"
           >
             {topic.title}
@@ -458,7 +457,7 @@ export function DecisionsTab({ series, spaceKey }: { series: Series; spaceKey: s
                 <span className="break-words">{decision.text || t("meetings.decisions.noStatement")}</span>
                 <span className="text-sm text-text-muted">
                   <Link
-                    to={pagePath(spaceKey, decision.meeting.id, itemSlug(decision.meeting.title))}
+                    to={pagePath(spaceKey, decision.meeting.number, itemSlug(decision.meeting.title))}
                     className="hover:underline focus-visible:focus-ring"
                   >
                     {decision.meeting.startsAt
@@ -538,7 +537,7 @@ export function MeetingsTab({ series, spaceKey }: { series: Series; spaceKey: st
             <CalendarDays aria-hidden="true" className="size-icon-md shrink-0 text-text-muted" />
             <span className="flex min-w-0 flex-1 flex-col">
               <Link
-                to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
+                to={pagePath(spaceKey, meeting.number, itemSlug(meeting.title))}
                 className="truncate hover:underline focus-visible:focus-ring"
                 title={meeting.title}
               >

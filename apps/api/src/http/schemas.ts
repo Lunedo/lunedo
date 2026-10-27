@@ -4,6 +4,14 @@ import { z } from "zod";
 
 export const uuid = (description: string) => idSchema.describe(description);
 
+export const itemNumber = (description: string) =>
+  z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).describe(description);
+
+export const ITEM_NUMBER_PATTERN = /^[1-9][0-9]{0,14}$/;
+
+export const itemNumberParam = (description: string) =>
+  z.string().regex(ITEM_NUMBER_PATTERN).describe(description);
+
 export const EXTENSIBLE_ENUM = "x-extensible-enum";
 
 export function extensibleEnum<const T extends readonly [string, ...string[]]>(

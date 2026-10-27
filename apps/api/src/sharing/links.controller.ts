@@ -11,7 +11,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { COOKIES, readCookie } from "../http/cookies.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { timestamp, uuid } from "../http/schemas.js";
+import { itemNumber, timestamp, uuid } from "../http/schemas.js";
 import { documentSchema, exampleDocument } from "../spaces/schemas.js";
 import { exampleShareLink, shareLinkInputSchema, shareLinkSchema, shareLinkUpdateSchema } from "./schemas.js";
 
@@ -76,6 +76,11 @@ const openedSchema = z
       .enum(["account", "anonymous"])
       .describe("`account` when the signed-in person now has access, `anonymous` otherwise."),
     itemId: uuid("The page the link opens."),
+    number: itemNumber("Number of the page in the addresses of the app.")
+      .nullable()
+      .describe(
+        "For `account`: number of the page in the addresses of the app, where the person now opens it. Null for anonymous visitors.",
+      ),
     unlock: z
       .string()
       .nullable()
@@ -263,7 +268,12 @@ export class ShareLinksController {
     response: {
       description: "Where the link leads.",
       schema: openedSchema,
-      example: { kind: "account", itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10", unlock: null },
+      example: {
+        kind: "account",
+        itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+        number: 1042,
+        unlock: null,
+      },
     },
     errors: [
       "linkNotFound",
@@ -286,6 +296,7 @@ export class ShareLinksController {
     return {
       kind: result.kind,
       itemId: result.itemId,
+      number: result.kind === "account" ? result.number : null,
       unlock: result.kind === "anonymous" ? result.unlock : null,
     };
   }

@@ -807,6 +807,7 @@ export function createAccountServices(options: {
     notifications,
     pageAccess,
     spacePermissions,
+    rateLimiter,
   });
   const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
   const giveAccessDrafts = new GiveAccessDraftService({ database });
@@ -973,7 +974,13 @@ export function createAccountServices(options: {
   const portals = new PortalService({ database, audit, settings });
   const portalSessions = new PortalSessionService({ database, sessions, audit });
   const embeds = new EmbedServices({ settings });
-  const articleRenderer = new ArticleRenderer({ database, authorization, jobs, embeds });
+  const articleRenderer = new ArticleRenderer({
+    database,
+    authorization,
+    jobs,
+    embeds,
+    instanceUrl: async () => (await instanceAddress.get()).url,
+  });
   const articleApi = new ArticleApiService({
     database,
     authorization,

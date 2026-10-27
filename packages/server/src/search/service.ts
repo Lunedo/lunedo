@@ -76,6 +76,7 @@ export interface SearchSpace {
 
 export interface SearchReference {
   id: string;
+  number: number;
   title: string;
 }
 
@@ -93,6 +94,7 @@ export interface SearchHit {
   type: SearchContentType;
   id: string;
   itemId: string;
+  number: number;
   itemType: SearchItemType;
   title: string;
   heading: string;
@@ -101,7 +103,7 @@ export interface SearchHit {
   space: SearchSpace | null;
   sharedWithYou: boolean;
   otherCategory: boolean;
-  path: { id: string; title: string }[];
+  path: { id: string; number: number; title: string }[];
   labels: string[];
   status: PageStatus | null;
   author: { id: string; name: string } | null;
@@ -520,8 +522,8 @@ export class SearchService {
     spaces: Map<string, SearchSpace>,
   ): Promise<SearchHit[]> {
     if (hits.length === 0) return [];
-    const kinds = await this.#database.execute<{ id: string; kind: string }>(sql`
-      select id, kind from tree_items where id = any(${sql.param([...new Set(hits.map((hit) => hit.itemId))])}::uuid[])`);
+    const kinds = await this.#database.execute<{ id: string; number: string; kind: string }>(sql`
+      select id, number, kind from tree_items where id = any(${sql.param([...new Set(hits.map((hit) => hit.itemId))])}::uuid[])`);
     const itemTypes = new Map(
       kinds.rows.map((row): [string, SearchItemType] => [
         row.id,
@@ -534,11 +536,16 @@ export class SearchService {
               : "page",
       ]),
     );
+    const numbers = new Map(kinds.rows.map((row) => [row.id, Number(row.number)]));
     const inSpaces = hits.filter((hit) => spaces.has(hit.spaceId)).map((hit) => hit.itemId);
-    const paths = new Map<string, { id: string; title: string }[]>();
+    const paths = new Map<string, { id: string; number: number; title: string }[]>();
     if (inSpaces.length > 0) {
-      const result = await this.#database.execute<{ id: string; path: { id: string; title: string }[] }>(sql`
-        select t.id, coalesce((select jsonb_agg(jsonb_build_object('id', a.id, 'title', a.title) order by p.n)
+      const result = await this.#database.execute<{
+        id: string;
+        path: { id: string; number: number; title: string }[];
+      }>(sql`
+        select t.id, coalesce((select jsonb_agg(jsonb_build_object('id', a.id, 'number', a.number, 'title', a.title)
+          order by p.n)
           from unnest(t.path) with ordinality as p(id, n)
           join tree_items a on a.id = p.id join spaces sa on sa.id = a.space_id
           where a.id <> t.id and ${visibleItem(this.#authorization, principal, sql`a`, sql`sa`)}), '[]'::jsonb) as path
@@ -552,13 +559,16 @@ export class SearchService {
     const statuses = await this.#statuses(hits.flatMap((hit) => (hit.status ? [hit.status] : [])));
     const meetings = await this.#meetingContext(principal, hits);
     const otherCategory = await this.#otherCategory(principal, hits, spaces);
-    return hits.map((hit) => {
+    return hits.flatMap((hit) => {
+      const number = numbers.get(hit.itemId);
+      if (number === undefined) return [];
       const space = spaces.get(hit.spaceId) ?? null;
       const authorName = hit.authorId ? authors.get(hit.authorId) : undefined;
-      return {
+      const described: SearchHit = {
         type: hit.contentType,
         id: hit.sourceId,
         itemId: hit.itemId,
+        number,
         itemType: itemTypes.get(hit.itemId) ?? "page",
         title: hit.title,
         heading: hit.heading,
@@ -575,12 +585,13 @@ export class SearchService {
         attachment: hit.attachment ? { id: hit.sourceId, ...hit.attachment } : null,
         topic:
           hit.contentType === "topic"
-            ? { id: hit.itemId, title: hit.title }
+            ? { id: hit.itemId, number, title: hit.title }
             : (meetings.get(hit.sourceId)?.topic ?? null),
         series: meetings.get(hit.sourceId)?.series ?? null,
         updatedAt: new Date(hit.contentUpdatedAt).toISOString(),
         cursor: { score: hit.score, updatedAt: hit.contentUpdatedAt, sourceId: hit.sourceId },
       };
+      return [described];
     });
   }
 
@@ -623,10 +634,10 @@ export class SearchService {
       series: SearchReference | null;
     }>(sql`
       select h.id,
-        (select jsonb_build_object('id', tt.id, 'title', tt.title) from tree_items tt
+        (select jsonb_build_object('id', tt.id, 'number', tt.number, 'title', tt.title) from tree_items tt
           join spaces ts on ts.id = tt.space_id
           where tt.id = d.topic_id and tt.kind = 'meetingTopic' and ${visible(sql`tt`, sql`ts`)}) as topic,
-        (select jsonb_build_object('id', st.id, 'title', st.title) from tree_items st
+        (select jsonb_build_object('id', st.id, 'number', st.number, 'title', st.title) from tree_items st
           join spaces ss on ss.id = st.space_id
           where st.id = coalesce(mt.series_id, m.series_id) and ${visible(sql`st`, sql`ss`)}) as series
       from unnest(${sql.param(related.map((hit) => hit.sourceId))}::uuid[],

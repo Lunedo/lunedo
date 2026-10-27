@@ -20,7 +20,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, nameCursor, pageQuery } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
-import { pictureRefField, timestamp, uuid } from "../http/schemas.js";
+import { itemNumber, pictureRefField, timestamp, uuid } from "../http/schemas.js";
 import { articleTypeSchema, exampleSpace } from "./schemas.js";
 
 const TAG = "Knowledge base reviews";
@@ -156,6 +156,7 @@ const listQuery = z
 const reviewItemSchema = z
   .object({
     id: uuid("ID of the article."),
+    number: itemNumber("Number of the article in the addresses of the app."),
     title: z.string().describe("Title of the article."),
     type: articleTypeSchema.nullable(),
     categoryPath: z
@@ -205,6 +206,7 @@ const reviewListSchema = z
 
 const exampleReviewItem = {
   id: exampleArticleId,
+  number: 4711,
   title: "Set up the VPN at home",
   type: "howTo" as const,
   categoryPath: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60", title: "IT" }],
@@ -229,6 +231,7 @@ const homeSchema = z
         z
           .object({
             id: uuid("ID of the article."),
+            number: itemNumber("Number of the article in the addresses of the app."),
             title: z.string().describe("Title of the article."),
             type: articleTypeSchema.nullable(),
             spaceKey: z.string().describe("Key of the knowledge base."),
@@ -249,6 +252,7 @@ const homeSchema = z
 const sourceSchema = z
   .object({
     id: uuid("ID of the source page."),
+    number: itemNumber("Number of the source page in the addresses of the app."),
     title: z.string().describe("Title of the source page."),
     spaceKey: z.string().describe("Key of the space of the source page."),
     spaceName: z.string().describe("Name of the space of the source page."),
@@ -262,6 +266,7 @@ const sourcesSchema = z
 
 const exampleSource = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+  number: 1041,
   title: "VPN gateway",
   spaceKey: "OPS",
   spaceName: "IT operations",
@@ -387,6 +392,7 @@ export class ReviewsController {
         items: [
           {
             id: exampleArticleId,
+            number: 4711,
             title: "Set up the VPN at home",
             type: "howTo" as const,
             spaceKey: exampleSpace.key,

@@ -4,6 +4,7 @@ import {
   type NodeJson,
   plainText,
   sectionIconValue,
+  slugify,
 } from "@lunedo/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -145,8 +146,7 @@ type ArticleRow = {
   space_id: string;
   title: string;
   article_type: ArticleType | null;
-  number: number | null;
-  slug: string;
+  number: number | string | null;
   category_ids: string[];
   category_titles: string[];
   owner_id: string | null;
@@ -165,7 +165,7 @@ function toSummary(row: ArticleRow): ArticleSummary {
     title: row.title,
     type: row.article_type,
     number: row.number === null ? null : Number(row.number),
-    slug: row.slug,
+    slug: slugify(row.title),
     categoryPath: row.category_ids.map((id, index) => ({ id, title: row.category_titles[index] ?? "" })),
     ownerId: row.owner_id,
     ownerName: row.owner_name,
@@ -473,7 +473,8 @@ export class KnowledgeBaseService {
   }
 
   #articleSelect(viewer: Principal): SQL {
-    return sql`select t.id, t.space_id, t.title, t.article_type, an.number, article_slug(t.title) as slug,
+    return sql`select t.id, t.space_id, t.title, t.article_type,
+        case when t.translation_of is null then t.number end as number,
         ${folderIds(this.#authorization, viewer, sql`t`)} as category_ids,
         ${folderTitles(this.#authorization, viewer, sql`t`)} as category_titles,
         t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
@@ -487,7 +488,6 @@ export class KnowledgeBaseService {
             and ${visibleItem(this.#authorization, viewer, sql`tr`, sql`trs`)}) as translations
       from tree_items t join spaces s on s.id = t.space_id
       left join knowledge_bases kb on kb.space_id = t.space_id
-      left join article_numbers an on an.item_id = t.id and an.space_id = t.space_id
       left join accounts o on o.id = t.owner_id`;
   }
 

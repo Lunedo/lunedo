@@ -465,8 +465,11 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       code: "externalPageLink",
       limit: 10,
     });
+    const alphaNumber = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${alpha}`,
+    );
     expect(external.entries[0]).toMatchObject({
-      item: { id: alpha, title: "Alpha" },
+      item: { id: alpha, number: Number(alphaNumber.rows[0]?.number), title: "Alpha" },
       details: { title: "Elsewhere" },
     });
   });
@@ -544,12 +547,14 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
         select t.title, d.snapshot::text as text from tree_items t join page_documents d on d.item_id = t.id
         where t.space_id = ${spaceId} order by t.title`);
       const report = await test.services.imports.report(as(admin), importId);
+      expect(documents.rows.filter((row) => /\/pages\/[0-9a-f]{8}-/.test(row.text))).toEqual([]);
       return {
         items: items.rows,
         documents: documents.rows.map((row) => ({
           title: row.title,
           text: row.text
             .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, "ID")
+            .replace(/\/pages\/\d+\//g, "/pages/NUMBER/")
             .replaceAll(/SYN[XC]/g, "KEY"),
         })),
         report: report.categories,

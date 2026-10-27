@@ -128,13 +128,12 @@ export {
 } from "../imports/schema.js";
 export { jobProgress } from "../jobs/schema.js";
 export {
-  articleNumbers,
   articleReviewEvents,
   articleReviews,
   articleReviewVia,
-  articleSlugs,
   articleSources,
   articleSync,
+  articleTitles,
   categoryResponsibilities,
   categoryResponsibleGroups,
   knowledgeBaseCategories,
@@ -270,6 +269,7 @@ export {
   trashEntries,
   trashEntryKind,
   treeItemKind,
+  treeItemNumbers,
   treeItems,
   versionReason,
 } from "../spaces/schema.js";

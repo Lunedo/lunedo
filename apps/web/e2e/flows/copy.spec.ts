@@ -1,3 +1,4 @@
+import { pagePath } from "../support/addresses.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { unique } from "../support/people.js";
@@ -34,7 +35,7 @@ test("copies a page with its children into another space after confirming wider 
     title: "Budget",
     parentId: null,
     mode: "live",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${budget.id}/content`, { document: paragraph("Plan for 2027") });
   const numbers = (await callApi(page, "POST", `/api/v1/spaces/${board.id}/items`, {
     kind: "page",
@@ -44,7 +45,7 @@ test("copies a page with its children into another space after confirming wider 
   })) as { id: string };
   await callApi(page, "PUT", `/api/v1/pages/${numbers.id}/content`, { document: paragraph("Travel 4,000") });
 
-  await page.goto(`/spaces/${boardKey}/pages/${budget.id}/budget`);
+  await page.goto(pagePath(boardKey, budget));
   const tree = page.getByRole("tree", { name: "Page tree" });
   const source = tree.getByRole("treeitem", { name: "Budget" });
   await source.getByRole("button", { name: "Actions for Budget" }).click();

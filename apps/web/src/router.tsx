@@ -138,6 +138,7 @@ import { currentOrganizationId } from "./shell/shell-context.js";
 import { FolderScreen } from "./spaces/folder-screen.js";
 import { itemHref } from "./spaces/item-paths.js";
 import { LabelScreen } from "./spaces/label-screen.js";
+import { itemNumberParams, resolveNumberedItem } from "./spaces/numbered-item.js";
 import { PageScreen } from "./spaces/page-screen.js";
 import { PersonalSpaceScreen } from "./spaces/personal-space-screen.js";
 import { OrganizationContentScreen } from "./spaces/settings/organization-content-screen.js";
@@ -152,7 +153,7 @@ import { SpaceSettingsLayout } from "./spaces/settings/space-settings-layout.js"
 import { SpaceShortcutsScreen } from "./spaces/settings/space-shortcuts-screen.js";
 import { SpaceStatusScreen } from "./spaces/settings/space-status-screen.js";
 import { SpaceLayout, SpaceLoading, SpaceOverviewRedirect } from "./spaces/space-layout.js";
-import { contentQuery, itemQuery, spaceByKeyQuery } from "./spaces/space-queries.js";
+import { contentQuery, itemNumberQuery, spaceByKeyQuery } from "./spaces/space-queries.js";
 import { SpacesScreen, spaceListFilter, spaceListQuery } from "./spaces/spaces-screen.js";
 import { InstanceTemplatesScreen } from "./spaces/templates/instance-templates-screen.js";
 import { OrganizationTemplatesScreen } from "./spaces/templates/organization-templates-screen.js";
@@ -472,8 +473,11 @@ const accessRequestRoute = createRoute({
 
 const sharedPageRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: "/shared/$itemId/{-$slug}",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  path: "/shared/$number/{-$slug}",
+  params: itemNumberParams,
+  loader: async ({ context: { queryClient }, params, location }) => {
+    await resolveNumberedItem(queryClient, params.number, location);
+  },
   validateSearch: z.object({
     attachment: z.uuid().optional().catch(undefined),
     edit: z.boolean().optional().catch(undefined),
@@ -487,6 +491,7 @@ const spaceRoute = createRoute({
   loader: ({ context: { queryClient }, params }) =>
     settle(queryClient.ensureQueryData(spaceByKeyQuery(params.spaceKey))),
   pendingComponent: SpaceLoading,
+  notFoundComponent: AppNotFoundScreen,
   component: SpaceLayout,
 });
 
@@ -496,8 +501,10 @@ const spaceIndexRoute = createRoute({
   loader: async ({ context: { queryClient }, params }) => {
     const resolved = await queryClient.ensureQueryData(spaceByKeyQuery(params.spaceKey)).catch(() => null);
     const space = resolved?.space;
-    if (!space?.overviewItemId || isKnowledgeBase(space)) return;
-    const overview = await queryClient.ensureQueryData(itemQuery(space.overviewItemId)).catch(() => null);
+    if (space?.overviewItemNumber == null || isKnowledgeBase(space)) return;
+    const overview = await queryClient
+      .ensureQueryData(itemNumberQuery(space.overviewItemNumber))
+      .catch(() => null);
     if (!overview) return;
     const href = itemHref({ ...overview, link: null }, space.key);
     if (href) throw redirect({ href, replace: true });
@@ -518,15 +525,17 @@ const itemSearch = z.object({
 
 const pageRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/pages/$itemId/{-$slug}",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  path: "/pages/$number/{-$slug}",
+  params: itemNumberParams,
   validateSearch: itemSearch,
-  loader: ({ context: { queryClient }, params }) =>
-    settle(
-      queryClient.ensureQueryData(itemQuery(params.itemId)),
-      queryClient.ensureQueryData(contentQuery(params.itemId)),
-      queryClient.ensureQueryData(taskStatusesQuery(params.itemId)),
-    ),
+  loader: async ({ context: { queryClient }, params, location }) => {
+    const item = await resolveNumberedItem(queryClient, params.number, location);
+    if (item?.kind !== "page") return;
+    await settle(
+      queryClient.ensureQueryData(contentQuery(item.id)),
+      queryClient.ensureQueryData(taskStatusesQuery(item.id)),
+    );
+  },
   component: PageScreen,
 });
 
@@ -538,39 +547,42 @@ const spaceBlogRoute = createRoute({
 
 const blogPostRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/blog/$itemId/{-$slug}",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  path: "/blog/$number/{-$slug}",
+  params: itemNumberParams,
   validateSearch: itemSearch,
-  loader: ({ context: { queryClient }, params }) =>
-    settle(
-      queryClient.ensureQueryData(itemQuery(params.itemId)),
-      queryClient.ensureQueryData(blogPostQuery(params.itemId)),
-      queryClient.ensureQueryData(taskStatusesQuery(params.itemId)),
-    ),
+  loader: async ({ context: { queryClient }, params, location }) => {
+    const item = await resolveNumberedItem(queryClient, params.number, location);
+    if (item?.kind !== "blogPost") return;
+    await settle(
+      queryClient.ensureQueryData(blogPostQuery(item.id)),
+      queryClient.ensureQueryData(taskStatusesQuery(item.id)),
+    );
+  },
   component: BlogPostScreen,
 });
 
 const whiteboardRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/whiteboards/$itemId/{-$slug}",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
-  loader: ({ context: { queryClient }, params }) =>
-    settle(queryClient.ensureQueryData(itemQuery(params.itemId))),
+  path: "/whiteboards/$number/{-$slug}",
+  params: itemNumberParams,
+  loader: async ({ context: { queryClient }, params, location }) => {
+    await resolveNumberedItem(queryClient, params.number, location);
+  },
   component: WhiteboardScreen,
 });
 
 const whiteboardHistoryRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/whiteboards/$itemId/history",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  path: "/whiteboards/$number/history",
+  params: itemNumberParams,
   validateSearch: z.object({ version: z.coerce.number().int().min(1).optional().catch(undefined) }),
   component: WhiteboardHistoryScreen,
 });
 
 const historyRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/pages/$itemId/history",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  path: "/pages/$number/history",
+  params: itemNumberParams,
   validateSearch: z.object({
     from: z
       .union([z.string().max(20), z.number().int()])
@@ -585,7 +597,7 @@ const historyRoute = createRoute({
     view: z.enum(["inline", "sideBySide"]).optional().catch(undefined),
   }),
   loader: ({ context: { queryClient }, params }) =>
-    settle(queryClient.ensureQueryData(itemQuery(params.itemId))),
+    settle(queryClient.ensureQueryData(itemNumberQuery(params.number))),
   component: VersionsScreen,
 });
 
@@ -611,10 +623,11 @@ const statisticsRoute = createRoute({
 
 const folderRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/folders/$itemId/{-$slug}",
-  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
-  loader: ({ context: { queryClient }, params }) =>
-    settle(queryClient.ensureQueryData(itemQuery(params.itemId))),
+  path: "/folders/$number/{-$slug}",
+  params: itemNumberParams,
+  loader: async ({ context: { queryClient }, params, location }) => {
+    await resolveNumberedItem(queryClient, params.number, location);
+  },
   component: FolderScreen,
 });
 
@@ -630,23 +643,27 @@ const meetingsRoute = createRoute({
 
 const seriesRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/meetings/$seriesId",
-  params: { parse: (params) => ({ ...params, seriesId: z.uuid().parse(params.seriesId) }) },
+  path: "/meetings/$number/{-$slug}",
+  params: itemNumberParams,
   validateSearch: z.object({
     tab: z.enum(["overview", "topics", "tasks", "decisions", "meetings"]).optional().catch(undefined),
     status: z.enum(["open", "closed", "all"]).optional().catch(undefined),
   }),
-  loader: ({ context: { queryClient }, params }) =>
-    settle(queryClient.ensureQueryData(seriesQuery(params.seriesId))),
+  loader: async ({ context: { queryClient }, params, location }) => {
+    const item = await resolveNumberedItem(queryClient, params.number, location);
+    if (item?.kind === "meetingSeries") await settle(queryClient.ensureQueryData(seriesQuery(item.id)));
+  },
   component: SeriesScreen,
 });
 
 const topicRoute = createRoute({
   getParentRoute: () => spaceRoute,
-  path: "/topics/$topicId",
-  params: { parse: (params) => ({ ...params, topicId: z.uuid().parse(params.topicId) }) },
-  loader: ({ context: { queryClient }, params }) =>
-    settle(queryClient.ensureQueryData(topicQuery(params.topicId))),
+  path: "/topics/$number/{-$slug}",
+  params: itemNumberParams,
+  loader: async ({ context: { queryClient }, params, location }) => {
+    const item = await resolveNumberedItem(queryClient, params.number, location);
+    if (item?.kind === "meetingTopic") await settle(queryClient.ensureQueryData(topicQuery(item.id)));
+  },
   component: TopicScreen,
 });
 

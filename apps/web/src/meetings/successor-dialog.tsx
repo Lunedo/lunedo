@@ -18,6 +18,7 @@ import { request } from "../api/request.js";
 import { peopleLoader } from "../collaboration/people.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useSession } from "../shell/shell-context.js";
+import { seriesPath } from "../spaces/space-queries.js";
 import { meetingKeys, type Series } from "./queries.js";
 
 export function SuccessorDialog({
@@ -65,11 +66,11 @@ export function SuccessorDialog({
         }),
       });
       onOpenChange(false);
-      if (mode === "new" && result.seriesId) {
+      if (mode === "new" && result.seriesNumber !== null) {
         const space = await request(() =>
           api.GET("/api/v1/spaces/{spaceId}", { params: { path: { spaceId: result.spaceId } } }),
         );
-        await navigate({ to: `/spaces/${space.key}/meetings/${result.seriesId}` });
+        await navigate({ to: seriesPath(space.key, result.seriesNumber, "") });
       }
     } catch (failure) {
       toast({

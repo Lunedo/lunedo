@@ -532,6 +532,7 @@ describe("old Confluence links", () => {
           ? {
               body: {
                 itemId: PAGE_ID,
+                number: 1043,
                 kind: "page",
                 spaceKey: "ARCH",
                 title: "On-call rota",
@@ -553,7 +554,7 @@ describe("old Confluence links", () => {
     expect(await screen.findByText(/No page you can open was imported from this link/)).toBeTruthy();
     found = true;
     await userEvent.click(screen.getByRole("button", { name: "Open page" }));
-    await waitFor(() => expect(window.location.pathname).toBe(`/spaces/ARCH/pages/${PAGE_ID}/on-call-rota`));
+    await waitFor(() => expect(window.location.pathname).toBe("/spaces/ARCH/pages/1043/on-call-rota"));
     const request = api.requests.findLast((entry) => entry.path.startsWith("/api/v1/confluence-links"));
     expect(new URL(request?.path ?? "", "http://localhost").searchParams.get("url")).toBe(
       "https://wiki.example.org/display/OPS/Gone",
@@ -568,6 +569,7 @@ describe("old Confluence links", () => {
           ? {
               body: {
                 itemId: PAGE_ID,
+                number: 1043,
                 kind: "page",
                 spaceKey: "ARCH",
                 title: "On-call rota",

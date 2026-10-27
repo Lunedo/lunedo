@@ -46,7 +46,7 @@ const rota = {
   id: FIRST,
   label: "On-call rota",
   url: null,
-  item: { id: PAGE, kind: "page", title: "On-call rota 2026", spaceKey: "ITOPS" },
+  item: { id: PAGE, number: 1002, kind: "page", title: "On-call rota 2026", spaceKey: "ITOPS" },
   hidden: false,
   position: 0,
 };
@@ -78,7 +78,7 @@ function inRouter(ui: ReactNode) {
   const router = createRouter({
     routeTree: root.addChildren([
       createRoute({ getParentRoute: () => root, path: "/spaces/$spaceKey/settings/$tab" }),
-      createRoute({ getParentRoute: () => root, path: "/spaces/$spaceKey/pages/$itemId/{-$slug}" }),
+      createRoute({ getParentRoute: () => root, path: "/spaces/$spaceKey/pages/$number/{-$slug}" }),
     ]),
     history: createMemoryHistory({ initialEntries: ["/spaces/ITOPS/settings/shortcuts"] }),
   });
@@ -98,7 +98,7 @@ describe("shortcut targets", () => {
       expect(isWebAddress(completeWebAddress(value))).toBe(false);
     }
     expect(shortcutHref(rota)).toEqual({
-      href: `/spaces/ITOPS/pages/${PAGE}/on-call-rota-2026`,
+      href: `/spaces/ITOPS/pages/1002/on-call-rota-2026`,
       external: false,
     });
     expect(shortcutHref(status)).toEqual({ href: "https://status.example.org/", external: true });
@@ -119,7 +119,7 @@ describe("shortcuts in the sidebar", () => {
       "On-call rota",
       "Status page (opens in a new tab)",
     ]);
-    expect(links[0]?.getAttribute("href")).toBe(`/spaces/ITOPS/pages/${PAGE}/on-call-rota-2026`);
+    expect(links[0]?.getAttribute("href")).toBe(`/spaces/ITOPS/pages/1002/on-call-rota-2026`);
     expect(links[0]?.getAttribute("target")).toBeNull();
     expect(links[1]?.getAttribute("target")).toBe("_blank");
     expect(links[1]?.getAttribute("rel")).toBe("noopener noreferrer");

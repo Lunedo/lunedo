@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   index,
@@ -11,7 +12,6 @@ import {
   smallint,
   text,
   timestamp,
-  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -41,7 +41,6 @@ export const knowledgeBases = pgTable(
       .primaryKey()
       .references(() => spaces.id, { onDelete: "cascade" }),
     contactEmail: text(),
-    nextArticleNumber: integer().notNull().default(1),
     reviewIntervalMonths: smallint(),
     reviewLeadDays: smallint().notNull().default(14),
     reviewRecipients: reviewRecipient().notNull().default("owner"),
@@ -67,7 +66,6 @@ export const knowledgeBases = pgTable(
         and ${table.defaultLanguage} ~ '^[a-z]{2}$'`,
     ),
     check("knowledge_bases_contact_length", sql`length(${table.contactEmail}) <= 254`),
-    check("knowledge_bases_next_number", sql`${table.nextArticleNumber} >= 1`),
     check("knowledge_bases_review_interval", sql`${table.reviewIntervalMonths} in (3, 6, 12)`),
     check("knowledge_bases_review_lead", sql`${table.reviewLeadDays} in (0, 7, 14, 30)`),
     uniqueIndex("knowledge_bases_portal_path_unique").on(table.portalPath),
@@ -204,25 +202,8 @@ export const categoryResponsibleGroups = pgTable(
   (table) => [primaryKey({ columns: [table.itemId, table.groupId] }), index().on(table.groupId)],
 );
 
-export const articleNumbers = pgTable(
-  "article_numbers",
-  {
-    spaceId: uuid()
-      .notNull()
-      .references(() => spaces.id, { onDelete: "cascade" }),
-    number: integer().notNull(),
-    itemId: uuid().references(() => treeItems.id, { onDelete: "set null" }),
-    createdAt: timestampColumn().notNull().defaultNow(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.spaceId, table.number] }),
-    unique("article_numbers_item_unique").on(table.itemId, table.spaceId),
-    check("article_numbers_positive", sql`${table.number} >= 1`),
-  ],
-);
-
-export const articleSlugs = pgTable(
-  "article_slugs",
+export const articleTitles = pgTable(
+  "article_titles",
   {
     itemId: uuid()
       .notNull()
@@ -230,10 +211,10 @@ export const articleSlugs = pgTable(
     spaceId: uuid()
       .notNull()
       .references(() => spaces.id, { onDelete: "cascade" }),
-    slug: text().notNull(),
+    title: text().notNull(),
     createdAt: timestampColumn().notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.itemId, table.spaceId, table.slug] }), index().on(table.spaceId)],
+  (table) => [primaryKey({ columns: [table.itemId, table.spaceId, table.title] }), index().on(table.spaceId)],
 );
 
 export const requiredSections = pgTable(
@@ -333,7 +314,7 @@ export const articleSync = pgTable(
     spaceId: uuid()
       .notNull()
       .references(() => spaces.id, { onDelete: "cascade" }),
-    number: integer(),
+    number: bigint({ mode: "number" }),
     language: text(),
     changedAt: timestampColumn().notNull().defaultNow(),
     removedAt: timestampColumn(),

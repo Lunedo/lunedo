@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
-import { itemHref } from "../item-paths.js";
+import { contentHref } from "../item-paths.js";
 import { TransferOwnerDialog } from "./owner-line.js";
 import { ownershipKeys, type UnownedItem, type UnownedPage } from "./ownership-queries.js";
 
@@ -67,8 +67,8 @@ export function UnownedItems({ scope, showSpace = false }: { scope: Scope; showS
       ) : (
         <ul className="flex flex-col divide-y divide-border">
           {list.map((item) => {
-            const href = itemHref(
-              { id: item.id, kind: item.kind, title: item.title, link: null },
+            const href = contentHref(
+              { kind: item.kind, number: item.number, title: item.title },
               item.spaceKey,
             );
             return (

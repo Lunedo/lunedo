@@ -31,6 +31,7 @@ export interface TaskEntry {
   assignedBy: { id: string; name: string } | null;
   item: {
     id: string;
+    number: number;
     kind: "page" | "blogPost";
     title: string;
     spaceId: string;
@@ -254,6 +255,7 @@ export class TaskService {
       assigned_by_id: string | null;
       assigned_by_name: string | null;
       item_id: string;
+      item_number: string;
       kind: "page" | "blogPost";
       title: string;
       space_id: string;
@@ -262,7 +264,7 @@ export class TaskService {
     }>(sql`
       select k.id, k.text, k.done, k.due_date::text as due_date, ${sortKey} as sort_key, k.assignee_id,
         ${this.#people.visibleName(viewer, sql`a`)} as assignee_name, k.assigned_by_id,
-        ${this.#people.visibleName(viewer, sql`ab`)} as assigned_by_name, t.id as item_id, t.kind, t.title, t.space_id,
+        ${this.#people.visibleName(viewer, sql`ab`)} as assigned_by_name, t.id as item_id, t.number as item_number, t.kind, t.title, t.space_id,
         ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as key, ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
       ${base} ${statusCondition}
         ${
@@ -292,6 +294,7 @@ export class TaskService {
             : null,
         item: {
           id: row.item_id,
+          number: Number(row.item_number),
           kind: row.kind,
           title: row.title,
           spaceId: row.space_id,

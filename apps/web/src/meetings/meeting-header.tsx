@@ -81,7 +81,7 @@ function AdjacentLink({
     <span>
       {label}{" "}
       <Link
-        to={pagePath(spaceKey, meeting.id, itemSlug(meeting.title))}
+        to={pagePath(spaceKey, meeting.number, itemSlug(meeting.title))}
         className="text-accent underline focus-visible:focus-ring"
       >
         {meeting.startsAt ? format.calendarDate(meeting.startsAt) : meeting.title}
@@ -392,7 +392,7 @@ export function ExtraMeetingForm({
       await refresh();
       toast({ variant: "success", title: t("meetings.extra.done") });
       onDone();
-      await navigate({ to: pagePath(spaceKey, created.id, itemSlug(created.title)) });
+      await navigate({ to: pagePath(spaceKey, created.number, itemSlug(created.title)) });
     } catch (failure) {
       toast({ variant: "error", title: t("meetings.extra.failed"), description: problemMessage(t, failure) });
     }

@@ -224,7 +224,8 @@ describe.skipIf(!baseUrl)("page properties, label reports and includes", () => {
         ), inserted as (
           insert into tree_items
           select (jsonb_populate_record(null::tree_items, to_jsonb(t) || jsonb_build_object(
-            'id', c.id, 'title', 'Site ' || c.n, 'position', t.position || lpad(c.n::text, 5, '0'),
+            'id', c.id, 'number', nextval('tree_item_numbers'), 'title', 'Site ' || c.n,
+            'position', t.position || lpad(c.n::text, 5, '0'),
             'path', jsonb_build_array(c.id)))).*
           from tree_items t cross join copies c where t.id = ${template}
           returning id, title
@@ -278,7 +279,12 @@ describe.skipIf(!baseUrl)("page properties, label reports and includes", () => {
         ["Graz", null, ["network", "site"]],
         ["Guide", "Short version", ["how-to", "network"]],
       ]);
-      expect(any[1]?.path).toBe(`/spaces/${encodeURIComponent(w.first.key)}/pages/${guide}/guide`);
+      const numbered = await test.database.execute<{ number: string }>(
+        sql`select number from tree_items where id = ${guide}`,
+      );
+      expect(any[1]?.path).toBe(
+        `/spaces/${encodeURIComponent(w.first.key)}/pages/${numbered.rows[0]?.number}/guide`,
+      );
       const all = await test.services.reports.labeledContent(w.reader, { ...request, matchAll: true });
       expect(all.map((item) => item.title)).toEqual(["Guide"]);
       const confidential = await test.services.reports.labeledContent(w.reader, {
@@ -385,7 +391,13 @@ describe.skipIf(!baseUrl)("page properties, label reports and includes", () => {
           values (${target}, 'confluence-xml', ${randomUUID()}, 'ops')`);
       }
       const request = include({ sourceSpace: "OPS", sourceTitle: " wien " });
-      expect(await test.services.includes.target(w.reader, w.graz, request)).toMatchObject({ id: w.wien });
+      const wien = await test.database.execute<{ number: string }>(
+        sql`select number from tree_items where id = ${w.wien}`,
+      );
+      expect(await test.services.includes.target(w.reader, w.graz, request)).toMatchObject({
+        id: w.wien,
+        path: `/spaces/${encodeURIComponent(w.third.key)}/pages/${wien.rows[0]?.number}/wien`,
+      });
       expect(
         await test.services.includes.target(
           w.reader,

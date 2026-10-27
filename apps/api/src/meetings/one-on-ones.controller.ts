@@ -6,7 +6,7 @@ import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { actorOf } from "../http/request.js";
-import { uuid } from "../http/schemas.js";
+import { itemNumber, uuid } from "../http/schemas.js";
 import {
   createOneOnOneSchema,
   exampleSeries,
@@ -20,11 +20,20 @@ const exampleOneOnOne = {
   spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5b00",
   spaceKey: "MSAB",
   seriesId: exampleSeries.id,
+  seriesNumber: exampleSeries.number,
   partners: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", pictureRef: null }],
-  nextMeeting: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10", startsAt: "2026-10-15T12:00:00.000Z" },
+  nextMeeting: {
+    id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f6a10",
+    number: 1051,
+    startsAt: "2026-10-15T12:00:00.000Z",
+  },
 };
 const createdSchema = z
-  .object({ spaceId: uuid("The confidential space."), seriesId: uuid("The series.").nullable() })
+  .object({
+    spaceId: uuid("The confidential space."),
+    seriesId: uuid("The series.").nullable(),
+    seriesNumber: itemNumber("Number of the series in the addresses of the app.").nullable(),
+  })
   .describe("The one-on-one.");
 const organizationsQuery = z.object({ personId: uuid("The other person.") }).strict();
 
@@ -91,7 +100,11 @@ export class OneOnOnesController {
     response: {
       description: "The one-on-one.",
       schema: createdSchema,
-      example: { spaceId: exampleOneOnOne.spaceId, seriesId: exampleSeries.id },
+      example: {
+        spaceId: exampleOneOnOne.spaceId,
+        seriesId: exampleSeries.id,
+        seriesNumber: exampleSeries.number,
+      },
     },
     errors: [
       "noSharedOrganization",
@@ -124,7 +137,11 @@ export class OneOnOnesController {
     response: {
       description: "The one-on-one that continues.",
       schema: createdSchema,
-      example: { spaceId: exampleOneOnOne.spaceId, seriesId: exampleSeries.id },
+      example: {
+        spaceId: exampleOneOnOne.spaceId,
+        seriesId: exampleSeries.id,
+        seriesNumber: exampleSeries.number,
+      },
     },
     errors: ["notOneOnOne", "notOneOnOneMember", "invalidMember", "invalidHolder", "noSharedOrganization"],
   })

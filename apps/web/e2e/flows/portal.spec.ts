@@ -79,7 +79,7 @@ test("an editor follows Edit into the app and returns with View in portal", asyn
   if (!article) throw new Error("no article");
   await page.goto(`${portal.path}/${article.address}`);
   await page.getByRole("link", { name: "Edit" }).click();
-  await expect(page).toHaveURL(new RegExp(`/pages/${article.id}`));
+  await expect(page).toHaveURL(new RegExp(`/spaces/${portal.spaceKey}/pages/${article.number}/`));
   await expect(page.getByRole("textbox", { name: "Page content" })).toBeEditable();
   const back = page.locator(`a[href$="${portal.path}/${article.address}"]`, { hasText: "View in portal" });
   await expect(back).toBeVisible();

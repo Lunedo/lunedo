@@ -2,7 +2,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../testing/render.js";
-import { activeHeading, OnThisPage } from "./on-this-page.js";
+import { activeHeading, anchorOf, entryForLegacyAnchor, OnThisPage } from "./on-this-page.js";
 
 function page(count: number) {
   const sections = Array.from({ length: count }, (_, index) => ({
@@ -34,6 +34,48 @@ async function render(count: number) {
 }
 
 describe("On this page", () => {
+  it("follows an anchor written with the earlier slug rule to the heading and updates the address", async () => {
+    const titles = ["Geräte", "Straße", "Geräte"];
+    const scroll = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    window.history.replaceState(null, "", "/#gerate-2");
+    const content = createRef<HTMLElement>();
+    const ids = titles.map((title, index) =>
+      titles.indexOf(title) === index ? anchorOf(title) : `${anchorOf(title)}-2`,
+    );
+    await renderWithProviders(
+      <div>
+        <article ref={content}>
+          <div className="ld-read-view">
+            {titles.map((title, index) => (
+              <h2 key={ids[index]} id={ids[index]}>
+                {title}
+              </h2>
+            ))}
+          </div>
+        </article>
+        <OnThisPage content={content} />
+      </div>,
+    );
+    await vi.waitFor(() => expect(scroll).toHaveBeenCalled());
+    expect(ids.slice(0, 3)).toEqual(["geraete", "strasse", "geraete-2"]);
+    expect(window.location.hash).toBe("#geraete-2");
+    expect(scroll).toHaveBeenCalled();
+    Element.prototype.scrollIntoView = original;
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("maps earlier anchors only to headings that produced them", () => {
+    const entries = [
+      { id: "geraete", title: "Geräte" },
+      { id: "strasse", title: "Straße" },
+    ];
+    expect(entryForLegacyAnchor(entries, "gerate")?.id).toBe("geraete");
+    expect(entryForLegacyAnchor(entries, "straße")?.id).toBe("strasse");
+    expect(entryForLegacyAnchor(entries, "unknown")).toBeNull();
+  });
+
   it("lists headings 1 to 3 once a page has six or more", async () => {
     await render(6);
     const nav = screen.getByRole("navigation", { name: "On this page" });

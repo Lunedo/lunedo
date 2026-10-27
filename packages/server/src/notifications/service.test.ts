@@ -102,6 +102,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect((await rows(org.owner.id)).map((row) => row.count)).toEqual([2, 1]);
 
     const [first] = (await test.services.notifications.list(org.owner.id, { limit: 10 })).items.slice(-1);
+    expect(first?.target).toEqual({ type: "account", id: target, number: null });
     expect(await test.services.notifications.markRead(org.owner.id, first?.id ?? "")).toBe(true);
     await notify(guestNotice(org.id, [org.owner.id], target));
     expect((await rows(org.owner.id)).map((row) => row.count)).toEqual([2, 1, 1]);
@@ -172,7 +173,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
       expect.objectContaining({
         type: "guest.expiring",
         organizationId: org.id,
-        target: { type: "account", id: guest.id },
+        target: { type: "account", id: guest.id, number: null },
         count: 1,
         readAt: null,
       }),

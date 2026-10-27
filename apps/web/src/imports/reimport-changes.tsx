@@ -52,7 +52,7 @@ const UNDECIDED = "later";
 
 function itemLink(entry: ChangeEntry) {
   if (!entry.item) return null;
-  return pagePath(entry.item.spaceKey, entry.item.id, slugify(entry.item.title));
+  return pagePath(entry.item.spaceKey, entry.item.number, slugify(entry.item.title));
 }
 
 function decisionOptions(t: TFunction, decisions: readonly ChangeDecision[]) {

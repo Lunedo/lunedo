@@ -261,11 +261,11 @@ describe("renderHtml", () => {
         { type: "heading", attrs: { level: 4 }, content: [text("Deep")] },
       ),
     );
-    expect(html).toContain('<h1 id="uber-uns">');
+    expect(html).toContain('<h1 id="ueber-uns">');
     expect(html).toContain('<h2 id="setup">');
     expect(html).toContain('<h2 id="setup-2">');
     expect(html).toContain(
-      '<nav class="ld-toc" aria-label="Table of contents"><ul><li><a href="#uber-uns">Über uns</a><ul><li><a href="#setup">Setup</a></li><li><a href="#setup-2">Setup</a></li></ul></li></ul></nav>',
+      '<nav class="ld-toc" aria-label="Table of contents"><ul><li><a href="#ueber-uns">Über uns</a><ul><li><a href="#setup">Setup</a></li><li><a href="#setup-2">Setup</a></li></ul></li></ul></nav>',
     );
   });
 

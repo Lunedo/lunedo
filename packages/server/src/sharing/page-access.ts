@@ -91,6 +91,7 @@ export interface PageAccessImpact {
 
 export interface RestrictedPage {
   itemId: string;
+  number: number;
   title: string;
   kind: TreeItemKind;
   view: RestrictionInfo | null;
@@ -100,6 +101,7 @@ export interface RestrictedPage {
 
 export interface SharedWithMe {
   itemId: string;
+  number: number;
   title: string;
   kind: TreeItemKind;
   role: ShareRole;
@@ -178,6 +180,7 @@ export class PageAccessService {
     if (!accountId) return [];
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       kind: TreeItemKind;
       role: ShareRole;
@@ -189,7 +192,7 @@ export class PageAccessService {
       space_name: string;
     }>(sql`
       select * from (
-        select distinct on (t.id) t.id, t.title, t.kind, ps.role, ps.include_descendants, ps.created_by,
+        select distinct on (t.id) t.id, t.number, t.title, t.kind, ps.role, ps.include_descendants, ps.created_by,
           ${this.#people.visibleName(viewer, sql`sb`)} as shared_by_name, ps.created_at as shared_at,
           ${spaceKeyFor(this.#authorization, viewer, sql`s`)} as space_key,
           ${spaceNameFor(this.#authorization, viewer, sql`s`)} as space_name
@@ -207,6 +210,7 @@ export class PageAccessService {
       limit ${limit}`);
     return result.rows.map((row) => ({
       itemId: row.id,
+      number: Number(row.number),
       title: row.title,
       kind: row.kind,
       role: row.role,
@@ -854,16 +858,17 @@ export class PageAccessService {
   async restrictedPages(spaceId: string): Promise<RestrictedPage[]> {
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       kind: TreeItemKind;
       restrictions: { kind: RestrictionKind; setBy: string | null; setAt: string; orphaned: boolean }[];
     }>(sql`
-      select t.id, t.title, t.kind,
+      select t.id, t.number, t.title, t.kind,
         json_agg(json_build_object('kind', r.kind, 'setBy', r.set_by, 'setAt', r.created_at,
           'orphaned', r.orphaned_at is not null) order by r.kind) as restrictions
       from page_restrictions r join tree_items t on t.id = r.item_id
       where t.space_id = ${spaceId} and t.trash_entry_id is null
-      group by t.id, t.title, t.kind
+      group by t.id, t.number, t.title, t.kind
       order by lower(t.title), t.id limit 2000`);
     const names = await this.#people.names(
       result.rows
@@ -879,6 +884,7 @@ export class PageAccessService {
         : null;
     return result.rows.map((row) => ({
       itemId: row.id,
+      number: Number(row.number),
       title: row.title,
       kind: row.kind,
       view: info(row.restrictions.find((entry) => entry.kind === "view")),

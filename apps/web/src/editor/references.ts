@@ -1,9 +1,10 @@
-import { slugify } from "@lunedo/editor-schema";
 import { useEffect, useSyncExternalStore } from "react";
 import { api } from "../api/client.js";
 import { isApiError, request } from "../api/request.js";
+import { contentHref } from "../spaces/item-paths.js";
 
 export interface PageReference {
+  number: number | null;
   title: string;
   spaceKey: string;
   kind: string;
@@ -103,11 +104,21 @@ async function loadPage(id: string): Promise<void> {
   try {
     const item = await request(() => api.GET("/api/v1/items/{itemId}", { params: { path: { itemId: id } } }));
     rememberReferences({
-      pages: { [id]: { title: item.title, spaceKey: item.spaceKey, kind: item.kind, accessible: true } },
+      pages: {
+        [id]: {
+          number: item.number,
+          title: item.title,
+          spaceKey: item.spaceKey,
+          kind: item.kind,
+          accessible: true,
+        },
+      },
     });
   } catch (error) {
     if (isApiError(error, "notFound") || isApiError(error, "forbidden")) {
-      rememberReferences({ pages: { [id]: { title: "", spaceKey: "", kind: "page", accessible: false } } });
+      rememberReferences({
+        pages: { [id]: { number: 0, title: "", spaceKey: "", kind: "page", accessible: false } },
+      });
     }
   } finally {
     pending.delete(id);
@@ -122,8 +133,8 @@ export function usePageReference(id: string | null): PageReference | null {
   return page;
 }
 
-export function pagePath(spaceKey: string, pageId: string, title: string): string {
-  return `/spaces/${encodeURIComponent(spaceKey)}/pages/${pageId}/${slugify(title)}`;
+export function referenceHref(page: PageReference): string {
+  return contentHref(page, page.spaceKey) ?? "";
 }
 
 export async function followTitleLink(
@@ -140,9 +151,23 @@ export async function followTitleLink(
     api.GET("/api/v1/items/{itemId}", { params: { path: { itemId: result.itemId } } }),
   );
   rememberReferences({
-    pages: { [item.id]: { title: item.title, spaceKey: item.spaceKey, kind: item.kind, accessible: true } },
+    pages: {
+      [item.id]: {
+        number: item.number,
+        title: item.title,
+        spaceKey: item.spaceKey,
+        kind: item.kind,
+        accessible: true,
+      },
+    },
   });
-  return pagePath(item.spaceKey, item.id, item.title);
+  return referenceHref({
+    number: item.number,
+    title: item.title,
+    spaceKey: item.spaceKey,
+    kind: item.kind,
+    accessible: true,
+  });
 }
 
 export async function searchPeople(query: string) {
@@ -157,7 +182,13 @@ export async function searchPages(query: string) {
     pages: Object.fromEntries(
       items.map((item) => [
         item.id,
-        { title: item.title, spaceKey: item.spaceKey, kind: item.kind, accessible: true },
+        {
+          number: item.number,
+          title: item.title,
+          spaceKey: item.spaceKey,
+          kind: item.kind,
+          accessible: true,
+        },
       ]),
     ),
   });

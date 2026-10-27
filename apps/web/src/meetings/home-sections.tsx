@@ -8,9 +8,9 @@ import { PersonAvatar } from "../components/person-avatar.js";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { itemSlug } from "../spaces/item-paths.js";
-import { pagePath } from "../spaces/space-queries.js";
+import { pagePath, seriesPath } from "../spaces/space-queries.js";
 import { OneOnOneDialog } from "./one-on-one-dialog.js";
-import { isToday, oneOnOnesQuery, seriesPath, upcomingQuery } from "./queries.js";
+import { isToday, oneOnOnesQuery, upcomingQuery } from "./queries.js";
 
 export function UpcomingMeetings() {
   const { t } = useTranslation();
@@ -30,7 +30,7 @@ export function UpcomingMeetings() {
       {upcoming.data?.map((meeting) => (
         <HomeRow
           key={meeting.id}
-          to={pagePath(meeting.spaceKey, meeting.id, itemSlug(meeting.title))}
+          to={pagePath(meeting.spaceKey, meeting.number, itemSlug(meeting.title))}
           leading={<CalendarDays aria-hidden="true" className="size-icon-md" />}
           title={meeting.seriesTitle ?? meeting.title}
           meta={meeting.startsAt ? format.weekdayDateTime(meeting.startsAt) : t("meetings.notScheduled")}
@@ -67,7 +67,11 @@ export function OneOnOnes() {
         return (
           <HomeRow
             key={entry.spaceId}
-            to={entry.seriesId ? seriesPath(entry.spaceKey, entry.seriesId) : `/spaces/${entry.spaceKey}`}
+            to={
+              entry.seriesNumber !== null
+                ? seriesPath(entry.spaceKey, entry.seriesNumber, "")
+                : `/spaces/${entry.spaceKey}`
+            }
             leading={
               <PersonAvatar
                 id={partner?.id ?? null}

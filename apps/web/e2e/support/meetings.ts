@@ -5,18 +5,9 @@ import { type Person, unique } from "./people.js";
 
 export interface Series {
   id: string;
+  number: number;
   title: string;
-  upcoming: { id: string; title: string };
-}
-
-export function slug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .split(/\s+/)
-    .join("-");
+  upcoming: { id: string; number: number; title: string };
 }
 
 export async function teamSpace(page: Page, organization: Organization, members: Person[]) {

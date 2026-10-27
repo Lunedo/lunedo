@@ -19,9 +19,9 @@ const NARROW = "01929b1e-0000-7000-8000-000000009999";
 
 const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
 
-function row(id: string, title: string, owner: unknown[] | null) {
+function row(id: string, number: number, title: string, owner: unknown[] | null) {
   return {
-    page: { id, title, path: `/spaces/OPS/pages/${id}/${title.toLowerCase()}`, spaceId: SPACE },
+    page: { id, title, path: `/spaces/OPS/pages/${number}/${title.toLowerCase()}`, spaceId: SPACE },
     creator: null,
     labels: ["site"],
     cells: [owner],
@@ -40,12 +40,12 @@ function routes(extra: Record<string, Parameters<typeof mockApi>[0][string]> = {
           total: 3,
           rows:
             offset === "2"
-              ? [row(LINZ, "Linz", null)]
+              ? [row(LINZ, 1004, "Linz", null)]
               : [
-                  row(GRAZ, "Graz", [
+                  row(GRAZ, 1003, "Graz", [
                     { type: "paragraph", content: [{ type: "mention", attrs: { id: PERSON } }] },
                   ]),
-                  row(SECRET.replace("6", "7"), "Wien", [paragraph("Bernd")]),
+                  row(SECRET.replace("6", "7"), 1007, "Wien", [paragraph("Bernd")]),
                 ],
           references: { people: { [PERSON]: "Anna Berger" }, pages: {}, topics: {} },
         },
@@ -57,7 +57,7 @@ function routes(extra: Record<string, Parameters<typeof mockApi>[0][string]> = {
           id: GRAZ,
           title: "Reset a password",
           kind: "page",
-          path: `/spaces/OPS/pages/${GRAZ}/reset`,
+          path: "/spaces/OPS/pages/1003/reset",
           space: { id: SPACE, name: "Operations" },
           labels: ["how-to"],
           excerpt: "Open the portal.",
@@ -73,7 +73,7 @@ function routes(extra: Record<string, Parameters<typeof mockApi>[0][string]> = {
       return {
         body: {
           state: query.get("excerpt") === "true" ? "noExcerpt" : "visible",
-          page: { id: GRAZ, title: "Graz", path: `/spaces/OPS/pages/${GRAZ}/graz`, spaceId: SPACE },
+          page: { id: GRAZ, title: "Graz", path: "/spaces/OPS/pages/1003/graz", spaceId: SPACE },
           document:
             query.get("excerpt") === "true" ? null : { type: "doc", content: [paragraph("Included words")] },
           references: { people: {}, pages: {}, topics: {} },
@@ -175,7 +175,7 @@ describe("page properties report", () => {
   });
 
   it("keeps the page of the results in the address, so going back and links keep it", async () => {
-    const history = createMemoryHistory({ initialEntries: ["/spaces/OPS/pages/x/sites"] });
+    const history = createMemoryHistory({ initialEntries: ["/spaces/OPS/pages/1001/sites"] });
     const root = createRootRoute({
       component: () => (
         <PreferencesProvider>

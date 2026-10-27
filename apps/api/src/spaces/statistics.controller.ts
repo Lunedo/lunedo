@@ -9,7 +9,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, pageQuery } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
-import { timestamp, uuid } from "../http/schemas.js";
+import { itemNumber, timestamp, uuid } from "../http/schemas.js";
 
 const feedbackCursor = z.tuple([z.iso.date(), idSchema]);
 const TAG = "Knowledge base statistics";
@@ -36,6 +36,7 @@ const day = (description: string) => z.iso.date().describe(description);
 const articleSchema = z
   .object({
     id: uuid("ID of the article."),
+    number: itemNumber("Number of the article in the addresses of the app."),
     title: z.string().describe("Title of the article."),
     categoryPath: z
       .array(
@@ -108,6 +109,7 @@ const statisticsSchema = z
 
 const exampleArticle = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+  number: 4711,
   title: "Set up the VPN at home",
   categoryPath: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60", title: "IT" }],
 };

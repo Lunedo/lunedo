@@ -63,7 +63,7 @@ export function RequestAccessForm({
   onSent,
   leave,
 }: {
-  target: { type: "page"; id: string } | { type: "space"; id: string; name: string };
+  target: { type: "page"; number: number } | { type: "space"; id: string; name: string };
   onSent?: () => void;
   leave?: boolean;
 }) {
@@ -84,8 +84,8 @@ export function RequestAccessForm({
     try {
       if (target.type === "page") {
         await request(() =>
-          api.POST("/api/v1/pages/{pageId}/access-requests", {
-            params: { path: { pageId: target.id } },
+          api.POST("/api/v1/pages/by-number/{number}/access-requests", {
+            params: { path: { number: String(target.number) } },
             body: { message },
           }),
         );
@@ -182,7 +182,7 @@ function RecentRequests() {
   );
 }
 
-export function NoPageAccess({ pageId }: { pageId: string }) {
+export function NoPageAccess({ number }: { number: number }) {
   const { t } = useTranslation();
   useDocumentTitle(t("errors.notFoundTitle"));
   const [sent, setSent] = useState(false);
@@ -195,7 +195,7 @@ export function NoPageAccess({ pageId }: { pageId: string }) {
       <h1 className="text-xl font-semibold tracking-heading">{t("sharing.requests.noAccessTitle")}</h1>
       <p className="text-text-muted">{t("sharing.requests.noAccess")}</p>
       <div className="w-full text-left">
-        <RequestAccessForm target={{ type: "page", id: pageId }} leave onSent={() => setSent(true)} />
+        <RequestAccessForm target={{ type: "page", number }} leave onSent={() => setSent(true)} />
       </div>
       {sent || showMine ? (
         <RecentRequests />
@@ -465,8 +465,8 @@ function MyRequestRow({ entry }: { entry: AccessRequest }) {
     }
   };
   const target =
-    entry.itemId && entry.itemTitle && entry.status === "approved"
-      ? sharedPath(entry.itemId, itemSlug(entry.itemTitle))
+    entry.number !== null && entry.itemTitle && entry.status === "approved"
+      ? sharedPath(entry.number, itemSlug(entry.itemTitle))
       : null;
   return (
     <li className="flex flex-wrap items-center gap-2 py-3">

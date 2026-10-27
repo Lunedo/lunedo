@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { pagePath } from "../support/addresses.js";
 import { expect, type Organization, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { type Person, unique } from "../support/people.js";
@@ -40,7 +41,7 @@ async function publishedPage(page: Page, space: Space, draft?: string): Promise<
     title: "Meeting notes",
     parentId: null,
     mode: "publish",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
     document: paragraphs("First published sentence."),
   });
@@ -50,7 +51,7 @@ async function publishedPage(page: Page, space: Space, draft?: string): Promise<
       document: paragraphs("First published sentence.", draft),
     });
   }
-  return `/spaces/${space.key}/pages/${created.id}/meeting-notes`;
+  return pagePath(space.key, created);
 }
 
 test("creates a page from a template and publishes it while readers keep the published version", async ({

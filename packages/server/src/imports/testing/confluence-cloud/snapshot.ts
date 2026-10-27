@@ -261,7 +261,8 @@ function normalize(value: unknown, people: ReadonlyMap<string, string>, spaceKey
   return JSON.parse(
     JSON.stringify(value)
       .replace(UUID, (id) => (people.has(id) ? `person:${people.get(id)}` : "uuid"))
-      .replaceAll(`/spaces/${encodeURIComponent(spaceKey)}/`, "/spaces/(space)/"),
+      .replaceAll(`/spaces/${encodeURIComponent(spaceKey)}/`, "/spaces/(space)/")
+      .replace(/\/pages\/\d+(?=[/"#])/g, "/pages/(number)"),
   ) as unknown;
 }
 

@@ -64,3 +64,39 @@ export async function makeArticleDue(itemId: string): Promise<void> {
     },
   );
 }
+
+const SEND_MAILS_NOW = `
+const { createDatabase, createDatabasePool, createLogger, notificationEmailJob, PgBossQueue } =
+  await import("@lunedo/server");
+const [connectionString, recipientId] = process.argv.slice(1);
+const pool = createDatabasePool({ connectionString, applicationName: "lunedo-e2e", max: 2 });
+const queue = new PgBossQueue({
+  connectionString,
+  database: createDatabase(pool),
+  logger: createLogger({ service: "e2e", level: "silent" }),
+  role: "producer",
+});
+try {
+  const due = await pool.query(
+    "update notifications set email_pending_since = now() - interval '1 hour' where recipient_id = $1 and email_status = 'immediate'",
+    [recipientId],
+  );
+  if (due.rowCount) await queue.enqueue(notificationEmailJob, {});
+  process.stdout.write(String(due.rowCount ?? 0));
+} finally {
+  await queue.stop({ timeoutSeconds: 5 });
+  await pool.end();
+}
+`;
+
+export async function sendNotificationMailsNow(recipientId: string): Promise<number> {
+  const { stdout } = await run(
+    process.execPath,
+    ["--input-type=module", "-e", SEND_MAILS_NOW, readState().databaseUrl ?? "", recipientId],
+    {
+      cwd: serverRoot,
+      timeout: 30_000,
+    },
+  );
+  return Number(stdout);
+}

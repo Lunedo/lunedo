@@ -34,6 +34,7 @@ export const spaceKeys = {
   permissions: (spaceId: string) => ["spaces", spaceId, "permissions"] as const,
   labelPages: (spaceId: string, label: string) => ["spaces", spaceId, "labels", label] as const,
   item: (itemId: string) => ["items", itemId] as const,
+  itemNumber: (number: number) => ["itemNumbers", number] as const,
   content: (itemId: string) => ["items", itemId, "content"] as const,
   labels: (itemId: string) => ["items", itemId, "labels"] as const,
   backlinks: (itemId: string) => ["items", itemId, "backlinks"] as const,
@@ -49,6 +50,17 @@ export function spaceByKeyQuery(key: string) {
     queryKey: spaceKeys.byKey(key),
     queryFn: () => request(() => api.GET("/api/v1/space-keys/{key}", { params: { path: { key } } })),
     staleTime: 30_000,
+  });
+}
+
+export function itemNumberQuery(number: number) {
+  return queryOptions({
+    queryKey: spaceKeys.itemNumber(number),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/items/by-number/{number}", { params: { path: { number: String(number) } } }),
+      ),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }
 
@@ -222,25 +234,41 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
   for (const key of keys.values()) void queryClient.invalidateQueries({ queryKey: key });
 }
 
-export function sharedPath(itemId: string, slug: string): string {
-  return `/shared/${itemId}/${slug}`;
+export function sharedPath(number: number, slug: string): string {
+  return withSlug(`/shared/${number}`, slug);
 }
 
-export function pagePath(spaceKey: string, itemId: string, slug: string): string {
-  if (!spaceKey) return sharedPath(itemId, slug);
-  return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slug}`;
+function withSlug(path: string, slug: string): string {
+  return slug ? `${path}/${slug}` : path;
 }
 
-export function blogPostPath(spaceKey: string, itemId: string, slug: string): string {
-  if (!spaceKey) return sharedPath(itemId, slug);
-  return `/spaces/${encodeURIComponent(spaceKey)}/blog/${itemId}/${slug}`;
+function spacePath(spaceKey: string, segment: string, number: number, slug: string): string {
+  return withSlug(`/spaces/${encodeURIComponent(spaceKey)}/${segment}/${number}`, slug);
 }
 
-export function whiteboardPath(spaceKey: string, itemId: string, slug: string): string {
-  if (!spaceKey) return sharedPath(itemId, slug);
-  return `/spaces/${encodeURIComponent(spaceKey)}/whiteboards/${itemId}/${slug}`;
+export function pagePath(spaceKey: string, number: number, slug: string): string {
+  if (!spaceKey) return sharedPath(number, slug);
+  return spacePath(spaceKey, "pages", number, slug);
 }
 
-export function folderPath(spaceKey: string, itemId: string, slug: string): string {
-  return `/spaces/${encodeURIComponent(spaceKey)}/folders/${itemId}/${slug}`;
+export function blogPostPath(spaceKey: string, number: number, slug: string): string {
+  if (!spaceKey) return sharedPath(number, slug);
+  return spacePath(spaceKey, "blog", number, slug);
+}
+
+export function whiteboardPath(spaceKey: string, number: number, slug: string): string {
+  if (!spaceKey) return sharedPath(number, slug);
+  return spacePath(spaceKey, "whiteboards", number, slug);
+}
+
+export function folderPath(spaceKey: string, number: number, slug: string): string {
+  return spacePath(spaceKey, "folders", number, slug);
+}
+
+export function seriesPath(spaceKey: string, number: number, slug: string): string {
+  return spacePath(spaceKey, "meetings", number, slug);
+}
+
+export function topicPath(spaceKey: string, number: number, slug: string): string {
+  return spacePath(spaceKey, "topics", number, slug);
 }

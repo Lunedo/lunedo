@@ -23,7 +23,7 @@ export type RouteAccess =
       publicForSoleOrganization: boolean;
     };
 
-export type ResourceSource = { type: "instance" } | { type: string; param: string };
+export type ResourceSource = { type: "instance" } | { type: string; param: string; by?: "number" };
 
 export const ROUTE_ACCESS = "lunedo:route-access";
 

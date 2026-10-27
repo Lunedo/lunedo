@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { itemPath } from "../support/addresses.js";
 import { expect, type Organization, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
 import { unique } from "../support/people.js";
@@ -107,7 +108,7 @@ test("switches tabs with the mouse and the keyboard and opens a whiteboard from 
     kind: "whiteboard",
     title: "Netzwerk-Umbau 2027",
     parentId: null,
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   const created = await createPage(page, spaceId, spaceKey, `Setup ${unique()}`);
   await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
     document: {
@@ -137,5 +138,5 @@ test("switches tabs with the mouse and the keyboard and opens a whiteboard from 
   await expect(page.getByRole("tabpanel", { name: "Linux" })).toContainText("Linux steps");
 
   await page.locator(".ld-whiteboard-card").getByText("Netzwerk-Umbau 2027").click();
-  await expect(page).toHaveURL(new RegExp(`/whiteboards/${board.id}/`));
+  await expect(page).toHaveURL(new RegExp(`${itemPath(spaceKey, "whiteboards", board)}$`));
 });

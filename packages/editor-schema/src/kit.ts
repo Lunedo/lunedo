@@ -84,7 +84,7 @@ export function createEditorKit(registry: ModuleRegistry): EditorKit {
     return (node: ValidNode): Heading | null => {
       const heading = registry.node(node.type)?.heading?.(node, node.content.map(textOf).join("").trim());
       if (!heading) return null;
-      const base = slugify(heading.text);
+      const base = slugify(heading.text) || "section";
       const count = used.get(base) ?? 0;
       used.set(base, count + 1);
       return { level: heading.level, text: heading.text, id: count === 0 ? base : `${base}-${count + 1}` };

@@ -41,15 +41,16 @@ import {
   versionsQuery,
 } from "../content-queries.js";
 import { itemHref, itemSlug } from "../item-paths.js";
+import { useNumberedItem } from "../numbered-item.js";
 import { ItemActivity } from "../ownership/item-activity.js";
 import { PageBar } from "../page-bar.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
-import { type ItemDetails, itemQuery, pagePath } from "../space-queries.js";
+import { type ItemDetails, pagePath } from "../space-queries.js";
 import { CopiedFrom } from "./copied-from.js";
 import { type DiffLayout, DiffView } from "./diff-view.js";
 
-const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/history");
+const route = getRouteApi("/app/spaces/$spaceKey/pages/$number/history");
 
 type View = DiffLayout;
 
@@ -66,8 +67,8 @@ function sideOf(value: string | undefined): VersionSide | undefined {
 
 export function VersionsScreen() {
   const { t } = useTranslation();
-  const { itemId } = route.useParams();
-  const item = useQuery(itemQuery(itemId));
+  const { number } = route.useParams();
+  const item = useNumberedItem(number);
   useDocumentTitle(item.data ? t("versions.historyOf", { title: item.data.title }) : "");
   if (item.isPending) return <Skeleton className="m-6 h-field" />;
   if (item.isError) {
@@ -110,8 +111,8 @@ function VersionHistory({ page }: { page: ItemDetails }) {
 
   const select = (next: { from?: VersionSide | null; to?: VersionSide | null; view?: View }) =>
     void navigate({
-      to: "/spaces/$spaceKey/pages/$itemId/history",
-      params: { spaceKey: space.key, itemId: page.id },
+      to: "/spaces/$spaceKey/pages/$number/history",
+      params: { spaceKey: space.key, number: page.number },
       search: {
         ...(next.from !== undefined
           ? next.from === null
@@ -139,7 +140,7 @@ function VersionHistory({ page }: { page: ItemDetails }) {
       label: t("versions.versionNumber", { number: version.number }),
     })),
   ];
-  const pageHref = pagePath(space.key, page.id, itemSlug(page.title));
+  const pageHref = pagePath(space.key, page.number, itemSlug(page.title));
   const breadcrumbs = [
     { label: spaceDisplayName(t, space), href: `/spaces/${space.key}` },
     ...page.ancestors.map((ancestor) => {
@@ -537,7 +538,7 @@ function RestoreDialog({
           });
           if (result.version === null) {
             await navigate({
-              to: pagePath(space.key, page.id, itemSlug(page.title)),
+              to: pagePath(space.key, page.number, itemSlug(page.title)),
               search: { edit: true },
             });
           }

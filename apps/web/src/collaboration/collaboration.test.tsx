@@ -50,8 +50,11 @@ const space = (role: Role) => ({
   role,
 });
 
+const NUMBERS: Record<string, number> = { [OVERVIEW]: 1040, [VPN]: 1042, [POST]: 1043 };
+
 const item = (id: string, title: string, kind = "page") => ({
   id,
+  number: NUMBERS[id] ?? 1099,
   spaceId: SPACE_ID,
   parentId: null,
   kind,
@@ -254,7 +257,7 @@ describe("comments on a page", () => {
         [`PUT /api/v1/comments/${THREAD}/reactions/${encodeURIComponent("👍")}`]: () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     await userEvent.click(await screen.findByText("blocks UDP"));
     const sheet = await screen.findByRole("dialog", { name: "Comments" });
     expect(within(sheet).getByText("Happened twice")).toBeTruthy();
@@ -271,7 +274,7 @@ describe("comments on a page", () => {
   it("open by keyboard in a popover at the mark and return the focus to the mark on Escape", async () => {
     wideScreen();
     mockApi(routes("commenter"));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     const mark = await screen.findByRole("button", { name: "Open comment on “blocks UDP”" });
     mark.focus();
     await userEvent.keyboard("{Enter}");
@@ -287,7 +290,7 @@ describe("comments on a page", () => {
   it("open the first thread of a paragraph from the counter at the edge", async () => {
     wideScreen();
     mockApi(routes("reader"));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     await userEvent.click(await screen.findByRole("button", { name: "1 open comment in this paragraph" }));
     const popover = await screen.findByRole("dialog", { name: "Comments" });
     expect(within(popover).getByText("Happened twice")).toBeTruthy();
@@ -298,7 +301,7 @@ describe("comments on a page", () => {
     const { requests } = mockApi(
       routes("commenter", { [`PUT /api/v1/comments/${THREAD}/resolved`]: () => ({ status: 204 }) }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     await userEvent.click(await screen.findByText("blocks UDP"));
     const popover = await screen.findByRole("dialog", { name: "Comments" });
     await userEvent.click(within(popover).getByRole("button", { name: "Resolve" }));
@@ -312,7 +315,7 @@ describe("comments on a page", () => {
   it("let commenters comment on selected text of the published version in the same popover", async () => {
     wideScreen();
     mockApi(routes("commenter"));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     const text = await screen.findByText(/on port 51820/);
     const range = document.createRange();
     const node = Array.from(text.childNodes).find((child) => child.textContent?.includes("on port")) as Text;
@@ -365,7 +368,7 @@ describe("comments on a page", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?comment=${pageThread.id}`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access?comment=${pageThread.id}`);
     const section = await screen.findByRole("region", { name: "Comments 2" });
     expect(within(section).getByText("Looks good")).toBeTruthy();
     expect(within(section).getByText("Thanks")).toBeTruthy();
@@ -402,7 +405,7 @@ describe("comments on a page", () => {
         [`PUT /api/v1/comments/${THREAD}/resolved`]: () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     const section = await screen.findByRole("region", { name: "Comments 1" });
     const thread = within(section).getByRole("article", { name: "Comment on “blocks UDP”" });
     expect(within(thread).getByText("Happened twice")).toBeTruthy();
@@ -422,7 +425,7 @@ describe("comments on a page", () => {
         [`PUT /api/v1/comments/${pageThread.id}/resolved`]: () => ({ status: 204 }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     const section = await screen.findByRole("region", { name: "Comments 1" });
     await userEvent.click(within(section).getByRole("button", { name: "Resolve" }));
     await waitFor(() =>
@@ -445,7 +448,7 @@ describe("comments on a page", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     const editors = await screen.findByRole("list", { name: "1 person is editing" });
     expect(within(editors).getByText("Lukas Hofer is editing")).toBeTruthy();
     expect(within(editors).queryByText("Olivia Owner is editing")).toBeNull();
@@ -454,7 +457,7 @@ describe("comments on a page", () => {
   it("open an inline thread from a deep link", async () => {
     wideScreen();
     mockApi(routes("reader"));
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access?comment=${THREAD}`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access?comment=${THREAD}`);
     const popover = await screen.findByRole("dialog", { name: "Comments" });
     expect(within(popover).getByText("Happened twice")).toBeTruthy();
   });
@@ -474,7 +477,7 @@ describe("tasks in the read view", () => {
         }),
       }),
     );
-    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await renderAt(`/spaces/ITOPS/pages/1042/vpn-access`);
     const mine = await screen.findByRole("checkbox", {
       name: /^Mark as done: Test the fallback/,
     });

@@ -9,9 +9,11 @@ import { peopleLoaderFor } from "../collaboration/people.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
+import { itemSlug } from "../spaces/item-paths.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import type { SpaceWithRole } from "../spaces/space-queries.js";
-import { meetingKeys, seriesPath } from "./queries.js";
+import { seriesPath } from "../spaces/space-queries.js";
+import { meetingKeys } from "./queries.js";
 import { choiceOf, type Rhythm } from "./rhythm.js";
 import {
   defaultSchedule,
@@ -106,7 +108,7 @@ export function CreateSeriesDialog({
       toast({ variant: "success", title: t("meetings.create.created", { name: created.title }) });
       onOpenChange(false);
       setName("");
-      await navigate({ to: seriesPath(space.key, created.id) });
+      await navigate({ to: seriesPath(space.key, created.number, itemSlug(created.title)) });
     } catch (error) {
       toast({ variant: "error", title: t("meetings.create.failed"), description: problemMessage(t, error) });
     } finally {

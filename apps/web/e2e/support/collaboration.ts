@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { pagePath } from "./addresses.js";
 import type { Organization } from "./fixtures.js";
 import { callApi } from "./helpers.js";
 import { type Person, unique } from "./people.js";
@@ -29,13 +30,16 @@ export async function collaborationSpace(
   return { id: space.id, key, colleague };
 }
 
-export async function vpnPage(page: Page, space: CollaborationSpace): Promise<{ id: string; path: string }> {
+export async function vpnPage(
+  page: Page,
+  space: CollaborationSpace,
+): Promise<{ id: string; number: number; path: string }> {
   const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
     kind: "page",
     title: "VPN access",
     parentId: null,
     mode: "publish",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
     document: {
       type: "doc",
@@ -63,7 +67,7 @@ export async function vpnPage(page: Page, space: CollaborationSpace): Promise<{ 
     },
   });
   await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
-  return { id: created.id, path: `/spaces/${space.key}/pages/${created.id}/vpn-access` };
+  return { id: created.id, number: created.number, path: pagePath(space.key, created) };
 }
 
 export async function publishedPost(page: Page, space: CollaborationSpace): Promise<string> {

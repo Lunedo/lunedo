@@ -194,11 +194,3 @@ export function oneOnOnesQuery() {
     queryFn: () => request(() => api.GET("/api/v1/one-on-ones")),
   });
 }
-
-export function seriesPath(spaceKey: string, seriesId: string): string {
-  return `/spaces/${encodeURIComponent(spaceKey)}/meetings/${seriesId}`;
-}
-
-export function topicPath(spaceKey: string, topicId: string): string {
-  return `/spaces/${encodeURIComponent(spaceKey)}/topics/${topicId}`;
-}

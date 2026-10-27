@@ -384,7 +384,9 @@ describe.skipIf(!baseUrl)("page restrictions", () => {
   it("lists restricted pages for space admins, who can remove restrictions without reading", async () => {
     const context = await setup();
     const listed = await test.services.pageAccess.restrictedPages(context.space.id);
-    expect(listed.map((page) => [page.title, page.view !== null])).toEqual([["Salaries 2027", true]]);
+    expect(listed.map((page) => [page.title, page.number, page.view !== null])).toEqual([
+      ["Salaries 2027", context.parent.number, true],
+    ]);
     await expect(
       test.services.pageAccess.removeRestrictionAsAdministrator(
         context.outsider,

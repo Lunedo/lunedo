@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { idIn, itemPath } from "../support/addresses.js";
 import { expect, type Organization, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
 import { unique } from "../support/people.js";
@@ -80,9 +81,9 @@ test("creates a whiteboard, draws a shape and a sticky note, and a second person
   const dialog = page.getByRole("dialog", { name: "New whiteboard" });
   await dialog.getByLabel("Title").fill("Netzwerk-Umbau 2027");
   await dialog.getByRole("button", { name: "Create whiteboard" }).click();
-  await expect(page).toHaveURL(/\/whiteboards\/[0-9a-f-]+\/netzwerk-umbau-2027$/);
+  await expect(page).toHaveURL(/\/whiteboards\/[1-9][0-9]*\/netzwerk-umbau-2027$/);
   await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
-  const itemId = page.url().split("/whiteboards/")[1]?.split("/")[0] ?? "";
+  const itemId = await idIn(page, "whiteboards");
 
   const second = await organization.signIn(colleague);
   try {
@@ -126,9 +127,9 @@ test("shows a whiteboard read-only on phones and explains where to edit it", asy
     kind: "whiteboard",
     title: "Retro",
     parentId: null,
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await page.setViewportSize({ width: 390, height: 800 });
-  await page.goto(`/spaces/${spaceKey}/whiteboards/${created.id}/retro`);
+  await page.goto(itemPath(spaceKey, "whiteboards", created));
   await expect(page.getByText("On phones you can view and zoom the whiteboard.")).toBeVisible();
   await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Sticky note" })).toHaveCount(0);
@@ -178,8 +179,8 @@ test("shows the stored scene after a reload and to a person who joins later, and
     kind: "whiteboard",
     title: "Office move plan",
     parentId: null,
-  })) as { id: string };
-  const path = `/spaces/${spaceKey}/whiteboards/${created.id}/office-move-plan`;
+  })) as { id: string; number: number; title: string };
+  const path = itemPath(spaceKey, "whiteboards", created);
   await page.goto(path);
   await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
   const empty = await paintedPixels(page);
@@ -219,8 +220,8 @@ test("keeps an image on a whiteboard after a reload", async ({ page, organizatio
     kind: "whiteboard",
     title: "Floor plan",
     parentId: null,
-  })) as { id: string };
-  await page.goto(`/spaces/${spaceKey}/whiteboards/${created.id}/floor-plan`);
+  })) as { id: string; number: number; title: string };
+  await page.goto(itemPath(spaceKey, "whiteboards", created));
   await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
   await canvas(page).click({ position: { x: 400, y: 300 } });
   await page.evaluate((base64) => {

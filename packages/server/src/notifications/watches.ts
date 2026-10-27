@@ -27,7 +27,7 @@ export interface WatchStatus {
 }
 
 export interface WatchedEntry {
-  target: WatchTarget;
+  target: WatchTarget & { number: number | null };
   state: Exclude<WatchState, "notWatching">;
   keepActionable: boolean;
   automatic: boolean;
@@ -259,6 +259,7 @@ export class WatchService {
     const rows = await this.#database.execute<{
       space_id: string | null;
       item_id: string | null;
+      number: string | null;
       state: "watching" | "muted";
       keep_actionable: boolean;
       automatic: boolean;
@@ -270,7 +271,7 @@ export class WatchService {
       space_type: string;
       updated_at: Date;
     }>(sql`
-      select w.space_id, w.item_id, w.state, w.keep_actionable, w.automatic, w.updated_at,
+      select w.space_id, w.item_id, t.number, w.state, w.keep_actionable, w.automatic, w.updated_at,
         coalesce(t.title, s.name) as title, coalesce(t.kind::text, 'space') as kind, s.id as target_space_id,
         s.key, s.name, s.type::text as space_type
       from watches w
@@ -295,7 +296,7 @@ export class WatchService {
       const target = targets[index];
       if (!target || !decisions[index]?.allowed) continue;
       entries.push({
-        target,
+        target: { ...target, number: row.number === null ? null : Number(row.number) },
         state: row.state,
         keepActionable: row.keep_actionable,
         automatic: row.automatic,

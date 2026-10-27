@@ -1,6 +1,7 @@
+import { itemPath } from "../support/addresses.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
-import { series, slug, teamSpace } from "../support/meetings.js";
+import { series, teamSpace } from "../support/meetings.js";
 import { sweepAppearances } from "../support/sweeps.js";
 
 test("meeting screens pass the review in both languages and themes", async ({ page, organization }) => {
@@ -16,17 +17,17 @@ test("meeting screens pass the review in both languages and themes", async ({ pa
   const topic = (await callApi(page, "POST", `/api/v1/meeting-series/${created.id}/topics`, {
     title: "Storage migration",
     labels: ["infrastructure"],
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "POST", `/api/v1/topics/${topic.id}/decision`, {
     statement: "Move to the new NAS in May.",
   });
-  const meetingPath = `/spaces/${space.key}/pages/${created.upcoming.id}/${slug(created.upcoming.title)}`;
+  const meetingPath = itemPath(space.key, "pages", created.upcoming);
   await sweepAppearances(page, "meetings-list", async () => {
     await page.goto(`/spaces/${space.key}/meetings`);
     await expect(page.getByRole("link", { name: /Jour fixe Ops/ }).first()).toBeVisible();
   });
   await sweepAppearances(page, "meeting-series", async () => {
-    await page.goto(`/spaces/${space.key}/meetings/${created.id}`);
+    await page.goto(itemPath(space.key, "meetings", created));
     await expect(page.getByText("Move to the new NAS in May.")).toBeVisible();
   });
   await sweepAppearances(page, "meeting-page", async () => {
@@ -40,7 +41,7 @@ test("meeting screens pass the review in both languages and themes", async ({ pa
     ).toBeVisible();
   });
   await sweepAppearances(page, "meeting-topic", async () => {
-    await page.goto(`/spaces/${space.key}/topics/${topic.id}`);
+    await page.goto(itemPath(space.key, "topics", topic));
     await expect(page.getByRole("heading", { name: "Storage migration", level: 1 })).toBeVisible();
   });
   await sweepAppearances(page, "meeting-create-series", async () => {

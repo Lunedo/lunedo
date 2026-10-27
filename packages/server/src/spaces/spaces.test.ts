@@ -63,10 +63,14 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(await role(creator, created.id)).toBe("admin");
       expect(await role(reader, created.id)).toBe("reader");
       expect(await role(await member(org.id), created.id)).toBeNull();
-      const overview = await test.database.execute<{ kind: string; title: string; parent_id: string | null }>(
-        sql`select kind, title, parent_id from tree_items where id = ${created.overviewItemId}`,
-      );
-      expect(overview.rows[0]).toEqual({ kind: "page", title: "IT Operations", parent_id: null });
+      const overview = await test.database.execute<{
+        kind: string;
+        title: string;
+        parent_id: string | null;
+        number: string;
+      }>(sql`select kind, title, parent_id, number from tree_items where id = ${created.overviewItemId}`);
+      expect(overview.rows[0]).toMatchObject({ kind: "page", title: "IT Operations", parent_id: null });
+      expect(created.overviewItemNumber).toBe(Number(overview.rows[0]?.number));
       expect(await auditNames(created.id)).toEqual([
         "space.created",
         "space.permissionGranted",

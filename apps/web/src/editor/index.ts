@@ -2,7 +2,7 @@ export { type CollaborationProblem, PageCollaboration } from "./collaboration.js
 export { PageEditor, type PageEditorProps } from "./page-editor.js";
 export { AvatarStack, type PresenceUser, presenceColor } from "./presence.js";
 export { FOLLOW_PATH, PageReadView } from "./read-view.js";
-export { type PageReference, pagePath, type References, rememberReferences } from "./references.js";
+export { type PageReference, type References, referenceHref, rememberReferences } from "./references.js";
 export {
   CollaborationProblemNotice,
   SaveStateIndicator,

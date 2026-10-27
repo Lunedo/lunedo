@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import { ChromiumRenderer, createRenderServer } from "@lunedo/render";
 import { chromium, type Page } from "@playwright/test";
+import { pagePath } from "../support/addresses.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { unique } from "../support/people.js";
@@ -24,7 +25,7 @@ async function handbook(page: Page, organizationId: string, readerId?: string) {
     title: "Network guide",
     parentId: null,
     mode: "live",
-  })) as { id: string };
+  })) as { id: string; number: number; title: string };
   await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
     document: {
       type: "doc",
@@ -45,7 +46,7 @@ async function handbook(page: Page, organizationId: string, readerId?: string) {
     key,
     pageId: created.id,
     childId: child.id,
-    pagePath: `/spaces/${key}/pages/${created.id}/network-guide`,
+    pagePath: pagePath(key, created),
   };
 }
 

@@ -7,6 +7,7 @@ import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { actorOf } from "../http/request.js";
 import { organizationIdParams, uuid } from "../http/schemas.js";
+import { exampleItem } from "../spaces/schemas.js";
 import {
   exampleBlogPost,
   exampleTask,
@@ -23,6 +24,7 @@ const itemParams = z.object({ itemId: uuid("ID of the page or blog post.") }).st
 const spaceParams = z.object({ spaceId: uuid("ID of the space.") }).strict();
 const exampleReference = {
   id: exampleTask.item.id,
+  number: exampleItem.number,
   kind: "page",
   title: exampleTask.item.title,
   spaceId: exampleTask.item.spaceId,

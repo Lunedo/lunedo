@@ -1031,7 +1031,6 @@ export {
   type PageListings,
   type PageReferences,
   type PageSnapshot,
-  pagePath,
   type ReadablePage,
   recordClient,
   renderPageMarkdown,

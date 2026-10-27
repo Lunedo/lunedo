@@ -4,9 +4,9 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { importedTitleCandidates } from "../imports/links.js";
+import { itemAddress } from "./addresses.js";
 import type { PageDocumentService } from "./documents.js";
 import { readersWithoutAccess } from "./move-impact.js";
-import { itemPath } from "./reports.js";
 import { visibleItem } from "./visibility.js";
 
 export interface IncludedPage {
@@ -61,13 +61,14 @@ export class IncludeService {
     if (!candidates) return null;
     const result = await this.#database.execute<{
       id: string;
+      number: string;
       title: string;
       kind: string;
       key: string;
       space_id: string;
     }>(sql`
       with candidates as (${candidates})
-      select t.id, t.title, t.kind::text as kind, s.key, s.id as space_id
+      select t.id, t.number, t.title, t.kind::text as kind, s.key, s.id as space_id
       from candidates c join tree_items t on t.id = c.id join spaces s on s.id = t.space_id
       where t.kind in ('page', 'blogPost') and ${visible}
         ${
@@ -83,7 +84,7 @@ export class IncludeService {
       ? {
           id: row.id,
           title: row.title,
-          path: itemPath(row.kind, row.key, row.id, row.title),
+          path: itemAddress(row.kind, row.key, row.number, row.title) ?? "",
           spaceId: row.space_id,
         }
       : null;

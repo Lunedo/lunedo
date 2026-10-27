@@ -16,7 +16,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
-import { PushSubscriptionError, pushDeliveryJob, startPushDelivery } from "./push-service.js";
+import { PushSubscriptionError, pushDeliveryJob, pushLink, startPushDelivery } from "./push-service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -320,7 +320,7 @@ describe.skipIf(!baseUrl)("browser push", () => {
     expect(decrypt(message?.body ?? Buffer.alloc(0), phone.privateKey, phone.auth)).toEqual({
       title: "Editor mentioned you",
       body: page.title,
-      url: `/spaces/${context.space.key}/pages/${page.id}/${page.title.toLowerCase().replace(/\s+/g, "-")}`,
+      url: `/spaces/${context.space.key}/pages/${page.number}/${page.title.toLowerCase().replace(/\s+/g, "-")}`,
       tag: `content.mentioned:${page.id}`,
     });
     expect(message?.body.toString("latin1")).not.toContain(page.title);
@@ -392,5 +392,38 @@ describe.skipIf(!baseUrl)("browser push", () => {
       sql`select type from push_outbox where recipient_id = ${context.readerId}`,
     );
     expect(rows.rows.map((row) => row.type)).toEqual(["content.changed"]);
+  });
+});
+
+describe("push links", () => {
+  it("point at the item by its number in the segment of its kind", () => {
+    const params = (itemKind: string, itemTitle = "Release notes") => ({
+      spaceKey: "IT",
+      itemKind,
+      itemTitle,
+    });
+    expect(pushLink("content.mentioned", "id", 1042, params("page"))).toBe(
+      "/spaces/IT/pages/1042/release-notes",
+    );
+    expect(pushLink("comment.created", "id", 1043, params("blogPost"))).toBe(
+      "/spaces/IT/blog/1043/release-notes",
+    );
+    expect(pushLink("content.changed", "id", 1044, params("whiteboard", "???"))).toBe(
+      "/spaces/IT/whiteboards/1044",
+    );
+  });
+
+  it("fall back to the start page when the item is gone or has no address", () => {
+    expect(
+      pushLink("content.mentioned", "id", null, { spaceKey: "IT", itemKind: "page", itemTitle: "A" }),
+    ).toBe("/");
+    expect(
+      pushLink("content.mentioned", "id", 1042, { spaceKey: "IT", itemKind: "link", itemTitle: "A" }),
+    ).toBe("/");
+    expect(pushLink("content.mentioned", "id", 1042, { itemKind: "page", itemTitle: "A" })).toBe("/");
+  });
+
+  it("keep access requests on their own address", () => {
+    expect(pushLink("access.requested", "request-id", null, {})).toBe("/access-requests/request-id");
   });
 });

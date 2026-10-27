@@ -191,7 +191,7 @@ export class WhiteboardsController {
       example: {
         itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
         title: "Network 2027",
-        href: "/spaces/IT/whiteboards/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21/network-2027",
+        href: "/spaces/IT/whiteboards/1021/network-2027",
         preview: true,
       },
     },

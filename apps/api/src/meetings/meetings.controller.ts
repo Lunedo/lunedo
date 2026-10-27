@@ -90,6 +90,7 @@ export class MeetingsController {
       example: [
         {
           id: exampleSeries.id,
+          number: exampleSeries.number,
           title: exampleSeries.title,
           archived: false,
           upcomingAt: exampleMeetingSummary.startsAt,
@@ -256,10 +257,12 @@ export class MeetingsController {
       example: [
         {
           id: exampleMeetingSummary.id,
+          number: exampleMeetingSummary.number,
           title: exampleMeetingSummary.title,
           startsAt: exampleMeetingSummary.startsAt,
           durationMinutes: 45,
           seriesId: exampleSeries.id,
+          seriesNumber: exampleSeries.number,
           seriesTitle: exampleSeries.title,
           spaceId: exampleSeries.spaceId,
           spaceKey: "ITOPS",
@@ -415,11 +418,14 @@ export class MeetingsController {
       schema: agendaSchema,
       example: {
         meetingId: exampleMeeting.id,
+        meetingNumber: exampleMeeting.number,
         seriesId: exampleSeries.id,
+        seriesNumber: exampleSeries.number,
         current: true,
         topics: [
           {
             id: exampleTopic.id,
+            number: exampleTopic.number,
             title: exampleTopic.title,
             status: "open",
             outcome: null,
@@ -777,6 +783,7 @@ export class MeetingsController {
       example: [
         {
           meetingId: exampleMeetingSummary.id,
+          meetingNumber: exampleMeetingSummary.number,
           meetingTitle: exampleMeetingSummary.title,
           startsAt: exampleMeetingSummary.startsAt,
           document: examplePrivateNotes.document,
@@ -991,6 +998,7 @@ export class MeetingsController {
           text: "Laptops get BitLocker.",
           meeting: {
             id: exampleMeetingSummary.id,
+            number: exampleMeetingSummary.number,
             title: exampleMeetingSummary.title,
             startsAt: exampleMeetingSummary.startsAt,
           },

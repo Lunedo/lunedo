@@ -4,7 +4,7 @@ Content lives in spaces. A space belongs to one organization and holds a tree of
 
 ## Spaces
 
-A space has a name, a description and a key of 2 to 10 letters or digits. The key appears in addresses such as `/spaces/ITOPS/pages/<page ID>/<title>`. Keys are unique regardless of case. When a space admin changes the key, addresses with the old key keep leading to the space until another space takes that key. Links to pages always work, because they contain the page ID.
+A space has a name, a description and a key of 2 to 10 letters or digits. The key appears in addresses such as `/spaces/ITOPS/pages/4711/it-operations`, see [Content numbers and addresses](#content-numbers-and-addresses). Keys are unique regardless of case. When a space admin changes the key, addresses with the old key keep leading to the space until another space takes that key. Links to pages always work, because the number in the address identifies the page.
 
 Who can read a space:
 
@@ -39,6 +39,31 @@ When the last space admin is deactivated, the space appears under **Organization
 ### Creating spaces
 
 Members of an organization may create spaces unless the setting `spaces.membersCreateSpaces` (instance and organization, lockable, default on) is off. The creator always becomes space admin. New spaces start with the organization's default permissions, `spaces.defaultPermissions` (default: visibility `organization`, all members as editors); the creator sees them in the create dialog and can change them there. Changing the defaults never changes existing spaces.
+
+## Content numbers and addresses
+
+Every item of a space (page, folder, blog post, whiteboard, meeting series and meeting topic) has a **number**. Numbers come from one sequence per instance that starts at 1000. A number is never reused and does not change when the item is renamed or moved. A copy gets a new number; an item restored from the trash keeps its number, and a backup restore keeps all numbers and the sequence. The API returns `number` on items. Its ID stays the key in the database, the API, links inside content, events and exports.
+
+Addresses in the app contain the space key, the type, the number and a short form of the title:
+
+| Item | Address |
+|---|---|
+| Page | `/spaces/IT/pages/4711/it-betrieb` |
+| Page history | `/spaces/IT/pages/4711/history` |
+| Folder | `/spaces/IT/folders/<number>/<short form>` |
+| Blog post | `/spaces/IT/blog/<number>/<short form>` |
+| Whiteboard | `/spaces/IT/whiteboards/<number>/<short form>` |
+| Meeting series | `/spaces/IT/meetings/<number>/<short form>` |
+| Meeting topic | `/spaces/IT/topics/<number>/<short form>` |
+| Item that a person sees only through a share | `/shared/<number>/<short form>` |
+
+The number alone identifies the item. A wrong or outdated space key, type or short form is replaced by the current address without an extra history entry, so renames and moves keep links working. Addresses with an ID from earlier versions no longer exist and are not redirected. Links in page content that still contain such an address are shown with the current address of their target; links to content the reader cannot see are shown as plain text.
+
+The short form of a title is the same everywhere in the app and the knowledge base portal, whatever the language: `ä`, `ö` and `ü` become `ae`, `oe` and `ue` (also in upper case) and `ß` becomes `ss`; other diacritics are removed (`è` becomes `e`); everything that is not a letter or digit becomes a hyphen, repeated hyphens collapse and none stay at the start or end; the result is lower case and at most 80 characters, cut at a hyphen where possible. Letters of non-Latin scripts, such as Cyrillic, Greek or Chinese, stay. "Flüghäfen & Co. (Wien)" becomes `flueghaefen-co-wien`. Heading anchors follow the same rule. An anchor written with an earlier rule, such as `#gerate` for "Geräte", still jumps to the heading, and the address is updated to the current anchor.
+
+Entering only a number (`1040` or `#1040`) in the search opens that item if the person can read it; otherwise the search runs normally. The quick search shows the item first under "Open by number".
+
+Through the API, `GET /api/v1/items/by-number/{number}` answers like `GET /api/v1/items/{itemId}`, with the same permissions; an unknown number and a number the caller cannot read give the same `404`. `POST /api/v1/pages/by-number/{number}/access-requests` requests access to a page by its number.
 
 ## Personal spaces
 

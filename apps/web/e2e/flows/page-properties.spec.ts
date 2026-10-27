@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { pagePath } from "../support/addresses.js";
 import { expect, type Organization, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
 import { unique } from "../support/people.js";
@@ -99,7 +100,7 @@ test("collects page properties of two pages in a report on a third page and incl
   await expect(table.getByRole("row", { name: /Site Graz.*1 Gbit\/s fibre/ })).toBeVisible();
   await expect(page.getByText("Graz is the main site.")).toBeVisible();
   await table.getByRole("link", { name: "Site Graz" }).click();
-  await expect(page).toHaveURL(new RegExp(graz.id));
+  await expect(page).toHaveURL(new RegExp(`${graz.path}$`));
 });
 
 test("renders a page for a reader who cannot see the pages and whiteboard it includes", async ({
@@ -127,10 +128,10 @@ test("renders a page for a reader who cannot see the pages and whiteboard it inc
       title,
       parentId: null,
       mode: "publish",
-    })) as { id: string };
+    })) as { id: string; number: number; title: string };
     await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, { document: { type: "doc", content } });
     await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
-    return created.id;
+    return created;
   };
   const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
   const incident = await published(security.id, "Incident response", [
@@ -147,8 +148,8 @@ test("renders a page for a reader who cannot see the pages and whiteboard it inc
   })) as { id: string };
   const sites = await published(operations.id, "Network sites", [
     paragraph("Every site has two uplinks."),
-    { type: "includeExcerpt", attrs: { pageId: incident, name: null, panel: true } },
-    { type: "includePage", attrs: { pageId: incident } },
+    { type: "includeExcerpt", attrs: { pageId: incident.id, name: null, panel: true } },
+    { type: "includePage", attrs: { pageId: incident.id } },
     { type: "whiteboard", attrs: { whiteboardId: board.id } },
     paragraph("Ask the network team for changes."),
   ]);
@@ -156,7 +157,7 @@ test("renders a page for a reader who cannot see the pages and whiteboard it inc
   const reader = await organization.invite("Chris");
   const second = await organization.signIn(reader);
   try {
-    await second.page.goto(`/spaces/${operations.key}/pages/${sites}/network-sites`);
+    await second.page.goto(pagePath(operations.key, sites));
     await expect(second.page.getByText("Every site has two uplinks.")).toBeVisible();
     await expect(second.page.getByText("Ask the network team for changes.")).toBeVisible();
     await expect(second.page.getByText("Page not found")).toHaveCount(0);
@@ -167,7 +168,7 @@ test("renders a page for a reader who cannot see the pages and whiteboard it inc
     await second.context.close();
   }
 
-  await page.goto(`/spaces/${operations.key}/pages/${sites}/network-sites`);
+  await page.goto(pagePath(operations.key, sites));
   await expect(page.getByText("Call the security lead.").first()).toBeVisible();
 });
 

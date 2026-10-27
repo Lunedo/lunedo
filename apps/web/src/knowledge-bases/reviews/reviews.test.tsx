@@ -76,6 +76,7 @@ function inSpace(ui: ReactNode, role: "admin" | "editor" = "admin") {
 
 const overdue: ReviewItem = {
   id: ARTICLE,
+  number: 1020,
   title: "Set up the VPN at home",
   type: "howTo",
   categoryPath: [{ id: "01929b1e-0000-7000-8000-0000000000f1", title: "IT" }],

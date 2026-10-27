@@ -52,14 +52,14 @@ test("the portal screens pass the review in both themes, wide and narrow", async
     for (const mode of modes) {
       const screens: [string, string][] = [
         ["start", `${publicPortal.path}/`],
-        ["category", `${publicPortal.path}/topics/${publicPortal.categories.IT}`],
-        ["topic", `${publicPortal.path}/topics/${publicPortal.categories["Remote access"]}`],
+        ["category", `${publicPortal.path}/${publicPortal.topics.IT}`],
+        ["topic", `${publicPortal.path}/${publicPortal.topics["Remote access"]}`],
         ["contact", `${publicPortal.path}/contact`],
         ["how-to", `${publicPortal.path}/${howTo.address}`],
         ["troubleshooting", `${publicPortal.path}/${trouble.address}`],
         ["search", `${publicPortal.path}/search?q=vpn`],
         ["no-results", `${publicPortal.path}/search?q=parking%20permit`],
-        ["not-found", `${publicPortal.path}/99999-missing`],
+        ["not-found", `${publicPortal.path}/999999999-missing`],
         ["sign-in", `${closed.path}/`],
         ["signed-out", `${publicPortal.path}/signed-out`],
       ];

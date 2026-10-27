@@ -222,10 +222,10 @@ describe.skipIf(!baseUrl)("knowledge base round trip between instances", () => {
       sql`select name, item_id from attachments where id = ${String(image?.attrs?.attachmentId)}`,
     );
     expect(attachment.rows[0]).toEqual({ name: "client.png", item_id: original.id });
-    const numbers = await test.database.execute<{ item_id: string }>(
-      sql`select item_id from article_numbers where space_id = ${targetId}`,
+    const numbers = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where space_id = ${targetId} and kind = 'page'`,
     );
-    expect(numbers.rows).toHaveLength(2);
+    expect(new Set(numbers.rows.map((row) => row.number)).size).toBe(numbers.rows.length);
   });
 
   it("keeps the article type and the sections in the HTML archive", async () => {

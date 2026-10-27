@@ -543,6 +543,22 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
                 { type: "pageLink", attrs: { pageId: internal, spaceId: other.id, title: "Intern" } },
               ],
             },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Verlinktes Ziel",
+                  marks: [{ type: "link", attrs: { href: `/spaces/HILFE/pages/${target}/alt#schritt` } }],
+                },
+                { type: "text", text: " und " },
+                {
+                  type: "text",
+                  text: "Verlinkt intern",
+                  marks: [{ type: "link", attrs: { href: `/spaces/OPS/pages/${internal}/gehalt` } }],
+                },
+              ],
+            },
             { type: "image", attrs: { attachmentId, alt: "Bild" } },
             { type: "image", attrs: { attachmentId: foreignId, alt: "Fremd" } },
             { type: "includePage", attrs: { pageId: internal } },
@@ -562,10 +578,13 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     await test.services.versions.publish(actor, page.id);
     const rendered = await test.services.articleRenderer.renderPublished(page.id);
     if (!rendered) throw new Error("not rendered");
-    const number = await test.database.execute<{ number: number }>(
-      sql`select number from article_numbers where item_id = ${target}`,
+    const number = await test.database.execute<{ number: string }>(
+      sql`select number from tree_items where id = ${target}`,
     );
     expect(rendered.html).toContain(`href="/__portal__/${number.rows[0]?.number}"`);
+    expect(rendered.html).toContain(`href="/__portal__/${number.rows[0]?.number}#schritt"`);
+    expect(rendered.html).toContain("Verlinkt intern");
+    expect(rendered.html).not.toContain("/spaces/OPS/pages/");
     expect(rendered.html).toContain(`src="/__portal__/files/${attachmentId}?size=display"`);
     expect(rendered.html).not.toContain("Interner Text");
     expect(rendered.html).not.toContain(internal);
@@ -629,14 +648,14 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     });
     await test.services.versions.publish(actor, source.id);
     await test.services.articleRenderer.renderPublished(source.id);
-    const numbers = await test.database.execute<{ item_id: string; number: number }>(
-      sql`select item_id, number from article_numbers where space_id = ${kb.id}`,
+    const numbers = await test.database.execute<{ item_id: string; number: string }>(
+      sql`select id as item_id, number from tree_items where space_id = ${kb.id}`,
     );
-    const numberOf = (id: string) => numbers.rows.find((row) => row.item_id === id)?.number;
+    const numberOf = (id: string) => Number(numbers.rows.find((row) => row.item_id === id)?.number);
     const config = await test.services.portals.config(kb.id);
     if (!config) throw new Error("missing config");
     const html = async () => {
-      const found = await test.services.portalReader.article(ANONYMOUS, config, numberOf(source.id) ?? 0, "");
+      const found = await test.services.portalReader.article(ANONYMOUS, config, numberOf(source.id), "");
       if (found?.type !== "found") throw new Error("missing article");
       return found.article.html;
     };

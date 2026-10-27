@@ -81,7 +81,7 @@ describe("opening a share link", () => {
         const password = (request.body as { password?: string }).password;
         if (!password) return problem(401, "passwordRequired");
         if (password !== "harbour lantern") return problem(401, "wrongPassword");
-        return { body: { kind: "anonymous", itemId: PAGE, unlock: "proof" } };
+        return { body: { kind: "anonymous", itemId: PAGE, number: 1042, unlock: "proof" } };
       },
       [`GET /api/v1/share-links/${TOKEN}/attachments/${FILE}/content`]: (request) => {
         downloads.push(request);
@@ -131,11 +131,11 @@ describe("opening a share link", () => {
         },
       }),
       [`POST /api/v1/share-links/${TOKEN}/open`]: () => ({
-        body: { kind: "account", itemId: PAGE, unlock: null },
+        body: { kind: "account", itemId: PAGE, number: 1042, unlock: null },
       }),
     });
     await renderLink();
-    await waitFor(() => expect(window.location.pathname).toMatch(new RegExp(`^/shared/${PAGE}`)));
+    await waitFor(() => expect(window.location.pathname).toBe("/shared/1042"));
   });
 
   it("explains a revoked or expired link", async () => {

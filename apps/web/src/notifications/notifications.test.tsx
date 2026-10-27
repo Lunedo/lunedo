@@ -117,7 +117,7 @@ describe("notificationText", () => {
       actor: { type: "account", id: ACCOUNT.id, name: "Gaby Teller" },
       actorCount: 3,
       count: 7,
-      target: { type: "item", id: "01929b1e-0000-7000-8000-000000000009" },
+      target: { type: "item", id: "01929b1e-0000-7000-8000-000000000009", number: 1050 },
       params: { itemTitle: "Restart the VPN gateway", itemKind: "page", spaceKey: "IT", version: 9 },
     });
     expect(notificationText(t, changed, format)).toBe(
@@ -192,7 +192,7 @@ describe("notification links", () => {
         notification("a", {
           type: "account.withoutOrganization",
           organizationId: null,
-          target: { type: "account", id: accountId },
+          target: { type: "account", id: accountId, number: null },
         }),
       ),
     ).toEqual({ to: "/settings/instance/accounts/$accountId", params: { accountId } });
@@ -355,7 +355,7 @@ describe("the notifications page", () => {
     const FELIX = { id: "01929b1e-0000-7000-8000-0000000000f3", name: "Felix Gruber", email: null };
     const asked = notification("01929b1e-0000-7000-8000-0000000000f4", {
       type: "access.requested",
-      target: { type: "accessRequest", id: REQUEST },
+      target: { type: "accessRequest", id: REQUEST, number: null },
       actor: { type: "account", id: FELIX.id, name: FELIX.name },
       actorCount: 1,
       params: {
@@ -470,12 +470,37 @@ async function openPanel() {
 }
 
 describe("acting on a notification", () => {
+  it("opens the comment on the page at the number address of the page and marks it read", async () => {
+    const id = "01929b1e-0000-7000-8000-0000000000e7";
+    const commentId = "01929b1e-0000-7000-8000-0000000000e8";
+    const items = [
+      notification(id, {
+        type: "comment.created",
+        target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000e9", number: 1056 },
+        actor: { type: "account", id: "01929b1e-0000-7000-8000-0000000000d2", name: "Bea Builder" },
+        actorCount: 1,
+        params: { itemTitle: "Restart the VPN gateway", itemKind: "page", spaceKey: "OPS", commentId },
+      }),
+    ];
+    const { requests } = shellApi({
+      "GET /api/v1/notifications": () => ({ body: { items, nextCursor: null } }),
+      [`POST /api/v1/notifications/${id}/read`]: () => ({ status: 204 }),
+    });
+    const panel = await openPanel();
+    await userEvent.click(await within(panel).findByRole("button", { name: /Restart the VPN gateway/ }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/spaces/OPS/pages/1056/restart-the-vpn-gateway"),
+    );
+    expect(new URL(window.location.href).searchParams.get("comment")).toBe(commentId);
+    expect(requests.some((request) => request.path === `/api/v1/notifications/${id}/read`)).toBe(true);
+  });
+
   it("stops watching the page in place and offers undo", async () => {
     const itemId = "01929b1e-0000-7000-8000-0000000000d1";
     const items = [
       notification("01929b1e-0000-7000-8000-00000000000c", {
         type: "comment.created",
-        target: { type: "item", id: itemId },
+        target: { type: "item", id: itemId, number: 1051 },
         actor: { type: "account", id: "01929b1e-0000-7000-8000-0000000000d2", name: "Bea Builder" },
         actorCount: 1,
         params: { itemTitle: "Restart the VPN gateway", itemKind: "page", spaceKey: "OPS" },
@@ -514,7 +539,7 @@ describe("acting on a notification", () => {
     const items = [
       notification("01929b1e-0000-7000-8000-0000000000e2", {
         type: "comment.created",
-        target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000e3" },
+        target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000e3", number: 1052 },
         actor: { type: "account", id: "01929b1e-0000-7000-8000-0000000000d2", name: "Bea Builder" },
         actorCount: 1,
         params: { itemTitle: "Restart the VPN gateway", itemKind: "page", spaceKey: "OPS", commentId },
@@ -563,7 +588,7 @@ describe("acting on a notification", () => {
     const items = [
       notification("01929b1e-0000-7000-8000-0000000000e6", {
         type: "task.assigned",
-        target: { type: "item", id: pageId },
+        target: { type: "item", id: pageId, number: 1053 },
         actor: { type: "account", id: "01929b1e-0000-7000-8000-0000000000d2", name: "Bea Builder" },
         actorCount: 1,
         params: { itemTitle: "Onboarding", spaceKey: "HR", taskId: "task-1", taskText: "Order a laptop" },
@@ -593,7 +618,7 @@ describe("acting on a notification", () => {
     const items = [
       notification(members[0] as string, {
         type: "content.changed",
-        target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000f8" },
+        target: { type: "item", id: "01929b1e-0000-7000-8000-0000000000f8", number: 1054 },
         params: { itemTitle: "Runbook", itemKind: "page", spaceKey: "OPS" },
         group: {
           spaceId: "01929b1e-0000-7000-8000-0000000000f9",
@@ -609,6 +634,7 @@ describe("acting on a notification", () => {
             {
               id: members[0] as string,
               itemId: "01929b1e-0000-7000-8000-0000000000f8",
+              number: 1054,
               itemTitle: "Runbook",
               actor: { id: "01929b1e-0000-7000-8000-0000000000d2", name: "Bea Builder" },
               updatedAt: new Date().toISOString(),
@@ -617,6 +643,7 @@ describe("acting on a notification", () => {
             {
               id: members[1] as string,
               itemId: "01929b1e-0000-7000-8000-0000000000fa",
+              number: 1055,
               itemTitle: "On-call rota",
               actor: { id: "01929b1e-0000-7000-8000-0000000000d3", name: "Carl Coder" },
               updatedAt: new Date().toISOString(),
@@ -635,7 +662,9 @@ describe("acting on a notification", () => {
     expect(within(panel).getByText("by Bea Builder, Carl Coder and 1 other")).toBeTruthy();
     expect(within(panel).queryByRole("link", { name: "On-call rota" })).toBeNull();
     await userEvent.click(within(panel).getByRole("button", { name: "Show all 2" }));
-    expect(within(panel).getByRole("link", { name: "On-call rota" })).toBeTruthy();
+    expect(within(panel).getByRole("link", { name: "On-call rota" }).getAttribute("href")).toMatch(
+      /^\/spaces\/OPS\/pages\/1055(\/on-call-rota)?$/,
+    );
     await userEvent.click(within(panel).getByRole("button", { name: "Show less" }));
     await userEvent.click(within(panel).getByRole("button", { name: "Mark as read" }));
     await waitFor(() =>

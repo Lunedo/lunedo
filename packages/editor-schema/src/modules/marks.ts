@@ -1,7 +1,31 @@
-import { attrOf, defineModule, optional, required } from "../module.js";
+import { internalItemLink } from "../internal-links.js";
+import {
+  attrOf,
+  defineModule,
+  optional,
+  type PageLinkTarget,
+  type ResolvedPageLink,
+  required,
+} from "../module.js";
 import { removedNode } from "../portable.js";
 import { element, inlineCode, markdownUrl, wrapDelimited } from "../text.js";
 import { type ContentColor, colorValue, hrefValue, uuidValue } from "../values.js";
+
+function linkHref(
+  renderer: {
+    readonly context: { instanceUrl?: string };
+    pageLink(link: PageLinkTarget): ResolvedPageLink | null;
+    safeHref(href: string): string | null;
+  },
+  href: string,
+): string | null {
+  const internal = internalItemLink(href, renderer.context.instanceUrl);
+  if (!internal) return renderer.safeHref(href);
+  const resolved = renderer.pageLink({ pageId: internal.itemId, spaceId: null, title: null });
+  return resolved?.accessible && resolved.href
+    ? renderer.safeHref(`${resolved.href}${internal.fragment}`)
+    : null;
+}
 
 export const linkModule = defineModule({
   name: "link",
@@ -17,16 +41,16 @@ export const linkModule = defineModule({
         return null;
       },
       html: (mark, content, renderer) => {
-        const href = renderer.safeHref(attrOf<string>(mark, "href"));
+        const href = linkHref(renderer, attrOf<string>(mark, "href"));
         if (!href) return content;
         return element("a", { href, rel: "noopener noreferrer" }, content);
       },
       word: (mark, style, renderer) => {
-        const href = renderer.safeHref(attrOf<string>(mark, "href"));
+        const href = linkHref(renderer, attrOf<string>(mark, "href"));
         return href ? { ...style, link: href } : style;
       },
       markdown: (mark, content, renderer) => {
-        const href = renderer.safeHref(attrOf<string>(mark, "href"));
+        const href = linkHref(renderer, attrOf<string>(mark, "href"));
         if (!href) return content;
         return `[${content}](${markdownUrl(href)})`;
       },
