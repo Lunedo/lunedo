@@ -23,7 +23,7 @@ A token can be limited to selected knowledge bases; it then reaches no other spa
 | `GET /api/v1/spaces/{spaceId}/article-changes` | New, changed and removed articles since `changedSince` | read the knowledge base |
 | `POST /api/v1/spaces/{spaceId}/articles` | Creates an article, or a translation with `translationOf` and `language` | write drafts |
 | `POST /api/v1/articles/{itemId}/images?name=` | Uploads an image, sent as `application/octet-stream` | write drafts |
-| `PUT /api/v1/articles/{itemId}/draft` | Saves title, lead and sections as the draft | write drafts |
+| `PUT /api/v1/articles/{itemId}/draft` | Saves title, lead, type, category (`categoryId`), sections and `versionNote` as the draft; once the article is published, type, category and lead change at once for readers and need permission to publish | write drafts |
 | `POST /api/v1/articles/{itemId}/publish` | Publishes the draft | publish |
 | `PUT /api/v1/articles/{itemId}/type` | Sets the type (`howTo`, `troubleshooting`) or removes it with `null` | edit the article |
 | `GET /api/v1/articles/{itemId}/translations` | The original and one entry per enabled language with the state of its translation | read the article |
@@ -88,7 +88,7 @@ curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json
 
 ## Changes and removed articles
 
-`GET …/article-changes` returns the articles, oldest change first, that changed after `changedSince`: new, republished, renamed, moved, retyped, reviewed, restricted or unrestricted articles, articles in renamed categories and new or changed translations. It pages with `cursor` and `limit` (1 to 200, default 50).
+`GET …/article-changes` returns the articles, oldest change first, that changed after `changedSince`: new, republished, renamed, moved, retyped, reviewed, restricted or unrestricted articles, articles in renamed categories and new or changed translations. It pages with `cursor` and `limit` (1 to 200, default 50). With `draft=true` it returns the current drafts, also of unpublished articles, of the articles the caller may edit; this needs a token that may write drafts.
 
 `removed` lists the articles readers can no longer find under their number and language since then:
 
@@ -129,7 +129,7 @@ echo "$PAGE" | jq -r '.nextChangedSince' > last-sync
 |---|---|---|
 | `GET /api/v1/spaces/{spaceId}/knowledge-base/reviews` | Default interval, lead time and who is reminded | read the knowledge base |
 | `PUT /api/v1/spaces/{spaceId}/knowledge-base/reviews` | Changes them | space admin |
-| `GET /api/v1/spaces/{spaceId}/reviews` | Articles that are overdue, due within 30 days, whose source page changed or that have no active owner; only articles the caller may edit | read the knowledge base |
+| `GET /api/v1/spaces/{spaceId}/reviews` | Articles that are overdue, due within 30 days, whose source page changed or that have no active owner, and translations whose original was published after them; only articles the caller may edit. `filter` (`all`, `due`, `soon`, `unowned`, `translations`) narrows the list, `mine=true` keeps only the caller's own articles | read the knowledge base |
 | `GET /api/v1/reviews/mine` | The caller's own articles that need a review | signed in or token |
 | `GET /api/v1/articles/{itemId}/review` | Interval, last review and due date | read the article |
 | `PUT /api/v1/articles/{itemId}/review/interval` | An interval of the article's own, `0` for none, or `null` to inherit | edit the article |

@@ -62,7 +62,7 @@ The role dialogs show this before saving: an area the actor does not hold cannot
 
 Every operation that removes or disables a principal holding a role checks the actor's rank: removing a role or a member, deleting a group or a custom role, deactivating an account or a service account. The actor must hold the areas of what is removed, and only owners remove owners.
 
-The account actions (deactivate, reactivate, end sessions, reset the second factor, link or unlink sign-in identities) follow these rules. They are available to instance administrators with the area Accounts and Manage, and to administrators with Members and groups and Manage in the account's home organization.
+The account actions (deactivate, reactivate, end sessions, reset the second factor, link or unlink sign-in identities) follow these rules. Changing the home organization follows them too, except the row for the own account: administrators can change their own home organization. They are available to instance administrators with the area Accounts and Manage, and to administrators with Members and groups and Manage in the account's home organization.
 
 | Target account | Who may act on it |
 |---|---|

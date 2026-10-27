@@ -4,7 +4,7 @@ Templates exist at three levels: a space, an organization and the instance. Thro
 
 ## Levels and permissions
 
-Every level has the same routes under its own prefix. The permission is the one that manages templates at that level:
+Every level has the same routes under its own prefix, except the few routes named for one level below. The permission is the one that manages templates at that level:
 
 | Level | Prefix | Permission |
 |---|---|---|
@@ -30,7 +30,11 @@ Space routes only:
 | Route | What it does | Permission |
 |---|---|---|
 | `GET /api/v1/spaces/{spaceId}/template-gallery` | Templates offered for new pages in the space, from every level | `space.edit` |
+| `GET /api/v1/spaces/{spaceId}/templates/from-page/files` | Tells how many files of a page a new template would take over, and whether the page is restricted | `space.edit` |
 | `POST /api/v1/spaces/{spaceId}/templates/from-page` | Saves the current content of a page as a space template | `space.edit` |
+| `GET /api/v1/spaces/{spaceId}/knowledge-base/templates` | Templates articles of a knowledge base can start from, with their required sections | `space.view` |
+
+`GET /api/v1/organizations/{organizationId}/templates/built-in` lists the built-in templates in the caller's language (`organization.templates.manage`); they cannot be changed, duplicate one to adapt it.
 
 Listing the templates of a space and reading their files needs only read access to the space (`space.view`). In a space, files of instance and organization templates need edit access to the space.
 

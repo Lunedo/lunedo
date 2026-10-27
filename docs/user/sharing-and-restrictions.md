@@ -2,7 +2,7 @@
 
 A space gives its members a role for every page in it (see [Spaces and pages](spaces-and-pages.md)). On a single page you can go further: share it with people and groups who are not in the space, create a share link, or restrict who can view or edit it. Pages, blog posts and whiteboards are shared the same way.
 
-Everything on this page happens in the **Share** dialog of a page. It opens from the **Share** button of the page and has two tabs: **People and access** and **Share links**. Anyone who can edit a page can share it.
+Everything on this page happens in the **Share** dialog of a page. It opens from the **Share** button of the page and has two tabs: **People and access** and **Share links**. Anyone with the editor role for a page, through the space or a share, can share it as long as they can view it, even when an edit restriction leaves them out.
 
 ## Share a page with people or groups
 

@@ -5,7 +5,7 @@ A script can rebuild the static website of a public knowledge base, for example 
 ## Before you start
 
 - The knowledge base must have the audience "public". Other knowledge bases are refused with `staticSiteNotPublic`, because a static website has no sign-in.
-- Exporting a space needs a person's account with a role in the knowledge base: its space admin, or a member whose organization role manages spaces. Guests and service accounts cannot export spaces.
+- Exporting a space needs a person's account with a role in the knowledge base: its space admin, or a member whose organization role manages spaces (not for confidential spaces, which only their space admins export). Guests and service accounts cannot export spaces.
 - Create a personal token for that person with the organization area `spaces` at `view` and the content level `read`; see [Getting started](getting-started.md#create-a-personal-token).
 - You need the ID of the knowledge base. `GET /api/v1/spaces?type=knowledgeBase` lists the knowledge bases the token can read.
 
@@ -43,7 +43,7 @@ A script can rebuild the static website of a public knowledge base, for example 
    npx wrangler pages deploy site --project-name=help
    ```
 
-Articles lie in the ZIP as `<number>-<slug>.html`, for example `1042-set-up-the-vpn-connection.html`, with translations in a folder per language such as `de/`.
+Articles lie in the ZIP as `<number>-<slug>.html`, for example `1042-set-up-the-vpn-connection.html`. Articles in the default language of the knowledge base lie at the root; the other languages get a folder named after the language, such as `de/`.
 
 ## When the export fails
 
@@ -57,6 +57,10 @@ A failed export names the reason in `errorCode` of `GET /api/v1/exports/{exportI
 | `exportDisabled` | A space admin turned export off for the space. |
 | `notEnoughStorage` | The file store ran short of free space. |
 | `interrupted` | The worker was interrupted too often. |
+| `tooLargeToBuild` | Building the website ran out of memory. |
+| `internalError` | An unexpected error; the export failed after all attempts. |
+
+The list can grow; treat an unknown `errorCode` as a failure.
 
 Starting an export can also be refused:
 

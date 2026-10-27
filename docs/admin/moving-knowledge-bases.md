@@ -6,7 +6,7 @@ A knowledge base moves to another Lunedo instance through a Markdown export and 
 
 The Markdown and HTML archives of the export keep what a knowledge base needs (see [Exporting](../user/export.md)):
 
-- Every Markdown file starts with front matter: `title`, `created`, `updated`, `labels` and a `lunedo` block with the kind, version, author, `articleType`, `language` and `translation: true` for translations.
+- Every Markdown file starts with front matter: `title`, `updated` and a `lunedo` block with the kind. `created`, `labels` and the `lunedo` keys version, author, `articleType`, `language` and `translation: true` (for translations) are written only when the article has them.
 - Sections are marked with comments around their heading and content, such as `<!-- lunedo:section key="steps" icon="list-ordered" -->` … `<!-- /lunedo:section -->`. Markdown viewers do not show them.
 - Each article sits in its own folder with its images; translations sit below their article, and categories are folders.
 - HTML files carry `<html lang>` and a `lunedo:article-type` meta element; sections keep their `data-section` and `data-icon` attributes.

@@ -9,7 +9,7 @@ A token needs the matching area in its scopes, for example `membersAndGroups` fo
 | Route | What it does | Permission |
 |---|---|---|
 | `POST /api/v1/organizations` | Creates an organization with an owner, the caller unless another account is named | `instance.organizations.create` |
-| `GET`, `PATCH /api/v1/organizations/{organizationId}` | Reads and changes name and short name | `organization.view`, `organization.update` |
+| `GET`, `PATCH /api/v1/organizations/{organizationId}` | Reads and changes name, short name (`slug`), default language, time zone and logo reference | `organization.view`, `organization.update` |
 | `PUT`, `DELETE /api/v1/organizations/{organizationId}/logo` | Uploads and removes the logo | `organization.update` |
 | `GET /api/v1/organizations/{organizationId}/domains` | Lists the domains of the organization | `organization.signIn.view` |
 | `POST /api/v1/organizations/{organizationId}/domains`, `DELETE …/domains/{domain}` | Adds and removes a domain | `instance.organizations.manage` |
@@ -68,6 +68,18 @@ Nobody can give a role more than they hold themselves.
 | `PUT /api/v1/instance/settings/{key}` | Sets, clears or locks an instance setting | the `manage` level of the setting's area: settings, sign-in, audit log or organizations |
 
 "Session only" routes need a signed-in session with a recent confirmation of identity and refuse API tokens; use the interface for them. See [Accounts](../admin/accounts.md).
+
+## Accounts
+
+These routes act on another account. They are open to instance administrators with the area Accounts and Manage, and to administrators with Members and groups and Manage in the account's home organization; the [rank rules](../admin/roles-and-permissions.md#who-may-act-on-whom) apply.
+
+| Route | What it does | Permission |
+|---|---|---|
+| `POST /api/v1/accounts/{accountId}/deactivate` | Deactivates an account and ends its sessions | `account.deactivate`, session only |
+| `POST /api/v1/accounts/{accountId}/reactivate` | Lets a deactivated account sign in again; revoked tokens and ended memberships stay as they are | `account.reactivate`, session only |
+| `POST /api/v1/accounts/{accountId}/sessions/end`, `POST …/sessions/{sessionId}/end` | Ends all sessions, or one session, of the account | `account.sessions.end`, session only |
+| `POST /api/v1/accounts/{accountId}/second-factor/reset` | Removes the second factor; the account sets up a new one at the next sign-in | `account.secondFactor.reset`, session only |
+| `PUT /api/v1/accounts/{accountId}/home-organization` | Makes another organization the account is a member of its home organization: `{ "organizationId": … }` | `account.homeOrganization.change` |
 
 ## Service accounts
 

@@ -53,7 +53,7 @@ The person who invites is responsible for the account and is reminded before its
 
 **Space settings › Publishing › Portal accounts** lists the portal accounts invited to this knowledge base, with the end of their access and their last sign-in.
 
-- **Deactivate** ends all sessions of the account at once and blocks its sign-in. An instance administrator can reactivate it.
+- **Deactivate** ends all sessions of the account at once and blocks its sign-in. An instance administrator, or an administrator of every organization the account belongs to, can reactivate it.
 - **Remove from organization** ends its access to every knowledge base of the organization. Invite it again to give it access back.
 
 An account that also reads knowledge bases of other organizations can only be removed from this organization, not deactivated. Organization administrators can do the same in the member list. Invitations, acceptances, deactivations and the end of access are recorded in the [audit log](../admin/audit-log.md), for example as `portalAccount.invited`.
