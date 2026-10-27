@@ -53,9 +53,9 @@ With **Require proof from the provider**, Lunedo compares the accepted proof val
 
 ## ADFS
 
-1. Choose **SAML 2.0** and the identity provider **Active Directory Federation Services**. Enter the federation metadata address of ADFS, usually `https://adfs.example.com/FederationMetadata/2007-06/FederationMetadata.xml`.
-2. In ADFS, add a relying party trust that reads Lunedo's metadata address.
-3. Add claim rules that send the attributes below.
+1. Choose **SAML 2.0** and the identity provider **Active Directory Federation Services**. Enter the federation metadata address of ADFS, usually `https://adfs.example.com/FederationMetadata/2007-06/FederationMetadata.xml`, with the name of the ADFS farm, not of a single server.
+2. In ADFS Management, choose **Add Relying Party Trust**, choose **Claims aware**, and let the wizard import the data about the relying party from Lunedo's metadata address.
+3. In the claim issuance policy of the trust, add a rule with the template **Send LDAP Attributes as Claims** and the attribute store Active Directory that sends the attributes below.
 4. Choose **Save and continue**, check the attributes, and test the sign-in.
 
 | Setting in Lunedo | Default claim type |
@@ -68,7 +68,7 @@ With **Require proof from the provider**, Lunedo compares the accepted proof val
 
 The identifier is the person's `objectGUID`. ADFS sends it in Base64; Lunedo converts it to the usual GUID form, so the identifier matches the one an Active Directory provider uses.
 
-Groups come as SIDs by default: add the claim rule "Token-Groups as SIDs". SIDs stay the same when a group is renamed. Group names ("Token-Groups – Unqualified Names") remain possible with **Group values** set to names; then renaming a group in Active Directory breaks the rules for it.
+Groups come as SIDs by default: in the same rule, map the LDAP attribute "Token-Groups as SIDs" to the outgoing claim type Group SID. SIDs stay the same when a group is renamed. Group names ("Token-Groups – Unqualified Names") remain possible with **Group values** set to names; then renaming a group in Active Directory breaks the rules for it.
 
 ## Other SAML providers
 

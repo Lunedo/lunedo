@@ -44,22 +44,22 @@ Each provider has a list of e-mail domains, at most 50. A domain belongs to at m
 - decide which e-mail addresses count as verified: an address from the provider counts as verified only when its domain is one of the provider's domains,
 - limit which people get an account at their first sign-in.
 
-Enter every domain people use at the provider, both for e-mail addresses and for sign-in names, for example `example.com` and `nordwind.test`. Google Workspace needs at least one domain.
+Enter every domain people use at the provider, both for e-mail addresses and for sign-in names in the form `name@domain`, for example `example.com` and `nordwind.test`. Google Workspace needs at least one domain.
 
 ## Sign-in page
 
-The sign-in page first asks for the e-mail address or sign-in name. The domain decides the next step:
+The sign-in page lists a button for every provider, the last used one first, and below them the field **Work e-mail address or sign-in name**. When a person enters an address, the domain, the part after the last `@`, decides the next step:
 
 - The domain belongs to an OIDC or SAML provider: the person continues at the provider.
 - The domain belongs to an LDAP provider: the page asks for the sign-in name and the password of the directory.
-- No provider has the domain and password sign-in is on: the page asks for the Lunedo password.
+- No provider has the domain, or the entry has no `@`, and password sign-in is on: the page asks for the Lunedo password.
 - Otherwise the page says that no sign-in method is set up for this address.
 
 The answer depends only on the domain and the settings, never on whether an account with the address exists, so the page cannot be used to find out who has an account. A client can ask 30 times a minute; further questions are refused for a short time.
 
 Further rules:
 
-- With exactly one provider and password sign-in off, the page shows that provider's button directly, without asking for the address.
+- With exactly one provider and password sign-in off, the page does not ask for the address. It shows that provider's button directly; for an LDAP provider it shows the form for the directory sign-in name and password instead.
 - Passkeys are always offered and work without an address.
 - After a sign-in through a provider, the browser remembers the provider for 180 days and offers it as a shortcut next time. The cookie holds only the provider's ID.
 - Deactivated providers and providers whose setup is not finished are never offered.
@@ -165,11 +165,13 @@ The home organization of a new account comes from the first mapping rule, in rul
 
 Every refusal gets a reference such as `7KQ2-M9XA`, shown on the refusal page together with the reason and what the person can do. Refusals are kept for 90 days. To look one up, filter the instance [audit log](audit-log.md) for refused sign-ins; the entry carries the reference and the reason.
 
+*name* is the name of the organization when the instance has exactly one, otherwise the name of the instance.
+
 | Reason on the refusal page | Cause |
 |---|---|
-| No account exists for you | Creating accounts at first sign-in is off for the provider, and nobody invited the person. |
+| No account exists for you in *name* | Creating accounts at first sign-in is off for the provider, and nobody invited the person. |
 | Your address is not accepted by this provider | The provider sent no address, or one outside its domains. |
-| You are not in a group that may use the instance | Required groups are set and the person is in none of them. |
+| You are not in a group that may use *name* | Required groups are set and the person is in none of them. |
 | Your account is deactivated | The linked account is deactivated. |
 | The accounts were not linked | The person chose "This is not my account". |
 | Your account cannot be linked by you | An account with the address exists but has no way to sign in the person could confirm with. |

@@ -21,7 +21,7 @@ The provider must be reached through HTTPS.
 
 ## Sign-in flow
 
-Lunedo uses the authorization code flow with PKCE (S256), `state` and `nonce`, and asks for the scopes `openid`, `profile` and `email`. A client secret is sent in the token request body (`client_secret_post`).
+Lunedo uses the authorization code flow with PKCE (S256), `state` and `nonce`, and asks for the scopes `openid`, `profile` and `email`. For **Other OIDC provider**, the list of scopes (at most 20) can be changed through the API, not in the settings page. A client secret is sent in the token request body (`client_secret_post`).
 
 ID tokens are checked for issuer, audience, expiry, nonce and signature. **Token signature** is the only algorithm Lunedo accepts: one of RS256 (default), RS384, RS512, PS256, PS384, PS512, ES256, ES384 or ES512. Unsigned tokens and tokens signed with another algorithm are refused.
 
@@ -65,11 +65,11 @@ With **Require proof from the provider**, Lunedo checks the `amr` claim of the I
 
 - Issuer URL: `https://sso.example.com/realms/{realm}`.
 - Create an OpenID Connect client with client authentication turned on, and enter the redirect URI as valid redirect URI.
-- To send groups, add a group membership mapper to the client that adds the claim `groups` to the ID token, and enter `groups` as **Claim for groups**. Keycloak sends group names or paths there, so renaming a group in Keycloak breaks its rules.
+- To send groups, add a mapper of the type **Group Membership** to the client, with the token claim name `groups` and **Add to ID token** on, and enter `groups` as **Claim for groups**. With **Full group path** on, Keycloak sends paths such as `/staff/editors`; turn it off to send plain group names. Either way, renaming a group in Keycloak breaks its rules.
 
 ## Authentik
 
-- Issuer URL: `https://auth.example.com/application/o/{application slug}/`, with the trailing slash.
+- Issuer URL: `https://auth.example.com/application/o/{application slug}/`, with the trailing slash. This is the issuer when the provider keeps its default issuer mode, one issuer per provider; otherwise enter the `issuer` value from the provider's discovery document.
 - Create an OAuth2/OpenID provider with the client type "Confidential" and enter the redirect URI.
 - Choose a signing key for the provider, so that ID tokens are signed with RS256 or another algorithm from the list above.
 - The default `profile` scope sends the names of the person's groups in the claim `groups`. Enter `groups` as **Claim for groups**.

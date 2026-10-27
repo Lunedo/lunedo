@@ -12,7 +12,7 @@ What all providers share, such as domains, credentials, testing and the first si
 2. In the Microsoft Entra admin center, create an app registration for a single tenant. Add the redirect URI as a redirect URI of the platform "Web".
 3. Under **API permissions**, add the Microsoft Graph application permissions `GroupMember.Read.All` and `User.Read.All` and grant admin consent. Lunedo uses them with its own credential, never with the person's token, to read groups, group names and account status.
 4. Create a client secret under **Certificates & secrets**, or upload Lunedo's certificate later (see step 7).
-5. Under **Enterprise applications**, open the application, turn on **Assignment required**, and assign the people or groups who may use Lunedo.
+5. Under **Enterprise applications**, open the application. On **Properties**, turn on **Assignment required**; under **Users and groups**, choose **Add user/group** and assign the people or groups who may use Lunedo. Assignment does not cover members of nested groups, and assigning groups needs Entra ID P1 or higher.
 
 ### In Lunedo
 
@@ -38,7 +38,7 @@ The `email` claim is empty for accounts without a mailbox. When the test sign-in
 
 Entra ID identifies groups by their object ID, so rules keep working when a group is renamed.
 
-- When the ID token carries a `groups` claim, Lunedo uses those object IDs. When it carries none, or Entra ID sends an overage reference instead because the person is in too many groups, Lunedo reads the groups through Microsoft Graph.
+- When the ID token carries a `groups` claim, Lunedo uses those object IDs. Entra ID adds the claim only when it is set up under **Token configuration**, **Add groups claim** of the app registration; **Groups assigned to the application** keeps the token small. When it carries none, or Entra ID sends an overage reference instead because the person is in too many groups, Lunedo reads the groups through Microsoft Graph.
 - Groups read through Graph include nested groups.
 - Lunedo reads the names of the groups through Graph at sign-in and during synchronization, so names follow renames in Entra ID.
 - The rule dialog searches the groups of the tenant by name, and its preview shows how many members the chosen group has in Entra ID.
@@ -51,7 +51,7 @@ Entra ID providers are synchronized in the background: Lunedo updates profiles a
 
 ### Second factor
 
-With **Require proof from the provider**, Lunedo checks the `amr` claim of the ID token. Entra ID reports multi-factor sign-in there as `mfa`, the default accepted value.
+With **Require proof from the provider**, Lunedo checks the `amr` claim of the ID token. Entra ID does not send this claim by default: add it under **Token configuration**, **Add optional claim**, token type **ID**. Entra ID reports multi-factor sign-in there as `mfa`, the default accepted value.
 
 ## SAML
 
@@ -82,16 +82,16 @@ For the SAML settings that every SAML provider shares, such as metadata refresh,
 
 ### Second factor
 
-With **Require proof from the provider**, Lunedo compares the accepted proof values with the authentication context classes of the assertion and the values of Entra ID's authentication methods claim. A test sign-in shows the claims Entra ID sends.
+With **Require proof from the provider**, Lunedo compares the accepted proof values with the authentication context classes of the assertion and the values of Entra ID's authentication methods claim (`http://schemas.microsoft.com/claims/authnmethodsreferences`). Entra ID sends multi-factor values such as `mfa` there only when the optional claim `amr` with the additional property `include_granular_amr` is added to the `saml2Token` optional claims in the manifest of the app registration; the admin center has no option for it. A test sign-in shows the claims Entra ID sends.
 
 ## SCIM
 
-With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo at once. It needs Entra ID P1 or higher. See [SCIM](../scim.md) for what Lunedo does with the requests.
+With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo at once. It needs an Entra ID licence that includes automatic provisioning to your own applications, usually P1 or higher. See [SCIM](../scim.md) for what Lunedo does with the requests.
 
 1. On the provider page in Lunedo, open the tab **SCIM** and choose **Create token**. Copy the token; Lunedo shows it only once.
-2. In the enterprise application in Entra ID, open **Provisioning** and choose **Automatic**.
-3. Enter the **Tenant URL** from the SCIM tab and the token as **Secret Token**, then test the connection.
-4. Under **Provisioning**, **Mappings**, **Provision Microsoft Entra ID Users**, change the attribute mappings:
+2. In the enterprise application in Entra ID, open **Provisioning** and create a new provisioning configuration.
+3. Enter the **Tenant URL** from the SCIM tab and the token as **Secret Token**, test the connection and create the configuration.
+4. Under **Attribute mapping**, open the mapping for users and change these mappings:
 
    | Attribute in Lunedo | Source attribute in Entra ID | When |
    |---|---|---|
@@ -99,6 +99,7 @@ With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo a
    | `emails[type eq "work"].value` | `userPrincipalName` | When accounts have no mailbox. Entra ID sends `mail` by default, which is empty without a mailbox. |
 
 5. Keep the default mapping for groups, where `externalId` is the object ID of the group.
-6. Start provisioning.
+6. Under **Users and groups**, assign the people and groups to send. With the scope "Sync only assigned users and groups", Entra ID sends only those; members of nested groups are not sent.
+7. Start provisioning.
 
 Lunedo identifies people by tenant and object ID, as at sign-in. It refuses a user whose `externalId` is not an object ID, in `POST`, `PUT` and `PATCH`, stores nothing of that request, and names the sent value and this mapping in the error. A wrong value stored earlier never blocks the correct one. A user without an e-mail address is refused as well.

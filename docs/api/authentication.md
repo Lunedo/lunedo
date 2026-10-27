@@ -1,6 +1,6 @@
 # Authentication
 
-Scripts authenticate with API tokens. This page describes what a token is, what it may do and when it stops working. The full reference of every route, with the permission it needs, is at `/api/docs` on your instance.
+Scripts authenticate with API tokens. This page describes what a token is, what it may do and when it stops working. The full reference of every route, with the permission it needs, is at `/api/docs` on your instance; it needs a sign-in or a token unless the instance setting **Public API reference** is on (see [Reference](conventions.md#reference)).
 
 ## Tokens
 
@@ -83,6 +83,6 @@ The reference at `/api/docs` names this for each such route. Tokens also never o
 | `forbidden` with `tokenScope` | 403 | The scopes, the content level or the knowledge base limit of the token do not cover the request. | Create a token with the needed scope or level. |
 | `forbidden` | 403 | The account itself lacks the permission. | Ask for the role. |
 | `sessionRequired` | 403 | The route is not available to tokens. | Use the interface. |
-| `rateLimited` | 429 | The token sent more requests per minute than allowed. | Wait for `Retry-After` seconds. |
+| `rateLimited` | 429 | The token sent more requests per minute than the instance setting **Requests per token** allows, 600 by default (see [Service accounts](../admin/service-accounts.md#tokens-and-reminders)). | Wait for `Retry-After` seconds. |
 
 Rejected tokens are recorded in the audit log as `apiToken.rejected`, at most ten times per minute per client address. Successful use is not recorded.
