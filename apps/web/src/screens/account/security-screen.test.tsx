@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { queryKeys } from "../../api/queries.js";
 import { PreferencesProvider } from "../../preferences/preferences-provider.js";
 import { mockApi, renderWithProviders } from "../../testing/render.js";
-import { SignInSection, TwoFactorSection } from "./security-screen.js";
+import { SecurityDangerZone, SignInSection, TwoFactorSection } from "./security-screen.js";
 
 const session = {
   sessionKind: "full",
@@ -41,7 +41,14 @@ function managedBy(providerType: string, providerName: string) {
   };
 }
 
-async function renderSections(security: ReturnType<typeof overview>) {
+const PASSKEY = {
+  id: "01929b1e-0000-7000-8000-0000000000c1",
+  name: "Laptop",
+  createdAt: "2026-09-01T08:00:00.000Z",
+  lastUsedAt: null,
+};
+
+async function renderSections(security: Record<string, unknown>) {
   mockApi({
     "GET /api/v1/auth/session": () => ({ body: session }),
     "GET /api/v1/account/security": () => ({ body: security }),
@@ -55,6 +62,7 @@ async function renderSections(security: ReturnType<typeof overview>) {
       <PreferencesProvider>
         <SignInSection withEmail />
         <TwoFactorSection />
+        <SecurityDangerZone />
       </PreferencesProvider>
     ),
   });
@@ -97,5 +105,46 @@ describe("sign-in and security of the own account", () => {
     expect(screen.queryByRole("button", { name: "Change e-mail address" })).toBeNull();
     expect(await screen.findByText("Authenticator app")).toBeTruthy();
     expect(screen.getByText("Passkeys")).toBeTruthy();
+  });
+
+  it("keeps the only second factor of an account that must have one and says why", async () => {
+    await renderSections({
+      ...overview(null),
+      totp: true,
+      secondFactorRequired: true,
+      secondFactorRequiredBy: "instanceOwner",
+    });
+    const remove = await screen.findByRole("button", { name: "Remove authenticator app" });
+    expect(remove.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByText(
+        "This is your only second factor, and your account must keep one. Add a passkey first; then you can remove the authenticator app.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("keeps the only passkey of an account that must have a second factor", async () => {
+    await renderSections({
+      ...overview(null),
+      passkeys: [PASSKEY],
+      secondFactorRequired: true,
+      secondFactorRequiredBy: "organization",
+    });
+    const remove = await screen.findByRole("button", { name: "Remove passkey" });
+    expect(remove.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("lets people remove a factor when another remains or none is required", async () => {
+    await renderSections({
+      ...overview(null),
+      totp: true,
+      passkeys: [PASSKEY],
+      secondFactorRequired: true,
+      secondFactorRequiredBy: "instanceOwner",
+    });
+    expect(
+      (await screen.findByRole("button", { name: "Remove authenticator app" })).hasAttribute("disabled"),
+    ).toBe(false);
+    expect(screen.getByRole("button", { name: "Remove passkey" }).hasAttribute("disabled")).toBe(false);
   });
 });

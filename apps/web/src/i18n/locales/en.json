@@ -2977,6 +2977,8 @@
     "endOthersDescription": "Every other device has to sign in again.",
     "removeAuthenticator": "Remove authenticator app",
     "removeAuthenticatorSummary": "Codes from the app no longer work for sign-in. Set up another second factor first if your organization requires one.",
+    "lastFactorAuthenticator": "This is your only second factor, and your account must keep one. Add a passkey first; then you can remove the authenticator app.",
+    "lastFactorPasskey": "This is your only second factor, and your account must keep one. Set up an authenticator app or add another passkey first; then you can remove this one.",
     "removePasskey": "Remove passkey",
     "passkeyNameHelp": "For example, the device or security key.",
     "passwordHelp": "Use a long passphrase that you use nowhere else.",

@@ -11,6 +11,7 @@ import {
   completeConfiguredSetup,
   configuredSetupEnv,
   createAccount,
+  firstOrganizationId,
   OWNER,
   signedInClient,
   totpNow,
@@ -513,6 +514,27 @@ describe.skipIf(!databaseBaseUrl)("sign-in", () => {
   });
 
   describe("when a second factor is required", () => {
+    it("refuses to remove the last second factor while the organization requires one", async () => {
+      const organizationId = await firstOrganizationId(test);
+      const account = await createAccount(test, "organization.required@example.org");
+      const client = await signedInClient(test, account.email, account.password);
+      await addTotp(client);
+      const chain = { organization: organizationId };
+      await test.runtime.settings.set(twoFactorRequiredSetting, chain, "organization", true);
+      try {
+        expect((await client.get("/api/v1/account/security")).json()).toMatchObject({
+          secondFactorRequired: true,
+          secondFactorRequiredBy: "organization",
+        });
+        const removed = await client.delete("/api/v1/account/totp");
+        expect(removed.statusCode).toBe(409);
+        expect(removed.json()).toMatchObject({ code: "lastSecondFactor" });
+        expect((await client.get("/api/v1/account/security")).json()).toMatchObject({ totp: true });
+      } finally {
+        await test.runtime.settings.clear(twoFactorRequiredSetting, chain, "organization");
+      }
+    });
+
     it("lets the owner only set up a second factor until one exists", async () => {
       const client = new TestClient(test.app);
       const response = await client.post("/api/v1/auth/sign-in", OWNER);

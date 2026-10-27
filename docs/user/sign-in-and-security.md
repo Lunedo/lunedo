@@ -73,7 +73,7 @@ Under **Two-factor authentication**, local accounts and accounts managed through
 - **Passkeys**: with fingerprint, face recognition or a security key;
 - **Recovery codes**: ten codes, created with your first second factor. Each code works once, when you cannot use your second factor. Signing in with a recovery code sends you an e-mail. **Create new codes** makes the old ones stop working.
 
-When the instance or your organization requires a second factor, or an administrator reset yours, you set one up before you can use Lunedo, and you cannot remove the last one. The instance owner always needs one.
+When the instance or your organization requires a second factor, or an administrator reset yours, you set one up before you can use Lunedo, and you cannot remove the last one: **Remove authenticator app** and **Remove passkey** are then not available, and the page says to add another second factor first. The instance owner always needs one.
 
 If you lost your second factor, sign in with a recovery code and set up a new one. Without recovery codes, ask an administrator to reset your second factor. Accounts managed through OpenID Connect or SAML have no second factor in Lunedo; your provider handles it.
 

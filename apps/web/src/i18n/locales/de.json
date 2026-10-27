@@ -2977,6 +2977,8 @@
     "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden.",
     "removeAuthenticator": "Authenticator-App entfernen",
     "removeAuthenticatorSummary": "Codes aus der App funktionieren dann nicht mehr für die Anmeldung. Richte zuerst einen anderen zweiten Faktor ein, wenn deine Organisation einen verlangt.",
+    "lastFactorAuthenticator": "Das ist dein einziger zweiter Faktor, und dein Konto muss einen behalten. Füge zuerst einen Passkey hinzu; dann kannst du die Authenticator-App entfernen.",
+    "lastFactorPasskey": "Das ist dein einziger zweiter Faktor, und dein Konto muss einen behalten. Richte zuerst eine Authenticator-App ein oder füge einen weiteren Passkey hinzu; dann kannst du diesen entfernen.",
     "removePasskey": "Passkey entfernen",
     "passkeyNameHelp": "Zum Beispiel das Gerät oder der Sicherheitsschlüssel.",
     "passwordHelp": "Verwende eine lange Passphrase, die du sonst nirgends verwendest.",

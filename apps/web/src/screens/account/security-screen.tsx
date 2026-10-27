@@ -66,7 +66,11 @@ export function SecurityScreen() {
   );
 }
 
-function SecurityDangerZone() {
+function onlyRequiredFactor(data: { secondFactorRequired: boolean; totp: boolean; passkeys: unknown[] }) {
+  return data.secondFactorRequired && (data.totp ? 1 : 0) + data.passkeys.length === 1;
+}
+
+export function SecurityDangerZone() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const showFailure = useFailureToast();
@@ -74,13 +78,16 @@ function SecurityDangerZone() {
   const security = useQuery({ ...securityQuery, throwOnError: false });
   const [open, setOpen] = useState(false);
   if (!security.data?.totp) return null;
+  const locked = onlyRequiredFactor(security.data);
   return (
     <DangerZone title={t("common.dangerZone")}>
       <DangerAction
         title={t("security.removeAuthenticator")}
-        description={t("security.removeAuthenticatorSummary")}
+        description={
+          locked ? t("security.lastFactorAuthenticator") : t("security.removeAuthenticatorSummary")
+        }
         action={
-          <Button variant="danger" size="sm" onClick={() => setOpen(true)}>
+          <Button variant="danger" size="sm" disabled={locked} onClick={() => setOpen(true)}>
             {t("security.removeAuthenticator")}
           </Button>
         }
@@ -264,6 +271,7 @@ export function TwoFactorSection() {
   const data = security.data;
   if (signsInOnlyThroughProvider(data.managedBy)) return null;
   const hasFactor = data.totp || data.passkeys.length > 0;
+  const passkeyLocked = onlyRequiredFactor(data) && !data.totp;
 
   return (
     <Section title={t("security.twoFactor")}>
@@ -308,12 +316,21 @@ export function TwoFactorSection() {
               key={passkey.id}
               icon={Fingerprint}
               title={passkey.name}
-              description={t("security.passkeyDetails", {
-                created: format.date(passkey.createdAt),
-                used: passkey.lastUsedAt ? format.relative(passkey.lastUsedAt) : t("common.never"),
-              })}
+              description={
+                passkeyLocked
+                  ? t("security.lastFactorPasskey")
+                  : t("security.passkeyDetails", {
+                      created: format.date(passkey.createdAt),
+                      used: passkey.lastUsedAt ? format.relative(passkey.lastUsedAt) : t("common.never"),
+                    })
+              }
               actions={
-                <Button variant="danger" icon={Trash2} onClick={() => setRemovePasskey(passkey)}>
+                <Button
+                  variant="danger"
+                  icon={Trash2}
+                  disabled={passkeyLocked}
+                  onClick={() => setRemovePasskey(passkey)}
+                >
                   {t("security.removePasskey")}
                 </Button>
               }
