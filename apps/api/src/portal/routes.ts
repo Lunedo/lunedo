@@ -800,7 +800,7 @@ async function articleRoute(
   slug: string,
 ): Promise<FastifyReply> {
   const reader = services.portalReader;
-  const lookup = await reader.article(viewer.principal, target.config, number, slug, target.language);
+  const lookup = await reader.article(viewer.principal, target.config, number, target.language);
   if (!lookup) return sendPage(reply, view, notFoundPage(view), 404);
   if (lookup.type === "redirect") {
     const other = await services.portals.config(lookup.spaceId);

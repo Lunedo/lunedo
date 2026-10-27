@@ -376,19 +376,37 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const internalPortal = await test.services.portals.config(internal.id);
     if (!portal || !internalPortal) throw new Error("missing portal");
     const reader = test.services.portalReader;
-    expect(
-      await reader.article(ANONYMOUS, portal, draftedNumber, "entlassungen-standort-nord-intern", "en"),
-    ).toBeNull();
-    expect(await reader.article(ANONYMOUS, portal, draftedNumber, "zwischenstand-umzug", "en")).toBeNull();
-    expect(
-      await reader.article(ANONYMOUS, portal, movedNumber, "abmahnung-fall-huber-vorlage", "en"),
-    ).toBeNull();
-    expect(
-      await reader.article(ANONYMOUS, portal, draftedNumber, "standortwechsel-faq", "en"),
-    ).not.toBeNull();
-    expect(
-      await reader.article(owner, internalPortal, internalNumber, "abmahnung-fall-huber-vorlage", "en"),
-    ).toMatchObject({ type: "redirect", number: movedNumber });
+    for (const [number, canonical] of [
+      [draftedNumber, "standortwechsel-faq"],
+      [movedNumber, "abmahnung-vorlage"],
+    ] as const) {
+      const found = await reader.article(ANONYMOUS, portal, number, "en");
+      expect(found).toMatchObject({ type: "found", article: { slug: canonical } });
+      expect(JSON.stringify(found)).not.toMatch(/entlassungen|zwischenstand|huber/i);
+    }
+    expect(await reader.article(ANONYMOUS, portal, 999_999_999_999, "en")).toBeNull();
+    expect(await reader.article(owner, internalPortal, internalNumber, "en")).toMatchObject({
+      type: "redirect",
+      number: movedNumber,
+    });
+  }, 120_000);
+
+  it("sends an address with an unknown slug to the page of its number through the 404 page", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const id = await article(owner, open.id, "Drucker einrichten", "Text");
+    await test.services.versions.publish(owner, id);
+    const number = await numberOf(id);
+
+    const files = await site(owner, open.id, null);
+    expect(files.get("404.html")?.toString("utf8")).toContain("data-not-found");
+    expect(files.has(`${number}.html`)).toBe(true);
+    const script = [...files.entries()].find(([name]) => /^_assets\/portal(-[0-9a-f]+)?\.js$/.test(name));
+    const source = script?.[1].toString("utf8") ?? "";
+    expect(source).toContain('querySelector("[data-not-found]")');
+    expect(source).toContain('.split("/").filter(Boolean)');
+    expect(source).toContain("target.origin === location.origin");
   }, 120_000);
 
   it("names files of articles and categories with titles in other scripts and links them encoded", async () => {

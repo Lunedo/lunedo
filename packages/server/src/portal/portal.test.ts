@@ -655,7 +655,7 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     const config = await test.services.portals.config(kb.id);
     if (!config) throw new Error("missing config");
     const html = async () => {
-      const found = await test.services.portalReader.article(ANONYMOUS, config, numberOf(source.id), "");
+      const found = await test.services.portalReader.article(ANONYMOUS, config, numberOf(source.id));
       if (found?.type !== "found") throw new Error("missing article");
       return found.article.html;
     };
