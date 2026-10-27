@@ -276,7 +276,7 @@ const articleSummaryShape = {
     .int()
     .nullable()
     .describe(
-      "Number of the article, unique in its knowledge base and never reused. It stays when the article moves.",
+      "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves.",
     ),
   slug: z
     .string()
@@ -314,7 +314,7 @@ export const exampleArticle = {
   spaceId: exampleSpace.id,
   title: "Set up the VPN connection",
   type: "howTo" as const,
-  number: 123,
+  number: 1123,
   slug: "set-up-the-vpn-connection",
   categoryPath: [{ id: exampleCategory.id, title: "IT" }],
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -419,7 +419,7 @@ export const exampleArticleRecord = {
   publishedAt: "2026-09-01T08:00:00.000Z",
   versionPublishedAt: "2026-10-05T08:00:00.000Z",
   lastReviewedAt: null,
-  portalUrl: "https://wiki.example.org/help/help/123-set-up-the-vpn-connection",
+  portalUrl: "https://wiki.example.org/help/help/1123-set-up-the-vpn-connection",
 };
 
 const articlesQuery = z

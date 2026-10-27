@@ -73,7 +73,7 @@ export const configSettings = [
   setting(
     "LUNEDO_IMPORT_DIR",
     path.default("/data/import"),
-    "Import folder: exports placed in an organization's subfolder, named after its slug, can be imported without uploading them. Only regular files directly inside that subfolder are read.",
+    "Import folder: exports placed in an organization's subfolder, named after its ID, can be imported without uploading them. Only regular files directly inside that subfolder are read.",
   ),
   setting(
     "LUNEDO_FILE_STORAGE",
@@ -209,7 +209,7 @@ export const configSettings = [
         (entries) => entries.every(isAddressOrRange),
         "must be a comma-separated list of IP addresses and CIDR ranges",
       ),
-    "Private networks that chat channels, Confluence imports and the S3 backup target may reach. Requests to private, loopback and link-local addresses are refused otherwise.",
+    "Private networks that chat channels, Confluence imports, the S3 backup target and the update check may reach. Requests to private, loopback and link-local addresses are refused otherwise.",
   ),
   setting(
     "LUNEDO_PASSWORD_HASH_CONCURRENCY",

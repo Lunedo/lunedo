@@ -83,7 +83,13 @@ export const seriesDefaultsResponse = z
         interval: z.number().int().describe("Every how many units."),
         weekdays: z.array(z.string()).optional().describe("Weekdays."),
         monthDay: z.number().int().optional().describe("Day of the month."),
-        weekOfMonth: z.number().int().optional().describe("Week of the month."),
+        weekOfMonth: z
+          .number()
+          .int()
+          .min(-1)
+          .max(4)
+          .optional()
+          .describe("For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last."),
         weekday: z.string().optional().describe("Weekday."),
       })
       .describe("Default rhythm."),

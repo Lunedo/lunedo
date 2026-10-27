@@ -7,6 +7,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { OpenApiValidator } from "../testing/openapi-validator.js";
 import { completenessIssues } from "./completeness.js";
 import { generateOpenApi, serializeOpenApi } from "./document.js";
+import { GETTING_STARTED } from "./getting-started.js";
 import { apiRoutes, routesOf } from "./routes.js";
 
 const committed = new URL("../../openapi.json", import.meta.url);
@@ -208,5 +209,13 @@ describe("the OpenAPI description", () => {
         "POST /api/v1/demo request body has no example",
       ]),
     );
+  });
+});
+
+describe("the getting-started text", () => {
+  it("names no route outside the reference and states that tokens expire only when a date applies", () => {
+    expect(GETTING_STARTED).not.toContain("/account/tokens");
+    expect(GETTING_STARTED).not.toContain("90 days");
+    expect(GETTING_STARTED).toContain("no expiry unless you set a date");
   });
 });

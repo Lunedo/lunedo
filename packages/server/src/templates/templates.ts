@@ -70,8 +70,12 @@ export interface TemplateInput {
 }
 
 export const seriesDefaultsSchema = z
-  .object({ rhythm: rhythmSchema, durationMinutes: z.number().int().min(5).max(1440) })
-  .strict();
+  .object({
+    rhythm: rhythmSchema.describe("Default rhythm."),
+    durationMinutes: z.number().int().min(5).max(1440).describe("Default duration in minutes."),
+  })
+  .strict()
+  .describe("Defaults of a series template.");
 
 export type TemplateScope =
   | { level: "instance" }

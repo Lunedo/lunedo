@@ -120,7 +120,7 @@ export class BackupTargetError extends Error {
 
   get explanation(): string {
     if (this.blockedAddress === null) return this.message;
-    return `${STEP_TEXTS[this.step]} failed: The endpoint resolves to ${this.blockedAddress}, which is in a private network. If Lunedo should reach it, add ${this.allowedNetwork} or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.`;
+    return `${STEP_TEXTS[this.step]} failed: The endpoint resolves to ${this.blockedAddress}, which is in a private network. If Lunedo should reach it, add ${this.allowedNetwork} to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.`;
   }
 }
 

@@ -85,12 +85,14 @@
               "properties": {
                 "key": {
                   "type": "string",
-                  "pattern": "^[a-z][a-zA-Z0-9]{0,39}$"
+                  "pattern": "^[a-z][a-zA-Z0-9]{0,39}$",
+                  "description": "Key of the field: a letter followed by letters and digits, at most 40 characters."
                 },
                 "label": {
                   "type": "string",
                   "minLength": 1,
-                  "maxLength": 100
+                  "maxLength": 100,
+                  "description": "Label shown next to the input."
                 },
                 "type": {
                   "type": "string",
@@ -99,12 +101,15 @@
                     "date",
                     "person",
                     "choice"
-                  ]
+                  ],
+                  "description": "Kind of input: text, date, person or choice."
                 },
                 "required": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "Whether the input must be filled in."
                 },
                 "options": {
+                  "description": "Options of a choice field; other fields have none.",
                   "maxItems": 30,
                   "type": "array",
                   "items": {
@@ -120,7 +125,8 @@
                 "type",
                 "required"
               ],
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "An input field asked for when a page is created from the template."
             },
             "description": "Input fields asked for when a page is created."
           },
@@ -140,15 +146,18 @@
                           "weekly",
                           "monthly",
                           "yearly"
-                        ]
+                        ],
+                        "description": "How often the meeting repeats."
                       },
                       "interval": {
                         "default": 1,
+                        "description": "Every how many days, weeks, months or years.",
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 52
                       },
                       "weekdays": {
+                        "description": "For `weekly`: the days of the week.",
                         "maxItems": 7,
                         "type": "array",
                         "items": {
@@ -165,16 +174,19 @@
                         }
                       },
                       "monthDay": {
+                        "description": "For `monthly` by date: the day of the month.",
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 31
                       },
                       "weekOfMonth": {
+                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                         "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
+                        "minimum": -1,
+                        "maximum": 4
                       },
                       "weekday": {
+                        "description": "For `monthly` by weekday: the day of the week.",
                         "type": "string",
                         "enum": [
                           "MO",
@@ -190,19 +202,22 @@
                     "required": [
                       "frequency"
                     ],
-                    "additionalProperties": false
+                    "additionalProperties": false,
+                    "description": "Default rhythm."
                   },
                   "durationMinutes": {
                     "type": "integer",
                     "minimum": 5,
-                    "maximum": 1440
+                    "maximum": 1440,
+                    "description": "Default duration in minutes."
                   }
                 },
                 "required": [
                   "rhythm",
                   "durationMinutes"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "Defaults of a series template."
               },
               {
                 "type": "null"
@@ -270,7 +285,8 @@
             "properties": {
               "type": {
                 "type": "string",
-                "const": "doc"
+                "const": "doc",
+                "description": "Always `doc`."
               }
             },
             "required": [

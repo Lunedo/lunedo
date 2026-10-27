@@ -165,7 +165,7 @@ Rolling back an update means restoring the backup before the update with the pre
 
 ## Test restore
 
-**Test restore** in the list, or the monthly test restore (on by default: after the first scheduled backup of a month), checks one backup:
+**Test restore** in the list, or the monthly test restore (on by default: after a scheduled backup, once the last automatic test is a month old), checks one backup:
 
 1. It verifies the backup like `backup verify`.
 2. When the database user may create databases, it checks that the work directory (`LUNEDO_WORK_DIR`) has free space for the files of the backup and for a copy of the database (each plus 20 %), below the critical level of the storage warnings. Lunedo cannot measure the disk of the database server; with the Compose file of the setup script, PostgreSQL keeps its data on the same host disk, so the check covers it.
