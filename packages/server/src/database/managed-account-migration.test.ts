@@ -131,4 +131,32 @@ describe.skipIf(!baseUrl)("managed account migration", () => {
     const setting = await target.query("select 1 from setting_values where key = 'auth.passwordSignIn'");
     expect(setting.rows).toEqual([]);
   });
+
+  it("moves OpenID Connect and SAML providers that asked for a Lunedo second factor to the provider's own", async () => {
+    const target = await migratedBefore("0107_provider_second_factor");
+    const ids = { oidc: randomUUID(), saml: randomUUID(), ldap: randomUUID(), proof: randomUUID() };
+    const config = (mode: string) => JSON.stringify({ secondFactor: { mode, proofValues: ["mfa"] } });
+    for (const [id, type, preset, mode] of [
+      [ids.oidc, "oidc", "generic", "lunedo"],
+      [ids.saml, "saml", "generic", "lunedo"],
+      [ids.ldap, "ldap", "activeDirectory", "lunedo"],
+      [ids.proof, "oidc", "generic", "providerProof"],
+    ] as const) {
+      await target.query(
+        "insert into identity_providers (id, type, preset, name, config, setup_completed_at) values ($1, $2, $3, $5, $4, now())",
+        [id, type, preset, config(mode), `Provider ${mode}`],
+      );
+    }
+    await runMigrations(target, { logger });
+    const rows = await target.query<{ id: string; mode: string }>(
+      "select id, config -> 'secondFactor' ->> 'mode' as mode from identity_providers",
+    );
+    const modes = Object.fromEntries(rows.rows.map((row) => [row.id, row.mode]));
+    expect(modes).toEqual({
+      [ids.oidc]: "provider",
+      [ids.saml]: "provider",
+      [ids.ldap]: "lunedo",
+      [ids.proof]: "providerProof",
+    });
+  });
 });

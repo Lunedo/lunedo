@@ -250,6 +250,8 @@ OIDC and SAML providers have the setting **Second factor after a sign-in through
 
 The instance owner is the exception: when the owner signs in through a linked provider, Lunedo asks for the owner's own second factor.
 
+Earlier versions had a third option that always asked for a Lunedo second factor. The update sets providers that used it to "Handled by the provider", so nobody is locked out; choose "Require proof from the provider" afterwards if the provider reports multi-factor authentication.
+
 LDAP providers offer "Always ask for a Lunedo second factor" (default) and "No additional second factor". With the second, Lunedo still asks where the instance or an organization requires a second factor, because a directory password proves no second factor. When Lunedo asks, the person confirms with an authenticator code, a passkey or a recovery code; a person without a second factor first sets one up.
 
 OIDC providers can end sessions with back-channel logout; see [OpenID Connect](identity-providers/openid-connect.md#back-channel-logout).
