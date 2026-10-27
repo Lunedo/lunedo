@@ -32,7 +32,7 @@ Until metadata is loaded, nobody can sign in through the provider.
 
 | Setting | Default | Effect |
 |---|---|---|
-| Require a signed response | Off | The assertion must always be signed. With this setting, the whole response must be signed as well. Entra ID and ADFS sign only the assertion by default. |
+| Require a signed response | Off | The assertion must always be signed. With this setting, the whole response must be signed as well. Entra ID signs only the assertion by default; choose the signing option **Sign SAML response and assertion** there. In ADFS, run `Set-AdfsRelyingPartyTrust -TargetName <trust> -SamlResponseSignature MessageAndAssertion`. |
 | Require encrypted assertions | Off | The identity provider encrypts the assertion with Lunedo's certificate from the metadata. Turn it on only after the identity provider is set up for it, or sign-in stops working. |
 | Allow sign-in started at the identity provider | Off | Lets people start from a portal of the identity provider, such as the Microsoft app launcher. Such a sign-in cannot be tied to a request from the browser, so an attacker could sign someone into the attacker's account. It also needs the instance URL to be set. |
 
@@ -55,7 +55,7 @@ With **Require proof from the provider**, Lunedo compares the accepted proof val
 
 1. Choose **SAML 2.0** and the identity provider **Active Directory Federation Services**. Enter the federation metadata address of ADFS, usually `https://adfs.example.com/FederationMetadata/2007-06/FederationMetadata.xml`, with the name of the ADFS farm, not of a single server.
 2. In ADFS Management, choose **Add Relying Party Trust**, choose **Claims aware**, and let the wizard import the data about the relying party from Lunedo's metadata address.
-3. In the claim issuance policy of the trust, add a rule with the template **Send LDAP Attributes as Claims** and the attribute store Active Directory that sends the attributes below.
+3. In the claim issuance policy of the trust, add a rule with the template **Send LDAP Attributes as Claims** and the attribute store Active Directory that sends the attributes below. `objectGUID` is usually not in the list of LDAP attributes; type it, and type `objectGUID` as the outgoing claim type.
 4. Choose **Save and continue**, check the attributes, and test the sign-in.
 
 | Setting in Lunedo | Default claim type |
@@ -66,9 +66,9 @@ With **Require proof from the provider**, Lunedo compares the accepted proof val
 | Attribute for the display name | `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name` |
 | Attribute for groups | `http://schemas.microsoft.com/ws/2008/06/identity/claims/groupsid` |
 
-The identifier is the person's `objectGUID`. ADFS sends it in Base64; Lunedo converts it to the usual GUID form, so the identifier matches the one an Active Directory provider uses.
+The identifier is the person's `objectGUID`. ADFS sends it as Base64 text; Lunedo converts it to the usual GUID form, so the identifier matches the one an Active Directory provider uses.
 
-Groups come as SIDs by default: in the same rule, map the LDAP attribute "Token-Groups as SIDs" to the outgoing claim type Group SID. SIDs stay the same when a group is renamed. Group names ("Token-Groups – Unqualified Names") remain possible with **Group values** set to names; then renaming a group in Active Directory breaks the rules for it.
+Groups come as SIDs by default: in the same rule, map the LDAP attribute "Token-Groups as SIDs" to the outgoing claim type Group SID. SIDs stay the same when a group is renamed. Group names ("Token-Groups - Unqualified Names") remain possible with **Group values** set to names; then renaming a group in Active Directory breaks the rules for it.
 
 ## Other SAML providers
 

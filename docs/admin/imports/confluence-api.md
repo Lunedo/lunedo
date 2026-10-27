@@ -7,7 +7,7 @@ Lunedo reads the same content an XML export contains, into the same records, so 
 ## Confluence Cloud
 
 1. In the step **Source**, choose **Confluence Cloud**.
-2. In the step **Connection**, enter the **Site address** (such as `example.atlassian.net`), **Your Atlassian e-mail address** and the **API token**. Create the token at id.atlassian.com › Security › API tokens.
+2. In the step **Connection**, enter the **Site address** (such as `example.atlassian.net`), **Your Atlassian e-mail address** and the **API token**. Create the token at `https://id.atlassian.com/manage-profile/security/api-tokens` with **Create API token** (a token without scopes; scoped tokens only work through `api.atlassian.com`, which Lunedo does not use).
 3. Choose **Test connection**. Lunedo reads the account the token belongs to and refuses a wrong token at once. Nothing is stored before the test succeeds.
 
 Address rules:
@@ -24,7 +24,7 @@ For Confluence Data Center and Server 7.9 or newer.
 1. An instance administrator adds the host of Confluence to **Further Atlassian sites** (see [Import settings](../imports.md#import-settings)).
 2. In the step **Source**, choose **Confluence Data Center**.
 3. In the step **Connection**, enter the **Base address**: the address you open Confluence with, including a context path, such as `https://wiki.example.com/confluence`.
-4. Paste a **Personal access token**. Create it in Confluence under your profile › Personal Access Tokens › Create token, with an account that can read every space you want to import.
+4. Paste a **Personal access token**. Create it in Confluence under your avatar › Settings › Personal access tokens › **Create token**, with an account that can read every space you want to import.
 5. If the server uses a certificate from your own certificate authority, open **Advanced** and paste the certificate of the authority (not the one of the server) as PEM. It is kept and deleted with the token.
 6. Choose **Test connection**.
 

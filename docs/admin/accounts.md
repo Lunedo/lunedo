@@ -42,7 +42,7 @@ On the account page, the danger zone offers:
 | **End all sessions** | Signs the person out on every device. They can sign in again right away. Single sessions can be ended under **Sign-in and security**. |
 | **Reset second factor** | Removes the authenticator app, passkeys and recovery codes and ends every session. The person sets up a new second factor at the next sign-in and receives an e-mail. A reason is required; it goes into the audit log and the e-mail. |
 | **Deactivate account** | As described above. |
-| **Reactivate** | For deactivated accounts. The account can sign in again and gets back its memberships and roles. |
+| **Reactivate** | For deactivated accounts. The account can sign in again with the memberships and roles it kept while deactivated. Revoked API tokens stay revoked. |
 
 These actions ask you to confirm your identity first and are recorded in the audit log.
 
@@ -56,7 +56,7 @@ To create one:
 2. Select **Add a person without an account**.
 3. Enter the name and the e-mail address, then select **Create placeholder**.
 
-When the person signs in through an identity provider for the first time with that address, and the provider verifies the address, the placeholder becomes their account under the same rules as an account created at sign-in. It keeps its memberships, groups and roles. An address that is not verified never takes over a placeholder.
+When the person signs in through an identity provider for the first time with that address, and the address is in one of the provider's domains, the placeholder becomes their account under the same rules as an account created at sign-in (see [First sign-in](identity-providers.md#first-sign-in)). It keeps its memberships, groups and roles. An address outside the provider's domains never takes over a placeholder.
 
 When the person signed in with another address, merge the placeholder into their account:
 

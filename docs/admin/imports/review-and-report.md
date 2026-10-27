@@ -30,14 +30,14 @@ Where content cannot be taken over, the import writes a short note into the page
 Confluence names people by account. The tab **People** lists everyone of the import who has no account in Lunedo yet, with the content they own.
 
 - People are matched to accounts of the organization only by e-mail address. Everyone else becomes a placeholder with the best name known.
-- A placeholder with an e-mail address is taken over when the person signs in with that verified address.
+- A placeholder with an e-mail address becomes the person's account when they first sign in through a sign-in provider that confirms that address and may create accounts, or when SCIM provisions an account with that address.
 - A placeholder that already holds access in another space never gets an e-mail address or a match from an import; it can only be mapped by hand.
 - The list suggests members with a similar name. Nobody is mapped by name automatically.
 - **Upload user list** maps remaining placeholders to members with the same e-mail address and names the others. It works before and after accepting.
 
 Mapping a placeholder moves pages, comments, mentions, tasks, reactions and places on page restrictions to the chosen account in one step. Nobody is notified. A mapping cannot be undone. You cannot map a placeholder that holds access to your own account.
 
-Groups from Confluence are matched by name to groups of the organization, including synchronized groups. The tab **Permissions** lists unmatched groups as "Missing group": map an existing group or create a local group with that name. Nothing is created automatically. You cannot map a group named in page restrictions to a group you belong to.
+Groups from Confluence are matched by name to groups of the organization, including synchronized groups. The tab **Permissions** lists unmatched groups as "Missing group": map an existing group or create a local group with that name. Nothing is created automatically. Mapping a group you belong to or manage, or creating a group here, is recorded in the audit log as adding yourself to that group.
 
 Before accepting, only the person who started the import maps people and groups. After accepting, everyone who may import in the organization can, so open mappings never depend on one person. The target is always an active member of the organization.
 

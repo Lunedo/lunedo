@@ -22,18 +22,18 @@ Google Workspace sends the e-mail address, the name and the user ID; there is no
 
 The ID token of Google carries no groups. Without group synchronization, mapping rules see no groups. With it, Lunedo reads the groups of each person through the Directory API with a service account, at sign-in and in the background, and the rule dialog searches the groups of the domain by name.
 
-1. In Google Cloud, create a service account and a JSON key for it. When an organization policy blocks the creation of keys, an organization administrator must allow it for the project.
+1. In Google Cloud, create a service account and a JSON key for it. When the organization policy `iam.disableServiceAccountKeyCreation` blocks the creation of keys, which is the default in newer organizations, an organization policy administrator must exempt the project.
 2. Give the service account access to the directory, in one of two ways (see below).
 3. On the provider page in Lunedo, open **Settings**, turn on **Synchronize groups** under **Synchronization**, and choose **How Lunedo reads the groups**.
 4. Paste the JSON key under **Service account key** and choose **Save key**. The key is stored encrypted and never shown again; **Remove key** deletes it.
 
 ### Administrator role (recommended)
 
-In the Google Admin console, under **Account > Admin roles**, open the prebuilt role Groups Reader, choose **Assign admin** and **Assign service accounts**, and enter the address of the service account. Lunedo then requests only the read-only scope `admin.directory.group.readonly` and acts as the service account itself, so the Google audit log shows the service account.
+In the Google Admin console, under **Account > Admin roles**, point to a role that can read groups, for example the prebuilt role Groups Reader, choose **Assign admin** and **Assign service accounts**, enter the e-mail address of the service account and choose **Add** and **Assign role**. When the role is limited to some kinds of groups, Lunedo sees only those groups. Lunedo then requests only the read-only scope `admin.directory.group.readonly` and acts as the service account itself, so the Google audit log shows the service account.
 
 ### Domain-wide delegation
 
-Under **Security > Access and data control > API controls > Manage Domain Wide Delegation**, authorize the client ID of the service account for the scopes `admin.directory.group.readonly` and `admin.directory.user.readonly`. In Lunedo, enter the address of an administrator under **Administrator for the directory**; the service account acts for that person. Delegation lets the service account use these scopes for the whole domain as that administrator. Use it only when the administrator role is not possible. A new authorization can take up to 24 hours to take effect.
+Under **Security > Access and data control > API controls > Manage Domain Wide Delegation**, choose **Add new** and authorize the client ID of the service account for the scopes `https://www.googleapis.com/auth/admin.directory.group.readonly` and `https://www.googleapis.com/auth/admin.directory.user.readonly`. The client ID is under **Advanced settings** in the details of the service account. In Lunedo, enter the address of an administrator under **Administrator for the directory**; the service account acts for that person. Delegation lets the service account use these scopes for the whole domain as that administrator. Use it only when the administrator role is not possible. Google says a change can take up to 24 hours, but usually applies sooner.
 
 ## Detecting suspended accounts
 

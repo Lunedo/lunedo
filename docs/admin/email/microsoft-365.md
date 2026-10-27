@@ -18,7 +18,7 @@ Both are set up under **Settings › Instance › Services › Delivery** and ne
 3. Under **API permissions**, add the Microsoft Graph application permission `Mail.Send` and grant admin consent. The app can then send as every mailbox of the tenant.
 4. Recommended: limit the app to the sender mailbox with RBAC for Applications in Exchange Online, then remove `Mail.Send` from the app registration. In Exchange Online PowerShell:
    1. Connect with `Connect-ExchangeOnline`.
-   2. If Exchange Online reports that the organization is dehydrated, run `Enable-OrganizationCustomization` first. This can take several hours to complete.
+   2. If a command in the next steps asks you to run `Enable-OrganizationCustomization`, run it once, then repeat that command.
    3. Register the app: `New-ServicePrincipal -AppId <application ID> -ObjectId <object ID> -DisplayName "Lunedo mail"`. Take the object ID from **Enterprise applications**, not from **App registrations**.
    4. Create a scope that contains only the sender mailbox: `New-ManagementScope -Name "Lunedo sender" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'wiki@nordwind.test'"`.
    5. Give the app the role for that scope: `New-ManagementRoleAssignment -App <application ID> -Role "Application Mail.Send" -CustomResourceScope "Lunedo sender"`.
@@ -38,7 +38,7 @@ Both are set up under **Settings › Instance › Services › Delivery** and ne
 6. Enter an address under **Send a test mail to** and select **Send test mail**.
 7. Select **Save** again. Lunedo now sends through Microsoft Graph.
 
-A test mail can be sent with settings before they are saved; it always uses the stored credentials. Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. The message trace in the Exchange admin center shows what happened to a mail.
+A test mail can be sent with settings before they are saved; it always uses the stored credentials. Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when the tenant has reached its daily limit of external recipients. The message trace in the Exchange admin center shows what happened to a mail.
 
 ### Credentials and renewal
 
@@ -101,9 +101,11 @@ Delivery through Graph is retried like delivery through SMTP, see [E-mail](../em
    1. Register the app as a service principal in Exchange: `New-ServicePrincipal -AppId <application ID> -ObjectId <object ID> -DisplayName "Lunedo mail <application ID>"`
    2. Let this service principal use the mailbox. `Add-MailboxPermission` takes the identity of the Exchange service principal, not the application ID, so the command reads it by its display name: `Add-MailboxPermission -Identity <mailbox> -User (Get-ServicePrincipal -Identity "Lunedo mail <application ID>").Identity -AccessRights FullAccess`
    3. Allow SMTP sign-in for the mailbox: `Set-CASMailbox -Identity <mailbox> -SmtpClientAuthenticationDisabled $false`
+
+   When security defaults are on in Entra ID, Exchange Online refuses SMTP sign-in; use [Microsoft Graph](#microsoft-graph) instead. When the sender address is not the mailbox, also give the service principal Send As permission for the sender address with `Add-RecipientPermission`.
 5. In Lunedo, open **Settings › Instance › Services › Delivery**, select **SMTP** under **Method** and the service **Microsoft 365**. It fills in `smtp.office365.com`, port 587, STARTTLS and OAuth2.
 6. Enter the **Mailbox**, the **Tenant ID**, the **Application (client) ID**, the **Client secret** and the **Sender address**.
-7. For a cloud other than the global one, open **Advanced: other Microsoft cloud** and choose **US Government** or **China (21Vianet)** under **Microsoft cloud**.
+7. For a cloud other than the global one, open **Advanced: other Microsoft cloud** and choose **US Government** or **China (21Vianet)** under **Microsoft cloud**. This changes the token endpoint; the server and the scope stay as above, so send a test mail to check that the mail server of that cloud accepts the token.
 8. Send a test mail, then save.
 
 Lunedo gets the token with the client credentials grant at `<authority>/<tenant>/oauth2/v2.0/token` with the scope `https://outlook.office365.com/.default`. A stored secret is kept only while tenant, application and cloud stay the same; a new app needs its secret again. Token errors are listed in [E-mail](../email.md#test-mail-fails).

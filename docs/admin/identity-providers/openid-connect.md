@@ -66,10 +66,12 @@ With **Require proof from the provider**, Lunedo checks the `amr` claim of the I
 - Issuer URL: `https://sso.example.com/realms/{realm}`.
 - Create an OpenID Connect client with client authentication turned on, and enter the redirect URI as valid redirect URI.
 - To send groups, add a mapper of the type **Group Membership** to the client, with the token claim name `groups` and **Add to ID token** on, and enter `groups` as **Claim for groups**. With **Full group path** on, Keycloak sends paths such as `/staff/editors`; turn it off to send plain group names. Either way, renaming a group in Keycloak breaks its rules.
+- When the ID token carries no `amr` claim, add a mapper of the type **Authentication Method Reference (AMR)** to the client.
 
 ## Authentik
 
 - Issuer URL: `https://auth.example.com/application/o/{application slug}/`, with the trailing slash. This is the issuer when the provider keeps its default issuer mode, one issuer per provider; otherwise enter the `issuer` value from the provider's discovery document.
-- Create an OAuth2/OpenID provider with the client type "Confidential" and enter the redirect URI.
+- Create an OAuth2/OpenID provider with the client type **Confidential** and add the redirect URI with the matching mode **Strict**.
+- Keep **Include claims in id_token** on in the advanced protocol settings, so that the claims are in the ID token.
 - Choose a signing key for the provider, so that ID tokens are signed with RS256 or another algorithm from the list above.
-- The default `profile` scope sends the names of the person's groups in the claim `groups`. Enter `groups` as **Claim for groups**.
+- The default `profile` scope sends the names of the person's groups in the claim `groups`. Enter `groups` as **Claim for groups**. Renaming a group in Authentik breaks its rules.

@@ -38,9 +38,9 @@ All links are relative, so the website works under any domain and in a subfolder
 
 ## Publishing on Cloudflare Pages
 
-In the dashboard: **Workers & Pages › Create › Pages › Upload assets**, name the project, drag the unpacked folder (not the ZIP file) into the upload area and deploy. Each new upload replaces the website.
+In the dashboard, open **Workers & Pages**, choose **Create application** and the option to upload your files by drag and drop. Name the project, drag the ZIP file or the unpacked folder into the upload area and deploy. Each new upload replaces the website.
 
-With Wrangler:
+With Wrangler, which takes only the unpacked folder:
 
 ```sh
 unzip "IT Help 2026-10-20.zip" -d site
@@ -60,4 +60,4 @@ location /help/ {
 }
 ```
 
-GitHub Pages serves the files as they are; earlier addresses work through the HTML redirect pages.
+On GitHub Pages, publishing from a branch runs Jekyll, which leaves out folders whose names start with an underscore, such as `_assets/`. Add an empty file `.nojekyll` next to `index.html`, or publish with a GitHub Actions workflow. GitHub Pages does not read `_redirects`; earlier addresses work through the HTML redirect pages.

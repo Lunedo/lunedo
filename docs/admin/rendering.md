@@ -52,9 +52,9 @@ The image `ghcr.io/lunedo/render` runs headless Chromium from Debian and a small
 
 Chromium runs with its own sandbox by default. The sandbox needs user namespaces, which container runtimes restrict:
 
-- The host must allow unprivileged user namespaces. Debian allows them; on Ubuntu 23.10 and later, AppArmor restricts them, so set `kernel.apparmor_restrict_unprivileged_userns=0` with `sysctl` or give the container an AppArmor profile that allows them.
-- Docker's default seccomp profile refuses the system calls that create user namespaces. Run the container with a seccomp profile that allows them, as in the example above. Start from Docker's default profile (`profiles/seccomp/default.json` in the Moby repository) and allow `clone`, `clone3`, `unshare` and `setns` without the `CAP_SYS_ADMIN` condition, or use the Chromium profile that Playwright publishes in its repository (`utils/docker/seccomp_profile.json`). Do not use `seccomp=unconfined` or `privileged: true`.
-- Podman in rootless mode and Kubernetes with user namespaces enabled (`hostUsers: false`) allow the sandbox without further settings.
+- The host must allow unprivileged user namespaces. Debian allows them. Ubuntu 23.10 and later can restrict them through AppArmor: when `kernel.apparmor_restrict_unprivileged_userns` is `1`, set it to `0` with `sysctl` or give the container an AppArmor profile that allows user namespaces.
+- Docker's default seccomp profile refuses the system calls that create user namespaces. Run the container with a seccomp profile that allows them, as in the example above. Start from Docker's default profile (`seccomp/default.json` in the `moby/profiles` repository) and allow `clone`, `clone3`, `unshare` and `setns` without the `CAP_SYS_ADMIN` condition, or use the Chromium profile that Playwright publishes in its repository (`utils/docker/seccomp_profile.json`). Do not use `seccomp=unconfined` or `privileged: true`.
+- Podman's default seccomp profile allows these system calls. On Kubernetes, give the pod a seccomp profile that allows them, as for Docker.
 
 If Chromium cannot start with the sandbox, the container stops and logs `Chromium did not start` with a hint to this section. `RENDER_CHROMIUM_SANDBOX=false` turns the sandbox off as an explicit exception. The container then logs a warning at every start, because a flaw in Chromium's image or font decoding could run code with the rights of the container. In that case, keeping the container on the internal network matters above all.
 

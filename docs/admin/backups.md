@@ -109,7 +109,7 @@ If the worker is killed during a test restore, the temporary database and direct
 
 ## Warnings
 
-Warnings go to the instance administrators (notification center, e-mail and push, as their preferences say) and to the [operations contacts](storage.md#operations-contacts) (e-mail and Teams):
+Warnings go to the instance administrators (notification center, e-mail and push, as their preferences say) and to the [operations contacts](storage.md#operations-contacts) (e-mail, and a Teams post when a Teams webhook is set):
 
 | Warning | When | Repeated |
 |---|---|---|

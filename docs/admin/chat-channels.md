@@ -42,24 +42,26 @@ Only content every member of the space can read is posted: the item is published
 
 Lunedo posts an Adaptive Card to a Teams Workflows webhook.
 
-1. In Teams, open the channel and choose **···** › **Workflows**.
-2. Pick "Post to a channel when a webhook request is received".
-3. Finish the workflow and copy the address it shows.
+1. In Teams, select **More options (···)** next to the channel, then **Workflows**.
+2. Pick the template **Send webhook alerts to a channel**.
+3. Check the team and the channel, select **Save** and copy the webhook address the workflow shows.
 4. In Lunedo, choose **Microsoft Teams (Workflows)** and paste the address under **Webhook address**.
+
+The workflow belongs to the person who created it. Add a co-owner in the Workflows app, so the posts keep working when that person leaves.
 
 The operations contacts of the instance can also receive warnings in Teams, see [Notifications](notifications.md#operations-contacts).
 
 ## Slack
 
-1. In Slack, create an app with Incoming Webhooks.
-2. Add a webhook for the channel.
-3. Copy the webhook address.
+1. Create a Slack app for your workspace, open **Incoming Webhooks** in its settings and turn on **Activate Incoming Webhooks**.
+2. Select **Add New Webhook to Workspace**, choose the channel and confirm.
+3. Copy the new address under **Webhook URLs for Your Workspace**; it starts with `https://hooks.slack.com/services/`.
 4. In Lunedo, choose **Slack** and paste it under **Webhook address**.
 
 ## Discord
 
-1. In the channel settings, open **Integrations › Webhooks**.
-2. Create a webhook and copy its address.
+1. Open the settings of the channel (**Edit Channel**), then **Integrations › Webhooks**. This needs the Manage Webhooks permission.
+2. Create a webhook and copy its address with **Copy Webhook URL**.
 3. In Lunedo, choose **Discord** and paste it under **Webhook address**.
 
 ## Matrix
@@ -68,7 +70,7 @@ Lunedo posts to a Matrix room as a bot account.
 
 1. Create a bot account on your homeserver and invite it to the room.
 2. In the room settings, copy the address of the room or its `matrix.to` link.
-3. Sign in as the bot and copy its access token.
+3. Sign in as the bot and copy its access token. In Element it is at the bottom of **All settings › Help & About**. Close the session afterwards without signing out, because signing out ends the token.
 4. In Lunedo, choose **Matrix** and enter the **Homeserver address** (for example `https://matrix.example.com`), the **Room** (for example `#ops:example.com`) and the **Access token of the bot**.
 
 When saving, Lunedo checks that the homeserver accepts the token and knows the room.

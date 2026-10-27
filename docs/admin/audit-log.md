@@ -10,7 +10,7 @@ Each entry also keeps the names at the time of the event: of the acting account,
 
 Entries never contain passwords, tokens, codes or other secrets. Personal preferences such as the color mode or the language are not recorded; security-relevant personal actions such as sign-ins, password and second-factor changes, sessions and tokens are.
 
-Events about a confidential space keep no titles or names of its content. People who are not members of that space see such an event without the people involved, with the note that it concerns a confidential space.
+Events about a confidential space keep no titles or names of its content. People who cannot see that space see such an event without the people involved, with the note that it concerns a confidential space. The **By** filter and the **Activity** tabs leave such events out for them.
 
 ## Who reads it
 
@@ -18,7 +18,7 @@ Events about a confidential space keep no titles or names of its content. People
 |---|---|---|
 | **Settings › Instance › Log › Audit log** | Instance owner and administrators, the security auditor and custom instance roles with the audit log area | Events of the instance and of every organization |
 | **Settings › Organization › Integrations and security › Audit log** | Organization owners and administrators and roles with the audit log area | Events of this organization |
-| Tab **Activity** of an account under **Settings › Instance › People and sign-in › Accounts** | Everyone who reads the instance audit log | Sign-ins, security and account changes of that person from the instance audit log |
+| Tab **Activity** of an account under **Settings › Instance › People and sign-in › Accounts** | Everyone who reads the instance audit log | Sign-ins, security and account changes of that person from the instance audit log, and events about the account in its organizations, such as ended sessions |
 | Tab **Activity** of a member under **Settings › Organization › People and access › Members** | Everyone who reads the organization audit log | Events of that person in this organization |
 
 ## Finding events

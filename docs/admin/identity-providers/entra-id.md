@@ -61,7 +61,7 @@ With **Require proof from the provider**, Lunedo checks the `amr` claim of the I
 2. In the Microsoft Entra admin center, create an enterprise application with SAML single sign-on. Enter the **Entity ID of Lunedo** as identifier and the **Assertion consumer service URL** as reply URL.
 3. Add a group claim that sends the object IDs of the groups.
 4. Assign the people or groups who may use Lunedo.
-5. Copy the **App Federation Metadata URL** from the SAML settings of the enterprise application.
+5. Copy the **App Federation Metadata Url** from the section **SAML Certificates** of the single sign-on settings.
 
 ### In Lunedo
 
@@ -86,7 +86,7 @@ With **Require proof from the provider**, Lunedo compares the accepted proof val
 
 ## SCIM
 
-With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo at once. It needs an Entra ID licence that includes automatic provisioning to your own applications, usually P1 or higher. See [SCIM](../scim.md) for what Lunedo does with the requests.
+With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo in its provisioning cycles, about every 40 minutes, without waiting for a sign-in. Whether automatic provisioning to your own application is included depends on your Entra ID licence; check Microsoft's licensing overview. See [SCIM](../scim.md) for what Lunedo does with the requests.
 
 1. On the provider page in Lunedo, open the tab **SCIM** and choose **Create token**. Copy the token; Lunedo shows it only once.
 2. In the enterprise application in Entra ID, open **Provisioning** and create a new provisioning configuration.

@@ -95,7 +95,7 @@ Images inside the sections `steps`, `symptom` and `resolution` (`FRAMED_SECTIONS
 | `portal.feedback-retention` | daily at 03:41 | safety net: deletes notes past the retention whose job was lost |
 | `portal.aggregate-searches` | the first search of a day per knowledge base schedules it for the day the searches turn 12 months old; daily at 03:47 as safety net | moves searches older than 12 months into monthly counts |
 
-The schedules are cron expressions in `jobs.ts` and `statistics.ts`. When a space admin changes the retention of notes, `retentionChanged` deletes older notes at once and schedules the deletion job of every remaining note again.
+The schedules are cron expressions in `knowledge-bases/jobs.ts` and `portal/statistics.ts`. When a space admin changes the retention of notes, `retentionChanged` deletes older notes at once and schedules the deletion job of every remaining note again.
 
 ## Reader statistics
 

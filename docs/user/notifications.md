@@ -20,8 +20,8 @@ Several events of the same kind about the same item become one notification whil
 ### Acting on a notification
 
 - Selecting a notification opens what it is about and marks it as read.
-- **More actions** offers **Mark as read** or **Mark as unread**, **Open**, and **Stop watching the page** or **Stop watching the space**. Stopping can be undone in the confirmation.
-- **Reply** answers a comment directly from the notification.
+- Pointing at a notification shows its actions; on touch screens they are under **More actions**: **Mark as read** or **Mark as unread**, **Open**, and **Stop watching the page** or **Stop watching the space**. Stopping can be undone in the confirmation.
+- **Reply**, among these actions, answers a comment directly from the notification.
 - An access request can be approved or declined in the notification.
 - A task assigned to you can be marked as **Done** in the notification.
 
@@ -102,7 +102,7 @@ Browser push shows notifications on your device while Lunedo is not open. It is 
 
 **Devices with browser push** lists your devices, with the current one marked **This device**. **Remove** stops push on a device. You can have up to 20 devices; remove one before adding another. Push on a device ends when you sign out there or the session ends.
 
-Push follows the **Browser push** column of the event list. A notification that is combined into an existing one is not pushed again. Current versions of Firefox, Chrome, Edge and Safari support push.
+Push follows the **Browser push** column of the event list. A notification that is combined into an existing one is not pushed again. Current versions of Firefox, Chrome, Edge and Safari support push. On iPhone and iPad, Safari offers push only to web apps added to the Home Screen.
 
 ## Chat channels
 

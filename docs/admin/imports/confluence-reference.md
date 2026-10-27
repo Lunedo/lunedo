@@ -55,8 +55,8 @@ These Confluence macros become Lunedo blocks. A macro falls back to an unsupport
 | `tasks-report-macro` | Task report | |
 | `create-from-template` | Template button | |
 | `details` (`id`, `hidden`) | Page properties. The table may have the names in the first column or in the first row. | Unsupported when the body is not one table of names and values, or a value contains blocks other than text, lists, quotes and code |
-| `detailssummary` (`cql`, `label`, `spaces`, `headings`, `firstcolumn`, `sortBy`, `reverseSort`, `pageSize`, `showCreator`, `showPageLabels`, `id`) | Page properties report | A query that cannot be converted into labels and spaces stays in the block as a note, and the report lists it. `showCommentsCount` and `showLikesCount` are listed as options not taken over. |
-| `contentbylabel` (`labels`, `cql`, `spaces`, `type`, `operator`, `sort`, `reverse`, `max`, `excerptType`, `showLabels`, `showSpace`, `title`) | Content by label | A query that cannot be converted stays as a note and is listed; `excludeCurrent` is listed as an option not taken over |
+| `detailssummary` (`cql`, `label` or `labels`, `spaces` or `spaceKey`, `headings`, `firstcolumn`, `sortBy`, `reverseSort`, `pageSize`, `showCreator`, `showPageLabels`, `id`) | Page properties report | A query that cannot be converted into labels and spaces stays in the block as a note, and the report lists it. `showCommentsCount` and `showLikesCount` are listed as options not taken over. |
+| `contentbylabel` (`labels`, `cql`, `spaces` or `space`, `type` or `types`, `operator`, `sort`, `reverse`, `max` or `maxResults`, `excerpt`, `excerptType`, `showLabels`, `showSpace`, `title`) | Content by label | A query that cannot be converted stays as a note and is listed; `excludeCurrent` is listed as an option not taken over |
 | `related-labels` (`labels`, `title`) | Related labels | |
 | `excerpt` (`name`, `hidden`) | Excerpt | |
 | `excerpt-include` (page, `name`, `nopanel`) | Include excerpt | |
@@ -64,12 +64,12 @@ These Confluence macros become Lunedo blocks. A macro falls back to an unsupport
 | `roadmap` | Read-only roadmap | Unsupported when the roadmap data cannot be read |
 | `widget` (Widget Connector: `url`, `height`) | Embed when the address is on the [embed allowlist](../embeds.md) of the organization (an `http` address counts when its `https` form is allowed), otherwise a link | The report lists each link as shown as a link |
 | `section` with `column` children (`width` in percent) | Columns, 2 to 4 | One column becomes its content; more than four or other content stays unsupported |
-| Composition Tabs and Content Formatting Macros `deck` with `card` (`label`), `deck-container` | Tabs; the deck container is unwrapped. Composition Tabs on Cloud: not verified against real exports. | Unsupported when the deck holds content outside its cards, more than 20 cards or nested tabs |
+| Composition Tabs and Content Formatting Macros `deck` with `card` (`label` or `title`), `deck-container` | Tabs; the deck container is unwrapped. Composition Tabs on Cloud: not verified against real exports. | Unsupported when the deck holds content outside its cards, more than 20 cards or nested tabs |
 | Content Formatting Macros `localtabgroup` with `localtab`, `auitabs` with `auitabspage` (`title`) | Tabs | As for decks |
 | Refined `ui-tabs` with `ui-tab` (`title`); `rw-ui-tabs-macro` with `rw-tab` and `refined-tabs` with `refined-tab` (Cloud, the tabs mark where their content starts) | Tabs | As for decks |
-| Aura `aura-tab-collection` with `aura-tab` (title in `summary` or in the encoded `params`) | Tabs. Aura on Data Center: not verified against real exports. | As for decks |
-| `tabs-group` with `tab-pane`, `horizontal-nav-group` with `horizontal-nav-item`, `vertical-nav-group` with `vertical-nav-item` (`name`) | Tabs | As for decks |
-| Aura `aura-panel` (`summary`), Content Formatting Macros `roundrect` (`title`) | Info callout with the title in bold. Aura on Data Center: not verified against real exports. | |
+| Aura `aura-tab-collection` with `aura-tab` (title in `summary`, `title` or the encoded `params`) | Tabs. Aura on Data Center: not verified against real exports. | As for decks |
+| `tabs-group` with `tab-pane`, `horizontal-nav-group` with `horizontal-nav-item`, `vertical-nav-group` with `vertical-nav-item` (`name` or `title`) | Tabs | As for decks |
+| Aura `aura-panel` (`summary` or `title`), Content Formatting Macros `roundrect` (`title`) | Info callout with the title in bold. Aura on Data Center: not verified against real exports. | |
 | Refined `ui-expand` (`title`) | Expand | |
 | Table Filter and Charts `table-filter` | Its table. Filters, sorting, hidden columns, column order, pagination and row numbers are listed as options not taken over; the table block has no filter or sort options. | |
 | Table Filter and Charts `table-chart`, `pivot-table` | The note "Chart not imported. Its source table follows." or "Pivot table not imported. Its source table follows.", followed by the source table | Listed in the report |

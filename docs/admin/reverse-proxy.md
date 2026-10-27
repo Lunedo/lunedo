@@ -61,7 +61,7 @@ With separate roles (`api`, `collab`, `worker`, see [Container roles](requiremen
 - Route `/collab` to the collaboration nodes, with WebSocket support and idle timeouts above 60 seconds, and everything else to the API nodes.
 - Keep the `Host`, `Cookie` and `Origin` headers unchanged.
 - Use `/health/ready` of each node as the health check; see [Monitoring](monitoring.md).
-- With more than one collaboration node, set `LUNEDO_REDIS_URL` on every collaboration node. Updates, presence and save messages then travel between the nodes through Redis, so people on different nodes see each other's changes immediately. Without Redis, nodes still converge through the database, but only after a page is stored. Any Redis-compatible server works, for example Valkey.
+- With more than one collaboration node, set `LUNEDO_REDIS_URL` on every collaboration node. Updates, presence and save messages then travel between the nodes through Redis, so people on different nodes see each other's changes immediately. Without Redis, a node takes over the changes of other nodes only from the database, when it stores the page after a change on its own node; until then, people on different nodes do not see each other's changes. Any Redis-compatible server works, for example Valkey.
 - Give every node the same configuration and the same keys. Without a shared secrets volume, configure all secrets explicitly; see [Configuration](configuration.md#secrets).
 
 ## Checking a proxy

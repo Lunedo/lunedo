@@ -19,7 +19,7 @@ Everyone who can read the item can copy it into a space where they have the edit
 - The published version of each item, never a draft, as its first version. Its history says "Copied from …" with a link to the original for people who can read the original; everyone else sees "Copied from another page".
 - The current version of every attachment, including the files of drawings and diagrams. Older attachment versions stay behind.
 - Whiteboards keep their images and preview.
-- Labels, page properties, the page width, numbered headings and the page status. In another space, the status is matched by its name.
+- Labels, page properties, the page width, numbered headings and the page status. In another space, the status is matched by its name, ignoring case; without a match, the copy has no status.
 - Tasks, as new tasks with their assignees.
 - The person copying becomes the owner of every copy.
 

@@ -61,7 +61,7 @@ While maintenance mode is on, every connection is read-only: the server accepts 
 
 ## Several nodes
 
-A single collaboration node needs no Redis. With more than one, set `LUNEDO_REDIS_URL` on every collaboration node: updates, presence and save messages travel between the nodes through Redis, so people on different nodes see each other's changes immediately. Without Redis, nodes still converge through the database, but only after a document is stored. Any Redis-compatible server works, for example Redis or Valkey; the development environment uses Valkey.
+A single collaboration node needs no Redis. With more than one, set `LUNEDO_REDIS_URL` on every collaboration node: updates, presence and save messages travel between the nodes through Redis, so people on different nodes see each other's changes immediately. Without Redis, a node merges the stored state from the database only in `onStoreDocument`, before it stores its own changes; until then, people on different nodes do not see each other's changes. Any Redis-compatible server works, for example Redis or Valkey; the development environment uses Valkey.
 
 ## Whiteboards
 

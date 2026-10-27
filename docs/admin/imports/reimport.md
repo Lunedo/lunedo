@@ -27,7 +27,7 @@ Every import records, for each page, blog post, template and space permission, t
 - Pages **changed only at the source** get a new version marked as from Confluence; the earlier version stays in the history. Unchanged pages are skipped.
 - Pages **changed on both sides** are conflicts and are never overwritten automatically. For each conflict, also for many at once, choose **Keep Lunedo version**, **Take Confluence version** (a new version) or **Keep both**: the Lunedo version stays current and the Confluence version is added to the history, marked "from Confluence, not applied", where the two can be compared.
 - **Compare** shows a conflict before you decide: the current Lunedo content next to the content of the new export, converted as it would be applied, in the same view as the comparison of two versions. Comparing changes nothing.
-- A page with an open **editing session** is held like a conflict. A re-import never writes into a document someone is editing; a decided change is applied once the session has ended.
+- A page with an open **editing session** is held like a conflict. A re-import never writes into a document someone is editing; a decided change waits and is applied by the next **Apply changes** after the session has ended.
 - Pages **deleted at the source** are listed. For each, choose **Move to the trash** or **Keep in Lunedo**. Nothing happens without a decision.
 - Pages **moved at the source** follow, unless they were moved in Lunedo since the last import; then they stay and are listed.
 - New comments and attachments are added; new versions of an attachment become versions. Comments and attachments deleted at the source are only listed.

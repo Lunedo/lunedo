@@ -20,7 +20,7 @@ To change the defaults:
 2. Under **Events**, set the channels of the content events. The events of administration and security are under **Administration and security**, collapsed.
 3. Each change saves at once. A channel that differs from the inherited value shows a reset.
 
-People who chose for themselves keep their choice when you change a default. Events about the instance, such as backups or a new Lunedo version, follow the defaults of the recipient's home organization.
+People who chose for themselves keep their choice when you change a default. Events about the instance, such as backups or a new Lunedo version, follow the defaults of the recipient's home organization, or the instance defaults for an account without one.
 
 ### Content events
 
@@ -135,7 +135,7 @@ The payload holds the event text, the item title and a link, nothing else. Befor
 Besides all instance administrators, operations contacts receive warnings about the instance by e-mail and optionally as a Teams post: the file store fills up or falls again, and backups fail, are missing, work again or a test restore fails. Set them under **Settings › Instance › Services › Delivery**, section **Operations contacts**:
 
 1. Under **E-mail addresses**, enter one address per line, up to 20, for example an IT ticket address.
-2. Under **Teams webhook**, optionally paste the address of a Teams Workflows webhook. It is stored encrypted and never shown again.
+2. Under **Teams webhook**, optionally paste the address of a Teams Workflows webhook, created as described under [Microsoft Teams](chat-channels.md#microsoft-teams). It is stored encrypted and never shown again.
 3. Save, then select **Send test message**.
 
 Operations contacts need no account. The warnings for instance administrators follow their notification settings; see [Storage](storage.md) and [Backups](backups.md) for what triggers them.

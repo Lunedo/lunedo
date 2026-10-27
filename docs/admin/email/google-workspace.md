@@ -8,13 +8,13 @@ The settings are under **Settings › Instance › Services › Delivery** and n
 
 1. In the Google Cloud console, create a service account in a project of your organization, for example "lunedo-mail".
 2. Under **Keys**, add a key of the type JSON and download the key file.
-3. Note the client ID of the service account, a number. The console shows it in the details of the service account, and the key file contains it as `client_id`.
+3. Note the client ID of the service account, a number. The console shows it under **Advanced settings** in the details of the service account, and the key file contains it as `client_id`.
 
 ## Allow domain-wide delegation
 
-1. In the Google Admin console, open **Security › Access and data control › API controls › Manage domain-wide delegation**.
-2. Add a new entry with the client ID of the service account and the scope `https://mail.google.com/`.
-3. Save. Google may need a few minutes, rarely up to 24 hours, before the delegation works.
+1. In the Google Admin console, open **Security › Access and data control › API controls › Manage Domain Wide Delegation**.
+2. Choose **Add new**, enter the client ID of the service account under **Client ID** and the scope `https://mail.google.com/` under **OAuth Scopes**.
+3. Choose **Authorize**. Google says a change can take up to 24 hours, but usually applies sooner.
 
 The delegation lets the service account act as any mailbox of the domain. Lunedo uses it only for the mailbox you enter.
 

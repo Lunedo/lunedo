@@ -43,6 +43,8 @@ A script can rebuild the static website of a public knowledge base, for example 
    npx wrangler pages deploy site --project-name=help
    ```
 
+   In a script, Wrangler reads the Cloudflare API token from `CLOUDFLARE_API_TOKEN` (permission Cloudflare Pages Edit) and the account from `CLOUDFLARE_ACCOUNT_ID`. Create the project once beforehand, in the dashboard or with `npx wrangler pages project create help`.
+
 Articles lie in the ZIP as `<number>-<slug>.html`, for example `1042-set-up-the-vpn-connection.html`. Articles in the default language of the knowledge base lie at the root; the other languages get a folder named after the language, such as `de/`.
 
 ## When the export fails

@@ -10,7 +10,7 @@ The owner is set when the content comes into being:
 
 - Whoever creates a page, folder, link, blog post or whiteboard owns it.
 - Whoever copies content owns the copies.
-- Imported pages are owned by the person who created them in the source system, if that person was mapped to an account. Otherwise they have no owner.
+- Imported pages are owned by the person who created them in the source system: the account that person was mapped to, or otherwise the placeholder account the import created for them. Pages without a known creator have no owner.
 - When a placeholder account from an import is merged into a real account, the real account becomes the owner of the content the placeholder owned.
 
 ## Where the owner shows

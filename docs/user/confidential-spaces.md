@@ -42,7 +42,7 @@ Who may create one: people whose organization role manages spaces, always. Other
 
 ## When the space admin leaves
 
-If the last active space admin is deactivated or leaves the organization while other members remain, the people who manage spaces in the organization get the notification "The confidential space … has no space admin anymore". In **Settings › Organization › Content › Spaces**, panel **Confidential spaces**, the space shows **No space admin**, and they can select **Appoint space admin** and choose one of the remaining members. They cannot appoint themselves or anyone who is not a member, and they still cannot read the space. The appointment is recorded in the audit log.
+If the last active space admin is deactivated or leaves the organization while other members remain, the people who manage spaces in the organization get the notification "The confidential space … has no space admin anymore". In **Settings › Organization › Content › Spaces**, tab **All spaces**, panel **Confidential spaces**, the space shows **No space admin**, and they can select **Appoint space admin** and choose one of the remaining members. They cannot appoint themselves or anyone who is not a member, and they still cannot read the space. The appointment is recorded in the audit log.
 
 When no active member is left at all, the space appears under **Clean up** after the waiting period set by the organization (see [Spaces in the organization](../admin/spaces.md)).
 

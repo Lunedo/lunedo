@@ -68,6 +68,6 @@ Captured values are decoded and encoded again for the embed address. Values that
 
 - Frames run with `sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"`, `allow="fullscreen; picture-in-picture; encrypted-media"` and the referrer policy of the matching rule. The service runs in its own origin and cannot reach the page, the session or other frames.
 - The web client sends `Content-Security-Policy: frame-src 'self' …` with the origins of all embed addresses of the instance list, so the browser refuses frames from any other origin even if a page contained one.
-- A frame loads only when it scrolls into view, so opening a long page sends nothing to the services further down.
+- A frame loads only when it comes close to the visible part of the page, so opening a long page sends nothing to the services further down.
 
 The embed allowlist also decides how Confluence Widget Connector, Lucidchart and Miro macros are imported (see [What Lunedo takes over from Confluence](imports/confluence-reference.md#macros)) and which embeds knowledge base portals show.

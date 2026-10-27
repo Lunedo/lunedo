@@ -30,6 +30,8 @@ Point the domain to the instance before the space admin saves it. **Space settin
 help.example.com CNAME wiki.example.com.
 ```
 
+DNS does not allow a `CNAME` record on a bare domain such as `example.com`; use a subdomain, or add `A` and `AAAA` records with the addresses of the instance there.
+
 ### Reverse proxy and certificates
 
 Lunedo does not request certificates itself. The reverse proxy holds the certificate for each portal domain and sends the domain to Lunedo like the instance address; Lunedo decides by the host which portal answers. Portals on own domains need HTTPS.
@@ -67,4 +69,4 @@ On its own domain the portal has a session of its own, which belongs to the sess
 - A visitor without a session there is sent to the instance. When they are already signed in there, they come back at once with a session for the domain; otherwise they sign in first.
 - People who do not belong to the organization of the domain are asked once per account and domain whether to sign in there. The answer is remembered and recorded in the audit log. Members of the organization are not asked.
 - The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain.
-- Signing out in the portal signs out everywhere. When the instance session ends, by sign-out, expiry, deactivation or "sign out everywhere", the session of the domain ends too.
+- Signing out in the portal also ends the instance session it belongs to, so the person is signed out of the portal and the app in that browser. When the instance session ends, by sign-out, expiry, deactivation or "sign out everywhere", the session of the domain ends too.

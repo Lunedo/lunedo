@@ -50,7 +50,7 @@ Every change of a rule, and every membership, role and group membership a rule g
 
 ### Group preview
 
-Before saving, the rule dialog shows who gains access through the group: how many people become members of the organization or receive the instance role, how many of them have an account already, and how many get one at their next sign-in. The number of members at the provider is known for Entra ID and Google Workspace; for other providers, the preview counts the accounts Lunedo has seen in the group.
+Before saving, the rule dialog shows who gains access through the group: how many people become members of the organization or receive the instance role, how many of them have an account already, and how many get one at their next sign-in. The number of members at the provider is known for Entra ID (with SAML only when Microsoft Graph access is set up) and for Google Workspace with group synchronization; otherwise, the preview counts the accounts Lunedo has seen in the group.
 
 ## Synchronized groups
 

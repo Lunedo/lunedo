@@ -100,7 +100,7 @@ Secrets and access tokens are stored with envelope encryption and never returned
 
 A mail is written to an outbox in the same transaction as the change that causes it, encrypted because it can contain links with tokens. A job delivers it and deletes it afterwards. Delivery runs in its own jobs with time limits, so a failing mail server never blocks other jobs or requests.
 
-- **Retries.** A failed delivery is retried up to eight times. The first retry waits 30 seconds, and every further wait doubles, so the attempts spread over roughly two hours. After the last attempt the mail is marked as failed and its content is removed.
+- **Retries.** A failed delivery is retried up to eight times. The first retry waits 30 to 60 seconds, and every further wait doubles, so the attempts spread over two to four hours. After the last attempt the mail is marked as failed and its content is removed.
 - **Lost mails.** A job looks every minute for mails whose delivery was never started, for example after a crash right after the commit, and queues them.
 - **No duplicates.** Before sending, a node claims the mail, so two nodes never send it at the same time. A claim older than ten minutes, left by a node that stopped while sending, is handed to the next run. Each mail carries a `Message-ID` derived from its ID, except through Microsoft Graph with the default setting, so a mail sent again after such a stop has the same ID and mail systems can recognize it.
 

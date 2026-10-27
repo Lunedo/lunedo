@@ -74,10 +74,10 @@ The areas appear in the order set under **Space settings › Content › Areas a
 ### Signing in
 
 - Under `/help/<path>/` the portal uses the session of the app.
-- Anonymous visitors of a knowledge base that is not public see a sign-in page on every address, with one button per identity provider of the instance except LDAP, and **Sign in with an e-mail address**, which leads to the normal sign-in page. Afterwards they come back to the requested address afterwards.
+- Anonymous visitors of a knowledge base that is not public see a sign-in page on every address, with one button per identity provider of the instance except LDAP, and **Sign in with an e-mail address**, which leads to the normal sign-in page. Afterwards they come back to the requested address.
 - In a public knowledge base, an anonymous visitor who opens an address they cannot read gets a page that offers to sign in and continue there. Hidden and missing addresses get the same page, so it reveals nothing.
 - On an own domain the portal sends visitors to the instance to sign in and back. People who do not belong to the organization of the domain are asked once per account and domain ("Sign in to … with your account?").
-- **Sign out** in the portal signs out everywhere, in the portal and in the app.
+- **Sign out** in the portal signs you out of the portal and of the app in that browser.
 
 ### Contact
 

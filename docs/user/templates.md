@@ -13,7 +13,7 @@ Templates give new pages a starting point: a title, input fields that are asked 
 
 Create a page in a space. The gallery shows the templates of the space, the organization and the instance (**From this space**, **From the organization**, **From the instance**) and the built-in ones, in the language of your interface. A knowledge base offers only its own templates and the built-in article templates. Search by name or filter by category, or choose **Blank page**.
 
-Choose a template, fill in its input fields and choose **Create from …**. A required field must be filled in. A date field left empty becomes today's date. Each value can have up to 200 characters. A template for meeting series asks for the name, members and rhythm of the series next; each meeting page then starts from the template.
+Choose a template, fill in its input fields and choose **Create from …**. A required field must be filled in. A date field left empty becomes today's date. Each value can have up to 200 characters. A template for meeting series opens the dialog for a new meeting series instead, which asks for the name, members, rhythm, first date, time and duration; each meeting page then starts from the template.
 
 The new page gets its own copy of the template's content and files. Changing or deleting the template later does not change pages created from it.
 

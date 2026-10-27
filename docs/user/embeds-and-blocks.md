@@ -11,7 +11,7 @@ An embed shows a video, design, presentation or document of an external service 
 3. Optionally set **Height in pixels**, from 100 to 2,000.
 4. Choose **Insert embed**.
 
-- An address on the allowlist appears as a frame. It loads only when it scrolls into view, so opening a long page sends nothing to the services further down. The title and **Open at the source** stay below the frame, so readers can open the content at the source, also when the instance has no internet access and the frame stays empty.
+- An address on the allowlist appears as a frame. It loads only when it comes close to the visible part of the page, so opening a long page sends nothing to the services further down. The title and **Open at the source** stay below the frame, so readers can open the content at the source, also when the instance has no internet access and the frame stays empty.
 - An address that is not on the allowlist appears as a link with a short hint. When an administrator adds the service later, the block shows the frame without editing the page; when a service is removed, its embeds turn back into links.
 - Print and Word show the title and the link. An imported embed that came with a preview image also shows that image; Lunedo never fetches images from the service during an export.
 
@@ -28,7 +28,7 @@ How to manage the list is described in [External embeds](../admin/embeds.md).
 **Show a preview in the page** on a file block shows the file inside the page: PDF, images, video, audio, text and code, Markdown, CSV, SVG (sanitized), Word and Excel. Other types stay a download link. PDF files are rendered by Lunedo, not by the browser.
 
 - **Height in pixels** (150 to 2,000) and **Page size** (**Fit to width**, or 50 to 200 %) can be set.
-- The file is loaded only when the block scrolls into view.
+- The file is loaded only when the block comes close to the visible part of the page.
 - Readers who cannot open the file see nothing, not even its name.
 - Print and Word show image files as a picture and other files as their name and link. PDF files appear as name and link.
 
