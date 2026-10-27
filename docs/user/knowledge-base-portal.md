@@ -54,7 +54,7 @@ The areas appear in the order set under **Space settings › Content › Areas a
 ### Layout
 
 - The top bar shows the logo and name, **Areas** with a menu of the areas and their article counts, a search icon, the language and appearance choices and **Sign in** or the account menu.
-- The search icon, `Ctrl`+`K` and `/` open a quick search with matching topics and articles, each with its folder path. `↑` and `↓` choose, `Enter` opens, and **All results** leads to the search page. Without JavaScript the icon leads to the search page.
+- The search icon, `Ctrl`+`K` and `/` open a quick search with matching topics and articles, each with its folder path. `↑` and `↓` choose, `Enter` opens, and the last entry (for example "All 12 results") leads to the search page. Without JavaScript the icon leads to the search page.
 - The appearance follows the reader's system until the reader chooses light or dark; the choice is kept in the browser.
 - The start page shows the heading, the search with frequent searches, the areas, **Most read** and **Recently updated** and **Didn't find an answer?**.
 - Every area and topic page shows the tree of its area, the breadcrumb, icon, title, introduction and contact line, its topics and its own articles with type filters and sorting. **Include subtopics** adds the articles of all folders below. A folder that only holds topics says so.
@@ -67,7 +67,7 @@ The areas appear in the order set under **Space settings › Content › Areas a
 - The portal shows only published versions. Drafts and articles that were never published are not shown, also not to editors.
 - Area lists and article counts are computed for each reader. A folder the reader cannot read, and every article in it, is neither shown nor counted.
 - People who may edit an article see **Edit**, which opens the article in the editor of the app.
-- The account menu shows the name, the e-mail address, a link to the app and **Sign out**. The link to the app appears only for people who can see at least one space, never for portal accounts. Its name is set for the instance (see [Knowledge base portals](../admin/knowledge-base-portals.md)); empty means "Go to the wiki".
+- The account menu shows the name, the e-mail address, a link to the app and **Sign out**. The link to the app appears only for people who can see at least one space, never for portal accounts. Portal accounts see **Account settings** instead. Its name is set for the instance (see [Knowledge base portals](../admin/knowledge-base-portals.md)); empty means "Go to the wiki".
 - Frequent searches on the start page are the most searched terms of the last 90 days that had results, each searched at least three times. A reader sees only terms with which they find something themselves.
 - Child page lists, attachment lists and reports are left out of articles. Links to articles the reader cannot read and to pages outside the knowledge base show "No access" without their title.
 

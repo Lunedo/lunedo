@@ -22,7 +22,7 @@ The history of owner changes is in the **Status and owner** section of the page'
 ## What the owner does
 
 - The owner is the person responsible for the content. In a knowledge base, review reminders for an article go to its owner. See [Knowledge base reviews](knowledge-base-reviews.md).
-- A new owner automatically watches the content and gets a notification that they were made the owner. Watchers of the content are told about the change too. See [Notifications](notifications.md).
+- A new owner automatically watches the content, unless they turned off automatic watching, and gets a notification that they were made the owner. Watchers of the content are told about the change too. See [Notifications](notifications.md).
 
 ## Transfer ownership
 

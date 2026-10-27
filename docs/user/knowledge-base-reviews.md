@@ -33,7 +33,7 @@ The list shows title, area or topic, owner, interval, last review and the state,
 | Filter | Articles |
 |---|---|
 | All | every article in the list |
-| Due | due or overdue |
+| Due | due, overdue or with a changed source page |
 | Within 30 days | due within the next 30 days |
 | Without owner | articles whose owner is missing or left |
 | Translations | outdated translations (see [Knowledge base translations](knowledge-base-translations.md#outdated-translations)) |
@@ -42,7 +42,7 @@ The list shows title, area or topic, owner, interval, last review and the state,
 
 ## Marking as reviewed
 
-Anyone with edit rights marks an article as reviewed, with **Mark as reviewed** in the review list, on **For you** or at the top of the article. The review is recorded in the article's history with who and when, without a new version, and the next due date starts from now. The confirmation offers **Undo** for a short time. Every review and every undo is recorded in the [audit log](../admin/audit-log.md), as `article.reviewed` and `article.reviewUndone`.
+Anyone with edit rights marks an article as reviewed, with **Mark as reviewed** in the review list, on **For you** or at the top of the article. The review is recorded in the article's history with who and when, without a new version, and the next due date starts from now. Only published articles can be marked as reviewed. The confirmation offers **Undo** for a short time. Every review and every undo is recorded in the [audit log](../admin/audit-log.md), as `article.reviewed` and `article.reviewUndone`.
 
 When you publish a changed article and tick **Content reviewed** in the publish dialog, the publication also counts as a review. The box is not ticked by default.
 
@@ -60,7 +60,7 @@ An article can be based on internal pages, for example the operating documentati
 
 A source page must be a page in a space of the same organization that is neither a knowledge base nor confidential, and you must be able to read it. An article has at most 20 source pages.
 
-When a source page is published with changes, the article shows **Source page changed** in the review list until it is marked as reviewed, and its owner is notified once. Live pages count each saved version as a change. The notification and the review list name the article, never the source page.
+When a source page is published with changes, the article shows **Source page changed** in the review list until it is marked as reviewed, and the people set under **Who is reminded** are notified once; without an owner, the space admins. Only people who can read the article are notified. Live pages count each saved version as a change. The notification and the review list name the article, never the source page.
 
 - In Lunedo, the link to a source page and its title are shown only to people who can read the source page. For everyone else the source does not exist.
 - Readers of the portal never see source pages, and they are not part of the article's content or its machine-readable form.

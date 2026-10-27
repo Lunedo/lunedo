@@ -19,7 +19,7 @@ People export what they can read as PDF, Word, HTML or Markdown: a single page, 
 4. Under **More options**, choose whether to **Include attachments**. For PDF and Word, also choose **Include comments**, **Table of contents**, the **Page size** (A4 or Letter) and the **Orientation**. In PDF and Word, images stay in the document and other attachments are listed in an appendix.
 5. Choose **Download** for a single page, or **Start export** for several pages. For PDF, the button is **Open print view** for a single page and **Prepare print view** for several pages.
 
-Anyone who can read a page can export it alone. Exporting several pages at once, a page with its subpages or the whole space, is for space admins, and for organization administrators who manage spaces unless the space is confidential. Others see these choices as unavailable, with the reason.
+Anyone who can read a page can export it alone. Exporting several pages at once, a page with its subpages or the whole space, is for space admins, and for organization administrators who manage spaces and have a role in the space, unless the space is confidential. Others see these choices as unavailable, with the reason.
 
 ### Single pages
 

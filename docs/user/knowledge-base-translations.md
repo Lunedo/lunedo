@@ -5,7 +5,7 @@ A knowledge base has a default language and can enable further languages. Articl
 ## Enabling languages
 
 1. Open **Space settings › Publishing › Languages**. Only space admins change the languages.
-2. Choose the **Default language**: the language of new articles and the fallback for readers whose language has no translation. When the knowledge base is created, it is the language of the organization.
+2. Choose the **Default language**: the language of new articles and the fallback for readers whose language has no translation. When the knowledge base is created, it is the language of the organization if articles can be written in it, otherwise English.
 3. Under **Enabled languages**, use **Add a language**. A knowledge base can have up to 30 languages. The default language always stays enabled.
 
 From two enabled languages on, the portal shows a language choice. **State of the translations** shows per language how many articles are translated, outdated or missing.

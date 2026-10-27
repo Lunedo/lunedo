@@ -6,7 +6,7 @@ A copy duplicates a page, a folder or a whiteboard, within its space or into ano
 
 1. Choose **Copy…** in the menu of a page, folder or whiteboard, in the page tree or on the item itself.
 2. Choose the **Space**, the place below (**Place below**) and the **Position**.
-3. For a page, choose whether to **Copy the pages below as well**. A folder is always copied with its content.
+3. For a page with subpages, choose whether to **Copy the pages below as well**. A folder is always copied with its content.
 4. Check **What is copied** and **Who can open the copy**.
 5. Choose **Create copy**, or **Copy to …** for another space.
 

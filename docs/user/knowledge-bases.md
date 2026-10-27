@@ -75,7 +75,7 @@ To open an article by its number, type the number, such as `1040` or `#1040`, in
 
 ## Areas and topics
 
-Space admins set up the folders under **Space settings › Content › Areas and topics**: create areas with **New area** and topics with **New topic inside**, drag a folder to reorder it or to move it into the folder above, and use the **…** menu to move one level up or into the folder above. The portal shows the areas and topics in this order.
+Editors and space admins set up the folders under **Space settings › Content › Areas and topics**: create areas with **New area** and topics with **New topic inside**, drag a folder to reorder it or to move it into the folder above, and use the **…** menu to move one level up or into the folder above. The portal shows the areas and topics in this order.
 
 Every folder, at every depth, has:
 

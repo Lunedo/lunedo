@@ -1,8 +1,8 @@
 # Notifications
 
-Lunedo tells you about mentions, tasks, shares, access requests, comments and changes on content you watch, and about events in the administration you take part in. Every notification appears in the app. You choose per kind of event whether it also arrives by e-mail and as a browser push message.
+Lunedo tells you about mentions, tasks, shares, access requests, comments and changes on content you watch, and about events in the administration you take part in. You choose per kind of event whether a notification appears in the app, arrives by e-mail and arrives as a browser push message.
 
-Notifications in the app always work, also when the instance has no mail server.
+Notifications in the app also work when the instance has no mail server.
 
 ## The notification panel
 
@@ -27,7 +27,7 @@ Several events of the same kind about the same item become one notification whil
 
 A notification about something you can no longer open is hidden. Notifications are kept for 90 days unless your administrators set another period. A link to a removed notification says "This notification is no longer available".
 
-You are never notified about your own actions, and imports never notify anyone.
+Changes, comments and other content events never notify you about your own actions. Imported content notifies nobody, also not about mentions in it. When a copy, import or export you started finishes, you are notified.
 
 ## Notification settings
 
@@ -106,4 +106,4 @@ Push follows the **Browser push** column of the event list. A notification that 
 
 ## Chat channels
 
-Space administrators can post new pages, changes, blog posts, decisions and comments of a space to Microsoft Teams, Slack, Discord, Matrix or a webhook. See [Chat channels](../admin/chat-channels.md).
+Space administrators can post new pages, changes, blog posts, decisions, page status changes and comments of a space to Microsoft Teams, Slack, Discord, Matrix or a webhook. See [Chat channels](../admin/chat-channels.md).

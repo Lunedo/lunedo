@@ -70,7 +70,7 @@ A deleted personal space can be restored by instance administrators, and by its 
 1. In the page tree, open the menu of the page, folder or whiteboard.
 2. Choose **Archive**.
 
-The item and everything below it leave the page tree and appear in the **Archive** section of the space sidebar. The message offers **Undo**. Editors and space admins can archive. Links cannot be archived, and neither can the overview page of a space or a page that has it below it.
+The item and everything below it leave the page tree and appear in the **Archive** section of the space sidebar. The message offers **Undo**. Editors and space admins can archive. The menu of a link does not offer **Archive**. The overview page of a space, and a page that has it below it, cannot be archived.
 
 Archived content:
 

@@ -79,7 +79,7 @@ Anyone who may edit the page can set its status. Only pages have a status; folde
 
 - **At the top of the page** for everyone who can read it.
 - **In search results**, next to each page.
-- **In the version history** of the page, with who changed the status and when.
+- **In the Status and owner section** of the page's versions screen, with who changed the status and when.
 - **In notifications** to people who watch the page; see [Notifications](notifications.md#watching).
 
 When a page moves to another space, it keeps a status with the same built-in value or the same name in the target space. Otherwise the status is removed.

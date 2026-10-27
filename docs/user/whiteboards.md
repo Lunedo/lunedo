@@ -36,7 +36,7 @@ Select one element and choose **Comment on element** to start a thread on it, or
 
 A version is kept when the last person leaves the whiteboard, and after it was not changed for the idle time set for live pages (**Version after a pause in live mode**, 10 minutes by default).
 
-**Versions** in the whiteboard menu opens the version history at `/spaces/<key>/whiteboards/<number>/history`. It lists every version with its time and the people who changed it, shows its image and lets you choose **Explore this version**. **Restore version** makes it the current content at once for everyone and adds a new version; nothing in the history is lost.
+**Versions** in the whiteboard menu opens the version history at `/spaces/<key>/whiteboards/<number>/history`. It lists every version with its time and the people who changed it, shows its image and lets you choose **Explore this version**. **Restore version** with the number of the version, for example **Restore version 3**, makes it the current content at once for everyone and adds a new version; nothing in the history is lost.
 
 ### Images of whiteboards
 
