@@ -572,7 +572,7 @@ export class SignInService {
     const { pending, account } = await this.#pending(input.pendingToken);
     if (!providerOfPending(pending.payload)) await refuseManaged(this.#database, account.id, "any");
     const method: SignInMethod = input.factor.type;
-    const subjects = await this.#subjects(account.id, account.email, input.client.ip);
+    const subjects = { email: account.email, clientIp: input.client.ip };
     await this.#checkAttempt(subjects, account.id, method);
 
     let valid = false;

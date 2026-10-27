@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import "reflect-metadata";
+import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -466,6 +467,45 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
           client: { ip: "198.51.100.201" },
         }),
       ).rejects.toMatchObject({ code: "locked" });
+    } finally {
+      await test.pool.query("update instance set owner_account_id = null");
+    }
+  });
+
+  it("still counts wrong second factors of the instance owner per account", async () => {
+    const owner = await account(`owner@${uniqueDomain()}`);
+    await test.pool.query("update instance set owner_account_id = $1", [owner.id]);
+    try {
+      const setup = await test.services.totp.begin(owner.id, { issuer: "Test", account: "owner" });
+      if (!setup) throw new Error("TOTP was not started");
+      const secret = Secret.fromBase32(setup.secret);
+      await test.services.totp.verify(test.database, owner.id, TOTP.generate({ secret }), {
+        confirming: true,
+      });
+      const wrongCode = async (attempt: number) => {
+        const client = { ip: `203.0.113.${attempt + 150}` };
+        const first = await test.services.signIn.signInWithPassword({
+          email: owner.email ?? "",
+          password: "a long test passphrase",
+          client,
+        });
+        if (first.status !== "secondFactorRequired") throw new Error("A second factor was expected");
+        return test.services.signIn.completeSecondFactor({
+          pendingToken: first.pendingToken,
+          factor: { type: "totp", code: "000000" },
+          client,
+        });
+      };
+      const outcomes: string[] = [];
+      for (let attempt = 0; attempt < 7; attempt++) {
+        outcomes.push(
+          await wrongCode(attempt).then(
+            () => "signedIn",
+            (error: { code?: string }) => error.code ?? "",
+          ),
+        );
+      }
+      expect(outcomes).toContain("locked");
     } finally {
       await test.pool.query("update instance set owner_account_id = null");
     }
