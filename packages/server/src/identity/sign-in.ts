@@ -672,8 +672,10 @@ export class ProviderSignInService {
     let placeholder: Account | null = null;
     if (input.emailVerified && profile.email) {
       const existing = await this.#accounts.findByEmail(profile.email);
-      if (existing?.state === "placeholder") placeholder = existing;
-      else if (existing) {
+      if (existing?.state === "placeholder") {
+        if (profile.emailUnverified) throw new Refused("emailNotVerified");
+        placeholder = existing;
+      } else if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
         if (!(await confirmsLinks(this.#database, existing.id))) {
           if (profile.emailUnverified) throw new Refused("emailNotVerified");

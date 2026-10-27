@@ -606,6 +606,19 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(verified).toMatchObject({ kind: "signedIn" });
   });
 
+  it("does not take over a placeholder when the provider says the address is not verified", async () => {
+    const domain = `${randomUUID().slice(0, 8)}.example.org`;
+    const id = await provider({ accountCreation: true, domains: [domain] });
+    const email = `imported@${domain}`;
+    const placeholder = await test.services.accountLifecycle.createPlaceholder(SYSTEM, {
+      name: "Imported",
+      email,
+    });
+    const result = await signIn(id, { sub: randomUUID(), email, email_verified: false });
+    expect(result).toMatchObject({ kind: "refused", reason: "emailNotVerified" });
+    expect(await test.services.accounts.get(placeholder.id)).toMatchObject({ state: "placeholder" });
+  });
+
   it("still creates new accounts for addresses in its domains that the provider leaves unverified", async () => {
     const id = await provider({ accountCreation: true });
     const email = `unverified.${randomUUID().slice(0, 8)}@example.org`;
