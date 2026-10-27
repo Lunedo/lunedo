@@ -370,7 +370,7 @@ describe.skipIf(!baseUrl)("backups", () => {
         allowedNetwork: "127.0.0.1/32",
       });
       expect(result.ok === false && result.message).toContain(
-        "resolves to 127.0.0.1, which is in a private network. If Lunedo should reach it, add 127.0.0.1/32 or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS",
+        "resolves to 127.0.0.1, which is in a private network. If Lunedo should reach it, add 127.0.0.1/32 to LUNEDO_OUTBOUND_ALLOWED_NETWORKS",
       );
     });
   });

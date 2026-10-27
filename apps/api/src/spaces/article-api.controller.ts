@@ -179,7 +179,7 @@ export class ArticleApiController {
         removed: [
           {
             itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a63",
-            number: 98,
+            number: 1098,
             language: "de",
             reason: "deleted" as const,
             removedAt: "2026-10-12T07:00:00.000Z",

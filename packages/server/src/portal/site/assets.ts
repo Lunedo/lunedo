@@ -41,6 +41,16 @@ export function fontFile(name: string): Buffer | null {
 }
 
 const SCRIPT = `(() => {
+  if (document.querySelector("[data-not-found]")) {
+    const parts = location.pathname.split("/").filter(Boolean);
+    const last = parts.pop() || "";
+    const number = last.slice(0, Math.max(last.indexOf("-"), 0));
+    if (number && String(Number(number)) === number) {
+      parts.push(number + ".html");
+      const target = new URL("/" + parts.join("/") + location.search + location.hash, location.origin);
+      if (target.origin === location.origin) location.replace(target.href);
+    }
+  }
   const toast = document.querySelector("[data-toast]");
   let timer;
   const say = (text) => {

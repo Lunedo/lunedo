@@ -895,7 +895,7 @@ export function notFoundPage(view: PortalView): string {
   return layout(
     view,
     { title: t.notFoundHeading, robots: "noindex,nofollow" },
-    html`<div class="pw"><div class="center">
+    html`<div class="pw" data-not-found><div class="center">
       <span class="cicon s56" aria-hidden="true">${icon("file-question")}</span>
       <h1>${t.notFoundHeading}</h1>
       <p class="lead">${t.notFoundLead}</p>

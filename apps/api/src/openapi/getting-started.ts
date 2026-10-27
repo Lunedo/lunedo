@@ -4,10 +4,10 @@ export const GETTING_STARTED = `The Lunedo API lets scripts and integrations rea
 
 Scripts authenticate with an API token. There are two kinds:
 
-- **Personal tokens** act as your own account. Create one while signed in with \`POST /api/v1/account/tokens\`.
+- **Personal tokens** act as your own account. Create one while signed in, in your account settings under Security.
 - **Service account tokens** act as a service account of an organization, which keeps working when people leave. Holders of the "integrations and API" area create service accounts and their tokens.
 
-A token starts with \`ld_\` and is shown only once, when it is created. Choose its scopes from the permission areas, each with \`view\` or \`manage\`, and optionally limit it to one organization. At every request, the token can do only what both its scopes and its owner's current permissions allow. Tokens expire after 90 days unless you choose another date within the configured maximum. Creating and revoking tokens needs a signed-in session; a token cannot manage tokens.
+A token starts with \`ld_\` and is shown only once, when it is created. Choose its scopes from the permission areas, each with \`view\` or \`manage\`, and optionally limit it to one organization. At every request, the token can do only what both its scopes and its owner's current permissions allow. A token has no expiry unless you set a date when you create it. If the instance or an organization sets a maximum lifetime, every new token needs a date within it, and a token created without one gets the maximum. Creating and revoking tokens needs a signed-in session; a token cannot manage tokens.
 
 ## Your first request
 

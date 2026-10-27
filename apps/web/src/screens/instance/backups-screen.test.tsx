@@ -260,7 +260,7 @@ describe("the backup settings", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Test connection" }));
     expect(
       await screen.findByText(
-        "Writing failed: the endpoint resolves to 172.18.0.7, which is in a private network. If Lunedo should reach it, add 172.18.0.7/32 or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.",
+        "Writing failed: the endpoint resolves to 172.18.0.7, which is in a private network. If Lunedo should reach it, add 172.18.0.7/32 to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.",
       ),
     ).toBeTruthy();
   });

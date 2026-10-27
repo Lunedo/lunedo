@@ -144,6 +144,25 @@ describe("template file format", () => {
     expect(readFileSync(schemaFile, "utf8")).toBe(`${JSON.stringify(templateFormatJsonSchema(), null, 2)}\n`);
   });
 
+  it("describes every property of the published JSON Schema", () => {
+    const missing: string[] = [];
+    const visit = (node: unknown, path: string) => {
+      if (Array.isArray(node)) {
+        for (const [index, item] of node.entries()) visit(item, `${path}/${index}`);
+        return;
+      }
+      if (typeof node !== "object" || node === null) return;
+      const schema = node as Record<string, unknown>;
+      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+      for (const [name, property] of Object.entries(properties ?? {})) {
+        if (typeof property.description !== "string") missing.push(`${path}/${name}`);
+      }
+      for (const [key, value] of Object.entries(schema)) visit(value, `${path}/${key}`);
+    };
+    visit(templateFormatJsonSchema(), "");
+    expect(missing).toEqual([]);
+  });
+
   const validate = new Ajv2020({ strict: false, allErrors: true }).compile(templateFormatJsonSchema());
 
   for (const example of examples) {

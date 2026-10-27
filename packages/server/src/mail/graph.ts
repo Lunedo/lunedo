@@ -1,4 +1,5 @@
 import type { GraphMailConfiguration, GraphMailErrorCode } from "@lunedo/shared";
+import MailComposer from "nodemailer/lib/mail-composer";
 import { type GraphClientCredential, requestGraphToken } from "../identity/graph-token.js";
 import type { MailMessage, MailTransport } from "./transport.js";
 
@@ -144,20 +145,39 @@ export class GraphMailTransport implements MailTransport {
   async send(message: MailMessage): Promise<void> {
     const config = this.#configuration;
     const token = await this.#token();
-    const request = {
-      type: "application/json",
-      content: JSON.stringify({
-        message: {
-          subject: message.subject,
-          body: { contentType: "HTML", content: message.html },
-          toRecipients: [{ emailAddress: { address: message.to } }],
-          ...(config.senderName
-            ? { from: { emailAddress: { address: config.sender, name: config.senderName } } }
-            : {}),
-        },
-        saveToSentItems: false,
-      }),
-    };
+    if (!config.saveToSentItems) {
+      await this.#post(token, {
+        type: "application/json",
+        content: JSON.stringify({
+          message: {
+            subject: message.subject,
+            body: { contentType: "HTML", content: message.html },
+            toRecipients: [{ emailAddress: { address: message.to } }],
+            ...(config.senderName
+              ? { from: { emailAddress: { address: config.sender, name: config.senderName } } }
+              : {}),
+          },
+          saveToSentItems: false,
+        }),
+      });
+      return;
+    }
+    const mime = await new MailComposer({
+      from: config.senderName ? { name: config.senderName, address: config.sender } : config.sender,
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      ...(message.headers ? { headers: message.headers } : {}),
+      ...(message.messageId ? { messageId: message.messageId } : {}),
+    })
+      .compile()
+      .build();
+    await this.#post(token, { type: "text/plain", content: mime.toString("base64") });
+  }
+
+  async #post(token: string, request: { type: string; content: string }): Promise<void> {
+    const config = this.#configuration;
     const response = await this.#request(
       `${config.graphUrl}/v1.0/users/${encodeURIComponent(config.sender)}/sendMail`,
       {

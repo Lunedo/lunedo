@@ -394,7 +394,7 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
       await test.services.search.indexer.drain();
       const portal = await config(kb.id);
       const [number] = await numbers(translated);
-      const shown = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "", "en");
+      const shown = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "en");
       expect(shown?.type === "found" && shown.article).toMatchObject({
         itemId: english.id,
         language: "en",
@@ -409,17 +409,16 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
         ANONYMOUS,
         portal,
         await ownNumber(english.id),
-        "",
         "en",
       );
       expect(own).toBeNull();
-      const german = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "", "de");
+      const german = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "de");
       expect(german?.type === "found" && german.article).toMatchObject({
         itemId: translated,
         fallback: false,
       });
       const [other] = await numbers(untranslated);
-      const fallback = await test.services.portalReader.article(ANONYMOUS, portal, other ?? 0, "", "en");
+      const fallback = await test.services.portalReader.article(ANONYMOUS, portal, other ?? 0, "en");
       expect(fallback?.type === "found" && fallback.article).toMatchObject({
         itemId: untranslated,
         language: "de",
@@ -450,7 +449,7 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
       await test.services.search.indexer.drain();
       const portal = await config(kb.id);
       const [number] = await numbers(source);
-      const found = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "", "en");
+      const found = await test.services.portalReader.article(ANONYMOUS, portal, number ?? 0, "en");
       expect(found?.type === "found" && found.article).toMatchObject({
         itemId: source,
         alternates: [{ language: "de" }],

@@ -230,6 +230,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
       clientId: "00000000-0000-0000-0000-000000000002",
       sender: "wiki@example.org",
       senderName: "Lunedo",
+      saveToSentItems: false,
       authority: "https://login.microsoftonline.com",
       graphUrl: "https://graph.microsoft.com",
     });

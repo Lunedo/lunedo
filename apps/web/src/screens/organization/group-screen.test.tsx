@@ -115,7 +115,9 @@ describe("group detail", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Remove from group" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(await screen.findByText("Lena Höfer was removed from the group.")).toBeTruthy();
-    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    await waitFor(() => expect(window.getComputedStyle(undo).pointerEvents).not.toBe("none"));
+    await userEvent.click(undo);
     await waitFor(() =>
       expect(requests.find((request) => request.method === "POST")?.body).toEqual({
         accountId: LENA,

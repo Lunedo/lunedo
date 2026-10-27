@@ -12,18 +12,34 @@ export const MAX_INTERVAL = 52;
 
 export const rhythmSchema = z
   .object({
-    frequency: z.enum(rhythmFrequencies),
-    interval: z.number().int().min(1).max(MAX_INTERVAL).default(1),
-    weekdays: z.array(z.enum(weekdays)).max(7).optional(),
-    monthDay: z.number().int().min(1).max(31).optional(),
+    frequency: z.enum(rhythmFrequencies).describe("How often the meeting repeats."),
+    interval: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_INTERVAL)
+      .default(1)
+      .describe("Every how many days, weeks, months or years."),
+    weekdays: z.array(z.enum(weekdays)).max(7).optional().describe("For `weekly`: the days of the week."),
+    monthDay: z
+      .number()
+      .int()
+      .min(1)
+      .max(31)
+      .optional()
+      .describe("For `monthly` by date: the day of the month."),
     weekOfMonth: z
       .number()
       .int()
-      .refine((value) => value === -1 || (value >= 1 && value <= 4), "Use 1 to 4, or -1 for the last")
-      .optional(),
-    weekday: z.enum(weekdays).optional(),
+      .min(-1)
+      .max(4)
+      .refine((value) => value !== 0, "Use 1 to 4, or -1 for the last")
+      .optional()
+      .describe("For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last."),
+    weekday: z.enum(weekdays).optional().describe("For `monthly` by weekday: the day of the week."),
   })
-  .strict();
+  .strict()
+  .describe("How a meeting series repeats.");
 export type Rhythm = z.output<typeof rhythmSchema>;
 
 export class ScheduleError extends Error {

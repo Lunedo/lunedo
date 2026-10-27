@@ -188,7 +188,7 @@ export class StaticSiteBuilder {
     const articles: SiteArticle[] = [];
     for (const row of result.rows) {
       const slug = slugify(row.title);
-      const found = await this.#reader.article(ANONYMOUS, config, Number(row.number), slug, row.language);
+      const found = await this.#reader.article(ANONYMOUS, config, Number(row.number), row.language);
       if (found?.type !== "found" || found.article.itemId !== row.id || found.article.fallback) continue;
       articles.push({
         itemId: row.id,

@@ -5,6 +5,7 @@ import {
   type Rhythm,
   recurrenceOf,
   rhythmOf,
+  rhythmSchema,
   type Schedule,
   ScheduleError,
   validateSchedule,
@@ -181,5 +182,17 @@ describe("validation", () => {
     expect(() => validateSchedule(schedule(null, "2026-10-12", "25:00"))).toThrow(ScheduleError);
     expect(() => validateSchedule(schedule("FREQ=SOMETIMES", "2026-10-12"))).toThrow(ScheduleError);
     expect(() => validateSchedule(schedule("FREQ=WEEKLY;BYDAY=MO", "2026-10-12"))).not.toThrow();
+  });
+});
+
+describe("the week of the month", () => {
+  const monthly = { frequency: "monthly", weekday: "TU" } as const;
+
+  it.each([-1, 1, 2, 3, 4])("accepts %i", (weekOfMonth) => {
+    expect(rhythmSchema.safeParse({ ...monthly, weekOfMonth }).success).toBe(true);
+  });
+
+  it.each([0, 5, -2, 53, 1.5])("refuses %s", (weekOfMonth) => {
+    expect(rhythmSchema.safeParse({ ...monthly, weekOfMonth }).success).toBe(false);
   });
 });

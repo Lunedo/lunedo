@@ -1195,6 +1195,7 @@ export function createAccountServices(options: {
     audit,
     notifications,
     language: (accountId) => mail.languageOf(accountId),
+    instanceUrl: async () => (await instanceAddress.get()).url,
     jobs,
   });
   memberships.onDeactivated((tx, accountId) => exports.afterDeactivation(tx, accountId));

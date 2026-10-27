@@ -3596,7 +3596,11 @@
       "senderHint": "Das Postfach, als das Lunedo sendet.",
       "senderName": "Absendername",
       "senderNameHint": "Optional, sonst Name des Postfachs.",
-      "sentItems": "Über Microsoft Graph gesendete E-Mails werden nicht in den Gesendeten Elementen des Absenderpostfachs abgelegt. Graph kann den Header für die Abmeldung mit einem Klick nicht mitsenden, deshalb lassen sich Benachrichtigungs-E-Mails nur über den Link in der E-Mail abbestellen. Über SMTP enthalten sie zusätzlich den Header.",
+      "saveToSentItems": "Von jeder E-Mail eine Kopie in den Gesendeten Elementen des Absenderpostfachs behalten",
+      "sentItemsOff": "Aus: Es bleibt keine Kopie. Die E-Mails gehen nur als HTML und ohne Header für die Abmeldung mit einem Klick hinaus; der Abmeldelink in der E-Mail bleibt. Für den Header nutze SMTP mit OAuth.",
+      "sentItemsOn": "An: Die E-Mails gehen vollständig hinaus, mit Textteil und dem Header für die Abmeldung mit einem Klick.",
+      "sentItemsWarningTitle": "Jede E-Mail bleibt im Postfach",
+      "sentItemsWarning": "Microsoft legt von jeder E-Mail eine Kopie in den Gesendeten Elementen des Absenderpostfachs ab, auch von Einmal-Links und Auszügen aus Seiten. Alle, die das Postfach lesen können, etwa Postfachadministratoren, können sie lesen, auch Seiten aus eingeschränkten Spaces. Eine Aufbewahrungsrichtlinie kann die Kopien aufräumen.",
       "credentials": "Client-Secret oder Zertifikat",
       "noCredentials": "Noch keines. Füge ein Client-Secret hinzu oder erstelle ein Zertifikat, bevor Lunedo senden kann.",
       "kinds": {
@@ -10657,7 +10661,7 @@
         "invalidThresholds": "Die Stufen müssen ganze Prozentzahlen sein und steigen: erst Warnung, dann große Schreibvorgänge, dann kritisch.",
         "invalidS3Limit": "Das Limit muss eine positive Größe sein."
       },
-      "moved": "Die Betriebskontakte, die Speicherwarnungen erhalten, legst du unter Benachrichtigungen fest.",
+      "moved": "Die Betriebskontakte, die Speicherwarnungen erhalten, legst du unter Zustellung fest.",
       "open": "Betriebskontakte öffnen",
       "loadFailed": "Die Betriebskontakte konnten nicht geladen werden",
       "addressesHelp": "Eine Adresse pro Zeile, zum Beispiel eine Ticket-Adresse der IT. Bis zu 20.",
@@ -10680,7 +10684,7 @@
       "invalidCount": "Gib eine ganze Zahl im erlaubten Bereich ein.",
       "invalidScope": "Wähle, was die Backups enthalten.",
       "invalidPath": "Gib einen absoluten Pfad im Container ein, zum Beispiel /var/lib/lunedo/backups.",
-      "reservedPath": "Dieser Pfad enthält den Dateispeicher, die Geheimnisse oder den Importordner. Wähle ein eigenes Verzeichnis.",
+      "reservedPath": "Dieser Pfad ist der Dateispeicher, die Geheimnisse, der Importordner oder das Arbeitsverzeichnis für temporäre Backup-Dateien oder liegt darin, enthält das Arbeitsverzeichnis oder ist das Stammverzeichnis. Wähle ein eigenes Verzeichnis.",
       "invalidEndpoint": "Gib nur die Adresse des Dienstes ein, beginnend mit https://, zum Beispiel https://s3.example.org.",
       "invalidRegion": "Gib die Region ein, zum Beispiel eu-central-1, oder auto für Cloudflare R2.",
       "invalidBucket": "Gib den Bucket-Namen ein: 3 bis 63 Kleinbuchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
@@ -10761,7 +10765,7 @@
         "full": "{step} fehlgeschlagen: Das Ziel ist voll. Schaffe Platz oder wähle ein anderes Ziel.",
         "dns": "{step} fehlgeschlagen: Der Hostname des Endpunkts ließ sich nicht auflösen. Prüfe den Endpunkt.",
         "blockedAddress": "{step} fehlgeschlagen: Der Endpunkt liegt in einem privaten Netz. Soll er erreichbar sein, trage seine Adresse in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein.",
-        "blockedAddressAt": "{step} fehlgeschlagen: Der Endpunkt löst zu {address} auf, einer Adresse in einem privaten Netz. Soll Lunedo ihn erreichen, trage {network} oder das Subnetz seines Netzes in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein und starte Lunedo neu.",
+        "blockedAddressAt": "{step} fehlgeschlagen: Der Endpunkt löst zu {address} auf, einer Adresse in einem privaten Netz. Soll Lunedo ihn erreichen, trage {network} in LUNEDO_OUTBOUND_ALLOWED_NETWORKS ein und starte Lunedo neu.",
         "insecureAddress": "{step} fehlgeschlagen: Öffentliche Endpunkte brauchen HTTPS. Verwende eine https://-Adresse.",
         "connection": "{step} fehlgeschlagen: Der Endpunkt war nicht erreichbar. Prüfe Adresse, Port und Firewall.",
         "tls": "{step} fehlgeschlagen: Dem TLS-Zertifikat des Endpunkts wird nicht vertraut. Prüfe das Zertifikat oder die Adresse.",
@@ -10820,9 +10824,9 @@
       "missingDaysHint": "Admins und Kontakte werden informiert.",
       "autoTestRestore": "Neuestes Backup jeden Monat testweise wiederherstellen",
       "autoTestRestoreHint": "Monatlich wiederherstellen und prüfen.",
-      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus den Benachrichtigungseinstellungen, mit derselben Erinnerung.",
+      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus der Zustellung, mit derselben Erinnerung.",
       "missingDaysHelp": "Instanzadministration und Betriebskontakte werden einmal informiert.",
-      "autoTestRestoreHelp": "Nach dem ersten geplanten Backup eines Monats stellt Lunedo es in eine temporäre Datenbank wieder her und prüft es."
+      "autoTestRestoreHelp": "Nach einem geplanten Backup stellt Lunedo es in eine temporäre Datenbank wieder her und prüft es, wenn der letzte automatische Test einen Monat oder länger zurückliegt."
     },
     "test": {
       "title": "Test-Wiederherstellung",
@@ -11232,7 +11236,7 @@
     },
     "categories": {
       "icon": "Icon",
-      "iconHint": "Ohne Icon zeigt das Portal den Anfangsbuchstaben des Namens.",
+      "iconHint": "Ohne Icon werden Namen bis 3 Zeichen ganz gezeigt, sonst der Anfangsbuchstabe.",
       "noIcon": "Kein Icon",
       "intro": "Einleitung",
       "moveUp": "{title} nach oben verschieben",

@@ -606,7 +606,10 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(old.headers.location).toBe(`${kb.path}/${entry.number}-neuer-titel`);
     const bare = await visitor.get(`${kb.path}/${entry.number}`);
     expect(bare.statusCode).toBe(301);
-    expect((await visitor.get(`${kb.path}/${entry.number}-erfunden`)).statusCode).toBe(404);
+    const invented = await visitor.get(`${kb.path}/${entry.number}-erfunden`);
+    expect(invented.statusCode).toBe(301);
+    expect(invented.headers.location).toBe(`${kb.path}/${entry.number}-neuer-titel`);
+    expect((await visitor.get(`${kb.path}/${entry.number + 100_000}-erfunden`)).statusCode).toBe(404);
     const moved = await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/address`, {
       path: `neu-${counter}`,
       domain: null,
@@ -686,7 +689,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const elsewhere = await owner.get(`${kb.path}/${foreign.number}-fremd`);
     expect(elsewhere.statusCode).toBe(301);
     expect(elsewhere.headers.location).toBe(`${TEST_ORIGIN}${other.path}/${foreign.number}-fremd`);
-    expect((await owner.get(`${kb.path}/${foreign.number}-erfunden`)).statusCode).toBe(404);
+    const wrongElsewhere = await owner.get(`${kb.path}/${foreign.number}-erfunden`);
+    expect(wrongElsewhere.statusCode).toBe(301);
+    expect(wrongElsewhere.headers.location).toBe(`${TEST_ORIGIN}${other.path}/${foreign.number}-fremd`);
   });
 
   it("shows the edit link only to editors and links back to the app editor", async () => {
@@ -1051,6 +1056,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const wrongSlug = await reader.get(`${kb.path}/en/${original.number}-passwort-aendern`);
     expect(wrongSlug.statusCode).toBe(301);
     expect(wrongSlug.headers.location).toBe(`${kb.path}/en/${original.number}-change-the-password`);
+    const invented = await reader.get(`${kb.path}/en/${original.number}-erfunden`);
+    expect(invented.statusCode).toBe(301);
+    expect(invented.headers.location).toBe(`${kb.path}/en/${original.number}-change-the-password`);
+    const inventedGerman = await reader.get(`${kb.path}/${original.number}-erfunden`);
+    expect(inventedGerman.statusCode).toBe(301);
+    expect(inventedGerman.headers.location).toBe(`${kb.path}/${original.number}-passwort-aendern`);
     const fallback = await reader.get(`${kb.path}/en/${untranslated.number}-drucker`);
     expect(fallback.statusCode, fallback.body).toBe(200);
     expect(fallback.body).toContain('<html lang="en"');

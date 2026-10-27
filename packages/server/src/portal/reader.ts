@@ -289,7 +289,6 @@ export class PortalReader {
     principal: Principal,
     config: PortalConfig,
     number: number,
-    slug: string,
     language: string = config.defaultLanguage,
   ): Promise<ArticleLookup> {
     if (!Number.isSafeInteger(number) || number < 1) return null;
@@ -307,14 +306,11 @@ export class PortalReader {
       version_id: string;
       updated_at: Date;
       reviewed_at: Date | string | null;
-      known_titles: string[];
     }>(sql`
       select t.id, t.number as item_number, t.space_id, s.key as space_key, v.title, t.description, t.article_type,
         array_remove(t.path, t.translation_of) as path, t.translation_of,
         case when t.translation_of is null then kb.default_language else t.content_language end as language,
-        v.id as version_id, v.created_at as updated_at, ${lastReviewedAt(sql`t`)} as reviewed_at,
-        array(select h.title from article_titles h where h.item_id = t.id and h.space_id = ${config.spaceId})
-          as known_titles
+        v.id as version_id, v.created_at as updated_at, ${lastReviewedAt(sql`t`)} as reviewed_at
       from tree_items src
       join tree_items t on t.id = src.id or (t.translation_of = src.id and t.space_id = src.space_id)
       join spaces s on s.id = t.space_id
@@ -325,10 +321,6 @@ export class PortalReader {
         and (t.translation_of is null or t.content_language = any(kb.languages))
         and ${this.#authorization.portalFilter(principal, sql`t`, sql`s`)}`);
     const rows = found.rows.map((row) => ({ ...row, slug: slugify(row.title) }));
-    const known = rows.some(
-      (row) => slug === "" || slug === row.slug || row.known_titles.some((title) => slugify(title) === slug),
-    );
-    if (!known) return null;
     const source = rows.find((row) => row.translation_of === null);
     if (source && source.space_id !== config.spaceId) {
       return { type: "redirect", spaceId: source.space_id, number, slug: source.slug };

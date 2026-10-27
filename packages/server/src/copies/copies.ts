@@ -5,6 +5,7 @@ import {
   copyPageDocument,
   type DocumentJson,
   documentAttachments,
+  itemAddressOf,
 } from "@lunedo/editor-schema";
 import { copyScene, validateScene, yDocFromScene } from "@lunedo/editor-schema/scene";
 import { type Language, uuidv7 } from "@lunedo/shared";
@@ -22,6 +23,7 @@ import { checkKnowledgeBaseSubtree, isKnowledgeBase } from "../knowledge-bases/r
 import type { NotificationService } from "../notifications/service.js";
 import { idleOutsideMaintenance } from "../operations/maintenance.js";
 import type { ValueSigner } from "../sharing/signer.js";
+import { itemAddress } from "../spaces/addresses.js";
 import { actorIdOf, auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
 import { encodeState, insertInitialDocument, migrated, recomputeLinks } from "../spaces/documents.js";
 import { positionBetween } from "../spaces/fractional-index.js";
@@ -60,7 +62,6 @@ const CONFIRMATION_MS = 60 * 60 * 1000;
 const STALE_COPY_HOURS = 5;
 const FINISHED_COPY_DAYS = 30;
 const COPYABLE_ROOTS: ReadonlySet<TreeItemKind> = new Set(["page", "folder", "whiteboard"]);
-const ITEM_PATH = /^\/spaces\/[^/?#]+\/(pages|whiteboards)\/([0-9a-f-]{36})(?=$|[/?#])/i;
 const RETRYABLE_CODES = new Set(["40001", "40P01"]);
 const SPACE_LOCK_ATTEMPTS = 20;
 const SPACE_LOCK_PAUSE_MS = 100;
@@ -127,6 +128,7 @@ export interface CopySummary {
 
 interface SourceRow {
   id: string;
+  number: number | string;
   parent_id: string | null;
   space_id: string;
   kind: TreeItemKind;
@@ -178,6 +180,10 @@ interface CopyContext {
   plan: Plan;
   located: Located;
   copies: Map<string, PlannedItem>;
+  copyNumbers: Map<string, number>;
+  titles: Map<string, string>;
+  sourceNumbers: Map<number, PlannedItem>;
+  instanceUrl: string | undefined;
   linked: { itemId: string; content: DocumentJson }[];
 }
 
@@ -275,6 +281,7 @@ export class CopyService {
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService;
   readonly #language: (accountId: string) => Promise<Language>;
+  readonly #instanceUrl: () => Promise<string | null>;
   readonly #jobs: JobQueue | undefined;
   readonly #copiers: Partial<Record<TreeItemKind, Copier>>;
 
@@ -289,6 +296,7 @@ export class CopyService {
     audit: AuditLog;
     notifications: NotificationService;
     language: (accountId: string) => Promise<Language>;
+    instanceUrl: () => Promise<string | null>;
     jobs?: JobQueue | undefined;
   }) {
     this.#database = options.database;
@@ -301,6 +309,7 @@ export class CopyService {
     this.#audit = options.audit;
     this.#notifications = options.notifications;
     this.#language = options.language;
+    this.#instanceUrl = options.instanceUrl;
     this.#jobs = options.jobs;
     this.#copiers = {
       page: (context, item) => this.#copyPage(context, item),
@@ -550,7 +559,7 @@ export class CopyService {
         where ${descendants} and c.trash_entry_id is null and c.kind not in ('blogPost')
           and c.archived_root_id is not distinct from down.archived_root_id and down.depth < 1000
       )
-      select t.id, t.parent_id, t.space_id, t.kind, t.title, t.description, t.width, t.number_headings, t.mode,
+      select t.id, t.number, t.parent_id, t.space_id, t.kind, t.title, t.description, t.width, t.number_headings, t.mode,
         t.position, t.content_language, t.translation_of, t.status_id, t.link_item_id, t.link_url, d.depth,
         (t.kind not in ('page', 'blogPost') or t.mode = 'live' or t.published_version_id is not null) as published,
         exists (select 1 from meetings m where m.item_id = t.id) as meeting,
@@ -728,7 +737,24 @@ export class CopyService {
     const position = await this.#position(tx, located.targetSpaceId, request);
     const copies = new Map(plan.items.map((item) => [item.id, item]));
     const knowledgeBase = await isKnowledgeBase(tx, located.targetSpaceId);
-    const context: CopyContext = { tx, actor, actorId, plan, located, copies, linked: [] };
+    const copyNumbers = new Map<string, number>();
+    for (const item of plan.items) {
+      const next = await tx.execute<{ number: string }>(sql`select nextval('tree_item_numbers') as number`);
+      copyNumbers.set(item.id, Number(next.rows[0]?.number));
+    }
+    const context: CopyContext = {
+      tx,
+      actor,
+      actorId,
+      plan,
+      located,
+      copies,
+      copyNumbers,
+      titles,
+      sourceNumbers: new Map(plan.items.map((item) => [Number(item.number), item])),
+      instanceUrl: (await this.#instanceUrl()) ?? undefined,
+      linked: [],
+    };
     for (const [index, item] of plan.items.entries()) {
       const isRoot = index === 0;
       const linked = item.link_item_id ? (copies.get(item.link_item_id)?.copyId ?? item.link_item_id) : null;
@@ -737,10 +763,10 @@ export class CopyService {
           ? (copies.get(item.translation_of)?.copyId ?? null)
           : null;
       await tx.execute(sql`
-        insert into tree_items (id, space_id, parent_id, kind, position, title, description, width, number_headings,
+        insert into tree_items (id, number, space_id, parent_id, kind, position, title, description, width, number_headings,
           mode, link_item_id, link_url, content_language, translation_of, status_id, status_changed_at,
           status_changed_by, creator_id, owner_id)
-        values (${item.copyId}, ${located.targetSpaceId}, ${isRoot ? request.parentId : item.copyParentId}, ${item.kind},
+        values (${item.copyId}, ${copyNumbers.get(item.id)}, ${located.targetSpaceId}, ${isRoot ? request.parentId : item.copyParentId}, ${item.kind},
           ${isRoot ? position : item.position}, ${titles.get(item.id) ?? item.title}, ${item.description},
           ${item.width}, ${item.number_headings}, ${item.mode}, ${linked}, ${item.link_url}, ${item.content_language},
           ${translationOf}, ${item.status_id}, ${item.status_id ? sql`now()` : null}, ${item.status_id ? actorId : null},
@@ -902,10 +928,21 @@ export class CopyService {
         return copied ? { id: copied.copyId, spaceId: context.located.targetSpaceId } : null;
       },
       href: (href) => {
-        const match = ITEM_PATH.exec(href);
-        const copied = match?.[2] ? context.copies.get(match[2].toLowerCase()) : undefined;
-        if (!match || !copied) return href;
-        return `/spaces/${encodeURIComponent(context.located.targetKey)}/${match[1]}/${copied.copyId}${href.slice(match[0].length)}`;
+        const address = itemAddressOf(href, context.instanceUrl);
+        if (!address) return href;
+        const source =
+          "id" in address.reference
+            ? context.copies.get(address.reference.id)
+            : context.sourceNumbers.get(address.reference.number);
+        const number = source ? context.copyNumbers.get(source.id) : undefined;
+        if (!source || number === undefined) return href;
+        const path = itemAddress(
+          source.kind,
+          context.located.targetKey,
+          number,
+          context.titles.get(source.id) ?? source.title,
+        );
+        return path ? `${path}${address.query}${address.fragment}` : href;
       },
     };
   }

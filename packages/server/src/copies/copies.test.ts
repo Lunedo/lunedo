@@ -2,6 +2,7 @@ import { Readable } from "node:stream";
 import { emptyScene, yDocFromScene } from "@lunedo/editor-schema/scene";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
 import type { PageMode } from "../spaces/schema.js";
@@ -78,8 +79,13 @@ describe.skipIf(!baseUrl)("copying content", () => {
   }
 
   async function children(parentId: string) {
-    const result = await test.database.execute<{ id: string; title: string; kind: string }>(sql`
-      select id, title, kind from tree_items where parent_id = ${parentId} order by position`);
+    const result = await test.database.execute<{
+      id: string;
+      title: string;
+      kind: string;
+      number: number;
+    }>(sql`
+      select id, number, title, kind from tree_items where parent_id = ${parentId} order by position`);
     return result.rows;
   }
 
@@ -391,6 +397,56 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(await usage.total()).toBe(empty);
     });
 
+    it("rewrites every internal address form that points into the copy to the number address of the copy", async () => {
+      const { wiki, other, as } = await setup();
+      await test.settings.set(instanceUrlSetting, {}, "instance", "https://wiki.example.org");
+      const root = await page(as, wiki.id, "Handbook");
+      const child = await page(as, wiki.id, "Onboarding", root.id);
+      const outside = await page(as, wiki.id, "Elsewhere");
+      const base = `/spaces/${wiki.key}/pages`;
+      const absolute = `https://wiki.example.org${base}`;
+      const sources = [
+        `${base}/${child.number}/onboarding`,
+        `${base}/${child.number}`,
+        `${base}/${child.number}/renamed-long-ago#setup`,
+        `${base}/${child.id}/onboarding`,
+        `${base}/${child.id.toUpperCase()}#setup`,
+        `${absolute}/${child.number}/onboarding?view=wide#setup`,
+        `${absolute}/${child.id}`,
+        `https://other.example.net${base}/${child.number}/onboarding`,
+        `${base}/${outside.number}/elsewhere#setup`,
+        `${absolute}/${outside.id}`,
+      ];
+      const marked = (href: string) =>
+        text("link", [{ type: "link", attrs: { href } }]) as ReturnType<typeof text>;
+      await test.services.documents.replace(
+        as,
+        root.id,
+        doc(paragraph(...sources.flatMap((href) => [marked(href), text(" ")]))),
+      );
+
+      const { item } = await copyRoot(as, root.id, other.id, true);
+
+      const [copiedChild] = await children(item.id);
+      const copied = `/spaces/${other.key}/pages/${copiedChild?.number}/onboarding`;
+      const content = await snapshot(item.id);
+      const hrefs = ((content?.content?.[0]?.content ?? []) as { marks?: { attrs?: { href?: string } }[] }[])
+        .filter((node) => node.marks)
+        .map((node) => node.marks?.[0]?.attrs?.href);
+      expect(hrefs).toEqual([
+        copied,
+        copied,
+        `${copied}#setup`,
+        copied,
+        `${copied}#setup`,
+        `${copied}?view=wide#setup`,
+        copied,
+        sources[7],
+        sources[8],
+        sources[9],
+      ]);
+    });
+
     it("rewrites links between copied pages and keeps other links, includes and live references", async () => {
       const { wiki, other, as } = await setup();
       const root = await page(as, wiki.id, "Handbook");
@@ -427,7 +483,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(inline[0]?.attrs).toEqual({ pageId: copiedChild?.id, spaceId: other.id, title: null });
       expect(inline[1]?.attrs).toEqual({ pageId: outside.id, spaceId: wiki.id, title: null });
       expect(inline[2]?.marks).toEqual([
-        { type: "link", attrs: { href: `/spaces/${other.key}/pages/${copiedChild?.id}/onboarding` } },
+        { type: "link", attrs: { href: `/spaces/${other.key}/pages/${copiedChild?.number}/onboarding` } },
       ]);
       expect(include?.attrs).toMatchObject({ pageId: child.id });
       expect(whiteboard?.attrs).toMatchObject({ whiteboardId: board.id });
@@ -534,7 +590,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
         frameId: null,
         boundElements: null,
         updated: 1_700_000_000_000,
-        link: `/spaces/${wiki.key}/whiteboards/${board.id}/network-map`,
+        link: `/spaces/${wiki.key}/whiteboards/${board.number}/network-map`,
         locked: false,
         fileId: "router",
         status: "saved",
@@ -561,7 +617,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(copiedImage?.name).toBe("router.png");
       expect(copiedScene?.scene.files.router?.attachmentId).toBe(copiedImage?.id);
       expect(copiedScene?.scene.elements[0]?.link).toBe(
-        `/spaces/${other.key}/whiteboards/${item.id}/network-map`,
+        `/spaces/${other.key}/whiteboards/${item.number}/network-map`,
       );
       expect(copiedScene?.preview).toBe(true);
       const previews = await test.database.execute<{ file_id: string; item_id: string }>(

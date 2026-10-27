@@ -3596,7 +3596,11 @@
       "senderHint": "The mailbox Lunedo sends as.",
       "senderName": "Sender name",
       "senderNameHint": "Optional, else the mailbox name.",
-      "sentItems": "Mails sent through Microsoft Graph are not kept in the Sent Items of the sender mailbox. Graph cannot add the one-click unsubscribe header, so notification mails offer unsubscribing through the link in the mail only. Through SMTP, they carry the header as well.",
+      "saveToSentItems": "Keep a copy of every mail in the Sent Items of the sender mailbox",
+      "sentItemsOff": "Off: no copy is kept. Mails go out as HTML only and carry no one-click unsubscribe header; the unsubscribe link in the mail stays. For the header, use SMTP with OAuth.",
+      "sentItemsOn": "On: mails go out in full, with a text part and the one-click unsubscribe header.",
+      "sentItemsWarningTitle": "Every mail stays in the mailbox",
+      "sentItemsWarning": "Microsoft keeps a copy of every mail, including one-time links and excerpts of pages, in the Sent Items of the sender mailbox. Everyone who can read that mailbox, such as mailbox administrators, can read them, also pages from restricted spaces. A retention policy can clean the copies up.",
       "credentials": "Client secret or certificate",
       "noCredentials": "None yet. Add a client secret or create a certificate before Lunedo can send.",
       "kinds": {
@@ -10657,7 +10661,7 @@
         "invalidThresholds": "The levels must be whole percentages that rise: warning, then large writes, then critical.",
         "invalidS3Limit": "The limit must be a positive size."
       },
-      "moved": "The operations contacts who receive storage warnings are set under Notifications.",
+      "moved": "The operations contacts who receive storage warnings are set under Delivery.",
       "open": "Open the operations contacts",
       "loadFailed": "The operations contacts could not be loaded",
       "addressesHelp": "One address per line, for example an IT ticket address. Up to 20.",
@@ -10680,7 +10684,7 @@
       "invalidCount": "Enter a whole number in the allowed range.",
       "invalidScope": "Choose what the backups contain.",
       "invalidPath": "Enter an absolute path inside the container, for example /var/lib/lunedo/backups.",
-      "reservedPath": "This path holds the file store, the secrets or the import folder. Choose a directory of its own.",
+      "reservedPath": "This path is, or lies inside, the file store, the secrets, the import folder or the work directory for temporary backup files, contains the work directory, or is the root directory. Choose a directory of its own.",
       "invalidEndpoint": "Enter only the address of the service, starting with https://, for example https://s3.example.org.",
       "invalidRegion": "Enter the region, for example eu-central-1, or auto for Cloudflare R2.",
       "invalidBucket": "Enter the bucket name: 3 to 63 lowercase letters, digits, dots, hyphens or underscores.",
@@ -10761,7 +10765,7 @@
         "full": "{step} failed: the target is full. Free up space or choose another target.",
         "dns": "{step} failed: the host name of the endpoint could not be resolved. Check the endpoint.",
         "blockedAddress": "{step} failed: the endpoint is in a private network. If it should be reached, add its address to LUNEDO_OUTBOUND_ALLOWED_NETWORKS.",
-        "blockedAddressAt": "{step} failed: the endpoint resolves to {address}, which is in a private network. If Lunedo should reach it, add {network} or the subnet of its network to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.",
+        "blockedAddressAt": "{step} failed: the endpoint resolves to {address}, which is in a private network. If Lunedo should reach it, add {network} to LUNEDO_OUTBOUND_ALLOWED_NETWORKS and restart Lunedo.",
         "insecureAddress": "{step} failed: public endpoints need HTTPS. Use an https:// address.",
         "connection": "{step} failed: the endpoint could not be reached. Check the address, the port and the firewall.",
         "tls": "{step} failed: the TLS certificate of the endpoint is not trusted. Check the certificate or the address.",
@@ -10820,9 +10824,9 @@
       "missingDaysHint": "Admins and contacts are told.",
       "autoTestRestore": "Test-restore the newest backup every month",
       "autoTestRestoreHint": "Restore and check monthly.",
-      "contacts": "Warnings go to the instance administrators and to the operations contacts set under Notifications, with the same reminder.",
+      "contacts": "Warnings go to the instance administrators and to the operations contacts set under Delivery, with the same reminder.",
       "missingDaysHelp": "Instance administrators and the operations contacts are told once.",
-      "autoTestRestoreHelp": "After the first scheduled backup of a month, Lunedo restores it into a temporary database and checks it."
+      "autoTestRestoreHelp": "After a scheduled backup, if the last automatic test is a month old or older, Lunedo restores that backup into a temporary database and checks it."
     },
     "test": {
       "title": "Test restore",
@@ -11232,7 +11236,7 @@
     },
     "categories": {
       "icon": "Icon",
-      "iconHint": "Without an icon the portal shows the first letter of the name.",
+      "iconHint": "Without an icon, names up to 3 characters are shown whole, else the first letter.",
       "noIcon": "No icon",
       "intro": "Introduction",
       "moveUp": "Move {title} up",

@@ -3,6 +3,7 @@ import {
   type DocumentJson,
   extractPageLinks,
   internalItemLink,
+  itemAddressOf,
   type RenderContext,
   renderHtml,
   renderMarkdown,
@@ -100,5 +101,41 @@ describe("internal item links in link marks", () => {
     expect(extractPageLinks(linked(`https://wiki.example.org/spaces/OPS/pages/${HIDDEN}/x#a`))).toEqual([
       { pageId: HIDDEN, spaceId: null, title: null },
     ]);
+  });
+});
+
+describe("itemAddressOf", () => {
+  const base = "https://wiki.example.org";
+  const id = "01929b1e-0000-7000-8000-00000000000a";
+
+  it.each([
+    ["/spaces/OPS/pages/4711/runbook", { number: 4711 }, "", ""],
+    ["/spaces/OPS/pages/4711", { number: 4711 }, "", ""],
+    ["/spaces/OPS/whiteboards/1040/map#north", { number: 1040 }, "", "#north"],
+    ["/spaces/OPS/folders/1041/area?view=wide#top", { number: 1041 }, "?view=wide", "#top"],
+    ["/shared/4711/runbook", { number: 4711 }, "", ""],
+    [`/spaces/OPS/pages/${id}/runbook#setup`, { id }, "", "#setup"],
+    [`/spaces/OPS/pages/${id.toUpperCase()}`, { id }, "", ""],
+    [`${base}/spaces/OPS/pages/4711/runbook#setup`, { number: 4711 }, "", "#setup"],
+    [`${base}/spaces/OPS/pages/${id}?x=1`, { id }, "?x=1", ""],
+  ])("reads %s", (href, reference, query, fragment) => {
+    expect(itemAddressOf(href, base)).toEqual({ reference, query, fragment });
+  });
+
+  it.each([
+    "https://other.example.net/spaces/OPS/pages/4711/runbook",
+    "//other.example.net/spaces/OPS/pages/4711",
+    "/spaces/OPS/pages/not-a-number",
+    "/spaces/OPS/pages/4711x",
+    "/spaces/OPS/settings/4711",
+    "/help/hilfe/1040-export",
+    "mailto:ops@example.org",
+  ])("does not read %s", (href) => {
+    expect(itemAddressOf(href, base)).toBeNull();
+  });
+
+  it("reads only relative addresses without an instance address", () => {
+    expect(itemAddressOf(`${base}/spaces/OPS/pages/4711`)).toBeNull();
+    expect(itemAddressOf("/spaces/OPS/pages/4711")).not.toBeNull();
   });
 });

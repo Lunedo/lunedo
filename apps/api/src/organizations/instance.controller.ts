@@ -250,6 +250,12 @@ const graphMailInputSchema = z
       .nullable()
       .optional()
       .describe("Name shown as sender, or null for the mailbox name."),
+    saveToSentItems: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether Microsoft keeps a copy of every mail in the Sent Items of the sender mailbox. Off by default. Only then the mails carry the one-click unsubscribe header and a text part.",
+      ),
     authority: z
       .string()
       .optional()
@@ -265,6 +271,9 @@ const graphMailSchema = z
     clientId: z.string().describe("Application (client) ID."),
     sender: z.string().describe("Sender mailbox."),
     senderName: z.string().nullable().describe("Name shown as sender, or null."),
+    saveToSentItems: z
+      .boolean()
+      .describe("Whether a copy of every mail stays in the Sent Items of the sender mailbox."),
     authority: z.string().describe("Sign-in authority."),
     graphUrl: z.string().describe("Microsoft Graph endpoint."),
   })

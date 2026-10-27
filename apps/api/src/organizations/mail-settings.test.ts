@@ -71,6 +71,13 @@ describe.skipIf(!databaseBaseUrl)("e-mail settings through the API", () => {
       code: "invalidMailConfiguration",
     });
     expect((await owner.put("/api/v1/instance/mail/graph", settings())).statusCode).toBe(204);
+    expect((await owner.get("/api/v1/instance/mail")).json().graph.saveToSentItems).toBe(false);
+    expect(
+      (await owner.put("/api/v1/instance/mail/graph", { ...settings(), saveToSentItems: true })).statusCode,
+    ).toBe(204);
+    expect((await owner.get("/api/v1/instance/mail")).json().graph.saveToSentItems).toBe(true);
+    expect((await owner.put("/api/v1/instance/mail/graph", settings())).statusCode).toBe(204);
+    expect((await owner.get("/api/v1/instance/mail")).json().graph.saveToSentItems).toBe(false);
     const added = await owner.post("/api/v1/instance/mail/graph/credentials", {
       kind: "clientSecret",
       secret: GRAPH_CLIENT_SECRET,

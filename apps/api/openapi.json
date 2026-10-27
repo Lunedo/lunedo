@@ -3,7 +3,7 @@
   "info": {
     "title": "Lunedo API",
     "version": "1",
-    "description": "The Lunedo API lets scripts and integrations read and change the data of this instance. Every route is versioned under `/api/v1`.\n\n## Create a token\n\nScripts authenticate with an API token. There are two kinds:\n\n- **Personal tokens** act as your own account. Create one while signed in with `POST /api/v1/account/tokens`.\n- **Service account tokens** act as a service account of an organization, which keeps working when people leave. Holders of the \"integrations and API\" area create service accounts and their tokens.\n\nA token starts with `ld_` and is shown only once, when it is created. Choose its scopes from the permission areas, each with `view` or `manage`, and optionally limit it to one organization. At every request, the token can do only what both its scopes and its owner's current permissions allow. Tokens expire after 90 days unless you choose another date within the configured maximum. Creating and revoking tokens needs a signed-in session; a token cannot manage tokens.\n\n## Your first request\n\nSend the token in the `Authorization` header. Tokens in the query string are never accepted, and a request that carries both a session cookie and a token is rejected.\n\n```sh\ncurl -H \"Authorization: Bearer ld_...\" https://wiki.example.org/api/v1/organizations/{organizationId}\n```\n\nRequests with a token need no cross-site request header.\n\n## Pagination\n\nLists return one page at a time:\n\n```json\n{ \"items\": [], \"nextCursor\": \"eyJ...\" }\n```\n\nPass `nextCursor` as the `cursor` query parameter to get the next page, until `nextCursor` is `null`. `limit` sets the page size, from 1 to 200, default 50.\n\n## Errors\n\nErrors follow RFC 9457 Problem Details with the media type `application/problem+json`. Branch on `type`; it is stable, for example `urn:lunedo:problem:forbidden`. `code` repeats its last part. Invalid input lists the affected fields in `fields`.\n\n## Rate limits\n\nEach token may send a configurable number of requests per minute, 600 by default. Above that, the API answers `429` with the problem type `urn:lunedo:problem:rateLimited` and a `Retry-After` header with the seconds to wait.\n",
+    "description": "The Lunedo API lets scripts and integrations read and change the data of this instance. Every route is versioned under `/api/v1`.\n\n## Create a token\n\nScripts authenticate with an API token. There are two kinds:\n\n- **Personal tokens** act as your own account. Create one while signed in, in your account settings under Security.\n- **Service account tokens** act as a service account of an organization, which keeps working when people leave. Holders of the \"integrations and API\" area create service accounts and their tokens.\n\nA token starts with `ld_` and is shown only once, when it is created. Choose its scopes from the permission areas, each with `view` or `manage`, and optionally limit it to one organization. At every request, the token can do only what both its scopes and its owner's current permissions allow. A token has no expiry unless you set a date when you create it. If the instance or an organization sets a maximum lifetime, every new token needs a date within it, and a token created without one gets the maximum. Creating and revoking tokens needs a signed-in session; a token cannot manage tokens.\n\n## Your first request\n\nSend the token in the `Authorization` header. Tokens in the query string are never accepted, and a request that carries both a session cookie and a token is rejected.\n\n```sh\ncurl -H \"Authorization: Bearer ld_...\" https://wiki.example.org/api/v1/organizations/{organizationId}\n```\n\nRequests with a token need no cross-site request header.\n\n## Pagination\n\nLists return one page at a time:\n\n```json\n{ \"items\": [], \"nextCursor\": \"eyJ...\" }\n```\n\nPass `nextCursor` as the `cursor` query parameter to get the next page, until `nextCursor` is `null`. `limit` sets the page size, from 1 to 200, default 50.\n\n## Errors\n\nErrors follow RFC 9457 Problem Details with the media type `application/problem+json`. Branch on `type`; it is stable, for example `urn:lunedo:problem:forbidden`. `code` repeats its last part. Invalid input lists the affected fields in `fields`.\n\n## Rate limits\n\nEach token may send a configurable number of requests per minute, 600 by default. Above that, the API answers `429` with the problem type `urn:lunedo:problem:rateLimited` and a `Retry-After` header with the seconds to wait.\n",
     "license": {
       "name": "AGPL-3.0-only",
       "identifier": "AGPL-3.0-only"
@@ -12641,7 +12641,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of the article, unique in its knowledge base and never reused. It stays when the article moves."
+                      "description": "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves."
                     },
                     "slug": {
                       "type": "string",
@@ -12971,7 +12971,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "title": "Set up the VPN connection",
                   "type": "howTo",
-                  "number": 123,
+                  "number": 1123,
                   "slug": "set-up-the-vpn-connection",
                   "categoryPath": [
                     {
@@ -13023,7 +13023,7 @@
                   "publishedAt": "2026-09-01T08:00:00.000Z",
                   "versionPublishedAt": "2026-10-05T08:00:00.000Z",
                   "lastReviewedAt": null,
-                  "portalUrl": "https://wiki.example.org/help/help/123-set-up-the-vpn-connection"
+                  "portalUrl": "https://wiki.example.org/help/help/1123-set-up-the-vpn-connection"
                 }
               }
             }
@@ -13355,7 +13355,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of the article, unique in its knowledge base and never reused. It stays when the article moves."
+                      "description": "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves."
                     },
                     "slug": {
                       "type": "string",
@@ -13685,7 +13685,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "title": "Set up the VPN connection",
                   "type": "howTo",
-                  "number": 123,
+                  "number": 1123,
                   "slug": "set-up-the-vpn-connection",
                   "categoryPath": [
                     {
@@ -13737,7 +13737,7 @@
                   "publishedAt": "2026-09-01T08:00:00.000Z",
                   "versionPublishedAt": "2026-10-05T08:00:00.000Z",
                   "lastReviewedAt": null,
-                  "portalUrl": "https://wiki.example.org/help/help/123-set-up-the-vpn-connection"
+                  "portalUrl": "https://wiki.example.org/help/help/1123-set-up-the-vpn-connection"
                 }
               }
             }
@@ -14941,7 +14941,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of the article, unique in its knowledge base and never reused. It stays when the article moves."
+                      "description": "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves."
                     },
                     "slug": {
                       "type": "string",
@@ -15271,7 +15271,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "title": "Set up the VPN connection",
                   "type": "howTo",
-                  "number": 123,
+                  "number": 1123,
                   "slug": "set-up-the-vpn-connection",
                   "categoryPath": [
                     {
@@ -15323,7 +15323,7 @@
                   "publishedAt": "2026-09-01T08:00:00.000Z",
                   "versionPublishedAt": "2026-10-05T08:00:00.000Z",
                   "lastReviewedAt": null,
-                  "portalUrl": "https://wiki.example.org/help/help/123-set-up-the-vpn-connection"
+                  "portalUrl": "https://wiki.example.org/help/help/1123-set-up-the-vpn-connection"
                 }
               }
             }
@@ -123235,6 +123235,10 @@
                                 "null"
                               ]
                             },
+                            "saveToSentItems": {
+                              "type": "boolean",
+                              "description": "Whether a copy of every mail stays in the Sent Items of the sender mailbox."
+                            },
                             "authority": {
                               "type": "string",
                               "description": "Sign-in authority."
@@ -123249,6 +123253,7 @@
                             "clientId",
                             "sender",
                             "senderName",
+                            "saveToSentItems",
                             "authority",
                             "graphUrl"
                           ],
@@ -123854,6 +123859,10 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "saveToSentItems": {
+                    "description": "Whether Microsoft keeps a copy of every mail in the Sent Items of the sender mailbox. Off by default. Only then the mails carry the one-click unsubscribe header and a text part.",
+                    "type": "boolean"
                   },
                   "authority": {
                     "description": "Sign-in authority of the Microsoft cloud; the global cloud by default.",
@@ -124668,6 +124677,10 @@
                           "string",
                           "null"
                         ]
+                      },
+                      "saveToSentItems": {
+                        "description": "Whether Microsoft keeps a copy of every mail in the Sent Items of the sender mailbox. Off by default. Only then the mails carry the one-click unsubscribe header and a text part.",
+                        "type": "boolean"
                       },
                       "authority": {
                         "description": "Sign-in authority of the Microsoft cloud; the global cloud by default.",
@@ -134301,10 +134314,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -135312,10 +135325,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -135559,10 +135572,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -136364,10 +136377,10 @@
                                     "maximum": 9007199254740991
                                   },
                                   "weekOfMonth": {
-                                    "description": "Week of the month.",
+                                    "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                     "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
+                                    "minimum": -1,
+                                    "maximum": 4
                                   },
                                   "weekday": {
                                     "description": "Weekday.",
@@ -137007,10 +137020,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",
@@ -137925,10 +137938,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",
@@ -196482,10 +196495,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -197539,10 +197552,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -197786,10 +197799,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -198615,10 +198628,10 @@
                                     "maximum": 9007199254740991
                                   },
                                   "weekOfMonth": {
-                                    "description": "Week of the month.",
+                                    "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                     "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
+                                    "minimum": -1,
+                                    "maximum": 4
                                   },
                                   "weekday": {
                                     "description": "Weekday.",
@@ -199299,10 +199312,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",
@@ -200259,10 +200272,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",
@@ -201438,10 +201451,10 @@
                                     "maximum": 9007199254740991
                                   },
                                   "weekOfMonth": {
-                                    "description": "Week of the month.",
+                                    "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                     "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
+                                    "minimum": -1,
+                                    "maximum": 4
                                   },
                                   "weekday": {
                                     "description": "Weekday.",
@@ -235896,7 +235909,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Number of the article, unique in its knowledge base and never reused. It stays when the article moves."
+                            "description": "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves."
                           },
                           "slug": {
                             "type": "string",
@@ -236309,7 +236322,7 @@
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "title": "Set up the VPN connection",
                       "type": "howTo",
-                      "number": 123,
+                      "number": 1123,
                       "slug": "set-up-the-vpn-connection",
                       "categoryPath": [
                         {
@@ -236361,13 +236374,13 @@
                       "publishedAt": "2026-09-01T08:00:00.000Z",
                       "versionPublishedAt": "2026-10-05T08:00:00.000Z",
                       "lastReviewedAt": null,
-                      "portalUrl": "https://wiki.example.org/help/help/123-set-up-the-vpn-connection"
+                      "portalUrl": "https://wiki.example.org/help/help/1123-set-up-the-vpn-connection"
                     }
                   ],
                   "removed": [
                     {
                       "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a63",
-                      "number": 98,
+                      "number": 1098,
                       "language": "de",
                       "reason": "deleted",
                       "removedAt": "2026-10-12T07:00:00.000Z"
@@ -236688,7 +236701,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Number of the article, unique in its knowledge base and never reused. It stays when the article moves."
+                            "description": "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves."
                           },
                           "slug": {
                             "type": "string",
@@ -236842,7 +236855,7 @@
                       "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                       "title": "Set up the VPN connection",
                       "type": "howTo",
-                      "number": 123,
+                      "number": 1123,
                       "slug": "set-up-the-vpn-connection",
                       "categoryPath": [
                         {
@@ -237228,7 +237241,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of the article, unique in its knowledge base and never reused. It stays when the article moves."
+                      "description": "Number of the article. It is unique on the instance, shared with pages, folders, blog posts and whiteboards, and never reused. It stays when the article moves."
                     },
                     "slug": {
                       "type": "string",
@@ -237558,7 +237571,7 @@
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "title": "Set up the VPN connection",
                   "type": "howTo",
-                  "number": 123,
+                  "number": 1123,
                   "slug": "set-up-the-vpn-connection",
                   "categoryPath": [
                     {
@@ -237610,7 +237623,7 @@
                   "publishedAt": "2026-09-01T08:00:00.000Z",
                   "versionPublishedAt": "2026-10-05T08:00:00.000Z",
                   "lastReviewedAt": null,
-                  "portalUrl": "https://wiki.example.org/help/help/123-set-up-the-vpn-connection"
+                  "portalUrl": "https://wiki.example.org/help/help/1123-set-up-the-vpn-connection"
                 }
               }
             }
@@ -266057,10 +266070,10 @@
                                     "maximum": 9007199254740991
                                   },
                                   "weekOfMonth": {
-                                    "description": "Week of the month.",
+                                    "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                     "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
+                                    "minimum": -1,
+                                    "maximum": 4
                                   },
                                   "weekday": {
                                     "description": "Weekday.",
@@ -266522,10 +266535,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -267580,10 +267593,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -267827,10 +267840,10 @@
                                         "maximum": 9007199254740991
                                       },
                                       "weekOfMonth": {
-                                        "description": "Week of the month.",
+                                        "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                         "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
+                                        "minimum": -1,
+                                        "maximum": 4
                                       },
                                       "weekday": {
                                         "description": "Weekday.",
@@ -268656,10 +268669,10 @@
                                     "maximum": 9007199254740991
                                   },
                                   "weekOfMonth": {
-                                    "description": "Week of the month.",
+                                    "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                     "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
+                                    "minimum": -1,
+                                    "maximum": 4
                                   },
                                   "weekday": {
                                     "description": "Weekday.",
@@ -269340,10 +269353,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",
@@ -270300,10 +270313,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",
@@ -272110,10 +272123,10 @@
                                   "maximum": 9007199254740991
                                 },
                                 "weekOfMonth": {
-                                  "description": "Week of the month.",
+                                  "description": "For `monthly` by weekday: 1 to 4 for the first to fourth, -1 for the last.",
                                   "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
+                                  "minimum": -1,
+                                  "maximum": 4
                                 },
                                 "weekday": {
                                   "description": "Weekday.",

@@ -88,7 +88,7 @@ export const templateEntrySchema = z
     series: seriesDefaultsSchema.nullable().describe("Defaults of a series template, or null."),
     files: z.array(templateFileEntrySchema).max(MAX_FILES_PER_UPLOAD).describe("Files the content uses."),
     document: z
-      .looseObject({ type: z.literal("doc") })
+      .looseObject({ type: z.literal("doc").describe("Always `doc`.") })
       .describe("Content in the editor format of the stated schema version."),
   })
   .strict()
