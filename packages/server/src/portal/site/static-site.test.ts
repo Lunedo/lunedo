@@ -226,9 +226,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
 
         const sitemap = files.get("sitemap.xml")?.toString("utf8") ?? "";
         expect(sitemap).toContain(`<loc>https://help.example.org/docs/${backupNumber}-backups.html</loc>`);
-        expect(sitemap).toContain(
-          `<loc>https://help.example.org/docs/topics/${category}-admin.html</loc>`,
-        );
+        expect(sitemap).toContain(`<loc>https://help.example.org/docs/topics/${category}-admin.html</loc>`);
         expect(sitemap).toContain(
           `<loc>https://help.example.org/docs/de/${backupNumber}-sicherung.html</loc>`,
         );
