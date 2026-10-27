@@ -649,6 +649,7 @@ export function createAccountServices(options: {
     challenges,
     audit,
     notifications,
+    mail,
     settings,
     rateLimiter,
     throttle,
@@ -1023,6 +1024,9 @@ export function createAccountServices(options: {
   const spaceCleanup = new SpaceCleanupService({ database, audit, settings, trash });
   spacePermissions.onAccessChange((tx, spaceId) => spaceCleanup.afterAccessChange(tx, spaceId));
   administration.onReactivated((tx, accountId) => spaceCleanup.afterActivity(tx, accountId));
+  administration.onMadeLocal((tx, accountId, providerName) =>
+    security.localPasswordLink(tx, accountId, providerName),
+  );
   memberships.onMembershipAdded((tx, _organizationId, accountId) =>
     spaceCleanup.afterActivity(tx, accountId),
   );

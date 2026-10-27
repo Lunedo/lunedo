@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
+import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -496,6 +497,10 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
   });
 
   async function pendingLinkFromCloud(domain: string, email: string) {
+    await test.pool.query(
+      "update instance set owner_account_id = (select id from accounts where email = $1)",
+      [email],
+    );
     await test.pool.query("delete from identity_provider_domains where domain = $1", [domain]);
     const { provider: entra } = await test.services.identityProviders.create(SYSTEM, {
       type: "oidc",
@@ -519,7 +524,7 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     return result.pendingToken;
   }
 
-  it("links a sign-in of another provider to a directory account after its directory password", async () => {
+  it("links a sign-in of another provider to the directory account of the instance owner after its directory password", async () => {
     const { id, domain } = await provider();
     const [moved] = await people(id, domain, 1);
     if (!moved) throw new Error("Account expected");
@@ -544,11 +549,12 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       client: {},
     });
     if (!("signedIn" in linked)) throw new Error("Signed in expected");
-    expect(linked.signedIn.session).toMatchObject({ accountId: moved.accountId, kind: "full" });
+    expect(linked.signedIn.session).toMatchObject({ accountId: moved.accountId, kind: "secondFactorSetup" });
     const identities = await test.pool.query("select 1 from identities where account_id = $1", [
       moved.accountId,
     ]);
     expect(identities.rowCount).toBe(2);
+    await test.pool.query("update instance set owner_account_id = null");
   });
 
   it("counts failed directory sign-ins against the confirmation of a link", async () => {
@@ -582,6 +588,53 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
       }),
     ).rejects.toSatisfy((error) => error instanceof LockedError || error instanceof RateLimitedError);
     expect(directory.binds.filter((bind) => bind.dn === locked.entry.dn).length).toBe(binds);
+    await test.pool.query("update instance set owner_account_id = null");
+  });
+
+  it("links an existing local account at its first directory sign-in and keeps its second factor", async () => {
+    const { id, domain } = await provider("lunedo");
+    const entry = person(`local-${randomUUID().slice(0, 6)}`, domain);
+    directory.entries.push(entry);
+    const email = String(entry.attributes.mail?.[0]);
+    const existing = await test.database.transaction((tx) =>
+      test.services.accounts.createStandard(tx, {
+        email,
+        name: "Local person",
+        password: "a long local passphrase",
+        homeOrganizationId: null,
+      }),
+    );
+    const setup = await test.services.totp.begin(existing.id, { issuer: "Test", account: email });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    await test.services.totp.verify(test.database, existing.id, TOTP.generate({ secret }), {
+      confirming: true,
+    });
+
+    const result = await signIn(id, email);
+    expect(result).toMatchObject({ kind: "secondFactorRequired", factors: ["totp"] });
+    const state = await test.pool.query<{
+      password: boolean;
+      totp: number;
+      provider_id: string;
+      source: string;
+    }>(
+      `select a.password_hash is not null as password,
+        (select count(*)::int from totp_credentials t where t.account_id = a.id) as totp,
+        m.provider_id, m.source
+       from accounts a join managed_accounts m on m.account_id = a.id where a.id = $1`,
+      [existing.id],
+    );
+    expect(state.rows).toEqual([{ password: false, totp: 1, provider_id: id, source: "identity" }]);
+    const removed = await test.pool.query<{ fields: Record<string, unknown> }>(
+      "select fields from audit_events where name = 'account.localCredentialsRemoved' and target_id = $1",
+      [existing.id],
+    );
+    expect(removed.rows[0]?.fields).toMatchObject({
+      providerId: id,
+      localSignIn: true,
+      authenticatorApp: false,
+    });
   });
 
   it("signs a person in to the placeholder an administrator created for them", async () => {

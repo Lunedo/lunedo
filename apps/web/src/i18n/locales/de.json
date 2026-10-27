@@ -1253,6 +1253,7 @@
     "managedIdentity": "Dieser Identitätsanbieter verwaltet dein Konto, deshalb kannst du die Verknüpfung nicht selbst trennen. Frag eine Person aus der Administration, wenn sich dein Konto anders anmelden soll.",
     "managedAccount": "Dieses Konto meldet sich über seinen Identitätsanbieter an, nicht mit Passwort oder Passkey in Lunedo. Nutze die Schaltfläche des Anbieters auf der Anmeldeseite.",
     "managedAccountNamed": "Dieses Konto meldet sich über {provider} an, nicht mit Passwort oder Passkey in Lunedo. Nutze die Schaltfläche von {provider} auf der Anmeldeseite.",
+    "accountNotActive": "Das Konto ist deaktiviert und kann deshalb kein lokales Konto werden. Aktiviere es zuerst und trenne die Identität dann erneut.",
     "providerHasAccounts": "Mit diesem Identitätsanbieter sind noch Konten verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
     "providerHasAccountsCount": "{count, plural, one {Ein Konto ist} other {# Konten sind}} noch mit diesem Identitätsanbieter verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
     "ownerManaged": "Dieses Konto meldet sich über einen Identitätsanbieter an, der Owner der Instanz braucht aber ein lokales Konto mit Passwort und zweitem Faktor für Notfälle. Wähle eine Person aus der Administration mit lokalem Konto.",
@@ -1815,6 +1816,11 @@
           "title": "Dein Anbieter hat keinen zweiten Faktor bestätigt",
           "cause": "Dieser Anbieter muss nachweisen, dass du dich mit einem zweiten Faktor angemeldet hast, etwa einer Authenticator-App, aber seine Antwort enthielt diesen Nachweis nicht.",
           "action": "melde dich erneut an und schließe den zweiten Schritt bei deinem Anbieter ab; wenn es weiter fehlschlägt, schick die Referenz unten an deine Administration."
+        },
+        "linkAmbiguous": {
+          "title": "Deine Anmeldung konnte nicht mit deinem Konto verknüpft werden",
+          "cause": "Das Lunedo-Konto mit deiner Adresse ist bei diesem Anbieter schon mit einer anderen Identität verknüpft, deshalb kann Lunedo nicht erkennen, welche deine ist.",
+          "action": "schick die Referenz unten an eine Person aus der Administration, die die richtige Identität prüfen und verknüpfen kann."
         }
       }
     },
@@ -4520,6 +4526,7 @@
         "organizationAssigned": "Organisation zugewiesen",
         "createdAtSignIn": "Konto bei der ersten Anmeldung angelegt",
         "managed": "Konto wird von einem Identitätsanbieter verwaltet",
+        "localCredentialsRemoved": "Lokale Anmeldung nach der ersten Anbieter-Anmeldung entfernt",
         "unmanaged": "Konto wird nicht mehr von einem Identitätsanbieter verwaltet",
         "created": "Konto angelegt",
         "passwordChanged": "Passwort geändert",

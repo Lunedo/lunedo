@@ -22,6 +22,8 @@ export interface MailTemplates {
   emailChangeNotice: { instanceName: string; newEmail: string };
   recoveryCodeUsed: { instanceName: string; remaining: number };
   secondFactorReset: { instanceName: string; reason: string };
+  accountManaged: { instanceName: string; providerName: string; directory: boolean };
+  accountMadeLocal: { instanceName: string; providerName: string; link: string; minutes: number };
   smtpTest: { instanceName: string };
   invitation: {
     instanceName: string;
@@ -196,6 +198,24 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `The e-mail address of your account on ${instanceName} was changed to ${newEmail}. This address no longer receives e-mails for the account.`,
         NOT_YOU_EN,
+      ],
+    }),
+    accountManaged: ({ instanceName, providerName, directory }) => ({
+      subject: `Your account on ${instanceName} now signs in through ${providerName}`,
+      paragraphs: [
+        `You signed in to ${instanceName} through ${providerName} for the first time, so your account is now managed by it. Your content, groups and roles stay as they were.`,
+        directory
+          ? `Lunedo removed the password of your account. Sign in with your directory password at ${providerName}; your second factor in Lunedo stays.`
+          : `Lunedo removed the password, passkeys, authenticator app and recovery codes of your account and ended your other sessions. Sign in through ${providerName} from now on; it asks for your second factor.`,
+        NOT_YOU_EN,
+      ],
+    }),
+    accountMadeLocal: ({ instanceName, providerName, link, minutes }) => ({
+      subject: `Set a password for your account on ${instanceName}`,
+      paragraphs: [
+        `An administrator unlinked your account on ${instanceName} from ${providerName}. It no longer signs in through ${providerName} and has no password yet.`,
+        `Set a password within ${minutes} minutes: ${link}`,
+        "If the link has expired, use Forgot password on the sign-in page.",
       ],
     }),
     secondFactorReset: ({ instanceName, reason }) => ({
@@ -408,6 +428,24 @@ const catalogs: Record<Language, Catalog> = {
       paragraphs: [
         `Die E-Mail-Adresse deines Kontos auf ${instanceName} wurde in ${newEmail} geändert. Diese Adresse erhält keine E-Mails für das Konto mehr.`,
         NOT_YOU_DE,
+      ],
+    }),
+    accountManaged: ({ instanceName, providerName, directory }) => ({
+      subject: `Dein Konto auf ${instanceName} meldet sich jetzt über ${providerName} an`,
+      paragraphs: [
+        `Du hast dich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet, deshalb wird dein Konto jetzt davon verwaltet. Deine Inhalte, Gruppen und Rollen bleiben, wie sie waren.`,
+        directory
+          ? `Lunedo hat das Passwort deines Kontos entfernt. Melde dich mit deinem Verzeichnispasswort bei ${providerName} an; dein zweiter Faktor in Lunedo bleibt.`
+          : `Lunedo hat Passwort, Passkeys, Authenticator-App und Wiederherstellungscodes deines Kontos entfernt und deine anderen Sitzungen beendet. Melde dich ab jetzt über ${providerName} an; dort wird dein zweiter Faktor abgefragt.`,
+        NOT_YOU_DE,
+      ],
+    }),
+    accountMadeLocal: ({ instanceName, providerName, link, minutes }) => ({
+      subject: `Lege ein Passwort für dein Konto auf ${instanceName} fest`,
+      paragraphs: [
+        `Eine Person aus der Administration hat dein Konto auf ${instanceName} von ${providerName} getrennt. Es meldet sich nicht mehr über ${providerName} an und hat noch kein Passwort.`,
+        `Lege innerhalb von ${minutes} Minuten ein Passwort fest: ${link}`,
+        "Wenn der Link abgelaufen ist, nutze „Passwort vergessen?“ auf der Anmeldeseite.",
       ],
     }),
     secondFactorReset: ({ instanceName, reason }) => ({

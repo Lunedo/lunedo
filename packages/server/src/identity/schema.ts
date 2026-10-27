@@ -205,6 +205,7 @@ export const signInRefusalReasons = [
   "linkUnavailable",
   "invalidResponse",
   "secondFactorMissing",
+  "linkAmbiguous",
 ] as const;
 export type SignInRefusalReason = (typeof signInRefusalReasons)[number];
 export const signInRefusalReason = pgEnum("sign_in_refusal_reason", signInRefusalReasons);

@@ -757,6 +757,13 @@
       "when": 1793124033301,
       "tag": "0107_provider_second_factor",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1793125610076,
+      "tag": "0108_link_refusal",
+      "breakpoints": true
     }
   ]
 }

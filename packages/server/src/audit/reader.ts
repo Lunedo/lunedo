@@ -102,6 +102,7 @@ export const ACCOUNT_SECURITY_EVENTS = [
   "account.passwordReset",
   "account.emailChanged",
   "account.secondFactorReset",
+  "account.localCredentialsRemoved",
   "twoFactor.totpAdded",
   "twoFactor.totpRemoved",
   "twoFactor.passkeyAdded",

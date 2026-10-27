@@ -1,7 +1,17 @@
 import { eq, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { ManagedAccountError } from "../auth/errors.js";
+import {
+  accountTokens,
+  authChallenges,
+  recoveryCodes,
+  sessions,
+  totpCredentials,
+  webauthnCredentials,
+} from "../auth/schema.js";
+import { secondFactorsOf } from "../auth/two-factor.js";
 import type { Executor, Transaction } from "../database/database.js";
 import { identityProviders, type ManagedSource, managedAccounts } from "./schema.js";
 
@@ -50,6 +60,46 @@ export async function refuseManaged(
   const state = await managedStateOf(executor, accountId);
   if (!state || (which === "providerOnly" && !signsInOnlyThroughProvider(state))) return;
   throw new ManagedAccountError(state.providerId, state.providerName);
+}
+
+export async function removeLocalCredentials(
+  tx: Transaction,
+  audit: AuditLog,
+  account: { id: string; home: string | null; passwordHash: string | null },
+  provider: { id: string; type: ManagingProviderType },
+  actor: Principal,
+): Promise<void> {
+  const directory = provider.type === "ldap";
+  const factors = directory ? null : await secondFactorsOf(tx, account.id);
+  await tx
+    .update(accounts)
+    .set({ passwordHash: null, passwordChangedAt: null, updatedAt: new Date() })
+    .where(eq(accounts.id, account.id));
+  if (!directory) {
+    await tx.delete(totpCredentials).where(eq(totpCredentials.accountId, account.id));
+    await tx.delete(webauthnCredentials).where(eq(webauthnCredentials.accountId, account.id));
+    await tx.delete(recoveryCodes).where(eq(recoveryCodes.accountId, account.id));
+  }
+  const ended = await tx
+    .delete(sessions)
+    .where(eq(sessions.accountId, account.id))
+    .returning({ id: sessions.id });
+  await tx.delete(authChallenges).where(eq(authChallenges.accountId, account.id));
+  await tx.delete(accountTokens).where(eq(accountTokens.accountId, account.id));
+  await audit.record(tx, {
+    name: "account.localCredentialsRemoved",
+    actor,
+    targetId: account.id,
+    fields: {
+      providerId: provider.id,
+      localSignIn: account.passwordHash !== null,
+      authenticatorApp: factors?.totp ?? false,
+      passkeys: factors?.passkeys ?? 0,
+      recoveryLeft: factors?.recoveryCodes ?? 0,
+      endedSessions: ended.length,
+    },
+    ...(account.home ? { scope: { type: "organization" as const, id: account.home } } : {}),
+  });
 }
 
 const setUpProvider = sql`p.setup_completed_at is not null`;

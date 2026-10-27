@@ -64,6 +64,11 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
     return result.rows;
   }
 
+  async function localMails(): Promise<number> {
+    const result = await test.pool.query("select 1 from mail_outbox where template = 'accountMadeLocal'");
+    return result.rowCount ?? 0;
+  }
+
   async function administrator() {
     const admin = await account(`${randomUUID()}@admins.example`);
     await test.services.roles.assign(SYSTEM, {
@@ -181,12 +186,60 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
     await test.services.identityProviders.deactivate(SYSTEM, created.id);
     expect(await managedStateOf(test.database, person.id)).toMatchObject({ providerId: created.id });
 
+    const mailsBefore = await localMails();
     await test.services.administration.unlinkIdentity(accountPrincipal(admin.id), person.id, first.id);
     expect(await managedStateOf(test.database, person.id)).toBeNull();
     expect(await events(person.id)).toEqual([
       { name: "account.managed", fields: { providerId: created.id, source: "identity" } },
       { name: "account.unmanaged", fields: { providerId: created.id } },
     ]);
+    expect(await localMails()).toBe(mailsBefore + 1);
+    const tokens = await test.pool.query(
+      "select 1 from account_tokens where account_id = $1 and purpose = 'passwordReset'",
+      [person.id],
+    );
+    expect(tokens.rowCount).toBe(1);
+  });
+
+  it("refuses to make a deactivated account local and keeps a domain-managed account managed", async () => {
+    const domain = uniqueDomain();
+    const byDomain = await provider([domain]);
+    const linkedProvider = await provider([uniqueDomain()]);
+    const inDomain = await account(`person@${domain}`);
+    const deactivated = await account(`gone@${uniqueDomain()}`);
+    const admin = await administrator();
+    const domainIdentity = await test.services.administration.linkIdentity(SYSTEM, inDomain.id, {
+      providerId: linkedProvider.id,
+      subject: randomUUID(),
+    });
+    const goneIdentity = await test.services.administration.linkIdentity(SYSTEM, deactivated.id, {
+      providerId: linkedProvider.id,
+      subject: randomUUID(),
+    });
+    await test.pool.query("update accounts set state = 'deactivated' where id = $1", [deactivated.id]);
+
+    await expect(
+      test.services.administration.unlinkIdentity(
+        accountPrincipal(admin.id),
+        deactivated.id,
+        goneIdentity.id,
+      ),
+    ).rejects.toMatchObject({ code: "accountNotActive" });
+    expect(await managedStateOf(test.database, deactivated.id)).toMatchObject({
+      providerId: linkedProvider.id,
+    });
+
+    const mailsBefore = await localMails();
+    await test.services.administration.unlinkIdentity(
+      accountPrincipal(admin.id),
+      inDomain.id,
+      domainIdentity.id,
+    );
+    expect(await managedStateOf(test.database, inDomain.id)).toMatchObject({
+      providerId: byDomain.id,
+      source: "domain",
+    });
+    expect(await localMails()).toBe(mailsBefore);
   });
 
   it("refuses to remove a provider with linked accounts and releases the accounts of its domains", async () => {

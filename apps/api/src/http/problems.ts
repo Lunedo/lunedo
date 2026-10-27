@@ -462,6 +462,7 @@ export const problems = {
   lastSignInMethod: { status: 409, title: "The last way to sign in cannot be removed" },
   managedIdentity: { status: 409, title: "The identity provider manages this account" },
   managedAccount: { status: 403, title: "The account signs in through its identity provider" },
+  accountNotActive: { status: 409, title: "The account is not active" },
   providerHasAccounts: { status: 409, title: "Accounts are still linked to the identity provider" },
   ownerManaged: { status: 409, title: "The instance owner needs a local account" },
   lastOwner: { status: 409, title: "The last owner cannot leave" },

@@ -329,42 +329,24 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(forged.statusCode).toBe(400);
   });
 
-  it("links an existing account after its password and shows linked identities", async () => {
+  it("links an existing account at its first sign-in and shows linked identities", async () => {
     const existing = await createAccount(test, "existing.person@lunedo.test");
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, { sub: "existing-subject", email: existing.email });
-    expect(response.headers.location).toBe("/sign-in/link");
-    expect([response.headers["set-cookie"]].flat()).toContainEqual(
-      expect.stringMatching(/^__Host-lunedo-link=[\w-]+; Path=\/; Max-Age=900; /),
-    );
-    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
-      providerName: "Company login",
-      email: existing.email,
-      factors: [],
+    expect(response.headers.location).not.toBe("/sign-in/link");
+    expect((await browser.get("/api/v1/auth/session")).json()).toMatchObject({
+      account: { id: existing.id },
     });
-    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
-      password: true,
-      passkey: false,
-      providers: [],
-      confirmed: false,
-    });
-    expect((await browser.post("/api/v1/auth/link", {})).json()).toMatchObject({
-      code: "invalidCredentials",
-    });
-    expect((await browser.post("/api/v1/auth/link/provider", { providerId })).json()).toMatchObject({
-      code: "notFound",
-    });
-    expect(
-      (await browser.post("/api/v1/auth/link/directory", { providerId, password: "secret" })).json(),
-    ).toMatchObject({ code: "invalidInput" });
-    expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
-    const linked = await browser.post("/api/v1/auth/link", { password: existing.password });
-    expect(linked.json()).toMatchObject({ status: "signedIn", account: { id: existing.id } });
     expect((await browser.get("/api/v1/account/identities")).json()).toEqual([
       expect.objectContaining({ providerId, subject: "existing-subject" }),
     ]);
     const identities = await owner.get(`/api/v1/accounts/${existing.id}/identities`);
     expect(identities.json()).toHaveLength(1);
+    const password = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
+      email: existing.email,
+      password: existing.password,
+    });
+    expect(password.json()).toMatchObject({ code: "invalidCredentials" });
   });
 
   it("checks the discovery document of an issuer before anything is saved", async () => {
@@ -399,10 +381,16 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(refused.searchParams.get("provider")).toBe(providerId);
   });
 
-  it("lets a person decline a link after a wrong password", async () => {
-    const existing = await createAccount(test, "declining.person@lunedo.test");
+  it("asks the instance owner to confirm a link, and lets the owner decline it after a wrong password", async () => {
     const browser = new TestClient(test.app);
-    await signInThroughProvider(browser, { sub: "declining-subject", email: existing.email });
+    const response = await signInThroughProvider(browser, { sub: "owner-subject", email: OWNER.email });
+    expect(response.headers.location).toBe("/sign-in/link");
+    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
+      providerName: "Company login",
+      email: OWNER.email,
+      password: true,
+      confirmed: false,
+    });
     expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
     const declined = await browser.post("/api/v1/auth/link/decline");
     expect(declined.statusCode).toBe(200);

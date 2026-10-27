@@ -697,10 +697,10 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Unlink an identity from an account",
     description:
-      "Ends the sessions that came from this identity. When it was the account's last provider link, the account becomes local without credentials.",
+      "Ends the sessions that came from this identity. When it was the account's last provider link and no provider has its e-mail domain, the account becomes local without credentials and the person gets an e-mail with a link to set a password. Refused for accounts that are not active.",
     tags: [TAG],
     params: identityParams,
-    errors: ["reauthenticationRequired"],
+    errors: ["accountNotActive", "reauthenticationRequired"],
   })
   async unlinkIdentity(
     @Param("accountId") accountId: string,

@@ -1253,6 +1253,7 @@
     "managedIdentity": "This identity provider manages your account, so you cannot unlink it yourself. Ask an administrator if your account should sign in another way.",
     "managedAccount": "This account signs in through its identity provider, not with a password or passkey in Lunedo. Use the provider's button on the sign-in page.",
     "managedAccountNamed": "This account signs in through {provider}, not with a password or passkey in Lunedo. Use the button of {provider} on the sign-in page.",
+    "accountNotActive": "The account is deactivated, so it cannot become a local account. Reactivate it first, then unlink the identity again.",
     "providerHasAccounts": "Accounts are still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
     "providerHasAccountsCount": "{count, plural, one {One account is} other {# accounts are}} still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
     "ownerManaged": "This account signs in through an identity provider, and the instance owner needs a local account with a password and second factor for emergencies. Choose an administrator with a local account.",
@@ -1815,6 +1816,11 @@
           "title": "Your provider did not confirm a second factor",
           "cause": "This provider must prove that you signed in with a second factor, such as an authenticator app, but its answer did not include that proof.",
           "action": "sign in again and complete the second step at your provider; if it keeps failing, send the reference below to your administrator."
+        },
+        "linkAmbiguous": {
+          "title": "Your sign-in could not be linked to your account",
+          "cause": "The Lunedo account with your address is already linked to another identity at this provider, so Lunedo cannot tell which one is yours.",
+          "action": "send the reference below to an administrator, who can check and link the right identity."
         }
       }
     },
@@ -4520,6 +4526,7 @@
         "organizationAssigned": "Organization assigned",
         "createdAtSignIn": "Account created at the first sign-in",
         "managed": "Account managed by an identity provider",
+        "localCredentialsRemoved": "Local sign-in removed after the first provider sign-in",
         "unmanaged": "Account no longer managed by an identity provider",
         "created": "Account created",
         "passwordChanged": "Password changed",

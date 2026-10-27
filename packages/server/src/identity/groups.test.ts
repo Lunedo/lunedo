@@ -435,7 +435,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await homeOf(person)).toBeNull();
   });
 
-  it("applies rules when an existing account is linked with its password", async () => {
+  it("applies rules when an existing account is linked at its first sign-in", async () => {
     const org = await organization();
     const group = `group-${randomUUID()}`;
     await test.services.mappingRules.create(accountPrincipal(org.owner), generic, {
@@ -447,16 +447,9 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       homeOrganization: false,
     });
     const existing = await account(null, `${randomUUID().slice(0, 8)}@generic.example`);
-    const result = await signIn({ sub: randomUUID(), email: existing.email, groups: [group] });
-    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
     expect(await membership(org.id, existing.id)).toBeNull();
-
-    await test.services.signIn.confirmIdentityLink({
-      pendingToken: result.pendingToken,
-      password: "a long test passphrase",
-      factor: null,
-      client: {},
-    });
+    const result = await signIn({ sub: randomUUID(), email: existing.email, groups: [group] });
+    expect(result.kind).toBe("signedIn");
     expect(await membership(org.id, existing.id)).toBe("member");
     expect(await roles(existing.id)).toEqual([{ scope: "organization", role: "administrator" }]);
   });
@@ -482,14 +475,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       }),
     );
     const result = await signIn({ sub: randomUUID(), email: guest.email, groups: [group] });
-    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
-
-    await test.services.signIn.confirmIdentityLink({
-      pendingToken: result.pendingToken,
-      password: "a long test passphrase",
-      factor: null,
-      client: {},
-    });
+    expect(result.kind).toBe("signedIn");
     expect(await membership(org.id, guest.id)).toBeNull();
     expect(await roles(guest.id)).toEqual([]);
     const logged = await test.pool.query<{ trigger: string; status: string; warnings: unknown[] }>(

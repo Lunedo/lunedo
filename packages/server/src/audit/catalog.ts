@@ -67,6 +67,7 @@ const refusalReasons = [
   "linkUnavailable",
   "invalidResponse",
   "secondFactorMissing",
+  "linkAmbiguous",
 ] as const;
 const credentialKinds = ["clientSecret", "certificate", "samlSigning", "bindPassword"] as const;
 const sessionReference = z.object({ sessionId: z.uuid() });
@@ -187,6 +188,19 @@ export const auditCatalog = {
     actor: ["account", "system"],
     target: "account",
     fields: z.object({ providerId: z.uuid(), source: z.enum(["identity", "domain"]) }),
+    visibility: "organization",
+  }),
+  "account.localCredentialsRemoved": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({
+      providerId: z.uuid(),
+      localSignIn: z.boolean(),
+      authenticatorApp: z.boolean(),
+      passkeys: z.number().int().nonnegative(),
+      recoveryLeft: z.number().int().nonnegative(),
+      endedSessions: z.number().int().nonnegative(),
+    }),
     visibility: "organization",
   }),
   "account.unmanaged": event({

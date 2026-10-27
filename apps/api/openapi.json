@@ -10547,7 +10547,7 @@
       "delete": {
         "operationId": "providerAuth.unlinkIdentity",
         "summary": "Unlink an identity from an account",
-        "description": "Ends the sessions that came from this identity. When it was the account's last provider link, the account becomes local without credentials.\n\nRequires the permission `account.identities.manage` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
+        "description": "Ends the sessions that came from this identity. When it was the account's last provider link and no provider has its e-mail domain, the account becomes local without credentials and the person gets an e-mail with a link to set a password. Refused for accounts that are not active.\n\nRequires the permission `account.identities.manage` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Identity providers"
         ],
@@ -10687,6 +10687,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`accountNotActive`: The account is not active.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "accountNotActive": {
+                    "value": {
+                      "type": "urn:lunedo:problem:accountNotActive",
+                      "title": "The account is not active",
+                      "status": 409,
+                      "code": "accountNotActive"
                     }
                   }
                 }
@@ -22980,7 +23000,8 @@
                             "linkDeclined",
                             "linkUnavailable",
                             "invalidResponse",
-                            "secondFactorMissing"
+                            "secondFactorMissing",
+                            "linkAmbiguous"
                           ],
                           "description": "Why the sign-in was refused."
                         }
@@ -132731,7 +132752,8 @@
                         "linkDeclined",
                         "linkUnavailable",
                         "invalidResponse",
-                        "secondFactorMissing"
+                        "secondFactorMissing",
+                        "linkAmbiguous"
                       ],
                       "description": "Why the sign-in was refused."
                     },

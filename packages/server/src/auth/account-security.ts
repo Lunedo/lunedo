@@ -318,6 +318,32 @@ export class AccountSecurityService {
     await this.#jobs.enqueue(passwordResetRequestJob, { email: email.trim() });
   }
 
+  async localPasswordLink(tx: Transaction, accountId: string, providerName: string): Promise<string | null> {
+    const account = await this.#accounts.get(accountId, tx);
+    if (!account?.email) return null;
+    const token = generateToken();
+    await tx
+      .delete(accountTokens)
+      .where(and(eq(accountTokens.accountId, account.id), eq(accountTokens.purpose, "passwordReset")));
+    await tx.insert(accountTokens).values({
+      accountId: account.id,
+      purpose: "passwordReset",
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_MINUTES * 60_000),
+    });
+    return this.#mail.queue(tx, {
+      to: account.email,
+      template: "accountMadeLocal",
+      security: true,
+      language: await this.#mail.languageOf(account.id),
+      params: {
+        providerName,
+        link: await this.#link("/reset-password", token),
+        minutes: PASSWORD_RESET_MINUTES,
+      },
+    });
+  }
+
   handlePasswordResetRequest = async (job: JobContext<{ email: string }>): Promise<void> => {
     const account = await this.#accounts.findByEmail(job.payload.email);
     if (!account?.email || account.state !== "active") return;

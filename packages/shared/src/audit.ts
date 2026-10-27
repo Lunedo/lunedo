@@ -8,6 +8,7 @@ export const auditEventNames = [
   "identity.unlinked",
   "account.createdAtSignIn",
   "account.managed",
+  "account.localCredentialsRemoved",
   "account.unmanaged",
   "identityProvider.created",
   "identityProvider.updated",

@@ -43,6 +43,12 @@ export interface IdentitySummary {
   createdAt: Date;
 }
 
+export type LocalPasswordLink = (
+  tx: Transaction,
+  accountId: string,
+  providerName: string,
+) => Promise<string | null>;
+
 interface Target {
   id: string;
   home: string | null;
@@ -58,6 +64,7 @@ export class AccountAdministrationService {
   readonly #mapping: GroupMappingService;
   readonly #memberships: MembershipService;
   readonly #reactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
+  #localPasswordLink: LocalPasswordLink | null = null;
 
   constructor(options: {
     database: Database;
@@ -194,7 +201,8 @@ export class AccountAdministrationService {
     accountId: string,
     identityId: string,
   ): Promise<{ endedSessions: number }> {
-    return this.#database.transaction(async (tx) => {
+    const mailIds: string[] = [];
+    const result = await this.#database.transaction(async (tx) => {
       const target = await this.#lockAccount(tx, accountId);
       await this.#authorization.require(
         actor,
@@ -203,20 +211,27 @@ export class AccountAdministrationService {
         { executor: tx },
       );
       await checkRankOverAccount(this.#authorization, tx, actor, target, IDENTITIES_ACTION);
-      return this.#unlink(tx, actor, target, identityId, false);
+      return this.#unlink(tx, actor, target, identityId, false, mailIds);
     });
+    await this.#mail.dispatch(mailIds);
+    return result;
   }
 
   async unlinkOwnIdentity(accountId: string, identityId: string): Promise<{ endedSessions: number }> {
     return this.#database.transaction(async (tx) => {
       const target = await this.#lockAccount(tx, accountId);
-      return this.#unlink(tx, accountPrincipal(target.id), target, identityId, true);
+      return this.#unlink(tx, accountPrincipal(target.id), target, identityId, true, []);
     });
   }
 
   async #lockAccount(tx: Transaction, accountId: string) {
     const [row] = await tx
-      .select({ id: accounts.id, home: accounts.homeOrganizationId, email: accounts.email })
+      .select({
+        id: accounts.id,
+        home: accounts.homeOrganizationId,
+        email: accounts.email,
+        state: accounts.state,
+      })
       .from(accounts)
       .where(eq(accounts.id, accountId))
       .for("update");
@@ -227,9 +242,10 @@ export class AccountAdministrationService {
   async #unlink(
     tx: Transaction,
     actor: Principal,
-    target: { id: string; home: string | null },
+    target: { id: string; home: string | null; state: string },
     identityId: string,
     own: boolean,
+    mailIds: string[],
   ): Promise<{ endedSessions: number }> {
     const [identity] = await tx
       .select({ id: identities.id, providerId: identities.providerId })
@@ -256,7 +272,21 @@ export class AccountAdministrationService {
     await tx.delete(identities).where(eq(identities.id, identity.id));
     await this.#mapping.reconcile(tx, target.id, emptyReport());
     const [change] = await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
-    if (managedBefore && change && !change.after) throw managedIdentity();
+    if (change?.before && !change.after) {
+      if (own) throw managedIdentity();
+      if (target.state !== "active") {
+        throw new OrganizationError(
+          "accountNotActive",
+          "Only an active account can become local; reactivate it first, then unlink the identity",
+        );
+      }
+      const [provider] = await tx
+        .select({ name: identityProviders.name })
+        .from(identityProviders)
+        .where(eq(identityProviders.id, change.before.providerId));
+      const mailId = await this.#localPasswordLink?.(tx, target.id, provider?.name ?? "");
+      if (mailId) mailIds.push(mailId);
+    }
     await this.#audit.record(tx, {
       name: "identity.unlinked",
       actor,
@@ -387,6 +417,10 @@ export class AccountAdministrationService {
       });
       return true;
     });
+  }
+
+  onMadeLocal(link: LocalPasswordLink): void {
+    this.#localPasswordLink = link;
   }
 
   onReactivated(listener: (tx: Transaction, accountId: string) => Promise<void>): void {
