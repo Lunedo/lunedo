@@ -11,6 +11,7 @@ import {
   refreshManagedAccounts,
   refuseManaged,
   signsInOnlyThroughProvider,
+  takeOverLocalCredentials,
 } from "../identity/managed.js";
 import { identities } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
@@ -815,6 +816,14 @@ export class SignInService {
         { accountIds: [account.id] },
         accountPrincipal(account.id),
       );
+      const mailId = await takeOverLocalCredentials(
+        tx,
+        { audit: this.#audit, mail: this.#mail },
+        account.id,
+        accountPrincipal(account.id),
+        "signIn",
+      );
+      if (mailId) mailIds.push(mailId);
       return this.#createSession(tx, account, [...new Set(methods)], kind, client, mailIds, started, {
         providerId: identity.providerId,
         identityId: linked.id,

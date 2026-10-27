@@ -70,6 +70,39 @@ export async function managedStatesOf(
   return new Map(rows.map(({ accountId, ...state }) => [accountId, state]));
 }
 
+export type DomainProvider = {
+  id: string;
+  name: string;
+  type: ManagingProviderType;
+};
+
+export async function providerOfEmailDomain(
+  executor: Executor,
+  email: string,
+): Promise<DomainProvider | null> {
+  const result = await executor.execute<DomainProvider>(sql`
+    select p.id, p.name, p.type from identity_provider_domains d
+    join identity_providers p on p.id = d.provider_id
+    where d.domain = lower(substring(${email} from '@([^@]+)$')) and p.setup_completed_at is not null`);
+  return result.rows[0] ?? null;
+}
+
+export async function confirmsLinks(executor: Executor, accountId: string): Promise<boolean> {
+  const result = await executor.execute<{ confirms: boolean }>(sql`
+    select exists (select 1 from instance where owner_account_id = ${accountId}::uuid)
+      or exists (
+        select 1 from role_assignments ra
+        where (ra.expires_at is null or ra.expires_at > now())
+          and (ra.built_in_role is null or ra.built_in_role <> 'member')
+          and ((ra.principal_kind = 'account' and ra.principal_id = ${accountId}::uuid)
+            or (ra.principal_kind = 'group' and ra.principal_id in (
+              select group_id from group_members where account_id = ${accountId}::uuid))
+            or (ra.principal_kind = 'organizationMembers' and ra.organization_id in (
+              select organization_id from memberships where account_id = ${accountId}::uuid and kind = 'member'))
+            or ra.principal_kind = 'instanceUsers')) as confirms`);
+  return result.rows[0]?.confirms === true;
+}
+
 export async function refuseManaged(
   executor: Executor,
   accountId: string,

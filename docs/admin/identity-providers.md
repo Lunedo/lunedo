@@ -190,7 +190,7 @@ At the first sign-in through a provider whose verified e-mail address belongs to
 - The person receives an e-mail that the account now signs in through the provider.
 - The audit log records `identity.linked`, `account.managed` and `account.localCredentialsRemoved`, with what was removed.
 
-The instance owner is never taken over this way; the owner confirms a link as described in [First sign-in](#first-sign-in) and stays local. When the account is already linked to another identity of the same provider, the sign-in is refused with the reason "Your sign-in could not be linked to your account".
+Accounts with a role above member are taken over only after they confirmed the link as described in [First sign-in](#first-sign-in). The instance owner confirms too and is never taken over; the owner stays local. When the account is already linked to another identity of the same provider, the sign-in is refused with the reason "Your sign-in could not be linked to your account".
 
 ### Deactivated providers
 
@@ -210,7 +210,7 @@ Making an account local is refused for accounts that are not active (`accountNot
 
 When nobody is linked to the identity yet, Lunedo decides in this order:
 
-1. The verified e-mail address belongs to an existing account: Lunedo links the identity to the account and [takes it over](#taking-over-an-existing-account). Only the instance owner confirms once that the account is theirs, with a way to sign in the account already has:
+1. The verified e-mail address belongs to an existing account: Lunedo links the identity to the account and [takes it over](#taking-over-an-existing-account). Accounts that hold a role above member, in the instance or in an organization (directly, through a group or through a role for all members), and the instance owner confirm once that the account is theirs, with a way to sign in the account already has:
    - its Lunedo password, followed by its second factor;
    - one of its passkeys;
    - a fresh sign-in through a provider already linked to it, or the password of a linked directory.

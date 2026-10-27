@@ -631,6 +631,61 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(removed.rowCount).toBe(1);
   });
 
+  it("asks an administrator to confirm the link once and then takes the account over", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: existing.id },
+    });
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+    expect(await managedStateOf(test.database, existing.id)).toMatchObject({ source: "domain" });
+
+    const linked = await test.services.signIn.confirmIdentityLink({
+      pendingToken: result.pendingToken,
+      password: PASSWORD,
+      factor: null,
+      client: {},
+    });
+    expect(linked.session).toMatchObject({ accountId: existing.id });
+    expect(await managedStateOf(test.database, existing.id)).toMatchObject({
+      providerId: id,
+      source: "identity",
+    });
+    expect(await localCredentials(existing.id)).toMatchObject({ password: false, sessions: 1 });
+  });
+
+  it("asks for a confirmation when an administrator role comes through a group", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    const group = await test.services.groups.create(SYSTEM, org, {
+      name: `Admins ${randomUUID().slice(0, 6)}`,
+    });
+    await test.services.groups.addMember(SYSTEM, group.id, existing.id);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org,
+      role: { builtIn: "administrator" },
+      principal: { kind: "group", id: group.id },
+    });
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    expect(result.kind).toBe("linkRequired");
+  });
+
+  it("links a plain member without asking", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    expect(result.kind).toBe("signedIn");
+  });
+
   it("drops the enforced second factor once linking makes the account managed", async () => {
     const org = await organization();
     await test.settings.set(twoFactorRequiredSetting, { organization: org }, "organization", true);

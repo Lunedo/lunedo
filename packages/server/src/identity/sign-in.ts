@@ -50,7 +50,7 @@ import {
 } from "./adapter.js";
 import type { ReceivedClaim } from "./claims.js";
 import type { GroupMappingService } from "./groups.js";
-import { refreshManagedAccounts, takeOverLocalCredentials } from "./managed.js";
+import { confirmsLinks, refreshManagedAccounts, takeOverLocalCredentials } from "./managed.js";
 import type { ConnectionCheck, IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import { SamlAdapter, samlPaths } from "./saml.js";
@@ -676,7 +676,7 @@ export class ProviderSignInService {
       if (existing?.state === "placeholder") placeholder = existing;
       else if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
-        if ((await this.#accounts.ownerId()) !== existing.id) return this.#adoptExisting(existing, input);
+        if (!(await confirmsLinks(this.#database, existing.id))) return this.#adoptExisting(existing, input);
         const ways = await this.#linkWays(existing);
         if (!ways.password && !ways.passkey && ways.providers.length === 0) {
           throw new Refused("linkUnavailable");
