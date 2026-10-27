@@ -68,10 +68,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
     expect(options.json()).toEqual({
       providers: [expect.objectContaining({ id: providerId, type: "oidc" })],
-      emailStep: true,
-      directProvider: null,
       lastProvider: null,
-      passwordSignIn: true,
       passkeys: true,
     });
     const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.40" });
@@ -293,9 +290,12 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     );
     expect(String(response.headers["set-cookie"])).toContain("__Host-lunedo-pending=");
     expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
-    expect((await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`)).statusCode).toBe(
-      204,
-    );
+    const refused = await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`);
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ code: "providerHasAccounts", accounts: 1 });
+    expect(
+      (await owner.post(`/api/v1/instance/identity-providers/${factorProvider}/deactivate`, {})).statusCode,
+    ).toBe(200);
   });
 
   it("ends provider sessions through back-channel logout without a browser", async () => {
@@ -428,40 +428,20 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(refused.json()).toMatchObject({ code: "rateLimited" });
   });
 
-  it("turns password sign-in off for the instance, except for the instance owner", async () => {
-    const member = await createAccount(test, "password.member@lunedo.test");
-    const organizationLevel = await owner.put(
+  it("refuses the removed password sign-in setting at every level", async () => {
+    for (const path of [
+      "/api/v1/instance/settings/auth.passwordSignIn",
       `/api/v1/organizations/${organizationId}/settings/auth.passwordSignIn`,
-      { value: false },
-    );
-    expect(organizationLevel.statusCode).toBeGreaterThanOrEqual(400);
-    const changed = await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { value: false });
-    expect(changed.statusCode).toBeLessThan(300);
-    try {
-      const refused = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
-        email: member.email,
-        password: member.password,
-      });
-      expect(refused.statusCode).toBe(403);
-      expect(refused.json()).toMatchObject({ code: "passwordSignInDisabled" });
-      const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
-      expect(options.json()).toMatchObject({
-        emailStep: false,
-        directProvider: { id: providerId, name: "Company login" },
-        passwordSignIn: false,
-        passkeys: true,
-      });
-      const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.43" });
-      expect(
-        (await visitor.post("/api/v1/auth/sign-in/discover", { email: "someone@other.test" })).json(),
-      ).toEqual({
-        step: "none",
-      });
-      const emergency = await new TestClient(test.app).post("/api/v1/auth/sign-in", OWNER);
-      expect(emergency.json()).toMatchObject({ status: "secondFactorRequired" });
-    } finally {
-      await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { clear: true });
+    ]) {
+      const refused = await owner.put(path, { value: false });
+      expect(refused.statusCode).toBe(404);
     }
+    const listed = await owner.get("/api/v1/instance/settings");
+    expect(listed.body).not.toContain("auth.passwordSignIn");
+    const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.43" });
+    expect(
+      (await visitor.post("/api/v1/auth/sign-in/discover", { email: "someone@other.test" })).json(),
+    ).toEqual({ step: "password" });
   });
 
   it("answers provider failures and invalid profile values with a problem or a reference", async () => {

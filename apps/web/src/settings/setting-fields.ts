@@ -85,7 +85,6 @@ const fields: SettingField[] = [
   },
   { key: "auth.passwordMinLength", type: { kind: "number", min: 8, max: 256, unit: "characters" } },
   { key: "auth.twoFactorRequired", type: { kind: "boolean" } },
-  { key: "auth.passwordSignIn", type: { kind: "boolean" } },
   { key: "auth.maxSessionsPerAccount", type: { kind: "number", min: 1, max: 100, unit: "count" } },
   { key: "auth.sessionIdleTimeoutMinutes", type: minutes(5, 365 * DAY, [30, 8 * HOUR, DAY, 7 * DAY]) },
   { key: "auth.sessionLifetimeMinutes", type: minutes(5, 365 * DAY, [DAY, 7 * DAY, 30 * DAY]) },

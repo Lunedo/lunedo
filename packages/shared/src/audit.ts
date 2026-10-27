@@ -7,6 +7,8 @@ export const auditEventNames = [
   "identity.linked",
   "identity.unlinked",
   "account.createdAtSignIn",
+  "account.managed",
+  "account.unmanaged",
   "identityProvider.created",
   "identityProvider.updated",
   "identityProvider.removed",

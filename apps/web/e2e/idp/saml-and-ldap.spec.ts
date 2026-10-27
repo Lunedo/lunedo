@@ -30,6 +30,7 @@ import {
   setDisabled,
   userDn,
 } from "../support/ldap.js";
+import { deleteProvider } from "../support/providers.js";
 
 const headers = { "X-Lunedo-Request": "1", origin: BASE_URL };
 
@@ -144,7 +145,7 @@ async function synchronize(request: APIRequestContext, providerId: string): Prom
 async function removeProvider(browser: Browser, providerId: string): Promise<void> {
   if (!providerId) return;
   const owner = await ownerApi(browser);
-  await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
+  await deleteProvider(owner.request, headers, providerId);
   await owner.close();
 }
 

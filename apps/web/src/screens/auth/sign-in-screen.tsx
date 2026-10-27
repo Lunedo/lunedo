@@ -29,7 +29,6 @@ const emergencyForm = z.object({ email: signInEmailSchema, password: passwordSch
 
 const PROVIDER_ERRORS = new Set([
   "challengeExpired",
-  "passwordSignInDisabled",
   "invalidCredentials",
   "providerUnavailable",
   "providerInitiatedSignIn",
@@ -206,7 +205,7 @@ export function SignInScreen() {
       description={t("auth.signInLead")}
       links={
         <>
-          {data?.passwordSignIn && (!step || step.next.step === "password") && !shortcut ? (
+          {(!step || step.next.step === "password") && !shortcut ? (
             <Link to="/reset-password" className={AUTH_LINK}>
               {t("auth.forgotPassword")}
             </Link>
@@ -238,29 +237,6 @@ export function SignInScreen() {
           onRetry={() => options.refetch()}
         />
       ) : null}
-      {data && !data.emailStep && data.directProvider ? (
-        <>
-          {data.directProvider.type === "ldap" ? (
-            <DirectorySignInForm
-              target={{
-                providerId: data.directProvider.id,
-                name: data.directProvider.name,
-                signInName: null,
-                email: null,
-              }}
-              redirect={search.redirect}
-              onSignedIn={signedIn}
-            />
-          ) : (
-            <ProviderButton
-              provider={data.directProvider}
-              busy={providerBusy === data.directProvider.id}
-              onClick={() => void signInWithProvider(data.directProvider?.id ?? "")}
-            />
-          )}
-          {passkeyButton}
-        </>
-      ) : null}
       {shortcut && !step ? (
         <>
           <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
@@ -277,7 +253,7 @@ export function SignInScreen() {
           <DirectorySignInForm target={shortcut} redirect={search.redirect} onSignedIn={signedIn} />
         </>
       ) : null}
-      {data?.emailStep && !step && !shortcut ? (
+      {data && !step && !shortcut ? (
         <>
           {data.providers.length > 0 ? (
             <>
@@ -381,15 +357,6 @@ export function SignInScreen() {
               {t("auth.signIn")}
             </Button>
           </form>
-        </>
-      ) : null}
-      {step?.next.step === "none" ? (
-        <>
-          {identity}
-          <Notice variant="warning" title={t("auth.discover.noneTitle")}>
-            {t("auth.discover.noneDescription")}
-          </Notice>
-          {passkeyButton}
         </>
       ) : null}
       <EmergencyDialog

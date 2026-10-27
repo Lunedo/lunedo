@@ -182,6 +182,18 @@ export const auditCatalog = {
     fields: z.object({ providerId: z.uuid(), endedSessions: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
+  "account.managed": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid(), source: z.enum(["identity", "domain"]) }),
+    visibility: "organization",
+  }),
+  "account.unmanaged": event({
+    actor: ["account", "system"],
+    target: "account",
+    fields: z.object({ providerId: z.uuid() }),
+    visibility: "organization",
+  }),
   "account.createdAtSignIn": event({
     actor: ["system"],
     target: "account",

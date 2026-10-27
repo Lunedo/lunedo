@@ -2330,7 +2330,7 @@
       "delete": {
         "operationId": "providerAuth.unlinkOwnIdentity",
         "summary": "Unlink an own identity",
-        "description": "Ends the sessions that came from this identity. Refused while it is the last working way to sign in: another identity of an active provider, a passkey, or a password while password sign-in is on.\n\nNeeds a signed-in session.",
+        "description": "Ends the sessions that came from this identity. Refused for the identity of the provider that manages the account, and while it is the last working way to sign in: another identity of an active provider, a passkey, or a password.\n\nNeeds a signed-in session.",
         "tags": [
           "Identity providers"
         ],
@@ -2454,7 +2454,7 @@
             }
           },
           "409": {
-            "description": "`lastSignInMethod`: The last way to sign in cannot be removed.",
+            "description": "`lastSignInMethod`: The last way to sign in cannot be removed. `managedIdentity`: The identity provider manages this account.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2467,6 +2467,14 @@
                       "title": "The last way to sign in cannot be removed",
                       "status": 409,
                       "code": "lastSignInMethod"
+                    }
+                  },
+                  "managedIdentity": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedIdentity",
+                      "title": "The identity provider manages this account",
+                      "status": 409,
+                      "code": "managedIdentity"
                     }
                   }
                 }
@@ -10483,7 +10491,7 @@
       "delete": {
         "operationId": "providerAuth.unlinkIdentity",
         "summary": "Unlink an identity from an account",
-        "description": "Ends the sessions that came from this identity. The last way to sign in cannot be removed.\n\nRequires the permission `account.identities.manage` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
+        "description": "Ends the sessions that came from this identity. When it was the account's last provider link, the account becomes local without credentials.\n\nRequires the permission `account.identities.manage` on the account in `accountId`. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Identity providers"
         ],
@@ -10623,26 +10631,6 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`lastSignInMethod`: The last way to sign in cannot be removed.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                },
-                "examples": {
-                  "lastSignInMethod": {
-                    "value": {
-                      "type": "urn:lunedo:problem:lastSignInMethod",
-                      "title": "The last way to sign in cannot be removed",
-                      "status": 409,
-                      "code": "lastSignInMethod"
                     }
                   }
                 }
@@ -21437,7 +21425,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `passwordSignInDisabled`: Sign-in with a password is turned off.",
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -21450,14 +21438,6 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
-                    }
-                  },
-                  "passwordSignInDisabled": {
-                    "value": {
-                      "type": "urn:lunedo:problem:passwordSignInDisabled",
-                      "title": "Sign-in with a password is turned off",
-                      "status": 403,
-                      "code": "passwordSignInDisabled"
                     }
                   }
                 }
@@ -24699,7 +24679,7 @@
       "get": {
         "operationId": "providerAuth.signInOptions",
         "summary": "Ways to sign in",
-        "description": "Whether the page asks for the e-mail address first, the provider to show directly when it is the only way in, the provider this browser used last, and whether password sign-in is offered. Passkeys are always offered.",
+        "description": "The active providers and the provider this browser used last. The page always asks for the e-mail address; passkeys are always offered.",
         "tags": [
           "Identity providers"
         ],
@@ -24768,68 +24748,6 @@
                       },
                       "description": "Every active provider, offered as a button above the e-mail address."
                     },
-                    "emailStep": {
-                      "type": "boolean",
-                      "description": "Whether the page asks for the e-mail address first. False only when `directProvider` is set."
-                    },
-                    "directProvider": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string",
-                              "format": "uuid",
-                              "description": "ID of the provider."
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "oidc",
-                                "saml",
-                                "ldap"
-                              ],
-                              "description": "Protocol of the provider."
-                            },
-                            "name": {
-                              "type": "string",
-                              "description": "Name shown on the sign-in page."
-                            },
-                            "preset": {
-                              "type": "string",
-                              "enum": [
-                                "entraId",
-                                "google",
-                                "generic",
-                                "adfs",
-                                "activeDirectory"
-                              ],
-                              "description": "Kind of provider."
-                            },
-                            "logoRef": {
-                              "description": "Reference to the uploaded logo, or null.",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "type",
-                            "name",
-                            "preset",
-                            "logoRef"
-                          ],
-                          "additionalProperties": false,
-                          "description": "A provider people sign in through."
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "The only provider, shown as a button right away, when password sign-in is off."
-                    },
                     "lastProvider": {
                       "anyOf": [
                         {
@@ -24888,10 +24806,6 @@
                       ],
                       "description": "The provider this browser signed in with last, offered as a shortcut, or null."
                     },
-                    "passwordSignIn": {
-                      "type": "boolean",
-                      "description": "Whether sign-in with a password is offered."
-                    },
                     "passkeys": {
                       "type": "boolean",
                       "const": true,
@@ -24900,10 +24814,7 @@
                   },
                   "required": [
                     "providers",
-                    "emailStep",
-                    "directProvider",
                     "lastProvider",
-                    "passwordSignIn",
                     "passkeys"
                   ],
                   "additionalProperties": false,
@@ -24919,7 +24830,7 @@
       "post": {
         "operationId": "providerAuth.discover",
         "summary": "Choose the sign-in method for an e-mail address",
-        "description": "The domain of the address chooses the provider. Other addresses continue to password sign-in when it is allowed. The answer is the same whether an account with the address exists or not.",
+        "description": "The domain of the address chooses the provider. Other addresses continue to password sign-in, which local accounts use. The answer is the same whether an account with the address exists or not.",
         "tags": [
           "Identity providers"
         ],
@@ -25056,22 +24967,7 @@
                         "step"
                       ],
                       "additionalProperties": false,
-                      "description": "Password sign-in is offered for this address."
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "step": {
-                          "type": "string",
-                          "const": "none",
-                          "description": "No sign-in method is set up for this address."
-                        }
-                      },
-                      "required": [
-                        "step"
-                      ],
-                      "additionalProperties": false,
-                      "description": "No sign-in method is set up for this address."
+                      "description": "No provider has the domain; local accounts sign in with their password."
                     }
                   ],
                   "description": "The next step. The answer does not depend on whether an account with the address exists."
@@ -82668,7 +82564,7 @@
       "delete": {
         "operationId": "identityProviders.removeInstance",
         "summary": "Remove an instance identity provider",
-        "description": "Removes the provider, its credentials, its mapping rules and all identities linked through it. Memberships and roles its rules granted are withdrawn; its synchronized groups become ordinary groups with their members and permissions.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
+        "description": "Removes the provider, its credentials and its mapping rules; its synchronized groups become ordinary groups with their members and permissions. Refused while accounts are linked through it: deactivate it instead, or unlink or move those accounts first. Accounts that were managed only through its domains become local.\n\nRequires the permission `instance.signIn.manage` on the instance. Needs a signed-in session; API tokens are refused.",
         "tags": [
           "Identity providers"
         ],
@@ -82797,6 +82693,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`providerHasAccounts`: Accounts are still linked to the identity provider.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "providerHasAccounts": {
+                    "value": {
+                      "type": "urn:lunedo:problem:providerHasAccounts",
+                      "title": "Accounts are still linked to the identity provider",
+                      "status": 409,
+                      "code": "providerHasAccounts"
                     }
                   }
                 }
@@ -126663,7 +126579,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`invalidInput`: The request is not valid.",
+            "description": "`invalidInput`: The request is not valid. `invalidOwner`: The owner is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -126676,6 +126592,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "invalidOwner": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidOwner",
+                      "title": "The owner is not valid",
+                      "status": 400,
+                      "code": "invalidOwner"
                     }
                   }
                 }
@@ -126747,7 +126671,7 @@
             }
           },
           "409": {
-            "description": "`instanceOwner`: The instance owner cannot be changed this way.",
+            "description": "`instanceOwner`: The instance owner cannot be changed this way. `ownerManaged`: The instance owner needs a local account.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -126760,6 +126684,14 @@
                       "title": "The instance owner cannot be changed this way",
                       "status": 409,
                       "code": "instanceOwner"
+                    }
+                  },
+                  "ownerManaged": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ownerManaged",
+                      "title": "The instance owner needs a local account",
+                      "status": 409,
+                      "code": "ownerManaged"
                     }
                   }
                 }
@@ -281356,6 +281288,12 @@
           "instanceUrl": {
             "description": "The current address of the instance, for `instanceMoved`.",
             "type": "string"
+          },
+          "accounts": {
+            "description": "Number of accounts still linked to the identity provider, for `providerHasAccounts`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           },
           "maxBytes": {
             "description": "Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`; storage limit of the organization's imports, for `organizationImportLimit`.",

@@ -261,7 +261,6 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
   ],
   "instance.signInProviders": [
-    section("identityProviders.otherMethods", [setting("auth.passwordSignIn")]),
     section("emergencyRecipients.title", [
       row("emergencyRecipients", "emergencyRecipients.title", "emergencyRecipients.description"),
     ]),

@@ -78,9 +78,3 @@ export class SameEmailError extends AuthError {
     super("sameEmail", "This is already the e-mail address of the account");
   }
 }
-
-export class PasswordSignInDisabledError extends AuthError {
-  constructor() {
-    super("passwordSignInDisabled", "Sign-in with a password is turned off for this account");
-  }
-}

@@ -743,6 +743,13 @@
       "when": 1793048318764,
       "tag": "0105_portal_instance_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1793122207673,
+      "tag": "0106_managed_accounts",
+      "breakpoints": true
     }
   ]
 }

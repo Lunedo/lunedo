@@ -293,7 +293,7 @@ const catalogs: Record<Language, Catalog> = {
     emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
       subject: `Emergency sign-in to ${instanceName}`,
       paragraphs: [
-        `${accountName}, the owner of ${instanceName}, signed in with a password while password sign-in is turned off: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
+        `${accountName}, the owner of ${instanceName}, signed in with the local account while an identity provider is active: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
         "This sign-in is meant for emergencies, for example when the identity provider fails. Check the audit log if you did not expect it.",
       ],
     }),
@@ -505,7 +505,7 @@ const catalogs: Record<Language, Catalog> = {
     emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
       subject: `Notfallanmeldung bei ${instanceName}`,
       paragraphs: [
-        `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
+        `${accountName}, Eigentümer von ${instanceName}, hat sich mit dem lokalen Konto angemeldet, während ein Identitätsanbieter aktiv ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
         "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfe das Audit-Log, wenn du sie nicht erwartet hast.",
       ],
     }),

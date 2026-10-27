@@ -2,7 +2,6 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
-import { passwordSignInSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -604,7 +603,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     });
   }
 
-  it("previews a removal, withdraws roles and keeps synchronized groups as ordinary groups", async () => {
+  it("previews a removal, withdraws grants at unlinking and keeps synchronized groups as ordinary groups", async () => {
     const org = await organization();
     const removable = await removableProvider("Removable");
     const group = `group-${randomUUID()}`;
@@ -628,15 +627,22 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       grants: 2,
     });
 
+    await expect(test.services.identityProviders.remove(SYSTEM, removable.id)).rejects.toMatchObject({
+      code: "providerHasAccounts",
+      details: { accounts: 1 },
+    });
+    expect(await roles(person)).toEqual([{ scope: "organization", role: "administrator" }]);
+    const [identity] = await test.services.administration.identities(person);
+    await test.services.administration.unlinkIdentity(SYSTEM, person, identity?.id ?? "");
     await test.services.identityProviders.remove(SYSTEM, removable.id);
     expect(await roles(person)).toEqual([]);
-    expect(await membership(org.id, person)).toBe("member");
+    expect(await membership(org.id, person)).toBeNull();
     const details = await test.services.groups.get(groupId);
     expect(details).toMatchObject({ managedBy: null, formerlySynchronizedFrom: "Removable" });
     const members = await test.pool.query("select account_id from group_members where group_id = $1", [
       groupId,
     ]);
-    expect(members.rows).toEqual([{ account_id: person }]);
+    expect(members.rows).toEqual([]);
     const other = await account(org.id);
     await test.services.groups.addMember(accountPrincipal(org.owner), groupId, other.id);
     const sessions = await test.pool.query("select 1 from sessions where account_id = $1", [person]);
@@ -645,7 +651,7 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       "select fields from audit_events where name = 'identityProvider.removed' and target_id = $1",
       [removable.id],
     );
-    expect(audit.rows[0]?.fields).toMatchObject({ name: "Removable", endedSessions: 1, releasedGroups: 1 });
+    expect(audit.rows[0]?.fields).toMatchObject({ name: "Removable", endedSessions: 0, releasedGroups: 1 });
   });
 
   it("counts only other working ways to sign in for the removal preview", async () => {
@@ -656,23 +662,19 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       accounts: 1,
       accountsWithoutSignIn: 0,
     });
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    try {
-      expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
-        accountsWithoutSignIn: 1,
-      });
-      const elsewhere = await removableProvider("Elsewhere");
-      await link(elsewhere.id, withPassword.id, randomUUID());
-      expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
-        accountsWithoutSignIn: 0,
-      });
-      await test.services.identityProviders.deactivate(SYSTEM, elsewhere.id);
-      expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
-        accountsWithoutSignIn: 1,
-      });
-    } finally {
-      await test.settings.clear(passwordSignInSetting, {}, "instance");
-    }
+    await test.pool.query("update accounts set password_hash = null where id = $1", [withPassword.id]);
+    expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+      accountsWithoutSignIn: 1,
+    });
+    const elsewhere = await removableProvider("Elsewhere");
+    await link(elsewhere.id, withPassword.id, randomUUID());
+    expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+      accountsWithoutSignIn: 0,
+    });
+    await test.services.identityProviders.deactivate(SYSTEM, elsewhere.id);
+    expect(await test.services.identityProviders.removalPreview(removable.id)).toMatchObject({
+      accountsWithoutSignIn: 1,
+    });
   });
 
   it("keeps everything of a deactivated provider but lets nobody sign in or synchronize through it", async () => {

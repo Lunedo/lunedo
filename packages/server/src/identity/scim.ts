@@ -12,6 +12,7 @@ import type { MembershipService } from "../organizations/memberships.js";
 import type { OrganizationService } from "../organizations/organizations.js";
 import type { ProviderDefinition } from "./adapter.js";
 import { emptyReport, type GroupMappingService, type SyncReport } from "./groups.js";
+import { refreshManagedAccounts } from "./managed.js";
 import type { IdentityProviderService } from "./providers.js";
 import { identities, identityGroups, providerGroups, providerSyncRuns } from "./schema.js";
 import {
@@ -420,6 +421,7 @@ export class ScimService {
             fields: { providerId: provider.id, operation: "created", attributes: Object.keys(input).sort() },
             ...scope,
           });
+          await refreshManagedAccounts(tx, this.#audit, { accountIds: [accountId] }, SYSTEM);
           report.changes.push({ kind: "accountCreated", accountId, organizationId: home, detail: null });
           return { identityId: identity.id, accountId };
         })

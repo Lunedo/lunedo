@@ -29,11 +29,9 @@ import {
   removeDraft,
   removeProvider,
 } from "../../api/identity-queries.js";
-import { SettingsList } from "../../components/settings-list.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
-import { useInstanceSettingsEditor } from "../instance/general-screen.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { EmergencyRecipients } from "./emergency-recipients.js";
 import { credentialStatus, providerPresetLabel, typeLabel } from "./provider-labels.js";
@@ -435,7 +433,6 @@ export function InstanceProvidersScreen() {
   const state = useOrganizationState();
   const navigate = useNavigate();
   const providers = useQuery(providersQuery);
-  const editor = useInstanceSettingsEditor();
   const canManage = state.can("instance.signIn.manage");
   return (
     <SettingsPage
@@ -481,9 +478,6 @@ export function InstanceProvidersScreen() {
           </>
         )
       ) : null}
-      <Section title={t("identityProviders.otherMethods")}>
-        <SettingsList {...editor} keys={["auth.passwordSignIn"]} level="instance" />
-      </Section>
       <Section title={t("emergencyRecipients.title")}>
         <p className="pt-3 text-sm text-text-muted">
           {t("emergencyRecipients.otherEmergency")}{" "}

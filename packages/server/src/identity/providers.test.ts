@@ -5,8 +5,6 @@ import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
-import { PasswordSignInDisabledError } from "../auth/errors.js";
-import { passwordSignInSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -98,7 +96,6 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       audit: test.services.audit,
       encryption: test.encryption,
       notifications: test.services.notifications,
-      settings: test.settings,
       allowInsecure: false,
       fetch: async (input) => {
         const answer = answers.get(String(input));
@@ -364,7 +361,6 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       audit: test.services.audit,
       encryption: test.encryption,
       notifications: test.services.notifications,
-      settings: test.settings,
       allowInsecure: false,
     });
     const credential = { kind: "clientSecret" as const, secret: "x", expiresAt: null };
@@ -469,7 +465,6 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       audit: test.services.audit,
       encryption: test.encryption,
       notifications: test.services.notifications,
-      settings: test.settings,
       allowInsecure: false,
     });
     const directory = {
@@ -524,19 +519,18 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     ).rejects.toMatchObject({ code: "invalidInput" });
   });
 
-  it("turns password sign-in off for the instance, but always lets the instance owner in and tells the administrators", async () => {
-    const org = await organization();
-    const member = await account(org.id);
-    await test.database.transaction((tx) =>
-      test.services.memberships
-        .add(tx, SYSTEM, { organizationId: org.id, accountId: member.id, kind: "member" })
-        .catch(() => undefined),
-    );
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    await expect(
-      test.services.signIn.signInWithPassword({ email: member.email ?? "", password: PASSWORD, client: {} }),
-    ).rejects.toThrow(PasswordSignInDisabledError);
+  async function enableTotp(accountId: string) {
+    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
+      confirming: true,
+    });
+    return secret;
+  }
 
+  it("counts a local sign-in of the instance owner as emergency sign-in only while a provider is active", async () => {
+    const org = await organization();
     const administrator = await account(null);
     await test.services.roles.assign(SYSTEM, {
       scope: "instance",
@@ -545,25 +539,35 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       principal: { kind: "account", id: administrator.id },
     });
     await test.pool.query("update instance set owner_account_id = $1", [org.owner]);
+    const paused = await test.pool.query<{ id: string }>(
+      "update identity_providers set deactivated_at = now() where deactivated_at is null returning id",
+    );
+    const provider = await instanceProvider();
     try {
-      const setup = await test.services.totp.begin(org.owner, { issuer: "Test", account: "owner" });
-      if (!setup) throw new Error("TOTP was not started");
-      const secret = Secret.fromBase32(setup.secret);
-      await test.services.totp.verify(test.database, org.owner, TOTP.generate({ secret }), {
-        confirming: true,
-      });
+      const secret = await enableTotp(org.owner);
       const owner = await test.services.accounts.get(org.owner);
-      const first = await test.services.signIn.signInWithPassword({
-        email: owner?.email ?? "",
-        password: PASSWORD,
-        client: { ip: "203.0.113.9" },
-      });
-      if (first.status !== "secondFactorRequired") throw new Error("A second factor was expected");
-      await test.services.signIn.completeSecondFactor({
-        pendingToken: first.pendingToken,
-        factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
-        client: { ip: "203.0.113.9" },
-      });
+      const signInOwner = async (offset: number) => {
+        await test.pool.query("update totp_credentials set last_used_step = null where account_id = $1", [
+          org.owner,
+        ]);
+        const first = await test.services.signIn.signInWithPassword({
+          email: owner?.email ?? "",
+          password: PASSWORD,
+          client: { ip: "203.0.113.9" },
+        });
+        if (first.status !== "secondFactorRequired") throw new Error("A second factor was expected");
+        await test.services.signIn.completeSecondFactor({
+          pendingToken: first.pendingToken,
+          factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + offset }) },
+          client: { ip: "203.0.113.9" },
+        });
+      };
+      await test.services.identityProviders.deactivate(SYSTEM, provider.id);
+      await signInOwner(30_000);
+      const quiet = await test.pool.query("select 1 from audit_events where name = 'auth.emergencySignIn'");
+      expect(quiet.rows).toEqual([]);
+      await test.services.identityProviders.activate(SYSTEM, provider.id);
+      await signInOwner(30_000);
       const audited = await test.pool.query(
         "select actor_id from audit_events where name = 'auth.emergencySignIn'",
       );
@@ -576,19 +580,12 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       );
     } finally {
       await test.pool.query("update instance set owner_account_id = null");
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
+      await test.services.identityProviders.remove(SYSTEM, provider.id);
+      await test.pool.query("update identity_providers set deactivated_at = null where id = any($1)", [
+        paused.rows.map((row) => row.id),
+      ]);
     }
   });
-
-  async function enableTotp(accountId: string) {
-    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
-    if (!setup) throw new Error("TOTP was not started");
-    const secret = Secret.fromBase32(setup.secret);
-    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
-      confirming: true,
-    });
-    return secret;
-  }
 
   it("tells the people and addresses the instance owner chose about an emergency sign-in", async () => {
     const org = await organization();
@@ -601,7 +598,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     });
     const security = await account(null);
     await test.pool.query("update instance set owner_account_id = $1", [org.owner]);
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
+    const provider = await instanceProvider();
     await test.settings.set(smtpSetting, {}, "instance", {
       host: "smtp.example.org",
       port: 25,
@@ -663,12 +660,12 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       expect(test.mail.sent.map((mail) => mail.to)).toContain("alarm@example.net");
     } finally {
       await test.pool.query("update instance set owner_account_id = null");
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
+      await test.services.identityProviders.remove(SYSTEM, provider.id);
       await test.settings.clear(smtpSetting, {}, "instance");
     }
   });
 
-  it("lets administrators link and unlink identities but never the last way to sign in", async () => {
+  it("lets administrators link and unlink identities, also the last way to sign in", async () => {
     const org = await organization();
     const provider = await instanceProvider();
     const target = await account(org.id);
@@ -701,18 +698,6 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     await test.pool.query("update accounts set password_hash = null where id = $1", [target.id]);
     await expect(
       test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
-    ).rejects.toMatchObject({ code: "lastSignInMethod" });
-    await test.pool.query("update accounts set password_hash = 'x' where id = $1", [target.id]);
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    try {
-      await expect(
-        test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
-      ).rejects.toMatchObject({ code: "lastSignInMethod" });
-    } finally {
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
-    }
-    await expect(
-      test.services.administration.unlinkIdentity(accountPrincipal(admin.id), target.id, linked.id),
     ).resolves.toEqual({ endedSessions: 0 });
     expect(await test.services.administration.identities(target.id)).toEqual([]);
   });
@@ -739,7 +724,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       endedSessions: 0,
     });
     await expect(test.services.administration.unlinkOwnIdentity(person.id, other.id)).rejects.toMatchObject({
-      code: "lastSignInMethod",
+      code: "managedIdentity",
     });
     const stranger = await account(null);
     await expect(test.services.administration.unlinkOwnIdentity(stranger.id, other.id)).rejects.toMatchObject(

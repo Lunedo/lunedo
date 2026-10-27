@@ -1,7 +1,5 @@
 import { sql } from "drizzle-orm";
-import { passwordSignInSetting } from "../auth/settings.js";
 import type { Executor } from "../database/database.js";
-import type { SettingsService } from "../settings/service.js";
 
 export interface IgnoredSignInWay {
   identityId?: string;
@@ -10,12 +8,10 @@ export interface IgnoredSignInWay {
 
 export async function accountsWithoutOtherSignIn(
   executor: Executor,
-  settings: SettingsService,
   accountIds: readonly string[],
   ignored: IgnoredSignInWay,
 ): Promise<string[]> {
   if (accountIds.length === 0) return [];
-  const passwordSignIn = await settings.get(passwordSignInSetting, {}, { executor });
   const ids = sql.join(
     [...new Set(accountIds)].map((id) => sql`${id}::uuid`),
     sql`, `,
@@ -29,8 +25,6 @@ export async function accountsWithoutOtherSignIn(
           and i.id is distinct from ${ignored.identityId ?? null}::uuid
           and i.provider_id is distinct from ${ignored.providerId ?? null}::uuid)
       and not exists (select 1 from webauthn_credentials w where w.account_id = a.id)
-      and not (
-        a.password_hash is not null
-        and (${passwordSignIn} or exists (select 1 from instance where owner_account_id = a.id)))`);
+      and a.password_hash is null`);
   return result.rows.map((row) => row.id);
 }

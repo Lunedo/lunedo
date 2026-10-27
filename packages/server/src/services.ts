@@ -524,7 +524,6 @@ export function createAccountServices(options: {
     audit,
     encryption,
     notifications,
-    settings,
     mapping: groupMapping,
     allowInsecure: options.insecureIdentityProviders ?? false,
   });
@@ -535,7 +534,6 @@ export function createAccountServices(options: {
     mail,
     providers: identityProviders,
     mapping: groupMapping,
-    settings,
     memberships,
   });
   const accountLifecycle = new AccountLifecycleService({

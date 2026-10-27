@@ -20,7 +20,6 @@ import {
 } from "../auth/errors.js";
 import { sessions } from "../auth/schema.js";
 import type { ClientInfo, SessionService } from "../auth/sessions.js";
-import { passwordSignInSetting } from "../auth/settings.js";
 import type { PendingIdentity, SecondFactorType, SignedIn, SignInService } from "../auth/sign-in.js";
 import {
   clientSubject,
@@ -50,6 +49,7 @@ import {
 } from "./adapter.js";
 import type { ReceivedClaim } from "./claims.js";
 import type { GroupMappingService } from "./groups.js";
+import { refreshManagedAccounts } from "./managed.js";
 import type { ConnectionCheck, IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import { SamlAdapter, samlPaths } from "./saml.js";
@@ -180,10 +180,7 @@ function testFailure(error: ProviderPolicyError | ProviderResponseError): TestFa
 
 export interface SignInOptions {
   providers: SignInProvider[];
-  emailStep: boolean;
-  directProvider: SignInProvider | null;
   lastProvider: SignInProvider | null;
-  passwordSignIn: boolean;
   passkeys: true;
 }
 
@@ -196,8 +193,7 @@ export type SignInStep =
       preset: SignInProvider["preset"];
       signInName: "email" | "userPrincipalName" | "sAMAccountName" | "uid";
     }
-  | { step: "password" }
-  | { step: "none" };
+  | { step: "password" };
 
 export interface SignInRefusal {
   reference: string;
@@ -761,6 +757,7 @@ export class ProviderSignInService {
           fields: { providerId: provider.id, via: "signIn" },
           ...scope,
         });
+        await refreshManagedAccounts(tx, this.#audit, { accountIds: [account.id] }, SYSTEM);
         return { identityId: created.id, account };
       },
       input,
@@ -920,7 +917,7 @@ export class ProviderSignInService {
       .where(and(eq(identities.accountId, account.id), isNull(identityProviders.deactivatedAt)))
       .orderBy(identityProviders.name);
     return {
-      password: await this.#signIn.passwordConfirmsLink(account),
+      password: this.#signIn.passwordConfirmsLink(account),
       passkey: factors.passkeys > 0,
       providers: linked.map((row) => ({ id: row.id, name: row.name, directory: row.type === "ldap" })),
     };
@@ -1121,14 +1118,9 @@ export class ProviderSignInService {
 
   async signInOptions(lastProviderId: string | null): Promise<SignInOptions> {
     const providers = await this.#providers.signInProviders();
-    const passwordSignIn = await this.#settings.get(passwordSignInSetting, {});
-    const directProvider = providers.length === 1 && !passwordSignIn ? (providers[0] ?? null) : null;
     return {
       providers,
-      emailStep: directProvider === null,
-      directProvider,
       lastProvider: providers.find((provider) => provider.id === lastProviderId) ?? null,
-      passwordSignIn,
       passkeys: true,
     };
   }
@@ -1158,7 +1150,7 @@ export class ProviderSignInService {
     if (provider) {
       return { step: "provider", providerId: provider.id, name: provider.name, preset: provider.preset };
     }
-    return (await this.#settings.get(passwordSignInSetting, {})) ? { step: "password" } : { step: "none" };
+    return { step: "password" };
   }
 
   async refusal(code: string): Promise<SignInRefusal | null> {

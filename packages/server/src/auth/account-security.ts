@@ -6,6 +6,7 @@ import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
+import { refreshManagedAccounts } from "../identity/managed.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { SettingsService } from "../settings/service.js";
@@ -480,6 +481,7 @@ export class AccountSecurityService {
         targetId: accountId,
         fields: { previousEmail, newEmail },
       });
+      await refreshManagedAccounts(tx, this.#audit, { accountIds: [accountId] }, accountPrincipal(accountId));
       return id;
     });
     await this.#mail.dispatch([mailId]);

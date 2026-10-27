@@ -18,6 +18,7 @@ import {
   signInAtKeycloak,
   TEST_DOMAIN,
 } from "../support/idp.js";
+import { deleteProvider } from "../support/providers.js";
 
 const HOST_FROM_PROVIDER = BASE_URL.replace("localhost", "host.docker.internal");
 
@@ -87,14 +88,6 @@ async function createProvider(
   return created.provider.id;
 }
 
-async function setPasswordSignIn(request: APIRequestContext, value: boolean | undefined): Promise<void> {
-  const response = await request.put("/api/v1/instance/settings/auth.passwordSignIn", {
-    headers,
-    data: value === undefined ? { clear: true } : { value },
-  });
-  expect(response.status()).toBeLessThan(300);
-}
-
 async function signInThroughProvider(page: Page, provider: IdentityProviderFixture, user: NewTestUser) {
   await page.goto("/sign-in");
   await page.getByLabel("Work e-mail address or sign-in name").fill(user.email);
@@ -130,9 +123,7 @@ for (const provider of identityProviders) {
 
     test.afterEach(async ({ browser }) => {
       const owner = await ownerApi(browser);
-      await setPasswordSignIn(owner.request, undefined);
-      if (providerId)
-        await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
+      if (providerId) await deleteProvider(owner.request, headers, providerId);
       providerId = "";
       await owner.close();
       for (const username of created.splice(0)) await provider.deleteUser(username);
@@ -248,16 +239,12 @@ for (const provider of identityProviders) {
       await again.context.close();
     });
 
-    test("shows the only provider directly when password sign-in is off, and keeps the emergency sign-in", async ({
+    test("keeps the emergency sign-in of the instance owner while a provider is the way in", async ({
       browser,
     }) => {
-      const owner = await ownerApi(browser);
-      await setPasswordSignIn(owner.request, false);
-      await owner.close();
       const { context, page } = await freshContext(browser);
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `Continue with E2E ${provider.name}` })).toBeVisible();
-      await expect(page.getByLabel("Work e-mail address or sign-in name")).toHaveCount(0);
 
       await page.getByRole("link", { name: "Emergency sign-in" }).click();
       const dialog = page.getByRole("dialog", { name: "Emergency sign-in" });
@@ -308,8 +295,7 @@ test.describe("linking an existing account", () => {
 
   test.afterAll(async ({ browser }) => {
     const owner = await ownerApi(browser);
-    if (providerId)
-      await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
+    if (providerId) await deleteProvider(owner.request, headers, providerId);
     await owner.close();
     if (username) await deleteKeycloakUser(username);
   });

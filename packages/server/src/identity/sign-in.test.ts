@@ -7,10 +7,9 @@ import {
   ChallengeExpiredError,
   InvalidCredentialsError,
   InvalidSecondFactorError,
-  PasswordSignInDisabledError,
   RateLimitedError,
 } from "../auth/errors.js";
-import { passwordSignInSetting, twoFactorRequiredSetting } from "../auth/settings.js";
+import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -669,30 +668,6 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       kind: "full",
       methods: ["passkey", "identityProvider"],
     });
-  });
-
-  it("accepts a password for linking only while it is a way to sign in", async () => {
-    const org = await organization();
-    const existing = await account(org);
-    const id = await provider({});
-    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
-    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    try {
-      expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
-        password: false,
-      });
-      await expect(
-        test.services.signIn.confirmIdentityLink({
-          pendingToken: result.pendingToken,
-          password: PASSWORD,
-          factor: null,
-          client: {},
-        }),
-      ).rejects.toThrow(PasswordSignInDisabledError);
-    } finally {
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
-    }
   });
 
   it("refuses linking when the account has no way to confirm it", async () => {

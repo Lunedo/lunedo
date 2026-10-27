@@ -251,7 +251,6 @@
     "domainHint": "Die Anmeldeseite wählt den Anbieter über die Domain der E-Mail-Adresse oder des Anmeldenamens, den Personen eingeben.",
     "noDomains": "Keine Domains",
     "noPermission": "Deine Rollen erlauben dir nicht, Identitätsanbieter zu ändern.",
-    "otherMethods": "Weitere Anmeldemethoden",
     "columns": {
       "provider": "Anbieter",
       "type": "Typ",
@@ -1053,7 +1052,7 @@
   },
   "emergencyRecipients": {
     "title": "Notfall-Anmeldung des Owners",
-    "description": "Wenn du dich bei ausgeschalteter Passwort-Anmeldung mit deinem Passwort anmeldest, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
+    "description": "Wenn du dich mit deinem Passwort oder einem Passkey anmeldest, während ein Identitätsanbieter aktiv ist, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
     "ownerOnly": "Nur der Instanz-Owner kann ändern, wer über eine Notfall-Anmeldung informiert wird.",
     "administrators": "Instanz-Administration informieren",
     "administratorsHint": "Alle Owner und Admins der Instanz.",
@@ -1252,10 +1251,13 @@
     "durationRange": "Wähle eine Dauer von {minimum} bis {maximum}."
   },
   "problems": {
-    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Anbieter, ein Passkey oder ein Passwort bei eingeschalteter Passwort-Anmeldung hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
+    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Anbieter, ein Passkey oder ein Passwort hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
+    "managedIdentity": "Dieser Identitätsanbieter verwaltet dein Konto, deshalb kannst du die Verknüpfung nicht selbst trennen. Frag eine Person aus der Administration, wenn sich dein Konto anders anmelden soll.",
+    "providerHasAccounts": "Mit diesem Identitätsanbieter sind noch Konten verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
+    "providerHasAccountsCount": "{count, plural, one {Ein Konto ist} other {# Konten sind}} noch mit diesem Identitätsanbieter verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
+    "ownerManaged": "Dieses Konto meldet sich über einen Identitätsanbieter an, der Owner der Instanz braucht aber ein lokales Konto mit Passwort und zweitem Faktor für Notfälle. Wähle eine Person aus der Administration mit lokalem Konto.",
     "lastCredential": "Das ist der einzige Zugang dieses Anbieters. Füge zuerst einen neuen hinzu, bevor du ihn entfernst.",
     "identityInUse": "Diese Identität ist schon mit einem anderen Konto verknüpft. Trenne sie dort zuerst.",
-    "passwordSignInDisabled": "Die Anmeldung mit Passwort ist für diese Instanz ausgeschaltet. Melde dich über deinen Anbieter oder mit einem Passkey an.",
     "invalidProviderConfiguration": "Lunedo konnte diese Anbieter-Konfiguration nicht verwenden. Vergleiche Issuer, Tenant oder Client-ID mit den Einstellungen deines Anbieters und speichere erneut.",
     "resetOwnSecondFactor": "Deinen eigenen zweiten Faktor kannst du hier nicht zurücksetzen, weil er sonst umgangen würde. Melde dich mit einem Wiederherstellungscode an oder bitte eine andere Person aus der Administration.",
     "endOwnSessions": "Deine eigenen Sitzungen beendest du nicht in der Kontenliste, sondern auf deiner Seite „Anmeldung und Sicherheit“.",
@@ -1861,9 +1863,7 @@
     "discover": {
       "or": "oder",
       "change": "Ändern",
-      "domainUses": "{domain} meldet sich mit {name} an",
-      "noneTitle": "Für diese Adresse ist keine Anmeldung eingerichtet",
-      "noneDescription": "Prüfe die Adresse auf Tippfehler. Wenn sie stimmt, bitte deine Administration, dich einzuladen oder die Anmeldung für deine Domain einzurichten. Wenn du einen Passkey hast, kannst du ihn unten verwenden."
+      "domainUses": "{domain} meldet sich mit {name} an"
     },
     "signIn": "Anmelden",
     "signInFailed": "Anmeldung fehlgeschlagen",
@@ -2460,11 +2460,6 @@
       }
     },
     "keys": {
-      "auth_passwordSignIn": {
-        "label": "Anmeldung mit Passwort",
-        "description": "Wenn aus, nur über Anbieter oder mit Passkey.",
-        "help": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
-      },
       "appearance_colorMode": {
         "label": "Farbmodus",
         "description": "Hell, dunkel oder wie das System."
@@ -3173,7 +3168,7 @@
         "homeOrganizationChanged": "Die Heimatorganisation von {accountName} ist jetzt {organizationName, select, null {keine} other {{organizationName}}}, vorher war es {previousOrganizationName, select, null {keine} other {{previousOrganizationName}}}. {reason, select, providerRule {Die Zuordnungsregel oder Gruppe, aus der die Mitgliedschaft kam, gilt nicht mehr.} other {Die Administration hat sie geändert.}}"
       },
       "auth": {
-        "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit Passwort verwendet: {browser} auf {operatingSystem}, {clientIp}."
+        "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit dem lokalen Konto verwendet: {browser} auf {operatingSystem}, {clientIp}."
       },
       "apiToken": {
         "expiring": "Das API-Token {tokenName} läuft am {expiresAt} ab.",
@@ -4519,6 +4514,8 @@
       "account": {
         "organizationAssigned": "Organisation zugewiesen",
         "createdAtSignIn": "Konto bei der ersten Anmeldung angelegt",
+        "managed": "Konto wird von einem Identitätsanbieter verwaltet",
+        "unmanaged": "Konto wird nicht mehr von einem Identitätsanbieter verwaltet",
         "created": "Konto angelegt",
         "passwordChanged": "Passwort geändert",
         "passwordResetRequested": "Passwort-Zurücksetzung angefordert",

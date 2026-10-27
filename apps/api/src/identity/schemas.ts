@@ -636,18 +636,9 @@ export const signInOptionsSchema = z
     providers: z
       .array(signInProviderSchema)
       .describe("Every active provider, offered as a button above the e-mail address."),
-    emailStep: z
-      .boolean()
-      .describe(
-        "Whether the page asks for the e-mail address first. False only when `directProvider` is set.",
-      ),
-    directProvider: signInProviderSchema
-      .nullable()
-      .describe("The only provider, shown as a button right away, when password sign-in is off."),
     lastProvider: signInProviderSchema
       .nullable()
       .describe("The provider this browser signed in with last, offered as a shortcut, or null."),
-    passwordSignIn: z.boolean().describe("Whether sign-in with a password is offered."),
     passkeys: z.literal(true).describe("Passkeys are always offered and need no e-mail address."),
   })
   .describe("Ways to sign in.");
@@ -680,10 +671,7 @@ export const signInStepSchema = z
       .describe("The domain belongs to a directory; the page asks for the password."),
     z
       .object({ step: z.literal("password").describe("Continue with the password form.") })
-      .describe("Password sign-in is offered for this address."),
-    z
-      .object({ step: z.literal("none").describe("No sign-in method is set up for this address.") })
-      .describe("No sign-in method is set up for this address."),
+      .describe("No provider has the domain; local accounts sign in with their password."),
   ])
   .describe("The next step. The answer does not depend on whether an account with the address exists.");
 

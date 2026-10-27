@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { SYSTEM } from "../accounts/principal.js";
-import { passwordSignInSetting } from "../auth/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 
@@ -45,35 +44,20 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
   it("asks for the e-mail address and offers passkeys and password sign-in without providers", async () => {
     expect(await test.services.providerSignIn.signInOptions(null)).toEqual({
       providers: [],
-      emailStep: true,
-      directProvider: null,
       lastProvider: null,
-      passwordSignIn: true,
       passkeys: true,
     });
     expect(await test.services.providerSignIn.discover("person@example.org")).toEqual({ step: "password" });
   });
 
-  it("shows the button of the only provider directly when password sign-in is off", async () => {
+  it("keeps the e-mail step with a single provider, because local accounts sign in with a password", async () => {
     const id = await provider("Only", ["only.example"]);
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    try {
-      expect(await test.services.providerSignIn.signInOptions(null)).toMatchObject({
-        providers: [{ id, name: "Only", preset: "generic" }],
-        emailStep: false,
-        directProvider: { id, name: "Only", preset: "generic" },
-        passwordSignIn: false,
-        passkeys: true,
-      });
-      expect(await test.services.providerSignIn.discover("person@elsewhere.example")).toEqual({
-        step: "none",
-      });
-    } finally {
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
-    }
     expect(await test.services.providerSignIn.signInOptions(null)).toMatchObject({
-      emailStep: true,
-      directProvider: null,
+      providers: [{ id, name: "Only", preset: "generic" }],
+      passkeys: true,
+    });
+    expect(await test.services.providerSignIn.discover("person@elsewhere.example")).toEqual({
+      step: "password",
     });
     await test.services.identityProviders.remove(SYSTEM, id);
   });
@@ -110,14 +94,6 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
       expect(await test.services.providerSignIn.discover(`${known}@${domain}`)).toEqual(
         await test.services.providerSignIn.discover(`${unknown}@${domain}`),
       );
-    }
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    try {
-      const withAccount = await test.services.providerSignIn.discover(`${known}@plain.example`);
-      expect(withAccount).toEqual({ step: "none" });
-      expect(await test.services.providerSignIn.discover(`${unknown}@plain.example`)).toEqual(withAccount);
-    } finally {
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
     }
   });
 

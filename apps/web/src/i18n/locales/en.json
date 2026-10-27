@@ -251,7 +251,6 @@
     "domainHint": "The sign-in page chooses the provider by the domain of the e-mail address or sign-in name people enter.",
     "noDomains": "No domains",
     "noPermission": "Your roles do not allow you to change identity providers.",
-    "otherMethods": "Other sign-in methods",
     "columns": {
       "provider": "Provider",
       "type": "Type",
@@ -1053,7 +1052,7 @@
   },
   "emergencyRecipients": {
     "title": "Emergency sign-in of the owner",
-    "description": "When you sign in with your password while password sign-in is off, these people are told at once. You, as the instance owner, are always told.",
+    "description": "When you sign in with your password or a passkey while an identity provider is active, these people are told at once. You, as the instance owner, are always told.",
     "ownerOnly": "Only the instance owner can change who is told about an emergency sign-in.",
     "administrators": "Tell instance administrators",
     "administratorsHint": "All owners and admins of the instance.",
@@ -1252,10 +1251,13 @@
     "durationRange": "Choose a duration from {minimum} to {maximum}."
   },
   "problems": {
-    "lastSignInMethod": "This is the last working way to sign in to the account. Another identity of an active provider, a passkey, or a password while password sign-in is on would keep it reachable. Add one of them first, then unlink again.",
+    "lastSignInMethod": "This is the last working way to sign in to the account. Another identity of an active provider, a passkey or a password would keep it reachable. Add one of them first, then unlink again.",
+    "managedIdentity": "This identity provider manages your account, so you cannot unlink it yourself. Ask an administrator if your account should sign in another way.",
+    "providerHasAccounts": "Accounts are still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
+    "providerHasAccountsCount": "{count, plural, one {One account is} other {# accounts are}} still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
+    "ownerManaged": "This account signs in through an identity provider, and the instance owner needs a local account with a password and second factor for emergencies. Choose an administrator with a local account.",
     "lastCredential": "This is the provider's only credential. Add a new one before you remove it.",
     "identityInUse": "This identity is already linked to another account. Unlink it there first.",
-    "passwordSignInDisabled": "Password sign-in is turned off for this instance. Sign in through your provider or with a passkey.",
     "invalidProviderConfiguration": "Lunedo could not use this provider configuration. Check the issuer, tenant or client ID against your provider's settings and save again.",
     "resetOwnSecondFactor": "You cannot reset your own second factor here, because that would bypass it. Sign in with a recovery code or ask another administrator.",
     "endOwnSessions": "Your own sessions are not ended from the account list. End them on your Sign-in and security page.",
@@ -1861,9 +1863,7 @@
     "discover": {
       "or": "or",
       "change": "Change",
-      "domainUses": "{domain} signs in with {name}",
-      "noneTitle": "No sign-in method is set up for this address",
-      "noneDescription": "Check the address for typos. If it is right, ask your administrator to invite you or to set up sign-in for your domain. If you have a passkey, you can use it below."
+      "domainUses": "{domain} signs in with {name}"
     },
     "signIn": "Sign in",
     "signInFailed": "Sign-in failed",
@@ -2460,11 +2460,6 @@
       }
     },
     "keys": {
-      "auth_passwordSignIn": {
-        "label": "Password sign-in",
-        "description": "When off, only through a provider or a passkey.",
-        "help": "When off, people sign in only through a provider or a passkey. The emergency sign-in of the instance owner always works."
-      },
       "appearance_colorMode": {
         "label": "Color mode",
         "description": "Light, dark or following the system."
@@ -3173,7 +3168,7 @@
         "homeOrganizationChanged": "The home organization of {accountName} is now {organizationName, select, null {none} other {{organizationName}}}, before it was {previousOrganizationName, select, null {none} other {{previousOrganizationName}}}. {reason, select, providerRule {The mapping rule or group that gave the membership no longer applies.} other {An administrator changed it.}}"
       },
       "auth": {
-        "emergencySignIn": "{accountName} used the emergency sign-in with password: {browser} on {operatingSystem}, {clientIp}."
+        "emergencySignIn": "{accountName} used the emergency sign-in with the local account: {browser} on {operatingSystem}, {clientIp}."
       },
       "apiToken": {
         "expiring": "The API token {tokenName} expires on {expiresAt}.",
@@ -4519,6 +4514,8 @@
       "account": {
         "organizationAssigned": "Organization assigned",
         "createdAtSignIn": "Account created at the first sign-in",
+        "managed": "Account managed by an identity provider",
+        "unmanaged": "Account no longer managed by an identity provider",
         "created": "Account created",
         "passwordChanged": "Password changed",
         "passwordResetRequested": "Password reset requested",

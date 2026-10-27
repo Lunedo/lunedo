@@ -101,7 +101,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Ways to sign in",
     description:
-      "Whether the page asks for the e-mail address first, the provider to show directly when it is the only way in, the provider this browser used last, and whether password sign-in is offered. Passkeys are always offered.",
+      "The active providers and the provider this browser used last. The page always asks for the e-mail address; passkeys are always offered.",
     tags: [TAG],
     response: { description: "Ways to sign in.", schema: signInOptionsSchema },
   })
@@ -115,7 +115,7 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Choose the sign-in method for an e-mail address",
     description:
-      "The domain of the address chooses the provider. Other addresses continue to password sign-in when it is allowed. The answer is the same whether an account with the address exists or not.",
+      "The domain of the address chooses the provider. Other addresses continue to password sign-in, which local accounts use. The answer is the same whether an account with the address exists or not.",
     tags: [TAG],
     status: 200,
     body: discoverSchema,
@@ -523,14 +523,7 @@ export class ProviderAuthController {
     status: 200,
     body: linkConfirmationSchema,
     response: { description: "The session.", schema: signedInSchema },
-    errors: [
-      "challengeExpired",
-      "invalidCredentials",
-      "invalidSecondFactor",
-      "passwordSignInDisabled",
-      "locked",
-      "rateLimited",
-    ],
+    errors: ["challengeExpired", "invalidCredentials", "invalidSecondFactor", "locked", "rateLimited"],
   })
   async link(
     @Body() body: z.output<typeof linkConfirmationSchema>,
@@ -659,10 +652,10 @@ export class ProviderAuthController {
   @ApiRoute({
     summary: "Unlink an own identity",
     description:
-      "Ends the sessions that came from this identity. Refused while it is the last working way to sign in: another identity of an active provider, a passkey, or a password while password sign-in is on.",
+      "Ends the sessions that came from this identity. Refused for the identity of the provider that manages the account, and while it is the last working way to sign in: another identity of an active provider, a passkey, or a password.",
     tags: [TAG],
     params: ownIdentityParams,
-    errors: ["lastSignInMethod", "reauthenticationRequired"],
+    errors: ["lastSignInMethod", "managedIdentity", "reauthenticationRequired"],
   })
   async unlinkOwnIdentity(@Param("identityId") identityId: string, @Req() request: FastifyRequest) {
     await this.#services.administration.unlinkOwnIdentity(sessionOf(request).accountId, identityId);
@@ -703,10 +696,11 @@ export class ProviderAuthController {
   @Permission("account.identities.manage", account, { recentAuthentication: true })
   @ApiRoute({
     summary: "Unlink an identity from an account",
-    description: "Ends the sessions that came from this identity. The last way to sign in cannot be removed.",
+    description:
+      "Ends the sessions that came from this identity. When it was the account's last provider link, the account becomes local without credentials.",
     tags: [TAG],
     params: identityParams,
-    errors: ["lastSignInMethod", "reauthenticationRequired"],
+    errors: ["reauthenticationRequired"],
   })
   async unlinkIdentity(
     @Param("accountId") accountId: string,

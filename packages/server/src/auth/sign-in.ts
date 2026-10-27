@@ -6,6 +6,7 @@ import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { refreshManagedAccounts } from "../identity/managed.js";
 import { identities } from "../identity/schema.js";
 import type { MailService } from "../mail/mail-service.js";
 import { knownDevices } from "../notifications/schema.js";
@@ -19,7 +20,6 @@ import {
   InvalidCredentialsError,
   InvalidSecondFactorError,
   LockedError,
-  PasswordSignInDisabledError,
   RateLimitedError,
   SetupIncompleteError,
 } from "./errors.js";
@@ -31,7 +31,7 @@ import {
   type SessionKind,
   type SessionService,
 } from "./sessions.js";
-import { passwordSignInSetting, twoFactorRequiredSetting } from "./settings.js";
+import { twoFactorRequiredSetting } from "./settings.js";
 import {
   clientSubject,
   type Lockout,
@@ -274,8 +274,11 @@ export class SignInService {
     return new Date(result.rows[0]?.now ?? Date.now());
   }
 
-  async passwordSignInAllowed(executor: Executor = this.#database): Promise<boolean> {
-    return this.#settings.get(passwordSignInSetting, {}, { executor });
+  async #providersActive(executor: Executor): Promise<boolean> {
+    const result = await executor.execute(sql`
+      select 1 from identity_providers
+      where deactivated_at is null and setup_completed_at is not null limit 1`);
+    return result.rows.length > 0;
   }
 
   async #emergencySignIn(
@@ -406,9 +409,9 @@ export class SignInService {
     });
     if (
       provider === null &&
-      methods.includes("password") &&
+      (methods.includes("password") || methods.includes("passkey")) &&
       (await this.#accounts.ownerId(tx)) === account.id &&
-      !(await this.passwordSignInAllowed(tx))
+      (await this.#providersActive(tx))
     ) {
       await this.#emergencySignIn(tx, account, session.id, client, mailIds);
     }
@@ -483,9 +486,6 @@ export class SignInService {
     if (!account || !valid) {
       await this.#recordFailure(subjects, account?.id ?? null, "password", "invalidCredentials");
       throw new InvalidCredentialsError();
-    }
-    if (!(await this.passwordSignInAllowed()) && (await this.#accounts.ownerId()) !== account.id) {
-      throw new PasswordSignInDisabledError();
     }
 
     const factors = await secondFactorsOf(this.#database, account.id);
@@ -635,11 +635,8 @@ export class SignInService {
     return { pending, account, identity: pending.payload as PendingIdentity };
   }
 
-  async passwordConfirmsLink(account: Account, executor: Executor = this.#database): Promise<boolean> {
-    if (!account.passwordHash) return false;
-    return (
-      (await this.passwordSignInAllowed(executor)) || (await this.#accounts.ownerId(executor)) === account.id
-    );
+  passwordConfirmsLink(account: Account): boolean {
+    return account.passwordHash !== null;
   }
 
   async identityLinkPasskeyOptions(pendingToken: string, use: "signIn" | "secondFactor" = "secondFactor") {
@@ -697,7 +694,6 @@ export class SignInService {
         await this.#recordFailure(subjects, account.id, "password", "invalidCredentials");
         throw new InvalidCredentialsError();
       }
-      if (!(await this.passwordConfirmsLink(account))) throw new PasswordSignInDisabledError();
       methods = ["password"];
       factorNeeded = hasSecondFactor(factors);
     } else if (pending.methods.includes("identityProvider")) {
@@ -805,6 +801,12 @@ export class SignInService {
         targetId: account.id,
         fields: { providerId: identity.providerId, via: "signIn" },
       });
+      await refreshManagedAccounts(
+        tx,
+        this.#audit,
+        { accountIds: [account.id] },
+        accountPrincipal(account.id),
+      );
       return this.#createSession(tx, account, [...new Set(methods)], kind, client, mailIds, started, {
         providerId: identity.providerId,
         identityId: linked.id,
