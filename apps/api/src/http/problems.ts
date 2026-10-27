@@ -125,6 +125,10 @@ export const problems = {
   wrongPassword: { status: 401, title: "The link password is not correct" },
   linkNotForYou: { status: 403, title: "The link was shared with other people" },
   guestInvitesDisabled: { status: 403, title: "Members cannot invite guests in this organization" },
+  confidentialGuestsBySpaceAdmins: {
+    status: 403,
+    title: "Only space administrators give guests access to a confidential space",
+  },
   invalidCredentials: { status: 401, title: "The credentials are not valid" },
   invalidSecondFactor: { status: 401, title: "The second factor is not valid" },
   challengeExpired: { status: 401, title: "The sign-in step expired" },

@@ -475,6 +475,41 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
     });
   });
 
+  it("let only space administrators invite guests into a confidential space", async () => {
+    const administrator = await person();
+    await test.runtime.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    counter += 1;
+    const created = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: `Confidential ${counter}`,
+      key: `C${counter}X`,
+      visibility: "private",
+      confidential: true,
+      grants: [{ principalKind: "account", principalId: administrator.id, role: "editor" }],
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const pageId = await page((created.json() as { id: string }).id, "Board minutes");
+    const access = await administrator.client.get(`/api/v1/pages/${pageId}/access`);
+    expect(access.json()).toMatchObject({ canInviteGuests: false });
+    const refused = await administrator.client.post(`/api/v1/pages/${pageId}/access/invitations`, {
+      email: `confidential${counter}@example.net`,
+      role: "reader",
+      includeDescendants: false,
+    });
+    expect(refused.statusCode, refused.body).toBe(403);
+    expect(refused.json()).toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    const invited = await owner.post(`/api/v1/pages/${pageId}/access/invitations`, {
+      email: `confidential${counter}@example.net`,
+      role: "reader",
+      includeDescendants: false,
+    });
+    expect(invited.statusCode, invited.body).toBe(201);
+  });
+
   it("explain what a person can do and export the overview as CSV", async () => {
     const member = await person();
     const created = await space([{ principalKind: "account", principalId: member.id, role: "reader" }]);

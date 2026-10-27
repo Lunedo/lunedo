@@ -1429,6 +1429,7 @@
     "wrongPassword": "The password is not correct. Ask the person who shared the link.",
     "linkNotForYou": "This link was shared with other people. Ask the person who shared it for access.",
     "guestInvitesDisabled": "Members cannot invite guests in this organization. Ask an administrator of the organization.",
+    "confidentialGuestsBySpaceAdmins": "Only space administrators give guests access to this confidential space. Ask a space administrator.",
     "attachmentNotFound": "The file was deleted or moved. Reload the page.",
     "shareNotFound": "The access entry was already removed. Reload the page.",
     "restrictionNotFound": "The page is no longer restricted. Reload the page.",

@@ -445,6 +445,32 @@ export class PageAccessService {
     if (!decision.allowed) throw new ForbiddenError(decision);
   }
 
+  async #isGuestOf(tx: Transaction, accountId: string, organizationId: string | null): Promise<boolean> {
+    if (!organizationId) return false;
+    const membership = await tx.execute<{ kind: string }>(sql`
+      select kind::text as kind from memberships
+      where account_id = ${accountId} and organization_id = ${organizationId}
+        and (expires_at is null or expires_at > now())`);
+    return membership.rows.some((entry) => entry.kind === "guest");
+  }
+
+  async #requireGuestInviter(tx: Transaction, actor: Principal, item: ItemRow): Promise<void> {
+    const space = await tx.execute<{ confidential: boolean }>(
+      sql`select confidential from spaces where id = ${item.space_id}`,
+    );
+    if (!space.rows[0]?.confidential || actor.type === "system") return;
+    const role =
+      actor.type === "account"
+        ? (await this.#authorization.spaceRole(actor.id, item.space_id, { executor: tx, fresh: true })).role
+        : null;
+    if (role !== "admin") {
+      throw new SpaceError(
+        "confidentialGuestsBySpaceAdmins",
+        "Only space administrators give guests access to a confidential space",
+      );
+    }
+  }
+
   async #validateHolder(
     tx: Transaction,
     actor: Principal,
@@ -459,6 +485,9 @@ export class PageAccessService {
       const row = account.rows[0];
       if (row?.state !== "active" || row.type === "portal" || !(await this.#people.canSee(actor, id, tx))) {
         throw new SpaceError("invalidHolder", "Choose a person you can find in the search");
+      }
+      if (row.type === "guest" || (await this.#isGuestOf(tx, id, item.organization_id))) {
+        await this.#requireGuestInviter(tx, actor, item);
       }
       return row.name;
     }

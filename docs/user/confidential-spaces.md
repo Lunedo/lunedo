@@ -25,6 +25,7 @@ Who may create one: people whose organization role manages spaces, always. Other
 |---|---|
 | Space roles | Only individual people of the organization. No groups, no "all members of the organization". |
 | Sharing pages | Only with individual people, never with groups. See [Sharing and restrictions](sharing-and-restrictions.md). |
+| Guests | Only the space admins invite guests or share pages with guests of the organization. Editors and organization administrators cannot, whatever the organization allows elsewhere. An invitation is held as an access request when the person who sent it is no longer space admin when the guest accepts. |
 | Share links | Only **Only the people and groups you choose**, and only with individual people. Links for the organization, the instance or anyone are not possible. |
 | Administrators | Organization and instance administrators cannot open the space, change its permissions or appoint its space admins. In organization lists they see it by key only, with a few numbers, never its name, members or content. |
 | Owners | Only the owner and the space admins can transfer ownership; organization administrators cannot. See [Owners](owners.md). |

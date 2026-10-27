@@ -1429,6 +1429,7 @@
     "wrongPassword": "Das Passwort stimmt nicht. Frag die Person, die den Link geteilt hat.",
     "linkNotForYou": "Dieser Link wurde mit anderen Personen geteilt. Bitte die Person, die ihn geteilt hat, um Zugriff.",
     "guestInvitesDisabled": "Mitglieder können in dieser Organisation keine Gäste einladen. Wende dich an die Administration der Organisation.",
+    "confidentialGuestsBySpaceAdmins": "Nur Space-Admins geben Gästen Zugriff auf diesen vertraulichen Space. Wende dich an einen Space-Admin.",
     "attachmentNotFound": "Die Datei wurde gelöscht oder verschoben. Lade die Seite neu.",
     "shareNotFound": "Der Zugriffseintrag wurde bereits entfernt. Lade die Seite neu.",
     "restrictionNotFound": "Die Seite ist nicht mehr eingeschränkt. Lade die Seite neu.",

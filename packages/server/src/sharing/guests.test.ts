@@ -153,4 +153,121 @@ describe.skipIf(!baseUrl)("inviting guests to a page", () => {
       [accepted.accountId, context.page.id],
     ]);
   });
+
+  async function confidentialSetup() {
+    const org = await organization();
+    await test.settings.set(membersInviteGuestsSetting, { organization: org.id }, "organization", true);
+    const adminId = await member(org.id, "member", "Space admin");
+    const editorId = await member(org.id, "member", "Editor");
+    const organizationAdminId = await member(org.id, "member", "Organization admin");
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: organizationAdminId },
+    });
+    const created = await test.services.spaces.create(
+      accountPrincipal(adminId),
+      org.id,
+      {
+        name: `Council ${randomUUID().slice(0, 6)}`,
+        key: `C${randomUUID().replace(/-/g, "").slice(0, 7).toUpperCase()}`,
+        visibility: "private",
+        confidential: true,
+        grants: [
+          { principalKind: "account", principalId: editorId, role: "editor" },
+          { principalKind: "account", principalId: organizationAdminId, role: "editor" },
+        ],
+      },
+      test.services.spacePermissions.holders,
+    );
+    const page = await test.services.tree.create(accountPrincipal(adminId), created.id, {
+      kind: "page",
+      title: "Board minutes",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    return { org, adminId, editorId, organizationAdminId, space: created, page };
+  }
+
+  it("lets only space administrators bring guests into a confidential space", async () => {
+    const context = await confidentialSetup();
+    const invite = (actorId: string) =>
+      test.services.guestShares.invite(accountPrincipal(actorId), context.page.id, {
+        email: `${randomUUID()}@guest.example.net`,
+        role: "reader",
+        includeDescendants: false,
+      });
+    for (const refused of [context.organizationAdminId, context.editorId]) {
+      expect(await test.services.guestShares.allowed(accountPrincipal(refused), context.page.id)).toBe(false);
+      await expect(invite(refused)).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    }
+    expect(await test.services.guestShares.allowed(accountPrincipal(context.adminId), context.page.id)).toBe(
+      true,
+    );
+    await expect(invite(context.adminId)).resolves.toMatchObject({ id: expect.any(String) });
+
+    const guestId = await member(context.org.id, "guest", "Existing guest");
+    const share = (actorId: string) =>
+      test.services.pageAccess.change(accountPrincipal(actorId), context.page.id, [
+        { action: "share", holderKind: "account", holderId: guestId, role: "reader" },
+      ]);
+    for (const refused of [context.organizationAdminId, context.editorId]) {
+      await expect(share(refused)).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    }
+    await share(context.adminId);
+    const standardGuest = await member(context.org.id, "member", "Standard account as guest");
+    await test.pool.query(
+      "update memberships set kind = 'guest' where account_id = $1 and organization_id = $2",
+      [standardGuest, context.org.id],
+    );
+    await expect(
+      test.services.pageAccess.change(accountPrincipal(context.editorId), context.page.id, [
+        { action: "share", holderKind: "account", holderId: standardGuest, role: "reader" },
+      ]),
+    ).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    expect(
+      (
+        await test.services.authorization.explain(accountPrincipal(guestId), "item.view", {
+          type: "item",
+          id: context.page.id,
+        })
+      ).allowed,
+    ).toBe(true);
+  });
+
+  it("holds a guest invitation into a confidential space when the inviter is no longer space admin", async () => {
+    const context = await confidentialSetup();
+    const email = `${randomUUID()}@guest.example.net`;
+    await test.services.guestShares.invite(accountPrincipal(context.adminId), context.page.id, {
+      email,
+      role: "reader",
+      includeDescendants: false,
+    });
+    const permissions = await test.services.spacePermissions.list(context.space.id);
+    for (const permission of permissions) {
+      const role = permission.principalId === context.editorId ? "admin" : "editor";
+      await test.services.spacePermissions.apply(SYSTEM, context.space.id, {
+        action: "change",
+        permissionId: permission.id,
+        role,
+      });
+    }
+    const accepted = await accept(email);
+    expect(
+      (
+        await test.services.authorization.explain(accountPrincipal(accepted.accountId), "item.view", {
+          type: "item",
+          id: context.page.id,
+        })
+      ).allowed,
+    ).toBe(false);
+    const requests = await test.services.accessRequests.forSpace(
+      accountPrincipal(context.editorId),
+      context.space.id,
+    );
+    expect(requests.map((request) => [request.requester.id, request.itemId])).toEqual([
+      [accepted.accountId, context.page.id],
+    ]);
+  });
 });
