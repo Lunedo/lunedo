@@ -22,7 +22,8 @@ import { OrganizationError } from "../organizations/organizations.js";
 import { organizations } from "../organizations/schema.js";
 import type { SettingsService } from "../settings/service.js";
 import { accountPrincipal, type Principal, SYSTEM } from "./principal.js";
-import { accounts, instance } from "./schema.js";
+import { checkRankOverAccount } from "./rank.js";
+import { accounts } from "./schema.js";
 
 export const SECOND_FACTOR_RESET_ACTION = "account.secondFactor.reset";
 const END_SESSIONS_ACTION = "account.sessions.end";
@@ -168,7 +169,7 @@ export class AccountAdministrationService {
         { type: "account", id: target.id },
         { executor: tx },
       );
-      await this.#checkRank(tx, actor, target, IDENTITIES_ACTION);
+      await checkRankOverAccount(this.#authorization, tx, actor, target, IDENTITIES_ACTION);
       const [linked] = await tx
         .insert(identities)
         .values({ accountId: target.id, providerId: provider.id, subject })
@@ -203,7 +204,7 @@ export class AccountAdministrationService {
         { type: "account", id: target.id },
         { executor: tx },
       );
-      await this.#checkRank(tx, actor, target, IDENTITIES_ACTION);
+      await checkRankOverAccount(this.#authorization, tx, actor, target, IDENTITIES_ACTION);
       return this.#unlink(tx, actor, target, identityId);
     });
   }
@@ -278,7 +279,7 @@ export class AccountAdministrationService {
         { type: "account", id: accountId },
         { executor: tx },
       );
-      await this.#checkRank(tx, actor, target, SECOND_FACTOR_RESET_ACTION);
+      await checkRankOverAccount(this.#authorization, tx, actor, target, SECOND_FACTOR_RESET_ACTION);
       const factors = await secondFactorsOf(tx, accountId);
       await tx.delete(totpCredentials).where(eq(totpCredentials.accountId, accountId));
       await tx.delete(webauthnCredentials).where(eq(webauthnCredentials.accountId, accountId));
@@ -333,7 +334,7 @@ export class AccountAdministrationService {
         { type: "account", id: accountId },
         { executor: tx },
       );
-      await this.#checkRank(tx, actor, target, END_SESSIONS_ACTION);
+      await checkRankOverAccount(this.#authorization, tx, actor, target, END_SESSIONS_ACTION);
       const ended = await tx
         .delete(sessions)
         .where(eq(sessions.accountId, accountId))
@@ -362,7 +363,7 @@ export class AccountAdministrationService {
         { type: "account", id: accountId },
         { executor: tx },
       );
-      await this.#checkRank(tx, actor, target, END_SESSIONS_ACTION);
+      await checkRankOverAccount(this.#authorization, tx, actor, target, END_SESSIONS_ACTION);
       const ended = await tx
         .delete(sessions)
         .where(and(eq(sessions.accountId, accountId), eq(sessions.id, sessionId)))
@@ -426,7 +427,7 @@ export class AccountAdministrationService {
         .update(accounts)
         .set({ state: "active", updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
-      await this.#checkRank(tx, actor, target, REACTIVATE_ACTION);
+      await checkRankOverAccount(this.#authorization, tx, actor, target, REACTIVATE_ACTION);
       for (const listener of this.#reactivationListeners) await listener(tx, accountId);
       await this.#audit.record(tx, {
         name: "account.reactivated",
@@ -463,34 +464,5 @@ export class AccountAdministrationService {
       throw new OrganizationError("notFound", "The account does not exist or is not active");
     }
     return { id: target.id, home: target.home, email: target.email };
-  }
-
-  async #checkRank(tx: Transaction, actor: Principal, target: Target, action: string): Promise<void> {
-    if (actor.type !== "account") return;
-    await this.#authorization.checkOwnersOverAccount(actor, target.id, { executor: tx, action });
-    const [row] = await tx.select({ owner: instance.ownerAccountId }).from(instance);
-    const instanceOwner = row?.owner ?? null;
-    const targetInstanceAreas = await this.#authorization.heldAreas(target.id, "instance", null, tx);
-    const targetIsInstanceOwner = instanceOwner === target.id;
-    if (targetIsInstanceOwner || Object.keys(targetInstanceAreas).length > 0) {
-      await this.#authorization.checkRank(
-        actor,
-        {
-          scope: "instance",
-          organizationId: null,
-          areas: targetInstanceAreas,
-          owner: targetIsInstanceOwner,
-          action,
-        },
-        { executor: tx },
-      );
-    }
-    if (!target.home) return;
-    const actorInstanceAreas = await this.#authorization.heldAreas(actor.id, "instance", null, tx);
-    const actorIsInstanceOwner = instanceOwner === actor.id;
-    const targetIsHomeOwner = await this.#authorization.isOrganizationOwner(target.id, target.home, tx);
-    const instanceAdministrator = actorInstanceAreas.accounts === "manage";
-    if (instanceAdministrator && (!targetIsHomeOwner || actorIsInstanceOwner)) return;
-    await this.#authorization.checkRankOverAccount(actor, target.home, target.id, { executor: tx, action });
   }
 }

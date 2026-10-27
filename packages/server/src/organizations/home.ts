@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import { checkRankOverAccount } from "../accounts/rank.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -96,6 +97,7 @@ export class HomeOrganizationService {
         { type: "account", id: accountId },
         { executor: tx },
       );
+      await checkRankOverAccount(this.#authorization, tx, actor, target, CHANGE_HOME_ACTION);
       if (target.home === organizationId) return [];
       const [membership] = await tx
         .select({ id: memberships.id })
