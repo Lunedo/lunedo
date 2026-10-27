@@ -139,6 +139,21 @@ describe.skipIf(!databaseBaseUrl)("sign-in rules for managed accounts", () => {
     }
   });
 
+  it("names the managing provider in the own security overview", async () => {
+    for (const kind of managedKinds) {
+      expect((await client(kind).get("/api/v1/account/security")).json().managedBy, kind).toEqual({
+        providerId: providers.get(kind),
+        providerName: `Managed ${kind}`,
+        providerType: kind,
+        source: "domain",
+        since: expect.any(String),
+      });
+    }
+    for (const kind of ["local", "guest"] as const) {
+      expect((await client(kind).get("/api/v1/account/security")).json().managedBy, kind).toBeNull();
+    }
+  });
+
   it("keeps the break-glass account of the instance owner local with password and second factor", async () => {
     const response = await new TestClient(test.app).post("/api/v1/auth/sign-in", OWNER);
     expect(response.json()).toMatchObject({ status: "secondFactorRequired" });

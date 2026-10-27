@@ -45,7 +45,7 @@ import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";
 import type { GroupMappingService } from "./groups.js";
 import { ldapCapabilities } from "./ldap.js";
-import { refreshManagedAccounts } from "./managed.js";
+import { managedAccountCounts, refreshManagedAccounts } from "./managed.js";
 import { oidcCapabilities, oidcIssuer } from "./oidc.js";
 import { samlCapabilities, samlPaths } from "./saml.js";
 import {
@@ -140,6 +140,7 @@ interface ProviderSummaryBase {
   directoryKey: boolean;
   capabilities: ProviderCapabilities;
   scim: boolean;
+  managedAccounts: number;
   deactivatedAt: Date | null;
   setupComplete: boolean;
   groupsClaimMissingSince: Date | null;
@@ -558,6 +559,7 @@ export class IdentityProviderService {
               )
           ).map((row) => row.providerId),
     );
+    const managed = ids.length === 0 ? new Map<string, number>() : await managedAccountCounts(executor, ids);
     const now = this.#clock();
     return rows.map((row): ProviderSummary => {
       const own = credentials.get(row.id) ?? [];
@@ -570,6 +572,7 @@ export class IdentityProviderService {
         credentials: own,
         directoryKey,
         scim: scim.has(row.id),
+        managedAccounts: managed.get(row.id) ?? 0,
         deactivatedAt: row.deactivatedAt,
         setupComplete: row.setupCompletedAt !== null,
         groupsClaimMissingSince: row.groupsClaimMissingSince,

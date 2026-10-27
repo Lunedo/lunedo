@@ -548,7 +548,8 @@ export class OrganizationsController {
   @Permission("organization.members.view", organization)
   @ApiRoute({
     summary: "List members",
-    description: "Lists members, collaborators and guests with their directly assigned roles.",
+    description:
+      "Lists members, collaborators and guests with their directly assigned roles. The identity provider that manages each account is included only for callers who manage the members of the organization.",
     tags: [MEMBERS],
     params: organizationIdParams,
     query: searchQuerySchema,
@@ -561,8 +562,16 @@ export class OrganizationsController {
   async members(
     @Param("organizationId") organizationId: string,
     @Query() query: z.output<typeof searchQuerySchema>,
+    @Req() request: FastifyRequest,
   ) {
-    return toApiPage(await this.#services.memberships.list(organizationId, pageRequest(query, nameCursor)));
+    const page = await this.#services.memberships.list(organizationId, pageRequest(query, nameCursor));
+    const managesMembers = await this.#services.authorization.authorize(
+      actorOf(request),
+      "organization.members.manage",
+      { type: "organization", id: organizationId },
+    );
+    if (managesMembers) return toApiPage(page);
+    return toApiPage({ ...page, items: page.items.map(({ managedBy: _managedBy, ...member }) => member) });
   }
 
   @Patch(":organizationId/members/:accountId")

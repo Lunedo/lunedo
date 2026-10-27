@@ -302,6 +302,72 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     ).toBe(200);
   });
 
+  it("shows which provider manages an account only to people who may see it", async () => {
+    const created = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
+      name: "Views login",
+      config: {
+        preset: "generic",
+        issuer: idp.issuer,
+        clientId: idp.clientId,
+        domains: ["views.lunedo.test"],
+        accountCreation: { enabled: true, requiredGroups: [] },
+      },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    const viewsProvider: string = created.json().provider.id;
+    expect(created.json().provider.managedAccounts).toBe(0);
+    const person = await createAccount(test, "managed.view@views.lunedo.test");
+    const browser = new TestClient(test.app);
+    const started = await browser.post(`/api/v1/auth/providers/${viewsProvider}/start`, {});
+    const callback = await idp.authorize(started.json().url, { sub: "views-person", email: person.email });
+    await browser.get(`${callback.pathname}${callback.search}`);
+    const managedBy = {
+      providerId: viewsProvider,
+      providerName: "Views login",
+      providerType: "oidc",
+      source: "identity",
+      since: expect.any(String),
+    };
+
+    expect((await browser.get("/api/v1/account/security")).json()).toMatchObject({ managedBy });
+    const providers = (await owner.get("/api/v1/instance/identity-providers")).json();
+    expect(providers.find((entry: { id: string }) => entry.id === viewsProvider)).toMatchObject({
+      managedAccounts: 1,
+    });
+    expect((await owner.get(`/api/v1/instance/identity-providers/${viewsProvider}`)).json()).toMatchObject({
+      managedAccounts: 1,
+    });
+    expect((await owner.get("/api/v1/instance/accounts?q=managed.view")).json().items).toEqual([
+      expect.objectContaining({ id: person.id, managedBy }),
+    ]);
+    expect((await owner.get(`/api/v1/instance/accounts/${person.id}`)).json().account).toMatchObject({
+      managedBy,
+    });
+    expect(
+      (await owner.get(`/api/v1/organizations/${organizationId}/members?q=managed.view`)).json().items,
+    ).toEqual([expect.objectContaining({ accountId: person.id, managedBy })]);
+    expect(
+      (await owner.get(`/api/v1/organizations/${organizationId}/members/${person.id}`)).json(),
+    ).toMatchObject({ managedBy });
+    expect((await owner.get("/api/v1/account/security")).json()).toMatchObject({ managedBy: null });
+
+    const viewer = await createAccount(test, "plain.viewer@members.test");
+    const client = await signedInClient(test, viewer.email, viewer.password);
+    expect((await client.get("/api/v1/account/security")).json()).toMatchObject({ managedBy: null });
+    expect((await client.get("/api/v1/instance/identity-providers")).statusCode).toBe(403);
+    expect((await client.get(`/api/v1/instance/identity-providers/${viewsProvider}`)).statusCode).toBe(403);
+    expect((await client.get("/api/v1/instance/accounts?q=managed.view")).statusCode).toBe(403);
+    expect((await client.get(`/api/v1/instance/accounts/${person.id}`)).statusCode).toBe(403);
+    expect(
+      (await client.get(`/api/v1/organizations/${organizationId}/members/${person.id}`)).statusCode,
+    ).toBe(403);
+    const members = await client.get(`/api/v1/organizations/${organizationId}/members?q=managed.view`);
+    expect(members.statusCode).toBe(200);
+    expect(members.json().items).toHaveLength(1);
+    expect(members.json().items[0]).not.toHaveProperty("managedBy");
+  });
+
   it("ends provider sessions through back-channel logout without a browser", async () => {
     const browser = new TestClient(test.app);
     await signInThroughProvider(browser, {

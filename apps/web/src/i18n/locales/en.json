@@ -194,15 +194,15 @@
     "moreFor": "More for {name}",
     "remove": "Remove provider",
     "removeTitle": "Remove {name}?",
-    "removeDescription": "Removes the provider, its rules and all identities linked through it. To stop sign-ins for a while, deactivate it instead.",
+    "removeDescription": "Removes the provider and its rules. Possible only while no account is linked to it; accounts whose e-mail domain is assigned to it become local again. To stop sign-ins, deactivate it instead.",
     "removeConfirm": "This cannot be undone. Accounts and their content stay.",
     "removal": {
       "consequences": "What the removal changes",
-      "accountsWithoutSignIn": "{count, plural, one {# account has no other way to sign in and cannot sign in any more.} other {# accounts have no other way to sign in and cannot sign in any more.}}",
-      "accounts": "{count, plural, =0 {No account is linked to this provider.} one {# account loses its identity of this provider.} other {# accounts lose their identity of this provider.}}",
       "grants": "{count, plural, =0 {No membership or role granted by its rules is withdrawn.} one {# membership or role granted by its rules is withdrawn.} other {# memberships and roles granted by its rules are withdrawn.}}",
       "rules": "{count, plural, =0 {There are no mapping rules.} one {# mapping rule is removed.} other {# mapping rules are removed.}}",
-      "groups": "{count, plural, =0 {There are no synchronized groups.} one {# synchronized group becomes an ordinary group and keeps its members and permissions.} other {# synchronized groups become ordinary groups and keep their members and permissions.}}"
+      "groups": "{count, plural, =0 {There are no synchronized groups.} one {# synchronized group becomes an ordinary group and keeps its members and permissions.} other {# synchronized groups become ordinary groups and keep their members and permissions.}}",
+      "refusedTitle": "{name} cannot be removed",
+      "refusedHint": "While {name} is deactivated, nobody signs in through it, and its accounts cannot sign in with a password either."
     },
     "secondFactor": {
       "title": "Second factor",
@@ -253,7 +253,8 @@
       "provider": "Provider",
       "type": "Type",
       "domains": "Domains",
-      "credential": "Credential"
+      "credential": "Credential",
+      "managedAccounts": "Accounts"
     },
     "credentialStatus": {
       "none": "No credential",
@@ -293,7 +294,10 @@
       "rulesHint": "Groups that grant access in Lunedo.",
       "missingGroups": "{count, plural, one {# rule points to a group that no longer exists} other {# rules point to groups that no longer exist}}",
       "connection": "Connection",
-      "credentialStatus": "Credential"
+      "credentialStatus": "Credential",
+      "managedAccounts": "Managed accounts",
+      "managedAccountsHint": "Sign in only through this provider.",
+      "managedAccountsDirectory": "Sign in with their directory password."
     },
     "settings": {
       "signIn": "Sign-in"
@@ -414,14 +418,14 @@
       "groups": "Required groups",
       "groupsHint": "Group IDs at the provider, comma-separated.",
       "link": "Link by e-mail address",
-      "linkHint": "Confirmed once with the old password.",
+      "linkHint": "Linked at the first sign-in.",
       "linkFixed": "Fixed for security",
-      "confirmationRequired": "Confirmation required",
+      "linkAutomatic": "At the first sign-in",
       "domainsHintDirectory": "Enter the domains of the e-mail addresses and sign-in names in the directory, for example example.com.",
       "groupsHelp": "IDs of the groups at the provider, separated by commas. Membership in one of them is enough.",
       "createHelp": "Without this, only invited people and existing accounts can sign in.",
       "requireGroupHelp": "Usually not needed: restrict access in the provider instead. Use this only when the provider cannot restrict access itself.",
-      "linkHelp": "When an account with the same verified address exists, the person confirms once with its password and second factor. Lunedo never links accounts automatically.",
+      "linkHelp": "When an account with the same address exists and its e-mail domain is assigned to this provider, the account is linked at its first sign-in through the provider and is managed by it from then on. Its password is removed, for OpenID Connect and SAML also its passkeys, authenticator app and recovery codes, its other sessions end, and the person gets an e-mail. Only the instance owner confirms the link with password and second factor and keeps a local account.",
       "domainsHelp": "The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
       "domainsHelpEntraId": "The sign-in page sends people with these domains to this provider, e-mail addresses in them count as confirmed, and accounts are created only for them. A domain belongs to one provider only.",
       "domainsHelpGoogle": "The sign-in page sends people with these domains to Google.",
@@ -948,7 +952,8 @@
     "chooseProvider": "Choose a provider",
     "subject": "Identifier at the provider",
     "subjectHint": "The person's stable ID at the provider.",
-    "subjectHelp": "The stable ID of the person at the provider, for example the object ID in Entra ID. A test sign-in shows it."
+    "subjectHelp": "The stable ID of the person at the provider, for example the object ID in Entra ID. A test sign-in shows it.",
+    "unlinkLastDescription": "This is the last identity provider linked to the account. Afterwards {name} has a local account without a password and gets an e-mail with a link to set one. If the e-mail domain of the account is assigned to an identity provider, that provider manages the account instead and no e-mail is sent. Content and memberships stay."
   },
   "brand": {
     "name": "Lunedo",
@@ -1860,7 +1865,7 @@
     },
     "emergency": {
       "title": "Emergency sign-in",
-      "description": "Only for the instance owner, when sign-in through providers does not work. Every use is recorded in the audit log, and all instance administrators are notified at once.",
+      "description": "Only for the instance owner, when sign-in through providers does not work. Every use is recorded in the audit log, and the people chosen for emergency sign-ins are told at once.",
       "submit": "Continue",
       "footerLink": "Emergency sign-in"
     },
@@ -1985,7 +1990,13 @@
     "brand": {
       "withLunedo": "with Lunedo"
     },
-    "passwordHelp": "At least {minimum} characters. A passphrase is easier to remember."
+    "passwordHelp": "At least {minimum} characters. A passphrase is easier to remember.",
+    "managed": {
+      "title": "Sign in through {provider}",
+      "description": "This account signs in through {provider}, not with a password in Lunedo. Continue there.",
+      "unavailable": "This account signs in through {provider}, which is not available at the moment. Ask your administrator.",
+      "otherAccount": "Use another account"
+    }
   },
   "reauthentication": {
     "withProvider": "Continue with {name}",
@@ -2964,7 +2975,16 @@
     "removePasskey": "Remove passkey",
     "passkeyNameHelp": "For example, the device or security key.",
     "passwordHelp": "Use a long passphrase that you use nowhere else.",
-    "noPasskeysHelp": "For signing in and as second factor."
+    "noPasskeysHelp": "For signing in and as second factor.",
+    "managed": {
+      "title": "Signed in through {provider}",
+      "provider": "Password and second factor are managed there.",
+      "directory": "Password there, second factor in Lunedo.",
+      "help": "{provider} checks your password and second factor; change them there. Lunedo stores no password, passkey or authenticator app for your account. If you can no longer sign in there, ask your administrator.",
+      "helpDirectory": "You sign in with your password from {provider}; change it there. Lunedo does not store it. Your second factor stays in Lunedo. If you can no longer sign in, ask your administrator.",
+      "badge": "Managed",
+      "emailFrom": "From {provider}. Change it there."
+    }
   },
   "tokens": {
     "personal": "API tokens",
@@ -12307,5 +12327,12 @@
     "hiddenTitle": "Categories hidden from you",
     "hiddenHint": "Restricted to groups you are not in. As space admin you change who sees them, but cannot read them.",
     "otherCategory": "other category · read only"
+  },
+  "managedAccounts": {
+    "column": "Sign-in",
+    "local": "Lunedo",
+    "signsInThrough": "Signs in through",
+    "secondFactorAtProvider": "At the provider",
+    "secondFactorChecked": "Checked by {provider}"
   }
 }

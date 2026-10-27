@@ -25,9 +25,11 @@ import { z } from "zod";
 import {
   type ApiToken,
   accountKeys,
+  type ManagingProvider,
   ownTokensQuery,
   securityQuery,
   sessionsQuery,
+  signsInOnlyThroughProvider,
   tokenLifetimeQuery,
 } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
@@ -109,21 +111,50 @@ function SecurityDangerZone() {
 export function SignInSection({ withEmail = false }: { withEmail?: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const security = useQuery({ ...securityQuery, throwOnError: false });
+  const managedBy = security.data?.managedBy ?? null;
   return (
     <Section title={t("security.signIn")}>
-      <SettingRow
-        label={t("auth.password")}
-        description={t("security.passwordDescription")}
-        help={t("security.passwordHelp")}
-        control={
-          <Button variant="outline" onClick={() => setOpen(true)}>
-            {t("security.changePassword")}
-          </Button>
-        }
-      />
+      {security.isPending ? (
+        <Skeleton className="h-12 w-full" />
+      ) : managedBy ? (
+        <ManagedSignInRow managedBy={managedBy} />
+      ) : (
+        <SettingRow
+          label={t("auth.password")}
+          description={t("security.passwordDescription")}
+          help={t("security.passwordHelp")}
+          control={
+            <Button variant="outline" onClick={() => setOpen(true)}>
+              {t("security.changePassword")}
+            </Button>
+          }
+        />
+      )}
       {withEmail ? <EmailRow /> : null}
       <ChangePasswordDialog open={open} onOpenChange={setOpen} />
     </Section>
+  );
+}
+
+function ManagedSignInRow({ managedBy }: { managedBy: ManagingProvider }) {
+  const { t } = useTranslation();
+  const values = { provider: managedBy.providerName };
+  return (
+    <SettingRow
+      label={t("security.managed.title", values)}
+      description={
+        managedBy.providerType === "ldap"
+          ? t("security.managed.directory", values)
+          : t("security.managed.provider", values)
+      }
+      help={
+        managedBy.providerType === "ldap"
+          ? t("security.managed.helpDirectory", values)
+          : t("security.managed.help", values)
+      }
+      control={<Badge variant="neutral">{t("security.managed.badge")}</Badge>}
+    />
   );
 }
 
@@ -231,6 +262,7 @@ export function TwoFactorSection() {
       />
     );
   const data = security.data;
+  if (signsInOnlyThroughProvider(data.managedBy)) return null;
   const hasFactor = data.totp || data.passkeys.length > 0;
 
   return (

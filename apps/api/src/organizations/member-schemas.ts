@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { exampleMember, memberSchema, timestamp, uuid } from "../http/schemas.js";
+import { exampleMember, managingProviderSchema, memberSchema, timestamp, uuid } from "../http/schemas.js";
 import { roleSchema } from "../spaces/schemas.js";
 
 const providerSchema = z
@@ -11,6 +11,7 @@ const providerSchema = z
 
 export const memberDetailsSchema = memberSchema
   .extend({
+    managedBy: managingProviderSchema,
     joinedAt: timestamp("When the person joined the organization."),
     invitedBy: z
       .object({ id: uuid("Account ID."), name: z.string().describe("Name.") })

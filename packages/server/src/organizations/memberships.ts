@@ -15,7 +15,7 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
-import { refreshManagedAccounts } from "../identity/managed.js";
+import { type ManagedState, managedStatesOf, refreshManagedAccounts } from "../identity/managed.js";
 import { managedAccounts, providerDeactivations } from "../identity/schema.js";
 import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
@@ -49,6 +49,7 @@ export interface Member {
   roles: { assignmentId: string; role: string; customRoleId: string | null; expiresAt: Date | null }[];
   groups: { id: string; name: string }[];
   twoFactorActive: boolean;
+  managedBy: ManagedState | null;
   lastActiveAt: Date | null;
 }
 
@@ -225,11 +226,13 @@ export class MembershipService {
         ),
       )
       .orderBy(sql`lower(${groups.name})`, groups.id);
+    const managed = await managedStatesOf(this.#database, accountIds);
     return {
       next: result.next,
       items: result.items.map((row) => ({
         ...row,
         twoFactorActive: row.twoFactorActive === true,
+        managedBy: managed.get(row.accountId) ?? null,
         groups: groupRows
           .filter((group) => group.accountId === row.accountId)
           .map((group) => ({ id: group.id, name: group.name })),

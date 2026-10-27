@@ -127,6 +127,7 @@ export class AccountSecurityService {
       passkeys: await this.#webauthn.list(accountId),
       recoveryCodes: factors.recoveryCodes,
       ...(await this.#requirement(accountId)),
+      managedBy: await managedStateOf(this.#database, accountId),
     };
   }
 

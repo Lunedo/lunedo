@@ -16,6 +16,7 @@ import { ImageUp, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { securityQuery } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
 import { queryKeys } from "../../api/queries.js";
 import { request } from "../../api/request.js";
@@ -54,7 +55,7 @@ export function ProfileScreen() {
         ) : profile.data ? (
           <ProfileRows profile={profile.data} />
         ) : (
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-12 w-full" />
         )}
         <EmailRow />
       </Section>
@@ -202,16 +203,26 @@ function PictureRow({ profile }: { profile: Profile }) {
 export function EmailRow() {
   const { t } = useTranslation();
   const session = useSession();
+  const security = useQuery({ ...securityQuery, throwOnError: false });
   const [open, setOpen] = useState(false);
+  const managedBy = security.data?.managedBy ?? null;
   return (
     <>
       <SettingRow
         label={t("auth.email")}
         description={session.account?.email ?? ""}
         control={
-          <Button variant="outline" onClick={() => setOpen(true)}>
-            {t("security.changeEmail")}
-          </Button>
+          security.isPending ? (
+            <Skeleton className="h-control-md w-full" />
+          ) : managedBy ? (
+            <span className="text-sm text-text-muted">
+              {t("security.managed.emailFrom", { provider: managedBy.providerName })}
+            </span>
+          ) : (
+            <Button variant="outline" onClick={() => setOpen(true)}>
+              {t("security.changeEmail")}
+            </Button>
+          )
         }
       />
       <ChangeEmailDialog open={open} onOpenChange={setOpen} />

@@ -33,7 +33,7 @@ export function EmergencyRecipients() {
   const recipients = useQuery({ ...recipientsQuery, throwOnError: false });
   const tracker = useSaveStates();
   const loader = useMemo(() => accountLoader(), []);
-  if (recipients.isPending) return <Skeleton className="h-24 w-full" />;
+  if (recipients.isPending) return <Skeleton className="h-12 w-full" />;
   if (recipients.isError) {
     return (
       <LoadError

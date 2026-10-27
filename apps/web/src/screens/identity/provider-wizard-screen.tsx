@@ -452,7 +452,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
                   onRetry={() => saved.refetch()}
                 />
               ) : (
-                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-12 w-full" />
               )
             ) : (
               <>
@@ -487,7 +487,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
           ) : null}
           {providerId && step !== "type" ? (
             provider.isPending ? (
-              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-12 w-full" />
             ) : provider.isError ? (
               <LoadError
                 what={t("failures.loadProvider")}

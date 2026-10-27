@@ -535,6 +535,13 @@ const providerBase = {
     })
     .describe("What the provider can do with its current configuration."),
   scim: z.boolean().describe("Whether SCIM is on: the provider has a SCIM token and sends changes at once."),
+  managedAccounts: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe(
+      "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated.",
+    ),
   setupComplete: z
     .boolean()
     .describe(

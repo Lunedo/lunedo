@@ -24,8 +24,6 @@ import {
   mappingRulesQuery,
   providerLogoUrl,
   providerQuery,
-  removalPreviewQuery,
-  removeProvider,
   removeProviderLogo,
   syncRunsQuery,
   uploadProviderLogo,
@@ -55,6 +53,7 @@ import {
   LdapSecondFactorFields,
 } from "./provider-ldap.js";
 import { MappingTab } from "./provider-mapping.js";
+import { RemoveProviderDialog, useRemovalPreviewLoader } from "./provider-removal.js";
 import {
   SamlAttributeFields,
   SamlConnectionFields,
@@ -114,7 +113,7 @@ export function InstanceProviderScreen() {
         ) : undefined
       }
     >
-      {provider.isPending ? <Skeleton className="h-48 w-full" /> : null}
+      {provider.isPending ? <Skeleton className="h-12 w-full" /> : null}
       {provider.isError ? (
         <LoadError
           what={t("failures.loadProvider")}
@@ -304,6 +303,15 @@ function OverviewTiles({ provider }: { provider: IdentityProvider }) {
           : t("identityProviders.overview.rulesHint"),
     },
     {
+      key: "managedAccounts",
+      label: t("identityProviders.overview.managedAccounts"),
+      value: format.number(provider.managedAccounts),
+      detail:
+        provider.type === "ldap"
+          ? t("identityProviders.overview.managedAccountsDirectory")
+          : t("identityProviders.overview.managedAccountsHint"),
+    },
+    {
       key: "credential",
       label: t("identityProviders.overview.credentialStatus"),
       value: status.label,
@@ -313,7 +321,7 @@ function OverviewTiles({ provider }: { provider: IdentityProvider }) {
   return (
     <ul
       aria-label={t("identityProviders.overview.summary")}
-      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
     >
       {tiles.map((tile) => (
         <li key={tile.key} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4">
@@ -524,7 +532,7 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
             }
           />
         )}
-        <RemoveRow provider={provider} />
+        <RemoveRow provider={provider} onDeactivate={() => setConfirming(true)} />
       </DangerZone>
       <ConfirmDialog
         open={confirming}
@@ -551,45 +559,11 @@ function StatusSection({ provider }: { provider: IdentityProvider }) {
   );
 }
 
-function RemovalPreview({ providerId }: { providerId: string }) {
-  const { t } = useTranslation();
-  const preview = useQuery({ ...removalPreviewQuery(providerId), throwOnError: false });
-  if (preview.isPending) return <Skeleton className="h-24 w-full" />;
-  if (preview.isError) {
-    return (
-      <LoadError
-        what={t("failures.loadRemovalPreview")}
-        error={preview.error}
-        onRetry={() => preview.refetch()}
-      />
-    );
-  }
-  const { accountsWithoutSignIn, groups, rules, grants } = preview.data;
-  return (
-    <div className="flex flex-col gap-3">
-      {accountsWithoutSignIn > 0 ? (
-        <Notice variant="danger">
-          {t("identityProviders.removal.accountsWithoutSignIn", { count: accountsWithoutSignIn })}
-        </Notice>
-      ) : null}
-      <ul
-        aria-label={t("identityProviders.removal.consequences")}
-        className="flex list-disc flex-col gap-1 pl-5"
-      >
-        <li>{t("identityProviders.removal.accounts", { count: preview.data.accounts })}</li>
-        <li>{t("identityProviders.removal.grants", { count: grants })}</li>
-        <li>{t("identityProviders.removal.rules", { count: rules })}</li>
-        <li>{t("identityProviders.removal.groups", { count: groups })}</li>
-      </ul>
-    </div>
-  );
-}
-
-function RemoveRow({ provider }: { provider: IdentityProvider }) {
+function RemoveRow({ provider, onDeactivate }: { provider: IdentityProvider; onDeactivate: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const showFailure = useFailureToast();
+  const preview = useRemovalPreviewLoader();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -597,37 +571,29 @@ function RemoveRow({ provider }: { provider: IdentityProvider }) {
         title={t("identityProviders.removeTitle", { name: provider.name })}
         description={t("identityProviders.removeDescription")}
         action={
-          <Button variant="danger" size="sm" icon={Trash2} onClick={() => setOpen(true)}>
+          <Button
+            variant="danger"
+            size="sm"
+            icon={Trash2}
+            loading={preview.loading === provider.id}
+            onClick={() => {
+              void preview.load(provider.id).then(() => setOpen(true));
+            }}
+          >
             {t("identityProviders.remove")}
           </Button>
         }
       />
-      <ConfirmDialog
+      <RemoveProviderDialog
+        provider={provider}
         open={open}
         onOpenChange={setOpen}
-        title={t("identityProviders.removeTitle", { name: provider.name })}
-        description={t("identityProviders.removeConfirm")}
-        confirmLabel={t("identityProviders.remove")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        typedConfirmation={{
-          value: provider.name,
-          label: t("common.typeToConfirm", { name: provider.name }),
-          mismatch: t("common.nameMismatch"),
+        onDeactivate={onDeactivate}
+        onRemoved={async () => {
+          await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
+          await navigate({ to: "/settings/instance/sign-in-providers" });
         }}
-        onConfirm={async () => {
-          try {
-            await removeProvider(provider.id);
-            setOpen(false);
-            await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
-            await navigate({ to: "/settings/instance/sign-in-providers" });
-          } catch (failure) {
-            showFailure(t("failures.removeProvider"), failure);
-          }
-        }}
-      >
-        {open ? <RemovalPreview providerId={provider.id} /> : null}
-      </ConfirmDialog>
+      />
     </>
   );
 }

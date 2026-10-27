@@ -72,7 +72,7 @@ export function ScimTab({ provider, canManage }: { provider: IdentityProvider; c
     }
   };
 
-  if (status.isPending) return <Skeleton className="h-48 w-full" />;
+  if (status.isPending) return <Skeleton className="h-12 w-full" />;
   if (status.isError) {
     return <LoadError what={t("failures.loadScim")} error={status.error} onRetry={() => status.refetch()} />;
   }

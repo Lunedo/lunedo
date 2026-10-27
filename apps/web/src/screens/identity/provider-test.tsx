@@ -83,7 +83,7 @@ export function StartTestButton({
 export function TestResult({ provider, flowId }: { provider: IdentityProvider; flowId: string }) {
   const { t } = useTranslation();
   const result = useQuery(providerTestResultQuery(provider.id, flowId));
-  if (result.isPending) return <Skeleton className="h-24 w-full" />;
+  if (result.isPending) return <Skeleton className="h-12 w-full" />;
   if (result.isError) {
     return (
       <LoadError what={t("failures.loadTestResult")} error={result.error} onRetry={() => result.refetch()} />

@@ -69,7 +69,18 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-function memberApi(options: { factorRequired?: boolean; permissions?: string[] } = {}) {
+const COMPANY_LOGIN = {
+  providerId: PROVIDER,
+  providerName: "Company login",
+  providerType: "oidc",
+  source: "identity",
+  since: "2026-09-14T07:45:00.000Z",
+};
+
+function memberApi(
+  options: { factorRequired?: boolean; permissions?: string[]; managedBy?: typeof COMPANY_LOGIN } = {},
+) {
+  const managed = { ...member, managedBy: options.managedBy ?? null };
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
@@ -113,7 +124,7 @@ function memberApi(options: { factorRequired?: boolean; permissions?: string[] }
     [`GET /api/v1/organizations/${ORGANIZATION.id}/members`]: () => ({
       body: {
         items: [
-          member,
+          managed,
           {
             ...member,
             accountId: OLIVIA.id,
@@ -129,7 +140,7 @@ function memberApi(options: { factorRequired?: boolean; permissions?: string[] }
     [`GET /api/v1/organizations/${ORGANIZATION.id}/invitations`]: () => ({ body: [] }),
     [`GET /api/v1/organizations/${ORGANIZATION.id}/members/${FELIX}`]: () => ({
       body: {
-        ...member,
+        ...managed,
         joinedAt: "2026-08-21T09:58:00.000Z",
         invitedBy: { id: OLIVIA.id, name: OLIVIA.name },
         homeOrganization: true,
@@ -224,6 +235,38 @@ describe("the member table", () => {
     await open(`/settings/organizations/${ORGANIZATION.id}/members`, "Members");
     const row = (await screen.findByText("Felix Gruber")).closest("tr") as HTMLElement;
     expect(await within(row).findByText("Missing")).toBeTruthy();
+  });
+});
+
+describe("members managed by an identity provider", () => {
+  it("names the provider and leaves the second factor to it in the table", async () => {
+    memberApi({ factorRequired: true, managedBy: COMPANY_LOGIN });
+    await open(`/settings/organizations/${ORGANIZATION.id}/members`, "Members");
+    const table = await screen.findByRole("table", { name: "Members" });
+    expect(within(table).getByRole("columnheader", { name: "Sign-in" })).toBeTruthy();
+    const row = (await within(table).findByText("Felix Gruber")).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Company login")).toBeTruthy();
+    expect(within(row).getByText("At the provider")).toBeTruthy();
+    expect(within(row).queryByText("Missing")).toBeNull();
+    const olivia = within(table).getByText(OLIVIA.name).closest("tr") as HTMLElement;
+    expect(within(olivia).getByText("Lunedo")).toBeTruthy();
+  });
+
+  it("leaves out the sign-in column for people who only view members", async () => {
+    memberApi({ permissions: ["organization.view", "organization.members.view"] });
+    await open(`/settings/organizations/${ORGANIZATION.id}/members`, "Members");
+    const table = await screen.findByRole("table", { name: "Members" });
+    await within(table).findByText("Felix Gruber");
+    expect(within(table).queryByRole("columnheader", { name: "Sign-in" })).toBeNull();
+  });
+
+  it("names the provider on the member page", async () => {
+    memberApi({ managedBy: COMPANY_LOGIN });
+    await open(`/settings/organizations/${ORGANIZATION.id}/members/${FELIX}`, "Felix Gruber");
+    expect(screen.getByText("Signs in through")).toBeTruthy();
+    expect(screen.getAllByText("Company login").length).toBeGreaterThan(0);
+    expect(screen.getByText("Checked by Company login")).toBeTruthy();
+    expect(screen.queryByText("(not required by the organization)")).toBeNull();
   });
 });
 

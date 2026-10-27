@@ -296,7 +296,10 @@ export class AccountController {
   @ApiRoute({
     summary: "Get the security overview",
     tags: ["Account"],
-    response: { description: "Second factors of the account.", schema: securityOverviewSchema },
+    response: {
+      description: "Second factors of the account and the identity provider that manages it.",
+      schema: securityOverviewSchema,
+    },
   })
   async security(@Req() request: FastifyRequest) {
     return this.#services.security.overview(sessionOf(request).accountId);

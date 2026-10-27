@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -37,9 +37,10 @@ export function signsInOnlyThroughProvider(state: Pick<ManagedState, "providerTy
   return state !== null && state.providerType !== "ldap";
 }
 
-export async function managedStateOf(executor: Executor, accountId: string): Promise<ManagedState | null> {
-  const [row] = await executor
+function selectManagedStates(executor: Executor) {
+  return executor
     .select({
+      accountId: managedAccounts.accountId,
       providerId: managedAccounts.providerId,
       providerName: identityProviders.name,
       providerType: identityProviders.type,
@@ -47,9 +48,25 @@ export async function managedStateOf(executor: Executor, accountId: string): Pro
       since: managedAccounts.since,
     })
     .from(managedAccounts)
-    .innerJoin(identityProviders, eq(identityProviders.id, managedAccounts.providerId))
-    .where(eq(managedAccounts.accountId, accountId));
-  return row ?? null;
+    .innerJoin(identityProviders, eq(identityProviders.id, managedAccounts.providerId));
+}
+
+export async function managedStateOf(executor: Executor, accountId: string): Promise<ManagedState | null> {
+  const [row] = await selectManagedStates(executor).where(eq(managedAccounts.accountId, accountId));
+  if (!row) return null;
+  const { accountId: _accountId, ...state } = row;
+  return state;
+}
+
+export async function managedStatesOf(
+  executor: Executor,
+  accountIds: readonly string[],
+): Promise<Map<string, ManagedState>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await selectManagedStates(executor).where(
+    inArray(managedAccounts.accountId, [...new Set(accountIds)]),
+  );
+  return new Map(rows.map(({ accountId, ...state }) => [accountId, state]));
 }
 
 export async function refuseManaged(
@@ -202,10 +219,14 @@ export async function refreshManagedAccounts(
   return changes;
 }
 
-export async function managedAccountCounts(executor: Executor): Promise<Map<string, number>> {
+export async function managedAccountCounts(
+  executor: Executor,
+  providerIds?: readonly string[],
+): Promise<Map<string, number>> {
   const rows = await executor
     .select({ providerId: managedAccounts.providerId, count: sql<number>`count(*)::int` })
     .from(managedAccounts)
+    .where(providerIds ? inArray(managedAccounts.providerId, [...providerIds]) : undefined)
     .groupBy(managedAccounts.providerId);
   return new Map(rows.map((row) => [row.providerId, row.count]));
 }

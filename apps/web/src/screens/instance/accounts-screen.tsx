@@ -27,12 +27,14 @@ import type { TFunction } from "i18next";
 import { Info, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { signsInOnlyThroughProvider } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
 import { instanceKeys, instanceOrganizationsQuery, instanceRolesQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { AuditLog } from "../../components/audit-log.js";
 import { formerUser } from "../../components/audit-presentation.js";
 import { AccountIdentities } from "../../components/linked-identities.js";
+import { SignInThrough } from "../../components/managed-account.js";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { useServerTable } from "../../components/table-state.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -221,6 +223,10 @@ export function InstanceAccountsScreen() {
               cell: (account) =>
                 !canHaveSecondFactor(account) ? (
                   <span className="text-text-muted">—</span>
+                ) : signsInOnlyThroughProvider(account.managedBy) ? (
+                  <span className="whitespace-nowrap text-text-muted">
+                    {t("managedAccounts.secondFactorAtProvider")}
+                  </span>
                 ) : account.twoFactorActive ? (
                   <span className="whitespace-nowrap">{t("common.yes")}</span>
                 ) : account.secondFactorRequired ? (
@@ -228,6 +234,12 @@ export function InstanceAccountsScreen() {
                 ) : (
                   <span className="whitespace-nowrap text-text-muted">{t("common.no")}</span>
                 ),
+            },
+            {
+              key: "signIn",
+              header: t("managedAccounts.column"),
+              hideBelow: "md",
+              cell: (account) => <SignInThrough managedBy={account.managedBy} />,
             },
             {
               key: "state",
@@ -486,7 +498,8 @@ function AccountDetails({
   );
   const anonymizable =
     account.state !== "anonymized" && (account.type === "standard" || account.type === "guest");
-  const secondFactor = canHaveSecondFactor({ type: account.type, state: account.state });
+  const providerOnly = signsInOnlyThroughProvider(account.managedBy);
+  const secondFactor = canHaveSecondFactor({ type: account.type, state: account.state }) && !providerOnly;
   const tabs = [
     { value: "overview", label: t("instance.accounts.page.overview") },
     { value: "security", label: t("instance.accounts.page.security") },
@@ -548,6 +561,20 @@ function AccountDetails({
               <AccountCard title={t("instance.accounts.page.securityAtAGlance")}>
                 <AccountFacts
                   rows={[
+                    [
+                      t("managedAccounts.signsInThrough"),
+                      <SignInThrough key="signIn" managedBy={account.managedBy} />,
+                    ],
+                    ...(providerOnly && account.managedBy
+                      ? ([
+                          [
+                            t("instance.accounts.twoFactor"),
+                            t("managedAccounts.secondFactorChecked", {
+                              provider: account.managedBy.providerName,
+                            }),
+                          ],
+                        ] as [string, ReactNode][])
+                      : []),
                     ...(secondFactor
                       ? ([
                           [
@@ -665,11 +692,13 @@ function AccountDetails({
                       description={t("instance.accounts.endSessionsSummary", { name: account.name })}
                       action={dangerButton("endSessions", t("instance.accounts.endSessions"))}
                     />
-                    <DangerAction
-                      title={t("instance.accounts.resetSecondFactor")}
-                      description={t("instance.accounts.resetSummary", { name: account.name })}
-                      action={dangerButton("reset", t("instance.accounts.resetSecondFactor"))}
-                    />
+                    {providerOnly ? null : (
+                      <DangerAction
+                        title={t("instance.accounts.resetSecondFactor")}
+                        description={t("instance.accounts.resetSummary", { name: account.name })}
+                        action={dangerButton("reset", t("instance.accounts.resetSecondFactor"))}
+                      />
+                    )}
                     <DangerAction
                       title={t("members.actions.deactivate")}
                       description={t("instance.accounts.deactivateSummary")}
@@ -713,7 +742,13 @@ function AccountDetails({
                 </AccountCard>
               ) : null}
               <AccountCard title={t("identities.title")}>
-                <AccountIdentities accountId={account.id} manage={manage} />
+                <AccountIdentities
+                  accountId={account.id}
+                  manage={manage}
+                  managedBy={account.managedBy}
+                  accountName={account.name}
+                  onChanged={refresh}
+                />
               </AccountCard>
             </div>
             <Table

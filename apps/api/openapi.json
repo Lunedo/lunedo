@@ -5912,7 +5912,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Second factors of the account.",
+            "description": "Second factors of the account and the identity provider that manages it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5989,6 +5989,58 @@
                         }
                       ],
                       "description": "Why the account must keep a second factor: it owns the instance, an administrator reset its second factor, or the instance or organization requires one. Null when nothing requires it."
+                    },
+                    "managedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "providerId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the identity provider."
+                            },
+                            "providerName": {
+                              "type": "string",
+                              "description": "Name of the identity provider."
+                            },
+                            "providerType": {
+                              "type": "string",
+                              "description": "Kind of identity provider. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "oidc",
+                                "saml",
+                                "ldap"
+                              ]
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "identity",
+                                "domain"
+                              ],
+                              "description": "Why the provider manages the account: `identity` when an identity of the provider is linked, `domain` when the e-mail domain of the account is assigned to the provider."
+                            },
+                            "since": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "Since when the provider manages the account. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "providerId",
+                            "providerName",
+                            "providerType",
+                            "source",
+                            "since"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The identity provider that manages the account, or null for a local account. Accounts managed by an OpenID Connect or SAML provider sign in only through it and have no password, passkey or authenticator app in Lunedo; accounts managed by a directory sign in with its password and keep their second factor in Lunedo."
                     }
                   },
                   "required": [
@@ -5996,7 +6048,8 @@
                     "passkeys",
                     "recoveryCodes",
                     "secondFactorRequired",
-                    "secondFactorRequiredBy"
+                    "secondFactorRequiredBy",
+                    "managedBy"
                   ],
                   "additionalProperties": false
                 }
@@ -60234,6 +60287,58 @@
                             "type": "boolean",
                             "description": "Whether the instance or the home organization requires a second factor that the account does not have yet."
                           },
+                          "managedBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "providerId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the identity provider."
+                                  },
+                                  "providerName": {
+                                    "type": "string",
+                                    "description": "Name of the identity provider."
+                                  },
+                                  "providerType": {
+                                    "type": "string",
+                                    "description": "Kind of identity provider. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "oidc",
+                                      "saml",
+                                      "ldap"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "identity",
+                                      "domain"
+                                    ],
+                                    "description": "Why the provider manages the account: `identity` when an identity of the provider is linked, `domain` when the e-mail domain of the account is assigned to the provider."
+                                  },
+                                  "since": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "Since when the provider manages the account. ISO 8601 timestamp in UTC."
+                                  }
+                                },
+                                "required": [
+                                  "providerId",
+                                  "providerName",
+                                  "providerType",
+                                  "source",
+                                  "since"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The identity provider that manages the account, or null for a local account. Accounts managed by an OpenID Connect or SAML provider sign in only through it and have no password, passkey or authenticator app in Lunedo; accounts managed by a directory sign in with its password and keep their second factor in Lunedo."
+                          },
                           "instanceRoles": {
                             "type": "array",
                             "items": {
@@ -60327,6 +60432,7 @@
                           "lastSignInAt",
                           "twoFactorActive",
                           "secondFactorRequired",
+                          "managedBy",
                           "instanceRoles",
                           "organizations"
                         ],
@@ -60363,6 +60469,13 @@
                       "lastSignInAt": "2026-10-01T09:30:00.000Z",
                       "twoFactorActive": true,
                       "secondFactorRequired": false,
+                      "managedBy": {
+                        "providerId": "01929b1f-1b7e-7b62-938f-7a6b5c4d9e0f",
+                        "providerName": "Company login",
+                        "providerType": "oidc",
+                        "source": "identity",
+                        "since": "2026-09-14T07:45:00.000Z"
+                      },
                       "instanceRoles": [
                         {
                           "builtInRole": "securityAuditor",
@@ -60602,6 +60715,58 @@
                           "type": "boolean",
                           "description": "Whether the instance or the home organization requires a second factor that the account does not have yet."
                         },
+                        "managedBy": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "providerId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the identity provider."
+                                },
+                                "providerName": {
+                                  "type": "string",
+                                  "description": "Name of the identity provider."
+                                },
+                                "providerType": {
+                                  "type": "string",
+                                  "description": "Kind of identity provider. New values can be added in later versions; handle unknown values.",
+                                  "x-extensible-enum": [
+                                    "oidc",
+                                    "saml",
+                                    "ldap"
+                                  ]
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "identity",
+                                    "domain"
+                                  ],
+                                  "description": "Why the provider manages the account: `identity` when an identity of the provider is linked, `domain` when the e-mail domain of the account is assigned to the provider."
+                                },
+                                "since": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Since when the provider manages the account. ISO 8601 timestamp in UTC."
+                                }
+                              },
+                              "required": [
+                                "providerId",
+                                "providerName",
+                                "providerType",
+                                "source",
+                                "since"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The identity provider that manages the account, or null for a local account. Accounts managed by an OpenID Connect or SAML provider sign in only through it and have no password, passkey or authenticator app in Lunedo; accounts managed by a directory sign in with its password and keep their second factor in Lunedo."
+                        },
                         "instanceRoles": {
                           "type": "array",
                           "items": {
@@ -60695,6 +60860,7 @@
                         "lastSignInAt",
                         "twoFactorActive",
                         "secondFactorRequired",
+                        "managedBy",
                         "instanceRoles",
                         "organizations"
                       ],
@@ -75137,6 +75303,12 @@
                             "type": "boolean",
                             "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                           },
+                          "managedAccounts": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                          },
                           "setupComplete": {
                             "type": "boolean",
                             "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -75836,6 +76008,7 @@
                           "directoryKey",
                           "capabilities",
                           "scim",
+                          "managedAccounts",
                           "setupComplete",
                           "deactivatedAt",
                           "groupsClaimMissingSince",
@@ -75981,6 +76154,12 @@
                           "scim": {
                             "type": "boolean",
                             "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                          },
+                          "managedAccounts": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                           },
                           "setupComplete": {
                             "type": "boolean",
@@ -76901,6 +77080,7 @@
                           "directoryKey",
                           "capabilities",
                           "scim",
+                          "managedAccounts",
                           "setupComplete",
                           "deactivatedAt",
                           "groupsClaimMissingSince",
@@ -77047,6 +77227,12 @@
                           "scim": {
                             "type": "boolean",
                             "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                          },
+                          "managedAccounts": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                           },
                           "setupComplete": {
                             "type": "boolean",
@@ -77608,6 +77794,7 @@
                           "directoryKey",
                           "capabilities",
                           "scim",
+                          "managedAccounts",
                           "setupComplete",
                           "deactivatedAt",
                           "groupsClaimMissingSince",
@@ -79949,6 +80136,12 @@
                               "type": "boolean",
                               "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                             },
+                            "managedAccounts": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                            },
                             "setupComplete": {
                               "type": "boolean",
                               "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -80648,6 +80841,7 @@
                             "directoryKey",
                             "capabilities",
                             "scim",
+                            "managedAccounts",
                             "setupComplete",
                             "deactivatedAt",
                             "groupsClaimMissingSince",
@@ -80793,6 +80987,12 @@
                             "scim": {
                               "type": "boolean",
                               "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                            },
+                            "managedAccounts": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                             },
                             "setupComplete": {
                               "type": "boolean",
@@ -81713,6 +81913,7 @@
                             "directoryKey",
                             "capabilities",
                             "scim",
+                            "managedAccounts",
                             "setupComplete",
                             "deactivatedAt",
                             "groupsClaimMissingSince",
@@ -81859,6 +82060,12 @@
                             "scim": {
                               "type": "boolean",
                               "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                            },
+                            "managedAccounts": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                             },
                             "setupComplete": {
                               "type": "boolean",
@@ -82420,6 +82627,7 @@
                             "directoryKey",
                             "capabilities",
                             "scim",
+                            "managedAccounts",
                             "setupComplete",
                             "deactivatedAt",
                             "groupsClaimMissingSince",
@@ -83011,6 +83219,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -83711,6 +83925,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -83856,6 +84071,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -84776,6 +84997,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -84922,6 +85144,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -85483,6 +85711,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -87451,6 +87680,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -88150,6 +88385,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -88295,6 +88531,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -89215,6 +89457,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -89361,6 +89604,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -89922,6 +90171,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -90267,6 +90517,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -90966,6 +91222,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -91111,6 +91368,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -92031,6 +92294,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -92177,6 +92441,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -92738,6 +93008,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -93056,6 +93327,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -93755,6 +94032,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -93900,6 +94178,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -94820,6 +95104,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -94966,6 +95251,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -95527,6 +95818,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -95866,6 +96158,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -96565,6 +96863,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -96710,6 +97009,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -97630,6 +97935,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -97776,6 +98082,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -98337,6 +98649,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -98671,6 +98984,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -99370,6 +99689,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -99515,6 +99835,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -100435,6 +100761,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -100581,6 +100908,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -101142,6 +101475,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -102198,6 +102532,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -102897,6 +103237,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -103042,6 +103383,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -103962,6 +104309,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -104108,6 +104456,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -104669,6 +105023,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -105007,6 +105362,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -105706,6 +106067,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -105851,6 +106213,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -106771,6 +107139,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -106917,6 +107286,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -107478,6 +107853,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -109229,6 +109605,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -109928,6 +110310,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -110073,6 +110456,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -110993,6 +111382,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -111139,6 +111529,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -111700,6 +112096,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -114486,6 +114883,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -115185,6 +115588,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -115330,6 +115734,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -116250,6 +116660,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -116396,6 +116807,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -116957,6 +117374,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -117294,6 +117712,12 @@
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
                         },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
+                        },
                         "setupComplete": {
                           "type": "boolean",
                           "description": "Whether the setup assistant was finished. Until then, nobody signs in through the provider except for test sign-ins."
@@ -117993,6 +118417,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -118138,6 +118563,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -119058,6 +119489,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -119204,6 +119636,12 @@
                         "scim": {
                           "type": "boolean",
                           "description": "Whether SCIM is on: the provider has a SCIM token and sends changes at once."
+                        },
+                        "managedAccounts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "description": "How many accounts the provider manages, through a linked identity or an assigned e-mail domain. They stay managed while the provider is deactivated."
                         },
                         "setupComplete": {
                           "type": "boolean",
@@ -119765,6 +120203,7 @@
                         "directoryKey",
                         "capabilities",
                         "scim",
+                        "managedAccounts",
                         "setupComplete",
                         "deactivatedAt",
                         "groupsClaimMissingSince",
@@ -180989,7 +181428,7 @@
       "get": {
         "operationId": "organizations.members",
         "summary": "List members",
-        "description": "Lists members, collaborators and guests with their directly assigned roles.\n\nRequires the permission `organization.members.view` on the organization in `organizationId`.",
+        "description": "Lists members, collaborators and guests with their directly assigned roles. The identity provider that manages each account is included only for callers who manage the members of the organization.\n\nRequires the permission `organization.members.view` on the organization in `organizationId`.",
         "tags": [
           "Members"
         ],
@@ -181208,6 +181647,58 @@
                             "type": "boolean",
                             "description": "Whether the account has a confirmed authenticator app or a passkey."
                           },
+                          "managedBy": {
+                            "description": "The identity provider that manages the account, or null for a local account. Only for callers who manage the members of the organization.",
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "providerId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the identity provider."
+                                  },
+                                  "providerName": {
+                                    "type": "string",
+                                    "description": "Name of the identity provider."
+                                  },
+                                  "providerType": {
+                                    "type": "string",
+                                    "description": "Kind of identity provider. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "oidc",
+                                      "saml",
+                                      "ldap"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": "string",
+                                    "enum": [
+                                      "identity",
+                                      "domain"
+                                    ],
+                                    "description": "Why the provider manages the account: `identity` when an identity of the provider is linked, `domain` when the e-mail domain of the account is assigned to the provider."
+                                  },
+                                  "since": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "Since when the provider manages the account. ISO 8601 timestamp in UTC."
+                                  }
+                                },
+                                "required": [
+                                  "providerId",
+                                  "providerName",
+                                  "providerType",
+                                  "source",
+                                  "since"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "lastActiveAt": {
                             "anyOf": [
                               {
@@ -181283,6 +181774,7 @@
                         }
                       ],
                       "twoFactorActive": true,
+                      "managedBy": null,
                       "lastActiveAt": "2026-10-24T08:15:00.000Z"
                     }
                   ],
@@ -181806,6 +182298,58 @@
                       "type": "boolean",
                       "description": "Whether the account has a confirmed authenticator app or a passkey."
                     },
+                    "managedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "providerId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the identity provider."
+                            },
+                            "providerName": {
+                              "type": "string",
+                              "description": "Name of the identity provider."
+                            },
+                            "providerType": {
+                              "type": "string",
+                              "description": "Kind of identity provider. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "oidc",
+                                "saml",
+                                "ldap"
+                              ]
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "identity",
+                                "domain"
+                              ],
+                              "description": "Why the provider manages the account: `identity` when an identity of the provider is linked, `domain` when the e-mail domain of the account is assigned to the provider."
+                            },
+                            "since": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "Since when the provider manages the account. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "providerId",
+                            "providerName",
+                            "providerType",
+                            "source",
+                            "since"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The identity provider that manages the account, or null for a local account. Accounts managed by an OpenID Connect or SAML provider sign in only through it and have no password, passkey or authenticator app in Lunedo; accounts managed by a directory sign in with its password and keep their second factor in Lunedo."
+                    },
                     "lastActiveAt": {
                       "anyOf": [
                         {
@@ -182080,6 +182624,7 @@
                     "roles",
                     "groups",
                     "twoFactorActive",
+                    "managedBy",
                     "lastActiveAt",
                     "joinedAt",
                     "invitedBy",
@@ -182117,6 +182662,7 @@
                     }
                   ],
                   "twoFactorActive": true,
+                  "managedBy": null,
                   "lastActiveAt": "2026-10-24T08:15:00.000Z",
                   "joinedAt": "2026-08-21T09:58:00.000Z",
                   "invitedBy": {

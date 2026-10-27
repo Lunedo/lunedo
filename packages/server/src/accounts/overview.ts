@@ -4,6 +4,7 @@ import { type SecondFactors, secondFactorsOf } from "../auth/two-factor.js";
 import { organizationFacts } from "../authorization/facts.js";
 import type { Database } from "../database/database.js";
 import type { Page, PageRequest } from "../database/keyset.js";
+import { type ManagedState, managedStatesOf } from "../identity/managed.js";
 import type { BuiltInRoleKey, MembershipKind } from "../organizations/access-schema.js";
 import { organizationDomains } from "../organizations/schema.js";
 import { apiTokens } from "../tokens/schema.js";
@@ -19,6 +20,7 @@ export type AdministeredAccount = Omit<Account, "passwordHash"> & {
   lastSignInAt: Date | null;
   twoFactorActive: boolean;
   secondFactorRequired: boolean;
+  managedBy: ManagedState | null;
   instanceRoles: InstanceRoleSummary[];
   organizations: { id: string; name: string; home: boolean }[];
 };
@@ -150,6 +152,7 @@ export class AccountOverviewService {
         lastSignInAt: null,
         twoFactorActive: false,
         secondFactorRequired: false,
+        managedBy: null,
         instanceRoles: [],
         organizations: [],
       }
@@ -171,11 +174,13 @@ export class AccountOverviewService {
         exists (select 1 from totp_credentials t where t.account_id = a.id and t.confirmed_at is not null)
           or exists (select 1 from webauthn_credentials w where w.account_id = a.id) as two_factor
       from accounts a where a.id in (${list})`);
+    const managed = await managedStatesOf(this.#database, ids);
     for (const row of facts.rows) {
       result.set(row.id, {
         lastSignInAt: date(row.last_sign_in_at),
         twoFactorActive: row.two_factor,
         secondFactorRequired: false,
+        managedBy: managed.get(row.id) ?? null,
         instanceRoles: [],
         organizations: [],
       });
