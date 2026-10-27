@@ -1,120 +1,109 @@
 # Notifications
 
-The notification center is the core channel: it always works, also without a mail server. E-mail is a second channel of the same core.
+Lunedo tells you about mentions, tasks, shares, access requests, comments and changes on content you watch, and about events in the administration you take part in. Every notification appears in the app. You choose per kind of event whether it also arrives by e-mail and as a browser push message.
 
-## Event types
+Notifications in the app always work, also when the instance has no mail server.
 
-| Type | Recipients | Target |
-|---|---|---|
-| `apiToken.expiring` | Owner of a personal token; responsible people of a service account, otherwise owners of its organization | The token |
-| `apiToken.unused` | Owner of a personal token; responsible people of a service account, otherwise owners of its organization | The token |
-| `guest.expiring` | The guest's responsible person, otherwise owners and administrators | The guest's account |
-| `guest.inactive` | As above | The guest's account |
-| `access.expiring` | Who granted the role or membership, a manager of the group, otherwise owners and administrators | The role assignment, group or membership |
-| `serviceAccount.unattended` | Owners of the organization | The service account |
-| `breakGlass.started` | Owners of the organization | The break-glass access |
-| `signIn.newBrowser` | The account itself | The account |
-| `auth.emergencySignIn` | Instance owner and instance administrators | The owner account |
-| `identityProvider.credentialExpiring` | Instance owner for instance providers, owners of the organization for organization providers | The identity provider |
-| `identityProvider.syncHeld` | Instance owner and instance administrators | The identity provider |
-| `storage.levelReached` | Instance owner and instance administrators, and the operations contacts by e-mail and Teams | The instance |
-| `storage.levelCleared` | As above | The instance |
-| `backup.failed`, `backup.missing`, `backup.recovered` | Instance owner and instance administrators, and the operations contacts by e-mail and Teams | The instance |
-| `backup.testRestoreFailed` | As above | The instance |
+## The notification panel
 
-Content events reach people who watch the content, see [Watching](#watching): `content.changed` (a new version, published or saved at the end of a live editing session), `comment.created` (a comment or reply), `page.statusChanged` and `ownership.transferred` (also to the new owner). Mentions, assigned tasks, shares and access requests reach the person concerned.
+Select the bell in the main navigation, or press **N**, to open the panel. The bell shows the number of unread notifications, up to "99+".
 
-Event types register in the `NotificationRegistry` with a parameter schema, a visibility rule, the mail they render and, for types not about a page, the space or item they come from, so later features add their own without changing the core.
+- The tabs **All**, **Mentions** and **Watched** filter the list. **Watched** holds comments, changes, page status and owner changes on content you watch.
+- **Unread only** hides what you have read.
+- **Show all** opens the full page at `/notifications`. It adds the tab **Requests** with the access requests you can decide, and a **Space** filter.
+- **Mark all as read** marks every notification in the list as read.
 
-Every type belongs to exactly one event of `notificationEvents` in `@lunedo/shared`. Preferences, muting and the delivery of every channel route through that list: `mentions`, `tasks`, `shares`, `accessRequests`, `comments`, `changes`, `blogPosts`, `meetings` and `ownershipAndStatus` for content, `spaceAdministration`, `importsAndExports` and one event per administration type such as `apiTokenExpiring`. Their parameters are defined in `@lunedo/shared`, so that the web client renders them with the same types.
+The list is grouped into **Today**, **Yesterday**, **This week** and **Older**. The arrow keys, **Home** and **End** move between the notifications.
 
-Mails for password resets, e-mail changes, recovery codes, invitations, registrations and test mails remain direct mails: they are part of a flow the person started and do not depend on preferences.
+Several events of the same kind about the same item become one notification while they keep coming, for example "Anna Berg and 2 others changed Network plan" with "7 changes". A new notification starts after 30 minutes without a new event, and after 24 hours at the latest. Changes to several pages of one space are shown together, for example "3 pages changed in IT"; **Show all** lists the pages.
 
-A sign-in from a browser whose device cookie the account has not used before creates `signIn.newBrowser`. The first browser of an account and sign-ins without a device cookie do not.
+### Acting on a notification
 
-## Storing and combining
+- Selecting a notification opens what it is about and marks it as read.
+- **More actions** offers **Mark as read** or **Mark as unread**, **Open**, and **Stop watching the page** or **Stop watching the space**. Stopping can be undone in the confirmation.
+- **Reply** answers a comment directly from the notification.
+- An access request can be approved or declined in the notification.
+- A task assigned to you can be marked as **Done** in the notification.
 
-`NotificationService.notify` runs inside the transaction of the change that causes the notification, so a notification exists exactly when the change is committed. A reminder is marked as sent in the same transaction; a crash in between sends it on the next run.
+A notification about something you can no longer open is hidden. Notifications are kept for 90 days unless your administrators set another period. A link to a removed notification says "This notification is no longer available".
 
-Events of the same type on the same target for the same recipient are combined into one unread notification while the last event is less than 30 minutes old, for at most 24 hours. The notification keeps a count and the people who took part, so it reads "Gaby and 2 others changed …, 7 changes". Thirty minutes cover the pauses within one working session on a page; the 24-hour limit starts a new notification for a page that is edited all day. A read notification is never changed again. An advisory lock per recipient and target makes concurrent events on several nodes end in one notification.
+You are never notified about your own actions, and imports never notify anyone.
 
-People are never notified about their own actions: content events skip a recipient who is the only person behind the event. Imports never notify and do not make anyone watch.
+## Notification settings
 
-Deactivated accounts receive nothing. Service accounts never receive notifications.
+Open **Settings › My account › Notifications**, or **Notification settings** on the notifications page.
 
-## Visibility
+Under **Events**, each kind of event has three channels: **In the app**, **E-mail** (**Off**, **Immediately** or **In the daily digest**) and **Browser push**. The column **Browser push** appears only when the instance has browser push turned on. Each change saves at once.
 
-Permissions are checked when notifications are created and whenever they are listed or counted, through the authorization service. A notification whose target the recipient can no longer see is hidden, for example a guest notice after the recipient lost the members area of that organization, unless they are still the guest's responsible person.
+Every channel shows where its value comes from: a value you chose, or the default of your organization. **Reset** returns to the inherited value. When your organization locked a choice, it cannot be changed here.
 
-## Preferences
+These are the shipped defaults; your organization can change them:
 
-Every event has one setting per channel: `notifications.<event>.inApp` (true or false), `notifications.<event>.email` (`off`, `immediately` or `digest`) and `notifications.<event>.push` (true or false). They apply at instance, organization and user level and can be locked. Each channel inherits on its own, so a person who changes the e-mail choice keeps following the organization's default for the app. A new channel adds its own settings and needs no migration of stored values.
+| Event | In the app | E-mail | Browser push |
+|---|---|---|---|
+| Mentions of me | on | Immediately | on |
+| Tasks assigned to me | on | Immediately | on |
+| Pages shared with me and answers to my access requests | on | Immediately | on |
+| Access requests I can decide | on | Immediately | on |
+| Comments and replies on content I watch | on | In the daily digest | off |
+| Changes to content I watch | on | Off | off |
+| Copies I made | on | Off | off |
+| New posts in blogs I follow | on | In the daily digest | off |
+| Meeting reminders and notes | on | Off | off |
+| Article reviews | on | In the daily digest | off |
+| Ownership and page status changes | on | Off | off |
 
-Shipped defaults: every event in the app; e-mail immediately for mentions, tasks, shares and access requests; comments and new blog posts in the daily digest; everything else in the app only. Administration events keep e-mail on.
+The collapsed section **Administration and security** lists the events of the administration, such as **Sign-in from a new browser**, **API token expires soon**, **Guest access ends soon** or **A backup fails**. They reach only the people responsible for them. **Space administration** and **Imports and exports** are in the app only by default; every other administration event is sent by e-mail immediately.
 
-`notifications.digestTime` (default 08:00 in the person's time zone) and `notifications.digestEnabled` (default on) apply at instance, organization and user level. Without an app channel, a notification is still stored for e-mail but never shown in the app (`in_app` is false).
+The same screen holds the [daily digest](#e-mail), [browser push](#browser-push), the [watching](#watching) options and the **Followed blogs**. A blog is followed with **Follow blog** on its page; see [Blog](blog.md).
 
-## E-mail
-
-A notification is marked for e-mail when, at the event, the person chose `immediately` or `digest`, the account has an address and a mail server (SMTP or Microsoft Graph) is configured. Everything else is decided again when the mail is built: the preference at that moment, an active account with an address, an active membership in the organization of the notification, and the visibility rule of the type. A notification the person can no longer see, has read in the app or no longer wants by e-mail is left out and marked `skipped`; one whose preference changed between immediately and the digest moves to the other. Titles are read again at that moment, and mails contain short excerpts only of what the person can read then: the task text, the message of an access request and the text of a comment the person may view.
-
-- Immediately, content events: the job `notifications.send-emails` runs every minute. Mentions, assigned tasks, shares with the person and access requests the person can decide are sent once they are 2 minutes old, so several events about the same item in that time become one mail. Other content events, such as changes and comments, are sent once nothing was combined into them for the 30 minutes of the combining window, or 24 hours after they started. A burst of changes therefore becomes one mail, as it becomes one notification. The job locks the rows it sends (`for update skip locked`) and writes the mail to the outbox and the notification as `sent` in one transaction, so two nodes and a restart never send a notification twice.
-- Immediately, administration events (such as a new browser, emergency sign-in or break-glass access) are sent at once, as before, because they are not bursts and are urgent.
-- Daily digest: the same job sends, per person, every notification marked for the digest since before the last digest time in the person's time zone, in one mail, and only when something is left after the checks. Entries are grouped by space and by item, newest first. A per-person advisory lock keeps two nodes from sending two digests. With `notifications.digestEnabled` off, digest notifications stay in the app only.
-
-Each mail links to the notification (`/notifications/{id}` in the web client, which marks it as read and opens what it is about) and to the notification settings. It carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058) and an unsubscribe link in the footer. The link holds the account ID, the event (or `digest`) and an HMAC with the instance's signing key; it works without signing in, does not expire and only sets the e-mail preference of that event to `off`, or `notifications.digestEnabled` to false, for that account. `POST /api/v1/notifications/unsubscribe/{token}` is the one-click target and is exempt from the request header check; `GET` on the same path says what the link turns off, and the page `/unsubscribe/{token}` asks before turning it off. A value the organization locked is not changed; the page says so.
-
-`notifications.retentionDays` (instance, default 90, overridable per organization) sets how long notifications are kept. A daily job removes older ones.
-
-## Browser push
-
-Browser push is off until an instance administrator turns on `notifications.browserPush`. Messages then go through the push services of browser makers; their content is encrypted with Web Push encryption (RFC 8291) and signed with VAPID (RFC 8292), but they leave the instance. The VAPID key pair is created once per instance on first use and stored encrypted in `instance_secrets`.
-
-People turn push on per device. The browser asks for permission only then. The subscription belongs to the session it was created in: signing out, ending the session or its expiry deletes it, and so does a push service that answers 404 or 410. Push is on by default for mentions, tasks, shares and access requests.
-
-A new notification for which the person chose push is written to `push_outbox` in the same transaction. A worker sends it after commit and checks first that the account is active, push is still on and the person can still read the item. The payload holds the event text, the item title and a link, nothing else. A notification that is combined into an existing one in the app is not pushed again. Push services that are busy or unreachable are retried with backoff; the browser replaces repeated messages with the same tag.
-
-## Chat channels
-
-Space administrators connect a space to Microsoft Teams (a Workflows webhook with an Adaptive Card), Slack and Discord webhooks, a Matrix room (homeserver, room ID and the access token of a bot) or a generic webhook. Organization administrators with the integrations area connect channels for the organization announcement. Addresses, tokens and the signing secret of generic webhooks are stored encrypted and are never returned; the signing secret is shown once after saving. Generic webhooks get a JSON body with the headers `X-Lunedo-Event`, `X-Lunedo-Delivery`, `X-Lunedo-Timestamp` and `X-Lunedo-Signature` (`sha256=` and the HMAC-SHA256 of the timestamp, a dot and the body).
-
-Events: `pagePublished` (first version of a page), `pageChanged` (later versions, combined per page for one hour), `blogPostPublished`, `decisionRecorded` (sent five minutes after the decision appears, with its text at that time), `pageStatusChanged`, `commentCreated` and, for organizations, `announcementPublished` (sent when the announcement starts).
-
-Only content every member of the space can read is posted: the item is published, not in the trash or archived, and neither it nor a page above it has a view restriction. Comments on such pages are posted unless they belong to a hidden inline comment. Confidential and personal spaces cannot have chat channels. The check runs when the event happens and again when the message is sent.
-
-Requests go to public addresses only. Private, loopback and link-local addresses are refused unless they are in `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`; the address is checked for every connection, so redirects and changed DNS answers cannot reach other networks. Redirects keep the Matrix token only on the same origin.
-
-Deliveries are stored in `chat_deliveries` and sent by the worker with up to five retries and backoff. A channel whose service keeps failing, or answers that the address is gone or not allowed, is marked failing with the reason, its administrators are notified once, and nothing more is posted until a test message succeeds or the address is changed. Finished deliveries are deleted after 14 days.
+Organization administrators set the defaults for their organization under **Settings › Organization › Notifications**; see [Notifications for administrators](../admin/notifications.md).
 
 ## Watching
 
-People watch pages, blog posts, meeting series and spaces. A watch row holds one of three states for one item or space: `watching`, `muted` (with `keepActionable`, true by default) or `notWatching`. People who create, edit or comment on an item watch it automatically unless `notifications.watchAutomatically` is off for them or they chose a state for it before.
+You watch pages, blog posts, whiteboards, meeting series and spaces. Watching a space covers everything in it; watching a meeting series covers its meetings and topics. Use **Watch** or **Watch this space** in the menu of the item or space.
 
-The state that applies to an item comes from the item, then its meeting series, then its space; the most specific row wins, except that an automatic watch never overrides a mute further up. Muting silences every event about the item or space; mentions, assigned tasks, shares with the person and access requests they can decide still arrive when `keepActionable` is true, which is the default.
+Each watched item or space has one of three states:
 
-Watching never grants anything. Delivery checks that the watcher can read the item; while they cannot, nothing arrives and the watch stays, so delivery resumes when access returns.
+- **Watching**: changes and comments notify you.
+- **Muted**: nothing about the item or space notifies you. **Mute…** asks whether mentions, tasks assigned to you, pages shared with you and access requests you can decide still arrive; this is on by default.
+- **Not watching**: you chose not to watch this item, even though you watch its space.
 
-## Live updates
+You watch an item automatically when you create, edit or comment on it, or become its owner, unless you chose a state for it before. **Watch what I create, edit or comment on** under **Watching** in the notification settings turns this off.
 
-A committed notification sends a PostgreSQL notification on the channel `lunedo_notifications` with the recipient's account ID. Every API node listens on one connection and forwards it to the streams of that account, so a client receives it from any node. After the listening connection was lost, every stream gets an update, because events may have been missed.
+The state that applies comes from the item, then its meeting series, then its space; the most specific state wins. A state you chose yourself wins over an automatic watch, also when you chose it on the meeting series or the space.
 
-## Endpoints
+Watching never grants access. While you cannot read an item, nothing about it arrives, and the watch stays, so notifications resume when your access returns.
 
-These endpoints are internal and need a signed-in session, except the unsubscribe endpoints. Chat channels are part of the public API under `/api/v1/spaces/{spaceId}/chat-channels` (space administrators) and `/api/v1/organizations/{organizationId}/chat-channels` (integrations area). Watching is part of the public API: `GET`, `PUT` and `DELETE` on `/api/v1/items/{itemId}/watch` and `/api/v1/spaces/{spaceId}/watch` need read access to the item or space.
+**Settings › My account › Watched items** lists what you watch and what you mute, in the tabs **Watching** and **Muted**, with the reason (**Automatic**, **Watched by you** or **Muted by you**) and the date. Search by name or space, filter by **Type** and **Space**, select several entries and stop watching, mute or unmute them together.
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/v1/notifications?cursor=&limit=&unread=true` | Own notifications, most recently changed first |
-| `GET /api/v1/notifications/unread-count` | Unread notifications the caller may see |
-| `GET /api/v1/notifications/{notificationId}` | One own notification the caller may still see |
-| `GET`, `POST /api/v1/notifications/unsubscribe/{token}` | Public: show or apply an unsubscribe link |
-| `POST /api/v1/notifications/{notificationId}/read` | Mark one as read |
-| `POST /api/v1/notifications/read-all` | Mark all as read, optionally only those changed before `before` |
-| `GET /api/v1/account/watches` | Own watched and muted items the caller can still open, with counts |
-| `GET /api/v1/account/notification-delivery` | Whether e-mail can be delivered and how, and whether browser push is on |
-| `GET /api/v1/account/push` | Whether browser push is on, the public key and the caller's devices |
-| `POST /api/v1/account/push/devices` | Turn push on for the device of the current session |
-| `DELETE /api/v1/account/push/devices/{deviceId}` | Turn push off for a device |
-| `GET /api/v1/notifications/stream` | Server-sent events: `notifications` with `{ "unreadCount": n }` at the start and after every change; `settings` with `{ "key", "level", "organizationId" }` when a setting changes whose value may change for the caller; a comment every 25 seconds; the stream ends when the session ends |
+## E-mail
 
-A setting change reaches every node through PostgreSQL notifications. A node sends `settings` to a connection when the change is at the user level of its account, at the instance level, or at the level of an organization the account belongs to, unless a lower level of the account (its home organization or the account itself) overrides the value and the changed level does not lock it. Locking and unlocking always count, and so does a new value of a locked setting, because it applies regardless of lower levels. Clients reload the named setting.
+E-mails are sent when you chose **Immediately** or **In the daily digest** for an event, your account has an e-mail address and the instance has a mail server. Without a mail server, the settings say "E-mail is not set up" and notifications stay in the app.
+
+- **Immediately**: mentions, tasks, shares and access requests are sent about two minutes after the event, so several events about the same item arrive in one mail. Other content events, such as changes and comments, are sent once the notification stopped growing for 30 minutes, or 24 hours after it started, so a burst of changes becomes one mail. Administration events are sent at once.
+- **In the daily digest**: one mail per day with everything marked for the digest, grouped by space and item, newest first. It is sent only when something happened. Under **Daily digest**, **Send the digest at** sets the time, 08:00 by default, in the time zone of **Settings › My account › Preferences**. With **Send a daily summary by e-mail** off, these notifications stay in the app.
+
+Before a mail is sent, Lunedo checks again that you still want it by e-mail, still have access and have not read the notification in the app. Mails contain short excerpts only of what you can read at that moment.
+
+Each mail links to the notification, which opens what it is about and marks it as read, and to the notification settings. Its footer has a link that stops these mails without signing in. The link turns off e-mail for that one event, or the daily digest, and asks before it does. Notifications still appear in the app. Mails about security events (such as a sign-in from a new browser or an emergency sign-in) and about storage and backups have no such link.
+
+Mail programs show their own unsubscribe button when a mail carries the `List-Unsubscribe` header. Mails sent through Microsoft Graph carry it only when the instance keeps a copy in the Sent Items of the sender mailbox; see [Microsoft 365](../admin/email/microsoft-365.md).
+
+Mails that belong to something you started, such as a password reset, a change of your e-mail address or an invitation, do not depend on these settings.
+
+## Browser push
+
+Browser push shows notifications on your device while Lunedo is not open. It is off until an instance administrator turns it on. Messages go through the push service of your browser maker; their content is encrypted, but they leave the server. A message holds the text of the event, the title of the item and a link.
+
+1. Open **Settings › My account › Notifications**.
+2. Under **Browser push**, select **Turn on for this device**.
+3. Allow notifications when the browser asks.
+
+**Devices with browser push** lists your devices, with the current one marked **This device**. **Remove** stops push on a device. You can have up to 20 devices; remove one before adding another. Push on a device ends when you sign out there or the session ends.
+
+Push follows the **Browser push** column of the event list. A notification that is combined into an existing one is not pushed again. Current versions of Firefox, Chrome, Edge and Safari support push.
+
+## Chat channels
+
+Space administrators can post new pages, changes, blog posts, decisions and comments of a space to Microsoft Teams, Slack, Discord, Matrix or a webhook. See [Chat channels](../admin/chat-channels.md).
