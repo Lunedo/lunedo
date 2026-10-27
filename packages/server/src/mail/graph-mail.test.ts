@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal } from "../accounts/principal.js";
 import { createLogger } from "../logging/logger.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -16,6 +17,13 @@ import { graphMailSetting, MailService } from "./mail-service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const SENDER = "alice@example.org";
+
+function headerOf(mime: string | undefined, name: string): string | undefined {
+  const head = (mime ?? "").split("\r\n\r\n")[0] ?? "";
+  const unfolded = head.replace(/\r\n[ \t]+/g, " ");
+  const line = unfolded.split("\r\n").find((item) => item.toLowerCase().startsWith(`${name.toLowerCase()}:`));
+  return line?.slice(name.length + 1).trim();
+}
 
 describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
   let test: TestServices;
@@ -94,6 +102,7 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
         body: { contentType: "HTML" },
       },
     });
+    expect(sent?.mime).toBeUndefined();
     expect(test.mail.sent.some((mail) => mail.to === "reader@example.net")).toBe(false);
 
     const events = await test.pool.query<{ name: string; fields: unknown }>(
@@ -107,12 +116,13 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     expect(JSON.stringify(events.rows)).not.toContain(GRAPH_CLIENT_SECRET);
   });
 
-  it("sends notification mails as JSON so that no copy stays in the Sent Items", async () => {
+  it("keeps no copy and sends HTML only without the list headers while the copy is off", async () => {
+    await test.services.mail.configureGraph(actor(), { ...configuration(), saveToSentItems: false });
     await test.database.transaction((tx) =>
       test.services.mail.queueMessage(tx, "notification", {
         to: "reader@example.net",
         subject: "Ada mentioned you",
-        text: "Ada mentioned you in Runbook",
+        text: "Ada mentioned you in Runbook, plain text part",
         html: '<p>Ada mentioned you in Runbook</p><a href="https://wiki.example.org/unsubscribe/token">Stop</a>',
         headers: {
           "List-Unsubscribe": "<https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
@@ -124,7 +134,72 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     const sent = graph.sentMail.at(-1);
     expect(sent?.saveToSentItems).toBe(false);
     expect(sent?.mime).toBeUndefined();
+    expect(sent?.message.body.contentType).toBe("HTML");
     expect(sent?.message.body.content).toContain("https://wiki.example.org/unsubscribe/token");
+    expect(JSON.stringify(sent)).not.toContain("List-Unsubscribe");
+    expect(JSON.stringify(sent)).not.toContain("plain text part");
+  });
+
+  it("sends notification mails as MIME with the list headers, the text part and the HTML part", async () => {
+    await test.services.mail.configureGraph(actor(), { ...configuration(), saveToSentItems: true });
+    await test.database.transaction((tx) =>
+      test.services.mail.queueMessage(tx, "notification", {
+        to: "reader@example.net",
+        subject: "Ada mentioned you",
+        text: "Ada mentioned you in Runbook, plain text part",
+        html: '<p>Ada mentioned you in Runbook</p><a href="https://wiki.example.org/unsubscribe/token">Stop</a>',
+        headers: {
+          "List-Unsubscribe": "<https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      }),
+    );
+    await deliverPendingMail(test.services, test.database);
+    const sent = graph.sentMail.at(-1);
+    expect(headerOf(sent?.mime, "List-Unsubscribe")).toBe(
+      "<https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
+    );
+    expect(headerOf(sent?.mime, "List-Unsubscribe-Post")).toBe("List-Unsubscribe=One-Click");
+    expect(headerOf(sent?.mime, "Subject")).toBe("Ada mentioned you");
+    expect(headerOf(sent?.mime, "Content-Type")).toMatch(/^multipart\/alternative/);
+    expect(sent?.mime).toMatch(/Content-Type: text\/plain/);
+    expect(sent?.mime).toMatch(/Content-Type: text\/html/);
+    expect(sent?.mime).toContain("Ada mentioned you in Runbook, plain text part");
+    expect(sent?.mime?.replace(/=\r\n/g, "")).toContain("https://wiki.example.org/unsubscribe/token");
+  });
+
+  it("lets a reader switch off a mail type through the one-click header of a mail sent through Graph", async () => {
+    await test.services.mail.configureGraph(actor(), { ...configuration(), saveToSentItems: true });
+    const reader = await test.database.transaction((tx) =>
+      test.services.accounts.createStandard(tx, {
+        email: "one-click@lunedo.test",
+        name: "Reader",
+        password: "a long test passphrase",
+        homeOrganizationId: null,
+      }),
+    );
+    await test.settings.set(instanceUrlSetting, {}, "instance", "https://wiki.example.org");
+    const links = await test.services.unsubscribe.links(reader.id, { kind: "event", event: "mentions" });
+    expect(links).not.toBeNull();
+    await test.database.transaction((tx) =>
+      test.services.mail.queueMessage(tx, "notification", {
+        to: "one-click@lunedo.test",
+        subject: "Ada mentioned you",
+        text: "Ada mentioned you",
+        html: "<p>Ada mentioned you</p>",
+        headers: {
+          "List-Unsubscribe": `<${links?.oneClick}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      }),
+    );
+    await deliverPendingMail(test.services, test.database);
+    const header = headerOf(graph.sentMail.at(-1)?.mime, "List-Unsubscribe") ?? "";
+    const token = /\/unsubscribe\/([^>]+)>/.exec(header)?.[1] ?? "";
+    expect(await test.services.unsubscribe.apply(token)).toMatchObject({
+      applied: true,
+      state: { off: true },
+    });
   });
 
   it("explains a mailbox outside the scope of the app, an unknown mailbox and an expired secret", async () => {
@@ -230,7 +305,7 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
       }),
     ).rejects.toMatchObject({ details: { fields: ["graphUrl"] } });
 
-    await test.settings.set(graphMailSetting, {}, "instance", configuration());
+    await test.settings.set(graphMailSetting, {}, "instance", { ...configuration(), saveToSentItems: false });
     const before = graph.requests.length;
     const result = await strict.sendGraphTest(actor(), "reader@example.net", "en");
     expect(result.delivered).toBe(false);

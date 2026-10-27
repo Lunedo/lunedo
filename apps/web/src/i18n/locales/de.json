@@ -3596,7 +3596,11 @@
       "senderHint": "Das Postfach, als das Lunedo sendet.",
       "senderName": "Absendername",
       "senderNameHint": "Optional, sonst Name des Postfachs.",
-      "sentItems": "Über Microsoft Graph gesendete E-Mails werden nicht in den Gesendeten Elementen des Absenderpostfachs abgelegt. Graph kann den Header für die Abmeldung mit einem Klick nicht mitsenden, deshalb lassen sich Benachrichtigungs-E-Mails nur über den Link in der E-Mail abbestellen. Über SMTP enthalten sie zusätzlich den Header.",
+      "saveToSentItems": "Von jeder E-Mail eine Kopie in den Gesendeten Elementen des Absenderpostfachs behalten",
+      "sentItemsOff": "Aus: Es bleibt keine Kopie. Die E-Mails gehen nur als HTML und ohne Header für die Abmeldung mit einem Klick hinaus; der Abmeldelink in der E-Mail bleibt. Für den Header nutze SMTP mit OAuth.",
+      "sentItemsOn": "An: Die E-Mails gehen vollständig hinaus, mit Textteil und dem Header für die Abmeldung mit einem Klick.",
+      "sentItemsWarningTitle": "Jede E-Mail bleibt im Postfach",
+      "sentItemsWarning": "Microsoft legt von jeder E-Mail eine Kopie in den Gesendeten Elementen des Absenderpostfachs ab, auch von Einmal-Links und Auszügen aus Seiten. Alle, die das Postfach lesen können, etwa Postfachadministratoren, können sie lesen, auch Seiten aus eingeschränkten Spaces. Eine Aufbewahrungsrichtlinie kann die Kopien aufräumen.",
       "credentials": "Client-Secret oder Zertifikat",
       "noCredentials": "Noch keines. Füge ein Client-Secret hinzu oder erstelle ein Zertifikat, bevor Lunedo senden kann.",
       "kinds": {

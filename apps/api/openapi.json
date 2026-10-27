@@ -123235,6 +123235,10 @@
                                 "null"
                               ]
                             },
+                            "saveToSentItems": {
+                              "type": "boolean",
+                              "description": "Whether a copy of every mail stays in the Sent Items of the sender mailbox."
+                            },
                             "authority": {
                               "type": "string",
                               "description": "Sign-in authority."
@@ -123249,6 +123253,7 @@
                             "clientId",
                             "sender",
                             "senderName",
+                            "saveToSentItems",
                             "authority",
                             "graphUrl"
                           ],
@@ -123854,6 +123859,10 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "saveToSentItems": {
+                    "description": "Whether Microsoft keeps a copy of every mail in the Sent Items of the sender mailbox. Off by default. Only then the mails carry the one-click unsubscribe header and a text part.",
+                    "type": "boolean"
                   },
                   "authority": {
                     "description": "Sign-in authority of the Microsoft cloud; the global cloud by default.",
@@ -124668,6 +124677,10 @@
                           "string",
                           "null"
                         ]
+                      },
+                      "saveToSentItems": {
+                        "description": "Whether Microsoft keeps a copy of every mail in the Sent Items of the sender mailbox. Off by default. Only then the mails carry the one-click unsubscribe header and a text part.",
+                        "type": "boolean"
                       },
                       "authority": {
                         "description": "Sign-in authority of the Microsoft cloud; the global cloud by default.",

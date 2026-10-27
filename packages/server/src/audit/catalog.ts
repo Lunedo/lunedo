@@ -767,12 +767,14 @@ export const auditCatalog = {
       clientId: z.string(),
       sender: z.string(),
       senderName: z.string().nullable(),
+      saveToSentItems: z.boolean(),
       previous: z
         .object({
           tenantId: z.string(),
           clientId: z.string(),
           sender: z.string(),
           senderName: z.string().nullable(),
+          saveToSentItems: z.boolean(),
         })
         .nullable(),
     }),

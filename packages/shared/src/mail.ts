@@ -20,6 +20,7 @@ export const graphMailConfigurationSchema = z
     clientId: z.string().trim().min(1).max(500),
     sender: emailSchema,
     senderName: z.string().trim().min(1).max(100).nullable().default(null),
+    saveToSentItems: z.boolean().default(false),
     authority: httpUrl.default(ENTRA_AUTHORITY),
     graphUrl: httpUrl.default(MICROSOFT_GRAPH),
   })

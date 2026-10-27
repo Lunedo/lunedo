@@ -668,12 +668,14 @@ export class MailService {
           clientId: configuration.clientId,
           sender: configuration.sender,
           senderName: configuration.senderName,
+          saveToSentItems: configuration.saveToSentItems,
           previous: previous
             ? {
                 tenantId: previous.tenantId,
                 clientId: previous.clientId,
                 sender: previous.sender,
                 senderName: previous.senderName,
+                saveToSentItems: previous.saveToSentItems,
               }
             : null,
         },

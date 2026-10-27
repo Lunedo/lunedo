@@ -14,6 +14,7 @@ import {
   PasswordInput,
   SegmentedControl,
   Select,
+  Switch,
   useToast,
 } from "@lunedo/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,7 @@ export interface GraphMailSettings {
   clientId: string;
   sender: string;
   senderName: string | null;
+  saveToSentItems: boolean;
   authority: string;
   graphUrl: string;
 }
@@ -80,6 +82,7 @@ export function GraphMailForm({
     clientId: initial?.clientId ?? "",
     sender: initial?.sender ?? "",
     senderName: initial?.senderName ?? "",
+    saveToSentItems: initial?.saveToSentItems ?? false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export function GraphMailForm({
       clientId: values.clientId,
       sender: values.sender,
       senderName: values.senderName.trim() === "" ? null : values.senderName,
+      saveToSentItems: values.saveToSentItems,
       ...(initial ? { authority: initial.authority, graphUrl: initial.graphUrl } : {}),
     });
     if (parsed.success) {
@@ -226,7 +230,23 @@ export function GraphMailForm({
           <Input value={values.senderName} onChange={(event) => set({ senderName: event.target.value })} />
         </Field>
       </FieldGrid>
-      <p className="text-sm text-text-muted">{t("mail.graph.sentItems")}</p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <Switch
+            label={t("mail.graph.saveToSentItems")}
+            checked={values.saveToSentItems}
+            onCheckedChange={(checked) => set({ saveToSentItems: checked })}
+          />
+        </div>
+        <p className="text-sm text-text-muted">
+          {t(values.saveToSentItems ? "mail.graph.sentItemsOn" : "mail.graph.sentItemsOff")}
+        </p>
+        {values.saveToSentItems && (
+          <Notice variant="warning" title={t("mail.graph.sentItemsWarningTitle")}>
+            {t("mail.graph.sentItemsWarning")}
+          </Notice>
+        )}
+      </div>
       <div className="flex flex-col gap-2">
         <span className="font-medium">{t("mail.graph.credentials")}</span>
         {credentials.length === 0 ? (

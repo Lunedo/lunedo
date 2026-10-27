@@ -144,6 +144,7 @@ describe("the e-mail settings", () => {
       clientId: "client-id",
       sender: "wiki@example.org",
       senderName: null,
+      saveToSentItems: false,
     });
     const graphTest = requests.find((request) => request.path === "/api/v1/instance/mail/graph/test");
     expect(graphTest?.body).toMatchObject({ to: OLIVIA.email });
@@ -165,12 +166,20 @@ describe("the e-mail settings", () => {
     ]);
   });
 
-  it("says that Graph keeps no copy in the Sent Items and sends no unsubscribe header", async () => {
+  it("keeps no copy by default and warns before every mail is kept in the Sent Items", async () => {
     api({});
     await renderMail();
     await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
-    const note = screen.getByText(/^Mails sent through Microsoft Graph are not kept in the Sent Items/);
-    expect(note.textContent).toContain("through the link in the mail only");
+    expect(screen.getByText(/^Off: no copy is kept/).textContent).toContain("use SMTP with OAuth");
+    expect(screen.queryByText("Every mail stays in the mailbox")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("switch", {
+        name: "Keep a copy of every mail in the Sent Items of the sender mailbox",
+      }),
+    );
+    expect(screen.getByText("Every mail stays in the mailbox")).toBeTruthy();
+    expect(screen.getByText(/including one-time links and excerpts of pages/)).toBeTruthy();
+    expect(screen.getByText(/^On: mails go out in full/)).toBeTruthy();
   });
 
   it("says that Microsoft 365 only accepted the test mail and where a failed delivery shows", async () => {

@@ -3596,7 +3596,11 @@
       "senderHint": "The mailbox Lunedo sends as.",
       "senderName": "Sender name",
       "senderNameHint": "Optional, else the mailbox name.",
-      "sentItems": "Mails sent through Microsoft Graph are not kept in the Sent Items of the sender mailbox. Graph cannot add the one-click unsubscribe header, so notification mails offer unsubscribing through the link in the mail only. Through SMTP, they carry the header as well.",
+      "saveToSentItems": "Keep a copy of every mail in the Sent Items of the sender mailbox",
+      "sentItemsOff": "Off: no copy is kept. Mails go out as HTML only and carry no one-click unsubscribe header; the unsubscribe link in the mail stays. For the header, use SMTP with OAuth.",
+      "sentItemsOn": "On: mails go out in full, with a text part and the one-click unsubscribe header.",
+      "sentItemsWarningTitle": "Every mail stays in the mailbox",
+      "sentItemsWarning": "Microsoft keeps a copy of every mail, including one-time links and excerpts of pages, in the Sent Items of the sender mailbox. Everyone who can read that mailbox, such as mailbox administrators, can read them, also pages from restricted spaces. A retention policy can clean the copies up.",
       "credentials": "Client secret or certificate",
       "noCredentials": "None yet. Add a client secret or create a certificate before Lunedo can send.",
       "kinds": {

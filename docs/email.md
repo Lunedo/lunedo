@@ -59,9 +59,9 @@ The authority and the Graph endpoint default to the global Microsoft cloud; othe
 | `graphTenantUnknown`, `graphApplicationUnknown` | Wrong tenant or client ID. |
 | `graphUnreachable`, `graphRefused` | Graph could not be reached, was busy or refused the mail. |
 
-Delivery through Graph is retried like delivery through SMTP. Mails with list headers, which all notification mails have, are sent in MIME format with a text and an HTML part, because Graph accepts other headers only that way; Graph then keeps a copy in the Sent Items of the sender mailbox, which a retention policy can clean up.
+Delivery through Graph is retried like delivery through SMTP. By default **Keep a copy of every mail in the Sent Items of the sender mailbox** is off: Lunedo sends the HTML part as JSON with `saveToSentItems: false`, so no copy stays in the mailbox. Graph accepts the one-click unsubscribe header only in the MIME format, so these mails carry no `List-Unsubscribe` header and no text part; the unsubscribe link in the body stays. For one-click unsubscribe with Microsoft 365, use SMTP with OAuth. With the setting on, Lunedo sends the full MIME message with a text and an HTML part and all headers, and Graph keeps a copy of every mail in the Sent Items of the sender mailbox, including one-time links and excerpts of pages, which everyone who can read the mailbox, such as mailbox administrators, can read. A retention policy can clean the copies up.
 
-Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. Lunedo sends with `saveToSentItems: false`, so the sent mail itself does not appear in Sent Items; the message trace in the Exchange admin center shows what happened to it.
+Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. The message trace in the Exchange admin center shows what happened to it.
 
 ## Delivery
 
