@@ -64,3 +64,5 @@ Uploaded files are deleted 7 days after an import was accepted, discarded or sto
 ## What is read
 
 Lunedo reads pages, blog posts, folders, comments, attachments with all their versions, labels, page states, restrictions, space permissions, space templates and, when **Full page history** is chosen, the earlier versions. The [Confluence reference](confluence-reference.md) lists what each item becomes and its fallback.
+
+Checked against Atlassian documentation, October 2026.

@@ -51,3 +51,5 @@ The client ID stays the same, so the delegation does not change.
 | `oauthTokenUnreachable` | `oauth2.googleapis.com` could not be reached. Check the network connection of the server. |
 
 Other failures are described in [E-mail](../email.md#troubleshooting).
+
+Checked against Google Cloud and Google Workspace documentation, October 2026.

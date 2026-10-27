@@ -103,3 +103,5 @@ With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo i
 7. Start provisioning.
 
 Lunedo identifies people by tenant and object ID, as at sign-in. It refuses a user whose `externalId` is not an object ID, in `POST`, `PUT` and `PATCH`, stores nothing of that request, and names the sent value and this mapping in the error. A wrong value stored earlier never blocks the correct one. A user without an e-mail address is refused as well.
+
+Checked against Microsoft Entra documentation, October 2026.

@@ -52,3 +52,5 @@ Every request that changed something or failed appears in the sync log of the pr
 ## SCIM and synchronization
 
 While SCIM is on, SCIM leads: the background synchronization of the provider runs once a day as a reconciliation, shown with the trigger "Reconciliation" in the sync log, instead of at its configured interval. For providers without a directory, SCIM is the only way to learn about changes before the next sign-in. See [Synchronization](identity-provider-groups.md#synchronization).
+
+Checked against Microsoft Entra documentation, October 2026.

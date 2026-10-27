@@ -102,3 +102,5 @@ A channel whose service keeps failing, or answers that the address is gone or no
 | Not reachable | Check the address and whether the server can reach the internet. |
 | Private network | Use a public address, or allow the network in `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`. |
 | Not HTTPS | Use an address that starts with `https://`. |
+
+Checked against Microsoft Teams, Slack, Discord and Element documentation, October 2026.

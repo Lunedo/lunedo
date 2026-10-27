@@ -49,3 +49,5 @@ See [Synchronization](../identity-provider-groups.md#synchronization) for how ru
 ## Second factor
 
 Either keep **Handled by the provider** and enforce 2-step verification in Google Workspace, or choose **Always ask for a Lunedo second factor**. **Require proof from the provider** works only when the ID token carries an `amr` claim with one of the accepted values; a test sign-in shows the claims Google sends.
+
+Checked against Google Cloud and Google Workspace documentation, October 2026.

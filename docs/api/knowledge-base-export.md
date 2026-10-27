@@ -75,3 +75,5 @@ Starting an export can also be refused:
 | `notEnoughStorage` | The file store is too full for the export. |
 
 A new export of the same space in the same format replaces the earlier one, so a nightly script does not pile up exports. A finished export is kept for 7 days, or 24 hours after its first complete download.
+
+Checked against Cloudflare documentation, October 2026.

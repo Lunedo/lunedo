@@ -61,3 +61,5 @@ location /help/ {
 ```
 
 On GitHub Pages, publishing from a branch runs Jekyll, which leaves out folders whose names start with an underscore, such as `_assets/`. Add an empty file `.nojekyll` next to `index.html`, or publish with a GitHub Actions workflow. GitHub Pages does not read `_redirects`; earlier addresses work through the HTML redirect pages.
+
+Checked against Cloudflare, nginx and GitHub documentation, October 2026.

@@ -109,3 +109,5 @@ Delivery through Graph is retried like delivery through SMTP, see [E-mail](../em
 8. Send a test mail, then save.
 
 Lunedo gets the token with the client credentials grant at `<authority>/<tenant>/oauth2/v2.0/token` with the scope `https://outlook.office365.com/.default`. A stored secret is kept only while tenant, application and cloud stay the same; a new app needs its secret again. Token errors are listed in [E-mail](../email.md#test-mail-fails).
+
+Checked against Microsoft Entra and Exchange Online documentation, October 2026.

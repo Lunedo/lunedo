@@ -66,3 +66,5 @@ The thresholds are starting points:
 - Scheduled backups run once a day, so 26 hours leaves room for a slow run.
 - Failed jobs cannot be retried or removed; they stay in `lunedo_jobs{state="failed"}` until the job queue deletes them after its retention period. `LunedoFailedJobs` therefore keeps firing for a while after the cause is fixed. [system-status.md](../system-status.md#jobs) says how to find the cause in the logs.
 - 1,000 waiting jobs is also the threshold of the [Jobs](../system-status.md#jobs) check on the status page.
+
+Checked against Prometheus documentation, October 2026.

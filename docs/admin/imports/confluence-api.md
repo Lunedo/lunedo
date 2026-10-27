@@ -69,3 +69,5 @@ Outgoing requests go only to the configured host, through the same protection as
 When Confluence asks to slow down, Lunedo waits as long as Confluence asks, up to 5 minutes per wait, and the import shows "Confluence asked to slow down". A longer pause hands the work back to the job queue, which tries again later. Only when Confluence keeps limiting after all retries does the import fail with "Confluence keeps asking to slow down"; try again later, for example outside office hours.
 
 Reading continues after a restart with the next part of the results, never from the start.
+
+Checked against Atlassian documentation, October 2026.

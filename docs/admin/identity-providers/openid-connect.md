@@ -75,3 +75,5 @@ With **Require proof from the provider**, Lunedo checks the `amr` claim of the I
 - Keep **Include claims in id_token** on in the advanced protocol settings, so that the claims are in the ID token.
 - Choose a signing key for the provider, so that ID tokens are signed with RS256 or another algorithm from the list above.
 - The default `profile` scope sends the names of the person's groups in the claim `groups`. Enter `groups` as **Claim for groups**. Renaming a group in Authentik breaks its rules.
+
+Checked against Keycloak and Authentik documentation, October 2026.

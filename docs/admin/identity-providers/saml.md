@@ -88,3 +88,5 @@ Groups come as SIDs by default: in the same rule, map the LDAP attribute "Token-
 When the group values are names, the rule list and the rule dialog warn that renaming a group at the identity provider breaks the rules for it. Use identifiers if the identity provider can send them.
 
 When a groups attribute is set and an assertion does not carry it, the person counts as having no groups, and instance administrators see a banner once the provider stops sending the attribute (see [Identity provider groups](../identity-provider-groups.md#groups)).
+
+Checked against Microsoft Entra and AD FS documentation, October 2026.

@@ -108,3 +108,5 @@ Images of drawings, whiteboards and draw.io, Mermaid and PlantUML diagrams are c
 ## External embeds
 
 The services whose content pages may show in a frame are set under **Settings › Instance › Services › External embeds**; see [embeds.md](embeds.md).
+
+Checked against Docker, Ubuntu and Podman documentation, October 2026.
