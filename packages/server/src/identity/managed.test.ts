@@ -4,6 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { ManagedAccountError } from "../auth/errors.js";
+import { generateToken, hashToken } from "../auth/tokens.js";
+import { organizationSettingsChain, selfRegistrationSetting } from "../organizations/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { VirtualAuthenticator } from "../testing/webauthn.js";
@@ -400,5 +402,72 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
     await expect(signInWithPasskey()).rejects.toThrow(ManagedAccountError);
     const sessions = await test.pool.query("select 1 from sessions where account_id = $1", [person.id]);
     expect(sessions.rows).toHaveLength(1);
+  });
+
+  it("refuses to complete a registration once the domain belongs to a provider", async () => {
+    const domain = uniqueDomain();
+    const owner = await account(`owner@${uniqueDomain()}`);
+    const organization = await test.services.organizations.createAsActor(SYSTEM, {
+      name: `Registering ${randomUUID().slice(0, 6)}`,
+      ownerAccountId: owner.id,
+    });
+    await test.settings.set(
+      selfRegistrationSetting,
+      organizationSettingsChain(organization.id),
+      "organization",
+      true,
+    );
+    const token = generateToken();
+    await test.pool.query(
+      "insert into registration_tokens (id, organization_id, email, token_hash, expires_at) values (gen_random_uuid(), $1, $2, $3, now() + interval '1 hour')",
+      [organization.id, `new.person@${domain}`, hashToken(token)],
+    );
+    const created = await provider([domain]);
+    await expect(
+      test.services.invitations.completeRegistration(
+        token,
+        { name: "New Person", password: "a long test passphrase" },
+        undefined,
+      ),
+    ).rejects.toMatchObject({ code: "managedDomain", details: { providerId: created.id } });
+    const accountRows = await test.pool.query("select 1 from accounts where email = $1", [
+      `new.person@${domain}`,
+    ]);
+    expect(accountRows.rowCount).toBe(0);
+  });
+
+  it("counts failed sign-ins of the instance owner per client address, so nobody locks the owner out", async () => {
+    const owner = await account(`owner@${uniqueDomain()}`);
+    const other = await account(`other@${uniqueDomain()}`);
+    await test.pool.query("update instance set owner_account_id = $1", [owner.id]);
+    try {
+      for (const target of [owner, other]) {
+        for (let attempt = 0; attempt < 6; attempt++) {
+          await test.services.signIn
+            .signInWithPassword({
+              email: target.email ?? "",
+              password: "not the passphrase",
+              client: { ip: `203.0.113.${attempt + 100}` },
+            })
+            .catch(() => undefined);
+        }
+      }
+      await expect(
+        test.services.signIn.signInWithPassword({
+          email: owner.email ?? "",
+          password: "a long test passphrase",
+          client: { ip: "198.51.100.200" },
+        }),
+      ).resolves.toMatchObject({ status: "signedIn" });
+      await expect(
+        test.services.signIn.signInWithPassword({
+          email: other.email ?? "",
+          password: "a long test passphrase",
+          client: { ip: "198.51.100.201" },
+        }),
+      ).rejects.toMatchObject({ code: "locked" });
+    } finally {
+      await test.pool.query("update instance set owner_account_id = null");
+    }
   });
 });

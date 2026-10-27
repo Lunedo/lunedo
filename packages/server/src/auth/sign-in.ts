@@ -230,6 +230,15 @@ export class SignInService {
       : "instance";
   }
 
+  async #subjects(
+    accountId: string | null,
+    email: string,
+    clientIp: string | undefined,
+  ): Promise<ThrottleSubjects> {
+    if (accountId !== null && (await this.#accounts.ownerId()) === accountId) return { clientIp };
+    return { email, clientIp };
+  }
+
   async #checkAttempt(subjects: ThrottleSubjects, accountId: string | null, method: SignInMethod) {
     if (!(await this.#setupComplete())) throw new SetupIncompleteError();
     const rate = await this.#throttle.attempt(subjects);
@@ -470,10 +479,10 @@ export class SignInService {
     password: string;
     client: ClientInfo;
   }): Promise<SignedIn | SecondFactorRequired> {
-    const subjects = { email: input.email, clientIp: input.client.ip };
     const started = await this.#databaseNow();
     const found = await this.#accounts.findByEmail(input.email);
     const account = canSignIn(found) && found.passwordHash ? found : null;
+    const subjects = await this.#subjects(found?.id ?? null, input.email, input.client.ip);
     await this.#checkAttempt(subjects, account?.id ?? null, "password");
 
     let valid = false;
@@ -563,7 +572,7 @@ export class SignInService {
     const { pending, account } = await this.#pending(input.pendingToken);
     if (!providerOfPending(pending.payload)) await refuseManaged(this.#database, account.id, "any");
     const method: SignInMethod = input.factor.type;
-    const subjects = { email: account.email, clientIp: input.client.ip };
+    const subjects = await this.#subjects(account.id, account.email, input.client.ip);
     await this.#checkAttempt(subjects, account.id, method);
 
     let valid = false;
@@ -667,7 +676,7 @@ export class SignInService {
   }): Promise<SignedIn> {
     const started = await this.#databaseNow();
     const { pending, account } = await this.#pendingLink(input.pendingToken);
-    const subjects = { email: account.email, clientIp: input.client.ip };
+    const subjects = await this.#subjects(account.id, account.email, input.client.ip);
     const factors = await secondFactorsOf(this.#database, account.id);
     let methods: SignInMethod[];
     let factorNeeded: boolean;
@@ -873,7 +882,7 @@ export class SignInService {
       await this.#recordFailure(clientSubjects, account?.id ?? null, "passkey", "invalidCredentials");
       throw new InvalidCredentialsError();
     }
-    const lockout = await this.#throttle.lockout({ email: account.email });
+    const lockout = await this.#throttle.lockout(await this.#subjects(account.id, account.email, undefined));
     if (lockout) {
       await this.#audit.recordAlone({
         name: "auth.signInFailed",

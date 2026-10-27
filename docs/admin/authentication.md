@@ -63,6 +63,8 @@ The settings are instance settings in **Settings › Instance › People and sig
 
 The attempt limits count every attempt per minute, successful or not. Failures within the lockout window lock the address or the client. Each further lockout within a day doubles the lockout, up to the maximum.
 
+The instance owner is the exception: attempts and failures for the owner's account count only per client, never for the account itself, so nobody can lock the owner out of the emergency sign-in by sending wrong passwords for the owner's address.
+
 Wrong second factors and failed re-authentications count as failures. A successful sign-in clears the failures of the address, not those of the client. Sign-ins with a directory password are counted in the same way, per directory and sign-in name.
 
 A lockout ends on its own. Every lockout is recorded in the audit log as `auth.lockedOut`, with the number of failures and the end of the lockout. Administrators find it in the [audit log](audit-log.md) with the filter, and for one account on the tab **Activity** of the account in **Settings › Instance › People and sign-in › Accounts**. A password reset clears the failures of the address.
