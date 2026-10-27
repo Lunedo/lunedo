@@ -443,6 +443,7 @@ export class ItemsController {
       "overviewPage",
       "confidentialSharing",
       "moveChangesAccess",
+      "confidentialGuestsBySpaceAdmins",
       "knowledgeBaseContent",
       "knowledgeBaseMode",
       "knowledgeBasePlacement",

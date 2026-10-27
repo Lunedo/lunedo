@@ -28,6 +28,7 @@ import type { PeopleService } from "../spaces/people.js";
 import type { SpaceRole, TreeItemKind } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
+import { guestAccounts, requireConfidentialGuestInviter } from "./confidential-guests.js";
 import type { RestrictionKind, ShareRole } from "./schema.js";
 
 export type HolderKind = "account" | "group";
@@ -460,6 +461,9 @@ export class PageAccessService {
       if (row?.state !== "active" || row.type === "portal" || !(await this.#people.canSee(actor, id, tx))) {
         throw new SpaceError("invalidHolder", "Choose a person you can find in the search");
       }
+      if ((await guestAccounts(tx, [id], item.organization_id)).size > 0) {
+        await requireConfidentialGuestInviter(this.#authorization, tx, actor, item.space_id);
+      }
       return row.name;
     }
     const confidential = await tx.execute<{ confidential: boolean }>(sql`
@@ -552,7 +556,15 @@ export class PageAccessService {
           }
           const widened = includeDescendants && !current.include_descendants;
           const raised = LEVEL_ROLES.indexOf(role) > LEVEL_ROLES.indexOf(current.role);
-          if (widened || raised) await this.requireReach(tx, actor, item.id, role, includeDescendants);
+          if (widened || raised) {
+            await this.requireReach(tx, actor, item.id, role, includeDescendants);
+            if (
+              current.principal_kind === "account" &&
+              (await guestAccounts(tx, [current.principal_id], item.organization_id)).size > 0
+            ) {
+              await requireConfidentialGuestInviter(this.#authorization, tx, actor, item.space_id);
+            }
+          }
           await tx.execute(sql`
             update page_shares set role = ${role}, include_descendants = ${includeDescendants}, updated_at = now()
             where id = ${change.shareId}`);

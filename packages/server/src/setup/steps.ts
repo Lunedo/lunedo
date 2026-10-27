@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { stat, statfs, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { type Language, proposeFormats, setupStepSchemas } from "@lunedo/shared";
+import { documentationTargets, type Language, proposeFormats, setupStepSchemas } from "@lunedo/shared";
 import { eq } from "drizzle-orm";
 import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -63,7 +63,7 @@ export async function checkDatabaseAndClock(
         status: migrations.upToDate ? "ok" : "error",
         cause: migrations.upToDate ? null : "migrationsPending",
         fixCommand: null,
-        docs: "setup.md#database",
+        docs: documentationTargets.checkDatabase,
         version: row?.version ?? null,
         migrationsUpToDate: migrations.upToDate,
       },
@@ -71,7 +71,7 @@ export async function checkDatabaseAndClock(
         status: clockOk ? "ok" : "warning",
         cause: clockOk ? null : offsetMs === null ? "unknown" : "offset",
         fixCommand: null,
-        docs: "setup.md#clock",
+        docs: documentationTargets.checkClock,
         offsetMs,
         toleranceMs: CLOCK_TOLERANCE_MS,
       },
@@ -82,7 +82,7 @@ export async function checkDatabaseAndClock(
         status: "error",
         cause: "unreachable",
         fixCommand: null,
-        docs: "setup.md#database",
+        docs: documentationTargets.checkDatabase,
         version: null,
         migrationsUpToDate: false,
       },
@@ -90,7 +90,7 @@ export async function checkDatabaseAndClock(
         status: "warning",
         cause: "unknown",
         fixCommand: null,
-        docs: "setup.md#clock",
+        docs: documentationTargets.checkClock,
         offsetMs: null,
         toleranceMs: CLOCK_TOLERANCE_MS,
       },
@@ -103,7 +103,7 @@ export async function checkFileStorage(directory: string): Promise<CheckHelp & R
   const processGid = process.getgid?.() ?? null;
   const owner = processUid !== null && processGid !== null ? `${processUid}:${processGid}` : null;
   const facts = {
-    docs: "setup.md#file-storage",
+    docs: documentationTargets.checkFileStorage,
     path: directory,
     minimumFreeBytes: LOW_DISK_BYTES,
     processUid,
@@ -204,7 +204,7 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             status: url ? "ok" : "warning",
             cause: url ? null : "notSet",
             fixCommand: null,
-            docs: "setup.md#instance-url",
+            docs: documentationTargets.checkInstanceUrl,
             configured: url !== "",
             url: url || null,
             source,
@@ -214,7 +214,7 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             status: httpsOk ? "ok" : "warning",
             cause: httpsOk ? null : url ? "instanceUrlNotHttps" : "requestNotHttps",
             fixCommand: null,
-            docs: "reverse-proxy.md#tls-and-the-instance-address",
+            docs: documentationTargets.tlsAndInstanceAddress,
             instanceUrl: httpsUrl,
             request: httpsRequest,
           },

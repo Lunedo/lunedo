@@ -16,15 +16,15 @@ function run(args: string[]) {
 }
 
 function documented(): string {
-  const docs = readFileSync(path.join(root, "docs", "setup.md"), "utf8");
+  const docs = readFileSync(path.join(root, "docs", "admin", "installation", "compose.md"), "utf8");
   const start = docs.indexOf("<!-- compose-file -->\n```yaml\n");
-  assert.ok(start >= 0, "docs/setup.md has no marked Compose file");
+  assert.ok(start >= 0, "docs/admin/installation/compose.md has no marked Compose file");
   const body = docs.slice(start + "<!-- compose-file -->\n```yaml\n".length);
   return body.slice(0, body.indexOf("```"));
 }
 
 describe("install.sh", () => {
-  it("writes the Compose file that docs/setup.md shows", () => {
+  it("writes the Compose file that docs/admin/installation/compose.md shows", () => {
     const printed = run(["print-compose"]);
     assert.equal(printed.status, 0, printed.stderr);
     assert.equal(printed.stdout, documented());

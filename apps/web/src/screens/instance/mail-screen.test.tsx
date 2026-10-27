@@ -237,6 +237,8 @@ describe("the e-mail settings", () => {
       (screen.getByRole("radio", { name: "OAuth2" }) as HTMLInputElement).getAttribute("aria-checked"),
     ).toBe("true");
     expect(screen.getByText("Set up in Microsoft 365 first")).toBeTruthy();
+    await userEvent.click(screen.getByText("Advanced: other Microsoft cloud"));
+    expect(screen.getByText("SMTP with OAuth2 works only in the global cloud.")).toBeTruthy();
     await userEvent.type(screen.getByLabelText("Mailbox"), "wiki@contoso.com");
     expect(
       screen.getByText("Set-CASMailbox -Identity wiki@contoso.com -SmtpClientAuthenticationDisabled $false"),
@@ -254,6 +256,17 @@ describe("the e-mail settings", () => {
       "1b6f0c2e-4d3a-4f5b-8c7d-9e0f1a2b3c4d",
     );
     await userEvent.type(screen.getByLabelText("Client secret"), "app-secret");
+    const principal = '"Lunedo mail 1b6f0c2e-4d3a-4f5b-8c7d-9e0f1a2b3c4d"';
+    expect(
+      screen.getByText(
+        `New-ServicePrincipal -AppId 1b6f0c2e-4d3a-4f5b-8c7d-9e0f1a2b3c4d -ObjectId <object ID> -DisplayName ${principal}`,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Add-MailboxPermission -Identity wiki@contoso.com -User (Get-ServicePrincipal -Identity ${principal}).Identity -AccessRights FullAccess`,
+      ),
+    ).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Send test mail" }));
     expect(await screen.findByText(/did not accept the client ID or the client secret/)).toBeTruthy();
     expect(screen.getByText(/Failed step: getting an access token/)).toBeTruthy();

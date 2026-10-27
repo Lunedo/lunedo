@@ -6,7 +6,7 @@ image="${1:?usage: scripts/backup-network-check.sh <image with node, such as the
 curl_image="curlimages/curl:8.18.0@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-docs="$root/docs/backup.md"
+docs="$root/docs/admin/backups/s3.md"
 project="lunedo-storage-${LUNEDO_CI_RUN:-$$}"
 work="$(mktemp -d "${TMPDIR:-/tmp}/lunedo-storage-$$-XXXX")"
 if command -v cygpath >/dev/null; then work="$(cygpath -m "$work")"; fi
@@ -32,7 +32,7 @@ awk '
   found && /^```/ { if (inside) exit; inside = 1; next }
   inside { print }
 ' "$docs" >"$work/storage.yml"
-[ -s "$work/storage.yml" ] || { echo "The example marked backup-network-check is missing in docs/backup.md" >&2; exit 1; }
+[ -s "$work/storage.yml" ] || { echo "The example marked backup-network-check is missing in docs/admin/backups/s3.md" >&2; exit 1; }
 bash "$root/scripts/install.sh" print-compose >"$work/compose.yml"
 sed -i.bak "s#^    image: ghcr.io/lunedo/lunedo:.*#    image: $image#" "$work/compose.yml"
 {
@@ -41,7 +41,7 @@ sed -i.bak "s#^    image: ghcr.io/lunedo/lunedo:.*#    image: $image#" "$work/co
   printf 'STORAGE_SECRET_KEY=%s\n' "storage-check-secret-$$"
 } >"$work/.env"
 
-echo "Checking the storage example of docs/backup.md with the Compose file of the setup script"
+echo "Checking the storage example of docs/admin/backups/s3.md with the Compose file of the setup script"
 compose config --format json >"$work/config.json"
 read_config() {
   docker run --rm -i --entrypoint node "$image" -e "

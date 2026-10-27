@@ -386,7 +386,7 @@ install_lunedo() {
     say "     project a fixed address and set LUNEDO_TRUSTED_PROXIES in .env to it, never to the"
     say "     whole subnet or its gateway:"
   fi
-  say "     https://github.com/lunedo/lunedo/blob/main/docs/reverse-proxy.md"
+  say "     https://github.com/lunedo/lunedo/blob/main/docs/admin/reverse-proxy.md"
   say "  3. Copy $directory/.env to a safe place. It holds the master key and the backup key;"
   say "     a backup cannot be restored without them."
   say "  4. Update later with: $directory/lunedo update"
@@ -397,7 +397,7 @@ update_lunedo() {
   [ -f "$directory/compose.yml" ] && [ -f "$directory/.env" ] ||
     fail "$directory is not a Lunedo installation. Run the update from the installation directory, or pass --dir."
   [ "$(record_value method)" = "script" ] ||
-    fail "$directory was not installed with the setup script. Update it as described in docs/setup.md."
+    fail "$directory was not installed with the setup script. Update it as described in docs/admin/updates.md."
   check_directory_mode "$directory"
   check_requirements_for_update
 
@@ -425,7 +425,7 @@ update_lunedo() {
     return 0
   fi
   if is_release "$current" && is_release "$target" && ! version_lt "$current" "$target"; then
-    fail "Lunedo $current is installed; $target is not newer. Downgrades are done by restoring a backup, see docs/setup.md."
+    fail "Lunedo $current is installed; $target is not newer. Downgrades are done by restoring a backup, see docs/admin/restore.md."
   fi
 
   say ""
@@ -472,7 +472,7 @@ The update stopped. Nothing was restored automatically. To go back to Lunedo $cu
   docker compose run --rm lunedo backup restore --input $(restore_input "$location") --force
   docker compose up -d
 
-The backup is $(host_location "$location").$(s3_note "$location") See docs/setup.md#rollback.
+The backup is $(host_location "$location").$(s3_note "$location") See docs/admin/updates.md#rollback.
 ROLLBACK
     exit 1
   fi

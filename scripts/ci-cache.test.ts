@@ -111,7 +111,7 @@ describe("rootProblem", () => {
   it("names a missing directory and where the setup is described", () => {
     assert.match(
       rootProblem("/srv/ci-cache", "host", fakeFileSystem(undefined).fs) ?? "",
-      /\/srv\/ci-cache does not exist on this runner\. .*docs\/development\.md/,
+      /\/srv\/ci-cache does not exist on this runner\. .*docs\/development\/self-hosted-runners\.md/,
     );
   });
 

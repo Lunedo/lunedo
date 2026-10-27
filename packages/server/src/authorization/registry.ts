@@ -12,7 +12,7 @@ export interface Resource {
 export interface ActionDefinition {
   scope: "instance" | "organization" | "space";
   spaceRole?: SpaceRole;
-  tokenScope?: { area: Area; level: AccessLevel };
+  tokenScope?: { area: Area; level: AccessLevel; unrestrictedContent?: true };
   area?: Area;
   level?: AccessLevel;
   membership?: readonly MembershipKind[];

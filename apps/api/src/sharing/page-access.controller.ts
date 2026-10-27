@@ -150,6 +150,7 @@ export class PageAccessController {
     response: { description: "The effect.", schema: pageImpactSchema, example: examplePageImpact },
     errors: [
       "invalidHolder",
+      "confidentialGuestsBySpaceAdmins",
       "alreadyShared",
       "shareNotFound",
       "shareBeyondOwnAccess",
@@ -266,7 +267,7 @@ export class PageAccessController {
   @ApiRoute({
     summary: "Invite a guest to a page",
     description:
-      "Invites a person without an account as a guest of the organization and shares the page with them when they accept. Organization administrators can always do this; members only when the organization allows it.",
+      "Invites a person without an account as a guest of the organization and shares the page with them when they accept. Organization administrators can always do this; members only when the organization allows it. In a confidential space only its space administrators invite guests.",
     tags: [TAG],
     status: 201,
     params: pageParams,
@@ -281,7 +282,13 @@ export class PageAccessController {
         expiresAt: "2026-10-15T09:30:00.000Z",
       },
     },
-    errors: ["guestInvitesDisabled", "invalidScope", "invalidResponsible", "shareBeyondOwnAccess"],
+    errors: [
+      "guestInvitesDisabled",
+      "confidentialGuestsBySpaceAdmins",
+      "invalidScope",
+      "invalidResponsible",
+      "shareBeyondOwnAccess",
+    ],
   })
   async invite(
     @Param("pageId") pageId: string,
@@ -313,7 +320,13 @@ export class PageAccessController {
       schema: giveEffectSchema,
       example: { ...exampleEffect, impact: examplePageImpact },
     },
-    errors: ["invalidHolder", "invalidRole", "shareBeyondOwnAccess", "ownShare"],
+    errors: [
+      "invalidHolder",
+      "invalidRole",
+      "shareBeyondOwnAccess",
+      "ownShare",
+      "confidentialGuestsBySpaceAdmins",
+    ],
   })
   async givePagePreview(
     @Param("pageId") pageId: string,

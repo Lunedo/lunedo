@@ -26,31 +26,7 @@ const PNG = Buffer.from(
   "base64",
 );
 const DOCS = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../../docs");
-const CATEGORIES: Record<string, string> = {
-  setup: "Operations",
-  configuration: "Operations",
-  backup: "Operations",
-  database: "Operations",
-  storage: "Operations",
-  email: "Operations",
-  encryption: "Operations",
-  rendering: "Operations",
-  authentication: "Identity and access",
-  "identity-providers": "Identity and access",
-  organizations: "Identity and access",
-  audit: "Identity and access",
-  spaces: "Content",
-  "editor-schema": "Content",
-  "embeds-and-blocks": "Content",
-  diagrams: "Content",
-  whiteboards: "Content",
-  templates: "Content",
-  "reports-and-reuse": "Content",
-  imports: "Content",
-  "knowledge-bases": "Content",
-  collaboration: "Content",
-  notifications: "Content",
-};
+const FOLDERS = ["admin", "user", "api", "development"];
 const TYPES: Record<string, string> = {
   "text/html": "text/html; charset=utf-8",
   ".css": "text/css",
@@ -106,12 +82,12 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const organization = await fixtures.organization();
     const owner = accountPrincipal(organization.owner);
     const files: ZipFileSpec[] = [];
-    for (const name of (await readdir(DOCS)).filter((entry) => entry.endsWith(".md")).sort()) {
-      const stem = name.replace(/\.md$/, "");
-      files.push({
-        name: `docs/${CATEGORIES[stem] ?? "Development"}/${name}`,
-        data: await readFile(join(DOCS, name), "utf8"),
-      });
+    for (const folder of FOLDERS) {
+      const names = await readdir(join(DOCS, folder), { recursive: true });
+      for (const name of names.filter((entry) => entry.endsWith(".md")).sort()) {
+        const path = `${folder}/${name.replaceAll("\\", "/")}`;
+        files.push({ name: `docs/${path}`, data: await readFile(join(DOCS, path), "utf8") });
+      }
     }
     const view = await harness.importedFiles({
       organizationId: organization.id,
@@ -214,13 +190,13 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
         }
 
         const start = await (await fetch(`${origin}/index.html`)).text();
-        expect(start).toContain("Operations");
+        expect(start).toContain(">admin<");
         const category = (
           await test.database.execute<{ number: string }>(sql`
-            select number from tree_items where space_id = ${spaceId} and kind = 'folder' and title = 'Operations'`)
+            select number from tree_items where space_id = ${spaceId} and kind = 'folder' and title = 'admin'`)
         ).rows[0]?.number;
-        expect(start).toContain(`href="./topics/${category}-operations.html"`);
-        const topic = await (await fetch(`${origin}/topics/${category}-operations.html`)).text();
+        expect(start).toContain(`href="./topics/${category}-admin.html"`);
+        const topic = await (await fetch(`${origin}/topics/${category}-admin.html`)).text();
         expect(topic).toContain(">Backups<");
         expect(topic).toContain(`href="../${backupNumber}-backups.html"`);
         expect(topic).not.toContain("data-autosubmit");
@@ -250,9 +226,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
 
         const sitemap = files.get("sitemap.xml")?.toString("utf8") ?? "";
         expect(sitemap).toContain(`<loc>https://help.example.org/docs/${backupNumber}-backups.html</loc>`);
-        expect(sitemap).toContain(
-          `<loc>https://help.example.org/docs/topics/${category}-operations.html</loc>`,
-        );
+        expect(sitemap).toContain(`<loc>https://help.example.org/docs/topics/${category}-admin.html</loc>`);
         expect(sitemap).toContain(
           `<loc>https://help.example.org/docs/de/${backupNumber}-sicherung.html</loc>`,
         );

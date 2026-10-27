@@ -13,6 +13,7 @@ import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
+import { guestAccounts, requireConfidentialGuestInviter } from "./confidential-guests.js";
 import type { HolderKind } from "./page-access.js";
 import type { ShareLinkScope } from "./schema.js";
 import { anyoneLinkMaxDaysSetting, anyoneLinksSetting, shareLinksSetting } from "./settings.js";
@@ -240,6 +241,7 @@ export class ShareLinkService {
     actor: Principal,
     itemId: string,
     input: ShareLinkInput,
+    current: { people: readonly string[]; expiresAt: Date | null } | null = null,
   ): Promise<{ expiresAt: Date | null; people: { kind: HolderKind; id: string }[] }> {
     const options = await this.options(itemId);
     const item = await this.#item(tx, itemId);
@@ -308,6 +310,18 @@ export class ShareLinkService {
         ) {
           throw new SpaceError("invalidHolder", "Choose a group of the organization the page belongs to");
         }
+      }
+    }
+    if (item.confidential) {
+      const accounts = people.filter((person) => person.kind === "account").map((person) => person.id);
+      const guests = await guestAccounts(tx, accounts, item.organization_id);
+      const extended =
+        current !== null &&
+        current.expiresAt !== null &&
+        (expiresAt === null || expiresAt.getTime() > current.expiresAt.getTime());
+      const added = [...guests].some((id) => !current?.people.includes(id));
+      if (added || (guests.size > 0 && extended)) {
+        await requireConfidentialGuestInviter(this.#authorization, tx, actor, item.space_id);
       }
     }
     return { expiresAt, people };
@@ -419,7 +433,12 @@ export class ShareLinkService {
           changes.people ??
           currentPeople.rows.map((row) => ({ kind: row.principal_kind, id: row.principal_id })),
       };
-      const { expiresAt, people } = await this.#validate(tx, actor, current.item_id, next);
+      const { expiresAt, people } = await this.#validate(tx, actor, current.item_id, next, {
+        people: currentPeople.rows
+          .filter((row) => row.principal_kind === "account")
+          .map((row) => row.principal_id),
+        expiresAt: current.expires_at ? new Date(current.expires_at) : null,
+      });
       const changed: string[] = [];
       if (next.scope !== current.scope) changed.push("scope");
       if (

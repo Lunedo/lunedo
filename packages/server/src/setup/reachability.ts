@@ -4,6 +4,7 @@ import http from "node:http";
 import https from "node:https";
 import { BlockList, isIP, type LookupFunction } from "node:net";
 import { Readable } from "node:stream";
+import { documentationTargets } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import type { Database } from "../database/database.js";
 import { setupSteps } from "./schema.js";
@@ -54,7 +55,7 @@ function result(url: string | null, cause: ReachabilityCause | null) {
     status: cause === null ? "ok" : cause === "loopback" ? "info" : "warning",
     cause,
     fixCommand: null,
-    docs: "setup.md#address-reachable",
+    docs: documentationTargets.checkAddressReachable,
     url,
   } satisfies ReachabilityResult;
 }

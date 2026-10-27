@@ -81,6 +81,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Diagrams: "Files and images of draw.io, Mermaid and PlantUML diagrams in pages.",
   Embeds:
     "External services whose content pages can embed, from the allowlist of the instance and organization.",
+  Imports:
+    "Imports of Confluence spaces, Markdown and Word into a new space in quarantine. Importing needs the organization area spaces at manage; API tokens need the organization scope spaces at manage.",
 };
 
 const ROOT = "root";

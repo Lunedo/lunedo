@@ -686,6 +686,7 @@
       },
       "typeFixed": "Fixed once the provider is saved",
       "stepLater": "Opens after the current step is saved",
+      "guide": "Setup guide: {type}",
       "metadataFileHelp": "Without an address, upload a new file whenever its certificate changes.",
       "caHelp": "Only needed when the server certificate was issued by your own certificate authority."
     },
@@ -1428,6 +1429,7 @@
     "wrongPassword": "The password is not correct. Ask the person who shared the link.",
     "linkNotForYou": "This link was shared with other people. Ask the person who shared it for access.",
     "guestInvitesDisabled": "Members cannot invite guests in this organization. Ask an administrator of the organization.",
+    "confidentialGuestsBySpaceAdmins": "Only space administrators give guests access to this confidential space. Ask a space administrator.",
     "attachmentNotFound": "The file was deleted or moved. Reload the page.",
     "shareNotFound": "The access entry was already removed. Reload the page.",
     "restrictionNotFound": "The page is no longer restricted. Reload the page.",
@@ -3694,6 +3696,8 @@
       "tenantId": "Tenant ID",
       "clientId": "Application (client) ID",
       "cloud": "Microsoft cloud",
+      "cloudHint": "SMTP with OAuth2 works only in the global cloud.",
+      "cloudHelp": "Server and scope of SMTP with OAuth2 are those of the global Microsoft cloud; another cloud here changes only the token endpoint. For US Government or China (21Vianet), use Microsoft Graph as the method.",
       "clouds": {
         "global": "Global",
         "usGovernment": "US Government",

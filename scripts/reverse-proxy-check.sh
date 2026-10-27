@@ -14,7 +14,7 @@ curl_image="curlimages/curl:8.18.0@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c6
 postgres_image="postgres:16-alpine"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-docs="$root/docs/reverse-proxy.md"
+docs=("$root/docs/admin/reverse-proxy/caddy.md" "$root/docs/admin/reverse-proxy/nginx.md" "$root/docs/admin/reverse-proxy/traefik.md")
 suffix="$$"
 network="lunedo-proxy-${suffix}"
 subnet="172.30.$((suffix % 200 + 20)).0/24"
@@ -44,7 +44,7 @@ block() {
     $0 == "<!-- reverse-proxy-check: " name " -->" { found = 1; next }
     found && /^```/ { if (inside) exit; inside = 1; next }
     inside { print }
-  ' "$docs"
+  ' "${docs[@]}"
 }
 
 psql_in() {

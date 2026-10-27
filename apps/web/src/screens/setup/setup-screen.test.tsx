@@ -216,7 +216,7 @@ describe("an address from the environment", () => {
   });
 });
 
-const CHECK = { status: "ok", cause: null, fixCommand: null, docs: "setup.md" };
+const CHECK = { status: "ok", cause: null, fixCommand: null, docs: "admin/system-check.md" };
 const INSTANCE = {
   id: "instance",
   required: true,

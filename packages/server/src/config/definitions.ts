@@ -38,7 +38,7 @@ function setting(name: string, schema: z.ZodType, description: string, secret = 
   return { name, schema, secret, description };
 }
 
-/** Every setting Lunedo reads. `docs/configuration.md` documents each of them; a test enforces this. */
+/** Every setting Lunedo reads. The configuration reference in the documentation lists each of them; a test enforces this. */
 export const configSettings = [
   setting("LUNEDO_CONFIG_FILE", path.optional(), "Path of an optional JSON configuration file."),
   setting("LUNEDO_HOST", nonEmpty.default("0.0.0.0"), "Address the HTTP servers listen on."),

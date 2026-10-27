@@ -417,6 +417,32 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     ).rejects.toThrow(ForbiddenError);
   });
 
+  it("changes the home organization only with the rank over the account", async () => {
+    const org = await organization();
+    const second = await organization();
+    const admin = await standard(org.id);
+    await role(admin, "organization", "administrator", org.id);
+    const instanceAdmin = await standard(org.id);
+    await role(instanceAdmin, "instance", "administrator");
+    const person = await standard(org.id);
+    await test.pool.query(
+      "insert into memberships (id, organization_id, account_id, kind) select gen_random_uuid(), $1, unnest($2::uuid[]), 'member'",
+      [second.id, [org.owner, instanceAdmin, person]],
+    );
+    for (const target of [org.owner, instanceAdmin]) {
+      await expect(
+        test.services.homeOrganizations.change(accountPrincipal(admin), target, second.id),
+      ).rejects.toThrow(ForbiddenError);
+    }
+    const homes = await test.pool.query("select id, home_organization_id from accounts where id = any($1)", [
+      [org.owner, instanceAdmin],
+    ]);
+    expect(homes.rows.map((row) => row.home_organization_id)).toEqual([org.id, org.id]);
+    await test.services.homeOrganizations.change(accountPrincipal(admin), person, second.id);
+    const moved = await test.pool.query("select home_organization_id from accounts where id = $1", [person]);
+    expect(moved.rows[0]?.home_organization_id).toBe(second.id);
+  });
+
   it("ignores service accounts and inactive accounts", async () => {
     const org = await organization();
     const service = await test.services.serviceAccounts.create(SYSTEM, org.id, { name: "Bot" });

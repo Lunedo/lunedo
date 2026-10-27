@@ -1,3 +1,4 @@
+import { documentationTargets } from "@lunedo/shared";
 import { IconButton, Menu, type MenuItem } from "@lunedo/ui";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -77,7 +78,11 @@ export function HelpMenu() {
     ...(help.custom
       ? [{ label: t("help.knowledgeBase"), icon: CircleHelp, onSelect: () => open(help.url) }]
       : []),
-    { label: t("help.documentation"), icon: LifeBuoy, onSelect: () => open(docsUrl("README.md")) },
+    {
+      label: t("help.documentation"),
+      icon: LifeBuoy,
+      onSelect: () => open(docsUrl(documentationTargets.index)),
+    },
     { label: t("help.shortcuts"), icon: Keyboard, shortcut: "?", onSelect: shell.openShortcuts },
     { label: t("help.apiReference"), icon: Code, onSelect: () => open("/api/docs") },
   ];

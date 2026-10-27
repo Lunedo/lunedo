@@ -48,8 +48,19 @@ export class GuestShareService {
   }
 
   async allowed(actor: Principal, itemId: string): Promise<boolean> {
-    const organizationId = await this.#organizationOf(itemId);
-    if (!organizationId || actor.type !== "account") return false;
+    const target = await this.#spaceOf(itemId);
+    const organizationId = target?.organizationId ?? null;
+    if (!target || !organizationId || actor.type !== "account") return false;
+    if (target.confidential && !(await this.#isSpaceAdmin(actor, target.spaceId))) return false;
+    return this.#organizationAllows(actor, organizationId);
+  }
+
+  async #isSpaceAdmin(actor: Principal, spaceId: string): Promise<boolean> {
+    if (actor.type !== "account") return false;
+    return (await this.#authorization.spaceRole(actor.id, spaceId, { fresh: true })).role === "admin";
+  }
+
+  async #organizationAllows(actor: Principal, organizationId: string): Promise<boolean> {
     if (
       await this.#authorization.authorize(actor, "organization.members.manage", {
         type: "organization",
@@ -68,10 +79,20 @@ export class GuestShareService {
     return member && (await this.#settings.get(membersInviteGuestsSetting, { organization: organizationId }));
   }
 
-  async #organizationOf(itemId: string): Promise<string | null> {
-    const result = await this.#database.execute<{ organization_id: string | null }>(sql`
-      select s.organization_id from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
-    return result.rows[0]?.organization_id ?? null;
+  async #spaceOf(
+    itemId: string,
+  ): Promise<{ spaceId: string; organizationId: string | null; confidential: boolean } | null> {
+    const result = await this.#database.execute<{
+      space_id: string;
+      organization_id: string | null;
+      confidential: boolean;
+    }>(sql`
+      select s.id as space_id, s.organization_id, s.confidential
+      from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
+    const row = result.rows[0];
+    return row
+      ? { spaceId: row.space_id, organizationId: row.organization_id, confidential: row.confidential }
+      : null;
   }
 
   async invite(
@@ -81,11 +102,18 @@ export class GuestShareService {
   ): Promise<Invitation> {
     const share = await this.#authorization.explain(actor, "item.share", { type: "item", id: itemId });
     if (!share.allowed) throw new ForbiddenError(share);
-    const organizationId = await this.#organizationOf(itemId);
-    if (!organizationId) {
+    const target = await this.#spaceOf(itemId);
+    const organizationId = target?.organizationId ?? null;
+    if (!target || !organizationId) {
       throw new SpaceError("invalidScope", "Guests can be invited to pages of an organization only");
     }
-    if (!(await this.allowed(actor, itemId))) {
+    if (target.confidential && !(await this.#isSpaceAdmin(actor, target.spaceId))) {
+      throw new SpaceError(
+        "confidentialGuestsBySpaceAdmins",
+        "Only space administrators invite guests into a confidential space",
+      );
+    }
+    if (!(await this.#organizationAllows(actor, organizationId))) {
       throw new SpaceError("guestInvitesDisabled", "Your organization does not let members invite guests");
     }
     if (input.includeDescendants) {
@@ -145,7 +173,8 @@ export class GuestShareService {
             { executor: tx, fresh: true },
           )
         ).allowed &&
-        (!share.include_descendants || (await this.#reaches(tx, sharer, share.item_id, share.role)));
+        (!share.include_descendants || (await this.#reaches(tx, sharer, share.item_id, share.role))) &&
+        (await this.#mayInviteInto(tx, sharer, share.space_id));
       if (allowed && sharer) {
         await this.#pageAccess.changeWithin(tx, sharer, share.item_id, [
           {
@@ -160,6 +189,18 @@ export class GuestShareService {
       }
       await this.#hold(tx, accountId, share.space_id, share.item_id);
     }
+  }
+
+  async #mayInviteInto(tx: Transaction, sharer: Principal, spaceId: string): Promise<boolean> {
+    const space = await tx.execute<{ confidential: boolean }>(
+      sql`select confidential from spaces where id = ${spaceId}`,
+    );
+    if (!space.rows[0]?.confidential) return true;
+    if (sharer.type !== "account") return false;
+    return (
+      (await this.#authorization.spaceRole(sharer.id, spaceId, { executor: tx, fresh: true })).role ===
+      "admin"
+    );
   }
 
   async #reaches(tx: Transaction, sharer: Principal, itemId: string, role: ShareRole): Promise<boolean> {

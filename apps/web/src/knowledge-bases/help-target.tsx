@@ -1,3 +1,4 @@
+import { documentationTargets } from "@lunedo/shared";
 import { type SaveState, SaveStatus, Section, Select, SettingRow, Skeleton } from "@lunedo/ui";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -28,7 +29,9 @@ export function useHelpUrl(organizationId: string | null): { url: string; custom
     throwOnError: false,
   });
   const current = help.data?.current;
-  return current ? { url: current.url, custom: true } : { url: docsUrl("README.md"), custom: false };
+  return current
+    ? { url: current.url, custom: true }
+    : { url: docsUrl(documentationTargets.index), custom: false };
 }
 
 export function HelpTargetSection({

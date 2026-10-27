@@ -43,7 +43,7 @@ pnpm test
 pnpm test:e2e
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions and [docs/](docs/) for details on the repository layout.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions and [docs/development/repository.md](docs/development/repository.md) for details on the repository layout.
 
 ## Use of AI tools
 

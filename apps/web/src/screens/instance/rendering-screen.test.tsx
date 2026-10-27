@@ -100,7 +100,7 @@ describe("the rendering settings", () => {
     expect(screen.getByRole("button", { name: "Copy the Docker Compose entries" })).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "How to set up the render container" }).getAttribute("href"),
-    ).toContain("docs/rendering.md");
+    ).toContain("docs/admin/rendering.md");
     expect(screen.getByText("Created by Lunedo itself. Always available.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Check again" })).toBeNull();
   });
