@@ -1791,8 +1791,8 @@
         },
         "emailNotVerified": {
           "title": "Deine E-Mail-Adresse konnte nicht bestätigt werden",
-          "cause": "Dein Anbieter hat eine Adresse in einer Domain geschickt, die für ihn nicht eingerichtet ist. Deshalb kann Lunedo ihr kein Konto zuordnen.",
-          "action": "Bitte deine Administration, dein Konto zu verknüpfen oder deine Domain beim Anbieter einzutragen."
+          "cause": "Dein Anbieter hat deine E-Mail-Adresse als nicht bestätigt gekennzeichnet, deshalb verknüpft Lunedo deine Anmeldung nicht mit dem bestehenden Konto mit dieser Adresse.",
+          "action": "bestätige die Adresse bei deinem Anbieter, oder bitte eine Person aus der Administration, deine Anmeldung mit dem Konto zu verknüpfen."
         },
         "groupRequired": {
           "title": "Du bist in keiner Gruppe, die {name} verwenden darf",

@@ -1791,8 +1791,8 @@
         },
         "emailNotVerified": {
           "title": "Your e-mail address could not be verified",
-          "cause": "Your provider sent an address in a domain that is not configured for it, so Lunedo cannot trust it to match an account.",
-          "action": "ask an administrator to link your account or to add your domain to the provider."
+          "cause": "Your provider marked your e-mail address as not verified, so Lunedo does not link your sign-in to the existing account with that address.",
+          "action": "verify the address at your provider, or ask an administrator to link your sign-in to the account."
         },
         "groupRequired": {
           "title": "You are not in a group that may use {name}",

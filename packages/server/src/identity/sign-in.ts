@@ -602,7 +602,6 @@ export class ProviderSignInService {
   }
 
   #emailVerified(domains: readonly string[], profile: ProviderProfile): boolean {
-    if (profile.emailUnverified) return false;
     const domain = domainOf(profile.email);
     return domain !== null && domains.includes(domain);
   }
@@ -676,7 +675,10 @@ export class ProviderSignInService {
       if (existing?.state === "placeholder") placeholder = existing;
       else if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
-        if (!(await confirmsLinks(this.#database, existing.id))) return this.#adoptExisting(existing, input);
+        if (!(await confirmsLinks(this.#database, existing.id))) {
+          if (profile.emailUnverified) throw new Refused("emailNotVerified");
+          return this.#adoptExisting(existing, input);
+        }
         const ways = await this.#linkWays(existing);
         if (!ways.password && !ways.passkey && ways.providers.length === 0) {
           throw new Refused("linkUnavailable");

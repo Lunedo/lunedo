@@ -597,13 +597,20 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     const existing = await account(null);
     const id = await provider({});
     const unverified = await signIn(id, { sub: randomUUID(), email: existing.email, email_verified: false });
-    expect(unverified).toMatchObject({ kind: "refused" });
+    expect(unverified).toMatchObject({ kind: "refused", reason: "emailNotVerified" });
     const linked = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
     expect(linked.rowCount).toBe(0);
     expect(await localCredentials(existing.id)).toMatchObject({ password: true });
 
     const verified = await signIn(id, { sub: randomUUID(), email: existing.email, email_verified: true });
     expect(verified).toMatchObject({ kind: "signedIn" });
+  });
+
+  it("still creates new accounts for addresses in its domains that the provider leaves unverified", async () => {
+    const id = await provider({ accountCreation: true });
+    const email = `unverified.${randomUUID().slice(0, 8)}@example.org`;
+    const result = await signIn(id, { sub: randomUUID(), email, email_verified: false });
+    expect(result).toMatchObject({ kind: "signedIn" });
   });
 
   it("removes local credentials left from before when a linked account signs in through its provider", async () => {
