@@ -6,6 +6,7 @@ import {
   completeConfiguredSetup,
   configuredSetupEnv,
   createAccount,
+  firstOrganizationId,
   OWNER,
   signedInClient,
   totpNow,
@@ -298,6 +299,75 @@ describe.skipIf(!databaseBaseUrl)("sign-in rules for managed accounts", () => {
       password: PASSWORD,
     });
     expect(refused.json()).toMatchObject({ code: "managedAccount" });
+  });
+
+  it("creates an invited account of a managed domain without a password and sends the person to the provider", async () => {
+    const organizationId = await firstOrganizationId(test);
+    const invite = async (address: string) => {
+      const invited = await owner.post(`/api/v1/organizations/${organizationId}/invitations`, {
+        email: address,
+        kind: "member",
+      });
+      expect(invited.statusCode).toBe(201);
+      await test.deliverMail();
+      return linkToken(test.mail.sent.findLast((mail) => mail.to === address)?.text);
+    };
+    const managedToken = await invite("invited.person@oidc.test");
+    const preview = await new TestClient(test.app).post("/api/v1/invitations/preview", {
+      token: managedToken,
+    });
+    expect(preview.json()).toMatchObject({
+      newAccount: true,
+      provider: { id: providers.get("oidc"), name: "Managed oidc", type: "oidc" },
+    });
+    const missing = await new TestClient(test.app).post("/api/v1/invitations/accept", {
+      token: managedToken,
+    });
+    expect(missing.json()).toMatchObject({ code: "accountDetailsRequired" });
+    const accepted = await new TestClient(test.app).post("/api/v1/invitations/accept", {
+      token: managedToken,
+      name: "Invited Person",
+      password: "a password that is ignored",
+    });
+    expect(accepted.json()).toMatchObject({
+      accountCreated: true,
+      provider: { id: providers.get("oidc"), type: "oidc" },
+    });
+    const created = await test.runtime.pool.query<{ password: boolean; source: string }>(
+      `select a.password_hash is not null as password, m.source from accounts a
+       join managed_accounts m on m.account_id = a.id where lower(a.email) = 'invited.person@oidc.test'`,
+    );
+    expect(created.rows).toEqual([{ password: false, source: "domain" }]);
+
+    const localToken = await invite("invited.person@local.test");
+    expect(
+      (await new TestClient(test.app).post("/api/v1/invitations/preview", { token: localToken })).json(),
+    ).toMatchObject({ newAccount: true, provider: null });
+    const withoutPassword = await new TestClient(test.app).post("/api/v1/invitations/accept", {
+      token: localToken,
+      name: "Local Person",
+    });
+    expect(withoutPassword.json()).toMatchObject({ code: "accountDetailsRequired" });
+  });
+
+  it("refuses self-registration for addresses of a managed domain and names the provider", async () => {
+    const refused = await new TestClient(test.app, { remoteAddress: "198.51.100.74" }).post(
+      "/api/v1/registrations",
+      { email: "someone.new@saml.test" },
+    );
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({
+      code: "managedDomain",
+      providerId: providers.get("saml"),
+      providerName: "Managed saml",
+    });
+    const open = await new TestClient(test.app, { remoteAddress: "198.51.100.75" }).post(
+      "/api/v1/registrations",
+      {
+        email: "someone.new@local.test",
+      },
+    );
+    expect(open.statusCode).toBe(202);
   });
 
   it("refuses the removed password sign-in setting", async () => {

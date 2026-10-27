@@ -463,6 +463,7 @@ export const problems = {
   managedIdentity: { status: 409, title: "The identity provider manages this account" },
   managedAccount: { status: 403, title: "The account signs in through its identity provider" },
   accountNotActive: { status: 409, title: "The account is not active" },
+  managedDomain: { status: 409, title: "Addresses of this domain sign in through an identity provider" },
   providerHasAccounts: { status: 409, title: "Accounts are still linked to the identity provider" },
   ownerManaged: { status: 409, title: "The instance owner needs a local account" },
   lastOwner: { status: 409, title: "The last owner cannot leave" },
@@ -590,11 +591,15 @@ export const problemSchema = z
     providerId: z
       .string()
       .optional()
-      .describe("ID of the identity provider that manages the account, for `managedAccount`."),
+      .describe(
+        "ID of the identity provider that manages the account, for `managedAccount` and `managedDomain`.",
+      ),
     providerName: z
       .string()
       .optional()
-      .describe("Name of the identity provider that manages the account, for `managedAccount`."),
+      .describe(
+        "Name of the identity provider that manages the account, for `managedAccount` and `managedDomain`.",
+      ),
     accounts: z
       .number()
       .int()

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
-import { request } from "../../api/request.js";
+import { isApiError, request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { AuthCard } from "./auth-layout.js";
@@ -16,14 +16,17 @@ export function RegisterScreen() {
   const { t } = useTranslation();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [managed, setManaged] = useState<string | null>(null);
   const form = useSchemaForm(registerForm, { defaultValues: { email: "" } });
   const submit = form.handleSubmit(async (values) => {
     setError(null);
+    setManaged(null);
     try {
       await request(() => api.POST("/api/v1/registrations", { body: values }), { sessionHandling: false });
       setSent(true);
     } catch (failure) {
-      setError(problemMessage(t, failure));
+      if (isApiError(failure, "managedDomain")) setManaged(problemMessage(t, failure));
+      else setError(problemMessage(t, failure));
     }
   });
   return (
@@ -36,6 +39,11 @@ export function RegisterScreen() {
         <Notice variant="success">{t("auth.registerSent")}</Notice>
       ) : (
         <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
+          {managed ? (
+            <Notice variant="info" title={t("auth.registerManagedTitle")}>
+              {managed}
+            </Notice>
+          ) : null}
           {error ? (
             <Notice variant="danger" title={t("failures.register")}>
               {error}

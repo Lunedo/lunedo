@@ -44,14 +44,16 @@ When your administrator deactivates the provider that manages your account, you 
 
 ## When your account becomes managed
 
-Your account becomes managed at your first sign-in through a provider when the provider's address for you is the address of your Lunedo account and its domain belongs to the provider. Lunedo links the sign-in to your account, and from then on:
+Your account becomes managed at your first sign-in through a provider when the provider's address for you is the address of your Lunedo account and its domain belongs to the provider. Lunedo links the sign-in to your account. If you hold a role above member, for example as an administrator, Lunedo first asks you once to confirm that the account is yours, with your Lunedo password or a passkey and your second factor. From then on:
 
 - Through OpenID Connect or SAML: Lunedo removes your password, passkeys, authenticator app and recovery codes. Sign in through the provider; it asks for your second factor.
 - Through a directory: Lunedo removes your Lunedo password. Your authenticator app and passkeys stay as second factor.
 - Your other sessions end. Your content, groups, roles and memberships stay as they were.
-- You receive an e-mail that your account now signs in through the provider.
+- You receive an e-mail that your account now signs in through the provider. An administrator can also link your account; then the e-mail says so.
 
 If your Lunedo account is already linked to another sign-in at the same provider, Lunedo cannot tell which one is yours. The sign-in is refused with a reference; send it to your administrator, who can link the right sign-in.
+
+When you are invited with an address of such a domain, the invitation page asks only for your name, and you sign in through the provider afterwards. Registering yourself is not possible for these addresses; use the provider's button on the sign-in page.
 
 ## When your account becomes local
 

@@ -43,6 +43,9 @@ export function problemMessage(t: TFunction, error: unknown): string {
   if (error.code === "shareBeyondOwnAccess" && problem.uncoveredPages) {
     return t("problems.shareBeyondOwnAccessBelow", { count: problem.uncoveredPages });
   }
+  if (error.code === "managedDomain" && problem.providerName) {
+    return t("problems.managedDomainNamed", { provider: problem.providerName });
+  }
   if (error.code === "managedAccount" && problem.providerName) {
     return t("problems.managedAccountNamed", { provider: problem.providerName });
   }

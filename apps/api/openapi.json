@@ -141233,13 +141233,52 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the identity provider."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the identity provider."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "oidc",
+                                "saml",
+                                "ldap"
+                              ],
+                              "description": "Kind of identity provider."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "type"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The identity provider that manages addresses of this domain."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The identity provider the new account signs in through, or null."
                     }
                   },
                   "required": [
                     "accountId",
                     "organizationId",
                     "accountCreated",
-                    "portalUrl"
+                    "portalUrl",
+                    "provider"
                   ],
                   "additionalProperties": false
                 }
@@ -141458,7 +141497,45 @@
                     },
                     "newAccount": {
                       "type": "boolean",
-                      "description": "Whether accepting creates an account, so a name and a password are needed. False once the invitation is no longer open."
+                      "description": "Whether accepting creates an account, so a name and, without `provider`, a password are needed. False once the invitation is no longer open."
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the identity provider."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the identity provider."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "oidc",
+                                "saml",
+                                "ldap"
+                              ],
+                              "description": "Kind of identity provider."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "type"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The identity provider that manages addresses of this domain."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The identity provider of the invited address's domain when accepting creates an account: the account gets no password and signs in through it. Null otherwise."
                     }
                   },
                   "required": [
@@ -141468,7 +141545,8 @@
                     "organizationName",
                     "invitedByName",
                     "knowledgeBaseName",
-                    "newAccount"
+                    "newAccount",
+                    "provider"
                   ],
                   "additionalProperties": false
                 }
@@ -224169,6 +224247,7 @@
       "post": {
         "operationId": "accounts.register",
         "summary": "Request a registration",
+        "description": "Sends a registration link when self-registration is open for the address's domain. Addresses in a domain of an identity provider are refused with `managedDomain`; they sign in through that provider.",
         "tags": [
           "Accounts"
         ],
@@ -224234,6 +224313,26 @@
                       "title": "The request failed the cross-site request check",
                       "status": 403,
                       "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`managedDomain`: Addresses of this domain sign in through an identity provider.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "managedDomain": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedDomain",
+                      "title": "Addresses of this domain sign in through an identity provider",
+                      "status": 409,
+                      "code": "managedDomain"
                     }
                   }
                 }
@@ -224408,7 +224507,7 @@
             }
           },
           "409": {
-            "description": "`emailInUse`: The e-mail address is in use.",
+            "description": "`emailInUse`: The e-mail address is in use. `managedDomain`: Addresses of this domain sign in through an identity provider.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -224421,6 +224520,14 @@
                       "title": "The e-mail address is in use",
                       "status": 409,
                       "code": "emailInUse"
+                    }
+                  },
+                  "managedDomain": {
+                    "value": {
+                      "type": "urn:lunedo:problem:managedDomain",
+                      "title": "Addresses of this domain sign in through an identity provider",
+                      "status": 409,
+                      "code": "managedDomain"
                     }
                   }
                 }
@@ -281862,11 +281969,11 @@
             "type": "string"
           },
           "providerId": {
-            "description": "ID of the identity provider that manages the account, for `managedAccount`.",
+            "description": "ID of the identity provider that manages the account, for `managedAccount` and `managedDomain`.",
             "type": "string"
           },
           "providerName": {
-            "description": "Name of the identity provider that manages the account, for `managedAccount`.",
+            "description": "Name of the identity provider that manages the account, for `managedAccount` and `managedDomain`.",
             "type": "string"
           },
           "accounts": {
