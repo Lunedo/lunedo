@@ -6,20 +6,20 @@ Routes behind the import wizard: a Confluence space from an export file or throu
 
 Importing needs the organization area `spaces` with `manage`. The person who starts an import runs it; reviewers read the quarantine space and the report.
 
-API tokens can start an import draft, upload files and read imports and their reports. The steps that change, start, resolve, accept, discard or stop an import are refused for tokens with `forbidden` and the denial `tokenScope`; they need a signed-in session, so they are done in the interface.
+API tokens need the organization scope `spaces` with `manage` for every step that starts, changes or decides an import. Reading an import, its report, people, groups and changes works with any organization scope. A token bound to an organization works only for imports of that organization; a token limited to drafts or to single knowledge bases cannot run imports. A token without the scope is refused with `forbidden` and the denial `tokenScope`. As with a session, a token only acts on imports its owner runs, reviews or may take over.
 
 ## Flow
 
-| Step | Route | Token |
+| Step | Route | Token scope |
 |---|---|---|
-| 1. Start a draft with the `source` | `POST /api/v1/organizations/{organizationId}/imports` | yes |
-| 2. Upload the file in parts, or list the import folder | `POST …/import-uploads`, `PUT …/import-uploads/{uploadId}/parts/{number}`, `POST …/import-uploads/{uploadId}/complete`; `GET …/import-folder` | yes |
-| 3. Choose the file, the space name and key and the options | `PATCH /api/v1/imports/{importId}` | no |
-| 4. For the Confluence API: connect and choose the spaces | `PUT /api/v1/imports/{importId}/connection`, `…/connection/selection` | no |
-| 5. For a Confluence export: choose how people are recognized | `PUT /api/v1/imports/{importId}/people-source` | no |
-| 6. Wait until `state` is `ready`, then start | `GET /api/v1/imports/{importId}`, `POST …/start` | read only |
-| 7. Follow the progress and read the report | `GET /api/v1/imports/{importId}`, `…/report`, `…/report/entries`, `…/report/export` | yes |
-| 8. Map people and groups, then accept or discard | `POST …/people/mappings`, `PUT …/groups/{groupKey}`, `POST …/accept`, `POST …/discard` | no |
+| 1. Start a draft with the `source` | `POST /api/v1/organizations/{organizationId}/imports` | spaces: manage |
+| 2. Upload the file in parts, or list the import folder | `POST …/import-uploads`, `PUT …/import-uploads/{uploadId}/parts/{number}`, `POST …/import-uploads/{uploadId}/complete`; `GET …/import-folder` | spaces: manage |
+| 3. Choose the file, the space name and key and the options | `PATCH /api/v1/imports/{importId}` | spaces: manage |
+| 4. For the Confluence API: connect and choose the spaces | `PUT /api/v1/imports/{importId}/connection`, `…/connection/selection` | spaces: manage |
+| 5. For a Confluence export: choose how people are recognized | `PUT /api/v1/imports/{importId}/people-source` | spaces: manage |
+| 6. Wait until `state` is `ready`, then start | `GET /api/v1/imports/{importId}`, `POST …/start` | spaces: manage |
+| 7. Follow the progress and read the report | `GET /api/v1/imports/{importId}`, `…/report`, `…/report/entries`, `…/report/export` | any organization scope |
+| 8. Map people and groups, then accept or discard | `POST …/people/mappings`, `PUT …/groups/{groupKey}`, `POST …/accept`, `POST …/discard` | spaces: manage |
 
 `source` is `confluence-xml`, `confluence-csv`, `confluence-cloud`, `confluence-dc`, `markdown` or `word`. `GET /api/v1/organizations/{organizationId}/imports` lists the imports the caller runs or reviews.
 

@@ -226,6 +226,66 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     expect(space.quarantined).toBe(false);
   });
 
+  it("lets API tokens with the scope spaces at manage run an import", async () => {
+    const tokenWith = async (spaces: "view" | "manage", contentLevel?: "draft") => {
+      const created = await owner.post("/api/v1/account/tokens", {
+        name: `Import ${spaces} ${contentLevel ?? "publish"}`,
+        scopes: { organization: { spaces } },
+        ...(contentLevel ? { contentLevel } : {}),
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      return { authorization: `Bearer ${created.json().token}` };
+    };
+    const manage = await tokenWith("manage");
+    const view = await tokenWith("view");
+    const drafts = await tokenWith("manage", "draft");
+    const script = new TestClient(test.app);
+    const refusedDraft = await script.post(
+      `/api/v1/organizations/${organizationId}/imports`,
+      { source: "confluence-xml" },
+      drafts,
+    );
+    expect(refusedDraft.json()).toMatchObject({ code: "forbidden", denials: ["tokenScope"] });
+    const created = await script.post(
+      `/api/v1/organizations/${organizationId}/imports`,
+      { source: "confluence-xml" },
+      manage,
+    );
+    expect(created.statusCode, created.body).toBe(201);
+    const id = (created.json() as { id: string }).id;
+    const uploadId = await uploadExport(createXmlExport(syntheticExport()));
+    const refused = await script.patch(`/api/v1/imports/${id}`, { file: { kind: "upload", uploadId } }, view);
+    expect(refused.json()).toMatchObject({ code: "forbidden", denials: ["tokenScope"] });
+    const draftsOnly = await script.patch(
+      `/api/v1/imports/${id}`,
+      { file: { kind: "upload", uploadId } },
+      drafts,
+    );
+    expect(draftsOnly.json()).toMatchObject({ code: "forbidden", denials: ["tokenScope"] });
+    const chosen = await script.patch(
+      `/api/v1/imports/${id}`,
+      { file: { kind: "upload", uploadId } },
+      manage,
+    );
+    expect(chosen.json()).toMatchObject({ state: "analyzing" });
+    await work(id);
+    const named = await script.patch(
+      `/api/v1/imports/${id}`,
+      { spaceName: "Token import", spaceKey: "TOKIMP" },
+      manage,
+    );
+    expect(named.json()).toMatchObject({ state: "ready" });
+    const people = await script.put(
+      `/api/v1/imports/${id}/people-source`,
+      { kind: "skip", confirmed: true },
+      manage,
+    );
+    expect(people.statusCode, people.body).toBe(200);
+    expect((await script.post(`/api/v1/imports/${id}/start`, undefined, view)).statusCode).toBe(403);
+    const started = await script.post(`/api/v1/imports/${id}/start`, undefined, manage);
+    expect(started.statusCode, started.body).toBe(200);
+  });
+
   it("discards and stops only after the key was typed", async () => {
     const { id, spaceId } = await finishedImport("APID", []);
     const wrong = await owner.post(`/api/v1/imports/${id}/discard`, { confirmation: "NOPE" });

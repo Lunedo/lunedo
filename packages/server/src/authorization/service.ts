@@ -136,7 +136,13 @@ function tokenAllows(
   spaceId: string | null = null,
 ): boolean {
   if (action.tokenScope) {
-    return grantsLevel(token.scopes.organization?.[action.tokenScope.area], action.tokenScope.level);
+    const areas =
+      action.scope === "organization"
+        ? tokenAreas(token, "organization", organizationId)
+        : (token.scopes.organization ?? {});
+    if (!grantsLevel(areas[action.tokenScope.area], action.tokenScope.level)) return false;
+    if (!action.tokenScope.unrestrictedContent) return true;
+    return (token.contentLevel ?? "publish") === "publish" && !token.knowledgeBaseIds;
   }
   if (action.scope === "space") {
     if (token.organizationId && token.organizationId !== organizationId) return false;

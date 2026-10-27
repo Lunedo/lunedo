@@ -74,7 +74,7 @@
     },
     {
       "name": "Imports",
-      "description": ""
+      "description": "Imports of Confluence spaces, Markdown and Word into a new space in quarantine. Importing needs the organization area spaces at manage; API tokens need the organization scope spaces at manage."
     },
     {
       "name": "Instance",
@@ -178319,7 +178319,7 @@
       "post": {
         "operationId": "imports.create",
         "summary": "Start an import draft",
-        "description": "Creates a draft of an import into a new space. The draft is saved as it is filled in and can be continued later. Only organization administrators import.\n\nRequires the permission `organization.imports.manage` on the organization in `organizationId`.",
+        "description": "Creates a draft of an import into a new space. The draft is saved as it is filled in and can be continued later. Importing needs the organization area spaces at manage, and API tokens the organization scope spaces at manage.\n\nRequires the permission `organization.imports.manage` on the organization in `organizationId`.",
         "tags": [
           "Imports"
         ],

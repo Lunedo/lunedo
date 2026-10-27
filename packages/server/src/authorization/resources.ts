@@ -128,6 +128,8 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
+  const IMPORT_TOKEN_SCOPE = { area: "spaces", level: "manage", unrestrictedContent: true } as const;
+
   const organization: ResourceType = {
     type: "organization",
     actions: {
@@ -171,7 +173,10 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "organization.integrations.manage": organizationArea("integrationsAndApi", "manage"),
       "organization.audit.view": organizationArea("auditLog", "view"),
       "organization.access.view": organizationArea("spaces", "view"),
-      "organization.imports.manage": organizationArea("spaces", "manage"),
+      "organization.imports.manage": {
+        ...organizationArea("spaces", "manage"),
+        tokenScope: IMPORT_TOKEN_SCOPE,
+      },
     },
     rules: {
       membersCreateGroups: async (context) => {
@@ -589,9 +594,13 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
     actions: {
       "import.view": { scope: "organization", rule: "importViewer" },
-      "import.manage": { scope: "organization", rule: "importer" },
-      "import.resolve": { scope: "organization", rule: "importResolver" },
-      "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
+      "import.manage": { scope: "organization", rule: "importer", tokenScope: IMPORT_TOKEN_SCOPE },
+      "import.resolve": { scope: "organization", rule: "importResolver", tokenScope: IMPORT_TOKEN_SCOPE },
+      "import.takeOver": {
+        scope: "organization",
+        rule: "heldForAdministrator",
+        tokenScope: IMPORT_TOKEN_SCOPE,
+      },
     },
     rules: {
       importViewer: async (context) => {

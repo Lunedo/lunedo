@@ -290,6 +290,37 @@ describe.skipIf(!baseUrl)("API tokens and service accounts", () => {
     ).toBe(true);
   });
 
+  it("applies the scope of an organization action only in the organization the token is bound to", async () => {
+    const bound = await organization();
+    const other = await organization();
+    await test.pool.query(
+      "insert into memberships (id, organization_id, account_id, kind) values (gen_random_uuid(), $1, $2, 'member')",
+      [other.id, bound.owner],
+    );
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: other.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: bound.owner },
+    });
+    const { token } = await test.services.apiTokens.create(accountPrincipal(bound.owner), {
+      accountId: bound.owner,
+      name: "Bound",
+      organizationId: bound.id,
+      scopes: { organization: { spaces: "manage" } },
+    });
+    const principal = await principalFor(token);
+    const auth = test.services.authorization;
+    expect(
+      await auth.authorize(principal, "organization.search.manage", { type: "organization", id: bound.id }),
+    ).toBe(true);
+    const denied = await auth.explain(principal, "organization.search.manage", {
+      type: "organization",
+      id: other.id,
+    });
+    expect(denied.denials).toEqual(["tokenScope"]);
+  });
+
   it("does not let a token assign roles beyond its scopes", async () => {
     const org = await organization();
     const target = await member(org.id);

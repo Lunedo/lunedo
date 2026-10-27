@@ -211,7 +211,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Start an import draft",
     description:
-      "Creates a draft of an import into a new space. The draft is saved as it is filled in and can be continued later. Only organization administrators import.",
+      "Creates a draft of an import into a new space. The draft is saved as it is filled in and can be continued later. Importing needs the organization area spaces at manage, and API tokens the organization scope spaces at manage.",
     tags: [TAG],
     params: organizationIdParams,
     body: createImportSchema,
