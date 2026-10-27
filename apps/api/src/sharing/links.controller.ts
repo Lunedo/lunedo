@@ -174,6 +174,7 @@ export class ShareLinksController {
       example: { link: exampleShareLink, token: "Yk3mR0vQx8LfJ2aB7cT9wE4nU6pH1sD5gK0zV3iM8oA2qX7r" },
     },
     errors: [
+      "confidentialGuestsBySpaceAdmins",
       "shareLinksDisabled",
       "anyoneLinksDisabled",
       "restrictedPage",
@@ -206,6 +207,7 @@ export class ShareLinksController {
     bodyExample: { expiresAt: "2026-12-31T00:00:00Z" },
     response: { description: "The link.", schema: shareLinkSchema, example: exampleShareLink },
     errors: [
+      "confidentialGuestsBySpaceAdmins",
       "linkNotFound",
       "anyoneLinksDisabled",
       "restrictedPage",

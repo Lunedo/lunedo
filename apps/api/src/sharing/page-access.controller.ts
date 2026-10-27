@@ -320,7 +320,13 @@ export class PageAccessController {
       schema: giveEffectSchema,
       example: { ...exampleEffect, impact: examplePageImpact },
     },
-    errors: ["invalidHolder", "invalidRole", "shareBeyondOwnAccess", "ownShare"],
+    errors: [
+      "invalidHolder",
+      "invalidRole",
+      "shareBeyondOwnAccess",
+      "ownShare",
+      "confidentialGuestsBySpaceAdmins",
+    ],
   })
   async givePagePreview(
     @Param("pageId") pageId: string,

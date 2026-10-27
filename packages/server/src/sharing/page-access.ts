@@ -28,6 +28,7 @@ import type { PeopleService } from "../spaces/people.js";
 import type { SpaceRole, TreeItemKind } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
+import { guestAccounts, requireConfidentialGuestInviter } from "./confidential-guests.js";
 import type { RestrictionKind, ShareRole } from "./schema.js";
 
 export type HolderKind = "account" | "group";
@@ -445,32 +446,6 @@ export class PageAccessService {
     if (!decision.allowed) throw new ForbiddenError(decision);
   }
 
-  async #isGuestOf(tx: Transaction, accountId: string, organizationId: string | null): Promise<boolean> {
-    if (!organizationId) return false;
-    const membership = await tx.execute<{ kind: string }>(sql`
-      select kind::text as kind from memberships
-      where account_id = ${accountId} and organization_id = ${organizationId}
-        and (expires_at is null or expires_at > now())`);
-    return membership.rows.some((entry) => entry.kind === "guest");
-  }
-
-  async #requireGuestInviter(tx: Transaction, actor: Principal, item: ItemRow): Promise<void> {
-    const space = await tx.execute<{ confidential: boolean }>(
-      sql`select confidential from spaces where id = ${item.space_id}`,
-    );
-    if (!space.rows[0]?.confidential || actor.type === "system") return;
-    const role =
-      actor.type === "account"
-        ? (await this.#authorization.spaceRole(actor.id, item.space_id, { executor: tx, fresh: true })).role
-        : null;
-    if (role !== "admin") {
-      throw new SpaceError(
-        "confidentialGuestsBySpaceAdmins",
-        "Only space administrators give guests access to a confidential space",
-      );
-    }
-  }
-
   async #validateHolder(
     tx: Transaction,
     actor: Principal,
@@ -486,8 +461,8 @@ export class PageAccessService {
       if (row?.state !== "active" || row.type === "portal" || !(await this.#people.canSee(actor, id, tx))) {
         throw new SpaceError("invalidHolder", "Choose a person you can find in the search");
       }
-      if (row.type === "guest" || (await this.#isGuestOf(tx, id, item.organization_id))) {
-        await this.#requireGuestInviter(tx, actor, item);
+      if ((await guestAccounts(tx, [id], item.organization_id)).size > 0) {
+        await requireConfidentialGuestInviter(this.#authorization, tx, actor, item.space_id);
       }
       return row.name;
     }
@@ -581,7 +556,15 @@ export class PageAccessService {
           }
           const widened = includeDescendants && !current.include_descendants;
           const raised = LEVEL_ROLES.indexOf(role) > LEVEL_ROLES.indexOf(current.role);
-          if (widened || raised) await this.requireReach(tx, actor, item.id, role, includeDescendants);
+          if (widened || raised) {
+            await this.requireReach(tx, actor, item.id, role, includeDescendants);
+            if (
+              current.principal_kind === "account" &&
+              (await guestAccounts(tx, [current.principal_id], item.organization_id)).size > 0
+            ) {
+              await requireConfidentialGuestInviter(this.#authorization, tx, actor, item.space_id);
+            }
+          }
           await tx.execute(sql`
             update page_shares set role = ${role}, include_descendants = ${includeDescendants}, updated_at = now()
             where id = ${change.shareId}`);

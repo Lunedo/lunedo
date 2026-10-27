@@ -146742,13 +146742,21 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`confidentialGuestsBySpaceAdmins`: Only space administrators give guests access to a confidential space. `csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "confidentialGuestsBySpaceAdmins": {
+                    "value": {
+                      "type": "urn:lunedo:problem:confidentialGuestsBySpaceAdmins",
+                      "title": "Only space administrators give guests access to a confidential space",
+                      "status": 403,
+                      "code": "confidentialGuestsBySpaceAdmins"
+                    }
+                  },
                   "csrfRejected": {
                     "value": {
                       "type": "urn:lunedo:problem:csrfRejected",
@@ -216510,13 +216518,21 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
+            "description": "`confidentialGuestsBySpaceAdmins`: Only space administrators give guests access to a confidential space. `csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `ownShare`: Nobody changes access they hold themselves. `shareBeyondOwnAccess`: A share cannot reach further than your own access.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "confidentialGuestsBySpaceAdmins": {
+                    "value": {
+                      "type": "urn:lunedo:problem:confidentialGuestsBySpaceAdmins",
+                      "title": "Only space administrators give guests access to a confidential space",
+                      "status": 403,
+                      "code": "confidentialGuestsBySpaceAdmins"
+                    }
+                  },
                   "csrfRejected": {
                     "value": {
                       "type": "urn:lunedo:problem:csrfRejected",
@@ -220521,13 +220537,21 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`confidentialGuestsBySpaceAdmins`: Only space administrators give guests access to a confidential space. `csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "confidentialGuestsBySpaceAdmins": {
+                    "value": {
+                      "type": "urn:lunedo:problem:confidentialGuestsBySpaceAdmins",
+                      "title": "Only space administrators give guests access to a confidential space",
+                      "status": 403,
+                      "code": "confidentialGuestsBySpaceAdmins"
+                    }
+                  },
                   "csrfRejected": {
                     "value": {
                       "type": "urn:lunedo:problem:csrfRejected",
@@ -221234,13 +221258,21 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`confidentialGuestsBySpaceAdmins`: Only space administrators give guests access to a confidential space. `csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "confidentialGuestsBySpaceAdmins": {
+                    "value": {
+                      "type": "urn:lunedo:problem:confidentialGuestsBySpaceAdmins",
+                      "title": "Only space administrators give guests access to a confidential space",
+                      "status": 403,
+                      "code": "confidentialGuestsBySpaceAdmins"
+                    }
+                  },
                   "csrfRejected": {
                     "value": {
                       "type": "urn:lunedo:problem:csrfRejected",

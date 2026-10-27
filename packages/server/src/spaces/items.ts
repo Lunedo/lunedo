@@ -16,6 +16,7 @@ import {
 } from "../knowledge-bases/rules.js";
 import { contentLanguageOf, spaceContentLanguage } from "../search/languages.js";
 import type { SettingsService } from "../settings/service.js";
+import { guestAccounts, requireConfidentialGuestInviter } from "../sharing/confidential-guests.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import { insertInitialWhiteboard } from "../whiteboards/initial.js";
 import { actorIdOf, SpaceError } from "./common.js";
@@ -327,6 +328,24 @@ async function broadlySharedPages(
           where lp.link_id = sl.id and lp.principal_kind <> 'account')))
       or exists (select 1 from page_restriction_holders rh where rh.item_id = d.id and rh.principal_kind <> 'account'))`);
   return Number(result.rows[0]?.pages ?? 0);
+}
+
+async function guestHolders(
+  tx: Transaction,
+  itemId: string,
+  sourceSpaceId: string,
+  targetSpaceId: string,
+): Promise<string[]> {
+  const result = await tx.execute<{ id: string }>(sql`
+    select distinct holder.id from tree_items d
+    cross join lateral (
+      select ps.principal_id as id from page_shares ps where ps.item_id = d.id and ps.principal_kind = 'account'
+      union
+      select lp.principal_id from share_links sl join share_link_people lp on lp.link_id = sl.id
+      where sl.item_id = d.id and sl.revoked_at is null and lp.principal_kind = 'account') holder
+    where d.space_id = ${sourceSpaceId} and ${itemId}::uuid = any(d.path)
+      and (select confidential from spaces where id = ${targetSpaceId})`);
+  return result.rows.map((row) => row.id);
 }
 
 export async function placementPosition(
@@ -993,6 +1012,16 @@ export class TreeService {
       );
       if (overview.rows[0]) {
         throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
+      }
+      const holders = await guestHolders(tx, itemId, sourceSpaceId, targetSpaceId);
+      if (holders.length > 0) {
+        const organization = await tx.execute<{ organization_id: string | null }>(
+          sql`select organization_id from spaces where id = ${targetSpaceId}`,
+        );
+        const guests = await guestAccounts(tx, holders, organization.rows[0]?.organization_id ?? null);
+        if (guests.size > 0) {
+          await requireConfidentialGuestInviter(this.#authorization, tx, actor, targetSpaceId);
+        }
       }
       const broad = await broadlySharedPages(tx, itemId, sourceSpaceId, targetSpaceId);
       if (broad > 0) {

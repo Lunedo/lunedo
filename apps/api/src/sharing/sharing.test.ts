@@ -508,6 +508,18 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
       includeDescendants: false,
     });
     expect(invited.statusCode, invited.body).toBe(201);
+
+    const guest = await person();
+    await test.runtime.pool.query(
+      "update memberships set kind = 'guest' where account_id = $1 and organization_id = $2",
+      [guest.id, organizationId],
+    );
+    const link = { scope: "people", people: [{ kind: "account", id: guest.id }] };
+    const refusedLink = await administrator.client.post(`/api/v1/pages/${pageId}/share-links`, link);
+    expect(refusedLink.statusCode, refusedLink.body).toBe(403);
+    expect(refusedLink.json()).toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    const ownerLink = await owner.post(`/api/v1/pages/${pageId}/share-links`, link);
+    expect(ownerLink.statusCode, ownerLink.body).toBe(201);
   });
 
   it("explain what a person can do and export the overview as CSV", async () => {

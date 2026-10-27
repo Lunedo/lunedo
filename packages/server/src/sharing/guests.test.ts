@@ -286,4 +286,99 @@ describe.skipIf(!baseUrl)("inviting guests to a page", () => {
       [accepted.accountId, context.page.id],
     ]);
   });
+
+  it("lets only space administrators name guests on links of a confidential space", async () => {
+    const context = await confidentialSetup();
+    const guestId = await member(context.org.id, "guest", "Link guest");
+    const memberId = await member(context.org.id, "member", "Link member");
+    const people = (ids: string[]) => ids.map((id) => ({ kind: "account" as const, id }));
+    for (const refused of [context.organizationAdminId, context.editorId]) {
+      await expect(
+        test.services.shareLinks.create(accountPrincipal(refused), context.page.id, {
+          scope: "people",
+          people: people([guestId]),
+        }),
+      ).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    }
+    const editorLink = await test.services.shareLinks.create(
+      accountPrincipal(context.editorId),
+      context.page.id,
+      {
+        scope: "people",
+        people: people([memberId]),
+      },
+    );
+    await expect(
+      test.services.shareLinks.update(accountPrincipal(context.editorId), editorLink.link.id, {
+        people: people([memberId, guestId]),
+      }),
+    ).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const adminLink = await test.services.shareLinks.create(
+      accountPrincipal(context.adminId),
+      context.page.id,
+      {
+        scope: "people",
+        people: people([guestId]),
+        expiresAt,
+      },
+    );
+    await expect(
+      test.services.shareLinks.update(accountPrincipal(context.editorId), adminLink.link.id, {
+        expiresAt: null,
+      }),
+    ).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    await test.services.shareLinks.update(accountPrincipal(context.editorId), adminLink.link.id, {
+      expiresAt: new Date(expiresAt.getTime() - 24 * 60 * 60 * 1000),
+    });
+  });
+
+  it("lets only space administrators widen a guest's share in a confidential space", async () => {
+    const context = await confidentialSetup();
+    const guestId = await member(context.org.id, "guest", "Narrow guest");
+    const access = await test.services.pageAccess.change(accountPrincipal(context.adminId), context.page.id, [
+      { action: "share", holderKind: "account", holderId: guestId, role: "reader" },
+    ]);
+    const shareId = access.shares.find((share) => share.holder.id === guestId)?.id ?? "";
+    for (const refused of [context.organizationAdminId, context.editorId]) {
+      await expect(
+        test.services.pageAccess.change(accountPrincipal(refused), context.page.id, [
+          { action: "changeShare", shareId, role: "editor" },
+        ]),
+      ).rejects.toMatchObject({ code: "confidentialGuestsBySpaceAdmins" });
+    }
+    await test.services.pageAccess.change(accountPrincipal(context.adminId), context.page.id, [
+      { action: "changeShare", shareId, role: "editor" },
+    ]);
+  });
+
+  it("lets only space administrators move pages shared with guests into a confidential space", async () => {
+    const context = await confidentialSetup();
+    const guestId = await member(context.org.id, "guest", "Moving guest");
+    const open = await space(context.org.id, context.editorId, {
+      grants: [{ principalKind: "account", principalId: context.adminId, role: "editor" }],
+    });
+    const shared = await test.services.tree.create(accountPrincipal(context.editorId), open.id, {
+      kind: "page",
+      title: "Shared with a guest",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    await test.services.pageAccess.change(accountPrincipal(context.editorId), shared.id, [
+      { action: "share", holderKind: "account", holderId: guestId, role: "reader", includeDescendants: true },
+    ]);
+    const target = { spaceId: context.space.id, parentId: null };
+    await expect(
+      test.services.tree.move(accountPrincipal(context.editorId), shared.id, target),
+    ).rejects.toMatchObject({
+      code: "confidentialGuestsBySpaceAdmins",
+    });
+    const impact = await test.services.tree.moveImpact(accountPrincipal(context.adminId), shared.id, target);
+    await test.services.tree.move(accountPrincipal(context.adminId), shared.id, {
+      ...target,
+      confirmation: impact.confirmation ?? "",
+    });
+    const moved = await test.pool.query("select space_id from tree_items where id = $1", [shared.id]);
+    expect(moved.rows[0]?.space_id).toBe(context.space.id);
+  });
 });
