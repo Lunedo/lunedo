@@ -686,6 +686,7 @@
       },
       "typeFixed": "Fixed once the provider is saved",
       "stepLater": "Opens after the current step is saved",
+      "guide": "Setup guide: {type}",
       "metadataFileHelp": "Without an address, upload a new file whenever its certificate changes.",
       "caHelp": "Only needed when the server certificate was issued by your own certificate authority."
     },

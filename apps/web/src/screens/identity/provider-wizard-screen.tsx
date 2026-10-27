@@ -1,4 +1,4 @@
-import { identityProviderNameSchema } from "@lunedo/shared";
+import { documentationTargets, identityProviderNameSchema } from "@lunedo/shared";
 import {
   Button,
   buttonClassName,
@@ -35,6 +35,7 @@ import {
   providerQuery,
   updateDraft,
 } from "../../api/identity-queries.js";
+import { docsUrl } from "../../docs/docs-url.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -96,6 +97,14 @@ function stepsFor(samlEntraId: boolean): Step[] {
 type Choice = "entraId" | "google" | "oidc" | "saml" | "ldap";
 
 const CHOICES: Choice[] = ["entraId", "google", "oidc", "saml", "ldap"];
+
+const GUIDES = {
+  entraId: documentationTargets.identityProviderEntraId,
+  google: documentationTargets.identityProviderGoogle,
+  oidc: documentationTargets.identityProviderOidc,
+  saml: documentationTargets.identityProviderSaml,
+  ldap: documentationTargets.identityProviderLdap,
+} as const satisfies Record<Choice, string>;
 
 interface WizardSearch {
   providerId?: string | undefined;
@@ -285,6 +294,7 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
       ? connected.type === "saml" && connected.config.preset === "entraId"
       : draft.choice === "saml" && draft.saml.preset === "entraId",
   );
+  const guide = connected ? choiceOf(connected.type, connected.config.preset) : draft.choice;
   const index = providerId ? Math.min(Math.max(search.step ?? 2, 1), steps.length - 1) : draftId ? 1 : 0;
   const step = steps[index] ?? "type";
   const canManage = state.can("instance.signIn.manage");
@@ -404,6 +414,16 @@ function ProviderWizard({ search }: { search: WizardSearch }) {
           {providerId ? null : (
             <p className="mt-2 px-2 text-xs text-text-muted">{t("identityProviders.wizard.stepLater")}</p>
           )}
+          <a
+            href={docsUrl(GUIDES[guide])}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 block px-2 text-sm font-medium text-accent underline focus-visible:focus-ring"
+          >
+            {t("identityProviders.wizard.guide", {
+              type: t(`identityProviders.wizard.choices.${guide}.title`),
+            })}
+          </a>
         </nav>
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {!canManage ? <Notice variant="warning">{t("identityProviders.noPermission")}</Notice> : null}

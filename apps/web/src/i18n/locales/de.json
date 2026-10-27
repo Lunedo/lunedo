@@ -686,6 +686,7 @@
       },
       "typeFixed": "Nach dem Speichern nicht mehr änderbar",
       "stepLater": "Öffnet sich, sobald der aktuelle Schritt gespeichert ist",
+      "guide": "Anleitung: {type}",
       "metadataFileHelp": "Ohne Adresse musst du eine neue Datei hochladen, sobald sich sein Zertifikat ändert.",
       "caHelp": "Nur nötig, wenn das Serverzertifikat von deiner eigenen Zertifizierungsstelle ausgestellt wurde."
     },
