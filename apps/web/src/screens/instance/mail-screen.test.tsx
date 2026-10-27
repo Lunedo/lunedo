@@ -237,6 +237,8 @@ describe("the e-mail settings", () => {
       (screen.getByRole("radio", { name: "OAuth2" }) as HTMLInputElement).getAttribute("aria-checked"),
     ).toBe("true");
     expect(screen.getByText("Set up in Microsoft 365 first")).toBeTruthy();
+    await userEvent.click(screen.getByText("Advanced: other Microsoft cloud"));
+    expect(screen.getByText("SMTP with OAuth2 works only in the global cloud.")).toBeTruthy();
     await userEvent.type(screen.getByLabelText("Mailbox"), "wiki@contoso.com");
     expect(
       screen.getByText("Set-CASMailbox -Identity wiki@contoso.com -SmtpClientAuthenticationDisabled $false"),

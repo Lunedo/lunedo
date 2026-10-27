@@ -405,7 +405,11 @@ export function SmtpForm({
                 layout="fields"
                 defaultOpen={form.getValues("authority") !== microsoftAuthorities[0]}
               >
-                <Field label={t("mail.oauth2.cloud")}>
+                <Field
+                  label={t("mail.oauth2.cloud")}
+                  hint={t("mail.oauth2.cloudHint")}
+                  help={t("mail.oauth2.cloudHelp")}
+                >
                   <Controller
                     control={form.control}
                     name="authority"

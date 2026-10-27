@@ -105,8 +105,9 @@ Delivery through Graph is retried like delivery through SMTP, see [E-mail](../em
    When security defaults are on in Entra ID, Exchange Online refuses SMTP sign-in; use [Microsoft Graph](#microsoft-graph) instead. When the sender address is not the mailbox, also give the service principal Send As permission for the sender address with `Add-RecipientPermission`.
 5. In Lunedo, open **Settings › Instance › Services › Delivery**, select **SMTP** under **Method** and the service **Microsoft 365**. It fills in `smtp.office365.com`, port 587, STARTTLS and OAuth2.
 6. Enter the **Mailbox**, the **Tenant ID**, the **Application (client) ID**, the **Client secret** and the **Sender address**.
-7. For a cloud other than the global one, open **Advanced: other Microsoft cloud** and choose **US Government** or **China (21Vianet)** under **Microsoft cloud**. This changes the token endpoint; the server and the scope stay as above, so send a test mail to check that the mail server of that cloud accepts the token.
-8. Send a test mail, then save.
+7. Send a test mail, then save.
+
+SMTP with OAuth2 works only with the global Microsoft cloud today: the server `smtp.office365.com` and the scope `https://outlook.office365.com/.default` are fixed. The settings offer **US Government** and **China (21Vianet)** under **Advanced: other Microsoft cloud**, but that changes only the token endpoint. For a national cloud, use [Microsoft Graph](#microsoft-graph).
 
 Lunedo gets the token with the client credentials grant at `<authority>/<tenant>/oauth2/v2.0/token` with the scope `https://outlook.office365.com/.default`. A stored secret is kept only while tenant, application and cloud stay the same; a new app needs its secret again. Token errors are listed in [E-mail](../email.md#test-mail-fails).
 

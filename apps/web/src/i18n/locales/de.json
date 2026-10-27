@@ -3696,6 +3696,8 @@
       "tenantId": "Mandanten-ID",
       "clientId": "Anwendungs-ID (Client-ID)",
       "cloud": "Microsoft-Cloud",
+      "cloudHint": "SMTP mit OAuth2 geht nur in der globalen Cloud.",
+      "cloudHelp": "Server und Scope von SMTP mit OAuth2 gehören zur globalen Microsoft-Cloud; eine andere Cloud ändert hier nur den Token-Endpunkt. Für US Government oder China (21Vianet) wähle Microsoft Graph als Methode.",
       "clouds": {
         "global": "Global",
         "usGovernment": "US Government",
