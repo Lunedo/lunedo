@@ -28,7 +28,7 @@ All sources run through the same quarantine, report and re-import; only the read
    - **People** (export file): choose how people are recognized: a read-only API token, a user list or skip.
    - **Connection** and **Selection** (Cloud and Data Center): test the connection, then choose the spaces and page trees.
    - **Upload** (Markdown and Word): add the files.
-4. **Space**: name the new space and choose its key (2 to 10 letters or digits; it appears in links). For Confluence sources, **Address of the Confluence site** is optional: links to pages that are not part of the import point there, otherwise they become plain text. Choose **Current state only** or **Full page history**, whether to **Import as archived**, and the **Reviewers**.
+4. **Space**: name the new space and choose its key (2 to 10 letters or digits; it appears in links). For Confluence sources, **Address of the Confluence site** is optional: links to pages that are not part of the import point there, otherwise they become plain text. For an export file, choose **Current state only** or **Full page history**; for Cloud and Data Center, the **Page history** switch is in the step **Selection**. Choose whether to **Import as archived**, and the **Reviewers**.
 5. **Check and start**: check what Lunedo found and choose **Start import**.
 
 The wizard saves the draft as you go. Unfinished drafts appear in the import list with **Continue**. You can leave the page while the import runs; you get a notification when it is ready for review or failed.

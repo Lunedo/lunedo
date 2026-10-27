@@ -23,7 +23,7 @@ The **Macros** tab counts each macro by name and shows the pages that use it. Un
 
 ## Notes in pages
 
-Where content cannot be taken over, the import writes a short note into the page, such as "Jira content not imported." or "Confluence whiteboard not imported." These notes use the language of the person who started the import: their own language setting, otherwise the organization's, otherwise the instance's. Notes exist in English and German; any other language gets English.
+Where content cannot be taken over, the import writes a short note into the page, such as "Jira content not imported." or "Confluence whiteboard not imported." Notes for converted macros, such as the Jira note, use the organization's language setting, otherwise the instance's. Notes for content types that are not imported, such as whiteboards and databases, use the language of the person who started the import: their own language setting, otherwise the organization's, otherwise the instance's. Notes exist in English and German; any other language gets English.
 
 ## People and groups
 

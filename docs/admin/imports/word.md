@@ -25,6 +25,7 @@ Save older `.doc` files as `.docx` first.
 - Documents with macros are never run or imported. `.docm` files are refused when they are added, and documents with macro parts are refused while reading.
 - Encrypted, damaged and old `.doc` files fail with a message that names the file.
 - Documents larger than 100 MiB are refused.
+- A document whose text or converted parts are too large is left out with a report entry; the other documents are imported.
 
 Lunedo converts documents on the server with [mammoth](https://github.com/mwilliamson/mammoth.js), without a browser or office suite. Before converting, it checks each document like an archive and rebuilds it without embedded objects and macro parts.
 

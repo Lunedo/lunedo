@@ -23,7 +23,7 @@ Confluence exports name people only by an Atlassian account ID, without name or 
 - **User list from the Atlassian administration**: a CSV file from admin.atlassian.com › Directory › Users › Export users, up to 10 MiB. Use it when you cannot create a token, or for Data Center.
 - **Skip for now**: every author becomes a placeholder named by the Atlassian ID. Confirm this choice; you can still upload a user list later in the report.
 
-The token is stored with envelope encryption (see [Encryption](../encryption.md)) and used only for this import. Lunedo deletes it when the import is accepted, discarded, stopped or fails, when the person who started the import loses the permission to import, and when the draft was not touched for 7 days. A draft whose token was deleted says so and asks for the token again. The token never appears in responses, logs, job payloads or audit entries.
+The token is stored with envelope encryption (see [Encryption](../encryption.md)) and used only for this import. Lunedo deletes it when the import is accepted, discarded, stopped or fails, when the person who started a draft loses the permission to import, and when the draft was not touched for 7 days. A started import keeps the token while it waits for an administrator, so that another person who may import can take it over. A draft whose token was deleted says so and asks for the token again. The token never appears in responses, logs, job payloads or audit entries.
 
 People are matched to accounts of the organization by e-mail address only. Everyone else becomes a placeholder, which you map in the [report](review-and-report.md#people-and-groups).
 

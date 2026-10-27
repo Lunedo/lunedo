@@ -21,7 +21,7 @@ This page lists what a Confluence import takes over and what it falls back to. I
 | Inline comments | Comments anchored to their text, resolved ones resolved | A page comment with the quoted text when the text no longer exists, listed in the report |
 | Attachments | Attachments with all their versions | Missing files are listed in the report |
 | Images and files of other spaces | | A placeholder with the file name, listed in the report |
-| Labels | Labels | Personal labels (`my:`) are left out |
+| Labels | Labels | Labels outside the global and team namespaces, such as personal labels (`my:`), are left out |
 | Page restrictions | View and edit restrictions with the same people and groups | Exports of Confluence Cloud mark a removed restriction with the group "tombstone". Lunedo keeps such a page restricted and lists all of them in one report entry; the API reports only the restrictions that apply. |
 | Space permissions and space roles | Space roles; see [Permissions](#permissions) | App accounts, site administrators (`all-product-admins`) and permissions without access to the space get no role |
 | Page states | Page statuses | |

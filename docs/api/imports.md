@@ -37,7 +37,7 @@ Large exports are uploaded in parts, so an interrupted upload continues without 
 
    The answer has the upload's `id`, `partSize` (16 MiB) and `partCount`.
 
-2. Send each part as `application/octet-stream`, numbered from 1, with its SHA-256 in hexadecimal. Every part except the last has exactly `partSize` bytes. Sending a part again replaces it.
+2. Send each part as `application/octet-stream`, numbered from 1, with its SHA-256 in lower-case hexadecimal. Every part except the last has exactly `partSize` bytes. Sending a part again replaces it.
 
    ```sh
    curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/octet-stream" \
@@ -45,7 +45,7 @@ Large exports are uploaded in parts, so an interrupted upload continues without 
      "https://wiki.example.com/api/v1/organizations/$ORG/import-uploads/$UPLOAD/parts/1?sha256=$PART_SHA256"
    ```
 
-3. Complete the upload with the SHA-256 over the hexadecimal SHA-256 values of all parts, joined in order. The server reads every part again and compares.
+3. Complete the upload with the SHA-256, in lower-case hexadecimal, over the hexadecimal SHA-256 values of all parts, joined in order. The server reads every part again and compares.
 
    ```sh
    curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -59,7 +59,7 @@ Uploads above the instance's upload limit (**Largest export to upload**, default
 
 ## States
 
-`state` of an import is `draft`, `analyzing` (the export is read), `ready`, `running`, `held` (the person who started it lost the permission, and another administrator has to take over), `stopping` or `discarding`, `review` (the quarantine space waits for a decision), and at the end `accepted`, `discarded`, `stopped` or `failed`. `phase` names the step a running import is in.
+`state` of an import is `draft`, `analyzing` (the export is read), `ready`, `running`, `held` (the person who started it lost the permission, and another administrator has to take over), `stopping` or `discarding`, `review` (the quarantine space waits for a decision), and at the end `accepted`, `discarded`, `stopped` or `failed`. A re-import that a newer re-import of the same space replaced ends in `superseded`. `phase` names the step a running import is in.
 
 Discarding and stopping need the key of the space typed as `confirmation`.
 
@@ -69,4 +69,4 @@ Discarding and stopping need the key of the space typed as `confirmation`.
 
 ## Re-imports
 
-A re-import of a space that an earlier import created starts with `POST /api/v1/organizations/{organizationId}/imports` and the `spaceId` of that space. Its changes are listed, compared and applied with the routes under `/api/v1/imports/{importId}/changes`. See [Re-import](../admin/imports/reimport.md).
+A re-import of a space that an earlier import created starts with `POST /api/v1/organizations/{organizationId}/imports` and the `spaceId` of that space. Its changes are listed, compared and decided with the routes under `/api/v1/imports/{importId}/changes`, and applied with `POST /api/v1/imports/{importId}/apply`. See [Re-import](../admin/imports/reimport.md).
