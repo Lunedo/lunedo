@@ -39,7 +39,7 @@ Until a target is set up, backups before updates go to `LUNEDO_BACKUP_DIR` (by d
 | **Monthly backup** | **No monthly backups** | A day of the month. The backup of that day is kept as a monthly one; in shorter months the last day is used. A day that is both a weekly and a monthly day counts as monthly. |
 
 - A day whose backup was due while the worker was down gets one backup when the worker is back, not one per missed day.
-- Only one backup runs at a time across all workers. A scheduled backup or **Back up now** that would overlap a running backup is skipped and listed as skipped. `backup create` on the command line waits for the running backup instead.
+- Only one backup runs at a time across all workers. A scheduled backup that would overlap a running backup is skipped and listed as skipped. **Back up now** while a backup or test restore runs is refused with the message "A backup or test restore is already running". `backup create` on the command line waits for the running backup instead.
 - **Back up now** starts a manual backup to the same target. Manual backups are kept until they are deleted.
 
 ### Free space before a backup
@@ -60,11 +60,10 @@ Every backup has exactly one class: daily, weekly, monthly, manual or before upd
 | **Daily backups** | 7 | 1–1000 |
 | **Weekly backups** | 4 | 1–1000 |
 | **Monthly backups** | 6 | 1–1000 |
-| **Backups before updates** | 3 | 1–1000 |
 
-Manual backups are kept until they are deleted. A backup kept as a monthly one never counts against the daily ones.
+Manual backups are kept until they are deleted. How many backups before updates are kept is set in the section **Before updates**, see [Backups before updates](#backups-before-updates). A backup kept as a monthly one never counts against the daily ones.
 
-Retention of daily, weekly and monthly backups runs after each successful scheduled or manual backup. It deletes only backups that the run records of this instance list as created by it, with the name of a Lunedo backup and a readable backup header; other files in the target are never touched. A copy of the instance, made by copying the database or a virtual machine, therefore never deletes backups that the original wrote after the copy, and two instances that share a target never thin out each other's backups.
+Retention of daily, weekly and monthly backups runs after each successful scheduled or manual backup. Retention of backups before updates runs after each successful backup before an update. It deletes only backups that the run records of this instance list as created by it, with the name of a Lunedo backup and a readable backup header; other files in the target are never touched. A copy of the instance, made by copying the database or a virtual machine, therefore never deletes backups that the original wrote after the copy, and two instances that share a target never thin out each other's backups.
 
 ## Content
 
@@ -124,7 +123,7 @@ The status of the backups is also shown in the [system status](system-status.md#
 
 ## Backups before updates
 
-When migrations are pending at a start, Lunedo first writes a backup with the class "before update". The section **Before updates** has the setting **Back up before migrations** (on by default) and shows when `LUNEDO_BACKUP_BEFORE_UPDATE=false` turned it off. See [Updates](updates.md).
+When migrations are pending at a start, Lunedo first writes a backup with the class "before update". The section **Before updates** has the setting **Back up before migrations** (on by default) and the setting **Backups before updates**, how many of these backups are kept (3 by default, 1–1000). It shows when `LUNEDO_BACKUP_BEFORE_UPDATE=false` turned it off. See [Updates](updates.md).
 
 ## Deleting a backup
 

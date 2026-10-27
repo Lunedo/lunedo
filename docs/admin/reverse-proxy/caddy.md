@@ -56,7 +56,7 @@ Caddy passes WebSockets and the forwarded headers by default and has no body lim
 
 The `https://` block serves every other domain that reaches Caddy, but only after Lunedo allowed it: before Caddy requests a certificate, it asks `GET /tls/ask?domain=<domain>`. Lunedo answers `200` for a portal domain an instance administrator has allowed and `404` for every other domain. Without portal domains, leave the `on_demand_tls` option and the `https://` block out. See [Own domains](../knowledge-base-portals.md#own-domains).
 
-`/tls/ask` answers from the list each API node keeps in memory, so it does not query the database per request. It allows 120 requests per minute per client address, then answers `429`. Requests from an address in `LUNEDO_TRUSTED_PROXIES`, or from the loopback address without `X-Forwarded-For`, are not limited, so a flood of unknown domains cannot block certificates for allowed ones. It answers on every host and reveals nothing but yes or no for the one domain asked.
+`/tls/ask` answers from the list each API node keeps in memory, so it does not query the database per request. It allows 120 requests per minute per client address, then answers `429`. Requests that come straight from an address in `LUNEDO_TRUSTED_PROXIES` or from loopback, without an `X-Forwarded-For` header, are not limited, so a flood of unknown domains cannot block certificates for allowed ones. It answers on every host and reveals nothing but yes or no for the one domain asked.
 
 ## Start
 

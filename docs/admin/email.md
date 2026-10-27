@@ -42,7 +42,7 @@ The page then shows "Currently through SMTP" or "Currently through Microsoft Gra
 
 | Field | Meaning |
 |---|---|
-| **Service** | A preset that fills in server, port and connection security, nothing else. **Own mail server** leaves them free. |
+| **Service** | A preset that fills in server, port and connection security. **Microsoft 365** and **Google Workspace** also set **Sign-in** to OAuth2 and the matching provider. **Own mail server** leaves them free. |
 | **Server**, **Port** | The mail server and its port |
 | **Security** | The connection security, see below |
 | **Sign-in** | **Password** or **OAuth2** |
@@ -102,7 +102,7 @@ A mail is written to an outbox in the same transaction as the change that causes
 
 - **Retries.** A failed delivery is retried up to eight times. The first retry waits 30 seconds, and every further wait doubles, so the attempts spread over roughly two hours. After the last attempt the mail is marked as failed and its content is removed.
 - **Lost mails.** A job looks every minute for mails whose delivery was never started, for example after a crash right after the commit, and queues them.
-- **No duplicates.** Before sending, a node claims the mail, so two nodes never send it at the same time. A claim older than ten minutes, left by a node that stopped while sending, is handed to the next run. Each mail carries a `Message-ID` derived from its ID, so a mail sent again after such a stop has the same ID and mail systems can recognize it.
+- **No duplicates.** Before sending, a node claims the mail, so two nodes never send it at the same time. A claim older than ten minutes, left by a node that stopped while sending, is handed to the next run. Each mail carries a `Message-ID` derived from its ID, except through Microsoft Graph with the default setting, so a mail sent again after such a stop has the same ID and mail systems can recognize it.
 
 The section **Delivery** on the settings page shows the **Last delivery error** with its cause and the step that failed, and the **Last e-mail handed to the server**. Logs name the mail ID, template, attempt and error code, never recipients, content, secrets or tokens.
 

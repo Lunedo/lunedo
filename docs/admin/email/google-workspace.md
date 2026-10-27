@@ -8,7 +8,7 @@ The settings are under **Settings › Instance › Services › Delivery** and n
 
 1. In the Google Cloud console, create a service account in a project of your organization, for example "lunedo-mail".
 2. Under **Keys**, add a key of the type JSON and download the key file.
-3. Note the **client ID** of the service account, a number.
+3. Note the client ID of the service account, a number. The console shows it in the details of the service account, and the key file contains it as `client_id`.
 
 ## Allow domain-wide delegation
 

@@ -18,13 +18,13 @@ Both are set up under **Settings › Instance › Services › Delivery** and ne
 3. Under **API permissions**, add the Microsoft Graph application permission `Mail.Send` and grant admin consent. The app can then send as every mailbox of the tenant.
 4. Recommended: limit the app to the sender mailbox with RBAC for Applications in Exchange Online, then remove `Mail.Send` from the app registration. In Exchange Online PowerShell:
    1. Connect with `Connect-ExchangeOnline`.
-   2. In a tenant that was never customized, run `Enable-OrganizationCustomization` first. This can take several hours to complete.
+   2. If Exchange Online reports that the organization is dehydrated, run `Enable-OrganizationCustomization` first. This can take several hours to complete.
    3. Register the app: `New-ServicePrincipal -AppId <application ID> -ObjectId <object ID> -DisplayName "Lunedo mail"`. Take the object ID from **Enterprise applications**, not from **App registrations**.
    4. Create a scope that contains only the sender mailbox: `New-ManagementScope -Name "Lunedo sender" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'wiki@nordwind.test'"`.
    5. Give the app the role for that scope: `New-ManagementRoleAssignment -App <application ID> -Role "Application Mail.Send" -CustomResourceScope "Lunedo sender"`.
    6. Remove the `Mail.Send` permission from the app registration in Entra ID.
 
-   Changes in Exchange Online can take up to an hour. Lunedo cannot see how the permission was granted, so it cannot check whether the app is limited to the sender mailbox. It always sends only as the sender mailbox.
+   Changes to app permissions in Exchange Online can take between 30 minutes and 2 hours to apply. `Test-ServicePrincipalAuthorization -Identity <application ID> -Resource <mailbox>` shows the assignment at once. Lunedo cannot see how the permission was granted, so it cannot check whether the app is limited to the sender mailbox. It always sends only as the sender mailbox.
 
 ### Set up Lunedo
 

@@ -120,7 +120,7 @@ See [Encryption](encryption.md) for what the keys protect, how to back them up a
 
 | Setting | Default | Secret | Description |
 |---|---|---|---|
-| `LUNEDO_OUTBOUND_ALLOWED_NETWORKS` | none | | Comma-separated IP addresses and CIDR ranges in private networks that Lunedo may reach for chat channels, Confluence imports, the S3 backup target, the S3 restore in the setup assistant, the update check and Web Push, for example a Matrix server or a MinIO in the local network. Requests to private, loopback and link-local addresses are refused otherwise, also after redirects and when a host name resolves to such an address. Addresses in these ranges may also use `http://`; public addresses need `https://`. |
+| `LUNEDO_OUTBOUND_ALLOWED_NETWORKS` | none | | Comma-separated IP addresses and CIDR ranges in private networks that Lunedo may reach for chat channels, Confluence imports, the S3 backup target, the S3 restore in the setup assistant and the update check, for example a Matrix server or a MinIO in the local network. Requests to private, loopback and link-local addresses are refused otherwise, also after redirects and when a host name resolves to such an address. Addresses in these ranges may also use `http://`; public addresses need `https://`. |
 
 ## Rendering
 

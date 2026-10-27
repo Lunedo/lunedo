@@ -14,7 +14,7 @@ The commands run inside the image, with the same configuration as the instance, 
 | `lunedo backup verify --input <file>` | Checks the header, decrypts the whole backup and checks the manifest and every checksum without restoring anything. Needs the backup key only. |
 | `lunedo backup restore --input <file> [--force] [--config-dir <dir>]` | Restores the backup into an empty instance. `--force` replaces all database schemas and the content of the file store. `--config-dir` writes the configuration files from the backup to a directory for review. |
 
-`verify` and `restore` read local files only. `create` and `restore` refuse to run while an earlier restore is incomplete (see [How a restore changes the instance](restore.md#how-a-restore-changes-the-instance)).
+`verify` and `restore` read local files only. `create`, also with `--before-update`, refuses to run while an earlier restore is incomplete; run `restore` again with `--force` to complete it (see [How a restore changes the instance](restore.md#how-a-restore-changes-the-instance)).
 
 ## Exit codes
 

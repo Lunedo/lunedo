@@ -1,6 +1,6 @@
 # Database
 
-PostgreSQL 16 or newer is the only required datastore; what operators need is in [requirements.md](../admin/requirements.md). Tables are defined with Drizzle in the module that owns them (`packages/server/src/<module>/schema.ts`) and collected in `packages/server/src/database/schema.ts`.
+PostgreSQL 16, 17 or 18 is the only required datastore; what operators need is in [requirements.md](../admin/requirements.md). Tables are defined with Drizzle in the module that owns them (`packages/server/src/<module>/schema.ts`) and collected in `packages/server/src/database/schema.ts`.
 
 ## Conventions
 

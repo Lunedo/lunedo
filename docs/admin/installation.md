@@ -2,7 +2,7 @@
 
 Lunedo runs as a container image with Docker Compose, next to a PostgreSQL database. Installing it takes three parts:
 
-1. Check the [requirements](requirements.md): a host with Docker, PostgreSQL 16 or newer, and a free port.
+1. Check the [requirements](requirements.md): a host with Docker, PostgreSQL 16, 17 or 18, and a free port.
 2. Start the containers, in one of two ways:
    - [With the setup script](installation/script.md). It checks the host, writes the Compose file and the secrets, starts Lunedo and later updates it with one command. Use it on a single Linux or macOS host.
    - [With your own Compose file](installation/compose.md). Use it for container platforms, templates or a setup you manage yourself.

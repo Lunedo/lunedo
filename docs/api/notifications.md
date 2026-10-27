@@ -2,7 +2,7 @@
 
 Two parts of notifications are in the public API: watching items and spaces, and chat channels that post to Microsoft Teams, Slack, Discord, Matrix or a generic webhook. [Notifications](../user/notifications.md) describes them for readers, [Chat channels](../admin/chat-channels.md) for administrators. The full reference is at `/api/docs` on your instance.
 
-The notification inbox, its live stream, the unread count, browser push and unsubscribe links serve the web client. They need a signed-in session and are not part of `/api/docs`.
+The notification inbox, its live stream, the unread count and browser push serve the web client. They need a signed-in session and are not part of `/api/docs`. The unsubscribe links in notification e-mails are not part of `/api/docs` either, but they work without signing in; the token in the link identifies what they turn off.
 
 ## Watching
 
@@ -47,7 +47,7 @@ Events of a space: `pagePublished` (the first version of a page), `pageChanged` 
 - Addresses, tokens and the signing secret are stored encrypted and never returned.
 - A space has at most 20 channels. Confidential and personal spaces cannot have chat channels (`confidentialSpace`).
 - Requests go to public addresses only. Private, loopback and link-local addresses are refused unless the instance allows them (`chatAddressBlocked`).
-- A channel whose service keeps failing gets `state: "failing"` with the reason in `failure`, and nothing more is posted until a test message succeeds or the address is changed.
+- A channel whose service keeps failing gets `state: "failing"` with the reason in `failure`, and nothing more is posted until a test message succeeds, the `target` is changed or a new signing secret is created.
 
 Only content every member of the space can read is posted: published, not in the trash or archive, and without a view restriction on it or a page above it.
 
@@ -73,7 +73,7 @@ A generic webhook receives a `POST` with a JSON body:
 }
 ```
 
-`space`, `item` and `actor` are `null` where they do not apply, for example `space` for an organization announcement. `text` is the message as plain lines.
+`space`, `item` and `actor` are `null` where they do not apply, for example `space` for an organization announcement. `item.url` can be `null` too. `text` is the message as plain lines. A test message arrives with `event` and `X-Lunedo-Event` set to `test`.
 
 with these headers:
 

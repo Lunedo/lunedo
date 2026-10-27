@@ -43,6 +43,8 @@ The check shows the exact command with the path and the user of your installatio
 
 ## Instance URL
 
+The **System check** step does not show this check as a row of its own; the same condition appears under **Address** as `notSet`, see [Address reachable](#address-reachable).
+
 | Cause | State | What to do |
 |---|---|---|
 | `notSet` | Warning | Neither the instance step nor `LUNEDO_INSTANCE_URL` has set the address of the instance yet. Enter it in the **Instance** step. |

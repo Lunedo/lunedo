@@ -73,7 +73,7 @@ The examples are read from the documentation pages, from the blocks marked `<!--
 
 ## Scope
 
-On a pull request in the full lane, the expensive jobs run only when their area changed. Changes to these paths run all of them: `.github/workflows/`, `.github/actions/`, `.nvmrc`, `.npmrc`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json` and `packages/config/`. Pushes to `main`, the stress run and manual runs always run all of them.
+On a pull request in the full lane, the expensive jobs run only when their area changed. Changes to these paths run all of them: `.github/workflows/`, `.nvmrc`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json` and `packages/config/`. Pushes to `main`, the stress run and manual runs always run all of them.
 
 | Job | Runs on pull requests when these change |
 |---|---|
@@ -81,7 +81,7 @@ On a pull request in the full lane, the expensive jobs run only when their area 
 | Accessibility and screenshot sweeps, inside the end-to-end job | the end-to-end job runs, and one of `apps/web/src/`, `apps/web/e2e/`, `apps/web/public/`, `apps/web/index.html`, `apps/web/vite.config.ts`, `apps/web/playwright.config.ts`, `packages/ui/`, `packages/tokens/` changed |
 | Sign-in through identity providers | identity, authentication and session code in server, API and web client (`packages/server/src/identity/`, `packages/server/src/auth/`, `apps/api/src/identity/`, `apps/api/src/auth/`, `apps/web/src/screens/auth/`, `apps/web/src/screens/identity/`, `apps/web/src/session/`), the test fakes, `packages/shared/src/identity-providers.ts`, `apps/web/e2e/idp/`, `apps/web/e2e/support/`, `apps/web/e2e/global-setup.ts`, `apps/web/playwright.config.ts`, `docker/idp/`, `docker/compose.dev.yml`, `docker/compose.ci.yml` |
 | Backup round trip | `packages/server/src/backup/`, `packages/server/src/files/`, `packages/server/src/crypto/stream.ts`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/Dockerfile`, `docker/start.sh`, `docker/runtime/`, `scripts/bundle-server.ts`, `scripts/backup-roundtrip.sh` |
-| Installation, update and reverse proxies | the image (`docker/Dockerfile`, `docker/start.sh`, `docker/runtime/`, `scripts/bundle-server.ts`), `docker/compose.yml`, the setup script and the three check scripts, the documentation pages with the checked examples, `packages/server/src/operations/`, `packages/server/src/portal/`, `packages/server/src/config/`, `packages/server/drizzle/`, `apps/api/src/health/`, `apps/api/src/portal/`, `apps/api/src/http/`, `apps/api/src/main.ts`, `apps/collab/`, `apps/worker/src/cli/` |
+| Installation, update and reverse proxies | the image (`docker/Dockerfile`, `docker/start.sh`, `docker/runtime/`, `scripts/bundle-server.ts`), the setup script and the three check scripts, the documentation pages with the checked examples, `packages/server/src/operations/`, `packages/server/src/portal/`, `packages/server/src/config/`, `packages/server/drizzle/`, `apps/api/src/health/`, `apps/api/src/portal/`, `apps/api/src/http/`, `apps/api/src/main.ts`, `apps/collab/`, `apps/worker/src/cli/` |
 
 The exact lists are in `scripts/ci-scope.ts`; its tests cover them.
 
