@@ -142,7 +142,6 @@ export const problems = {
   secondFactorSetupRequired: { status: 403, title: "Set up a second factor first" },
   reauthenticationRequired: { status: 403, title: "Confirm your identity first" },
   sessionRequired: { status: 403, title: "This endpoint needs a signed-in session" },
-  passwordSignInDisabled: { status: 403, title: "Sign-in with a password is turned off" },
   notFound: { status: 404, title: "Not found" },
   settingNotAtLevel: { status: 409, title: "The setting cannot be set at this level" },
   methodNotAllowed: { status: 405, title: "The method is not allowed" },
@@ -461,6 +460,12 @@ export const problems = {
   groupManagedByProvider: { status: 409, title: "The group is managed by an identity provider" },
   lastCredential: { status: 409, title: "The last credential cannot be removed" },
   lastSignInMethod: { status: 409, title: "The last way to sign in cannot be removed" },
+  managedIdentity: { status: 409, title: "The identity provider manages this account" },
+  managedAccount: { status: 403, title: "The account signs in through its identity provider" },
+  accountNotActive: { status: 409, title: "The account is not active" },
+  managedDomain: { status: 409, title: "Addresses of this domain sign in through an identity provider" },
+  providerHasAccounts: { status: 409, title: "Accounts are still linked to the identity provider" },
+  ownerManaged: { status: 409, title: "The instance owner needs a local account" },
   lastOwner: { status: 409, title: "The last owner cannot leave" },
   homeOrganization: { status: 409, title: "An account cannot leave its home organization" },
   deactivateSelf: { status: 409, title: "An account cannot deactivate itself" },
@@ -583,6 +588,23 @@ export const problemSchema = z
       .optional()
       .describe("Domains that belong to another identity provider, for `domainInUse`."),
     instanceUrl: z.string().optional().describe("The current address of the instance, for `instanceMoved`."),
+    providerId: z
+      .string()
+      .optional()
+      .describe(
+        "ID of the identity provider that manages the account, for `managedAccount` and `managedDomain`.",
+      ),
+    providerName: z
+      .string()
+      .optional()
+      .describe(
+        "Name of the identity provider that manages the account, for `managedAccount` and `managedDomain`.",
+      ),
+    accounts: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of accounts still linked to the identity provider, for `providerHasAccounts`."),
     maxBytes: z
       .number()
       .int()

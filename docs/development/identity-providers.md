@@ -14,7 +14,7 @@ The code lives in `packages/server/src/identity/`. Provider types and presets, t
 
 The adapters are created once in `packages/server/src/services.ts` and passed to the services that need them. `ProviderSignInService` (`sign-in.ts`), `MappingRuleService` (`mapping.ts`) and the synchronization service (`sync.ts`) keep them in a map by type and look the adapter up for each provider. A sign-in with a type that has no adapter fails with an error instead of falling back to another adapter.
 
-The sign-in flow, linking, accounts at first sign-in, the refusal page, mapping rules, synchronization runs and SCIM do not depend on the protocol. A new protocol only adds an adapter, a configuration schema and its presets.
+The sign-in flow, linking, accounts at first sign-in, managed accounts (`managed.ts`, see [Authentication](authentication.md#managed-accounts)), the refusal page, mapping rules, synchronization runs and SCIM do not depend on the protocol. A new protocol only adds an adapter, a configuration schema and its presets.
 
 ## Adapter interface
 
@@ -71,6 +71,12 @@ Errors:
 
 Consumed SAML assertion IDs are kept in `saml_assertions` and logout token IDs in `provider_logout_tokens` until they expire, so each is accepted once. Expired flows, assertion IDs and logout tokens, and refusals older than 90 days, are removed by the authentication cleanup job.
 
+## First sign-in and second factor
+
+`ProviderSignInService` finds the identity by provider and subject. Without one, an existing account whose address is verified for the provider is linked at once and taken over (`#adoptExisting`): the identity is stored, the managed state refreshed and `takeOverLocalCredentials` removes any local sign-in and queues the mail `accountManaged`. A sign-in through an identity that is already linked runs `takeOverLocalCredentials` too. An OpenID Connect address with `email_verified: false` is never linked automatically to an existing account; the sign-in is refused with `emailNotVerified`. New accounts are still created by the domain alone. A second identity of the same provider for the account is refused with `linkAmbiguous`. The instance owner and accounts with a role above member (`confirmsLinks`) still go through the link confirmation (`identityLink` challenge, `/sign-in/link`); after a confirmed link, `takeOverLocalCredentials` runs as well, except for the owner, who is never managed.
+
+The provider setting `secondFactor.mode` is `provider` or `providerProof` for OIDC and SAML, and `lunedo` or `provider` for LDAP. `providerProvedSecondFactor` decides for OIDC and SAML: with `providerProof`, a sign-in whose authentication methods contain none of `proofValues` is refused with `secondFactorMissing`, and re-authentication and link confirmation through the provider fail. After a provider sign-in, a Lunedo second factor is asked only where `SignInService.secondFactorRequirement` requires one, or always with the LDAP mode `lunedo`.
+
 ## Background jobs
 
 | Job | Schedule | Purpose |
@@ -99,7 +105,7 @@ All identity routes are internal: they serve the web client and are hidden from 
 | Route | Purpose |
 |---|---|
 | `GET, POST /instance/identity-provider-drafts`, `GET, PATCH, DELETE …/{draftId}` | Drafts of the setup assistant |
-| `GET, POST /instance/identity-providers`, `GET, PATCH, DELETE …/{providerId}` | Providers; `POST` with `draftId` turns a draft into a provider with the same ID |
+| `GET, POST /instance/identity-providers`, `GET, PATCH, DELETE …/{providerId}` | Providers; `POST` with `draftId` turns a draft into a provider with the same ID. Summaries carry `managedAccounts`, the number of accounts the provider manages. `DELETE` is refused with `providerHasAccounts` and the number of `accounts` while identities are linked |
 | `POST …/{providerId}/complete-setup` | Finish the setup |
 | `POST …/{providerId}/deactivate`, `…/activate`, `GET …/removal-preview` | Deactivate, activate, preview a removal |
 | `POST …/{providerId}/credentials`, `PUT …/credentials/{id}/use`, `DELETE …/credentials/{id}`, `GET …/credentials/{id}/certificate` | Credentials |

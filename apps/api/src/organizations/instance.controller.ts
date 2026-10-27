@@ -992,7 +992,7 @@ export class InstanceController {
     summary: "Transfer instance ownership",
     tags: [TAG],
     body: ownershipSchema,
-    errors: ["instanceOwner"],
+    errors: ["instanceOwner", "invalidOwner", "ownerManaged"],
   })
   async transferOwnership(@Body() body: z.output<typeof ownershipSchema>, @Req() request: FastifyRequest) {
     await this.#services.memberships.transferOwnership(actorOf(request), body.accountId);

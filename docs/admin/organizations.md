@@ -62,7 +62,9 @@ Groups can also come from an identity provider, see [Identity provider groups](i
 
 Invitations go by e-mail, are valid for 7 days, work once and are stored as hashes. Accepting an invitation creates the account, with a verified address, or adds the membership to the existing account with that address. Collaborators join with their existing account. An invitation for a member can carry a role up to the inviter's own permissions; invitations for guests and collaborators carry none.
 
-Self-registration is the setting **Self-registration** (`organizations.selfRegistration`, default off) under **Settings › Organization › People and access › Domains and guests**. When an organization enables it, people with an address in one of its domains receive a confirmation link and create their account themselves. The answer to a registration request is the same whether it is accepted or not.
+When the domain of the invited address belongs to an identity provider, the invitation page asks only for the name. The account is created without a password, is managed by that provider, and the page offers **Continue with** *provider*; the first sign-in there links the account (see [Identity providers](identity-providers.md#managed-accounts)). Portal invitations for readers of a knowledge base always ask for a password.
+
+Self-registration is the setting **Self-registration** (`organizations.selfRegistration`, default off) under **Settings › Organization › People and access › Domains and guests**. When an organization enables it, people with an address in one of its domains receive a confirmation link and create their account themselves. The answer to a registration request is the same whether it is accepted or not, except for addresses in a domain of an identity provider: they are refused with `managedDomain`, and the page says to sign in through that provider instead. A registration link opened after the domain was assigned to a provider is refused the same way.
 
 ## Break-glass access
 
@@ -79,4 +81,4 @@ The access gives the organization administrator role, never more. It lasts for *
 
 Break-glass access never counts for giving access to others: a role given or widened through it is refused, and only owners who are owners by assignment can act on owners. The page lists the break-glass accesses of the last 90 days.
 
-How the instance owner signs in when identity providers fail is a different mechanism, the emergency sign-in, see [Authentication](authentication.md).
+How the instance owner signs in when identity providers fail is a different mechanism, the emergency sign-in, see [Emergency sign-in](identity-providers.md#emergency-sign-in).

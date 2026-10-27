@@ -1,5 +1,7 @@
 # Importing a Confluence export file
 
+Checked against Atlassian documentation, October 2026.
+
 Lunedo reads the XML and CSV space exports of Confluence Cloud, the XML space exports of Confluence Data Center and Server, and XML site backups. For an overview of all sources and the import settings, see [Imports](../imports.md).
 
 ## Creating the export
@@ -64,5 +66,3 @@ Uploaded files are deleted 7 days after an import was accepted, discarded or sto
 ## What is read
 
 Lunedo reads pages, blog posts, folders, comments, attachments with all their versions, labels, page states, restrictions, space permissions, space templates and, when **Full page history** is chosen, the earlier versions. The [Confluence reference](confluence-reference.md) lists what each item becomes and its fallback.
-
-Checked against Atlassian documentation, October 2026.

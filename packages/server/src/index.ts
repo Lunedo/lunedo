@@ -121,6 +121,7 @@ export {
   InvalidTokenError,
   LastFactorError,
   LockedError,
+  ManagedAccountError,
   RateLimitedError,
   SetupIncompleteError,
 } from "./auth/errors.js";
@@ -403,6 +404,7 @@ export {
   ProviderResponseError,
 } from "./identity/adapter.js";
 export type { SyncChange, SyncReport, SyncWarning } from "./identity/groups.js";
+export type { DomainProvider, ManagedState, ManagingProviderType } from "./identity/managed.js";
 export type { MappingRule, ProviderGroupMatch, RulePreview } from "./identity/mapping.js";
 export {
   type AddedCredential,

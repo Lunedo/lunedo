@@ -15,6 +15,7 @@ import { accountSubject, clientSubject } from "../auth/throttle.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Transaction } from "../database/database.js";
+import { refreshManagedAccounts } from "../identity/managed.js";
 import { identities, providerDeactivations, providerGrants, signInRefusals } from "../identity/schema.js";
 import { mailOutbox } from "../mail/schema.js";
 import { knownDevices, notifications } from "../notifications/schema.js";
@@ -439,6 +440,7 @@ export class AccountLifecycleService {
         removedIdentities,
         sessionIps.flatMap((row) => (row.clientIp ? [row.clientIp] : [])),
       );
+      await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
       return {
         endedSessions: endedSessions.length,
         removedIdentities: removedIdentities.length,

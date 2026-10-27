@@ -15,7 +15,8 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
-import { providerDeactivations } from "../identity/schema.js";
+import { type ManagedState, managedStatesOf, refreshManagedAccounts } from "../identity/managed.js";
+import { managedAccounts, providerDeactivations } from "../identity/schema.js";
 import { responsiblesOf } from "../tokens/service-accounts.js";
 import {
   customRoles,
@@ -48,6 +49,7 @@ export interface Member {
   roles: { assignmentId: string; role: string; customRoleId: string | null; expiresAt: Date | null }[];
   groups: { id: string; name: string }[];
   twoFactorActive: boolean;
+  managedBy: ManagedState | null;
   lastActiveAt: Date | null;
 }
 
@@ -224,11 +226,13 @@ export class MembershipService {
         ),
       )
       .orderBy(sql`lower(${groups.name})`, groups.id);
+    const managed = await managedStatesOf(this.#database, accountIds);
     return {
       next: result.next,
       items: result.items.map((row) => ({
         ...row,
         twoFactorActive: row.twoFactorActive === true,
+        managedBy: managed.get(row.accountId) ?? null,
         groups: groupRows
           .filter((group) => group.accountId === row.accountId)
           .map((group) => ({ id: group.id, name: group.name })),
@@ -764,10 +768,21 @@ export class MembershipService {
       if (!candidate) {
         throw new OrganizationError("invalidOwner", "The new owner must be an active instance administrator");
       }
+      const [managed] = await tx
+        .select({ providerId: managedAccounts.providerId })
+        .from(managedAccounts)
+        .where(eq(managedAccounts.accountId, newOwnerId));
+      if (managed) {
+        throw new OrganizationError(
+          "ownerManaged",
+          "The instance owner keeps a local account with a password and second factor; this account signs in through an identity provider",
+        );
+      }
       await tx
         .update(instance)
         .set({ ownerAccountId: newOwnerId, updatedAt: new Date() })
         .where(eq(instance.id, 1));
+      await refreshManagedAccounts(tx, this.#audit, { accountIds: [current.owner] }, actor);
       const [assignment] = await tx
         .insert(roleAssignments)
         .values({

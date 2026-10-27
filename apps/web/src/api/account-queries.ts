@@ -14,6 +14,14 @@ export const securityQuery = queryOptions({
   queryFn: () => request(() => api.GET("/api/v1/account/security")),
 });
 
+export type ManagingProvider = NonNullable<
+  Awaited<ReturnType<NonNullable<(typeof securityQuery)["queryFn"]>>>["managedBy"]
+>;
+
+export function signsInOnlyThroughProvider(managedBy: { providerType: string } | null | undefined): boolean {
+  return managedBy !== null && managedBy !== undefined && managedBy.providerType !== "ldap";
+}
+
 export const sessionsQuery = queryOptions({
   queryKey: accountKeys.sessions,
   queryFn: () =>

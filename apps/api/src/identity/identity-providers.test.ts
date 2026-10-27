@@ -68,10 +68,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
     expect(options.json()).toEqual({
       providers: [expect.objectContaining({ id: providerId, type: "oidc" })],
-      emailStep: true,
-      directProvider: null,
       lastProvider: null,
-      passwordSignIn: true,
       passkeys: true,
     });
     const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.40" });
@@ -96,7 +93,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     });
     expect(taken.statusCode).toBe(409);
     expect(taken.json()).toMatchObject({ code: "domainInUse" });
-    const member = await createAccount(test, "plain.member@lunedo.test");
+    const member = await createAccount(test, "plain.member@members.test");
     const client = await signedInClient(test, member.email, member.password);
     expect((await client.get("/api/v1/instance/identity-providers")).statusCode).toBe(403);
     expect((await owner.get("/api/v1/instance/identity-providers")).json()).toEqual([
@@ -191,7 +188,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     );
     expect(chosen.statusCode).toBe(200);
     expect(inUse(chosen.json())).toEqual([original.id]);
-    const member = await createAccount(test, "credential.viewer@lunedo.test");
+    const member = await createAccount(test, "credential.viewer@members.test");
     const client = await signedInClient(test, member.email, member.password);
     expect(
       (
@@ -251,51 +248,124 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(withheld.json()).toEqual([]);
   });
 
-  it("sends people to the second factor of Lunedo when the provider asks for it", async () => {
+  it("requires proof of a second factor from the provider instead of a Lunedo factor", async () => {
+    const config = {
+      preset: "generic",
+      issuer: idp.issuer,
+      clientId: idp.clientId,
+      domains: ["factor.lunedo.test"],
+      accountCreation: { enabled: true, requiredGroups: [] },
+    };
+    const lunedo = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
+      name: "Second factor login",
+      config: { ...config, secondFactor: { mode: "lunedo" } },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    expect(lunedo.statusCode).toBe(400);
     const created = await owner.post("/api/v1/instance/identity-providers", {
       type: "oidc",
       name: "Second factor login",
-      config: {
-        preset: "generic",
-        issuer: idp.issuer,
-        clientId: idp.clientId,
-        domains: ["factor.lunedo.test"],
-        accountCreation: { enabled: true, requiredGroups: [] },
-        secondFactor: { mode: "lunedo" },
-      },
+      config: { ...config, secondFactor: { mode: "providerProof" } },
       credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
     });
-    expect(created.json().provider.config.secondFactor).toEqual({ mode: "lunedo", proofValues: ["mfa"] });
+    expect(created.json().provider.config.secondFactor).toEqual({
+      mode: "providerProof",
+      proofValues: ["mfa"],
+    });
     const factorProvider = created.json().provider.id;
-    const signInOnce = async (client: TestClient) => {
+    const signInOnce = async (client: TestClient, amr: string[]) => {
       const started = await client.post(`/api/v1/auth/providers/${factorProvider}/start`, {
         returnTo: "/settings/security",
       });
       const callback = await idp.authorize(started.json().url, {
         sub: "factor-person",
         email: "person@factor.lunedo.test",
-        amr: ["mfa"],
+        amr,
       });
       return client.get(`${callback.pathname}${callback.search}`);
     };
     const first = new TestClient(test.app);
-    expect((await signInOnce(first)).headers.location).toBe("/settings/security");
-    expect((await first.get("/api/v1/auth/session")).json()).toMatchObject({
-      sessionKind: "secondFactorSetup",
-    });
-    await addTotp(first);
+    const refused = await signInOnce(first, ["pwd"]);
+    expect(refused.headers.location).toContain("secondFactorMissing");
+    expect((await first.get("/api/v1/auth/session")).statusCode).toBe(401);
 
     const second = new TestClient(test.app);
-    const response = await signInOnce(second);
-    expect(response.statusCode).toBe(303);
-    expect(response.headers.location).toBe(
-      `/sign-in/verify?${new URLSearchParams({ factors: '["totp","recoveryCode"]', redirect: "/settings/security" })}`,
-    );
-    expect(String(response.headers["set-cookie"])).toContain("__Host-lunedo-pending=");
-    expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
-    expect((await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`)).statusCode).toBe(
-      204,
-    );
+    expect((await signInOnce(second, ["pwd", "mfa"])).headers.location).toBe("/settings/security");
+    expect((await second.get("/api/v1/auth/session")).json()).toMatchObject({ sessionKind: "full" });
+    expect((await second.post("/api/v1/account/totp")).json()).toMatchObject({ code: "managedAccount" });
+    const removal = await owner.delete(`/api/v1/instance/identity-providers/${factorProvider}`);
+    expect(removal.statusCode).toBe(409);
+    expect(removal.json()).toMatchObject({ code: "providerHasAccounts", accounts: 1 });
+    expect(
+      (await owner.post(`/api/v1/instance/identity-providers/${factorProvider}/deactivate`, {})).statusCode,
+    ).toBe(200);
+  });
+
+  it("shows which provider manages an account only to people who may see it", async () => {
+    const created = await owner.post("/api/v1/instance/identity-providers", {
+      type: "oidc",
+      name: "Views login",
+      config: {
+        preset: "generic",
+        issuer: idp.issuer,
+        clientId: idp.clientId,
+        domains: ["views.lunedo.test"],
+        accountCreation: { enabled: true, requiredGroups: [] },
+      },
+      credential: { kind: "clientSecret", secret: idp.clientSecret, expiresAt: null },
+    });
+    const viewsProvider: string = created.json().provider.id;
+    expect(created.json().provider.managedAccounts).toBe(0);
+    const person = await createAccount(test, "managed.view@views.lunedo.test");
+    const browser = new TestClient(test.app);
+    const started = await browser.post(`/api/v1/auth/providers/${viewsProvider}/start`, {});
+    const callback = await idp.authorize(started.json().url, { sub: "views-person", email: person.email });
+    await browser.get(`${callback.pathname}${callback.search}`);
+    const managedBy = {
+      providerId: viewsProvider,
+      providerName: "Views login",
+      providerType: "oidc",
+      source: "identity",
+      since: expect.any(String),
+    };
+
+    expect((await browser.get("/api/v1/account/security")).json()).toMatchObject({ managedBy });
+    const providers = (await owner.get("/api/v1/instance/identity-providers")).json();
+    expect(providers.find((entry: { id: string }) => entry.id === viewsProvider)).toMatchObject({
+      managedAccounts: 1,
+    });
+    expect((await owner.get(`/api/v1/instance/identity-providers/${viewsProvider}`)).json()).toMatchObject({
+      managedAccounts: 1,
+    });
+    expect((await owner.get("/api/v1/instance/accounts?q=managed.view")).json().items).toEqual([
+      expect.objectContaining({ id: person.id, managedBy }),
+    ]);
+    expect((await owner.get(`/api/v1/instance/accounts/${person.id}`)).json().account).toMatchObject({
+      managedBy,
+    });
+    expect(
+      (await owner.get(`/api/v1/organizations/${organizationId}/members?q=managed.view`)).json().items,
+    ).toEqual([expect.objectContaining({ accountId: person.id, managedBy })]);
+    expect(
+      (await owner.get(`/api/v1/organizations/${organizationId}/members/${person.id}`)).json(),
+    ).toMatchObject({ managedBy });
+    expect((await owner.get("/api/v1/account/security")).json()).toMatchObject({ managedBy: null });
+
+    const viewer = await createAccount(test, "plain.viewer@members.test");
+    const client = await signedInClient(test, viewer.email, viewer.password);
+    expect((await client.get("/api/v1/account/security")).json()).toMatchObject({ managedBy: null });
+    expect((await client.get("/api/v1/instance/identity-providers")).statusCode).toBe(403);
+    expect((await client.get(`/api/v1/instance/identity-providers/${viewsProvider}`)).statusCode).toBe(403);
+    expect((await client.get("/api/v1/instance/accounts?q=managed.view")).statusCode).toBe(403);
+    expect((await client.get(`/api/v1/instance/accounts/${person.id}`)).statusCode).toBe(403);
+    expect(
+      (await client.get(`/api/v1/organizations/${organizationId}/members/${person.id}`)).statusCode,
+    ).toBe(403);
+    const members = await client.get(`/api/v1/organizations/${organizationId}/members?q=managed.view`);
+    expect(members.statusCode).toBe(200);
+    expect(members.json().items).toHaveLength(1);
+    expect(members.json().items[0]).not.toHaveProperty("managedBy");
   });
 
   it("ends provider sessions through back-channel logout without a browser", async () => {
@@ -325,42 +395,24 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(forged.statusCode).toBe(400);
   });
 
-  it("links an existing account after its password and shows linked identities", async () => {
+  it("links an existing account at its first sign-in and shows linked identities", async () => {
     const existing = await createAccount(test, "existing.person@lunedo.test");
     const browser = new TestClient(test.app);
     const response = await signInThroughProvider(browser, { sub: "existing-subject", email: existing.email });
-    expect(response.headers.location).toBe("/sign-in/link");
-    expect([response.headers["set-cookie"]].flat()).toContainEqual(
-      expect.stringMatching(/^__Host-lunedo-link=[\w-]+; Path=\/; Max-Age=900; /),
-    );
-    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
-      providerName: "Company login",
-      email: existing.email,
-      factors: [],
+    expect(response.headers.location).not.toBe("/sign-in/link");
+    expect((await browser.get("/api/v1/auth/session")).json()).toMatchObject({
+      account: { id: existing.id },
     });
-    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
-      password: true,
-      passkey: false,
-      providers: [],
-      confirmed: false,
-    });
-    expect((await browser.post("/api/v1/auth/link", {})).json()).toMatchObject({
-      code: "invalidCredentials",
-    });
-    expect((await browser.post("/api/v1/auth/link/provider", { providerId })).json()).toMatchObject({
-      code: "notFound",
-    });
-    expect(
-      (await browser.post("/api/v1/auth/link/directory", { providerId, password: "secret" })).json(),
-    ).toMatchObject({ code: "invalidInput" });
-    expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
-    const linked = await browser.post("/api/v1/auth/link", { password: existing.password });
-    expect(linked.json()).toMatchObject({ status: "signedIn", account: { id: existing.id } });
     expect((await browser.get("/api/v1/account/identities")).json()).toEqual([
       expect.objectContaining({ providerId, subject: "existing-subject" }),
     ]);
     const identities = await owner.get(`/api/v1/accounts/${existing.id}/identities`);
     expect(identities.json()).toHaveLength(1);
+    const password = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
+      email: existing.email,
+      password: existing.password,
+    });
+    expect(password.json()).toMatchObject({ code: "invalidCredentials" });
   });
 
   it("checks the discovery document of an issuer before anything is saved", async () => {
@@ -395,10 +447,16 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(refused.searchParams.get("provider")).toBe(providerId);
   });
 
-  it("lets a person decline a link after a wrong password", async () => {
-    const existing = await createAccount(test, "declining.person@lunedo.test");
+  it("asks the instance owner to confirm a link, and lets the owner decline it after a wrong password", async () => {
     const browser = new TestClient(test.app);
-    await signInThroughProvider(browser, { sub: "declining-subject", email: existing.email });
+    const response = await signInThroughProvider(browser, { sub: "owner-subject", email: OWNER.email });
+    expect(response.headers.location).toBe("/sign-in/link");
+    expect((await browser.get("/api/v1/auth/link")).json()).toMatchObject({
+      providerName: "Company login",
+      email: OWNER.email,
+      password: true,
+      confirmed: false,
+    });
     expect((await browser.post("/api/v1/auth/link", { password: "wrong password" })).statusCode).toBe(401);
     const declined = await browser.post("/api/v1/auth/link/decline");
     expect(declined.statusCode).toBe(200);
@@ -428,40 +486,20 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     expect(refused.json()).toMatchObject({ code: "rateLimited" });
   });
 
-  it("turns password sign-in off for the instance, except for the instance owner", async () => {
-    const member = await createAccount(test, "password.member@lunedo.test");
-    const organizationLevel = await owner.put(
+  it("refuses the removed password sign-in setting at every level", async () => {
+    for (const path of [
+      "/api/v1/instance/settings/auth.passwordSignIn",
       `/api/v1/organizations/${organizationId}/settings/auth.passwordSignIn`,
-      { value: false },
-    );
-    expect(organizationLevel.statusCode).toBeGreaterThanOrEqual(400);
-    const changed = await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { value: false });
-    expect(changed.statusCode).toBeLessThan(300);
-    try {
-      const refused = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
-        email: member.email,
-        password: member.password,
-      });
-      expect(refused.statusCode).toBe(403);
-      expect(refused.json()).toMatchObject({ code: "passwordSignInDisabled" });
-      const options = await new TestClient(test.app).get("/api/v1/auth/sign-in-options");
-      expect(options.json()).toMatchObject({
-        emailStep: false,
-        directProvider: { id: providerId, name: "Company login" },
-        passwordSignIn: false,
-        passkeys: true,
-      });
-      const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.43" });
-      expect(
-        (await visitor.post("/api/v1/auth/sign-in/discover", { email: "someone@other.test" })).json(),
-      ).toEqual({
-        step: "none",
-      });
-      const emergency = await new TestClient(test.app).post("/api/v1/auth/sign-in", OWNER);
-      expect(emergency.json()).toMatchObject({ status: "secondFactorRequired" });
-    } finally {
-      await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { clear: true });
+    ]) {
+      const refused = await owner.put(path, { value: false });
+      expect(refused.statusCode).toBe(404);
     }
+    const listed = await owner.get("/api/v1/instance/settings");
+    expect(listed.body).not.toContain("auth.passwordSignIn");
+    const visitor = new TestClient(test.app, { remoteAddress: "198.51.100.43" });
+    expect(
+      (await visitor.post("/api/v1/auth/sign-in/discover", { email: "someone@other.test" })).json(),
+    ).toEqual({ step: "password" });
   });
 
   it("answers provider failures and invalid profile values with a problem or a reference", async () => {

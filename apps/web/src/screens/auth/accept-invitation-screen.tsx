@@ -14,6 +14,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { translateKey } from "../../i18n/translate.js";
 import { forgetLinkToken, useLinkToken } from "../../session/link-token.js";
+import { startProviderSignIn } from "../../session/provider-sign-in.js";
 import { AuthCard } from "./auth-layout.js";
 
 const DEFAULT_PASSWORD_MINIMUM = 12;
@@ -24,7 +25,11 @@ function detailsForm(minimum: number) {
     .refine((values) => values.password === values.repeated, { path: ["repeated"], message: "mismatch" });
 }
 
+const nameForm = z.object({ name: accountNameSchema });
+
 type State = "start" | "details" | "joined" | "created";
+
+type DomainProvider = { id: string; name: string; type: "oidc" | "saml" | "ldap" };
 
 export function AcceptInvitationScreen() {
   const { t } = useTranslation();
@@ -32,6 +37,7 @@ export function AcceptInvitationScreen() {
   const info = useQuery(instanceInfoQuery);
   const [state, setState] = useState<State>("start");
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const [signInProvider, setSignInProvider] = useState<DomainProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const minimum = info.data?.passwordMinLength ?? DEFAULT_PASSWORD_MINIMUM;
@@ -41,6 +47,7 @@ export function AcceptInvitationScreen() {
     messages: { repeated: t("auth.passwordsDiffer") },
   });
   const longEnough = [...(form.watch("password") ?? "")].length >= minimum;
+  const nameOnly = useSchemaForm(nameForm, { defaultValues: { name: "" } });
 
   const preview = useQuery({
     queryKey: ["invitationPreview", token],
@@ -105,6 +112,7 @@ export function AcceptInvitationScreen() {
       );
       forgetLinkToken();
       setPortalUrl(result.portalUrl);
+      setSignInProvider(result.provider);
       setState(result.accountCreated ? "created" : "joined");
     } catch (failure) {
       if (isApiError(failure, "accountDetailsRequired")) setState("details");
@@ -135,7 +143,24 @@ export function AcceptInvitationScreen() {
           {t("auth.acceptInvitation")}
         </Button>
       ) : null}
-      {step === "details" ? (
+      {step === "details" && invitation.provider ? (
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={submitWith(nameOnly.handleSubmit((values) => accept({ name: values.name })))}
+        >
+          <Notice variant="info">
+            {t("auth.createManagedAccountForInvitation", { provider: invitation.provider.name })}
+          </Notice>
+          <Field label={t("auth.name")} error={nameOnly.formState.errors.name?.message}>
+            <Input autoComplete="name" autoFocus {...nameOnly.register("name")} />
+          </Field>
+          <Button type="submit" variant="primary" size="lg" block loading={busy}>
+            {t("auth.createAccount")}
+          </Button>
+        </form>
+      ) : null}
+      {step === "details" && !invitation.provider ? (
         <form
           className="flex flex-col gap-4"
           noValidate
@@ -179,11 +204,28 @@ export function AcceptInvitationScreen() {
           <Notice variant="success">
             {portalUrl
               ? t("auth.portalAccountCreated", names)
-              : state === "created"
-                ? t("auth.invitationAccountCreated")
-                : t("auth.invitationJoined")}
+              : state === "created" && signInProvider
+                ? t("auth.invitationManagedAccountCreated", { provider: signInProvider.name })
+                : state === "created"
+                  ? t("auth.invitationAccountCreated")
+                  : t("auth.invitationJoined")}
           </Notice>
-          {portalUrl ? (
+          {signInProvider && signInProvider.type !== "ldap" ? (
+            <Button
+              variant="primary"
+              block
+              loading={busy}
+              onClick={() => {
+                setBusy(true);
+                startProviderSignIn(signInProvider.id).catch((failure: unknown) => {
+                  setError(problemMessage(t, failure));
+                  setBusy(false);
+                });
+              }}
+            >
+              {t("auth.providers.continueWith", { name: signInProvider.name })}
+            </Button>
+          ) : portalUrl ? (
             <Button variant="primary" block asChild>
               <a href={portalUrl}>{t("auth.openPortal", names)}</a>
             </Button>

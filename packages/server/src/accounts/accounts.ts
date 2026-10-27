@@ -14,8 +14,10 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
+import { refreshManagedAccounts } from "../identity/managed.js";
 import { memberships } from "../organizations/access-schema.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
+import { SYSTEM } from "./principal.js";
 import { type AccountState, type AccountType, accounts, instance } from "./schema.js";
 import { accountScopeChain } from "./scope.js";
 
@@ -215,6 +217,7 @@ export class AccountService {
     }
     if (options.collect) options.collect.push(...events);
     else await this.#audit.recordMany(tx, events);
+    await refreshManagedAccounts(tx, this.#audit, { accountIds: [row.id] }, SYSTEM);
     return row;
   }
 

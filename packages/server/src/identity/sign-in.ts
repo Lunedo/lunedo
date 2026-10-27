@@ -20,7 +20,6 @@ import {
 } from "../auth/errors.js";
 import { sessions } from "../auth/schema.js";
 import type { ClientInfo, SessionService } from "../auth/sessions.js";
-import { passwordSignInSetting } from "../auth/settings.js";
 import type { PendingIdentity, SecondFactorType, SignedIn, SignInService } from "../auth/sign-in.js";
 import {
   clientSubject,
@@ -31,6 +30,7 @@ import {
 import { hasSecondFactor, secondFactorsOf } from "../auth/two-factor.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
+import type { MailService } from "../mail/mail-service.js";
 import type { NotificationService } from "../notifications/service.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import { memberships } from "../organizations/access-schema.js";
@@ -50,6 +50,7 @@ import {
 } from "./adapter.js";
 import type { ReceivedClaim } from "./claims.js";
 import type { GroupMappingService } from "./groups.js";
+import { confirmsLinks, refreshManagedAccounts, takeOverLocalCredentials } from "./managed.js";
 import type { ConnectionCheck, IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import { SamlAdapter, samlPaths } from "./saml.js";
@@ -79,13 +80,12 @@ export interface StartedFlow {
   browserToken: string;
 }
 
-export function needsLunedoFactor(
-  setting: { mode: "provider" | "providerProof" | "lunedo"; proofValues?: readonly string[] },
+export function providerProvedSecondFactor(
+  setting: { mode: "provider" | "providerProof"; proofValues?: readonly string[] },
   methods: readonly string[],
 ): boolean {
-  if (setting.mode === "lunedo") return true;
-  if (setting.mode === "provider") return false;
-  return !methods.some((method) => setting.proofValues?.includes(method));
+  if (setting.mode === "provider") return true;
+  return methods.some((method) => setting.proofValues?.includes(method));
 }
 
 export class DirectorySignInRefusedError extends AuthError {
@@ -180,10 +180,7 @@ function testFailure(error: ProviderPolicyError | ProviderResponseError): TestFa
 
 export interface SignInOptions {
   providers: SignInProvider[];
-  emailStep: boolean;
-  directProvider: SignInProvider | null;
   lastProvider: SignInProvider | null;
-  passwordSignIn: boolean;
   passkeys: true;
 }
 
@@ -196,8 +193,7 @@ export type SignInStep =
       preset: SignInProvider["preset"];
       signInName: "email" | "userPrincipalName" | "sAMAccountName" | "uid";
     }
-  | { step: "password" }
-  | { step: "none" };
+  | { step: "password" };
 
 export interface SignInRefusal {
   reference: string;
@@ -268,6 +264,7 @@ export class ProviderSignInService {
   readonly #challenges: ChallengeStore;
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService;
+  readonly #mail: MailService | undefined;
   readonly #settings: SettingsService;
   readonly #rateLimiter: RateLimiter;
   readonly #throttle: SignInThrottle | undefined;
@@ -285,6 +282,7 @@ export class ProviderSignInService {
     challenges: ChallengeStore;
     audit: AuditLog;
     notifications: NotificationService;
+    mail?: MailService;
     settings: SettingsService;
     rateLimiter: RateLimiter;
     throttle?: SignInThrottle;
@@ -301,6 +299,7 @@ export class ProviderSignInService {
     this.#challenges = options.challenges;
     this.#audit = options.audit;
     this.#notifications = options.notifications;
+    this.#mail = options.mail;
     this.#settings = options.settings;
     this.#rateLimiter = options.rateLimiter;
     this.#throttle = options.throttle;
@@ -445,7 +444,7 @@ export class ProviderSignInService {
     }
     await this.#forgetResponse(flow.id);
     const profile = result.profile;
-    const emailVerified = this.#emailVerified(provider.config.domains, profile.email);
+    const emailVerified = this.#emailVerified(provider.config.domains, profile);
 
     if (flow.purpose === "test") {
       const test: TestResult = {
@@ -462,7 +461,13 @@ export class ProviderSignInService {
     }
 
     if (flow.purpose === "reauthentication") {
-      return this.#reauthenticate(flow, provider.id, profile, result.authTime);
+      return this.#reauthenticate(
+        flow,
+        provider.id,
+        profile,
+        result.authTime,
+        provider.type === "ldap" || providerProvedSecondFactor(provider.config.secondFactor, result.methods),
+      );
     }
     if (flow.purpose === "linkConfirmation") {
       return this.#confirmLink(
@@ -476,6 +481,12 @@ export class ProviderSignInService {
       );
     }
 
+    if (
+      provider.type !== "ldap" &&
+      !providerProvedSecondFactor(provider.config.secondFactor, result.methods)
+    ) {
+      return this.#refuse({ providerId: provider.id, reason: "secondFactorMissing", profile });
+    }
     const { groups, failed: groupsFailed } = await this.#groups(provider, credentials, profile);
     await this.#trackGroupsClaim(provider.id, profile);
     for (let attempt = 0; ; attempt++) {
@@ -486,7 +497,7 @@ export class ProviderSignInService {
           groups,
           groupsFailed,
           emailVerified,
-          secondFactor: needsLunedoFactor(provider.config.secondFactor, result.methods),
+          secondFactor: "policy",
           providerSessionId: result.providerSessionId,
           client: input.client,
           returnTo: flow.returnTo,
@@ -590,8 +601,8 @@ export class ProviderSignInService {
     );
   }
 
-  #emailVerified(domains: readonly string[], email: string | null): boolean {
-    const domain = domainOf(email);
+  #emailVerified(domains: readonly string[], profile: ProviderProfile): boolean {
+    const domain = domainOf(profile.email);
     return domain !== null && domains.includes(domain);
   }
 
@@ -644,6 +655,14 @@ export class ProviderSignInService {
             },
             mailIds,
           );
+          const mailId = await takeOverLocalCredentials(
+            tx,
+            { audit: this.#audit, mail: this.#mail },
+            account.id,
+            accountPrincipal(account.id),
+            "signIn",
+          );
+          if (mailId) mailIds.push(mailId);
           return identity.id;
         },
         { ...input, returnTo: input.returnTo },
@@ -653,9 +672,15 @@ export class ProviderSignInService {
     let placeholder: Account | null = null;
     if (input.emailVerified && profile.email) {
       const existing = await this.#accounts.findByEmail(profile.email);
-      if (existing?.state === "placeholder") placeholder = existing;
-      else if (existing) {
+      if (existing?.state === "placeholder") {
+        if (profile.emailUnverified) throw new Refused("emailNotVerified");
+        placeholder = existing;
+      } else if (existing) {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
+        if (!(await confirmsLinks(this.#database, existing.id))) {
+          if (profile.emailUnverified) throw new Refused("emailNotVerified");
+          return this.#adoptExisting(existing, input);
+        }
         const ways = await this.#linkWays(existing);
         if (!ways.password && !ways.passkey && ways.providers.length === 0) {
           throw new Refused("linkUnavailable");
@@ -761,7 +786,89 @@ export class ProviderSignInService {
           fields: { providerId: provider.id, via: "signIn" },
           ...scope,
         });
+        await refreshManagedAccounts(tx, this.#audit, { accountIds: [account.id] }, SYSTEM);
         return { identityId: created.id, account };
+      },
+      input,
+    );
+  }
+
+  async #adoptExisting(
+    existing: Account & { email: string },
+    input: {
+      provider: ProviderDefinition;
+      profile: ProviderProfile;
+      groups: ProviderProfile["groups"];
+      groupsFailed: boolean;
+      secondFactor: boolean | "policy";
+      providerSessionId: string | null;
+      client: ClientInfo;
+      returnTo: string | null;
+      started: Date;
+    },
+  ): Promise<CallbackResult> {
+    const { provider, profile } = input;
+    return this.#withSession(
+      existing,
+      async (tx, mailIds) => {
+        const account = await this.#accounts.lock(tx, existing.id);
+        if (!canSignIn(account)) throw new Refused("accountInactive");
+        const [other] = await tx
+          .select({ id: identities.id, subject: identities.subject })
+          .from(identities)
+          .where(and(eq(identities.accountId, account.id), eq(identities.providerId, provider.id)));
+        if (other?.subject === profile.subject) return other.id;
+        if (other) throw new Refused("linkAmbiguous");
+        const [created] = await tx
+          .insert(identities)
+          .values({
+            accountId: account.id,
+            providerId: provider.id,
+            subject: profile.subject,
+            email: profile.email,
+            emailVerified: true,
+            signInName: profile.signInName,
+            displayName: profile.displayName,
+            lastSignInAt: this.#clock(),
+          })
+          .returning({ id: identities.id });
+        if (!created) throw new Error("The identity was not stored");
+        await this.#mapping.applyAtSignIn(
+          tx,
+          {
+            providerId: provider.id,
+            identityId: created.id,
+            accountId: account.id,
+            groups: input.groups,
+            groupsFailed: input.groupsFailed,
+          },
+          mailIds,
+        );
+        const scope = account.homeOrganizationId
+          ? { scope: { type: "organization" as const, id: account.homeOrganizationId } }
+          : {};
+        await this.#audit.record(tx, {
+          name: "identity.linked",
+          actor: accountPrincipal(account.id),
+          targetId: account.id,
+          fields: { providerId: provider.id, via: "signIn" },
+          ...scope,
+        });
+        await refreshManagedAccounts(
+          tx,
+          this.#audit,
+          { accountIds: [account.id] },
+          accountPrincipal(account.id),
+        );
+        const mailId = await takeOverLocalCredentials(
+          tx,
+          { audit: this.#audit, mail: this.#mail },
+          account.id,
+          accountPrincipal(account.id),
+          "signIn",
+        );
+        if (mailId) mailIds.push(mailId);
+        return created.id;
       },
       input,
     );
@@ -850,6 +957,7 @@ export class ProviderSignInService {
     providerId: string,
     profile: ProviderProfile,
     authTime: number | null,
+    proved: boolean,
   ): Promise<CallbackResult> {
     if (!flow.sessionId) throw new ChallengeExpiredError();
     const [session] = await this.#database
@@ -862,7 +970,7 @@ export class ProviderSignInService {
       .from(identities)
       .where(and(eq(identities.providerId, providerId), eq(identities.subject, profile.subject)));
     const fresh = authTime !== null && authTime * 1000 >= flow.createdAt.getTime() - AUTH_TIME_TOLERANCE_MS;
-    if (identity?.accountId !== session.accountId || !fresh) {
+    if (identity?.accountId !== session.accountId || !fresh || !proved) {
       await this.#audit.recordAlone({
         name: "auth.reauthenticationFailed",
         actor: accountPrincipal(session.accountId),
@@ -920,7 +1028,7 @@ export class ProviderSignInService {
       .where(and(eq(identities.accountId, account.id), isNull(identityProviders.deactivatedAt)))
       .orderBy(identityProviders.name);
     return {
-      password: await this.#signIn.passwordConfirmsLink(account),
+      password: this.#signIn.passwordConfirmsLink(account),
       passkey: factors.passkeys > 0,
       providers: linked.map((row) => ({ id: row.id, name: row.name, directory: row.type === "ldap" })),
     };
@@ -1008,10 +1116,14 @@ export class ProviderSignInService {
       });
       throw new ChallengeExpiredError();
     }
+    if (provider.type !== "ldap" && !providerProvedSecondFactor(provider.config.secondFactor, methods)) {
+      await this.#challenges.recordFailure(pending.id);
+      throw new ChallengeExpiredError();
+    }
     const outcome = await this.#finishLink(
       pending.id,
       account,
-      needsLunedoFactor(provider.config.secondFactor, methods),
+      await this.#signIn.secondFactorRequired(account.id),
       client,
       started,
     );
@@ -1121,14 +1233,9 @@ export class ProviderSignInService {
 
   async signInOptions(lastProviderId: string | null): Promise<SignInOptions> {
     const providers = await this.#providers.signInProviders();
-    const passwordSignIn = await this.#settings.get(passwordSignInSetting, {});
-    const directProvider = providers.length === 1 && !passwordSignIn ? (providers[0] ?? null) : null;
     return {
       providers,
-      emailStep: directProvider === null,
-      directProvider,
       lastProvider: providers.find((provider) => provider.id === lastProviderId) ?? null,
-      passwordSignIn,
       passkeys: true,
     };
   }
@@ -1158,7 +1265,7 @@ export class ProviderSignInService {
     if (provider) {
       return { step: "provider", providerId: provider.id, name: provider.name, preset: provider.preset };
     }
-    return (await this.#settings.get(passwordSignInSetting, {})) ? { step: "password" } : { step: "none" };
+    return { step: "password" };
   }
 
   async refusal(code: string): Promise<SignInRefusal | null> {
@@ -1391,7 +1498,7 @@ export class ProviderSignInService {
     }
     await this.#throttle?.recordSuccess(subjects.email ?? "");
     const profile = result.profile;
-    const emailVerified = this.#emailVerified(provider.config.domains, profile.email);
+    const emailVerified = this.#emailVerified(provider.config.domains, profile);
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.#signInWith({

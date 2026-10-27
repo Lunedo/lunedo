@@ -1,5 +1,7 @@
 # Static website
 
+Checked against Cloudflare, nginx and GitHub documentation, October 2026.
+
 A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The Lunedo instance stays the place where articles are edited. After changes, download a new ZIP and upload it again, by hand or with your own script ([Knowledge base export](../api/knowledge-base-export.md) shows how to do this through the API).
 
 ## Downloading the website
@@ -61,5 +63,3 @@ location /help/ {
 ```
 
 On GitHub Pages, publishing from a branch runs Jekyll, which leaves out folders whose names start with an underscore, such as `_assets/`. Add an empty file `.nojekyll` next to `index.html`, or publish with a GitHub Actions workflow. GitHub Pages does not read `_redirects`; earlier addresses work through the HTML redirect pages.
-
-Checked against Cloudflare, nginx and GitHub documentation, October 2026.

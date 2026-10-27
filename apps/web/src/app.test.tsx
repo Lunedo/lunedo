@@ -59,10 +59,7 @@ function api(overrides: Record<string, (request: RecordedRequest) => Reply | Pro
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
         providers: [],
-        emailStep: true,
-        directProvider: null,
         lastProvider: null,
-        passwordSignIn: true,
         passkeys: true,
       },
     }),

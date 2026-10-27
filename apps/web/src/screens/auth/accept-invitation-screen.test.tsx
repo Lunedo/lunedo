@@ -20,8 +20,12 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-function api(preview: () => { status?: number; body?: unknown }) {
+function api(
+  preview: () => { status?: number; body?: unknown },
+  overrides: Record<string, (request: { body: unknown }) => { status?: number; body?: unknown }> = {},
+) {
   return mockApi({
+    ...overrides,
     "GET /api/v1/instance/info": () => ({
       body: {
         name: "Lunedo",
@@ -60,6 +64,7 @@ const OPEN = {
   invitedByName: "Olivia Owner",
   knowledgeBaseName: null,
   newAccount: false,
+  provider: null,
 };
 
 describe("accepting an invitation", () => {
@@ -168,5 +173,39 @@ describe("accepting an invitation", () => {
     await user.clear(password);
     await user.type(password, "a long reader passphrase");
     expect(screen.getByText(/Met\./)).toBeTruthy();
+  });
+
+  it("asks only for the name when the invited address signs in through a provider", async () => {
+    const provider = { id: "01929b1e-0000-7000-8000-0000000000e1", name: "Nordwind SSO", type: "oidc" };
+    const { requests } = api(() => ({ body: { ...OPEN, newAccount: true, provider } }), {
+      "POST /api/v1/invitations/accept": () => ({
+        body: {
+          accountId: "01929b1e-0000-7000-8000-0000000000e2",
+          organizationId: "01929b1e-0000-7000-8000-0000000000e3",
+          accountCreated: true,
+          portalUrl: null,
+          provider,
+        },
+      }),
+    });
+    await open(`/accept-invitation#token=${TOKEN}`);
+    expect(
+      await screen.findByText(
+        "Create your account to accept the invitation. You sign in through Nordwind SSO, so Lunedo needs only your name.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Password")).toBeNull();
+    await userEvent.type(screen.getByLabelText("Name"), "Lena Example");
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    expect(
+      await screen.findByText("Your account is ready. Sign in through Nordwind SSO to start."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Continue with Nordwind SSO" })).toBeTruthy();
+    await waitFor(() =>
+      expect(requests.find((request) => request.path === "/api/v1/invitations/accept")?.body).toEqual({
+        token: TOKEN,
+        name: "Lena Example",
+      }),
+    );
   });
 });

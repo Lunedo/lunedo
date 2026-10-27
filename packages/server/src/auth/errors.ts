@@ -79,8 +79,11 @@ export class SameEmailError extends AuthError {
   }
 }
 
-export class PasswordSignInDisabledError extends AuthError {
-  constructor() {
-    super("passwordSignInDisabled", "Sign-in with a password is turned off for this account");
+export class ManagedAccountError extends AuthError {
+  constructor(
+    readonly providerId: string,
+    readonly providerName: string,
+  ) {
+    super("managedAccount", `This account signs in through ${providerName}`);
   }
 }

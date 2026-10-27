@@ -50,7 +50,7 @@ export type DirectorySignInResult =
 
 export type SignInOptions =
   paths["/api/v1/auth/sign-in-options"]["get"]["responses"]["200"]["content"]["application/json"];
-export type SignInProvider = NonNullable<SignInOptions["directProvider"]>;
+export type SignInProvider = SignInOptions["providers"][number];
 
 export type DiscoveredStep =
   paths["/api/v1/auth/sign-in/discover"]["post"]["responses"]["200"]["content"]["application/json"];
@@ -75,6 +75,8 @@ export const refusalReasons: readonly RefusalReason[] = [
   "linkDeclined",
   "linkUnavailable",
   "invalidResponse",
+  "secondFactorMissing",
+  "linkAmbiguous",
 ];
 
 export function isRefusalReason(value: unknown): value is RefusalReason {

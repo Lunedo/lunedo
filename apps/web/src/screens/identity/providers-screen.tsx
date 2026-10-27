@@ -27,16 +27,14 @@ import {
   providersQuery,
   providerTypes,
   removeDraft,
-  removeProvider,
 } from "../../api/identity-queries.js";
-import { SettingsList } from "../../components/settings-list.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
-import { useInstanceSettingsEditor } from "../instance/general-screen.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { EmergencyRecipients } from "./emergency-recipients.js";
 import { credentialStatus, providerPresetLabel, typeLabel } from "./provider-labels.js";
+import { RemoveProviderDialog, useRemovalPreviewLoader } from "./provider-removal.js";
 
 export function providerPath(providerId: string, search?: Record<string, string>) {
   return {
@@ -275,10 +273,10 @@ export function ProvidersTable({
   const format = useFormat();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const showFailure = useFailureToast();
   const [search, setSearch] = useState("");
   const [type, setType] = useState<ProviderType | "all">("all");
   const [removing, setRemoving] = useState<IdentityProvider | null>(null);
+  const preview = useRemovalPreviewLoader();
   const query = search.trim().toLocaleLowerCase();
   const rows = providers.filter(
     (provider) =>
@@ -358,6 +356,17 @@ export function ProvidersTable({
               ),
           },
           {
+            key: "managedAccounts",
+            header: t("identityProviders.columns.managedAccounts"),
+            align: "end",
+            hideBelow: "md",
+            cell: (provider) => (
+              <span className="whitespace-nowrap tabular-nums">
+                {format.number(provider.managedAccounts)}
+              </span>
+            ),
+          },
+          {
             key: "credential",
             header: t("identityProviders.columns.credential"),
             cell: (provider) => {
@@ -397,7 +406,9 @@ export function ProvidersTable({
                           label: t("identityProviders.remove"),
                           icon: Trash2,
                           danger: true,
-                          onSelect: () => setRemoving(provider),
+                          onSelect: () => {
+                            void preview.load(provider.id).then(() => setRemoving(provider));
+                          },
                         },
                       ]
                     : []),
@@ -407,25 +418,17 @@ export function ProvidersTable({
           },
         ]}
       />
-      <ConfirmDialog
-        open={removing !== null}
-        onOpenChange={(next) => (next ? undefined : setRemoving(null))}
-        title={t("identityProviders.removeTitle", { name: removing?.name ?? "" })}
-        description={t("identityProviders.removeDescription")}
-        confirmLabel={t("identityProviders.remove")}
-        cancelLabel={t("common.cancel")}
-        destructive
-        onConfirm={async () => {
-          if (!removing) return;
-          try {
-            await removeProvider(removing.id);
+      {removing ? (
+        <RemoveProviderDialog
+          provider={removing}
+          open
+          onOpenChange={(next) => (next ? undefined : setRemoving(null))}
+          onRemoved={async () => {
             setRemoving(null);
             await queryClient.invalidateQueries({ queryKey: identityKeys.providers });
-          } catch (failure) {
-            showFailure(t("failures.removeProvider"), failure);
-          }
-        }}
-      />
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -435,7 +438,6 @@ export function InstanceProvidersScreen() {
   const state = useOrganizationState();
   const navigate = useNavigate();
   const providers = useQuery(providersQuery);
-  const editor = useInstanceSettingsEditor();
   const canManage = state.can("instance.signIn.manage");
   return (
     <SettingsPage
@@ -481,9 +483,6 @@ export function InstanceProvidersScreen() {
           </>
         )
       ) : null}
-      <Section title={t("identityProviders.otherMethods")}>
-        <SettingsList {...editor} keys={["auth.passwordSignIn"]} level="instance" />
-      </Section>
       <Section title={t("emergencyRecipients.title")}>
         <p className="pt-3 text-sm text-text-muted">
           {t("emergencyRecipients.otherEmergency")}{" "}

@@ -133,6 +133,25 @@ export const identities = pgTable(
   ],
 );
 
+export const managedSources = ["identity", "domain"] as const;
+export type ManagedSource = (typeof managedSources)[number];
+export const managedSource = pgEnum("managed_account_source", managedSources);
+
+export const managedAccounts = pgTable(
+  "managed_accounts",
+  {
+    accountId: uuid()
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    providerId: uuid()
+      .notNull()
+      .references(() => identityProviders.id, { onDelete: "cascade" }),
+    source: managedSource().notNull(),
+    since: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [index().on(table.providerId)],
+);
+
 export const scimTokens = pgTable(
   "scim_tokens",
   {
@@ -185,6 +204,8 @@ export const signInRefusalReasons = [
   "linkDeclined",
   "linkUnavailable",
   "invalidResponse",
+  "secondFactorMissing",
+  "linkAmbiguous",
 ] as const;
 export type SignInRefusalReason = (typeof signInRefusalReasons)[number];
 export const signInRefusalReason = pgEnum("sign_in_refusal_reason", signInRefusalReasons);

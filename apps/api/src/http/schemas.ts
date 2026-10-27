@@ -97,6 +97,31 @@ export const jobTitleField = z
   .nullable()
   .describe("Job title the person entered on their profile, or null.");
 
+export const managingProviderSchema = z
+  .object({
+    providerId: uuid("ID of the identity provider."),
+    providerName: z.string().describe("Name of the identity provider."),
+    providerType: extensibleEnum(["oidc", "saml", "ldap"], "Kind of identity provider."),
+    source: z
+      .enum(["identity", "domain"])
+      .describe(
+        "Why the provider manages the account: `identity` when an identity of the provider is linked, `domain` when the e-mail domain of the account is assigned to the provider.",
+      ),
+    since: timestamp("Since when the provider manages the account."),
+  })
+  .nullable()
+  .describe(
+    "The identity provider that manages the account, or null for a local account. Accounts managed by an OpenID Connect or SAML provider sign in only through it and have no password, passkey or authenticator app in Lunedo; accounts managed by a directory sign in with its password and keep their second factor in Lunedo.",
+  );
+
+export const exampleManagingProvider = {
+  providerId: "01929b1f-1b7e-7b62-938f-7a6b5c4d9e0f",
+  providerName: "Company login",
+  providerType: "oidc",
+  source: "identity",
+  since: "2026-09-14T07:45:00.000Z",
+};
+
 export const memberSchema = z
   .object({
     accountId: uuid("ID of the account."),
@@ -130,6 +155,11 @@ export const memberSchema = z
     twoFactorActive: z
       .boolean()
       .describe("Whether the account has a confirmed authenticator app or a passkey."),
+    managedBy: managingProviderSchema
+      .optional()
+      .describe(
+        "The identity provider that manages the account, or null for a local account. Only for callers who manage the members of the organization.",
+      ),
     lastActiveAt: timestamp("When the account was last active in Lunedo, or null.").nullable(),
   })
   .describe("A member of an organization.");
@@ -154,6 +184,7 @@ export const exampleMember = {
   ],
   groups: [{ id: "01929b1e-7a3b-7c2d-8e1f-0a9b8c7d6e5f", name: "Engineering" }],
   twoFactorActive: true,
+  managedBy: null,
   lastActiveAt: "2026-10-24T08:15:00.000Z",
 };
 

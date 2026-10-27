@@ -1,5 +1,7 @@
 # E-mail with Google Workspace
 
+Checked against Google Cloud and Google Workspace documentation, October 2026.
+
 Lunedo sends through Google Workspace with SMTP and OAuth2: a Google Cloud service account with domain-wide delegation signs in at `smtp.gmail.com` as one mailbox. No password of the mailbox is stored.
 
 The settings are under **Settings › Instance › Services › Delivery** and need the instance area Settings with Manage and a recent sign-in, also for test mails. The general settings, delivery and troubleshooting are on [E-mail](../email.md).
@@ -51,5 +53,3 @@ The client ID stays the same, so the delegation does not change.
 | `oauthTokenUnreachable` | `oauth2.googleapis.com` could not be reached. Check the network connection of the server. |
 
 Other failures are described in [E-mail](../email.md#troubleshooting).
-
-Checked against Google Cloud and Google Workspace documentation, October 2026.

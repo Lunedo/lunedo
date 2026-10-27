@@ -1,23 +1,23 @@
 import { randomUUID } from "node:crypto";
 import { Secret, TOTP } from "otpauth";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import {
   ChallengeExpiredError,
   InvalidCredentialsError,
   InvalidSecondFactorError,
-  PasswordSignInDisabledError,
   RateLimitedError,
 } from "../auth/errors.js";
-import { passwordSignInSetting, twoFactorRequiredSetting } from "../auth/settings.js";
+import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { VirtualAuthenticator } from "../testing/webauthn.js";
-import { type CallbackResult, needsLunedoFactor } from "./sign-in.js";
+import { managedStateOf } from "./managed.js";
+import { type CallbackResult, providerProvedSecondFactor } from "./sign-in.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const BASE = "https://lunedo.test";
@@ -38,6 +38,14 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     await idp?.close();
     await test?.close();
   });
+
+  afterEach(async () => {
+    await test.pool.query("update instance set owner_account_id = null");
+  });
+
+  async function asOwner(accountId: string) {
+    await test.pool.query("update instance set owner_account_id = $1", [accountId]);
+  }
 
   async function account(home: string | null, email = `${randomUUID()}@example.org`) {
     return test.database.transaction((tx) =>
@@ -64,7 +72,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     requiredGroups?: string[];
     domains?: string[];
     issuer?: FakeOidcProvider;
-    secondFactor?: { mode: "provider" | "providerProof" | "lunedo"; proofValues?: string[] };
+    secondFactor?: { mode: "provider" | "providerProof"; proofValues?: string[] };
   }) {
     const source = options.issuer ?? idp;
     const domains = options.domains ?? ["example.org"];
@@ -156,6 +164,10 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       [placeholder.id],
     );
     expect(events.rowCount).toBe(1);
+    expect(await managedStateOf(test.database, placeholder.id)).toMatchObject({
+      providerId: id,
+      source: "identity",
+    });
   });
 
   it("creates an account at the first sign-in and signs it in again by its identifier", async () => {
@@ -290,16 +302,6 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(identities.rows).toEqual([]);
   });
 
-  async function enableTotp(accountId: string) {
-    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
-    if (!setup) throw new Error("TOTP was not started");
-    const secret = Secret.fromBase32(setup.secret);
-    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
-      confirming: true,
-    });
-    return secret;
-  }
-
   it("creates accounts without an organization, tells the administrators and lets them assign one", async () => {
     const administrator = await account(null);
     await test.services.roles.assign(SYSTEM, {
@@ -350,60 +352,50 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(audited.rows).toEqual([{ fields: { organizationId: org } }]);
   });
 
-  it("asks for a Lunedo second factor when the provider shows no proof of one", async () => {
+  it("refuses a sign-in without proof of a second factor when the provider is set to require one", async () => {
     const id = await provider({ accountCreation: true, secondFactor: { mode: "providerProof" } });
     const subject = randomUUID();
     const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org` };
-    const first = await signIn(id, claims);
-    if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
-    expect(first.signedIn.session.kind).toBe("secondFactorSetup");
-    const accountId = first.signedIn.session.accountId;
-
-    const secret = await enableTotp(accountId);
-    const second = await signIn(id, claims);
-    if (second.kind !== "secondFactorRequired") throw new Error(`Second factor expected, got ${second.kind}`);
-    expect(second.factors).toEqual(["totp"]);
-    const completed = await test.services.signIn.completeSecondFactor({
-      pendingToken: second.pendingToken,
-      factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
-      client: {},
-    });
-    expect(completed.session).toMatchObject({
-      accountId,
-      kind: "full",
-      methods: ["identityProvider", "totp"],
-    });
-    const stored = await test.pool.query<{ identity_id: string | null }>(
-      "select identity_id from sessions where id = $1",
-      [completed.session.id],
+    const refused = await signIn(id, claims);
+    expect(refused).toMatchObject({ kind: "refused", reason: "secondFactorMissing" });
+    const audited = await test.pool.query(
+      "select fields from audit_events where name = 'auth.signInRefused' and target_id = $1",
+      [id],
     );
-    expect(stored.rows[0]?.identity_id).not.toBeNull();
+    expect(audited.rows.map((row) => row.fields.reason)).toEqual(["secondFactorMissing"]);
+    const created = await test.pool.query("select 1 from identities where subject = $1", [subject]);
+    expect(created.rows).toEqual([]);
 
     const proven = await signIn(id, { ...claims, amr: ["pwd", "mfa"] });
     if (proven.kind !== "signedIn") throw new Error(`Signed in expected, got ${proven.kind}`);
     expect(proven.signedIn.session).toMatchObject({ kind: "full", methods: ["identityProvider"] });
   });
 
-  it("always asks for a Lunedo second factor when the provider is set to", async () => {
-    const id = await provider({ accountCreation: true, secondFactor: { mode: "lunedo" } });
+  it("never asks managed accounts of a provider for a Lunedo second factor, also when 2FA is enforced", async () => {
+    const id = await provider({ accountCreation: true });
     const subject = randomUUID();
-    const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org`, amr: ["mfa"] };
-    const first = await signIn(id, claims);
-    if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
-    await enableTotp(first.signedIn.session.accountId);
-    expect((await signIn(id, claims)).kind).toBe("secondFactorRequired");
+    const claims = { sub: subject, email: `${subject.slice(0, 8)}@example.org` };
+    await test.settings.set(twoFactorRequiredSetting, {}, "instance", true);
+    try {
+      const first = await signIn(id, claims);
+      if (first.kind !== "signedIn") throw new Error(`Signed in expected, got ${first.kind}`);
+      expect(first.signedIn.session.kind).toBe("full");
+      expect(await test.services.signIn.secondFactorRequirement(first.signedIn.session.accountId)).toBeNull();
+    } finally {
+      await test.settings.clear(twoFactorRequiredSetting, {}, "instance");
+    }
   });
 
   it("accepts the configured proof values of a provider", () => {
     const setting = { mode: "providerProof" as const, proofValues: ["hwk", "otp"] };
-    expect(needsLunedoFactor(setting, ["pwd", "otp"])).toBe(false);
-    expect(needsLunedoFactor(setting, ["pwd", "mfa"])).toBe(true);
-    expect(needsLunedoFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(false);
-    expect(needsLunedoFactor({ mode: "lunedo", proofValues: ["mfa"] }, ["mfa"])).toBe(true);
+    expect(providerProvedSecondFactor(setting, ["pwd", "otp"])).toBe(true);
+    expect(providerProvedSecondFactor(setting, ["pwd", "mfa"])).toBe(false);
+    expect(providerProvedSecondFactor({ mode: "provider", proofValues: ["mfa"] }, [])).toBe(true);
   });
 
-  it("keeps a pending link for 15 minutes and refuses it afterwards", async () => {
+  it("keeps a pending link of the instance owner for 15 minutes and refuses it afterwards", async () => {
     const existing = await account(null);
+    await asOwner(existing.id);
     const id = await provider({});
     const result = await signIn(id, { sub: randomUUID(), email: existing.email });
     if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
@@ -423,9 +415,10 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     );
   });
 
-  it("links an existing account only after its password and second factor", async () => {
+  it("links the account of the instance owner only after its password and second factor and keeps it local", async () => {
     const org = await organization();
     const existing = await account(org);
+    await asOwner(existing.id);
     const setup = await test.services.totp.begin(existing.id, {
       issuer: "Test",
       account: existing.email ?? "",
@@ -472,26 +465,329 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       methods: ["password", "totp", "identityProvider"],
     });
     const again = await signIn(id, { sub: subject, email: existing.email });
-    expect(again.kind === "signedIn" && again.signedIn.session.accountId).toBe(existing.id);
+    expect(again.kind).toBe("secondFactorRequired");
+    expect(await managedStateOf(test.database, existing.id)).toBeNull();
+    expect((await test.services.accounts.get(existing.id))?.passwordHash).not.toBeNull();
   });
 
-  it("asks to set up the required second factor after linking an account that has none", async () => {
+  async function localCredentials(accountId: string) {
+    const result = await test.pool.query<{
+      password: boolean;
+      totp: number;
+      passkeys: number;
+      codes: number;
+      sessions: number;
+    }>(
+      `select (select password_hash is not null from accounts where id = $1) as password,
+        (select count(*)::int from totp_credentials where account_id = $1) as totp,
+        (select count(*)::int from webauthn_credentials where account_id = $1) as passkeys,
+        (select count(*)::int from recovery_codes where account_id = $1) as codes,
+        (select count(*)::int from sessions where account_id = $1) as sessions`,
+      [accountId],
+    );
+    return result.rows[0];
+  }
+
+  async function enableTotp(accountId: string) {
+    const setup = await test.services.totp.begin(accountId, { issuer: "Test", account: "person" });
+    if (!setup) throw new Error("TOTP was not started");
+    const secret = Secret.fromBase32(setup.secret);
+    await test.services.totp.verify(test.database, accountId, TOTP.generate({ secret }), {
+      confirming: true,
+    });
+    return secret;
+  }
+
+  it("links an existing local account at its first provider sign-in and removes its local credentials", async () => {
     const org = await organization();
-    await test.settings.set(twoFactorRequiredSetting, { organization: org }, "organization", true);
     const existing = await account(org);
+    await enableTotp(existing.id);
+    await test.database.transaction((tx) => test.services.recoveryCodes.generate(tx, existing.id));
+    const authenticator = new VirtualAuthenticator();
+    const options = await test.services.webauthn.registrationOptions({
+      id: existing.id,
+      email: existing.email ?? "",
+      name: existing.name,
+    });
+    await test.services.webauthn.register(test.database, {
+      accountId: existing.id,
+      response: authenticator.register(options, "https://wiki.example.org"),
+      expectedChallenge: options.challenge,
+      name: "Laptop",
+    });
+    await test.database.transaction((tx) =>
+      test.services.sessions.create(tx, {
+        accountId: existing.id,
+        kind: "full",
+        methods: ["password", "totp"],
+        client: {},
+      }),
+    );
+    expect(await localCredentials(existing.id)).toEqual({
+      password: true,
+      totp: 1,
+      passkeys: 1,
+      codes: 10,
+      sessions: 1,
+    });
+    const id = await provider({});
+    expect(await managedStateOf(test.database, existing.id)).toMatchObject({
+      providerId: id,
+      source: "domain",
+    });
+
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    expect(result.signedIn.session).toMatchObject({
+      accountId: existing.id,
+      kind: "full",
+      methods: ["identityProvider"],
+    });
+    expect(await managedStateOf(test.database, existing.id)).toMatchObject({
+      providerId: id,
+      source: "identity",
+    });
+    expect(await localCredentials(existing.id)).toEqual({
+      password: false,
+      totp: 0,
+      passkeys: 0,
+      codes: 0,
+      sessions: 1,
+    });
+    const membership = await test.pool.query(
+      "select kind from memberships where organization_id = $1 and account_id = $2",
+      [org, existing.id],
+    );
+    expect(membership.rows).toEqual([{ kind: "member" }]);
+    const removed = await test.pool.query<{ fields: Record<string, unknown> }>(
+      "select fields from audit_events where name = 'account.localCredentialsRemoved' and target_id = $1",
+      [existing.id],
+    );
+    expect(removed.rows.map((row) => row.fields)).toEqual([
+      {
+        providerId: id,
+        localSignIn: true,
+        authenticatorApp: true,
+        passkeys: 1,
+        recoveryLeft: 10,
+        endedSessions: 1,
+      },
+    ]);
+    const mails = await test.pool.query("select 1 from mail_outbox where template = 'accountManaged'");
+    expect(mails.rowCount).toBeGreaterThanOrEqual(1);
+    await expect(
+      test.services.signIn.signInWithPassword({
+        email: existing.email ?? "",
+        password: PASSWORD,
+        client: {},
+      }),
+    ).rejects.toThrow(InvalidCredentialsError);
+
+    const again = await signIn(id, { sub: randomUUID(), email: existing.email });
+    expect(again).toMatchObject({ kind: "refused", reason: "linkAmbiguous" });
+    const refused = await test.pool.query(
+      "select 1 from audit_events where name = 'auth.signInRefused' and target_id = $1 and fields ->> 'reason' = 'linkAmbiguous'",
+      [id],
+    );
+    expect(refused.rowCount).toBe(1);
+    expect(await localCredentials(existing.id)).toMatchObject({ sessions: 1 });
+  });
+
+  it("does not link an account when the provider says the address is not verified", async () => {
+    const existing = await account(null);
+    const id = await provider({});
+    const unverified = await signIn(id, { sub: randomUUID(), email: existing.email, email_verified: false });
+    expect(unverified).toMatchObject({ kind: "refused", reason: "emailNotVerified" });
+    const linked = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
+    expect(linked.rowCount).toBe(0);
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+
+    const verified = await signIn(id, { sub: randomUUID(), email: existing.email, email_verified: true });
+    expect(verified).toMatchObject({ kind: "signedIn" });
+  });
+
+  it("does not take over a placeholder when the provider says the address is not verified", async () => {
+    const domain = `${randomUUID().slice(0, 8)}.example.org`;
+    const id = await provider({ accountCreation: true, domains: [domain] });
+    const email = `imported@${domain}`;
+    const placeholder = await test.services.accountLifecycle.createPlaceholder(SYSTEM, {
+      name: "Imported",
+      email,
+    });
+    const result = await signIn(id, { sub: randomUUID(), email, email_verified: false });
+    expect(result).toMatchObject({ kind: "refused", reason: "emailNotVerified" });
+    expect(await test.services.accounts.get(placeholder.id)).toMatchObject({ state: "placeholder" });
+  });
+
+  it("still creates new accounts for addresses in its domains that the provider leaves unverified", async () => {
+    const id = await provider({ accountCreation: true });
+    const email = `unverified.${randomUUID().slice(0, 8)}@example.org`;
+    const result = await signIn(id, { sub: randomUUID(), email, email_verified: false });
+    expect(result).toMatchObject({ kind: "signedIn" });
+  });
+
+  it("removes local credentials left from before when a linked account signs in through its provider", async () => {
+    const existing = await account(null);
+    await enableTotp(existing.id);
+    const id = await provider({});
+    const subject = randomUUID();
+    await test.pool.query(
+      "insert into identities (id, account_id, provider_id, subject, email_verified) values (gen_random_uuid(), $1, $2, $3, true)",
+      [existing.id, id, subject],
+    );
+    await test.pool.query(
+      "insert into managed_accounts (account_id, provider_id, source) values ($1, $2, 'identity') on conflict (account_id) do update set source = 'identity', provider_id = $2",
+      [existing.id, id],
+    );
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true, totp: 1 });
+
+    const result = await signIn(id, { sub: subject, email: existing.email });
+    expect(result).toMatchObject({ kind: "signedIn" });
+    expect(await localCredentials(existing.id)).toMatchObject({ password: false, totp: 0, sessions: 1 });
+    const removed = await test.pool.query(
+      "select 1 from audit_events where name = 'account.localCredentialsRemoved' and target_id = $1",
+      [existing.id],
+    );
+    expect(removed.rowCount).toBe(1);
+  });
+
+  it("asks an administrator to confirm the link once and then takes the account over", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: existing.id },
+    });
     const id = await provider({});
     const result = await signIn(id, { sub: randomUUID(), email: existing.email });
     if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+    expect(await managedStateOf(test.database, existing.id)).toMatchObject({ source: "domain" });
+
     const linked = await test.services.signIn.confirmIdentityLink({
       pendingToken: result.pendingToken,
       password: PASSWORD,
       factor: null,
       client: {},
     });
-    expect(linked.session).toMatchObject({ accountId: existing.id, kind: "secondFactorSetup" });
+    expect(linked.session).toMatchObject({ accountId: existing.id });
+    expect(await managedStateOf(test.database, existing.id)).toMatchObject({
+      providerId: id,
+      source: "identity",
+    });
+    expect(await localCredentials(existing.id)).toMatchObject({ password: false, sessions: 1 });
   });
 
-  async function accountFromProvider(secondFactor?: { mode: "provider" | "lunedo" }) {
+  it("asks for a confirmation when an administrator role comes through a group", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    const group = await test.services.groups.create(SYSTEM, org, {
+      name: `Admins ${randomUUID().slice(0, 6)}`,
+    });
+    await test.services.groups.addMember(SYSTEM, group.id, existing.id);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org,
+      role: { builtIn: "administrator" },
+      principal: { kind: "group", id: group.id },
+    });
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    expect(result.kind).toBe("linkRequired");
+  });
+
+  it("links a plain member without asking", async () => {
+    const org = await organization();
+    const existing = await account(org);
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    expect(result.kind).toBe("signedIn");
+  });
+
+  it("drops the enforced second factor once linking makes the account managed", async () => {
+    const org = await organization();
+    await test.settings.set(twoFactorRequiredSetting, { organization: org }, "organization", true);
+    const existing = await account(org);
+    const id = await provider({});
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+    expect(result.signedIn.session).toMatchObject({ accountId: existing.id, kind: "full" });
+    expect(await test.services.signIn.secondFactorRequirement(existing.id)).toBeNull();
+  });
+
+  it("does not link an account whose address the provider cannot vouch for", async () => {
+    const id = await provider({ accountCreation: true, domains: ["example.org"] });
+    const existing = await account(null, `${randomUUID().slice(0, 8)}@elsewhere.example`);
+    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
+    expect(result).toMatchObject({ kind: "refused", reason: "domainNotAllowed" });
+    expect(await managedStateOf(test.database, existing.id)).toBeNull();
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+    const linked = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
+    expect(linked.rowCount).toBe(0);
+  });
+
+  it("does not link a deactivated account", async () => {
+    const existing = await account(null);
+    await test.pool.query("update accounts set state = 'deactivated' where id = $1", [existing.id]);
+    const id = await provider({});
+    expect(await signIn(id, { sub: randomUUID(), email: existing.email })).toMatchObject({
+      kind: "refused",
+      reason: "accountInactive",
+    });
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+  });
+
+  it("links once when the first sign-in arrives twice at the same moment", async () => {
+    const existing = await account(null);
+    const id = await provider({});
+    const subject = randomUUID();
+    const results = await Promise.all([
+      signIn(id, { sub: subject, email: existing.email }),
+      signIn(id, { sub: subject, email: existing.email }),
+    ]);
+    expect(results.map((result) => result.kind)).toEqual(["signedIn", "signedIn"]);
+    const linked = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
+    expect(linked.rowCount).toBe(1);
+    const removed = await test.pool.query(
+      "select 1 from audit_events where name = 'account.localCredentialsRemoved' and target_id = $1",
+      [existing.id],
+    );
+    expect(removed.rowCount).toBe(1);
+  });
+
+  it("asks the provider again for proof of a second factor when it confirms the identity", async () => {
+    const id = await provider({ accountCreation: true, secondFactor: { mode: "providerProof" } });
+    const subject = randomUUID();
+    const first = await signIn(id, { sub: subject, email: `p.${randomUUID()}@example.org`, amr: ["mfa"] });
+    if (first.kind !== "signedIn") throw new Error("Signed in expected");
+    const session = first.signedIn.session;
+    const reauthenticate = async (amr: string[]) => {
+      const started = await test.services.providerSignIn.start({
+        providerId: id,
+        purpose: "reauthentication",
+        baseUrl: BASE,
+        sessionId: session.id,
+        accountId: session.accountId,
+      });
+      const callback = await idp.authorize(started.url, {
+        sub: subject,
+        auth_time: Math.floor(Date.now() / 1000),
+        amr,
+      });
+      return test.services.providerSignIn.callback({
+        providerId: id,
+        query: callback.searchParams,
+        browserToken: started.browserToken,
+        client: {},
+      });
+    };
+    await expect(reauthenticate(["pwd"])).rejects.toThrow(ChallengeExpiredError);
+    expect(await reauthenticate(["pwd", "mfa"])).toMatchObject({ kind: "reauthenticated" });
+  });
+
+  async function accountFromProvider(secondFactor?: { mode: "provider" | "providerProof" }) {
     const domain = `${randomUUID().slice(0, 8)}.example`;
     const first = await provider({
       accountCreation: true,
@@ -541,8 +837,9 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     });
   }
 
-  it("links an account without a password after a fresh sign-in through a provider it is linked to", async () => {
+  it("links the owner's account without a password after a fresh sign-in through a provider it is linked to", async () => {
     const moved = await accountFromProvider();
+    await asOwner(moved.accountId);
     const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
     if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
     expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
@@ -572,48 +869,9 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     if (confirmed.kind !== "signedIn") throw new Error(`Signed in expected, got ${confirmed.kind}`);
     expect(confirmed.signedIn.session).toMatchObject({
       accountId: moved.accountId,
-      kind: "full",
+      kind: "secondFactorSetup",
       methods: ["identityProvider"],
     });
-    expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
-  });
-
-  it("asks for the Lunedo second factor after a provider confirmed a link and the provider needs one", async () => {
-    const moved = await accountFromProvider({ mode: "lunedo" });
-    const setup = await test.services.totp.begin(moved.accountId, { issuer: "Test", account: moved.email });
-    if (!setup) throw new Error("TOTP was not started");
-    const secret = Secret.fromBase32(setup.secret);
-    await test.services.totp.verify(test.database, moved.accountId, TOTP.generate({ secret }), {
-      confirming: true,
-    });
-    const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
-    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
-
-    const confirmed = await confirmThrough(
-      moved.first,
-      result.pendingToken,
-      moved.subject,
-      Math.floor(Date.now() / 1000),
-    );
-    expect(confirmed).toEqual({ kind: "linkConfirmed" });
-    expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
-      confirmed: true,
-      factors: ["totp"],
-    });
-    expect(await linkedProviders(moved.accountId)).toEqual([moved.first]);
-    await expect(
-      test.services.signIn.confirmIdentityLink({
-        pendingToken: result.pendingToken,
-        factor: null,
-        client: {},
-      }),
-    ).rejects.toThrow(InvalidSecondFactorError);
-    const linked = await test.services.signIn.confirmIdentityLink({
-      pendingToken: result.pendingToken,
-      factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
-      client: {},
-    });
-    expect(linked.session).toMatchObject({ kind: "full", methods: ["identityProvider", "totp"] });
     expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
   });
 
@@ -627,8 +885,9 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(options.pubKeyCredParams.map((parameter) => parameter.alg)).toEqual([-8, -7, -257]);
   });
 
-  it("links an account without a password with one of its passkeys", async () => {
+  it("links the owner's account without a password with one of its passkeys", async () => {
     const moved = await accountFromProvider();
+    await asOwner(moved.accountId);
     const authenticator = new VirtualAuthenticator();
     const account = await test.services.accounts.get(moved.accountId);
     const options = await test.services.webauthn.registrationOptions({
@@ -671,32 +930,9 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     });
   });
 
-  it("accepts a password for linking only while it is a way to sign in", async () => {
-    const org = await organization();
-    const existing = await account(org);
-    const id = await provider({});
-    const result = await signIn(id, { sub: randomUUID(), email: existing.email });
-    if (result.kind !== "linkRequired") throw new Error(`Linking expected, got ${result.kind}`);
-    await test.settings.set(passwordSignInSetting, {}, "instance", false);
-    try {
-      expect(await test.services.providerSignIn.linkInfo(result.pendingToken)).toMatchObject({
-        password: false,
-      });
-      await expect(
-        test.services.signIn.confirmIdentityLink({
-          pendingToken: result.pendingToken,
-          password: PASSWORD,
-          factor: null,
-          client: {},
-        }),
-      ).rejects.toThrow(PasswordSignInDisabledError);
-    } finally {
-      await test.settings.set(passwordSignInSetting, {}, "instance", true);
-    }
-  });
-
-  it("refuses linking when the account has no way to confirm it", async () => {
+  it("refuses linking when the owner's account has no way to confirm it", async () => {
     const moved = await accountFromProvider();
+    await asOwner(moved.accountId);
     await test.pool.query("delete from identities where account_id = $1", [moved.accountId]);
     const result = await signIn(moved.second, { sub: randomUUID(), email: moved.email });
     expect(result).toMatchObject({ kind: "refused", reason: "linkUnavailable" });
@@ -705,6 +941,7 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
   it("records a reference when the person says the account is not theirs", async () => {
     const org = await organization();
     const existing = await account(org);
+    await asOwner(existing.id);
     const id = await provider({});
     const result = await signIn(id, { sub: randomUUID(), email: existing.email, name: "Somebody" });
     if (result.kind !== "linkRequired") throw new Error("Linking expected");

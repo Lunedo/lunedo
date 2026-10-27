@@ -57,10 +57,7 @@ function signedOutApi(options: Record<string, unknown>, overrides: Record<string
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
         providers: [],
-        emailStep: true,
-        directProvider: null,
         lastProvider: null,
-        passwordSignIn: false,
         passkeys: true,
         ...options,
       },
@@ -217,36 +214,6 @@ describe("signing in with a directory password", () => {
     expect(await screen.findByText("Sign-in with Verlag AD did not work")).toBeTruthy();
     expect(screen.getByText(message)).toBeTruthy();
     expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
-  });
-
-  it("asks for the sign-in name when the directory is the only way to sign in", async () => {
-    const { requests } = signedOutApi(
-      {
-        emailStep: false,
-        directProvider: {
-          id: LDAP,
-          type: "ldap",
-          name: "Verlag AD",
-          preset: "activeDirectory",
-          logoRef: null,
-        },
-      },
-      {
-        [`POST /api/v1/auth/providers/${LDAP}/password`]: () => ({
-          body: { status: "secondFactorRequired", factors: ["totp"] },
-        }),
-      },
-    );
-    await renderPath("/sign-in");
-    await userEvent.type(await screen.findByLabelText("Sign-in name at Verlag AD"), "lhofer");
-    await userEvent.type(screen.getByLabelText("Password"), "directory password");
-    expect(screen.queryByRole("button", { name: "Continue with Verlag AD" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("heading", { name: "Confirm it's you" })).toBeTruthy();
-    expect(passwordRequests(requests)[0]?.body).toEqual({
-      signInName: "lhofer",
-      password: "directory password",
-    });
   });
 
   it("shows the password form for a directory chosen above the e-mail address instead of a redirect", async () => {

@@ -194,28 +194,26 @@
     "moreFor": "Mehr zu {name}",
     "remove": "Anbieter entfernen",
     "removeTitle": "{name} entfernen?",
-    "removeDescription": "Entfernt den Anbieter, seine Regeln und alle darüber verknüpften Identitäten. Um Anmeldungen nur eine Zeit lang zu stoppen, deaktiviere ihn stattdessen.",
+    "removeDescription": "Entfernt den Anbieter und seine Regeln. Nur möglich, solange kein Konto mit ihm verknüpft ist; Konten, deren E-Mail-Domain ihm zugeordnet ist, werden wieder lokal. Um Anmeldungen zu stoppen, deaktiviere ihn stattdessen.",
     "removeConfirm": "Das lässt sich nicht rückgängig machen. Konten und ihre Inhalte bleiben.",
     "removal": {
       "consequences": "Was das Entfernen ändert",
-      "accountsWithoutSignIn": "{count, plural, one {# Konto hat keinen anderen Weg zur Anmeldung und kann sich nicht mehr anmelden.} other {# Konten haben keinen anderen Weg zur Anmeldung und können sich nicht mehr anmelden.}}",
-      "accounts": "{count, plural, =0 {Kein Konto ist mit diesem Anbieter verknüpft.} one {# Konto verliert seine Identität bei diesem Anbieter.} other {# Konten verlieren ihre Identität bei diesem Anbieter.}}",
       "grants": "{count, plural, =0 {Keine Mitgliedschaft und keine Rolle aus seinen Regeln wird entzogen.} one {# Mitgliedschaft oder Rolle aus seinen Regeln wird entzogen.} other {# Mitgliedschaften und Rollen aus seinen Regeln werden entzogen.}}",
       "rules": "{count, plural, =0 {Es gibt keine Zuordnungsregeln.} one {# Zuordnungsregel wird entfernt.} other {# Zuordnungsregeln werden entfernt.}}",
-      "groups": "{count, plural, =0 {Es gibt keine synchronisierten Gruppen.} one {# synchronisierte Gruppe wird eine normale Gruppe und behält Mitglieder und Berechtigungen.} other {# synchronisierte Gruppen werden normale Gruppen und behalten Mitglieder und Berechtigungen.}}"
+      "groups": "{count, plural, =0 {Es gibt keine synchronisierten Gruppen.} one {# synchronisierte Gruppe wird eine normale Gruppe und behält Mitglieder und Berechtigungen.} other {# synchronisierte Gruppen werden normale Gruppen und behalten Mitglieder und Berechtigungen.}}",
+      "refusedTitle": "{name} kann nicht entfernt werden",
+      "refusedHint": "Solange {name} deaktiviert ist, meldet sich niemand darüber an, und seine Konten können sich auch nicht mit einem Passwort anmelden."
     },
     "secondFactor": {
       "title": "Zweiter Faktor",
       "mode": "Zweiter Faktor nach einer Anmeldung über diesen Anbieter",
       "modes": {
         "provider": "Übernimmt der Anbieter",
-        "providerProof": "Nachweis vom Anbieter verlangen",
-        "lunedo": "Immer den zweiten Faktor von Lunedo abfragen"
+        "providerProof": "Nachweis vom Anbieter verlangen"
       },
       "hints": {
-        "provider": "Eine Anmeldung über diesen Anbieter ist vollständig. Richte die Mehrfaktor-Authentifizierung im Anbieter ein.",
-        "providerProof": "Der Anbieter muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, fragt Lunedo den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein.",
-        "lunedo": "Nach jeder Anmeldung über diesen Anbieter fragt Lunedo den eigenen zweiten Faktor ab; wer noch keinen hat, richtet zuerst einen ein."
+        "provider": "Eine Anmeldung über diesen Anbieter ist vollständig. Richte die Mehrfaktor-Authentifizierung im Anbieter ein; Konten, die er verwaltet, haben keinen zweiten Faktor in Lunedo.",
+        "providerProof": "Der Anbieter muss im Anmelde-Token eine Mehrfaktor-Authentifizierung melden. Fehlt sie, wird die Anmeldung abgelehnt, weil Konten, die er verwaltet, keinen zweiten Faktor in Lunedo haben."
       },
       "proofValues": "Anerkannte Nachweise",
       "proofValuesHint": "Werte des amr-Claims, meist mfa.",
@@ -251,12 +249,12 @@
     "domainHint": "Die Anmeldeseite wählt den Anbieter über die Domain der E-Mail-Adresse oder des Anmeldenamens, den Personen eingeben.",
     "noDomains": "Keine Domains",
     "noPermission": "Deine Rollen erlauben dir nicht, Identitätsanbieter zu ändern.",
-    "otherMethods": "Weitere Anmeldemethoden",
     "columns": {
       "provider": "Anbieter",
       "type": "Typ",
       "domains": "Domains",
-      "credential": "Zugang"
+      "credential": "Zugang",
+      "managedAccounts": "Konten"
     },
     "credentialStatus": {
       "none": "Kein Zugang",
@@ -296,7 +294,10 @@
       "rulesHint": "Gruppen, die Zugriff in Lunedo geben.",
       "missingGroups": "{count, plural, one {# Regel verweist auf eine Gruppe, die es nicht mehr gibt} other {# Regeln verweisen auf Gruppen, die es nicht mehr gibt}}",
       "connection": "Verbindung",
-      "credentialStatus": "Zugang"
+      "credentialStatus": "Zugang",
+      "managedAccounts": "Verwaltete Konten",
+      "managedAccountsHint": "Melden sich nur über diesen Anbieter an.",
+      "managedAccountsDirectory": "Melden sich mit ihrem Verzeichnispasswort an."
     },
     "settings": {
       "signIn": "Anmeldung"
@@ -417,14 +418,14 @@
       "groups": "Verlangte Gruppen",
       "groupsHint": "Gruppen-IDs beim Anbieter, mit Kommas.",
       "link": "Über die E-Mail-Adresse verknüpfen",
-      "linkHint": "Einmal mit dem alten Passwort bestätigen.",
+      "linkHint": "Verknüpft bei der ersten Anmeldung.",
       "linkFixed": "Aus Sicherheitsgründen fest",
-      "confirmationRequired": "Bestätigung erforderlich",
+      "linkAutomatic": "Bei der ersten Anmeldung",
       "domainsHintDirectory": "Gib die Domains der E-Mail-Adressen und Anmeldenamen im Verzeichnis ein, zum Beispiel example.com.",
       "groupsHelp": "IDs der Gruppen beim Anbieter, durch Kommas getrennt. Die Mitgliedschaft in einer davon genügt.",
       "createHelp": "Ohne diese Einstellung können sich nur eingeladene Personen und bestehende Konten anmelden.",
       "requireGroupHelp": "Meist nicht nötig: Beschränke den Zugang besser beim Anbieter. Verwende das nur, wenn der Anbieter den Zugang nicht selbst beschränken kann.",
-      "linkHelp": "Gibt es schon ein Konto mit derselben bestätigten Adresse, bestätigt die Person einmal mit dessen Passwort und zweitem Faktor. Lunedo verknüpft Konten nie automatisch.",
+      "linkHelp": "Gibt es schon ein Konto mit derselben Adresse und ist seine E-Mail-Domain diesem Anbieter zugeordnet, wird das Konto bei seiner ersten Anmeldung über den Anbieter verknüpft und ab dann von ihm verwaltet. Sein Passwort wird entfernt, bei OpenID Connect und SAML auch seine Passkeys, die Authenticator-App und die Wiederherstellungscodes, seine anderen Sitzungen enden, und die Person bekommt eine E-Mail. Konten mit einer Rolle über „Mitglied“ und der Instanz-Owner bestätigen die Verknüpfung einmal mit Passwort oder Passkey und zweitem Faktor; der Instanz-Owner behält ein lokales Konto.",
       "domainsHelp": "Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHelpEntraId": "Die Anmeldeseite schickt Personen mit diesen Domains zu diesem Anbieter, E-Mail-Adressen darin gelten als bestätigt, und nur für sie werden Konten angelegt. Eine Domain gehört nur zu einem Anbieter.",
       "domainsHelpGoogle": "Die Anmeldeseite schickt Personen mit diesen Domains zu Google.",
@@ -951,7 +952,8 @@
     "chooseProvider": "Anbieter wählen",
     "subject": "Kennung beim Anbieter",
     "subjectHint": "Die feste ID der Person beim Anbieter.",
-    "subjectHelp": "Die feste ID der Person beim Anbieter, zum Beispiel die Objekt-ID in Entra ID. Eine Testanmeldung zeigt sie an."
+    "subjectHelp": "Die feste ID der Person beim Anbieter, zum Beispiel die Objekt-ID in Entra ID. Eine Testanmeldung zeigt sie an.",
+    "unlinkLastDescription": "Das ist der letzte mit dem Konto verknüpfte Identitätsanbieter. Danach hat {name} ein lokales Konto ohne Passwort und bekommt eine E-Mail mit einem Link, um eines festzulegen. Ist die E-Mail-Domain des Kontos einem Identitätsanbieter zugeordnet, verwaltet stattdessen dieser Anbieter das Konto, und es wird keine E-Mail verschickt. Inhalte und Mitgliedschaften bleiben."
   },
   "brand": {
     "name": "Lunedo",
@@ -1053,7 +1055,7 @@
   },
   "emergencyRecipients": {
     "title": "Notfall-Anmeldung des Owners",
-    "description": "Wenn du dich bei ausgeschalteter Passwort-Anmeldung mit deinem Passwort anmeldest, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
+    "description": "Wenn du dich mit deinem Passwort oder einem Passkey anmeldest, während ein Identitätsanbieter aktiv ist, werden diese Personen sofort informiert. Du als Instanz-Owner wirst immer informiert.",
     "ownerOnly": "Nur der Instanz-Owner kann ändern, wer über eine Notfall-Anmeldung informiert wird.",
     "administrators": "Instanz-Administration informieren",
     "administratorsHint": "Alle Owner und Admins der Instanz.",
@@ -1252,10 +1254,18 @@
     "durationRange": "Wähle eine Dauer von {minimum} bis {maximum}."
   },
   "problems": {
-    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Anbieter, ein Passkey oder ein Passwort bei eingeschalteter Passwort-Anmeldung hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
+    "lastSignInMethod": "Das ist der letzte funktionierende Weg, sich bei dem Konto anzumelden. Eine Identität bei einem anderen aktiven Anbieter, ein Passkey oder ein Passwort hielte es erreichbar. Richte zuerst eines davon ein und trenne dann erneut.",
+    "managedIdentity": "Dieser Identitätsanbieter verwaltet dein Konto, deshalb kannst du die Verknüpfung nicht selbst trennen. Frag eine Person aus der Administration, wenn sich dein Konto anders anmelden soll.",
+    "managedAccount": "Dieses Konto meldet sich über seinen Identitätsanbieter an, nicht mit Passwort oder Passkey in Lunedo. Nutze die Schaltfläche des Anbieters auf der Anmeldeseite.",
+    "managedAccountNamed": "Dieses Konto meldet sich über {provider} an, nicht mit Passwort oder Passkey in Lunedo. Nutze die Schaltfläche von {provider} auf der Anmeldeseite.",
+    "accountNotActive": "Das Konto ist deaktiviert und kann deshalb kein lokales Konto werden. Aktiviere es zuerst und trenne die Identität dann erneut.",
+    "managedDomain": "Adressen dieser Domain melden sich über ihren Identitätsanbieter an und brauchen keine Registrierung. Nutze die Schaltfläche deines Anbieters auf der Anmeldeseite.",
+    "managedDomainNamed": "Adressen dieser Domain melden sich über {provider} an und brauchen keine Registrierung. Nutze die Schaltfläche von {provider} auf der Anmeldeseite; dort wird dein Konto angelegt, oder deine Administration lädt dich ein.",
+    "providerHasAccounts": "Mit diesem Identitätsanbieter sind noch Konten verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
+    "providerHasAccountsCount": "{count, plural, one {Ein Konto ist} other {# Konten sind}} noch mit diesem Identitätsanbieter verknüpft, deshalb kann er nicht entfernt werden. Deaktiviere ihn stattdessen, oder trenne oder verschiebe diese Konten zuerst.",
+    "ownerManaged": "Dieses Konto meldet sich über einen Identitätsanbieter an, der Owner der Instanz braucht aber ein lokales Konto mit Passwort und zweitem Faktor für Notfälle. Wähle eine Person aus der Administration mit lokalem Konto.",
     "lastCredential": "Das ist der einzige Zugang dieses Anbieters. Füge zuerst einen neuen hinzu, bevor du ihn entfernst.",
     "identityInUse": "Diese Identität ist schon mit einem anderen Konto verknüpft. Trenne sie dort zuerst.",
-    "passwordSignInDisabled": "Die Anmeldung mit Passwort ist für diese Instanz ausgeschaltet. Melde dich über deinen Anbieter oder mit einem Passkey an.",
     "invalidProviderConfiguration": "Lunedo konnte diese Anbieter-Konfiguration nicht verwenden. Vergleiche Issuer, Tenant oder Client-ID mit den Einstellungen deines Anbieters und speichere erneut.",
     "resetOwnSecondFactor": "Deinen eigenen zweiten Faktor kannst du hier nicht zurücksetzen, weil er sonst umgangen würde. Melde dich mit einem Wiederherstellungscode an oder bitte eine andere Person aus der Administration.",
     "endOwnSessions": "Deine eigenen Sitzungen beendest du nicht in der Kontenliste, sondern auf deiner Seite „Anmeldung und Sicherheit“.",
@@ -1781,8 +1791,8 @@
         },
         "emailNotVerified": {
           "title": "Deine E-Mail-Adresse konnte nicht bestätigt werden",
-          "cause": "Dein Anbieter hat eine Adresse in einer Domain geschickt, die für ihn nicht eingerichtet ist. Deshalb kann Lunedo ihr kein Konto zuordnen.",
-          "action": "Bitte deine Administration, dein Konto zu verknüpfen oder deine Domain beim Anbieter einzutragen."
+          "cause": "Dein Anbieter hat deine E-Mail-Adresse als nicht bestätigt gekennzeichnet, deshalb verknüpft Lunedo deine Anmeldung nicht mit dem bestehenden Konto mit dieser Adresse.",
+          "action": "bestätige die Adresse bei deinem Anbieter, oder bitte eine Person aus der Administration, deine Anmeldung mit dem Konto zu verknüpfen."
         },
         "groupRequired": {
           "title": "Du bist in keiner Gruppe, die {name} verwenden darf",
@@ -1808,6 +1818,16 @@
           "title": "Dein Anbieter hat eine Antwort geschickt, die Lunedo nicht annehmen kann",
           "cause": "Die Antwort hat die Sicherheitsprüfungen nicht bestanden, zum Beispiel weil sie abgelaufen war oder für eine andere Anwendung bestimmt war.",
           "action": "Versuche es noch einmal; klappt es wieder nicht, schick die Referenz unten an deine Administration."
+        },
+        "secondFactorMissing": {
+          "title": "Dein Anbieter hat keinen zweiten Faktor bestätigt",
+          "cause": "Dieser Anbieter muss nachweisen, dass du dich mit einem zweiten Faktor angemeldet hast, etwa einer Authenticator-App, aber seine Antwort enthielt diesen Nachweis nicht.",
+          "action": "melde dich erneut an und schließe den zweiten Schritt bei deinem Anbieter ab; wenn es weiter fehlschlägt, schick die Referenz unten an deine Administration."
+        },
+        "linkAmbiguous": {
+          "title": "Deine Anmeldung konnte nicht mit deinem Konto verknüpft werden",
+          "cause": "Das Lunedo-Konto mit deiner Adresse ist bei diesem Anbieter schon mit einer anderen Identität verknüpft, deshalb kann Lunedo nicht erkennen, welche deine ist.",
+          "action": "schick die Referenz unten an eine Person aus der Administration, die die richtige Identität prüfen und verknüpfen kann."
         }
       }
     },
@@ -1847,7 +1867,7 @@
     },
     "emergency": {
       "title": "Notfall-Anmeldung",
-      "description": "Nur für den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und alle Instanz-Administratoren werden sofort benachrichtigt.",
+      "description": "Nur für den Instanz-Owner, wenn die Anmeldung über Anbieter nicht funktioniert. Jede Verwendung steht im Audit-Log, und die für Notfall-Anmeldungen ausgewählten Personen werden sofort informiert.",
       "submit": "Weiter",
       "footerLink": "Notfall-Anmeldung"
     },
@@ -1861,9 +1881,7 @@
     "discover": {
       "or": "oder",
       "change": "Ändern",
-      "domainUses": "{domain} meldet sich mit {name} an",
-      "noneTitle": "Für diese Adresse ist keine Anmeldung eingerichtet",
-      "noneDescription": "Prüfe die Adresse auf Tippfehler. Wenn sie stimmt, bitte deine Administration, dich einzuladen oder die Anmeldung für deine Domain einzurichten. Wenn du einen Passkey hast, kannst du ihn unten verwenden."
+      "domainUses": "{domain} meldet sich mit {name} an"
     },
     "signIn": "Anmelden",
     "signInFailed": "Anmeldung fehlgeschlagen",
@@ -1912,8 +1930,10 @@
     "invitationTitle": "Einer Organisation beitreten",
     "acceptInvitation": "Einladung annehmen",
     "createAccountForInvitation": "Lege dein Konto an, um die Einladung anzunehmen.",
+    "createManagedAccountForInvitation": "Lege dein Konto an, um die Einladung anzunehmen. Du meldest dich über {provider} an, deshalb braucht Lunedo nur deinen Namen.",
     "createAccount": "Konto anlegen",
     "invitationAccountCreated": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
+    "invitationManagedAccountCreated": "Dein Konto ist bereit. Melde dich über {provider} an, um loszulegen.",
     "invitationJoined": "Du bist der Organisation beigetreten. Melde dich an, um fortzufahren.",
     "invitationFor": "{organization} beitreten",
     "invitationFrom": "{inviter} hat dich ({email}) eingeladen, in {organization} auf Lunedo zusammenzuarbeiten.",
@@ -1930,6 +1950,7 @@
     "registerDescription": "Gib deine geschäftliche E-Mail-Adresse ein. Wenn deine Organisation die Registrierung erlaubt, senden wir dir einen Link.",
     "sendRegistrationLink": "Link senden",
     "registerSent": "Wenn die Registrierung für diese Adresse offen ist, haben wir einen Link geschickt. Sieh in deinem Postfach nach.",
+    "registerManagedTitle": "Melde dich über deinen Anbieter an",
     "completeRegistrationTitle": "Registrierung abschließen",
     "registrationComplete": "Dein Konto ist bereit. Melde dich an, um zu beginnen.",
     "secondFactorSetupTitle": "Zweiten Faktor einrichten",
@@ -1974,7 +1995,13 @@
     "brand": {
       "withLunedo": "mit Lunedo"
     },
-    "passwordHelp": "Mindestens {minimum} Zeichen. Eine Passphrase merkt man sich leichter."
+    "passwordHelp": "Mindestens {minimum} Zeichen. Eine Passphrase merkt man sich leichter.",
+    "managed": {
+      "title": "Melde dich über {provider} an",
+      "description": "Dieses Konto meldet sich über {provider} an, nicht mit einem Passwort in Lunedo. Mach dort weiter.",
+      "unavailable": "Dieses Konto meldet sich über {provider} an, das gerade nicht verfügbar ist. Wende dich an deine Administration.",
+      "otherAccount": "Anderes Konto verwenden"
+    }
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",
@@ -2460,11 +2487,6 @@
       }
     },
     "keys": {
-      "auth_passwordSignIn": {
-        "label": "Anmeldung mit Passwort",
-        "description": "Wenn aus, nur über Anbieter oder mit Passkey.",
-        "help": "Wenn sie aus ist, melden sich Personen nur über einen Anbieter oder mit einem Passkey an. Die Notfall-Anmeldung des Instanz-Owners funktioniert immer."
-      },
       "appearance_colorMode": {
         "label": "Farbmodus",
         "description": "Hell, dunkel oder wie das System."
@@ -2955,10 +2977,21 @@
     "endOthersDescription": "Alle anderen Geräte müssen sich erneut anmelden.",
     "removeAuthenticator": "Authenticator-App entfernen",
     "removeAuthenticatorSummary": "Codes aus der App funktionieren dann nicht mehr für die Anmeldung. Richte zuerst einen anderen zweiten Faktor ein, wenn deine Organisation einen verlangt.",
+    "lastFactorAuthenticator": "Das ist dein einziger zweiter Faktor, und dein Konto muss einen behalten. Füge zuerst einen Passkey hinzu; dann kannst du die Authenticator-App entfernen.",
+    "lastFactorPasskey": "Das ist dein einziger zweiter Faktor, und dein Konto muss einen behalten. Richte zuerst eine Authenticator-App ein oder füge einen weiteren Passkey hinzu; dann kannst du diesen entfernen.",
     "removePasskey": "Passkey entfernen",
     "passkeyNameHelp": "Zum Beispiel das Gerät oder der Sicherheitsschlüssel.",
     "passwordHelp": "Verwende eine lange Passphrase, die du sonst nirgends verwendest.",
-    "noPasskeysHelp": "Zur Anmeldung und als zweiter Faktor."
+    "noPasskeysHelp": "Zur Anmeldung und als zweiter Faktor.",
+    "managed": {
+      "title": "Angemeldet über {provider}",
+      "provider": "Passwort und zweiter Faktor werden dort verwaltet.",
+      "directory": "Passwort dort, zweiter Faktor in Lunedo.",
+      "help": "{provider} prüft dein Passwort und deinen zweiten Faktor; ändere sie dort. Lunedo speichert für dein Konto kein Passwort, keinen Passkey und keine Authenticator-App. Kannst du dich dort nicht mehr anmelden, wende dich an deine Administration.",
+      "helpDirectory": "Du meldest dich mit deinem Passwort aus {provider} an; ändere es dort. Lunedo speichert es nicht. Dein zweiter Faktor bleibt in Lunedo. Kannst du dich nicht mehr anmelden, wende dich an deine Administration.",
+      "badge": "Verwaltet",
+      "emailFrom": "Von {provider}. Ändere sie dort."
+    }
   },
   "tokens": {
     "personal": "API-Tokens",
@@ -3173,7 +3206,7 @@
         "homeOrganizationChanged": "Die Heimatorganisation von {accountName} ist jetzt {organizationName, select, null {keine} other {{organizationName}}}, vorher war es {previousOrganizationName, select, null {keine} other {{previousOrganizationName}}}. {reason, select, providerRule {Die Zuordnungsregel oder Gruppe, aus der die Mitgliedschaft kam, gilt nicht mehr.} other {Die Administration hat sie geändert.}}"
       },
       "auth": {
-        "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit Passwort verwendet: {browser} auf {operatingSystem}, {clientIp}."
+        "emergencySignIn": "{accountName} hat die Notfall-Anmeldung mit dem lokalen Konto verwendet: {browser} auf {operatingSystem}, {clientIp}."
       },
       "apiToken": {
         "expiring": "Das API-Token {tokenName} läuft am {expiresAt} ab.",
@@ -4519,6 +4552,9 @@
       "account": {
         "organizationAssigned": "Organisation zugewiesen",
         "createdAtSignIn": "Konto bei der ersten Anmeldung angelegt",
+        "managed": "Konto wird von einem Identitätsanbieter verwaltet",
+        "localCredentialsRemoved": "Lokale Anmeldung nach der ersten Anbieter-Anmeldung entfernt",
+        "unmanaged": "Konto wird nicht mehr von einem Identitätsanbieter verwaltet",
         "created": "Konto angelegt",
         "passwordChanged": "Passwort geändert",
         "passwordResetRequested": "Passwort-Zurücksetzung angefordert",
@@ -12298,5 +12334,12 @@
     "hiddenTitle": "Für dich ausgeblendete Bereiche",
     "hiddenHint": "Auf Gruppen eingeschränkt, in denen du nicht bist. Als Space-Admin änderst du, wer sie sieht, lesen kannst du sie nicht.",
     "otherCategory": "anderer Bereich · nur lesen"
+  },
+  "managedAccounts": {
+    "column": "Anmeldung",
+    "local": "Lunedo",
+    "signsInThrough": "Meldet sich an über",
+    "secondFactorAtProvider": "Beim Anbieter",
+    "secondFactorChecked": "Prüft {provider}"
   }
 }

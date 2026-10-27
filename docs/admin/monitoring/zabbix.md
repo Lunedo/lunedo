@@ -1,5 +1,7 @@
 # Monitoring with Zabbix
 
+Checked against Zabbix documentation, October 2026.
+
 Zabbix reads the metrics of Lunedo with an HTTP agent item and splits them with Prometheus preprocessing; no template is needed. [monitoring.md](../monitoring.md) lists every metric and explains the token.
 
 1. Create a host for the instance and a macro `{$LUNEDO.METRICS.TOKEN}` of the type secret text with the metrics token.
@@ -20,5 +22,3 @@ Zabbix reads the metrics of Lunedo with an HTTP agent item and splits them with 
 5. Add triggers with the thresholds of the [Prometheus alerts](prometheus.md#alerts), for example, for a host named `lunedo`, `now() - last(/lunedo/backup.last) > 26h` and `last(/lunedo/storage.level) >= 1`.
 
 Use the address inside the network, not the public address of the reverse proxy. The host itself (CPU, memory, disk of the volumes) is monitored by the Zabbix agent as usual.
-
-Checked against Zabbix documentation, October 2026.

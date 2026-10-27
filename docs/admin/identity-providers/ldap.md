@@ -83,7 +83,7 @@ Under **User attributes**, enter the sign-in name of a test person and choose **
 
 On the sign-in page, people enter their e-mail address first. When its domain belongs to the directory, the page asks for the sign-in name at the directory and the password. Lunedo finds exactly one person with the sign-in name under the base DN and filter for people and checks the password with the directory.
 
-Lunedo's own attempt limits and lockouts apply before the directory is asked (see [Authentication](../authentication.md#rate-limits-and-lockouts)). Accounts without a Lunedo password confirm sensitive actions with their directory password.
+Lunedo's own attempt limits and lockouts apply before the directory is asked (see [Authentication](../authentication.md#rate-limits-and-lockouts)). Accounts managed by the directory have no Lunedo password and cannot sign in with a passkey alone; they keep their authenticator app and passkeys as second factor (see [Managed accounts](../identity-providers.md#managed-accounts)). They confirm sensitive actions with their directory password, an authenticator code or a passkey.
 
 ## Testing the directory
 

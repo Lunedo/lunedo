@@ -73,6 +73,11 @@ function stringClaim(claims: Record<string, unknown>, name: string | null): stri
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
+function emailUnverified(claims: Record<string, unknown>): boolean {
+  const value = claims.email_verified;
+  return value === false || value === "false";
+}
+
 function groupsClaim(
   claims: Record<string, unknown>,
   name: string,
@@ -448,6 +453,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
       return {
         subject,
         email: stringClaim(claims, "email"),
+        emailUnverified: emailUnverified(claims),
         signInName: stringClaim(claims, "email"),
         displayName: stringClaim(claims, "name"),
         groups: null,
@@ -456,6 +462,7 @@ export class OidcAdapter implements IdentityProviderAdapter {
     return {
       subject,
       email: stringClaim(claims, config.claims.email),
+      emailUnverified: emailUnverified(claims),
       signInName: stringClaim(claims, config.claims.signInName),
       displayName: stringClaim(claims, config.claims.displayName),
       ...genericGroups(claims, config.claims),

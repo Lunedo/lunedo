@@ -116,17 +116,8 @@ export const lockoutMaxDurationSetting = defineSetting({
   lockable: false,
 });
 
-export const passwordSignInSetting = defineSetting({
-  key: "auth.passwordSignIn",
-  schema: z.boolean(),
-  default: true,
-  levels: ["instance"],
-  lockable: false,
-});
-
 export const authSettings = [
   passwordMinLengthSetting,
-  passwordSignInSetting,
   emergencyRecipientsSetting,
   twoFactorRequiredSetting,
   maxSessionsSetting,

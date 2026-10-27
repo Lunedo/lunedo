@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import {
   type APIRequestContext,
   type Browser,
@@ -7,17 +8,16 @@ import {
   test,
 } from "@playwright/test";
 import { BASE_URL, OWNER, OWNER_STORAGE, readState } from "../support/environment.js";
-import { freshTotp, linkFrom, waitForMail } from "../support/helpers.js";
+import { freshTotp } from "../support/helpers.js";
 import {
-  createKeycloakUser,
-  deleteKeycloakUser,
   type IdentityProviderFixture,
   identityProviders,
   type NewTestUser,
   newTestUser,
-  signInAtKeycloak,
   TEST_DOMAIN,
 } from "../support/idp.js";
+import { deleteProvider } from "../support/providers.js";
+import { waitForSignInBudget } from "../support/throttle.js";
 
 const HOST_FROM_PROVIDER = BASE_URL.replace("localhost", "host.docker.internal");
 
@@ -30,6 +30,7 @@ async function ownerApi(
 ): Promise<{ request: APIRequestContext; close: () => Promise<void> }> {
   const context = await browser.newContext({ storageState: OWNER_STORAGE });
   if (!reauthenticated) {
+    await waitForSignInBudget(OWNER.email, 1);
     const response = await context.request.post("/api/v1/auth/reauthenticate", {
       data: { method: "password", password: OWNER.password },
       headers,
@@ -80,19 +81,7 @@ async function createProvider(
     },
   });
   expect(response.status(), await response.text()).toBe(201);
-  const created = (await response.json()) as { provider: { id: string } };
-  await provider.setBackchannelLogoutUrl(
-    `${HOST_FROM_PROVIDER}/api/v1/auth/providers/${created.provider.id}/backchannel-logout`,
-  );
-  return created.provider.id;
-}
-
-async function setPasswordSignIn(request: APIRequestContext, value: boolean | undefined): Promise<void> {
-  const response = await request.put("/api/v1/instance/settings/auth.passwordSignIn", {
-    headers,
-    data: value === undefined ? { clear: true } : { value },
-  });
-  expect(response.status()).toBeLessThan(300);
+  return ((await response.json()) as { provider: { id: string } }).provider.id;
 }
 
 async function signInThroughProvider(page: Page, provider: IdentityProviderFixture, user: NewTestUser) {
@@ -105,7 +94,12 @@ async function signInThroughProvider(page: Page, provider: IdentityProviderFixtu
 }
 
 async function freshContext(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const context = await browser.newContext({
+    storageState: { cookies: [], origins: [] },
+    extraHTTPHeaders: {
+      "x-forwarded-for": `10.${randomInt(1, 255)}.${randomInt(1, 255)}.${randomInt(1, 255)}`,
+    },
+  });
   return { context, page: await context.newPage() };
 }
 
@@ -126,13 +120,14 @@ for (const provider of identityProviders) {
       const owner = await ownerApi(browser);
       providerId = await createProvider(owner.request, provider, true);
       await owner.close();
+      await provider.setBackchannelLogoutUrl(
+        `${HOST_FROM_PROVIDER}/api/v1/auth/providers/${providerId}/backchannel-logout`,
+      );
     });
 
     test.afterEach(async ({ browser }) => {
       const owner = await ownerApi(browser);
-      await setPasswordSignIn(owner.request, undefined);
-      if (providerId)
-        await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
+      if (providerId) await deleteProvider(owner.request, headers, providerId);
       providerId = "";
       await owner.close();
       for (const username of created.splice(0)) await provider.deleteUser(username);
@@ -248,16 +243,14 @@ for (const provider of identityProviders) {
       await again.context.close();
     });
 
-    test("shows the only provider directly when password sign-in is off, and keeps the emergency sign-in", async ({
+    test("keeps the emergency sign-in of the instance owner while a provider is the way in", async ({
       browser,
     }) => {
-      const owner = await ownerApi(browser);
-      await setPasswordSignIn(owner.request, false);
-      await owner.close();
+      test.setTimeout(120_000);
+      await waitForSignInBudget(OWNER.email, 2);
       const { context, page } = await freshContext(browser);
       await page.goto("/sign-in");
       await expect(page.getByRole("button", { name: `Continue with E2E ${provider.name}` })).toBeVisible();
-      await expect(page.getByLabel("Work e-mail address or sign-in name")).toHaveCount(0);
 
       await page.getByRole("link", { name: "Emergency sign-in" }).click();
       const dialog = page.getByRole("dialog", { name: "Emergency sign-in" });
@@ -273,66 +266,3 @@ for (const provider of identityProviders) {
     });
   });
 }
-
-test.describe("linking an existing account", () => {
-  const provider = identityProviders[0];
-  if (provider?.name !== "keycloak") return;
-  let providerId = "";
-  let username = "";
-  const person = { name: "Link Example", password: "a long passphrase of the linked person" };
-  const email = () => `${username}@${TEST_DOMAIN}`;
-
-  test.beforeAll(async ({ browser }) => {
-    username = `link-${Date.now().toString(36)}`;
-    await createKeycloakUser(username, { email: email(), firstName: "Link", lastName: "Example" });
-    const owner = await ownerApi(browser);
-    providerId = await createProvider(owner.request, provider, true);
-    const organizationId = await firstOrganization(owner.request);
-    const invited = await owner.request.post(`/api/v1/organizations/${organizationId}/invitations`, {
-      headers,
-      data: { email: email(), kind: "member" },
-    });
-    expect(invited.status()).toBeLessThan(300);
-    await owner.close();
-    const mail = await waitForMail(email(), /invit/i);
-    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const page = await context.newPage();
-    await page.goto(linkFrom(mail.text).replace(/^https?:\/\/[^/]+/, ""));
-    await page.getByLabel("Name", { exact: true }).fill(person.name);
-    await page.getByLabel("Password", { exact: true }).fill(person.password);
-    await page.getByLabel("Repeat the password").fill(person.password);
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByText("Your account is ready. Sign in to start.")).toBeVisible();
-    await context.close();
-  });
-
-  test.afterAll(async ({ browser }) => {
-    const owner = await ownerApi(browser);
-    if (providerId)
-      await owner.request.delete(`/api/v1/instance/identity-providers/${providerId}`, { headers });
-    await owner.close();
-    if (username) await deleteKeycloakUser(username);
-  });
-
-  test("links only after the password of the existing account", async ({ browser }) => {
-    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const page = await context.newPage();
-    await page.goto("/sign-in");
-    await page.getByLabel("Work e-mail address or sign-in name").fill(email());
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await page.getByRole("button", { name: `Continue with E2E ${provider.name}` }).click();
-    await signInAtKeycloak(page, username);
-    await expect(page.getByRole("heading", { name: `Link your E2E ${provider.name} account` })).toBeVisible();
-    await page.getByLabel(`Password of ${person.name}`).fill("not the password");
-    await page.getByRole("button", { name: "Confirm and link" }).click();
-    await expect(
-      page.getByText(`This is not the Lunedo password of ${person.name}.`, { exact: false }),
-    ).toBeVisible();
-    await page.getByLabel(`Password of ${person.name}`).fill(person.password);
-    await page.getByRole("button", { name: "Confirm and link" }).click();
-    await expect(page).not.toHaveURL(/\/sign-in/);
-    const identities = await context.request.get("/api/v1/account/identities");
-    expect((await identities.json()) as unknown[]).toHaveLength(1);
-    await context.close();
-  });
-});

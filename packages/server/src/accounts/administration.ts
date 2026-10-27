@@ -11,6 +11,12 @@ import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import { emptyReport, type GroupMappingService } from "../identity/groups.js";
+import {
+  managedStateOf,
+  refreshManagedAccounts,
+  refuseManaged,
+  takeOverLocalCredentials,
+} from "../identity/managed.js";
 import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import { accountsWithoutOtherSignIn } from "../identity/sign-in-ways.js";
@@ -20,7 +26,6 @@ import { memberships } from "../organizations/access-schema.js";
 import type { MembershipService } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { organizations } from "../organizations/schema.js";
-import type { SettingsService } from "../settings/service.js";
 import { accountPrincipal, type Principal, SYSTEM } from "./principal.js";
 import { checkRankOverAccount } from "./rank.js";
 import { accounts } from "./schema.js";
@@ -43,6 +48,12 @@ export interface IdentitySummary {
   createdAt: Date;
 }
 
+export type LocalPasswordLink = (
+  tx: Transaction,
+  accountId: string,
+  providerName: string,
+) => Promise<string | null>;
+
 interface Target {
   id: string;
   home: string | null;
@@ -56,9 +67,9 @@ export class AccountAdministrationService {
   readonly #mail: MailService;
   readonly #providers: IdentityProviderService;
   readonly #mapping: GroupMappingService;
-  readonly #settings: SettingsService;
   readonly #memberships: MembershipService;
   readonly #reactivationListeners: ((tx: Transaction, accountId: string) => Promise<void>)[] = [];
+  #localPasswordLink: LocalPasswordLink | null = null;
 
   constructor(options: {
     database: Database;
@@ -67,7 +78,6 @@ export class AccountAdministrationService {
     mail: MailService;
     providers: IdentityProviderService;
     mapping: GroupMappingService;
-    settings: SettingsService;
     memberships: MembershipService;
   }) {
     this.#database = options.database;
@@ -76,7 +86,6 @@ export class AccountAdministrationService {
     this.#mail = options.mail;
     this.#providers = options.providers;
     this.#mapping = options.mapping;
-    this.#settings = options.settings;
     this.#memberships = options.memberships;
   }
 
@@ -161,6 +170,7 @@ export class AccountAdministrationService {
     const loaded = await this.#providers.definition(input.providerId);
     if (!loaded) throw new OrganizationError("notFound", "The identity provider does not exist");
     const provider = loaded.provider;
+    const mailIds: string[] = [];
     const linkedId = await this.#database.transaction(async (tx) => {
       const target = await this.#lockActive(tx, accountId);
       await this.#authorization.require(
@@ -184,8 +194,18 @@ export class AccountAdministrationService {
         fields: { providerId: provider.id, via: "administrator" },
         ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
       });
+      await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
+      const mailId = await takeOverLocalCredentials(
+        tx,
+        { audit: this.#audit, mail: this.#mail },
+        target.id,
+        actor,
+        "administrator",
+      );
+      if (mailId) mailIds.push(mailId);
       return linked.id;
     });
+    await this.#mail.dispatch(mailIds);
     const linked = (await this.identities(accountId)).find((identity) => identity.id === linkedId);
     if (!linked) throw new OrganizationError("notFound", "The identity does not exist");
     return linked;
@@ -196,7 +216,8 @@ export class AccountAdministrationService {
     accountId: string,
     identityId: string,
   ): Promise<{ endedSessions: number }> {
-    return this.#database.transaction(async (tx) => {
+    const mailIds: string[] = [];
+    const result = await this.#database.transaction(async (tx) => {
       const target = await this.#lockAccount(tx, accountId);
       await this.#authorization.require(
         actor,
@@ -205,20 +226,27 @@ export class AccountAdministrationService {
         { executor: tx },
       );
       await checkRankOverAccount(this.#authorization, tx, actor, target, IDENTITIES_ACTION);
-      return this.#unlink(tx, actor, target, identityId);
+      return this.#unlink(tx, actor, target, identityId, false, mailIds);
     });
+    await this.#mail.dispatch(mailIds);
+    return result;
   }
 
   async unlinkOwnIdentity(accountId: string, identityId: string): Promise<{ endedSessions: number }> {
     return this.#database.transaction(async (tx) => {
       const target = await this.#lockAccount(tx, accountId);
-      return this.#unlink(tx, accountPrincipal(target.id), target, identityId);
+      return this.#unlink(tx, accountPrincipal(target.id), target, identityId, true, []);
     });
   }
 
   async #lockAccount(tx: Transaction, accountId: string) {
     const [row] = await tx
-      .select({ id: accounts.id, home: accounts.homeOrganizationId, email: accounts.email })
+      .select({
+        id: accounts.id,
+        home: accounts.homeOrganizationId,
+        email: accounts.email,
+        state: accounts.state,
+      })
       .from(accounts)
       .where(eq(accounts.id, accountId))
       .for("update");
@@ -229,19 +257,28 @@ export class AccountAdministrationService {
   async #unlink(
     tx: Transaction,
     actor: Principal,
-    target: { id: string; home: string | null },
+    target: { id: string; home: string | null; state: string },
     identityId: string,
+    own: boolean,
+    mailIds: string[],
   ): Promise<{ endedSessions: number }> {
     const [identity] = await tx
       .select({ id: identities.id, providerId: identities.providerId })
       .from(identities)
       .where(and(eq(identities.id, identityId), eq(identities.accountId, target.id)));
     if (!identity) throw new OrganizationError("notFound", "The identity does not exist");
-    const stranded = await accountsWithoutOtherSignIn(tx, this.#settings, [target.id], {
-      identityId: identity.id,
-    });
-    if (stranded.length > 0) {
-      throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
+    const managedBefore = own ? await managedStateOf(tx, target.id) : null;
+    const managedIdentity = () =>
+      new OrganizationError(
+        "managedIdentity",
+        "This identity provider manages the account; only an administrator can unlink it",
+      );
+    if (own) {
+      if (managedBefore?.providerId === identity.providerId) throw managedIdentity();
+      const stranded = await accountsWithoutOtherSignIn(tx, [target.id], { identityId: identity.id });
+      if (stranded.length > 0) {
+        throw new OrganizationError("lastSignInMethod", "The account would have no way to sign in");
+      }
     }
     const ended = await tx
       .delete(sessions)
@@ -249,6 +286,22 @@ export class AccountAdministrationService {
       .returning({ id: sessions.id });
     await tx.delete(identities).where(eq(identities.id, identity.id));
     await this.#mapping.reconcile(tx, target.id, emptyReport());
+    const [change] = await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
+    if (change?.before && !change.after) {
+      if (own) throw managedIdentity();
+      if (target.state !== "active") {
+        throw new OrganizationError(
+          "accountNotActive",
+          "Only an active account can become local; reactivate it first, then unlink the identity",
+        );
+      }
+      const [provider] = await tx
+        .select({ name: identityProviders.name })
+        .from(identityProviders)
+        .where(eq(identityProviders.id, change.before.providerId));
+      const mailId = await this.#localPasswordLink?.(tx, target.id, provider?.name ?? "");
+      if (mailId) mailIds.push(mailId);
+    }
     await this.#audit.record(tx, {
       name: "identity.unlinked",
       actor,
@@ -280,6 +333,7 @@ export class AccountAdministrationService {
         { executor: tx },
       );
       await checkRankOverAccount(this.#authorization, tx, actor, target, SECOND_FACTOR_RESET_ACTION);
+      await refuseManaged(tx, accountId, "providerOnly");
       const factors = await secondFactorsOf(tx, accountId);
       await tx.delete(totpCredentials).where(eq(totpCredentials.accountId, accountId));
       await tx.delete(webauthnCredentials).where(eq(webauthnCredentials.accountId, accountId));
@@ -378,6 +432,10 @@ export class AccountAdministrationService {
       });
       return true;
     });
+  }
+
+  onMadeLocal(link: LocalPasswordLink): void {
+    this.#localPasswordLink = link;
   }
 
   onReactivated(listener: (tx: Transaction, accountId: string) => Promise<void>): void {

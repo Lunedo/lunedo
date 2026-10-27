@@ -258,7 +258,7 @@ function RunDetail({
       setCancelling(false);
     }
   };
-  if (run.isPending) return <Skeleton className="h-32 w-full" />;
+  if (run.isPending) return <Skeleton className="h-12 w-full" />;
   if (run.isError) {
     return (
       <FailureNotice what={t("failures.loadSyncRun")} error={run.error} onRetry={() => void run.refetch()} />
@@ -514,7 +514,7 @@ function LimitField({
         <Input
           aria-label={label}
           aria-invalid={error !== null}
-          className="w-20"
+          className="w-number-field"
           inputMode="numeric"
           value={draft}
           disabled={disabled}

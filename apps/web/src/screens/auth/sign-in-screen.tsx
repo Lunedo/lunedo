@@ -29,7 +29,6 @@ const emergencyForm = z.object({ email: signInEmailSchema, password: passwordSch
 
 const PROVIDER_ERRORS = new Set([
   "challengeExpired",
-  "passwordSignInDisabled",
   "invalidCredentials",
   "providerUnavailable",
   "providerInitiatedSignIn",
@@ -40,6 +39,13 @@ export function providerErrorMessage(t: (key: string) => string, code: string): 
 }
 
 type Step = { email: string; next: DiscoveredStep };
+
+type ManagedRefusal = { providerId: string; name: string; email: string | null };
+
+export function managedRefusalOf(failure: unknown, email: string | null): ManagedRefusal | null {
+  if (!isApiError(failure, "managedAccount") || !failure.problem.providerId) return null;
+  return { providerId: failure.problem.providerId, name: failure.problem.providerName ?? "", email };
+}
 
 export function orderedProviders<T extends { id: string }>(
   providers: readonly T[],
@@ -61,6 +67,7 @@ export function SignInScreen() {
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [providerBusy, setProviderBusy] = useState<string | null>(null);
   const [shortcut, setShortcut] = useState<DirectoryTarget | null>(null);
+  const [managed, setManaged] = useState<ManagedRefusal | null>(null);
   const emailStep = useSchemaForm(emailForm, { defaultValues: { email: "" } });
   const passwordStep = useSchemaForm(passwordForm, { defaultValues: { password: "" } });
   const data = options.data;
@@ -104,6 +111,12 @@ export function SignInScreen() {
     try {
       await signInWithPassword(step.email, password);
     } catch (failure) {
+      const refusal = managedRefusalOf(failure, step.email);
+      if (refusal) {
+        passwordStep.reset();
+        setManaged(refusal);
+        return;
+      }
       if (isApiError(failure, "invalidCredentials")) {
         passwordStep.resetField("password");
         passwordStep.setError(
@@ -145,7 +158,9 @@ export function SignInScreen() {
       );
       await signedIn();
     } catch (failure) {
-      setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
+      const refusal = managedRefusalOf(failure, null);
+      if (refusal) setManaged(refusal);
+      else setError(isPasskeyCancelled(failure) ? t("auth.passkeyCancelled") : problemMessage(t, failure));
     } finally {
       setPasskeyBusy(false);
     }
@@ -162,9 +177,28 @@ export function SignInScreen() {
   const changeEmail = () => {
     setStep(null);
     setShortcut(null);
+    setManaged(null);
     setError(null);
     passwordStep.reset();
   };
+
+  const continueWithProvider = (
+    provider: { id: string; type: string; name: string },
+    email: string | null,
+  ) => {
+    setError(null);
+    if (provider.type === "ldap") {
+      setStep(null);
+      setManaged(null);
+      setShortcut({ providerId: provider.id, name: provider.name, signInName: null, email });
+      return;
+    }
+    void signInWithProvider(provider.id);
+  };
+
+  const managedProvider = managed
+    ? (data?.providers.find((provider) => provider.id === managed.providerId) ?? null)
+    : null;
 
   const passkeyButton = passkeysSupported() ? (
     <Button
@@ -206,7 +240,7 @@ export function SignInScreen() {
       description={t("auth.signInLead")}
       links={
         <>
-          {data?.passwordSignIn && (!step || step.next.step === "password") && !shortcut ? (
+          {(!step || step.next.step === "password") && !shortcut && !managed ? (
             <Link to="/reset-password" className={AUTH_LINK}>
               {t("auth.forgotPassword")}
             </Link>
@@ -238,27 +272,23 @@ export function SignInScreen() {
           onRetry={() => options.refetch()}
         />
       ) : null}
-      {data && !data.emailStep && data.directProvider ? (
+      {managed ? (
         <>
-          {data.directProvider.type === "ldap" ? (
-            <DirectorySignInForm
-              target={{
-                providerId: data.directProvider.id,
-                name: data.directProvider.name,
-                signInName: null,
-                email: null,
-              }}
-              redirect={search.redirect}
-              onSignedIn={signedIn}
-            />
-          ) : (
+          <Notice variant="info" title={t("auth.managed.title", { provider: managed.name })}>
+            {managedProvider
+              ? t("auth.managed.description", { provider: managed.name })
+              : t("auth.managed.unavailable", { provider: managed.name })}
+          </Notice>
+          {managedProvider ? (
             <ProviderButton
-              provider={data.directProvider}
-              busy={providerBusy === data.directProvider.id}
-              onClick={() => void signInWithProvider(data.directProvider?.id ?? "")}
+              provider={managedProvider}
+              busy={providerBusy === managedProvider.id}
+              onClick={() => continueWithProvider(managedProvider, managed.email)}
             />
-          )}
-          {passkeyButton}
+          ) : null}
+          <Button variant="secondary" size="lg" block onClick={changeEmail}>
+            {t("auth.managed.otherAccount")}
+          </Button>
         </>
       ) : null}
       {shortcut && !step ? (
@@ -277,7 +307,7 @@ export function SignInScreen() {
           <DirectorySignInForm target={shortcut} redirect={search.redirect} onSignedIn={signedIn} />
         </>
       ) : null}
-      {data?.emailStep && !step && !shortcut ? (
+      {data && !step && !shortcut && !managed ? (
         <>
           {data.providers.length > 0 ? (
             <>
@@ -287,19 +317,7 @@ export function SignInScreen() {
                     key={provider.id}
                     provider={provider}
                     busy={providerBusy === provider.id}
-                    onClick={() => {
-                      if (provider.type === "ldap") {
-                        setError(null);
-                        setShortcut({
-                          providerId: provider.id,
-                          name: provider.name,
-                          signInName: null,
-                          email: null,
-                        });
-                        return;
-                      }
-                      void signInWithProvider(provider.id);
-                    }}
+                    onClick={() => continueWithProvider(provider, null)}
                   />
                 ))}
               </div>
@@ -360,7 +378,7 @@ export function SignInScreen() {
           />
         </>
       ) : null}
-      {step?.next.step === "password" ? (
+      {step?.next.step === "password" && !managed ? (
         <>
           {identity}
           <form className="flex flex-col gap-4" onSubmit={submitWith(submitPassword)} noValidate>
@@ -381,15 +399,6 @@ export function SignInScreen() {
               {t("auth.signIn")}
             </Button>
           </form>
-        </>
-      ) : null}
-      {step?.next.step === "none" ? (
-        <>
-          {identity}
-          <Notice variant="warning" title={t("auth.discover.noneTitle")}>
-            {t("auth.discover.noneDescription")}
-          </Notice>
-          {passkeyButton}
         </>
       ) : null}
       <EmergencyDialog

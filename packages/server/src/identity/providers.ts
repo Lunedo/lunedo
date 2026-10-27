@@ -35,7 +35,6 @@ import { defineJob } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { BuiltInRoleKey } from "../organizations/access-schema.js";
 import { LOGO_MAX_BYTES, logoContentType, OrganizationError } from "../organizations/organizations.js";
-import type { SettingsService } from "../settings/service.js";
 import {
   type ProviderCapabilities,
   type ProviderCredential,
@@ -44,8 +43,9 @@ import {
 } from "./adapter.js";
 import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";
-import { emptyReport, type GroupMappingService } from "./groups.js";
+import type { GroupMappingService } from "./groups.js";
 import { ldapCapabilities } from "./ldap.js";
+import { managedAccountCounts, refreshManagedAccounts } from "./managed.js";
 import { oidcCapabilities, oidcIssuer } from "./oidc.js";
 import { samlCapabilities, samlPaths } from "./saml.js";
 import {
@@ -140,6 +140,7 @@ interface ProviderSummaryBase {
   directoryKey: boolean;
   capabilities: ProviderCapabilities;
   scim: boolean;
+  managedAccounts: number;
   deactivatedAt: Date | null;
   setupComplete: boolean;
   groupsClaimMissingSince: Date | null;
@@ -334,7 +335,6 @@ export class IdentityProviderService {
   readonly #allowInsecure: boolean;
   readonly #clock: () => Date;
   readonly #mapping: GroupMappingService | undefined;
-  readonly #settings: SettingsService;
   readonly #fetch: typeof fetch | undefined;
 
   constructor(options: {
@@ -342,7 +342,6 @@ export class IdentityProviderService {
     audit: AuditLog;
     encryption: Encryption;
     notifications: NotificationService;
-    settings: SettingsService;
     allowInsecure: boolean;
     clock?: () => Date;
     mapping?: GroupMappingService;
@@ -355,7 +354,6 @@ export class IdentityProviderService {
     this.#allowInsecure = options.allowInsecure;
     this.#clock = options.clock ?? (() => new Date());
     this.#mapping = options.mapping;
-    this.#settings = options.settings;
     this.#fetch = options.fetch;
   }
 
@@ -561,6 +559,7 @@ export class IdentityProviderService {
               )
           ).map((row) => row.providerId),
     );
+    const managed = ids.length === 0 ? new Map<string, number>() : await managedAccountCounts(executor, ids);
     const now = this.#clock();
     return rows.map((row): ProviderSummary => {
       const own = credentials.get(row.id) ?? [];
@@ -573,6 +572,7 @@ export class IdentityProviderService {
         credentials: own,
         directoryKey,
         scim: scim.has(row.id),
+        managedAccounts: managed.get(row.id) ?? 0,
         deactivatedAt: row.deactivatedAt,
         setupComplete: row.setupCompletedAt !== null,
         groupsClaimMissingSince: row.groupsClaimMissingSince,
@@ -906,6 +906,7 @@ export class IdentityProviderService {
         });
       }
       await this.#syncDomains(tx, row.id, config.domains);
+      await refreshManagedAccounts(tx, this.#audit, { providerId: row.id }, actor);
       let added: AddedCredential | null = null;
       if (type === "saml" && metadataXml && !signing) {
         added = await this.#addCredential(tx, actor, row, {
@@ -1042,6 +1043,7 @@ export class IdentityProviderService {
         targetId: id,
         fields: { name: current.name },
       });
+      await refreshManagedAccounts(tx, this.#audit, { providerId: id }, actor);
     });
     return this.get(id);
   }
@@ -1121,6 +1123,7 @@ export class IdentityProviderService {
         })
         .where(eq(identityProviders.id, id));
       await this.#syncDomains(tx, id, config.domains);
+      await refreshManagedAccounts(tx, this.#audit, { providerId: id }, actor);
       await this.#audit.record(tx, {
         name: "identityProvider.updated",
         actor,
@@ -1374,7 +1377,7 @@ export class IdentityProviderService {
       .select({ value: count() })
       .from(mappingRules)
       .where(eq(mappingRules.providerId, id));
-    const withoutSignIn = await accountsWithoutOtherSignIn(this.#database, this.#settings, accountIds, {
+    const withoutSignIn = await accountsWithoutOtherSignIn(this.#database, accountIds, {
       providerId: id,
     });
     return {
@@ -1390,18 +1393,24 @@ export class IdentityProviderService {
     await this.#database.transaction(async (tx) => {
       const current = await this.#find(tx, id, true, "include");
       const linked = await this.#linked(tx, id);
-      const endedSessions = await this.#endSessions(tx, linked);
+      const linkedAccounts = new Set(linked.map((identity) => identity.accountId)).size;
+      if (linkedAccounts > 0) {
+        throw new OrganizationError(
+          "providerHasAccounts",
+          `${linkedAccounts} accounts are still linked to this provider. Deactivate it instead, or unlink or move these accounts first.`,
+          { accounts: linkedAccounts },
+        );
+      }
       const releasedGroups = (await this.#mapping?.releaseGroups(tx, id, current.name)) ?? 0;
+      await tx.delete(identityProviderDomains).where(eq(identityProviderDomains.providerId, id));
+      await refreshManagedAccounts(tx, this.#audit, { providerId: id }, actor);
       await this.#audit.record(tx, {
         name: "identityProvider.removed",
         actor,
         targetId: id,
-        fields: { name: current.name, endedSessions, releasedGroups },
+        fields: { name: current.name, endedSessions: 0, releasedGroups },
       });
       await tx.delete(identityProviders).where(eq(identityProviders.id, id));
-      for (const accountId of new Set(linked.map((identity) => identity.accountId))) {
-        await this.#mapping?.reconcile(tx, accountId, emptyReport());
-      }
     });
   }
 

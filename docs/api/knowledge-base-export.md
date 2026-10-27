@@ -1,5 +1,7 @@
 # Export a knowledge base as a static website
 
+Checked against Cloudflare documentation, October 2026.
+
 A script can rebuild the static website of a public knowledge base, for example every night, and publish it on any web server. [Static website](../user/knowledge-base-static-website.md) describes what the website contains and how to publish it by hand. The full reference of the routes is at `/api/docs` on your instance.
 
 ## Before you start
@@ -75,5 +77,3 @@ Starting an export can also be refused:
 | `notEnoughStorage` | The file store is too full for the export. |
 
 A new export of the same space in the same format replaces the earlier one, so a nightly script does not pile up exports. A finished export is kept for 7 days, or 24 hours after its first complete download.
-
-Checked against Cloudflare documentation, October 2026.

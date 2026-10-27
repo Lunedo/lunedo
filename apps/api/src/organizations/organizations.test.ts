@@ -141,6 +141,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       invitedByName: "Olivia Owner",
       knowledgeBaseName: null,
       newAccount: true,
+      provider: null,
     });
     const accepted = await new TestClient(test.app).post("/api/v1/invitations/accept", {
       token: linkToken(mail?.text),

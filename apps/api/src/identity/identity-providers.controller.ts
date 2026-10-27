@@ -462,10 +462,10 @@ export class IdentityProvidersController {
   @ApiRoute({
     summary: "Remove an instance identity provider",
     description:
-      "Removes the provider, its credentials, its mapping rules and all identities linked through it. Memberships and roles its rules granted are withdrawn; its synchronized groups become ordinary groups with their members and permissions.",
+      "Removes the provider, its credentials and its mapping rules; its synchronized groups become ordinary groups with their members and permissions. Refused while accounts are linked through it: deactivate it instead, or unlink or move those accounts first. Accounts that were managed only through its domains become local.",
     tags: [TAG],
     params: providerIdParams,
-    errors: ["reauthenticationRequired"],
+    errors: ["providerHasAccounts", "reauthenticationRequired"],
   })
   async removeInstance(@Param("providerId") providerId: string, @Req() request: FastifyRequest) {
     await this.#services.identityProviders.remove(actorOf(request), providerId);

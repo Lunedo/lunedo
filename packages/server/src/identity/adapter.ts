@@ -54,6 +54,7 @@ export interface ProviderGroup {
 export interface ProviderProfile {
   subject: string;
   email: string | null;
+  emailUnverified?: boolean;
   signInName: string | null;
   displayName: string | null;
   groups: ProviderGroup[] | null;

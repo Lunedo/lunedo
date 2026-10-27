@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { signsInOnlyThroughProvider } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
 import {
   invitationsQuery,
@@ -45,6 +46,7 @@ import {
 import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AppDatePicker } from "../../components/date-fields.js";
+import { SignInThrough } from "../../components/managed-account.js";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { memberLoader } from "../../components/pickers.js";
 import { useUnassignWithUndo } from "../../components/role-undo.js";
@@ -117,7 +119,10 @@ export function MembersScreen() {
       (tab === "all" || member.kind === tab) &&
       (groupFilter === "all" || member.groups.some((group) => group.id === groupFilter)) &&
       (roleFilter === "all" || member.roles.some((role) => roleName(role) === roleFilter)) &&
-      (factorFilter === "all" || member.twoFactorActive === (factorFilter === "on")) &&
+      (factorFilter === "all" ||
+        (factorFilter === "on"
+          ? member.twoFactorActive
+          : !member.twoFactorActive && !signsInOnlyThroughProvider(member.managedBy))) &&
       (!needle ||
         member.name.toLowerCase().includes(needle) ||
         (member.email ?? "").toLowerCase().includes(needle)),
@@ -307,7 +312,11 @@ export function MembersScreen() {
                   header: t("members.twoFactor"),
                   hideBelow: "md",
                   cell: (member) =>
-                    member.twoFactorActive ? (
+                    signsInOnlyThroughProvider(member.managedBy) ? (
+                      <span className="whitespace-nowrap text-text-muted">
+                        {t("managedAccounts.secondFactorAtProvider")}
+                      </span>
+                    ) : member.twoFactorActive ? (
                       <span className="whitespace-nowrap">{t("common.yes")}</span>
                     ) : factorRequired ? (
                       <Badge variant="warning">{t("members.twoFactorMissing")}</Badge>
@@ -315,6 +324,16 @@ export function MembersScreen() {
                       <span className="whitespace-nowrap text-text-muted">{t("common.no")}</span>
                     ),
                 },
+                ...(manage
+                  ? [
+                      {
+                        key: "signIn",
+                        header: t("managedAccounts.column"),
+                        hideBelow: "md" as const,
+                        cell: (member: Member) => <SignInThrough managedBy={member.managedBy} />,
+                      },
+                    ]
+                  : []),
                 {
                   key: "lastActive",
                   header: t("members.lastActive"),

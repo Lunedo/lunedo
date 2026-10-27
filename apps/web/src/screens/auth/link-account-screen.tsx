@@ -207,7 +207,7 @@ export function LinkAccountScreen() {
   if (pending.isPending) {
     return (
       <AuthCard title={t("auth.link.loading")}>
-        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-12 w-full" />
       </AuthCard>
     );
   }

@@ -34,6 +34,7 @@ function account(id: string, name: string, email: string) {
     lastSignInAt: "2026-10-01T09:00:00.000Z",
     twoFactorActive: true,
     secondFactorRequired: false,
+    managedBy: null as null | Record<string, string>,
     instanceRoles: id === OLIVIA.id ? [{ builtInRole: "owner", customRoleId: null, name: null }] : [],
   };
 }
@@ -463,6 +464,96 @@ describe("the accounts page", () => {
     expect(requests.find((request) => request.path.endsWith("/second-factor/reset"))?.body).toEqual({
       reason: "Lost phone, confirmed by call",
     });
+  });
+
+  it("names the provider of a managed account and leaves out what only a local account has", async () => {
+    const managedBy = {
+      providerId: "01929b1f-1b7e-7b62-938f-7a6b5c4d9e0f",
+      providerName: "Company login",
+      providerType: "oidc",
+      source: "identity",
+      since: "2026-09-14T07:45:00.000Z",
+    };
+    const max = { ...account(MAX, "Max Member", "max@example.org"), twoFactorActive: false, managedBy };
+    const detail = { account: max, memberships: [], sessions: [], tokens: [] };
+    api(() => ({ body: { endedSessions: 0 } }), {
+      "GET /api/v1/instance/accounts": () => ({ body: { items: [max], nextCursor: null } }),
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => ({
+        body: { ...detail, twoFactor: { totp: false, passkeys: 0, recoveryCodes: 0 } },
+      }),
+      [`GET /api/v1/accounts/${MAX}/identities`]: () => ({
+        body: [
+          {
+            id: "01929b1f-0000-7000-8000-0000000000a9",
+            providerId: managedBy.providerId,
+            providerName: "Company login",
+            subject: "max-subject",
+            email: "max@example.org",
+            signInName: null,
+            lastSignInAt: null,
+            createdAt: "2026-09-14T07:45:00.000Z",
+          },
+        ],
+      }),
+    });
+    const table = await renderAccounts();
+    const row = (await within(table).findByText("Max Member")).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Company login")).toBeTruthy();
+    expect(within(row).getByText("At the provider")).toBeTruthy();
+
+    await userEvent.click(within(row).getByText("Max Member"));
+    const panel = await accountPage("Max Member");
+    await within(panel).findByText("Security at a glance");
+    expect(within(panel).getByText("Signs in through")).toBeTruthy();
+    expect(within(panel).getByText("Checked by Company login")).toBeTruthy();
+    expect(within(panel).queryByText("Passkeys")).toBeNull();
+    const zone = within(panel).getByRole("region", { name: "Danger zone" });
+    expect(within(zone).queryByRole("button", { name: "Reset second factor" })).toBeNull();
+
+    await userEvent.click(within(panel).getByRole("tab", { name: "Sign-in and security" }));
+    expect(within(panel).queryByText("Two-factor authentication")).toBeNull();
+    await userEvent.click(await within(panel).findByRole("button", { name: "Unlink" }));
+    const dialog = await screen.findByRole("dialog", { name: "Unlink Company login?" });
+    expect(
+      within(dialog).getByText(
+        /This is the last identity provider linked to the account\. Afterwards Max Member has a local account without a password and gets an e-mail with a link to set one\./,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("keeps the second factor reset for an account of a directory", async () => {
+    const max = {
+      ...account(MAX, "Max Member", "max@example.org"),
+      managedBy: {
+        providerId: "01929b1f-1b7e-7b62-938f-7a6b5c4d9e10",
+        providerName: "Verlag AD",
+        providerType: "ldap",
+        source: "domain",
+        since: "2026-09-14T07:45:00.000Z",
+      },
+    };
+    api(() => ({ body: { endedSessions: 0 } }), {
+      "GET /api/v1/instance/accounts": () => ({ body: { items: [max], nextCursor: null } }),
+      [`GET /api/v1/instance/accounts/${MAX}`]: () => ({
+        body: {
+          account: max,
+          memberships: [],
+          sessions: [],
+          tokens: [],
+          twoFactor: { totp: true, passkeys: 1, recoveryCodes: 9 },
+        },
+      }),
+    });
+    const table = await renderAccounts();
+    const row = (await within(table).findByText("Max Member")).closest("tr") as HTMLElement;
+    expect(within(row).getByText("Verlag AD")).toBeTruthy();
+    expect(within(row).getByText("Yes")).toBeTruthy();
+    await userEvent.click(within(row).getByText("Max Member"));
+    const panel = await accountPage("Max Member");
+    await within(panel).findByText("Security at a glance");
+    expect(within(panel).getByText("Passkeys")).toBeTruthy();
+    const zone = within(panel).getByRole("region", { name: "Danger zone" });
+    expect(within(zone).getByRole("button", { name: "Reset second factor" })).toBeTruthy();
   });
 
   it("anonymizes an account only after the reason and the typed name", async () => {

@@ -192,6 +192,36 @@ function checkTitles(tree: DocsTree): string[] {
     });
 }
 
+const MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
+const VENDOR_NOTE = new RegExp(`^Checked against \\S.* documentation, (?:${MONTHS}) \\d{4}\\.$`);
+
+function checkVendorNotes(tree: DocsTree): string[] {
+  return [...tree.files.entries()]
+    .filter(([file]) => file.startsWith("docs/") && file.endsWith(".md"))
+    .flatMap(([file, content]) => {
+      const lines = content.split("\n");
+      const prose = proseLines(content);
+      const title = prose.find(({ text }) => /^#\s/.test(text));
+      const first = title
+        ? prose.find(({ line, text }) => line > title.line && text.trim() !== "")
+        : undefined;
+      return prose
+        .filter(({ text }) => /^\W*checked against\b/i.test(text.trim()))
+        .flatMap(({ line, text }) => {
+          const problems: string[] = [];
+          if (!VENDOR_NOTE.test(text)) {
+            problems.push(
+              `${file}:${line}: the vendor note must read "Checked against <vendor> documentation, <Month Year>."`,
+            );
+          }
+          if (first?.line !== line || (lines[line] ?? "").trim() !== "") {
+            problems.push(`${file}:${line}: the vendor note must be a line of its own directly below the H1`);
+          }
+          return problems;
+        });
+    });
+}
+
 export function checkDocs(tree: DocsTree): string[] {
   return [
     ...checkTargets(tree),
@@ -199,5 +229,6 @@ export function checkDocs(tree: DocsTree): string[] {
     ...checkCode(tree),
     ...checkNavigation(tree),
     ...checkTitles(tree),
+    ...checkVendorNotes(tree),
   ];
 }

@@ -340,10 +340,18 @@ describe.skipIf(!baseUrl)("placeholders and anonymization", () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenError);
 
+    const managedBefore = await test.pool.query("select 1 from managed_accounts where account_id = $1", [
+      accountId,
+    ]);
+    expect(managedBefore.rowCount).toBe(1);
     const done = await test.services.accountLifecycle.anonymize(accountPrincipal(administrator), accountId, {
       reason: "Erasure request",
       confirmation: name,
     });
+    const managedAfter = await test.pool.query("select 1 from managed_accounts where account_id = $1", [
+      accountId,
+    ]);
+    expect(managedAfter.rowCount).toBe(0);
     expect(done).toMatchObject({ endedSessions: 1, removedIdentities: 1, endedMemberships: 1 });
     expect(await state(accountId)).toMatchObject({ state: "anonymized", email: null });
 

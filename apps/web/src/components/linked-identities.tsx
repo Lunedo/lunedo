@@ -118,15 +118,38 @@ export function OwnIdentities() {
   );
 }
 
-export function AccountIdentities({ accountId, manage }: { accountId: string; manage: boolean }) {
+export function unlinkDescriptionKey(
+  identities: readonly Pick<LinkedIdentity, "id">[],
+  managedBy: { source: string } | null | undefined,
+): "identities.unlinkDescription" | "identities.unlinkLastDescription" {
+  return managedBy?.source === "identity" && identities.length === 1
+    ? "identities.unlinkLastDescription"
+    : "identities.unlinkDescription";
+}
+
+export function AccountIdentities({
+  accountId,
+  accountName,
+  manage,
+  managedBy,
+  onChanged,
+}: {
+  accountId: string;
+  accountName: string;
+  manage: boolean;
+  managedBy: { source: string } | null;
+  onChanged: () => Promise<void>;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const identities = useQuery({ ...accountIdentitiesQuery(accountId), throwOnError: false });
   const [unlinking, setUnlinking] = useState<LinkedIdentity | null>(null);
   const [linking, setLinking] = useState(false);
-  const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: identityKeys.accountIdentities(accountId) });
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: identityKeys.accountIdentities(accountId) });
+    await onChanged();
+  };
   if (identities.isPending) return <Skeleton className="h-12 w-full" />;
   if (identities.isError) {
     return (
@@ -155,7 +178,7 @@ export function AccountIdentities({ accountId, manage }: { accountId: string; ma
         open={unlinking !== null}
         onOpenChange={(next) => (next ? undefined : setUnlinking(null))}
         title={t("identities.unlinkTitle", { provider: unlinking?.providerName ?? "" })}
-        description={t("identities.unlinkDescription")}
+        description={t(unlinkDescriptionKey(identities.data, managedBy), { name: accountName })}
         confirmLabel={t("identities.unlink")}
         cancelLabel={t("common.cancel")}
         destructive

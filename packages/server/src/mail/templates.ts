@@ -22,6 +22,13 @@ export interface MailTemplates {
   emailChangeNotice: { instanceName: string; newEmail: string };
   recoveryCodeUsed: { instanceName: string; remaining: number };
   secondFactorReset: { instanceName: string; reason: string };
+  accountManaged: {
+    instanceName: string;
+    providerName: string;
+    directory: boolean;
+    linkedBy: "signIn" | "administrator";
+  };
+  accountMadeLocal: { instanceName: string; providerName: string; link: string; minutes: number };
   smtpTest: { instanceName: string };
   invitation: {
     instanceName: string;
@@ -198,6 +205,26 @@ const catalogs: Record<Language, Catalog> = {
         NOT_YOU_EN,
       ],
     }),
+    accountManaged: ({ instanceName, providerName, directory, linkedBy }) => ({
+      subject: `Your account on ${instanceName} now signs in through ${providerName}`,
+      paragraphs: [
+        linkedBy === "signIn"
+          ? `You signed in to ${instanceName} through ${providerName} for the first time, so your account is now managed by it. Your content, groups and roles stay as they were.`
+          : `An administrator linked your account on ${instanceName} to ${providerName}, so your account is now managed by it. Your content, groups and roles stay as they were.`,
+        directory
+          ? `Lunedo removed the password of your account. Sign in with your directory password at ${providerName}; your second factor in Lunedo stays.`
+          : `Lunedo removed the password, passkeys, authenticator app and recovery codes of your account and ended your other sessions. Sign in through ${providerName} from now on; it asks for your second factor.`,
+        NOT_YOU_EN,
+      ],
+    }),
+    accountMadeLocal: ({ instanceName, providerName, link, minutes }) => ({
+      subject: `Set a password for your account on ${instanceName}`,
+      paragraphs: [
+        `An administrator unlinked your account on ${instanceName} from ${providerName}. It no longer signs in through ${providerName} and has no password yet.`,
+        `Set a password within ${minutes} minutes: ${link}`,
+        "If the link has expired, use Forgot password on the sign-in page.",
+      ],
+    }),
     secondFactorReset: ({ instanceName, reason }) => ({
       subject: `Your second factor on ${instanceName} was reset`,
       paragraphs: [
@@ -293,7 +320,7 @@ const catalogs: Record<Language, Catalog> = {
     emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
       subject: `Emergency sign-in to ${instanceName}`,
       paragraphs: [
-        `${accountName}, the owner of ${instanceName}, signed in with a password while password sign-in is turned off: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
+        `${accountName}, the owner of ${instanceName}, signed in with the local account while an identity provider is active: ${describeBrowser(browser, operatingSystem, "an unknown browser", "on")}${clientIp ? `, address ${clientIp}` : ""}.`,
         "This sign-in is meant for emergencies, for example when the identity provider fails. Check the audit log if you did not expect it.",
       ],
     }),
@@ -410,6 +437,26 @@ const catalogs: Record<Language, Catalog> = {
         NOT_YOU_DE,
       ],
     }),
+    accountManaged: ({ instanceName, providerName, directory, linkedBy }) => ({
+      subject: `Dein Konto auf ${instanceName} meldet sich jetzt über ${providerName} an`,
+      paragraphs: [
+        linkedBy === "signIn"
+          ? `Du hast dich zum ersten Mal über ${providerName} bei ${instanceName} angemeldet, deshalb wird dein Konto jetzt davon verwaltet. Deine Inhalte, Gruppen und Rollen bleiben, wie sie waren.`
+          : `Eine Person aus der Administration hat dein Konto auf ${instanceName} mit ${providerName} verknüpft, deshalb wird es jetzt davon verwaltet. Deine Inhalte, Gruppen und Rollen bleiben, wie sie waren.`,
+        directory
+          ? `Lunedo hat das Passwort deines Kontos entfernt. Melde dich mit deinem Verzeichnispasswort bei ${providerName} an; dein zweiter Faktor in Lunedo bleibt.`
+          : `Lunedo hat Passwort, Passkeys, Authenticator-App und Wiederherstellungscodes deines Kontos entfernt und deine anderen Sitzungen beendet. Melde dich ab jetzt über ${providerName} an; dort wird dein zweiter Faktor abgefragt.`,
+        NOT_YOU_DE,
+      ],
+    }),
+    accountMadeLocal: ({ instanceName, providerName, link, minutes }) => ({
+      subject: `Lege ein Passwort für dein Konto auf ${instanceName} fest`,
+      paragraphs: [
+        `Eine Person aus der Administration hat dein Konto auf ${instanceName} von ${providerName} getrennt. Es meldet sich nicht mehr über ${providerName} an und hat noch kein Passwort.`,
+        `Lege innerhalb von ${minutes} Minuten ein Passwort fest: ${link}`,
+        "Wenn der Link abgelaufen ist, nutze „Passwort vergessen?“ auf der Anmeldeseite.",
+      ],
+    }),
     secondFactorReset: ({ instanceName, reason }) => ({
       subject: `Dein zweiter Faktor auf ${instanceName} wurde zurückgesetzt`,
       paragraphs: [
@@ -505,7 +552,7 @@ const catalogs: Record<Language, Catalog> = {
     emergencySignIn: ({ instanceName, accountName, browser, operatingSystem, clientIp }) => ({
       subject: `Notfallanmeldung bei ${instanceName}`,
       paragraphs: [
-        `${accountName}, Eigentümer von ${instanceName}, hat sich mit Passwort angemeldet, obwohl die Anmeldung mit Passwort ausgeschaltet ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
+        `${accountName}, Eigentümer von ${instanceName}, hat sich mit dem lokalen Konto angemeldet, während ein Identitätsanbieter aktiv ist: ${describeBrowser(browser, operatingSystem, "ein unbekannter Browser", "unter")}${clientIp ? `, Adresse ${clientIp}` : ""}.`,
         "Diese Anmeldung ist für Notfälle gedacht, zum Beispiel wenn der Identitätsanbieter ausfällt. Prüfe das Audit-Log, wenn du sie nicht erwartet hast.",
       ],
     }),

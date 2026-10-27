@@ -59,10 +59,7 @@ function signedOutApi(options: Record<string, unknown>, overrides: Record<string
     "GET /api/v1/auth/sign-in-options": () => ({
       body: {
         providers: [],
-        emailStep: true,
-        directProvider: null,
         lastProvider: null,
-        passwordSignIn: true,
         passkeys: true,
         ...options,
       },
@@ -109,9 +106,8 @@ describe("the sign-in page", () => {
     });
   });
 
-  it("offers the password for other addresses and says when no method is set up", async () => {
-    let step = "password";
-    signedOutApi({}, { "POST /api/v1/auth/sign-in/discover": () => ({ body: { step } }) });
+  it("offers the password and the reset link for addresses outside the provider domains", async () => {
+    signedOutApi({}, { "POST /api/v1/auth/sign-in/discover": () => ({ body: { step: "password" } }) });
     await renderPath("/sign-in");
     await userEvent.type(
       await screen.findByLabelText("Work e-mail address or sign-in name"),
@@ -119,17 +115,12 @@ describe("the sign-in page", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByLabelText("Password")).toBeTruthy();
-
-    step = "none";
-    await userEvent.click(screen.getByRole("button", { name: "Change" }));
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByText("No sign-in method is set up for this address")).toBeTruthy();
-    expect(screen.queryByLabelText("Password")).toBeNull();
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toBeTruthy();
   });
 
   it("keeps the emergency sign-in reachable when the owner's domain belongs to a provider", async () => {
     const { requests } = signedOutApi(
-      { passwordSignIn: true },
+      {},
       {
         "POST /api/v1/auth/sign-in/discover": () => ({
           body: { step: "provider", providerId: PROVIDER, name: "Microsoft", preset: "entraId" },
@@ -144,31 +135,6 @@ describe("the sign-in page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeNull();
-
-    await userEvent.click(screen.getByRole("link", { name: "Emergency sign-in" }));
-    const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
-    await userEvent.type(within(dialog).getByLabelText("E-mail"), OLIVIA.email);
-    await userEvent.type(within(dialog).getByLabelText("Password"), "correct horse battery");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
-    expect(await screen.findByRole("heading", { name: "Confirm it's you" })).toBeTruthy();
-    expect(requests.find((request) => request.path === "/api/v1/auth/sign-in")?.body).toEqual({
-      email: OLIVIA.email,
-      password: "correct horse battery",
-    });
-  });
-
-  it("shows the only provider directly and keeps the emergency sign-in when passwords are off", async () => {
-    const { requests } = signedOutApi(
-      { emailStep: false, directProvider: ENTRA, passwordSignIn: false },
-      {
-        "POST /api/v1/auth/sign-in": () => ({
-          body: { status: "secondFactorRequired", factors: ["totp"] },
-        }),
-      },
-    );
-    await renderPath("/sign-in");
-    expect(await screen.findByRole("button", { name: "Sign in with Microsoft" })).toBeTruthy();
-    expect(screen.queryByLabelText("Work e-mail address or sign-in name")).toBeNull();
 
     await userEvent.click(screen.getByRole("link", { name: "Emergency sign-in" }));
     const dialog = await screen.findByRole("dialog", { name: "Emergency sign-in" });
@@ -410,20 +376,7 @@ function adminApi(overrides: Record<string, Handler> = {}) {
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0, capped: false } }),
     "GET /api/v1/instance/settings": () => ({
       body: {
-        items: [
-          {
-            key: "auth.passwordSignIn",
-            value: true,
-            defaultValue: true,
-            source: "default",
-            lockedBy: null,
-            locked: false,
-            lockable: false,
-            levelsBelow: [],
-            editable: true,
-            levels: [{ level: "instance", value: null, locked: false, effective: true }],
-          },
-        ],
+        items: [],
         nextCursor: null,
       },
     }),
@@ -468,6 +421,8 @@ function provider(patch: Record<string, unknown> = {}) {
     warnings: ["credentialExpiring"],
     directoryKey: false,
     capabilities: { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false },
+    scim: false,
+    managedAccounts: 0,
     deactivatedAt: null,
     groupsClaimMissingSince: null,
     setupComplete: true,
@@ -652,13 +607,16 @@ describe("setting up a provider as a draft", () => {
 });
 
 describe("the sign-in settings of the instance", () => {
-  it("lists the providers with their domains, warns about expiring credentials and offers password sign-in", async () => {
-    adminApi({ "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }) });
+  it("lists the providers with their domains and warns about expiring credentials", async () => {
+    adminApi({
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider({ managedAccounts: 1250 })] }),
+    });
     await renderPath("/settings/instance/sign-in-providers");
     const table = await screen.findByRole("table", { name: "Identity providers" });
     expect(within(table).getByText("example.org, example.at")).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Accounts" })).toBeTruthy();
+    expect(within(table).getByText("1,250")).toBeTruthy();
     expect(screen.getByText(/The credential of Microsoft Entra ID · Example expires soon/)).toBeTruthy();
-    expect(await screen.findByRole("switch", { name: "Password sign-in" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add provider" })).toBeTruthy();
   });
 
@@ -1023,19 +981,14 @@ describe("the sign-in settings of the instance", () => {
       [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ body: provider() }),
       "GET /api/v1/instance/identity-providers": () => ({ body: [provider()] }),
       [`GET /api/v1/instance/identity-providers/${PROVIDER}/removal-preview`]: () => ({
-        body: { accounts: 12, accountsWithoutSignIn: 3, groups: 2, rules: 4, grants: 9 },
+        body: { accounts: 0, accountsWithoutSignIn: 0, groups: 2, rules: 4, grants: 9 },
       }),
       [`DELETE /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({ status: 204 }),
     });
     await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}?tab=settings`);
     await userEvent.click(await screen.findByRole("button", { name: "Remove provider" }));
     const confirm = await screen.findByRole("dialog", { name: "Remove Microsoft Entra ID · Example?" });
-    expect(
-      await within(confirm).findByText(
-        "3 accounts have no other way to sign in and cannot sign in any more.",
-      ),
-    ).toBeTruthy();
-    const list = within(confirm).getByRole("list", { name: "What the removal changes" });
+    const list = await within(confirm).findByRole("list", { name: "What the removal changes" });
     expect(
       within(list).getByText("9 memberships and roles granted by its rules are withdrawn."),
     ).toBeTruthy();
@@ -1178,5 +1131,37 @@ describe("linked identities", () => {
     const confirm = await screen.findByRole("dialog", { name: "Unlink Microsoft?" });
     await userEvent.click(within(confirm).getByRole("button", { name: "Unlink" }));
     await waitFor(() => expect(requests.some((request) => request.method === "DELETE")).toBe(true));
+  });
+
+  it("refuses to remove a provider with linked accounts, names their number and offers to deactivate it", async () => {
+    const { requests } = adminApi({
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}`]: () => ({
+        body: provider({ managedAccounts: 12 }),
+      }),
+      "GET /api/v1/instance/identity-providers": () => ({ body: [provider({ managedAccounts: 12 })] }),
+      [`GET /api/v1/instance/identity-providers/${PROVIDER}/removal-preview`]: () => ({
+        body: { accounts: 12, accountsWithoutSignIn: 3, groups: 2, rules: 4, grants: 9 },
+      }),
+    });
+    await renderPath(`/settings/instance/sign-in-providers/${PROVIDER}`);
+    const tiles = await screen.findByRole("list", { name: "Summary" });
+    expect(within(tiles).getByText("Managed accounts")).toBeTruthy();
+    expect(within(tiles).getByText("12")).toBeTruthy();
+    await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Remove provider" }));
+    const refusal = await screen.findByRole("dialog", {
+      name: "Microsoft Entra ID · Example cannot be removed",
+    });
+    expect(
+      within(refusal).getByText(
+        "12 accounts are still linked to this identity provider, so it cannot be removed. Deactivate it instead, or unlink or move these accounts first.",
+      ),
+    ).toBeTruthy();
+    expect(within(refusal).queryByLabelText(/to confirm/)).toBeNull();
+    await userEvent.click(within(refusal).getByRole("button", { name: "Deactivate provider" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Deactivate Microsoft Entra ID · Example" }),
+    ).toBeTruthy();
+    expect(requests.some((request) => request.method === "DELETE")).toBe(false);
   });
 });

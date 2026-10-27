@@ -74,8 +74,9 @@ Run an instance and administer organizations, sign-in, mail, storage, backups an
 
 ## Using Lunedo
 
-Write, organize and share content in spaces and knowledge bases (`user/`).
+Sign in, then write, organize and share content in spaces and knowledge bases (`user/`).
 
+- [Sign-in and security](user/sign-in-and-security.md)
 - [Spaces and pages](user/spaces-and-pages.md)
 - [Content addresses](user/content-addresses.md)
 - [Blocks](user/blocks.md)

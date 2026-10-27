@@ -2,7 +2,9 @@ import { z } from "zod";
 import {
   accountSchema,
   exampleAccount,
+  exampleManagingProvider,
   exampleOrganization,
+  managingProviderSchema,
   organizationSchema,
   timestamp,
   uuid,
@@ -22,6 +24,7 @@ export const administeredAccountSchema = accountSchema
       .describe(
         "Whether the instance or the home organization requires a second factor that the account does not have yet.",
       ),
+    managedBy: managingProviderSchema,
     instanceRoles: z
       .array(
         z
@@ -52,6 +55,7 @@ export const exampleAdministeredAccount = {
   lastSignInAt: "2026-10-01T09:30:00.000Z",
   twoFactorActive: true,
   secondFactorRequired: false,
+  managedBy: exampleManagingProvider,
   instanceRoles: [{ builtInRole: "securityAuditor", customRoleId: null, name: null }],
   organizations: [{ id: exampleOrganization.id, name: exampleOrganization.name, home: true }],
 };

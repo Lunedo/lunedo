@@ -73,6 +73,7 @@
     {
       "title": "Using Lunedo",
       "pages": [
+        "user/sign-in-and-security.md",
         "user/spaces-and-pages.md",
         "user/content-addresses.md",
         "user/blocks.md",

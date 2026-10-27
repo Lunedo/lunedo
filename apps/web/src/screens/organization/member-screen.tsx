@@ -14,6 +14,7 @@ import { getRouteApi, Link } from "@tanstack/react-router";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { signsInOnlyThroughProvider } from "../../api/account-queries.js";
 import { api } from "../../api/client.js";
 import {
   type MemberDetails,
@@ -24,6 +25,7 @@ import {
 } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { AuditLog } from "../../components/audit-log.js";
+import { SignInThrough } from "../../components/managed-account.js";
 import { PersonAvatar } from "../../components/person-avatar.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
@@ -202,15 +204,23 @@ export function MemberScreen() {
               <Facts
                 rows={[
                   [
+                    t("managedAccounts.signsInThrough"),
+                    <SignInThrough key="managed" managedBy={member.managedBy} />,
+                  ],
+                  [
                     t("members.twoFactor"),
-                    <span key="factor" className="flex flex-wrap items-center gap-2">
-                      {member.twoFactorActive ? t("common.yes") : t("common.no")}
-                      <span className="text-text-muted">
-                        {member.twoFactorRequired
-                          ? t("members.page.factorRequired")
-                          : t("members.page.factorNotRequired")}
+                    member.managedBy && signsInOnlyThroughProvider(member.managedBy) ? (
+                      t("managedAccounts.secondFactorChecked", { provider: member.managedBy.providerName })
+                    ) : (
+                      <span key="factor" className="flex flex-wrap items-center gap-2">
+                        {member.twoFactorActive ? t("common.yes") : t("common.no")}
+                        <span className="text-text-muted">
+                          {member.twoFactorRequired
+                            ? t("members.page.factorRequired")
+                            : t("members.page.factorNotRequired")}
+                        </span>
                       </span>
-                    </span>,
+                    ),
                   ],
                   [
                     t("members.page.signInWith"),

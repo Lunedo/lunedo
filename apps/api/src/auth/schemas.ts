@@ -9,7 +9,7 @@ import {
   totpCodeSchema,
 } from "@lunedo/shared";
 import { z } from "zod";
-import { pictureRefField } from "../http/schemas.js";
+import { managingProviderSchema, pictureRefField } from "../http/schemas.js";
 
 const base64url = (max: number) =>
   z
@@ -181,6 +181,7 @@ export const securityOverviewSchema = z.object({
     .describe(
       "Why the account must keep a second factor: it owns the instance, an administrator reset its second factor, or the instance or organization requires one. Null when nothing requires it.",
     ),
+  managedBy: managingProviderSchema,
 });
 
 export const totpSetupSchema = z.object({ secret: z.string(), uri: z.string() });

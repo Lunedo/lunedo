@@ -32,6 +32,13 @@ const completeSchema = z
   })
   .strict();
 const joinedSchema = z.object({ accountId: idSchema, organizationId: idSchema });
+const domainProviderSchema = z
+  .object({
+    id: idSchema.describe("ID of the identity provider."),
+    name: z.string().describe("Name of the identity provider."),
+    type: z.enum(["oidc", "saml", "ldap"]).describe("Kind of identity provider."),
+  })
+  .describe("The identity provider that manages addresses of this domain.");
 const invitationPreviewSchema = z.object({
   state: z
     .enum(["open", "expired", "accepted", "revoked"])
@@ -52,7 +59,12 @@ const invitationPreviewSchema = z.object({
   newAccount: z
     .boolean()
     .describe(
-      "Whether accepting creates an account, so a name and a password are needed. False once the invitation is no longer open.",
+      "Whether accepting creates an account, so a name and, without `provider`, a password are needed. False once the invitation is no longer open.",
+    ),
+  provider: domainProviderSchema
+    .nullable()
+    .describe(
+      "The identity provider of the invited address's domain when accepting creates an account: the account gets no password and signs in through it. Null otherwise.",
     ),
 });
 const secondFactorResetSchema = z
@@ -192,7 +204,7 @@ export class AccountsController {
     params: z.object({ accountId: idSchema }).strict(),
     body: secondFactorResetSchema,
     response: { description: "Sessions that ended.", schema: z.object({ endedSessions: z.number().int() }) },
-    errors: ["resetOwnSecondFactor", "notFound"],
+    errors: ["managedAccount", "resetOwnSecondFactor", "notFound"],
   })
   async resetSecondFactor(
     @Param("accountId") accountId: string,
@@ -257,6 +269,9 @@ export class AccountsController {
           .string()
           .nullable()
           .describe("Address of the portal for a reader account of a knowledge base, or null."),
+        provider: domainProviderSchema
+          .nullable()
+          .describe("The identity provider the new account signs in through, or null."),
       }),
     },
     errors: [
@@ -278,6 +293,7 @@ export class AccountsController {
       accountId: accepted.accountId,
       organizationId: accepted.organizationId,
       accountCreated: accepted.accountCreated,
+      provider: accepted.provider,
       portalUrl: config
         ? config.domain
           ? `https://${config.domain}/`
@@ -290,10 +306,12 @@ export class AccountsController {
   @PublicRoute()
   @ApiRoute({
     summary: "Request a registration",
+    description:
+      "Sends a registration link when self-registration is open for the address's domain. Addresses in a domain of an identity provider are refused with `managedDomain`; they sign in through that provider.",
     tags: ["Accounts"],
     status: 202,
     body: registrationSchema,
-    errors: ["rateLimited"],
+    errors: ["managedDomain", "rateLimited"],
   })
   async register(@Body() body: z.output<typeof registrationSchema>, @Req() request: FastifyRequest) {
     await this.#services.invitations.requestRegistration(body.email, request.ip);
@@ -307,7 +325,7 @@ export class AccountsController {
     status: 200,
     body: completeSchema,
     response: { description: "The new account and its organization.", schema: joinedSchema },
-    errors: ["invalidToken", "passwordPolicy", "emailInUse", "rateLimited"],
+    errors: ["invalidToken", "managedDomain", "passwordPolicy", "emailInUse", "rateLimited"],
   })
   async complete(@Body() body: z.output<typeof completeSchema>, @Req() request: FastifyRequest) {
     const { token, ...details } = body;

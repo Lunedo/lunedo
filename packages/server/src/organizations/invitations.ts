@@ -11,6 +11,7 @@ import { accountSubject, clientSubject, type RateLimiter } from "../auth/throttl
 import { generateToken, hashToken, isWellFormedToken } from "../auth/tokens.js";
 import type { Database, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import { type DomainProvider, providerOfEmailDomain } from "../identity/managed.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { Language } from "../mail/templates.js";
@@ -60,6 +61,15 @@ export interface InvitationPreview {
   invitedByName: string | null;
   knowledgeBaseName: string | null;
   newAccount: boolean;
+  provider: DomainProvider | null;
+}
+
+function managedDomain(provider: DomainProvider): OrganizationError {
+  return new OrganizationError(
+    "managedDomain",
+    `Accounts with this address sign in through ${provider.name}`,
+    { providerId: provider.id, providerName: provider.name },
+  );
 }
 
 export class InvitationService {
@@ -330,6 +340,7 @@ export class InvitationService {
     if (!row) throw new InvalidTokenError();
     const state = row.acceptedAt ? "accepted" : row.revokedAt ? "revoked" : row.expired ? "expired" : "open";
     const existing = state === "open" ? await this.#accounts.findByEmail(row.email) : null;
+    const newAccount = state === "open" && !existing;
     return {
       state,
       email: row.email,
@@ -337,7 +348,11 @@ export class InvitationService {
       organizationName: row.organizationName,
       invitedByName: row.invitedByName,
       knowledgeBaseName: row.knowledgeBaseName,
-      newAccount: state === "open" && !existing,
+      newAccount,
+      provider:
+        newAccount && row.knowledgeBaseName === null
+          ? await providerOfEmailDomain(this.#database, row.email)
+          : null,
     };
   }
 
@@ -350,6 +365,7 @@ export class InvitationService {
     organizationId: string;
     accountCreated: boolean;
     portalSpaceId: string | null;
+    provider: DomainProvider | null;
   }> {
     await this.#limit(`invitation:client:${clientSubject(clientIp ?? "unknown")}`, ACCEPTANCES_PER_CLIENT);
     if (!isWellFormedToken(token)) throw new InvalidTokenError();
@@ -375,6 +391,7 @@ export class InvitationService {
       const portalSpaceId = portalRow.rows[0]?.space_id ?? null;
       const existing = await this.#accounts.findByEmail(invitation.email, tx);
       let accountId: string;
+      let provider: DomainProvider | null = null;
       let kind = invitation.kind;
       if (existing) {
         if (existing.state !== "active") throw new InvalidTokenError();
@@ -397,10 +414,13 @@ export class InvitationService {
         if (kind === "collaborator") {
           throw new OrganizationError("invalidInvitation", "Collaborators join with their existing account");
         }
-        if (!input.name || !input.password) {
+        provider = portalSpaceId ? null : await providerOfEmailDomain(tx, invitation.email);
+        if (!input.name || (!provider && !input.password)) {
           throw new OrganizationError(
             "accountDetailsRequired",
-            "A name and a password are needed to create the account",
+            provider
+              ? "A name is needed to create the account"
+              : "A name and a password are needed to create the account",
           );
         }
         const home =
@@ -414,7 +434,7 @@ export class InvitationService {
             type: portalSpaceId ? "portal" : kind === "guest" ? "guest" : "standard",
             email: invitation.email,
             name: input.name,
-            password: input.password,
+            password: provider ? null : (input.password ?? null),
             homeOrganizationId: home,
             emailVerified: true,
           },
@@ -487,6 +507,7 @@ export class InvitationService {
         organizationId: invitation.organizationId,
         accountCreated: !existing,
         portalSpaceId,
+        provider,
       };
     });
   }
@@ -496,6 +517,8 @@ export class InvitationService {
       `registration:client:${clientSubject(clientIp ?? "unknown")}`,
       REGISTRATIONS_PER_CLIENT,
     );
+    const provider = await providerOfEmailDomain(this.#database, email.trim());
+    if (provider) throw managedDomain(provider);
     const allowed = await this.#rateLimiter.consume(
       `registration:account:${accountSubject(email)}`,
       REGISTRATIONS_PER_ADDRESS,
@@ -522,6 +545,7 @@ export class InvitationService {
     const email = parsed.data;
     const organizationId = await this.#organizations.organizationForEmail(email);
     if (!organizationId || (await this.#accounts.findByEmail(email))) return;
+    if (await providerOfEmailDomain(this.#database, email)) return;
     if (!(await this.#settings.get(selfRegistrationSetting, organizationSettingsChain(organizationId))))
       return;
     const token = generateToken();
@@ -579,6 +603,8 @@ export class InvitationService {
       ) {
         throw new InvalidTokenError();
       }
+      const provider = await providerOfEmailDomain(tx, registration.email);
+      if (provider) throw managedDomain(provider);
       const account = await this.#accounts.create(tx, {
         type: "standard",
         email: registration.email,

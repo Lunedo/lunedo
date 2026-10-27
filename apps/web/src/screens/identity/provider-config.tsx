@@ -598,7 +598,7 @@ export function LinkFields() {
       meta={t("identityProviders.accounts.linkFixed")}
       control={
         <Badge variant="neutral" icon={Lock}>
-          {t("identityProviders.accounts.confirmationRequired")}
+          {t("identityProviders.accounts.linkAutomatic")}
         </Badge>
       }
     />
