@@ -106,6 +106,11 @@ describe.skipIf(!baseUrl)("SCIM provisioning", () => {
       [created.id],
     );
     expect(result.signedIn.session.accountId).toBe(identity.rows[0]?.account_id);
+    const managedRow = await test.pool.query<{ provider_id: string; source: string }>(
+      "select provider_id, source from managed_accounts where account_id = $1",
+      [identity.rows[0]?.account_id],
+    );
+    expect(managedRow.rows).toEqual([{ provider_id: providerId, source: "identity" }]);
   });
 
   it("creates each user once when two nodes receive the same request at the same time", async () => {
@@ -184,6 +189,11 @@ describe.skipIf(!baseUrl)("SCIM provisioning", () => {
       placeholder.id,
     ]);
     expect(state.rows[0]?.state).toBe("active");
+    const managedRow = await test.pool.query<{ provider_id: string; source: string }>(
+      "select provider_id, source from managed_accounts where account_id = $1",
+      [placeholder.id],
+    );
+    expect(managedRow.rows).toEqual([{ provider_id: providerId, source: "identity" }]);
   });
 
   it("refuses to link an existing account by its e-mail address", async () => {

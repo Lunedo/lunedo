@@ -11,8 +11,9 @@ import {
   totpCredentials,
   webauthnCredentials,
 } from "../auth/schema.js";
-import { secondFactorsOf } from "../auth/two-factor.js";
+import { hasSecondFactor, secondFactorsOf } from "../auth/two-factor.js";
 import type { Executor, Transaction } from "../database/database.js";
+import type { MailService } from "../mail/mail-service.js";
 import { identityProviders, type ManagedSource, managedAccounts } from "./schema.js";
 
 export type ManagingProviderType = "oidc" | "saml" | "ldap";
@@ -79,15 +80,28 @@ export async function refuseManaged(
   throw new ManagedAccountError(state.providerId, state.providerName);
 }
 
-export async function removeLocalCredentials(
+export async function takeOverLocalCredentials(
   tx: Transaction,
-  audit: AuditLog,
-  account: { id: string; home: string | null; passwordHash: string | null },
-  provider: { id: string; type: ManagingProviderType },
+  services: { audit: AuditLog; mail: MailService | undefined },
+  accountId: string,
   actor: Principal,
-): Promise<void> {
-  const directory = provider.type === "ldap";
+  linkedBy: "signIn" | "administrator",
+): Promise<string | null> {
+  const state = await managedStateOf(tx, accountId);
+  if (state?.source !== "identity") return null;
+  const [account] = await tx
+    .select({
+      id: accounts.id,
+      email: accounts.email,
+      home: accounts.homeOrganizationId,
+      passwordHash: accounts.passwordHash,
+    })
+    .from(accounts)
+    .where(eq(accounts.id, accountId));
+  if (!account) return null;
+  const directory = state.providerType === "ldap";
   const factors = directory ? null : await secondFactorsOf(tx, account.id);
+  if (account.passwordHash === null && (factors === null || !hasSecondFactor(factors))) return null;
   await tx
     .update(accounts)
     .set({ passwordHash: null, passwordChangedAt: null, updatedAt: new Date() })
@@ -103,12 +117,12 @@ export async function removeLocalCredentials(
     .returning({ id: sessions.id });
   await tx.delete(authChallenges).where(eq(authChallenges.accountId, account.id));
   await tx.delete(accountTokens).where(eq(accountTokens.accountId, account.id));
-  await audit.record(tx, {
+  await services.audit.record(tx, {
     name: "account.localCredentialsRemoved",
     actor,
     targetId: account.id,
     fields: {
-      providerId: provider.id,
+      providerId: state.providerId,
       localSignIn: account.passwordHash !== null,
       authenticatorApp: factors?.totp ?? false,
       passkeys: factors?.passkeys ?? 0,
@@ -116,6 +130,15 @@ export async function removeLocalCredentials(
       endedSessions: ended.length,
     },
     ...(account.home ? { scope: { type: "organization" as const, id: account.home } } : {}),
+  });
+  if (!services.mail || !account.email) return null;
+  return services.mail.queue(tx, {
+    to: account.email,
+    template: "accountManaged",
+    security: true,
+    language: await services.mail.languageOf(account.id),
+    params: { providerName: state.providerName, directory, linkedBy },
+    organizationId: account.home,
   });
 }
 

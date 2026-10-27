@@ -201,6 +201,39 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
     expect(tokens.rowCount).toBe(1);
   });
 
+  it("removes the local credentials when an administrator links an account and leaves none after unlinking", async () => {
+    const created = await provider([uniqueDomain()]);
+    const person = await account(`person@${uniqueDomain()}`);
+    const admin = await administrator();
+    const before = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from mail_outbox where template = 'accountManaged'",
+    );
+    const identity = await test.services.administration.linkIdentity(accountPrincipal(admin.id), person.id, {
+      providerId: created.id,
+      subject: randomUUID(),
+    });
+    expect((await test.services.accounts.get(person.id))?.passwordHash).toBeNull();
+    const after = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from mail_outbox where template = 'accountManaged'",
+    );
+    expect(after.rows[0]?.count).toBe((before.rows[0]?.count ?? 0) + 1);
+    const removed = await test.pool.query<{ actor_id: string }>(
+      "select actor_id from audit_events where name = 'account.localCredentialsRemoved' and target_id = $1",
+      [person.id],
+    );
+    expect(removed.rows).toEqual([{ actor_id: admin.id }]);
+
+    await test.services.administration.unlinkIdentity(accountPrincipal(admin.id), person.id, identity.id);
+    expect(await managedStateOf(test.database, person.id)).toBeNull();
+    await expect(
+      test.services.signIn.signInWithPassword({
+        email: person.email ?? "",
+        password: "a long test passphrase",
+        client: {},
+      }),
+    ).rejects.toMatchObject({ code: "invalidCredentials" });
+  });
+
   it("refuses to make a deactivated account local and keeps a domain-managed account managed", async () => {
     const domain = uniqueDomain();
     const byDomain = await provider([domain]);

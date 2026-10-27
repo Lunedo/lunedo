@@ -50,7 +50,7 @@ import {
 } from "./adapter.js";
 import type { ReceivedClaim } from "./claims.js";
 import type { GroupMappingService } from "./groups.js";
-import { refreshManagedAccounts, removeLocalCredentials } from "./managed.js";
+import { refreshManagedAccounts, takeOverLocalCredentials } from "./managed.js";
 import type { ConnectionCheck, IdentityProviderService, SignInProvider } from "./providers.js";
 import { callbackPath } from "./providers.js";
 import { SamlAdapter, samlPaths } from "./saml.js";
@@ -444,7 +444,7 @@ export class ProviderSignInService {
     }
     await this.#forgetResponse(flow.id);
     const profile = result.profile;
-    const emailVerified = this.#emailVerified(provider.config.domains, profile.email);
+    const emailVerified = this.#emailVerified(provider.config.domains, profile);
 
     if (flow.purpose === "test") {
       const test: TestResult = {
@@ -601,8 +601,9 @@ export class ProviderSignInService {
     );
   }
 
-  #emailVerified(domains: readonly string[], email: string | null): boolean {
-    const domain = domainOf(email);
+  #emailVerified(domains: readonly string[], profile: ProviderProfile): boolean {
+    if (profile.emailUnverified) return false;
+    const domain = domainOf(profile.email);
     return domain !== null && domains.includes(domain);
   }
 
@@ -655,6 +656,14 @@ export class ProviderSignInService {
             },
             mailIds,
           );
+          const mailId = await takeOverLocalCredentials(
+            tx,
+            { audit: this.#audit, mail: this.#mail },
+            account.id,
+            accountPrincipal(account.id),
+            "signIn",
+          );
+          if (mailId) mailIds.push(mailId);
           return identity.id;
         },
         { ...input, returnTo: input.returnTo },
@@ -841,33 +850,20 @@ export class ProviderSignInService {
           fields: { providerId: provider.id, via: "signIn" },
           ...scope,
         });
-        const [change] = await refreshManagedAccounts(
+        await refreshManagedAccounts(
           tx,
           this.#audit,
           { accountIds: [account.id] },
           accountPrincipal(account.id),
         );
-        if (change?.after?.source === "identity" && change.before?.source !== "identity") {
-          await removeLocalCredentials(
-            tx,
-            this.#audit,
-            { id: account.id, home: account.homeOrganizationId, passwordHash: account.passwordHash },
-            { id: provider.id, type: provider.type },
-            accountPrincipal(account.id),
-          );
-          if (this.#mail) {
-            mailIds.push(
-              await this.#mail.queue(tx, {
-                to: account.email,
-                template: "accountManaged",
-                security: true,
-                language: await this.#mail.languageOf(account.id),
-                params: { providerName: provider.name, directory: provider.type === "ldap" },
-                organizationId: account.homeOrganizationId,
-              }),
-            );
-          }
-        }
+        const mailId = await takeOverLocalCredentials(
+          tx,
+          { audit: this.#audit, mail: this.#mail },
+          account.id,
+          accountPrincipal(account.id),
+          "signIn",
+        );
+        if (mailId) mailIds.push(mailId);
         return created.id;
       },
       input,
@@ -1498,7 +1494,7 @@ export class ProviderSignInService {
     }
     await this.#throttle?.recordSuccess(subjects.email ?? "");
     const profile = result.profile;
-    const emailVerified = this.#emailVerified(provider.config.domains, profile.email);
+    const emailVerified = this.#emailVerified(provider.config.domains, profile);
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.#signInWith({

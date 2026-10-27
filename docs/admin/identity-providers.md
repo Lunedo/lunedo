@@ -41,7 +41,7 @@ Providers are set up for the instance in **Settings › Instance › People and 
 Each provider has a list of e-mail domains, at most 50. A domain belongs to at most one provider; adding a domain another provider already has is refused. The domains:
 
 - choose the provider on the sign-in page,
-- decide which e-mail addresses count as verified: an address from the provider counts as verified only when its domain is one of the provider's domains,
+- decide which e-mail addresses count as verified: an address from the provider counts as verified only when its domain is one of the provider's domains and an OpenID Connect provider does not mark it as unverified (`email_verified: false`),
 - limit which people get an account at their first sign-in,
 - make the accounts with an address in the domain [managed](#managed-accounts) by the provider.
 
@@ -146,9 +146,9 @@ For the checks of the directory test, see [LDAP and Active Directory](identity-p
 
 An account can have several linked identities, one per provider and identifier. The identifier never changes at the provider; which value it is depends on the method and is named on each method page. E-mail address, sign-in name and display name are updated at every sign-in.
 
-Lunedo never recognizes an account by its e-mail address alone. An address from a provider counts as verified only when its domain is one of the provider's domains.
+Lunedo never recognizes an account by its e-mail address alone. An address from a provider counts as verified only when its domain is one of the provider's domains. When an OpenID Connect provider sends the claim `email_verified` with the value `false`, the address does not count as verified, whatever its domain; providers that do not send the claim, such as Microsoft Entra ID, are judged by the domain alone.
 
-People who manage accounts see the **Linked sign-ins** of an account in **Settings › Instance › People and sign-in › Accounts**, on the tab **Sign-in and security** of the account. There they can **Link identity** by choosing a provider and entering the identifier at the provider, which a test sign-in shows, and **Unlink** an identity. Linking makes the account managed by that provider, except for the instance owner. Unlinking ends the sessions that came from that identity; what happens when it was the last link is described in [Making an account local](#making-an-account-local).
+People who manage accounts see the **Linked sign-ins** of an account in **Settings › Instance › People and sign-in › Accounts**, on the tab **Sign-in and security** of the account. There they can **Link identity** by choosing a provider and entering the identifier at the provider, which a test sign-in shows, and **Unlink** an identity. Linking makes the account managed by that provider, except for the instance owner, and removes its local sign-in as described in [Taking over an existing account](#taking-over-an-existing-account); the e-mail to the person then says that an administrator linked the account. Unlinking ends the sessions that came from that identity; what happens when it was the last link is described in [Making an account local](#making-an-account-local).
 
 People see their own linked sign-ins under **Settings › My account › Profile**. They can unlink one while another way to sign in remains, but not the identity of the provider that manages their account (`managedIdentity`).
 
@@ -181,7 +181,7 @@ When a domain is added to a provider, the accounts with that domain are managed 
 
 ### Taking over an existing account
 
-At the first sign-in through a provider whose verified e-mail address belongs to an existing account, Lunedo links the identity to the account without asking, because the provider's domain makes the address verified (see [First sign-in](#first-sign-in)). When the account was not managed through a linked identity before:
+At the first sign-in through a provider whose verified e-mail address belongs to an existing account, Lunedo links the identity to the account without asking, because the provider's domain makes the address verified (see [First sign-in](#first-sign-in)). Whenever an account managed through a linked identity still has a local sign-in, for example after **Link identity** or from before the upgrade, Lunedo removes it at that moment or at the next sign-in through the provider:
 
 - For OIDC and SAML, Lunedo deletes its password, passkeys, authenticator app and recovery codes.
 - For LDAP, Lunedo deletes its Lunedo password; authenticator app, passkeys and recovery codes stay as second factor.

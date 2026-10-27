@@ -11,7 +11,12 @@ import { secondFactorsOf } from "../auth/two-factor.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import { emptyReport, type GroupMappingService } from "../identity/groups.js";
-import { managedStateOf, refreshManagedAccounts, refuseManaged } from "../identity/managed.js";
+import {
+  managedStateOf,
+  refreshManagedAccounts,
+  refuseManaged,
+  takeOverLocalCredentials,
+} from "../identity/managed.js";
 import type { IdentityProviderService } from "../identity/providers.js";
 import { identities, identityProviders, providerDeactivations } from "../identity/schema.js";
 import { accountsWithoutOtherSignIn } from "../identity/sign-in-ways.js";
@@ -165,6 +170,7 @@ export class AccountAdministrationService {
     const loaded = await this.#providers.definition(input.providerId);
     if (!loaded) throw new OrganizationError("notFound", "The identity provider does not exist");
     const provider = loaded.provider;
+    const mailIds: string[] = [];
     const linkedId = await this.#database.transaction(async (tx) => {
       const target = await this.#lockActive(tx, accountId);
       await this.#authorization.require(
@@ -189,8 +195,17 @@ export class AccountAdministrationService {
         ...(target.home ? { scope: { type: "organization" as const, id: target.home } } : {}),
       });
       await refreshManagedAccounts(tx, this.#audit, { accountIds: [target.id] }, actor);
+      const mailId = await takeOverLocalCredentials(
+        tx,
+        { audit: this.#audit, mail: this.#mail },
+        target.id,
+        actor,
+        "administrator",
+      );
+      if (mailId) mailIds.push(mailId);
       return linked.id;
     });
+    await this.#mail.dispatch(mailIds);
     const linked = (await this.identities(accountId)).find((identity) => identity.id === linkedId);
     if (!linked) throw new OrganizationError("notFound", "The identity does not exist");
     return linked;

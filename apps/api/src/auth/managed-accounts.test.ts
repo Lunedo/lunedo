@@ -276,6 +276,30 @@ describe.skipIf(!databaseBaseUrl)("sign-in rules for managed accounts", () => {
     ).toEqual([]);
   });
 
+  it("makes an account managed when its owner moves it into a domain of a provider", async () => {
+    const moving = await createAccount(test, "moving.person@local.test", PASSWORD);
+    const mover = await signedInClient(test, moving.email, PASSWORD);
+    expect((await mover.get("/api/v1/account/security")).json()).toMatchObject({ managedBy: null });
+    expect((await mover.post("/api/v1/account/email", { email: "moving.person@saml.test" })).statusCode).toBe(
+      202,
+    );
+    await test.deliverMail();
+    const token = linkToken(test.mail.sent.findLast((mail) => mail.to === "moving.person@saml.test")?.text);
+    expect(
+      (await new TestClient(test.app).post("/api/v1/auth/email-change/confirm", { token })).statusCode,
+    ).toBe(204);
+    const state = await test.runtime.pool.query<{ provider_id: string; source: string }>(
+      "select provider_id, source from managed_accounts where account_id = $1",
+      [moving.id],
+    );
+    expect(state.rows).toEqual([{ provider_id: providers.get("saml"), source: "domain" }]);
+    const refused = await new TestClient(test.app).post("/api/v1/auth/sign-in", {
+      email: "moving.person@saml.test",
+      password: PASSWORD,
+    });
+    expect(refused.json()).toMatchObject({ code: "managedAccount" });
+  });
+
   it("refuses the removed password sign-in setting", async () => {
     const refused = await owner.put("/api/v1/instance/settings/auth.passwordSignIn", { value: false });
     expect(refused.statusCode).toBe(404);

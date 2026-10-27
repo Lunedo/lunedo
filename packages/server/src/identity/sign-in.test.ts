@@ -164,6 +164,10 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       [placeholder.id],
     );
     expect(events.rowCount).toBe(1);
+    expect(await managedStateOf(test.database, placeholder.id)).toMatchObject({
+      providerId: id,
+      source: "identity",
+    });
   });
 
   it("creates an account at the first sign-in and signs it in again by its identifier", async () => {
@@ -587,6 +591,44 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     );
     expect(refused.rowCount).toBe(1);
     expect(await localCredentials(existing.id)).toMatchObject({ sessions: 1 });
+  });
+
+  it("does not link an account when the provider says the address is not verified", async () => {
+    const existing = await account(null);
+    const id = await provider({});
+    const unverified = await signIn(id, { sub: randomUUID(), email: existing.email, email_verified: false });
+    expect(unverified).toMatchObject({ kind: "refused" });
+    const linked = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
+    expect(linked.rowCount).toBe(0);
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+
+    const verified = await signIn(id, { sub: randomUUID(), email: existing.email, email_verified: true });
+    expect(verified).toMatchObject({ kind: "signedIn" });
+  });
+
+  it("removes local credentials left from before when a linked account signs in through its provider", async () => {
+    const existing = await account(null);
+    await enableTotp(existing.id);
+    const id = await provider({});
+    const subject = randomUUID();
+    await test.pool.query(
+      "insert into identities (id, account_id, provider_id, subject, email_verified) values (gen_random_uuid(), $1, $2, $3, true)",
+      [existing.id, id, subject],
+    );
+    await test.pool.query(
+      "insert into managed_accounts (account_id, provider_id, source) values ($1, $2, 'identity') on conflict (account_id) do update set source = 'identity', provider_id = $2",
+      [existing.id, id],
+    );
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true, totp: 1 });
+
+    const result = await signIn(id, { sub: subject, email: existing.email });
+    expect(result).toMatchObject({ kind: "signedIn" });
+    expect(await localCredentials(existing.id)).toMatchObject({ password: false, totp: 0, sessions: 1 });
+    const removed = await test.pool.query(
+      "select 1 from audit_events where name = 'account.localCredentialsRemoved' and target_id = $1",
+      [existing.id],
+    );
+    expect(removed.rowCount).toBe(1);
   });
 
   it("drops the enforced second factor once linking makes the account managed", async () => {
