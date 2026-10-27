@@ -79,4 +79,4 @@ The access gives the organization administrator role, never more. It lasts for *
 
 Break-glass access never counts for giving access to others: a role given or widened through it is refused, and only owners who are owners by assignment can act on owners. The page lists the break-glass accesses of the last 90 days.
 
-How the instance owner signs in when identity providers fail is a different mechanism, the emergency sign-in, see [Authentication](authentication.md).
+How the instance owner signs in when identity providers fail is a different mechanism, the emergency sign-in, see [Emergency sign-in](identity-providers.md#emergency-sign-in).

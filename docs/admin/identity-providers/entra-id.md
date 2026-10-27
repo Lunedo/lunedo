@@ -1,5 +1,7 @@
 # Microsoft Entra ID
 
+Checked against Microsoft Entra documentation, October 2026.
+
 People sign in with their Microsoft work account. Lunedo connects to one Entra ID tenant, through OpenID Connect or through SAML 2.0. Prefer OpenID Connect: with one app registration, Lunedo signs people in, reads their groups and synchronizes account status in the background. Use SAML when your organization requires it.
 
 What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](../identity-provider-groups.md).
@@ -51,7 +53,7 @@ Entra ID providers are synchronized in the background: Lunedo updates profiles a
 
 ### Second factor
 
-With **Require proof from the provider**, Lunedo checks the `amr` claim of the ID token. Entra ID does not send this claim by default: add it under **Token configuration**, **Add optional claim**, token type **ID**. Entra ID reports multi-factor sign-in there as `mfa`, the default accepted value.
+With **Require proof from the provider**, Lunedo checks the `amr` claim of the ID token. Entra ID does not send this claim by default: add it under **Token configuration**, **Add optional claim**, token type **ID**. Entra ID reports multi-factor sign-in there as `mfa`, the default accepted value. Without it, Lunedo refuses the sign-in.
 
 ## SAML
 
@@ -103,5 +105,3 @@ With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo i
 7. Start provisioning.
 
 Lunedo identifies people by tenant and object ID, as at sign-in. It refuses a user whose `externalId` is not an object ID, in `POST`, `PUT` and `PATCH`, stores nothing of that request, and names the sent value and this mapping in the error. A wrong value stored earlier never blocks the correct one. A user without an e-mail address is refused as well.
-
-Checked against Microsoft Entra documentation, October 2026.

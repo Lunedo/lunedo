@@ -1,6 +1,6 @@
 # Identity providers
 
-People can sign in to Lunedo with an account at an identity provider instead of, or in addition to, a Lunedo password or a passkey. Lunedo supports three kinds of providers:
+People can sign in to Lunedo with an account at an identity provider instead of a Lunedo password. An account linked to a provider is [managed](#managed-accounts) by it and signs in only through it. Lunedo supports three kinds of providers:
 
 - OpenID Connect (OIDC), with presets for Microsoft Entra ID and Google Workspace and a generic setup for providers such as Keycloak or Authentik.
 - SAML 2.0, with presets for Microsoft Entra ID and Active Directory Federation Services (ADFS) and a generic setup.
@@ -42,7 +42,8 @@ Each provider has a list of e-mail domains, at most 50. A domain belongs to at m
 
 - choose the provider on the sign-in page,
 - decide which e-mail addresses count as verified: an address from the provider counts as verified only when its domain is one of the provider's domains,
-- limit which people get an account at their first sign-in.
+- limit which people get an account at their first sign-in,
+- make the accounts with an address in the domain [managed](#managed-accounts) by the provider.
 
 Enter every domain people use at the provider, both for e-mail addresses and for sign-in names in the form `name@domain`, for example `example.com` and `nordwind.test`. Google Workspace needs at least one domain.
 
@@ -52,15 +53,16 @@ The sign-in page lists a button for every provider, the last used one first, and
 
 - The domain belongs to an OIDC or SAML provider: the person continues at the provider.
 - The domain belongs to an LDAP provider: the page asks for the sign-in name and the password of the directory.
-- No provider has the domain, or the entry has no `@`, and password sign-in is on: the page asks for the Lunedo password.
-- Otherwise the page says that no sign-in method is set up for this address.
+- No active provider has the domain, or the entry has no `@`: the page asks for the Lunedo password. Local accounts and guests sign in there.
 
-The answer depends only on the domain and the settings, never on whether an account with the address exists, so the page cannot be used to find out who has an account. A client can ask 30 times a minute; further questions are refused for a short time.
+The answer depends only on the domain and the active providers, never on whether an account with the address exists, so the page cannot be used to find out who has an account. A client can ask 30 times a minute; further questions are refused for a short time.
+
+A managed account that reaches the password step, for example because its address is outside the provider's domains or its provider is deactivated, is refused there. Only after a correct password does the answer name the provider that manages the account; the page then shows "Sign in through *provider*" with the provider's button, or says that the provider is not available. A wrong password gets the same answer as for any address.
 
 Further rules:
 
-- With exactly one provider and password sign-in off, the page does not ask for the address. It shows that provider's button directly; for an LDAP provider it shows the form for the directory sign-in name and password instead.
-- Passkeys are always offered and work without an address.
+- Choosing the button of an LDAP provider opens the form for the directory sign-in name and password.
+- Passkeys are always offered and work without an address. They sign in local accounts only.
 - After a sign-in through a provider, the browser remembers the provider for 180 days and offers it as a shortcut next time. The cookie holds only the provider's ID.
 - Deactivated providers and providers whose setup is not finished are never offered.
 
@@ -146,18 +148,74 @@ An account can have several linked identities, one per provider and identifier. 
 
 Lunedo never recognizes an account by its e-mail address alone. An address from a provider counts as verified only when its domain is one of the provider's domains.
 
-People who manage accounts see the **Linked sign-ins** of an account in **Settings › Instance › People and sign-in › Accounts**, on the tab **Sign-in and security** of the account. There they can **Link identity** by choosing a provider and entering the identifier at the provider, which a test sign-in shows, and **Unlink** an identity. Unlinking ends the sessions that came from that identity. Removing the last way an account can sign in is refused. People see their own linked sign-ins under **Settings › My account › Profile** and can unlink one while another way to sign in remains.
+People who manage accounts see the **Linked sign-ins** of an account in **Settings › Instance › People and sign-in › Accounts**, on the tab **Sign-in and security** of the account. There they can **Link identity** by choosing a provider and entering the identifier at the provider, which a test sign-in shows, and **Unlink** an identity. Linking makes the account managed by that provider, except for the instance owner. Unlinking ends the sessions that came from that identity; what happens when it was the last link is described in [Making an account local](#making-an-account-local).
+
+People see their own linked sign-ins under **Settings › My account › Profile**. They can unlink one while another way to sign in remains, but not the identity of the provider that manages their account (`managedIdentity`).
+
+## Managed accounts
+
+An account is managed by a provider when:
+
+- an identity of the provider is linked to it: the provider or [SCIM](scim.md) created the account, the account was linked at a sign-in, or an administrator linked it; or
+- the domain of its e-mail address is one of the provider's domains.
+
+A linked identity decides before a domain. When identities of several providers are linked, the provider linked most recently manages the account. Only providers whose setup is finished count. Every other account is local, including guests whose domain belongs to no provider. The instance owner is never managed, see [Emergency sign-in](#emergency-sign-in).
+
+The provider list shows in the column **Accounts** how many accounts each provider manages, and the provider's **Overview** shows the same number as **Managed accounts**. On the account page under **Settings › Instance › People and sign-in › Accounts**, **Security at a glance** shows **Signs in through** with the provider, or **Lunedo** for a local account; the account list has the column **Sign-in**. In an organization, people who manage members see the same column in **Settings › Organization › People and access › Members** and **Signs in through** on the member's page.
+
+Lunedo stores which provider manages each account and since when, and updates it when an identity is linked or unlinked, when a provider is set up, changed or removed, when its domains change, when an account is created or changes its e-mail address, and when the instance ownership moves to another account. Each change is recorded in the audit log as `account.managed` or `account.unmanaged`, with the provider and whether the identity or the domain decided.
+
+What a managed account can do depends on the method:
+
+| | OIDC or SAML | LDAP |
+|---|---|---|
+| Sign-in | Only through the provider | With the directory password on the Lunedo sign-in page |
+| Lunedo password | Not used: sign-in, change and reset are refused | Not used: sign-in, change and reset are refused |
+| Passkey sign-in without password | Refused | Refused |
+| Second factor in Lunedo | None: authenticator apps, passkeys and recovery codes cannot be added, **Require two-factor authentication** does not apply, and **Reset second factor** is refused. The provider handles the second factor. | As for local accounts: authenticator app or passkey, recovery codes, **Require two-factor authentication** applies, and administrators can reset it |
+| E-mail address | Comes from the provider; changing it in Lunedo is refused | Comes from the directory; changing it in Lunedo is refused |
+
+Refused requests are answered with `403` and the problem code `managedAccount`, which names the provider. A password sign-in answers `managedAccount` only after a correct password.
+
+When a domain is added to a provider, the accounts with that domain are managed at once: their password and passkey sign-in is refused from then on, but their stored credentials and sessions stay until the first sign-in through the provider. When the domain is removed again before that sign-in, the accounts are local again with their earlier password.
+
+### Taking over an existing account
+
+At the first sign-in through a provider whose verified e-mail address belongs to an existing account, Lunedo links the identity to the account without asking, because the provider's domain makes the address verified (see [First sign-in](#first-sign-in)). When the account was not managed through a linked identity before:
+
+- For OIDC and SAML, Lunedo deletes its password, passkeys, authenticator app and recovery codes.
+- For LDAP, Lunedo deletes its Lunedo password; authenticator app, passkeys and recovery codes stay as second factor.
+- All other sessions of the account end, and open password reset and e-mail change links stop working.
+- Content, groups, roles and memberships stay.
+- The person receives an e-mail that the account now signs in through the provider.
+- The audit log records `identity.linked`, `account.managed` and `account.localCredentialsRemoved`, with what was removed.
+
+The instance owner is never taken over this way; the owner confirms a link as described in [First sign-in](#first-sign-in) and stays local. When the account is already linked to another identity of the same provider, the sign-in is refused with the reason "Your sign-in could not be linked to your account".
+
+### Deactivated providers
+
+A deactivated provider keeps managing its accounts. They cannot sign in until the provider is activated again or the accounts move to another provider. Lunedo does not fall back to a password, and a password reset sends no link.
+
+### Moving to another provider
+
+Accounts move with the existing linking: at the first sign-in through the new provider with a verified matching address, or with **Link identity** by an administrator. The provider linked last manages the account. Unlink the identity of the old provider afterwards. Because a domain belongs to only one provider, move the domain to the new provider before people sign in there with addresses in it.
+
+### Making an account local
+
+An administrator makes an account local by unlinking its last identity with **Unlink**; the confirmation explains the e-mail when it is the account's last linked provider. When no provider has the domain of its address, the account becomes local and the person receives an e-mail with a link to set a password, valid for 30 minutes; afterwards **Forgot password?** on the sign-in page works. When a provider still has the domain, the account stays managed through the domain, and no e-mail is sent.
+
+Making an account local is refused for accounts that are not active (`accountNotActive`); reactivate the account first. Unlinking is recorded as `identity.unlinked` and `account.unmanaged`.
 
 ## First sign-in
 
 When nobody is linked to the identity yet, Lunedo decides in this order:
 
-1. The verified e-mail address belongs to an existing account: the person confirms once that the account is theirs, with a way to sign in the account already has:
-   - its Lunedo password, followed by its second factor if it has one, while password sign-in is on;
+1. The verified e-mail address belongs to an existing account: Lunedo links the identity to the account and [takes it over](#taking-over-an-existing-account). Only the instance owner confirms once that the account is theirs, with a way to sign in the account already has:
+   - its Lunedo password, followed by its second factor;
    - one of its passkeys;
    - a fresh sign-in through a provider already linked to it, or the password of a linked directory.
 
-   The confirmation must happen within 15 minutes after the sign-in. Lunedo never links automatically. "This is not my account" ends the sign-in with a reference. An account with none of these ways to sign in is refused, and an administrator links the identity on the account page. Linking lets an account move from one provider to another, for example from OIDC to SAML.
+   The confirmation must happen within 15 minutes after the sign-in. "This is not my account" ends the sign-in with a reference.
 2. Otherwise, when **Create accounts at first sign-in** is on and the address is in one of the provider's domains, Lunedo creates a standard account without a password. When a placeholder account has the address, the placeholder becomes the person's account instead. With **Require group membership**, the person must be in one of the **Required groups**.
 3. Otherwise the sign-in is refused.
 
@@ -174,26 +232,29 @@ Every refusal gets a reference such as `7KQ2-M9XA`, shown on the refusal page to
 | You are not in a group that may use *name* | Required groups are set and the person is in none of them. |
 | Your account is deactivated | The linked account is deactivated. |
 | The accounts were not linked | The person chose "This is not my account". |
-| Your account cannot be linked by you | An account with the address exists but has no way to sign in the person could confirm with. |
+| Your account cannot be linked by you | The account with the address belongs to the instance owner and has no way to sign in the person could confirm with. |
 | Your provider sent an answer Lunedo could not accept | The response failed a security check, for example because it expired or was meant for another application. |
+| Your provider did not confirm a second factor | The provider is set to **Require proof from the provider**, and its answer carried none of the **Accepted proof values**. |
+| Your sign-in could not be linked to your account | The account with the address is already linked to another identity of this provider. |
 
 ## Sessions and sign-out
 
 A session created through a provider remembers the identity and, for OIDC, the provider's session ID.
 
-Each provider has the setting **Second factor after a sign-in through this provider** on the **Settings** tab:
+OIDC and SAML providers have the setting **Second factor after a sign-in through this provider** on the **Settings** tab. Accounts they manage have no second factor in Lunedo, so the provider is responsible for it:
 
 | Option | Effect |
 |---|---|
-| Handled by the provider (default for OIDC and SAML) | A sign-in through the provider is complete. Set up multi-factor authentication at the provider. |
-| Require proof from the provider | Lunedo accepts the sign-in without its own second factor only when the provider reports multi-factor authentication with one of the **Accepted proof values** (default `mfa`). Otherwise Lunedo asks for its own. |
-| Always ask for a Lunedo second factor (default for LDAP) | Lunedo asks for its own second factor after every sign-in through the provider. |
+| Handled by the provider (default) | A sign-in through the provider is complete. Set up multi-factor authentication at the provider. |
+| Require proof from the provider | The provider must report multi-factor authentication with one of the **Accepted proof values** (default `mfa`). Without it, the sign-in is refused with the reason "Your provider did not confirm a second factor", and a confirmation of identity through the provider fails. |
 
-LDAP providers offer "Always ask for a Lunedo second factor" and "No additional second factor". With the second, Lunedo still asks where the instance or an organization requires a second factor, because a directory password proves no second factor. When Lunedo asks, the person confirms with an authenticator code, a passkey or a recovery code; a person without a second factor first sets one up.
+The instance owner is the exception: when the owner signs in through a linked provider, Lunedo asks for the owner's own second factor.
+
+LDAP providers offer "Always ask for a Lunedo second factor" (default) and "No additional second factor". With the second, Lunedo still asks where the instance or an organization requires a second factor, because a directory password proves no second factor. When Lunedo asks, the person confirms with an authenticator code, a passkey or a recovery code; a person without a second factor first sets one up.
 
 OIDC providers can end sessions with back-channel logout; see [OpenID Connect](identity-providers/openid-connect.md#back-channel-logout).
 
-Accounts without a Lunedo password confirm sensitive actions through their provider, which signs them in again, or with their directory password.
+Accounts managed through OIDC or SAML confirm sensitive actions through their provider, which signs them in again. Accounts managed through LDAP confirm with their directory password, an authenticator code or a passkey.
 
 ## Deactivating and removing a provider
 
@@ -203,23 +264,23 @@ Accounts without a Lunedo password confirm sensitive actions through their provi
 - a running synchronization stops, and no new one starts;
 - the sessions that came from it end. They do not come back when the provider is activated again.
 
-Settings, credentials, identities, rules, groups and access stay. **Activate** turns the provider on again.
+Settings, credentials, identities, rules, groups and access stay. The accounts it manages stay managed and cannot sign in in another way, see [Deactivated providers](#deactivated-providers). **Activate** turns the provider on again.
 
-**Remove provider** cannot be undone. Before the removal, Lunedo shows:
+**Remove provider** cannot be undone. It is refused while accounts are linked to the provider, with the problem code `providerHasAccounts` and the number of accounts. The dialog then says *name* **cannot be removed**, with the number of linked accounts, and offers **Deactivate provider** while the provider is active. Deactivate the provider instead, or [move the accounts](#moving-to-another-provider) or [make them local](#making-an-account-local) first.
 
-- how many accounts lose their identity of this provider, and how many of them have no other way to sign in (another active provider, a passkey, or a password while password sign-in is on or for the instance owner);
-- how many mapping rules are removed and how many memberships and roles granted by them are withdrawn;
-- how many synchronized groups become ordinary groups.
+Before the removal, Lunedo shows how many mapping rules are removed, how many memberships and roles granted by them are withdrawn, and how many synchronized groups become ordinary groups.
 
-The removal ends the sessions from the provider, deletes its identities and rules and withdraws what its rules granted. Synchronized groups keep their members and permissions and show that they were formerly synchronized from the provider. Accounts and their content stay.
+The removal deletes the provider's rules and withdraws what they granted. Synchronized groups keep their members and permissions and show that they were formerly synchronized from the provider. Accounts that were managed only through one of its domains become local again; they keep the password they had. Accounts and their content stay.
 
 Deactivations and removals, like every change to providers, credentials and rules, are recorded in the [audit log](audit-log.md) and can be found there with the filter.
 
-## Password sign-in and emergency sign-in
+## Emergency sign-in
 
-`auth.passwordSignIn` is an instance setting and decides whether people sign in with a password. When it is off, they sign in through a provider or a passkey. Requiring a second factor stays a setting that organizations can make stricter for their members.
+The instance owner's account is never managed by a provider, also when its domain belongs to one or an identity is linked to it. It keeps its password and always needs a second factor, so the owner can sign in when every provider fails. The sign-in page has the link **Emergency sign-in** at the bottom, which asks for the owner's e-mail address and password. The ownership can only be transferred to an account that is not managed (`ownerManaged`).
 
-The instance owner can always sign in with password and second factor. When password sign-in is off for the owner, this counts as emergency sign-in: it is audited as `auth.emergencySignIn`, and the recipients get the notification `auth.emergencySignIn` at once. The instance owner is always told. By default, all instance owners and administrators are told as well; the instance owner can turn that off, add further people and add e-mail addresses outside Lunedo (`PUT /api/v1/instance/emergency-sign-in-recipients`). Only the instance owner can change the recipients, and every change is audited as `settings.changed`.
+While at least one provider is active and set up, every sign-in of the owner with password or passkey counts as emergency sign-in. It is audited as `auth.emergencySignIn`, and the recipients get the notification `auth.emergencySignIn` at once. Without an active provider, signing in with a password is the normal way and is not reported.
+
+The instance owner is always told. By default, all instance owners and administrators are told as well. In the section **Emergency sign-in of the owner** under **Settings › Instance › People and sign-in › Sign-in methods**, the instance owner can turn **Tell instance administrators** off, add up to 50 **Further people**, who are told in Lunedo and by e-mail, and up to 20 **Further e-mail addresses** outside Lunedo (`PUT /api/v1/instance/emergency-sign-in-recipients`). Only the instance owner can change the recipients, and every change is audited as `settings.changed`.
 
 ## Security
 

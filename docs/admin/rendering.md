@@ -1,5 +1,7 @@
 # Rendering: PDF and Word
 
+Checked against Docker, Ubuntu and Podman documentation, October 2026.
+
 Lunedo turns pages into print-ready HTML on the server. By default, the person's own browser lays it out into sheets and saves it as PDF through its print dialog. Word documents are created by Lunedo itself. Neither needs anything besides Lunedo.
 
 An optional render container creates PDF files on the server. It is needed only for:
@@ -108,5 +110,3 @@ Images of drawings, whiteboards and draw.io, Mermaid and PlantUML diagrams are c
 ## External embeds
 
 The services whose content pages may show in a frame are set under **Settings › Instance › Services › External embeds**; see [embeds.md](embeds.md).
-
-Checked against Docker, Ubuntu and Podman documentation, October 2026.

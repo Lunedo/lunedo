@@ -28,7 +28,7 @@ Built-in roles use the same areas as custom roles:
 
 | Role | Level | Areas |
 |---|---|---|
-| Owner | Instance | All instance areas: Manage. Exactly one; only the owner transfers ownership, after confirming their identity. |
+| Owner | Instance | All instance areas: Manage. Exactly one; only the owner transfers ownership, after confirming their identity, to an active instance administrator whose account is not managed by an identity provider. |
 | Administrator | Instance | All instance areas: Manage |
 | Security auditor | Instance | All instance areas: View |
 | Owner | Organization | All organization areas: Manage. At least one; the last owner cannot leave or be removed. |

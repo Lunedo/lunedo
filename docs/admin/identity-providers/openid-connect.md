@@ -1,5 +1,7 @@
 # OpenID Connect
 
+Checked against Keycloak and Authentik documentation, October 2026.
+
 Use **Other OIDC provider** for identity providers that speak OpenID Connect, such as Keycloak, Authentik, Okta or Zitadel. People sign in at the provider; profile and groups update at every sign-in. Generic OIDC providers have no directory Lunedo could synchronize with in the background; with [SCIM](../scim.md), the provider can send changes at once.
 
 For Microsoft Entra ID and Google Workspace, use their presets instead: [Microsoft Entra ID](entra-id.md), [Google Workspace](google-workspace.md). What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md).
@@ -59,7 +61,7 @@ Lunedo accepts a logout token signed with the configured algorithm, issued for i
 
 ## Second factor
 
-With **Require proof from the provider**, Lunedo checks the `amr` claim of the ID token for one of the **Accepted proof values**, `mfa` by default. Check with a test sign-in which values the provider sends.
+With **Require proof from the provider**, Lunedo checks the `amr` claim of the ID token for one of the **Accepted proof values**, `mfa` by default, and refuses the sign-in without one. Check with a test sign-in which values the provider sends.
 
 ## Keycloak
 
@@ -75,5 +77,3 @@ With **Require proof from the provider**, Lunedo checks the `amr` claim of the I
 - Keep **Include claims in id_token** on in the advanced protocol settings, so that the claims are in the ID token.
 - Choose a signing key for the provider, so that ID tokens are signed with RS256 or another algorithm from the list above.
 - The default `profile` scope sends the names of the person's groups in the claim `groups`. Enter `groups` as **Claim for groups**. Renaming a group in Authentik breaks its rules.
-
-Checked against Keycloak and Authentik documentation, October 2026.

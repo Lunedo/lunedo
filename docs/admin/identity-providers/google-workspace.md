@@ -1,5 +1,7 @@
 # Google Workspace
 
+Checked against Google Cloud and Google Workspace documentation, October 2026.
+
 People sign in with their Google Workspace account through OpenID Connect. At first, Google Workspace is used for sign-in only. Group synchronization can be turned on later with a service account; Lunedo then reads groups through the Google Directory API and synchronizes them in the background.
 
 What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](../identity-provider-groups.md).
@@ -48,6 +50,4 @@ See [Synchronization](../identity-provider-groups.md#synchronization) for how ru
 
 ## Second factor
 
-Either keep **Handled by the provider** and enforce 2-step verification in Google Workspace, or choose **Always ask for a Lunedo second factor**. **Require proof from the provider** works only when the ID token carries an `amr` claim with one of the accepted values; a test sign-in shows the claims Google sends.
-
-Checked against Google Cloud and Google Workspace documentation, October 2026.
+Accounts managed by Google Workspace have no second factor in Lunedo. Keep **Handled by the provider** and enforce 2-step verification in Google Workspace. **Require proof from the provider** works only when the ID token carries an `amr` claim with one of the accepted values; otherwise every sign-in is refused. A test sign-in shows the claims Google sends.

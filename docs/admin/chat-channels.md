@@ -1,5 +1,7 @@
 # Chat channels
 
+Checked against Microsoft Teams, Slack, Discord and Element documentation, October 2026.
+
 Lunedo posts what happens in a space, and the announcements of an organization, to Microsoft Teams, Slack, Discord, Matrix or any service that accepts webhooks. A chat channel is a one-way connection: Lunedo posts, nobody answers through it.
 
 ## Where to set them up
@@ -102,5 +104,3 @@ A channel whose service keeps failing, or answers that the address is gone or no
 | Not reachable | Check the address and whether the server can reach the internet. |
 | Private network | Use a public address, or allow the network in `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`. |
 | Not HTTPS | Use an address that starts with `https://`. |
-
-Checked against Microsoft Teams, Slack, Discord and Element documentation, October 2026.

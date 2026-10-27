@@ -13,11 +13,13 @@ Instance administrators manage every account under **Settings › Instance › P
 
 An account is **Invited**, **Active**, **Deactivated**, **Anonymized** or a **Placeholder**.
 
+Standard and guest accounts are local or managed by an identity provider. A managed account signs in only through its provider, does not use a Lunedo password and, with OIDC or SAML, no second factor in Lunedo. Which accounts are managed, and how an account moves to another provider or becomes local again, is described in [Managed accounts](identity-providers.md#managed-accounts). Deactivating an account does not change whether it is managed.
+
 ## Finding accounts
 
-The account list shows each account with its type, state, home organization, instance role, whether a second factor is set up and the last sign-in. The search matches names, e-mail addresses and short names on the server, page by page. The filter offers accounts without organization and, for instance administrators, personal spaces that wait for review (see [Spaces](spaces.md#personal-spaces)).
+The account list shows each account with its type, state, home organization, instance role, whether a second factor is set up (**At the provider** for accounts managed through OIDC or SAML), how it signs in (column **Sign-in**: the managing provider, or **Lunedo**) and the last sign-in. The search matches names, e-mail addresses and short names on the server, page by page. The filter offers accounts without organization and, for instance administrators, personal spaces that wait for review (see [Spaces](spaces.md#personal-spaces)).
 
-The account page adds the memberships and roles per organization, active sessions, active API tokens, the second factors and, under **Activity**, the account's entries in the instance audit log.
+The account page adds, under **Security at a glance**, how the account signs in (**Signs in through**) and, for accounts managed through OIDC or SAML, that the provider checks the second factor. It also shows the memberships and roles per organization, active sessions, active API tokens, the second factors and, under **Activity**, the account's entries in the instance audit log.
 
 ## Home organization
 
@@ -40,7 +42,7 @@ On the account page, the danger zone offers:
 | Action | Effect |
 |---|---|
 | **End all sessions** | Signs the person out on every device. They can sign in again right away. Single sessions can be ended under **Sign-in and security**. |
-| **Reset second factor** | Removes the authenticator app, passkeys and recovery codes and ends every session. The person sets up a new second factor at the next sign-in and receives an e-mail. A reason is required; it goes into the audit log and the e-mail. |
+| **Reset second factor** | Removes the authenticator app, passkeys and recovery codes and ends every session. The person sets up a new second factor at the next sign-in and receives an e-mail. A reason is required; it goes into the audit log and the e-mail. Not offered for accounts managed through OIDC or SAML, whose provider handles the second factor; the server refuses it as well. |
 | **Deactivate account** | As described above. |
 | **Reactivate** | For deactivated accounts. The account can sign in again with the memberships and roles it kept while deactivated. Revoked API tokens stay revoked. |
 

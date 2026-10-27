@@ -1,5 +1,7 @@
 # E-mail with Microsoft 365
 
+Checked against Microsoft Entra and Exchange Online documentation, October 2026.
+
 Lunedo sends through Microsoft 365 in two ways:
 
 - **Microsoft Graph** (recommended): Lunedo calls `sendMail` of one sender mailbox with an app registration of its own. No SMTP is involved, and the app can be limited to the sender mailbox.
@@ -110,5 +112,3 @@ Delivery through Graph is retried like delivery through SMTP, see [E-mail](../em
 SMTP with OAuth2 works only with the global Microsoft cloud today: the server `smtp.office365.com` and the scope `https://outlook.office365.com/.default` are fixed. The settings offer **US Government** and **China (21Vianet)** under **Advanced: other Microsoft cloud**, but that changes only the token endpoint. For a national cloud, use [Microsoft Graph](#microsoft-graph).
 
 Lunedo gets the token with the client credentials grant at `<authority>/<tenant>/oauth2/v2.0/token` with the scope `https://outlook.office365.com/.default`. A stored secret is kept only while tenant, application and cloud stay the same; a new app needs its secret again. Token errors are listed in [E-mail](../email.md#test-mail-fails).
-
-Checked against Microsoft Entra and Exchange Online documentation, October 2026.

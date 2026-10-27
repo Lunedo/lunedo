@@ -149,6 +149,46 @@ describe("checkDocs", () => {
   });
 });
 
+describe("vendor notes", () => {
+  const note = "Checked against Microsoft Entra and AD FS documentation, October 2026.";
+  const check = (page: string) =>
+    checkDocs(
+      tree({
+        files: {
+          "docs/admin/vendor.md": page,
+          "docs/navigation.json": navigation(["admin/installation.md", "api/format.md", "admin/vendor.md"]),
+        },
+      }),
+    );
+
+  it("accepts the note as a line of its own directly below the H1", () => {
+    assert.deepEqual(check(`# Vendor\n\n${note}\n\nIntroduction.\n`), []);
+    assert.deepEqual(check(`# Vendor\n${note}\n`), []);
+  });
+
+  it("reports a note that is not directly below the H1", () => {
+    assert.deepEqual(check(`# Vendor\n\nIntroduction.\n\n${note}\n`), [
+      "docs/admin/vendor.md:5: the vendor note must be a line of its own directly below the H1",
+    ]);
+    assert.deepEqual(check(`# Vendor\n\n${note}\nIntroduction in the same paragraph.\n`), [
+      "docs/admin/vendor.md:3: the vendor note must be a line of its own directly below the H1",
+    ]);
+  });
+
+  it("reports a note in another form", () => {
+    assert.deepEqual(check("# Vendor\n\nChecked against the Keycloak docs in October 2026.\n"), [
+      'docs/admin/vendor.md:3: the vendor note must read "Checked against <vendor> documentation, <Month Year>."',
+    ]);
+    assert.deepEqual(check("# Vendor\n\nChecked against Keycloak documentation, 10/2026\n"), [
+      'docs/admin/vendor.md:3: the vendor note must read "Checked against <vendor> documentation, <Month Year>."',
+    ]);
+  });
+
+  it("ignores notes inside code blocks", () => {
+    assert.deepEqual(check(`# Vendor\n\nIntroduction.\n\n\`\`\`text\n${note}\n\`\`\`\n`), []);
+  });
+});
+
 describe("anchors and links", () => {
   it("follows the slug rule of GitHub, including repeated headings", () => {
     assert.equal(slug("Chromium's sandbox"), "chromiums-sandbox");

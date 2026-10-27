@@ -24,6 +24,10 @@ export const documentationTargets = {
   identityProviderOidc: "admin/identity-providers/openid-connect.md",
   identityProviderSaml: "admin/identity-providers/saml.md",
   identityProviderLdap: "admin/identity-providers/ldap.md",
+  managedAccounts: "admin/identity-providers.md#managed-accounts",
+  makingAccountLocal: "admin/identity-providers.md#making-an-account-local",
+  emergencySignIn: "admin/identity-providers.md#emergency-sign-in",
+  signInAndSecurity: "user/sign-in-and-security.md",
 } as const;
 
 export type DocumentationTarget = keyof typeof documentationTargets;
