@@ -98,8 +98,8 @@ Delivery through Graph is retried like delivery through SMTP, see [E-mail](../em
 2. Under **API permissions**, add **Office 365 Exchange Online**, application permission `SMTP.SendAsApp`, and grant admin consent.
 3. Create a client secret.
 4. In Exchange Online PowerShell, connect with `Connect-ExchangeOnline`, then run the three commands the settings page shows with your values filled in. Use the object ID from **Enterprise applications**, not from **App registrations**:
-   1. Register the app: `New-ServicePrincipal -AppId <application ID> -ObjectId <object ID>`
-   2. Let it use the mailbox: `Add-MailboxPermission -Identity <mailbox> -User <application ID> -AccessRights FullAccess`
+   1. Register the app as a service principal in Exchange: `New-ServicePrincipal -AppId <application ID> -ObjectId <object ID> -DisplayName "Lunedo mail <application ID>"`
+   2. Let this service principal use the mailbox. `Add-MailboxPermission` takes the identity of the Exchange service principal, not the application ID, so the command reads it by its display name: `Add-MailboxPermission -Identity <mailbox> -User (Get-ServicePrincipal -Identity "Lunedo mail <application ID>").Identity -AccessRights FullAccess`
    3. Allow SMTP sign-in for the mailbox: `Set-CASMailbox -Identity <mailbox> -SmtpClientAuthenticationDisabled $false`
 5. In Lunedo, open **Settings › Instance › Services › Delivery**, select **SMTP** under **Method** and the service **Microsoft 365**. It fills in `smtp.office365.com`, port 587, STARTTLS and OAuth2.
 6. Enter the **Mailbox**, the **Tenant ID**, the **Application (client) ID**, the **Client secret** and the **Sender address**.

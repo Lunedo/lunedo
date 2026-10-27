@@ -56,6 +56,7 @@ export function OAuth2Steps({
   const box = mailbox.trim() || t("mail.oauth2.placeholders.mailbox");
   const app = clientId.trim() || t("mail.oauth2.placeholders.application");
   const objectId = t("mail.oauth2.placeholders.objectId");
+  const principal = `"Lunedo mail ${app}"`;
   return (
     <Notice variant="info" title={t("mail.oauth2.steps.title", { provider: providerName })}>
       {provider === "microsoft365" ? (
@@ -67,11 +68,11 @@ export function OAuth2Steps({
             {t("mail.oauth2.steps.microsoft365.exchange")}
             <CopyLine
               name="New-ServicePrincipal"
-              value={`New-ServicePrincipal -AppId ${app} -ObjectId ${objectId}`}
+              value={`New-ServicePrincipal -AppId ${app} -ObjectId ${objectId} -DisplayName ${principal}`}
             />
             <CopyLine
               name="Add-MailboxPermission"
-              value={`Add-MailboxPermission -Identity ${box} -User ${app} -AccessRights FullAccess`}
+              value={`Add-MailboxPermission -Identity ${box} -User (Get-ServicePrincipal -Identity ${principal}).Identity -AccessRights FullAccess`}
             />
             <CopyLine
               name="Set-CASMailbox"
