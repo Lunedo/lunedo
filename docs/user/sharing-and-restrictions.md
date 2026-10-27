@@ -31,7 +31,7 @@ If the person has no account in the organization, you can invite them by e-mail:
 
 The person joins the organization as a guest and sees the page after accepting. If at that moment you may no longer share the page, the share is not created; it becomes an access request for the people who manage the page.
 
-Organization administrators can always invite guests. Other people can do it only when the organization turns on **Members can invite guests to a page** (default off) under **Settings › Organization › Content › Pages and trash**, section **Sharing**. In a [confidential space](confidential-spaces.md), only its space admins invite guests or share pages with guests, and organization administrators cannot.
+Organization administrators can always invite guests. Other people can do it only when the organization turns on **Members can invite guests to a page** (default off) under **Settings › Organization › Content › Pages and trash**, section **Sharing**. In a [confidential space](confidential-spaces.md), you must also be one of its space admins to invite guests or share pages with guests; organization administrators who are not space admins cannot.
 
 ## Share links
 

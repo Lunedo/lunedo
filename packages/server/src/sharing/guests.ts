@@ -51,11 +51,16 @@ export class GuestShareService {
     const target = await this.#spaceOf(itemId);
     const organizationId = target?.organizationId ?? null;
     if (!target || !organizationId || actor.type !== "account") return false;
-    if (target.confidential) {
-      return (
-        (await this.#authorization.spaceRole(actor.id, target.spaceId, { fresh: true })).role === "admin"
-      );
-    }
+    if (target.confidential && !(await this.#isSpaceAdmin(actor, target.spaceId))) return false;
+    return this.#organizationAllows(actor, organizationId);
+  }
+
+  async #isSpaceAdmin(actor: Principal, spaceId: string): Promise<boolean> {
+    if (actor.type !== "account") return false;
+    return (await this.#authorization.spaceRole(actor.id, spaceId, { fresh: true })).role === "admin";
+  }
+
+  async #organizationAllows(actor: Principal, organizationId: string): Promise<boolean> {
     if (
       await this.#authorization.authorize(actor, "organization.members.manage", {
         type: "organization",
@@ -102,13 +107,13 @@ export class GuestShareService {
     if (!target || !organizationId) {
       throw new SpaceError("invalidScope", "Guests can be invited to pages of an organization only");
     }
-    if (!(await this.allowed(actor, itemId))) {
-      if (target.confidential) {
-        throw new SpaceError(
-          "confidentialGuestsBySpaceAdmins",
-          "Only space administrators invite guests into a confidential space",
-        );
-      }
+    if (target.confidential && !(await this.#isSpaceAdmin(actor, target.spaceId))) {
+      throw new SpaceError(
+        "confidentialGuestsBySpaceAdmins",
+        "Only space administrators invite guests into a confidential space",
+      );
+    }
+    if (!(await this.#organizationAllows(actor, organizationId))) {
       throw new SpaceError("guestInvitesDisabled", "Your organization does not let members invite guests");
     }
     if (input.includeDescendants) {

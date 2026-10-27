@@ -206,6 +206,22 @@ describe.skipIf(!baseUrl)("inviting guests to a page", () => {
       true,
     );
     await expect(invite(context.adminId)).resolves.toMatchObject({ id: expect.any(String) });
+    await test.settings.set(
+      membersInviteGuestsSetting,
+      { organization: context.org.id },
+      "organization",
+      false,
+    );
+    expect(await test.services.guestShares.allowed(accountPrincipal(context.adminId), context.page.id)).toBe(
+      false,
+    );
+    await expect(invite(context.adminId)).rejects.toMatchObject({ code: "guestInvitesDisabled" });
+    await test.settings.set(
+      membersInviteGuestsSetting,
+      { organization: context.org.id },
+      "organization",
+      true,
+    );
 
     const guestId = await member(context.org.id, "guest", "Existing guest");
     const share = (actorId: string) =>
