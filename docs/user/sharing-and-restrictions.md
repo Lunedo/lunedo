@@ -61,11 +61,7 @@ To change a link, select **Change** next to it. To end it, select **Revoke** and
 
 The organization sets these under **Settings › Organization › Content › Pages and trash**, section **Sharing**. Links for anyone and their lifetime can also be set for the whole instance; an organization can only shorten the lifetime.
 
-| Setting | Default | Effect |
-|---|---|---|
-| **Share links** | on | Off: no new links, and existing links stop working. Sharing with people still works. |
-| **Links for anyone without signing in** | off | Allows links that open without signing in. |
-| **Longest lifetime of a link for anyone** | 30 days | 1 to 3650 days. |
+Turning **Share links** off stops new links, and existing links stop working; sharing with people still works. **Links for anyone without signing in** allows links that open without signing in. **Longest lifetime of a link for anyone** limits how long such a link can stay valid. The [Settings reference](../admin/settings-reference.md#organization--content--pages-and-trash) lists their defaults and allowed values.
 
 ## Restrict viewing or editing
 

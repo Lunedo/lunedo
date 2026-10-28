@@ -63,6 +63,7 @@ export const digestTimeSetting = defineSetting({
   default: "08:00",
   levels: PREFERENCE_LEVELS,
   lockable: false,
+  format: "A time of day as `HH:MM`, from `00:00` to `23:59`.",
 });
 
 export const digestEnabledSetting = defineSetting({

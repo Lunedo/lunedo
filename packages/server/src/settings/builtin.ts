@@ -20,6 +20,7 @@ export const timeZoneSetting = defineSetting({
   default: "UTC",
   levels: ["instance", "organization", "user"],
   lockable: true,
+  format: "An IANA time zone, for example `Europe/Vienna`.",
 });
 
 export const builtinSettings = [languageSetting, timeZoneSetting];

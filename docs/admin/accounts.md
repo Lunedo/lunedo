@@ -89,12 +89,8 @@ The instance owner, service and portal accounts and the own account cannot be an
 
 ## Reminders and inactivity
 
-Lunedo reminds the people responsible before access ends, and tells them when guests stay inactive. The periods are organization settings under **Settings › Organization › People and access › Domains and guests**:
+Lunedo reminds the people responsible before access ends, and tells them when guests stay inactive. The periods are organization settings under **Settings › Organization › People and access › Domains and guests**.
 
-| Setting | Default | Range |
-|---|---|---|
-| Guest expiry reminder | 7 days | 1 to 90 days |
-| Inactive guests | 30 days | 1 to 365 days |
-| Access expiry reminder | 7 days | 1 to 90 days |
+They are **Guest expiry reminder**, **Inactive guests** and **Access expiry reminder**, in days. The [Settings reference](settings-reference.md#organization--people-and-access--domains-and-guests) lists their keys, defaults and allowed values.
 
 API token reminders are instance settings under **Settings › Instance › People and sign-in › Policies**, section **API tokens**, see [Service accounts](service-accounts.md#tokens-and-reminders).

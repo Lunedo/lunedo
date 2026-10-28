@@ -19,14 +19,9 @@ When the last responsible person leaves the organization or is deactivated, the 
 
 ## Tokens and reminders
 
-Unused tokens are the safeguard against forgotten service accounts: a token that is not used for a while triggers a notice, and an expiry, when set or required, stops it. The limits are instance settings under **Settings › Instance › People and sign-in › Policies**, section **API tokens**:
+Unused tokens are the safeguard against forgotten service accounts: a token that is not used for a while triggers a notice, and an expiry, when set or required, stops it. The limits are instance settings under **Settings › Instance › People and sign-in › Policies**, section **API tokens**.
 
-| Setting | Key | Default | Range |
-|---|---|---|---|
-| Maximum lifetime of API tokens | `apiTokens.maxLifetimeDays` | No limit | 1 to 3650 days; organizations can only shorten it |
-| Expiry reminder | `apiTokens.expiryReminderDays` | 7 days | 1 to 90 days |
-| Unused API tokens | `apiTokens.unusedNoticeDays` | 90 days | 7 to 3650 days |
-| Requests per token | `apiTokens.requestsPerMinute` | 600 per minute | 1 to 100000 |
+They are **Maximum lifetime of API tokens**, **Expiry reminder** and **Unused API tokens** in days, and **Requests per token** per minute. The [Settings reference](settings-reference.md#instance--people-and-sign-in--policies) lists each of them with its key, default and allowed values.
 
 Organizations set a shorter maximum lifetime under **Settings › Organization › Integrations and security › Security**.
 

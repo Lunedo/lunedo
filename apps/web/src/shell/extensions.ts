@@ -2,8 +2,9 @@ import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import type { SpaceWithRole } from "../spaces/space-queries.js";
 import { createRegistry } from "./registry.js";
+import type { NavigationSection } from "./settings-pages.js";
 
-export type NavigationSection = "account" | "organization" | "instance";
+export type { NavigationSection };
 
 export interface ShellContext {
   organizationId: string | null;

@@ -77,6 +77,7 @@ Run an instance and administer organizations, sign-in, mail, storage, backups an
 Lists generated from the code: every environment variable, setting, audit event and command (`admin/`).
 
 - [Environment variables](admin/environment-variables.md)
+- [Settings reference](admin/settings-reference.md)
 
 ## Using Lunedo
 

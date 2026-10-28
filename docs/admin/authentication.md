@@ -49,17 +49,9 @@ Sign-in through identity providers, linking of identities and the emergency sign
 
 Attempts are limited per account address and per client, and failures lock temporarily. Unknown addresses are counted like known ones. All counters are in PostgreSQL, so they apply across all nodes. IPv6 clients are counted per /64 network.
 
-The settings are instance settings in **Settings › Instance › People and sign-in › Policies**, section **Protection against attacks**:
+The settings are instance settings in **Settings › Instance › People and sign-in › Policies**, section **Protection against attacks**.
 
-| Setting | Key | Default | Range |
-|---|---|---|---|
-| Sign-in attempts per account | `auth.signInAttemptsPerAccountPerMinute` | 10 per minute | 1 to 1000 |
-| Sign-in attempts per client | `auth.signInAttemptsPerClientPerMinute` | 30 per minute | 1 to 10,000 |
-| Failures before an account is locked | `auth.lockoutFailuresPerAccount` | 5 | 3 to 1000 |
-| Failures before a client is locked | `auth.lockoutFailuresPerClient` | 20 | 3 to 10,000 |
-| Lockout window | `auth.lockoutWindowMinutes` | 15 minutes | 1 minute to 1 day |
-| First lockout | `auth.lockoutMinutes` | 1 minute | 1 minute to 1 day |
-| Maximum lockout | `auth.lockoutMaxMinutes` | 60 minutes | 1 minute to 7 days |
+The attempts are counted per minute, the lockout window and the lockouts in minutes. The [Settings reference](settings-reference.md#instance--people-and-sign-in--policies) lists each setting with its key, default and allowed values.
 
 The attempt limits count every attempt per minute, successful or not. Failures within the lockout window lock the address or the client. Each further lockout within a day doubles the lockout, up to the maximum.
 
@@ -93,16 +85,9 @@ Sensitive actions, such as changing the password or a second factor, require tha
 
 ## Settings for the instance and organizations
 
-These settings can be set for the instance in **Settings › Instance › People and sign-in › Policies**, section **Sign-in**, and for an organization in **Settings › Organization › Integrations and security › Security**, section **Sign-in**:
+These settings can be set for the instance in **Settings › Instance › People and sign-in › Policies**, section **Sign-in**, and for an organization in **Settings › Organization › Integrations and security › Security**, section **Sign-in**.
 
-| Setting | Key | Default | Range |
-|---|---|---|---|
-| Require two-factor authentication | `auth.twoFactorRequired` | Off | |
-| Minimum password length | `auth.passwordMinLength` | 12 | 8 to 256 characters |
-| Confirmation for sensitive changes | `auth.reauthenticationMinutes` | 10 minutes | 1 to 60 minutes |
-| Sign out after inactivity | `auth.sessionIdleTimeoutMinutes` | 10080 minutes (7 days) | 5 minutes to 365 days |
-| Maximum session length | `auth.sessionLifetimeMinutes` | 43200 minutes (30 days) | 5 minutes to 365 days |
-| Sessions per account | `auth.maxSessionsPerAccount` | 10 | 1 to 100 |
+Durations are in minutes, the minimum password length in characters. The settings reference lists each setting with its key, default and allowed values, for the [instance](settings-reference.md#instance--people-and-sign-in--policies) and for [organizations](settings-reference.md#organization--integrations-and-security--security).
 
 A new session beyond **Sessions per account** ends the least recently used one.
 

@@ -1,14 +1,7 @@
 import { code, defineReference, table } from "./docs-reference.ts";
+import { allowedValues, type JsonSchema } from "./docs-schema.ts";
 
-export interface JsonSchema {
-  readonly type?: string;
-  readonly enum?: readonly unknown[];
-  readonly default?: unknown;
-  readonly minimum?: number;
-  readonly exclusiveMinimum?: number;
-  readonly maximum?: number;
-  readonly minLength?: number;
-}
+export type { JsonSchema };
 
 export interface EnvironmentVariable {
   readonly name: string;
@@ -23,27 +16,8 @@ export interface EnvironmentVariable {
 
 const SOURCE = "packages/server/src/config/definitions.ts";
 
-function list(values: readonly string[]): string {
-  if (values.length <= 1) return values.join("");
-  return `${values.slice(0, -1).join(", ")} or ${values.at(-1)}`;
-}
-
-export function allowedValues(variable: EnvironmentVariable): string {
-  if (variable.format !== null) return variable.format;
-  const { schema } = variable;
-  if (schema.enum) return `${list(schema.enum.map((value) => code(String(value))))}.`;
-  if (schema.type === "integer") {
-    const minimum =
-      schema.minimum ?? (schema.exclusiveMinimum === undefined ? null : schema.exclusiveMinimum + 1);
-    const maximum =
-      schema.maximum !== undefined && schema.maximum < Number.MAX_SAFE_INTEGER ? schema.maximum : null;
-    if (minimum !== null && maximum !== null) return `A whole number from ${minimum} to ${maximum}.`;
-    if (minimum !== null) return `A whole number of at least ${minimum}.`;
-    return "A whole number.";
-  }
-  if (schema.minLength !== undefined && schema.minLength > 1)
-    return `At least ${schema.minLength} characters.`;
-  return "";
+export function variableValues(variable: EnvironmentVariable): string {
+  return variable.format ?? allowedValues(variable.schema);
 }
 
 export function defaultValue(variable: EnvironmentVariable): string {
@@ -66,7 +40,7 @@ export function renderEnvironmentVariables(variables: readonly EnvironmentVariab
       .map((variable) => [
         code(variable.name),
         defaultValue(variable),
-        allowedValues(variable),
+        variableValues(variable),
         secret(variable),
         variable.description,
       ]);

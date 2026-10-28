@@ -4,13 +4,9 @@ Lunedo notifies people in the app, by e-mail and, when it is turned on, by brows
 
 ## Organization defaults
 
-Every event has one setting per channel:
+Every event has one setting per channel.
 
-| Setting | Values |
-|---|---|
-| `notifications.<event>.inApp` | On or off |
-| `notifications.<event>.email` | **Off**, **Immediately** or **In the daily digest** |
-| `notifications.<event>.push` | On or off |
+`notifications.<event>.inApp` and `notifications.<event>.push` are on or off; `notifications.<event>.email` is **Off**, **Immediately** or **In the daily digest**. The [Settings reference](settings-reference.md#my-account--notifications) lists every event with its defaults.
 
 These settings exist at the organization and the user level. Each channel inherits on its own, so a person who changes the e-mail choice of an event keeps following the organization's default for the app.
 
@@ -89,10 +85,7 @@ Content-Type: application/json
 
 The digest collects the notifications whose e-mail is set to **In the daily digest** in one mail per person, grouped by space and item, newest first. It is sent only when something is left after the checks at sending time.
 
-| Setting | Key | Default |
-|---|---|---|
-| Send a daily summary by e-mail | `notifications.digestEnabled` | On |
-| Send the digest at | `notifications.digestTime` | 08:00, in each person's own time zone |
+**Send a daily summary by e-mail** turns the digest on or off, **Send the digest at** sets the time in each person's own time zone. The [Settings reference](settings-reference.md#organization--notifications) lists both with their keys and defaults.
 
 Both are under **Settings › Organization › Notifications**, section **Delivery**, and each person can change them. They cannot be locked. With the digest off, digest notifications stay in the app only.
 
@@ -113,9 +106,7 @@ Security and operations events, such as a new browser, break-glass access, expir
 
 ## Retention
 
-| Setting | Key | Default | Range |
-|---|---|---|---|
-| Retention of notifications | `notifications.retentionDays` | 90 days | 1 to 3650 days |
+**Retention of notifications** sets after how many days notifications are deleted. The [Settings reference](settings-reference.md#instance--people-and-sign-in--policies) lists its key, default and allowed values.
 
 The instance value is under **Settings › Instance › People and sign-in › Policies**, section **Retention**, and can be locked for organizations. Organizations set their own under **Settings › Organization › Notifications**, section **Delivery**. A daily job removes notifications whose last change is older; notifications about the instance follow the instance value.
 

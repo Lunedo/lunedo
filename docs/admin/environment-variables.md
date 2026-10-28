@@ -11,9 +11,9 @@ Every environment variable Lunedo reads, grouped by task. The [configuration fil
 | `LUNEDO_DATABASE_URL` | required | A `postgres://` URL, for example `postgres://user:password@host:5432/database`. | yes, also as `LUNEDO_DATABASE_URL_FILE` | PostgreSQL connection URL. |
 | `LUNEDO_DATABASE_POOL_SIZE` | `10` | A whole number of at least 1. |  | Maximum database connections per process. |
 | `LUNEDO_HOST` | `0.0.0.0` |  |  | Address the HTTP servers listen on. |
-| `LUNEDO_API_PORT` | `3000` | A whole number from 1 to 65535. |  | Port of the API. |
-| `LUNEDO_COLLAB_PORT` | `3001` | A whole number from 1 to 65535. |  | Port of the collaboration server. |
-| `LUNEDO_WORKER_PORT` | `3002` | A whole number from 1 to 65535. |  | Port of the worker's health and metrics endpoints. |
+| `LUNEDO_API_PORT` | `3000` | A whole number from 1 to 65,535. |  | Port of the API. |
+| `LUNEDO_COLLAB_PORT` | `3001` | A whole number from 1 to 65,535. |  | Port of the collaboration server. |
+| `LUNEDO_WORKER_PORT` | `3002` | A whole number from 1 to 65,535. |  | Port of the worker's health and metrics endpoints. |
 | `LUNEDO_LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. |  | Minimum level of the messages Lunedo logs. |
 | `LUNEDO_SHUTDOWN_TIMEOUT_SECONDS` | `30` | A whole number of at least 1. |  | Time in seconds that running requests and jobs get to finish on shutdown. Allow a stop grace period of at least this time plus 10 seconds in the container orchestrator. |
 | `LUNEDO_WEB_ROOT` | `/app/web` in the image |  |  | Directory with the built web client, served by the API. |
@@ -89,7 +89,7 @@ Every environment variable Lunedo reads, grouped by task. The [configuration fil
 | Variable | Default | Allowed values | Secret | Description |
 |---|---|---|---|---|
 | `LUNEDO_RENDER_URL` | none | An `http://` or `https://` address without a path. |  | Address of the optional render container that creates PDF files on the server, for example `http://lunedo-render:3000`. Set it together with `LUNEDO_RENDER_TOKEN`. |
-| `LUNEDO_RENDER_TOKEN` | none | At least 32 characters. | yes, also as `LUNEDO_RENDER_TOKEN_FILE` | Token the worker sends to the render container. Must be the same as `RENDER_TOKEN` of the container. |
+| `LUNEDO_RENDER_TOKEN` | none | Text of at least 32 characters. | yes, also as `LUNEDO_RENDER_TOKEN_FILE` | Token the worker sends to the render container. Must be the same as `RENDER_TOKEN` of the container. |
 
 ## Sign-in
 
@@ -111,7 +111,7 @@ Every environment variable Lunedo reads, grouped by task. The [configuration fil
 | `LUNEDO_ORGANIZATION_LANGUAGE` | the language of the instance | `en` or `de`. |  | Language of the first organization for setup through configuration. |
 | `LUNEDO_ORGANIZATION_TIME_ZONE` | the time zone of the instance | An IANA time zone, for example `Europe/Vienna`. |  | Time zone of the first organization for setup through configuration. |
 | `LUNEDO_SMTP_HOST` | none |  |  | SMTP server for outgoing e-mail, for setup through configuration. |
-| `LUNEDO_SMTP_PORT` | `587`, `465` with `tls` | A whole number from 1 to 65535. |  | SMTP port for setup through configuration. |
+| `LUNEDO_SMTP_PORT` | `587`, `465` with `tls` | A whole number from 1 to 65,535. |  | SMTP port for setup through configuration. |
 | `LUNEDO_SMTP_SECURITY` | `starttls` | `tls`, `starttls` or `none`. |  | SMTP connection security for setup through configuration. `none` cannot be combined with credentials. |
 | `LUNEDO_SMTP_USERNAME` | none |  |  | SMTP user name for setup through configuration. Set it together with the password. |
 | `LUNEDO_SMTP_PASSWORD` | none |  | yes, also as `LUNEDO_SMTP_PASSWORD_FILE` | SMTP password for setup through configuration. |

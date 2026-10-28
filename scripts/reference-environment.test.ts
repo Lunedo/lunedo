@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  allowedValues,
   defaultValue,
   type EnvironmentVariable,
   renderEnvironmentVariables,
+  variableValues,
 } from "./reference-environment.ts";
 
 function variable(patch: Partial<EnvironmentVariable>): EnvironmentVariable {
@@ -23,23 +23,23 @@ function variable(patch: Partial<EnvironmentVariable>): EnvironmentVariable {
 
 describe("environment variable reference", () => {
   it("derives allowed values from the schema unless the code names a format", () => {
-    assert.equal(allowedValues(variable({ schema: { enum: ["a", "b", "c"] } })), "`a`, `b` or `c`.");
+    assert.equal(variableValues(variable({ schema: { enum: ["a", "b", "c"] } })), "`a`, `b` or `c`.");
     assert.equal(
-      allowedValues(variable({ schema: { type: "integer", minimum: 1, maximum: 65535 } })),
-      "A whole number from 1 to 65535.",
+      variableValues(variable({ schema: { type: "integer", minimum: 1, maximum: 65535 } })),
+      "A whole number from 1 to 65,535.",
     );
     assert.equal(
-      allowedValues(
+      variableValues(
         variable({ schema: { type: "integer", exclusiveMinimum: 0, maximum: Number.MAX_SAFE_INTEGER } }),
       ),
       "A whole number of at least 1.",
     );
     assert.equal(
-      allowedValues(variable({ schema: { type: "string", minLength: 32 } })),
-      "At least 32 characters.",
+      variableValues(variable({ schema: { type: "string", minLength: 32 } })),
+      "Text of at least 32 characters.",
     );
-    assert.equal(allowedValues(variable({ schema: { type: "string", minLength: 1 } })), "");
-    assert.equal(allowedValues(variable({ format: "A URL.", schema: { enum: ["ignored"] } })), "A URL.");
+    assert.equal(variableValues(variable({ schema: { type: "string", minLength: 1 } })), "");
+    assert.equal(variableValues(variable({ format: "A URL.", schema: { enum: ["ignored"] } })), "A URL.");
   });
 
   it("shows required, empty, missing and described defaults", () => {

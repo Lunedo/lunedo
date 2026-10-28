@@ -36,13 +36,9 @@ An account cannot leave its home organization; deactivate it instead, see [Accou
 
 A guest has a responsible person, by default the person who invited them. The responsible person is reminded before the guest's access expires and is told when the guest has not been active for a while. When the responsible person leaves or is deactivated, the organization's owners and administrators take over.
 
-The reminder periods are under **Settings › Organization › People and access › Domains and guests**, section **Guests and expiry**:
+The reminder periods are under **Settings › Organization › People and access › Domains and guests**, section **Guests and expiry**.
 
-| Setting | Key | Default | Range |
-|---|---|---|---|
-| Guest expiry reminder | `organizations.guestExpiryReminderDays` | 7 days | 1 to 90 days |
-| Inactive guests | `organizations.guestInactivityDays` | 30 days | 1 to 365 days |
-| Access expiry reminder | `organizations.expiryReminderDays` | 7 days | 1 to 90 days |
+They are **Guest expiry reminder**, **Inactive guests** and **Access expiry reminder**, in days. The [Settings reference](settings-reference.md#organization--people-and-access--domains-and-guests) lists their keys, defaults and allowed values.
 
 All three are organization settings and can be locked for members.
 

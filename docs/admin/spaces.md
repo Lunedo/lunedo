@@ -6,12 +6,9 @@ The organization's spaces are under **Settings › Organization › Content › 
 
 ## Who may create spaces
 
-Administrators with the organization area Spaces and Manage always create spaces. For members, two organization settings on the tab **Defaults for new spaces**, section **Creating spaces**, decide:
+Administrators with the organization area Spaces and Manage always create spaces. For members, two organization settings on the tab **Defaults for new spaces**, section **Creating spaces**, decide.
 
-| Setting | Key | Default |
-|---|---|---|
-| Members create spaces | `spaces.membersCreateSpaces` | On |
-| Members create confidential spaces | `spaces.membersCreateConfidentialSpaces` | On |
+They are **Members create spaces** and **Members create confidential spaces**, both on by default. The [Settings reference](settings-reference.md#organization--content--spaces) lists their keys and whether they can be locked.
 
 Members create confidential spaces and one-on-ones only when both are on. Guests and collaborators never create spaces. Both settings can be locked for members.
 
@@ -59,9 +56,7 @@ Instance administrators with the area Accounts and Manage transfer and delete pe
 
 Personal spaces, one-on-ones and confidential spaces nobody can open anymore appear on the tab **Clean up** once nobody active has been in them for the waiting period. The list shows key, kind, size, number of pages, last activity and former members, never names or content. Personal spaces count for the home organization of their owner.
 
-| Setting | Key | Default | Range |
-|---|---|---|---|
-| Waiting period before clean-up | `spaces.cleanupGraceDays` | 30 days | 7 to 3650 days |
+**Waiting period before clean-up** sets the waiting period in days, 30 by default and at least 7. The [Settings reference](settings-reference.md#organization--content--spaces) lists its key and allowed values.
 
 To delete such a space:
 
