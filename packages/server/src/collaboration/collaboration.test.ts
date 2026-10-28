@@ -790,6 +790,18 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         ),
       );
       expect(Object.keys(references.people)).toEqual([context.editorId]);
+      expect(references.pictures).toEqual({});
+      await test.database.execute(
+        sql`update accounts set picture_ref = 'v1' where id in (${stranger}, ${context.editorId})`,
+      );
+      const withPictures = await test.services.documents.references(
+        context.reader,
+        doc(
+          task(taskId, "Hidden person", { assignee: stranger }),
+          task(randomUUID(), "Known", { assignee: context.editorId }),
+        ),
+      );
+      expect(withPictures.pictures).toEqual({ [context.editorId]: "v1" });
       await test.database.execute(
         sql`insert into reactions (item_id, account_id, emoji) values (${created.id}, ${stranger}, '👍')`,
       );

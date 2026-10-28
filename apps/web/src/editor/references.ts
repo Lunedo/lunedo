@@ -19,12 +19,14 @@ export interface TopicReference {
 
 export interface References {
   people: Record<string, string>;
+  pictures?: Record<string, string>;
   pages: Record<string, PageReference>;
   topics?: Record<string, TopicReference>;
   tooLargeImages?: string[];
 }
 
 const people = new Map<string, string>();
+const pictures = new Map<string, string>();
 const topics = new Map<string, TopicReference>();
 const pages = new Map<string, PageReference>();
 const tooLargeImages = new Set<string>();
@@ -47,6 +49,12 @@ export function rememberReferences(references: Partial<References>): void {
   for (const [id, name] of Object.entries(references.people ?? {})) {
     if (people.get(id) !== name) {
       people.set(id, name);
+      changed = true;
+    }
+  }
+  for (const [id, picture] of Object.entries(references.pictures ?? {})) {
+    if (pictures.get(id) !== picture) {
+      pictures.set(id, picture);
       changed = true;
     }
   }
@@ -92,6 +100,10 @@ export function personName(id: string): string | null {
 
 export function pageReference(id: string): PageReference | null {
   return pages.get(id) ?? null;
+}
+
+export function usePersonPicture(id: string): string | null {
+  return useSyncExternalStore(subscribe, () => (version >= 0 ? (pictures.get(id) ?? null) : null));
 }
 
 export function usePersonName(id: string): string | null {

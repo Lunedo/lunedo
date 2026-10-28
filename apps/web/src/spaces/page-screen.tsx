@@ -80,7 +80,7 @@ import { itemHref, itemSlug } from "./item-paths.js";
 import { useNumberedItem } from "./numbered-item.js";
 import { OnThisPage } from "./on-this-page.js";
 import { EditInfo, PageBar } from "./page-bar.js";
-import { PageEditors } from "./page-editors.js";
+import { PageEditors, useEditorPictures } from "./page-editors.js";
 import { usePageMeta } from "./page-meta.js";
 import {
   DraftToggle,
@@ -197,6 +197,7 @@ function PageArticle({
   const saveState = useRef<SaveState>("saved");
   const [shownSaveState, setShownSaveState] = useState<SaveState>("saved");
   const [coEditors, setCoEditors] = useState<PresenceUser[]>([]);
+  const editorPictures = useEditorPictures(page.id);
   const [previewing, setPreviewing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
@@ -450,6 +451,7 @@ function PageArticle({
           draft={publishMode}
           saveState={shownSaveState}
           others={coEditors}
+          pictureOf={editorPictures}
           previewing={previewing}
           onPreview={() => void preview()}
           onClose={() => setEditing(false)}

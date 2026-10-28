@@ -1,4 +1,4 @@
-import { Avatar, Button, Combobox, Field, Popover, useToast } from "@lunedo/ui";
+import { Button, Combobox, Field, Popover, useToast } from "@lunedo/ui";
 import { useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { CalendarDays, UserRound, X } from "lucide-react";
@@ -8,10 +8,11 @@ import { checkMentionAccess, peopleLoader } from "../../collaboration/people.js"
 import { taskStatusesQuery } from "../../collaboration/queries.js";
 import { useSetTaskStatus } from "../../collaboration/task-actions.js";
 import { AppDatePicker } from "../../components/date-fields.js";
+import { PersonAvatar } from "../../components/person-avatar.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useEditable, usePageContext } from "../context.js";
 import { takeTaskStatus } from "../extensions/pasted-tasks.js";
-import { rememberReferences, usePersonName } from "../references.js";
+import { rememberReferences, usePersonName, usePersonPicture } from "../references.js";
 
 function todayIso(): string {
   const now = new Date();
@@ -28,6 +29,7 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
   const assignee = (node.attrs.assignee as string | null) ?? null;
   const dueDate = (node.attrs.dueDate as string | null) ?? null;
   const assigneeName = usePersonName(assignee ?? "");
+  const assigneePicture = usePersonPicture(assignee ?? "");
   const statuses = useQuery({
     ...taskStatusesQuery(page?.pageId ?? ""),
     enabled: page !== null,
@@ -114,7 +116,13 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
                 trigger={
                   <button type="button" className="ld-inline-button ld-task-chip">
                     {assignee ? (
-                      <Avatar name={assigneeName ?? "?"} size="sm" decorative />
+                      <PersonAvatar
+                        id={assignee}
+                        name={assigneeName ?? "?"}
+                        pictureRef={assigneePicture}
+                        size="sm"
+                        decorative
+                      />
                     ) : (
                       <UserRound aria-hidden="true" className="size-icon-sm" />
                     )}

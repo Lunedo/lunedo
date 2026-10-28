@@ -2,9 +2,10 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { initialsOf, Tooltip } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from "@tiptap/y-tiptap";
-import { type CSSProperties, type RefObject, useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as Y from "yjs";
+import { PersonAvatar } from "../components/person-avatar.js";
 
 export const presenceColors = ["petrol", "blue", "violet", "amber", "red", "green"] as const;
 export type PresenceColor = (typeof presenceColors)[number];
@@ -30,7 +31,7 @@ export function cursorColor(accountId: string): string {
 }
 
 export function selectionAttributes(user: Record<string, unknown>) {
-  const color = presenceColors.includes(user.color as PresenceColor) ? String(user.color) : "petrol";
+  const color = typeof user.id === "string" && user.id !== "" ? presenceColor(user.id) : "petrol";
   return { class: "ld-remote-selection", "data-color": color };
 }
 
@@ -54,7 +55,9 @@ function remoteStates(provider: HocuspocusProvider): RemoteState[] {
     if (clientId === awareness.clientID) return;
     const user = state.user as PresenceUser | undefined;
     const cursor = state.cursor as { head?: unknown } | null | undefined;
-    if (user?.id) states.push({ clientId, user, head: cursor?.head ?? null });
+    if (user?.id) {
+      states.push({ clientId, user: { ...user, color: presenceColor(user.id) }, head: cursor?.head ?? null });
+    }
   });
   return states;
 }
@@ -80,14 +83,49 @@ export function usePresence(provider: HocuspocusProvider | null, self: PresenceU
 
 const VISIBLE_AVATARS = 3;
 
+export type PictureOf = (accountId: string) => string | null | undefined;
+
+export function PresenceAvatar({
+  user,
+  pictureRef,
+  colorFor,
+  children,
+}: {
+  user: PresenceUser;
+  pictureRef?: string | null | undefined;
+  colorFor?: ((user: PresenceUser) => string) | undefined;
+  children?: ReactNode;
+}) {
+  return (
+    <span
+      {...(colorFor
+        ? {
+            "data-theme": "light",
+            style: { "--presence-color": colorFor(user) } as CSSProperties,
+          }
+        : { "data-color": presenceColor(user.id) })}
+      className={`ld-presence-avatar${colorFor ? " ld-presence-avatar-cursor" : ""} relative inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
+    >
+      {pictureRef ? (
+        <PersonAvatar id={user.id} name={user.name} pictureRef={pictureRef} size="sm" decorative />
+      ) : (
+        <span aria-hidden="true">{initialsOf(user.name)}</span>
+      )}
+      {children}
+    </span>
+  );
+}
+
 export function AvatarStack({
   self,
   others,
   colorFor,
+  pictureOf,
 }: {
   self: PresenceUser | null;
   others: PresenceUser[];
   colorFor?: (user: PresenceUser) => string;
+  pictureOf?: PictureOf;
 }) {
   const { t } = useTranslation();
   const everyone = self ? [self, ...others] : others;
@@ -96,23 +134,14 @@ export function AvatarStack({
   return (
     <ul
       aria-label={t("editor.presence.label", { count: everyone.length })}
-      className="flex items-center -space-x-1"
+      className="flex items-center gap-1"
     >
       {visible.map((user) => (
         <li key={user.id}>
           <Tooltip content={user.id === self?.id ? t("editor.presence.you", { name: user.name }) : user.name}>
-            <span
-              {...(colorFor
-                ? {
-                    "data-theme": "light",
-                    style: { "--presence-color": colorFor(user) } as CSSProperties,
-                  }
-                : { "data-color": user.color })}
-              className={`ld-presence-avatar${colorFor ? " ld-presence-avatar-cursor" : ""} inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
-            >
-              <span aria-hidden="true">{initialsOf(user.name)}</span>
+            <PresenceAvatar user={user} pictureRef={pictureOf?.(user.id)} colorFor={colorFor}>
               <span className="sr-only">{user.name}</span>
-            </span>
+            </PresenceAvatar>
           </Tooltip>
         </li>
       ))}

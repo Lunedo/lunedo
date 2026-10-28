@@ -526,7 +526,7 @@ details.ld-expand > summary {
 }
 
 .ld-remote-caret-anchor {
-  @apply hidden;
+  @apply pointer-events-none inline select-none;
 }
 
 .ld-remote-selection {
@@ -536,6 +536,10 @@ details.ld-expand > summary {
 .ld-presence-avatar {
   background-color: var(--presence-color);
   color: var(--ld-color-on-accent);
+}
+
+.ld-presence-avatar:has(img) {
+  outline: 2px solid var(--presence-color);
 }
 
 .ld-presence-avatar-cursor {

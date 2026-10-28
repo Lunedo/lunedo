@@ -43651,6 +43651,17 @@
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
                         },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
+                        },
                         "pages": {
                           "type": "object",
                           "propertyNames": {
@@ -210252,6 +210263,17 @@
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
                         },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
+                        },
                         "pages": {
                           "type": "object",
                           "propertyNames": {
@@ -210646,6 +210668,17 @@
                             "description": "Name of the person."
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
                         },
                         "pages": {
                           "type": "object",
@@ -211061,6 +211094,17 @@
                             "description": "Name of the person."
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
                         },
                         "pages": {
                           "type": "object",
@@ -213323,6 +213367,17 @@
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
                         },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
+                        },
                         "pages": {
                           "type": "object",
                           "propertyNames": {
@@ -213933,6 +213988,17 @@
                             "description": "Name of the person."
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
                         },
                         "pages": {
                           "type": "object",
@@ -217376,6 +217442,17 @@
                             "description": "Name of the person."
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
                         },
                         "pages": {
                           "type": "object",
@@ -223077,6 +223154,17 @@
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
                         },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
+                        },
                         "pages": {
                           "type": "object",
                           "propertyNames": {
@@ -225740,6 +225828,17 @@
                             "description": "Name of the person."
                           },
                           "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pictures": {
+                          "description": "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Version of the profile picture."
+                          }
                         },
                         "pages": {
                           "type": "object",
