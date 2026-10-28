@@ -1,8 +1,9 @@
 import { idIn, pagePath as numberedPagePath } from "../support/addresses.js";
-import { collaborationSpace, publishedPost, vpnPage } from "../support/collaboration.js";
+import { collaborationSpace, paragraph, publishedPost, vpnPage } from "../support/collaboration.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { publishScheduledPostNow } from "../support/jobs.js";
+import { unique } from "../support/people.js";
 
 test("two people discuss a page with comments, reactions, a mention and a task", async ({
   page,
@@ -219,4 +220,95 @@ test("shows recent pages, starred items, tasks, mentions and new posts on For yo
     main.getByRole("region", { name: "Mentions" }).getByRole("link", { name: /VPN access/ }),
   ).toBeVisible();
   await expectAccessible(other, "For you");
+});
+
+test("shows where other people edit: a caret with their name and their selection in their color", async ({
+  page,
+  organization,
+}) => {
+  await page.goto("/spaces");
+  const people = [await organization.invite("Carla"), await organization.invite("Dario")];
+  const key = `PR${unique()}`;
+  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: "Presence",
+    key,
+    visibility: "private",
+    grants: people.map((person) => ({ principalKind: "account", principalId: person.id, role: "editor" })),
+  })) as { id: string };
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
+    kind: "page",
+    title: "Rotation",
+    parentId: null,
+    mode: "live",
+  })) as { id: string; number: number; title: string };
+  const lines = ["The rotation changes every Monday.", "Swap shifts in the on-call calendar."];
+  await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
+    document: { type: "doc", content: lines.map((line) => paragraph(line)) },
+  });
+  const address = `${numberedPagePath(key, created)}?edit=true`;
+  const content = (target: typeof page) => target.getByRole("textbox", { name: "Page content" });
+
+  await page.goto(address);
+  await expect(content(page)).toBeEditable({ timeout: 30_000 });
+  const viewers: (typeof page)[] = [];
+  for (const [index, person] of people.entries()) {
+    const { page: other } = await organization.signIn(person);
+    viewers.push(other);
+    await other.goto(address);
+    await expect(content(other)).toBeEditable({ timeout: 30_000 });
+    await content(other)
+      .getByText(lines[index] ?? "", { exact: true })
+      .selectText();
+  }
+
+  const coEditors = page.getByRole("list", { name: "2 people are editing" });
+  await expect(coEditors).toBeVisible({ timeout: 20_000 });
+  const avatars = coEditors.locator(".ld-presence-avatar");
+  const [first, second] = await Promise.all([avatars.nth(0).boundingBox(), avatars.nth(1).boundingBox()]);
+  expect(first && second && first.x + first.width <= second.x).toBe(true);
+
+  for (const [index, person] of people.entries()) {
+    const line = content(page).getByText(lines[index] ?? "", { exact: true });
+    const label = page.locator(".ld-remote-caret-label", { hasText: person.name });
+    await expect(label).toBeVisible();
+    const caret = await page.locator(".ld-remote-caret").filter({ has: label }).boundingBox();
+    const box = await line.boundingBox();
+    expect(caret && box && caret.height > 0 && Math.abs(caret.y - box.y) < box.height).toBe(true);
+    const avatarColor = await coEditors
+      .getByRole("listitem")
+      .filter({ hasText: `${person.name} is editing` })
+      .locator(".ld-presence-avatar")
+      .getAttribute("data-color");
+    await expect(
+      content(page).locator(".ld-remote-selection", { hasText: lines[index] ?? "" }),
+    ).toHaveAttribute("data-color", avatarColor ?? "");
+    await expect(page.locator(".ld-remote-caret").filter({ has: label })).toHaveAttribute(
+      "data-color",
+      avatarColor ?? "",
+    );
+  }
+  const colors = await avatars.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-color")),
+  );
+  expect(new Set(colors).size).toBe(people.length);
+  const colorOf = (viewer: typeof page, name: string) =>
+    viewer
+      .getByRole("list", { name: /people? (is|are) editing/ })
+      .getByRole("listitem")
+      .filter({ hasText: `${name} is editing` })
+      .locator(".ld-presence-avatar")
+      .getAttribute("data-color");
+  const [carlaView, dario] = [viewers[0], people[1]];
+  if (!carlaView || !dario) throw new Error("The test needs two co-editors");
+  await expect(carlaView.getByRole("list", { name: "2 people are editing" })).toBeVisible();
+  expect(await colorOf(carlaView, dario.name)).toBe(await colorOf(page, dario.name));
+
+  await page.goto(numberedPagePath(key, created));
+  const editing = page.getByRole("list", { name: "2 people are editing" });
+  await expect(editing).toBeVisible({ timeout: 20_000 });
+  const [left, right] = await Promise.all([
+    editing.getByRole("listitem").nth(0).boundingBox(),
+    editing.getByRole("listitem").nth(1).boundingBox(),
+  ]);
+  expect(left && right && left.x + left.width <= right.x).toBe(true);
 });

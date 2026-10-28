@@ -726,6 +726,12 @@ export const pageReferencesSchema = z
     people: z
       .record(z.string(), z.string().describe("Name of the person."))
       .describe("Names of mentioned people the caller may see, by account ID."),
+    pictures: z
+      .record(z.string(), z.string().describe("Version of the profile picture."))
+      .optional()
+      .describe(
+        "Profile pictures of the people in `people` that have one, by account ID. The picture is at `/api/v1/accounts/{accountId}/picture`.",
+      ),
     pages: z
       .record(
         z.string(),

@@ -7,7 +7,9 @@ import { callApi, linkFrom, waitForMail } from "../support/helpers.js";
 import { makeArticleDue } from "../support/jobs.js";
 import { type Person, post, SIGNED_OUT, sessionOf } from "../support/people.js";
 import {
+  avatarSvg,
   doc,
+  ENGINEERING_TREE,
   FIREWALL_DOCUMENT,
   firstVersion,
   h,
@@ -21,6 +23,7 @@ import {
   panel,
   RACK_SVG,
   richDocument,
+  runbookDocument,
   TREE,
   table,
   troubleshooting,
@@ -38,8 +41,16 @@ test.setTimeout(600_000);
 
 const HEADERS = { "X-Lunedo-Request": "1" };
 
+const AVATARS: Record<PersonKey, [string, string, string, string]> = {
+  lena: ["#cfe8e4", "#f1c7a6", "#6b3f24", "#1f6f6a"],
+  jonas: ["#dfe3f5", "#e8b896", "#2d2a26", "#3b4a8c"],
+  aylin: ["#f5e1d3", "#c98e66", "#1c1714", "#8c3b4a"],
+  mateo: ["#e6eed8", "#d9a07a", "#4a3022", "#56733a"],
+  sophie: ["#efe0f2", "#f3d2b8", "#b8834a", "#6a4a8c"],
+};
+
 async function invite(owner: Page, browser: Browser, organizationId: string, name: string): Promise<Person> {
-  const email = `${name.toLowerCase().split(" ").join(".")}@nordwind.test`;
+  const email = `${name.toLowerCase().split(" ").join(".")}@northwind.test`;
   await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`, {
     method: "DELETE",
   });
@@ -250,11 +261,11 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   const organizationId = list[0]?.id ?? "";
   expect(organizationId).not.toBe("");
   await callApi(page, "PATCH", `/api/v1/organizations/${organizationId}`, {
-    name: "Nordwind Logistik",
+    name: "Northwind Labs",
     language: "de",
     timeZone: "Europe/Vienna",
   });
-  await callApi(page, "PUT", "/api/v1/instance/settings/instance.name", { value: "Nordwind Wiki" });
+  await callApi(page, "PUT", "/api/v1/instance/settings/instance.name", { value: "Northwind Labs Wiki" });
   await callApi(page, "PUT", "/api/v1/account/preferences/appearance.colorMode", { value: "system" });
   await callApi(page, "PUT", "/api/v1/account/preferences/locale.language", { value: "en" });
 
@@ -265,6 +276,11 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
     writeFileSync(personState(key), JSON.stringify(state));
     const context = await asPerson(browser, key);
     await put(context, "/api/v1/account/preferences/appearance.colorMode", { value: "system" });
+    const picture = await illustration(browser, avatarSvg(...AVATARS[key]), 256, 256);
+    await put(context, "/api/v1/account/profile/picture", {
+      contentType: "image/png",
+      data: picture.toString("base64"),
+    });
     await context.close();
   }
 
@@ -474,13 +490,13 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   }
   await callApi(page, "POST", `/api/v1/meetings/${series.upcoming.id}/close`, {});
 
-  const general = await createSpace(page, organizationId, { name: "Nordwind intern", key: "INTERN" });
+  const general = await createSpace(page, organizationId, { name: "Northwind intern", key: "INTERN" });
   await writePage(
     page,
     general.overviewItemId,
     doc(
       p(
-        "Willkommen bei Nordwind Logistik. Hier findest du Neuigkeiten, Ansprechpersonen und die wichtigsten Links.",
+        "Willkommen bei Northwind Labs. Hier findest du Neuigkeiten, Ansprechpersonen und die wichtigsten Links.",
       ),
       h(2, "Aktuelles"),
       p("Der Umzug in den 3. Stock startet am 14. November. Bitte packt eure Schreibtische bis zum Vortag."),
@@ -497,6 +513,46 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
   await callApi(page, "PUT", `/api/v1/organizations/${organizationId}/home-page`, {
     itemId: general.overviewItemId,
   });
+
+  const engineering = await createSpace(page, organizationId, { name: "Engineering", key: "ENG" });
+  await writePage(
+    page,
+    engineering.overviewItemId,
+    doc(
+      p("Architecture, operations and onboarding for the engineering team at Northwind Labs."),
+      panel("tip", "On call this week? Start with Operations › On-call runbook."),
+    ),
+    true,
+  );
+  const engineeringPages: Record<string, { id: string; number: number; title: string }> = {};
+  const createEngineering = async (nodes: typeof ENGINEERING_TREE, parentId: string | null) => {
+    for (const node of nodes) {
+      const created = await createItem(page, engineering.id, { title: node.title, parentId, mode: "live" });
+      engineeringPages[node.title] = created;
+      await writePage(page, created.id, doc(p(node.text)));
+      if (node.children) await createEngineering(node.children, created.id);
+    }
+  };
+  await createEngineering(ENGINEERING_TREE, null);
+  const runbook = engineeringPages["On-call runbook"];
+  if (!runbook) throw new Error("The Engineering space has no page On-call runbook");
+  await writePage(
+    page,
+    runbook.id,
+    runbookDocument({
+      lena: people.lena.id,
+      jonas: people.jonas.id,
+      aylin: people.aylin.id,
+      mateo: people.mateo.id,
+    }),
+  );
+  const runbookTasks = (await (await page.request.get(`/api/v1/pages/${runbook.id}/tasks`)).json()) as {
+    id: string;
+  }[];
+  expect(runbookTasks).toHaveLength(5);
+  for (const task of runbookTasks.slice(0, 2)) {
+    await callApi(page, "PUT", `/api/v1/pages/${runbook.id}/tasks/${task.id}/status`, { done: true });
+  }
 
   const empty = await createSpace(page, organizationId, { name: "Marketing", key: "MKT" });
 
@@ -534,7 +590,7 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
     confirmWidening: true,
   });
   await callApi(page, "PUT", `/api/v1/spaces/${knowledgeBase.id}/knowledge-base/contact`, {
-    contactEmail: "service-desk@nordwind.test",
+    contactEmail: "service-desk@northwind.test",
   });
   await callApi(page, "PUT", `/api/v1/spaces/${knowledgeBase.id}/knowledge-base/languages`, {
     defaultLanguage: "de",
@@ -631,6 +687,10 @@ test("seeds the content of the screenshots", async ({ page, browser }) => {
     templateName,
     seriesPath: itemPath("IT", "meetings", series),
     general: { key: "INTERN", homePath: "/spaces/INTERN" },
+    engineering: {
+      key: "ENG",
+      runbook: { id: runbook.id, number: runbook.number, path: pagePath("ENG", runbook) },
+    },
     empty: { key: empty.key },
     personal: {
       key: "HR",

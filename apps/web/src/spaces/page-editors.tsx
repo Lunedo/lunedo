@@ -1,10 +1,12 @@
 import { Tooltip } from "@lunedo/ui";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { PersonAvatar } from "../components/person-avatar.js";
+import type { PictureOf } from "../editor/presence.js";
 import { useSession } from "../shell/shell-context.js";
 
 const VISIBLE_AVATARS = 3;
@@ -28,7 +30,7 @@ export function PageEditors({ pageId }: { pageId: string }) {
   return (
     <ul
       aria-label={t("editor.presence.coEditors", { count: others.length })}
-      className="flex items-center -space-x-1 px-1"
+      className="flex items-center gap-2 px-1"
     >
       {visible.map((person) => (
         <li key={person.id}>
@@ -67,5 +69,14 @@ export function PageEditors({ pageId }: { pageId: string }) {
         </li>
       ) : null}
     </ul>
+  );
+}
+
+export function useEditorPictures(pageId: string): PictureOf {
+  const editors = useQuery({ ...pageEditorsQuery(pageId), throwOnError: false });
+  const data = editors.data;
+  return useCallback(
+    (accountId: string) => data?.editors.find((person) => person.id === accountId)?.pictureRef ?? null,
+    [data],
   );
 }

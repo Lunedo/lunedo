@@ -28,6 +28,7 @@ export interface ScreenWorld {
   templateName: string;
   seriesPath: string;
   general: { key: string; homePath: string };
+  engineering: { key: string; runbook: PlacedPage };
   empty: { key: string };
   personal: { key: string; salary: PlacedPage };
   knowledgeBase: {

@@ -108,6 +108,7 @@ export interface ReadablePage {
 
 export interface PageReferences {
   people: Record<string, string>;
+  pictures?: Record<string, string>;
   pages: Record<
     string,
     {
@@ -612,17 +613,10 @@ export class PageDocumentService {
           .filter((id): id is string => id !== null),
       ),
     ];
-    const people =
-      mentions.length === 0
-        ? []
-        : (
-            await this.#database.execute<{ id: string; name: string }>(
-              sql`select a.id, coalesce(m.name, a.name) as name from accounts a
-                left join accounts m on m.id = a.merged_into_id
-                where a.id = any(${sql.param(mentions)}::uuid[])
-                  and ${this.#people.visibleCondition(viewer, sql`coalesce(m.id, a.id)`)}`,
-            )
-          ).rows;
+    const people = [...(await this.#people.visiblePeople(viewer, mentions))].map(([id, person]) => ({
+      id,
+      ...person,
+    }));
     const pages =
       pageIds.length === 0
         ? []
@@ -685,6 +679,9 @@ export class PageDocumentService {
         topics.map((topic) => [topic.id, { title: topic.title, status: topic.status }]),
       ),
       people: Object.fromEntries(people.map((person) => [person.id, person.name])),
+      pictures: Object.fromEntries(
+        people.flatMap((person) => (person.pictureRef ? [[person.id, person.pictureRef]] : [])),
+      ),
       pages: Object.fromEntries(
         pageIds.map((id) => {
           const page = pages.find((candidate) => candidate.id === id);

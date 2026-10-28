@@ -417,6 +417,20 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
       await test.services.versions.endSession(created.id, "node-b");
       expect(await test.services.versions.editors(context.reader, created.id)).toEqual([]);
     });
+
+    it("show the picture of an editor only to people who may see that editor", async () => {
+      const context = await setup();
+      const created = await publishedPage(context, doc(paragraph("Public text.")));
+      const stranger = await account({ name: "Stranger" });
+      await test.database.execute(
+        sql`update accounts set picture_ref = 'p2' where id in (${stranger}, ${context.editorId})`,
+      );
+      await test.services.versions.touchEditor(created.id, "node-a", stranger, 1);
+      await test.services.versions.touchEditor(created.id, "node-a", context.editorId, 1);
+      const editors = await test.services.versions.editors(context.reader, created.id);
+      expect(editors.find((person) => person.id === stranger)?.pictureRef).toBeNull();
+      expect(editors.find((person) => person.id === context.editorId)?.pictureRef).toBe("p2");
+    });
   });
 
   describe("readers never see draft content", () => {
@@ -790,6 +804,18 @@ describe.skipIf(!baseUrl)("collaboration on pages", () => {
         ),
       );
       expect(Object.keys(references.people)).toEqual([context.editorId]);
+      expect(references.pictures).toEqual({});
+      await test.database.execute(
+        sql`update accounts set picture_ref = 'v1' where id in (${stranger}, ${context.editorId})`,
+      );
+      const withPictures = await test.services.documents.references(
+        context.reader,
+        doc(
+          task(taskId, "Hidden person", { assignee: stranger }),
+          task(randomUUID(), "Known", { assignee: context.editorId }),
+        ),
+      );
+      expect(withPictures.pictures).toEqual({ [context.editorId]: "v1" });
       await test.database.execute(
         sql`insert into reactions (item_id, account_id, emoji) values (${created.id}, ${stranger}, '👍')`,
       );

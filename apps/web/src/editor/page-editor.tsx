@@ -17,6 +17,7 @@ import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useSession } from "../shell/shell-context.js";
 import { draftQuery } from "../spaces/content-queries.js";
+import { useEditorPictures } from "../spaces/page-editors.js";
 import { contentQuery } from "../spaces/space-queries.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
 import { BlockGutter } from "./block-gutter.js";
@@ -30,7 +31,14 @@ import { type MissingSection, setRequiredSections } from "./extensions/required-
 import { FindBar } from "./find-bar.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
-import { AvatarStack, type PresenceUser, presenceColor, RemoteCarets, usePresence } from "./presence.js";
+import {
+  AvatarStack,
+  type PresenceUser,
+  presenceColor,
+  RemoteCarets,
+  usePresence,
+  usePresenceColor,
+} from "./presence.js";
 import { rememberReferences } from "./references.js";
 import {
   CollaborationProblemNotice,
@@ -124,6 +132,13 @@ function CollaborativeEditor({
   const self = useMemo(
     () => (account ? { id: account.id, name: account.name, color: presenceColor(account.id) } : null),
     [account],
+  );
+
+  const editorPictures = useEditorPictures(pageId);
+  const ownPicture = account?.pictureRef ?? null;
+  const pictureOf = useCallback(
+    (accountId: string) => (accountId === account?.id ? ownPicture : editorPictures(accountId)),
+    [account?.id, ownPicture, editorPictures],
   );
 
   const editorRef = useRef<Editor | null>(null);
@@ -286,6 +301,8 @@ function CollaborativeEditor({
   useUnsavedChangesWarning(hasUnsavedChanges);
 
   const others = usePresence(collaboration.provider, self);
+  const ownColor = usePresenceColor(collaboration.provider, self, snapshot.synced);
+  const shownSelf = self && ownColor ? { ...self, color: ownColor } : self;
   useEffect(() => {
     onPresenceChange?.(others);
   }, [others, onPresenceChange]);
@@ -358,7 +375,7 @@ function CollaborativeEditor({
                     {showStatus && !docked ? (
                       <div className="flex shrink-0 items-center gap-2 px-1">
                         <SaveStateIndicator state={snapshot.saveState} draft={draft} />
-                        <AvatarStack self={self} others={others} />
+                        <AvatarStack self={shownSelf} others={others} pictureOf={pictureOf} />
                       </div>
                     ) : null}
                   </div>

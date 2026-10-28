@@ -328,7 +328,7 @@ shot(
     number: "05",
     name: "editor-block-menu",
     title: "Editor, block menu open",
-    state: "table menu with the rows menu open (the editor has no other block menu)",
+    state: "menu of the second table row open (the editor has no other block menu)",
     fullPage: false,
   },
   "owner",
@@ -338,9 +338,7 @@ shot(
       timeout: 30_000,
     });
     await page.getByText("Büro-Arbeitsplätze").click();
-    const menu = page.getByRole("toolbar", { name: /^(Tabelle|Table)$/ });
-    await expect(menu).toBeVisible();
-    await menu.getByRole("button", { name: /^(Zeilen|Rows)$/ }).click();
+    await page.getByRole("button", { name: /^(Zeile|Row) 2$/ }).click();
     await expect(page.getByRole("menu")).toBeVisible();
   },
   async (page) => discardDraft(page, rich().id),
@@ -537,7 +535,7 @@ shot(
   async (page) => {
     await openRich(page);
     await page.getByRole("button", { name: /^(Weitere Aktionen|More actions)$/ }).click();
-    await page.getByRole("menuitem", { name: /^(Exportieren|Export)$/ }).click();
+    await page.getByRole("menuitem", { name: /^(Exportieren|Export)…$/ }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
   },
 );

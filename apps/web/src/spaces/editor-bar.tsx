@@ -3,7 +3,7 @@ import { Eye, MoreHorizontal, PanelLeft } from "lucide-react";
 import { type ReactNode, type Ref, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { CoEditors } from "../editor/co-editors.js";
-import type { PresenceUser } from "../editor/presence.js";
+import type { PictureOf, PresenceUser } from "../editor/presence.js";
 import { SaveStateIndicator } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
 import { useShell } from "../shell/shell.js";
@@ -14,6 +14,7 @@ export function EditorBar({
   draft,
   saveState,
   others,
+  pictureOf,
   previewing,
   onPreview,
   onClose,
@@ -27,6 +28,7 @@ export function EditorBar({
   draft: boolean;
   saveState: SaveState;
   others: PresenceUser[];
+  pictureOf?: PictureOf;
   previewing: boolean;
   onPreview: () => void;
   onClose: () => void;
@@ -61,7 +63,7 @@ export function EditorBar({
           <SaveStateIndicator state={saveState} draft={draft} />
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <CoEditors others={others} />
+          <CoEditors others={others} {...(pictureOf ? { pictureOf } : {})} />
           <Button variant="ghost" icon={Eye} aria-pressed={previewing} onClick={onPreview}>
             {previewing ? t("editor.preview.stop") : t("editor.preview.start")}
           </Button>

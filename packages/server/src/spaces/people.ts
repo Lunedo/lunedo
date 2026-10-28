@@ -11,6 +11,7 @@ export interface Person {
   name: string;
   email: string | null;
   type: string;
+  pictureRef: string | null;
 }
 
 export interface VisiblePerson {
@@ -64,7 +65,11 @@ export class PeopleService {
   async search(
     viewer: Principal,
     page: PageRequest = FIRST_PAGE,
-    options: { spaceId?: string | undefined; seriesId?: string | undefined } = {},
+    options: {
+      spaceId?: string | undefined;
+      seriesId?: string | undefined;
+      ids?: readonly string[] | undefined;
+    } = {},
   ): Promise<Page<Person>> {
     const term = page.search?.trim() ?? "";
     const pattern = `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
@@ -74,13 +79,15 @@ export class PeopleService {
       name: string;
       email: string | null;
       type: string;
+      picture_ref: string | null;
       sort_name: string;
     }>(sql`
       select a.id, a.name, case when ${this.colleagueCondition(viewer, sql`a.id`)} then a.email end as email,
-        a.type::text as type, ${sortName} as sort_name
+        a.type::text as type, a.picture_ref, ${sortName} as sort_name
       from accounts a
       where a.state = 'active' and ${this.visibleCondition(viewer, sql`a.id`)}
         ${term ? sql`and (a.name ilike ${pattern} or (a.email ilike ${pattern} and ${this.colleagueCondition(viewer, sql`a.id`)}))` : sql``}
+        ${options.ids ? sql`and a.id = any(${sql.param([...options.ids])}::uuid[])` : sql``}
         ${options.spaceId ? sql`and exists (select 1 from spaces ps where ps.id = ${options.spaceId} and ${spaceRoleConditionFor(sql`a.id`, sql`ps`, "reader")})` : sql``}
         ${options.seriesId ? sql`and ${seriesParticipant(sql`${options.seriesId}::uuid`, sql`a.id`)}` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`a.id`], page.after)}` : sql``}
@@ -90,7 +97,13 @@ export class PeopleService {
       result.rows,
       page,
       (row) => [row.sort_name, row.id],
-      (row) => ({ id: row.id, name: row.name, email: row.email, type: row.type }),
+      (row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        type: row.type,
+        pictureRef: row.picture_ref,
+      }),
     );
   }
 

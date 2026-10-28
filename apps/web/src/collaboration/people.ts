@@ -1,4 +1,6 @@
 import type { ComboboxLoader } from "@lunedo/ui";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { rememberReferences } from "../editor/references.js";
@@ -12,7 +14,12 @@ export function peopleLoaderFor(filter: { spaceId?: string; seriesId?: string })
         },
       }),
     );
-    rememberReferences({ people: Object.fromEntries(page.items.map((person) => [person.id, person.name])) });
+    rememberReferences({
+      people: Object.fromEntries(page.items.map((person) => [person.id, person.name])),
+      pictures: Object.fromEntries(
+        page.items.flatMap((person) => (person.pictureRef ? [[person.id, person.pictureRef]] : [])),
+      ),
+    });
     return {
       items: page.items.map((person) => ({
         value: person.id,
@@ -40,4 +47,20 @@ export async function checkMentionAccess(
   } catch {
     return [];
   }
+}
+
+export function usePeoplePictures(ids: readonly string[]): (accountId: string) => string | null {
+  const wanted = [...new Set(ids)].sort().slice(0, 20);
+  const people = useQuery({
+    queryKey: ["people", "pictures", wanted] as const,
+    queryFn: () =>
+      request(() => api.GET("/api/v1/people", { params: { query: { ids: wanted.join(","), limit: 20 } } })),
+    enabled: wanted.length > 0,
+    throwOnError: false,
+  });
+  const items = people.data?.items;
+  return useCallback(
+    (accountId: string) => items?.find((person) => person.id === accountId)?.pictureRef ?? null,
+    [items],
+  );
 }

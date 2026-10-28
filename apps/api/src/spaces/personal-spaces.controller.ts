@@ -105,6 +105,15 @@ const peopleQuery = searchQuerySchema
     spaceId: uuid(
       "Only people who can open this space, for example to choose members of a meeting series.",
     ).optional(),
+    ids: z
+      .string()
+      .max(800)
+      .transform((value) => value.split(",").filter(Boolean))
+      .pipe(z.array(uuid("Account ID.")).min(1).max(20))
+      .optional()
+      .describe(
+        "Only these people, up to 20 account IDs separated by commas, for example to show who is on a whiteboard.",
+      ),
   })
   .strict();
 
@@ -114,6 +123,7 @@ const personSchema = z
     name: z.string().describe("Name of the person."),
     email: z.string().nullable().describe("E-mail address, shown for people of the caller's organizations."),
     type: z.string().describe("`standard`, `guest`, `portal` or `service`."),
+    pictureRef: z.string().nullable().describe("Version of the profile picture, or null when there is none."),
   })
   .describe("A person the caller may see.");
 
@@ -161,7 +171,13 @@ export class PersonalSpacesController {
       schema: pageSchema(personSchema, "People, ordered by name."),
       example: {
         items: [
-          { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", email: null, type: "standard" },
+          {
+            id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+            name: "Anna Berger",
+            email: null,
+            type: "standard",
+            pictureRef: null,
+          },
         ],
         nextCursor: null,
       },
@@ -181,6 +197,7 @@ export class PersonalSpacesController {
       await this.#services.people.search(actor, pageRequest(query, nameCursor), {
         spaceId: query.spaceId,
         seriesId: query.seriesId,
+        ids: query.ids,
       }),
     );
   }

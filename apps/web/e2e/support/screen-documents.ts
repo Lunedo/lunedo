@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 type Inline = string | Record<string, unknown>;
 
 export function text(value: string, ...marks: string[]) {
@@ -259,7 +261,7 @@ export const TREE: { title: string; text: string; children?: typeof TREE }[] = [
       },
       {
         title: "WLAN für Gäste",
-        text: "Das Gäste-WLAN heißt Nordwind-Gast. Das Passwort wechselt jeden Montag.",
+        text: "Das Gäste-WLAN heißt Northwind-Gast. Das Passwort wechselt jeden Montag.",
       },
     ],
   },
@@ -444,4 +446,93 @@ export function howToEnglish(lead: string) {
       p("Restart the laptop and try again. Otherwise the service desk helps."),
     ),
   );
+}
+
+export const ENGINEERING_TREE: { title: string; text: string; children?: typeof ENGINEERING_TREE }[] = [
+  {
+    title: "Architecture overview",
+    text: "How our services fit together and which team owns which part.",
+    children: [
+      { title: "Service map", text: "Every production service with its owner, dependencies and dashboards." },
+      { title: "Decision log", text: "Architecture decisions with their context and consequences." },
+    ],
+  },
+  {
+    title: "Operations",
+    text: "Everything you need while you are on call or shipping a release.",
+    children: [
+      { title: "On-call runbook", text: "" },
+      {
+        title: "Incident reviews",
+        text: "Blameless reviews of every SEV1 and SEV2 incident.",
+        children: [
+          {
+            title: "Payment queue backlog, September",
+            text: "A stuck consumer delayed payment confirmations for 40 minutes.",
+          },
+        ],
+      },
+      { title: "Release checklist", text: "Steps before, during and after a production release." },
+    ],
+  },
+  {
+    title: "Onboarding for engineers",
+    text: "Your first two weeks on the engineering team.",
+    children: [
+      { title: "Local development setup", text: "Install the tools and run the platform on your laptop." },
+    ],
+  },
+  { title: "Coding guidelines", text: "Conventions for code, reviews and tests." },
+];
+
+export function runbookDocument(ids: { lena: string; jonas: string; aylin: string; mateo: string }) {
+  const task = (label: string, assignee: string | null = null) => ({
+    type: "taskItem",
+    attrs: { id: randomUUID(), assignee, dueDate: null },
+    content: [p(label)],
+  });
+  return doc(
+    p(
+      "This runbook covers the first hour of an incident: who to call, what to check and where to write things down. It applies to every service the platform team runs in production.",
+    ),
+    panel(
+      "info",
+      "The rotation changes every Monday at 09:00. Swap shifts in the on-call calendar, not in chat.",
+    ),
+    h(2, "Escalation contacts"),
+    table(
+      ["Role", "Person", "How to reach"],
+      ["Primary on-call", "Lena Hofer", "Pager, then phone +1 555 0142"],
+      ["Secondary on-call", "Jonas Berger", "Pager"],
+      ["Engineering manager", "Aylin Demir", "Phone +1 555 0187"],
+      ["Database owner", "Mateo Rossi", "Chat, #db-help"],
+    ),
+    h(2, "First steps"),
+    {
+      type: "taskList",
+      content: [
+        task("Acknowledge the page within five minutes"),
+        task("Open an incident channel and post the alert link"),
+        task("Check error rate and latency on the service dashboard", ids.lena),
+        task("Set the severity and inform the engineering manager for SEV1 and SEV2", ids.jonas),
+        task("Post a short status update every 30 minutes", ids.aylin),
+      ],
+    },
+    h(2, "After the incident"),
+    p(
+      "Write the incident review within two working days and link it under Operations › Incident reviews. ",
+      mention(ids.mateo),
+      " reviews every change to the database runbooks.",
+    ),
+  );
+}
+
+export function avatarSvg(background: string, skin: string, hair: string, shirt: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="${background}"/>
+  <path d="M38 256c6-52 44-80 90-80s84 28 90 80z" fill="${shirt}"/>
+  <rect x="110" y="140" width="36" height="44" rx="14" fill="${skin}"/>
+  <ellipse cx="128" cy="106" rx="46" ry="54" fill="${skin}"/>
+  <path d="M80 102c-4-40 20-64 50-64 30 0 52 22 48 62-10-20-30-30-50-30-22 0-38 12-48 32z" fill="${hair}"/>
+</svg>`;
 }

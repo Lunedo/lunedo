@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { OWNER_STORAGE } from "../support/environment.js";
-import { capture, copySession, record, type Screen } from "../support/screens.js";
+import { CAPTURED_PART, capture, copySession, record, type Screen } from "../support/screens.js";
 import { enterSetupCode, runSetupSteps, type SetupStep, setUpMail, signInOwner } from "../support/setup.js";
 
 test.describe.configure({ mode: "serial" });
@@ -27,7 +27,7 @@ const SETUP_SCREENS: Partial<Record<SetupStep, Screen>> = {
 test("sets up the instance and captures the setup assistant", async ({ page, browser }) => {
   const shown = async (step: SetupStep, setupPage: Page) => {
     const screen = SETUP_SCREENS[step];
-    if (!screen) return;
+    if (!screen || (CAPTURED_PART ?? "screens") !== "screens") return;
     const context = await browser.newContext({ locale: "de-DE" });
     try {
       await copySession(setupPage.context(), context);

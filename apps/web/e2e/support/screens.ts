@@ -6,6 +6,7 @@ import { setAppearance } from "./helpers.js";
 
 export const SCREENS_DIR = process.env.LUNEDO_SCREENS_DIR ?? path.join(STATE_DIR, "screens");
 export const CAPTURE_LOG = path.join(SCREENS_DIR, "capture.jsonl");
+export const CAPTURED_PART = process.env.LUNEDO_SCREENS_ONLY;
 
 export const DEVICES = {
   desktop: { width: 1440, height: 900 },

@@ -2,9 +2,11 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { initialsOf, Tooltip } from "@lunedo/ui";
 import type { Editor } from "@tiptap/core";
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from "@tiptap/y-tiptap";
-import { type CSSProperties, type RefObject, useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
+import { PersonAvatar } from "../components/person-avatar.js";
 
 export const presenceColors = ["petrol", "blue", "violet", "amber", "red", "green"] as const;
 export type PresenceColor = (typeof presenceColors)[number];
@@ -29,9 +31,81 @@ export function cursorColor(accountId: string): string {
   return `hsl(${(Math.abs(hash) % 37) * 10}, 100%, 83%)`;
 }
 
+type PresenceAwareness = Pick<
+  Awareness,
+  "clientID" | "getStates" | "getLocalState" | "setLocalStateField" | "on" | "off"
+>;
+
+function isPresenceColor(value: unknown): value is PresenceColor {
+  return presenceColors.includes(value as PresenceColor);
+}
+
+export function publishedColor(user: unknown): PresenceColor {
+  const published = user as { id?: unknown; presence?: unknown } | undefined;
+  if (isPresenceColor(published?.presence)) return published.presence;
+  return typeof published?.id === "string" && published.id !== "" ? presenceColor(published.id) : "petrol";
+}
+
+export function choosePresenceColor(
+  awareness: PresenceAwareness,
+  accountId: string,
+  current: PresenceColor,
+  joining: boolean,
+): PresenceColor {
+  const others: { clientId: number; color: PresenceColor }[] = [];
+  awareness.getStates().forEach((state, clientId) => {
+    const user = state.user as { id?: unknown; presence?: unknown } | undefined;
+    if (clientId === awareness.clientID || !user?.id || user.id === accountId) return;
+    if (isPresenceColor(user.presence)) others.push({ clientId, color: user.presence });
+  });
+  const taken = (color: PresenceColor) => others.some((other) => other.color === color);
+  const conflict = joining
+    ? taken(current)
+    : others.some((other) => other.color === current && other.clientId < awareness.clientID);
+  if (!conflict) return current;
+  return presenceColors.find((color) => !taken(color)) ?? current;
+}
+
+export function claimPresenceColor(
+  awareness: PresenceAwareness,
+  user: { id: string; name: string },
+  onChange: (color: PresenceColor) => void = () => {},
+): () => void {
+  const previous = (awareness.getLocalState()?.user as { presence?: unknown } | undefined)?.presence;
+  let color = isPresenceColor(previous) ? previous : presenceColor(user.id);
+  let joining = true;
+  const update = () => {
+    const next = choosePresenceColor(awareness, user.id, color, joining);
+    joining = false;
+    const local = awareness.getLocalState()?.user as Record<string, unknown> | undefined;
+    if (next === color && local?.presence === color) return;
+    color = next;
+    awareness.setLocalStateField("user", { ...local, id: user.id, name: user.name, color, presence: color });
+    onChange(color);
+  };
+  update();
+  awareness.on("change", update);
+  return () => awareness.off("change", update);
+}
+
+export function usePresenceColor(
+  provider: HocuspocusProvider | null,
+  self: { id: string; name: string } | null,
+  synced: boolean,
+): PresenceColor | null {
+  const [color, setColor] = useState<PresenceColor | null>(null);
+  const id = self?.id;
+  const name = self?.name;
+  useEffect(() => {
+    const awareness = provider?.awareness;
+    if (!awareness || !id || name === undefined || !synced) return;
+    return claimPresenceColor(awareness, { id, name }, setColor);
+  }, [provider, id, name, synced]);
+  return color;
+}
+
 export function selectionAttributes(user: Record<string, unknown>) {
-  const color = presenceColors.includes(user.color as PresenceColor) ? String(user.color) : "petrol";
-  return { class: "ld-remote-selection", "data-color": color };
+  return { class: "ld-remote-selection", "data-color": publishedColor(user) };
 }
 
 export function hiddenCaret(): HTMLElement {
@@ -54,7 +128,13 @@ function remoteStates(provider: HocuspocusProvider): RemoteState[] {
     if (clientId === awareness.clientID) return;
     const user = state.user as PresenceUser | undefined;
     const cursor = state.cursor as { head?: unknown } | null | undefined;
-    if (user?.id) states.push({ clientId, user, head: cursor?.head ?? null });
+    if (user?.id) {
+      states.push({
+        clientId,
+        user: { ...user, color: publishedColor(user) },
+        head: cursor?.head ?? null,
+      });
+    }
   });
   return states;
 }
@@ -80,14 +160,49 @@ export function usePresence(provider: HocuspocusProvider | null, self: PresenceU
 
 const VISIBLE_AVATARS = 3;
 
+export type PictureOf = (accountId: string) => string | null | undefined;
+
+export function PresenceAvatar({
+  user,
+  pictureRef,
+  colorFor,
+  children,
+}: {
+  user: PresenceUser;
+  pictureRef?: string | null | undefined;
+  colorFor?: ((user: PresenceUser) => string) | undefined;
+  children?: ReactNode;
+}) {
+  return (
+    <span
+      {...(colorFor
+        ? {
+            "data-theme": "light",
+            style: { "--presence-color": colorFor(user) } as CSSProperties,
+          }
+        : { "data-color": user.color })}
+      className={`ld-presence-avatar${colorFor ? " ld-presence-avatar-cursor" : ""} relative inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
+    >
+      {pictureRef ? (
+        <PersonAvatar id={user.id} name={user.name} pictureRef={pictureRef} size="sm" decorative />
+      ) : (
+        <span aria-hidden="true">{initialsOf(user.name)}</span>
+      )}
+      {children}
+    </span>
+  );
+}
+
 export function AvatarStack({
   self,
   others,
   colorFor,
+  pictureOf,
 }: {
   self: PresenceUser | null;
   others: PresenceUser[];
   colorFor?: (user: PresenceUser) => string;
+  pictureOf?: PictureOf;
 }) {
   const { t } = useTranslation();
   const everyone = self ? [self, ...others] : others;
@@ -96,23 +211,14 @@ export function AvatarStack({
   return (
     <ul
       aria-label={t("editor.presence.label", { count: everyone.length })}
-      className="flex items-center -space-x-1"
+      className="flex items-center gap-1"
     >
       {visible.map((user) => (
         <li key={user.id}>
           <Tooltip content={user.id === self?.id ? t("editor.presence.you", { name: user.name }) : user.name}>
-            <span
-              {...(colorFor
-                ? {
-                    "data-theme": "light",
-                    style: { "--presence-color": colorFor(user) } as CSSProperties,
-                  }
-                : { "data-color": user.color })}
-              className={`ld-presence-avatar${colorFor ? " ld-presence-avatar-cursor" : ""} inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
-            >
-              <span aria-hidden="true">{initialsOf(user.name)}</span>
+            <PresenceAvatar user={user} pictureRef={pictureOf?.(user.id)} colorFor={colorFor}>
               <span className="sr-only">{user.name}</span>
-            </span>
+            </PresenceAvatar>
           </Tooltip>
         </li>
       ))}
