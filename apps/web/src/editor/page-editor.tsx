@@ -34,10 +34,10 @@ import { SelectionMenu, TableMenu } from "./menus.js";
 import {
   AvatarStack,
   type PresenceUser,
-  paletteFor,
   presenceColor,
   RemoteCarets,
   usePresence,
+  usePresenceColor,
 } from "./presence.js";
 import { rememberReferences } from "./references.js";
 import {
@@ -301,10 +301,8 @@ function CollaborativeEditor({
   useUnsavedChangesWarning(hasUnsavedChanges);
 
   const others = usePresence(collaboration.provider, self);
-  const shownSelf =
-    self && collaboration.provider
-      ? { ...self, color: paletteFor(collaboration.provider).colorOf(self.id) }
-      : self;
+  const ownColor = usePresenceColor(collaboration.provider, self, snapshot.synced);
+  const shownSelf = self && ownColor ? { ...self, color: ownColor } : self;
   useEffect(() => {
     onPresenceChange?.(others);
   }, [others, onPresenceChange]);

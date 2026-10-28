@@ -1,63 +1,142 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
+import * as Y from "yjs";
 import { renderWithProviders } from "../testing/render.js";
 import { CoEditors } from "./co-editors.js";
 import {
   AvatarStack,
-  assignPresenceColors,
+  claimPresenceColor,
   cursorColor,
-  PresencePalette,
   presenceColor,
-  presenceColors,
+  publishedColor,
   selectionAttributes,
 } from "./presence.js";
 
 const person = (number: number) => `01930000-0000-7000-8000-0000000000${String(number).padStart(2, "0")}`;
 
-describe("presence color assignment", () => {
-  it("gives everyone on the page a different color while the palette has enough", () => {
-    const ids = [3, 9, 12, 30, 36, 45].map(person);
-    expect(new Set(ids.map(presenceColor)).size).toBe(1);
-    const colors = assignPresenceColors(new Map(), ids);
-    expect(new Set(colors.values()).size).toBe(presenceColors.length);
+function network() {
+  const peers: Awareness[] = [];
+  const links = new Set<Awareness>();
+  const send = (from: Awareness, clients: number[]) => {
+    if (!links.has(from)) return;
+    const update = encodeAwarenessUpdate(from, clients);
+    for (const peer of links) if (peer !== from) applyAwarenessUpdate(peer, update, "remote");
+  };
+  return {
+    join(clientId: number, id: string, linked = true) {
+      const doc = new Y.Doc();
+      doc.clientID = clientId;
+      const awareness = new Awareness(doc);
+      awareness.on(
+        "update",
+        (
+          { added, updated, removed }: { added: number[]; updated: number[]; removed: number[] },
+          origin: unknown,
+        ) => {
+          if (origin !== "remote") send(awareness, [...added, ...updated, ...removed]);
+        },
+      );
+      awareness.setLocalStateField("user", { id, name: id, color: presenceColor(id) });
+      peers.push(awareness);
+      if (linked) this.link(awareness);
+      claimPresenceColor(awareness, { id, name: id });
+      return awareness;
+    },
+    link(awareness: Awareness) {
+      links.add(awareness);
+      for (const peer of links) {
+        if (peer === awareness) continue;
+        applyAwarenessUpdate(awareness, encodeAwarenessUpdate(peer, [...peer.getStates().keys()]), "remote");
+        applyAwarenessUpdate(peer, encodeAwarenessUpdate(awareness, [awareness.clientID]), "remote");
+      }
+    },
+    close() {
+      for (const peer of peers) peer.destroy();
+    },
+  };
+}
+
+function ownColor(awareness: Awareness) {
+  return publishedColor(awareness.getLocalState()?.user);
+}
+
+function colorsSeenBy(awareness: Awareness) {
+  const seen = new Map<number, string>();
+  awareness.getStates().forEach((state, clientId) => {
+    if (clientId !== awareness.clientID) seen.set(clientId, publishedColor(state.user));
+  });
+  return seen;
+}
+
+function expectSameColorsEverywhere(peers: Awareness[]) {
+  for (const viewer of peers) {
+    for (const other of peers) {
+      if (other !== viewer) expect(colorsSeenBy(viewer).get(other.clientID)).toBe(ownColor(other));
+    }
+  }
+  expect(new Set(peers.map(ownColor)).size).toBe(peers.length);
+}
+
+describe("presence colors across clients", () => {
+  it("are the same for two people looking at each other, and differ", () => {
+    const net = network();
+    const lena = net.join(20, person(3));
+    const jonas = net.join(10, person(9));
+    expect(presenceColor(person(3))).toBe(presenceColor(person(9)));
+    expect(ownColor(lena)).toBe("blue");
+    expect(ownColor(jonas)).not.toBe("blue");
+    expectSameColorsEverywhere([lena, jonas]);
+    net.close();
   });
 
-  it("keeps the color of the people who stay when someone joins", () => {
-    const first = assignPresenceColors(new Map(), [person(3), person(4)]);
-    const second = assignPresenceColors(first, [person(3), person(4), person(9), person(12)]);
-    expect(second.get(person(3))).toBe(first.get(person(3)));
-    expect(second.get(person(4))).toBe(first.get(person(4)));
-    expect(new Set(second.values()).size).toBe(4);
+  it("are the same for three people looking at each other, and differ", () => {
+    const net = network();
+    const peers = [net.join(30, person(3)), net.join(20, person(9)), net.join(10, person(12))];
+    expectSameColorsEverywhere(peers);
+    net.close();
   });
 
-  it("frees the color of someone who leaves for the next person", () => {
-    const first = assignPresenceColors(new Map(), [person(3), person(9)]);
-    expect(first.get(person(3))).toBe("blue");
-    const left = assignPresenceColors(first, [person(9)]);
-    expect(left.get(person(9))).toBe(first.get(person(9)));
-    expect(left.has(person(3))).toBe(false);
-    expect(assignPresenceColors(left, [person(9), person(12)]).get(person(12))).toBe("blue");
+  it("stay distinct when two people join at the same moment with the same color: the lower client keeps it", () => {
+    const net = network();
+    const first = net.join(1, person(3), false);
+    const second = net.join(2, person(9), false);
+    expect(ownColor(first)).toBe("blue");
+    expect(ownColor(second)).toBe("blue");
+    net.link(first);
+    net.link(second);
+    expect(ownColor(first)).toBe("blue");
+    expect(ownColor(second)).not.toBe("blue");
+    expectSameColorsEverywhere([first, second]);
+    net.close();
   });
 
-  it("gives the same color to selections and cursors through the palette of the page", () => {
-    let present = [person(3), person(9)];
-    const palette = new PresencePalette(() => present);
-    const jonas = palette.colorOf(person(3));
-    const aylin = palette.colorOf(person(9));
-    expect(aylin).not.toBe(jonas);
-    expect(selectionAttributes({ id: person(9), color: "transparent" }, palette)["data-color"]).toBe(aylin);
-    present = [person(9)];
-    expect(palette.colorOf(person(9))).toBe(aylin);
+  it("keep the color of the people who stay when someone leaves and someone joins", () => {
+    const net = network();
+    const lena = net.join(30, person(3));
+    const jonas = net.join(20, person(9));
+    const kept = ownColor(jonas);
+    lena.setLocalState(null);
+    expect(ownColor(jonas)).toBe(kept);
+    const aylin = net.join(40, person(12));
+    expect(ownColor(jonas)).toBe(kept);
+    expectSameColorsEverywhere([jonas, aylin]);
+    net.close();
   });
 });
 
 describe("remote selections", () => {
-  it("take the color of the person, also when the caret extension blanks the color name", () => {
+  it("take the color the person published, also when the caret extension blanks the color name", () => {
     const id = "0192d6f0-0000-7000-8000-000000000001";
-    expect(selectionAttributes({ id, name: "Jonas Berger", color: "transparent" })).toEqual({
+    expect(
+      selectionAttributes({ id, name: "Jonas Berger", color: "transparent", presence: "amber" }),
+    ).toEqual({
       class: "ld-remote-selection",
-      "data-color": presenceColor(id),
+      "data-color": "amber",
     });
+    expect(selectionAttributes({ id, name: "Jonas Berger", color: "transparent" })["data-color"]).toBe(
+      presenceColor(id),
+    );
     expect(selectionAttributes({ name: "Unknown", color: "transparent" })["data-color"]).toBe("petrol");
   });
 });

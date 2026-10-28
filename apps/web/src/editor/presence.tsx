@@ -4,6 +4,7 @@ import type { Editor } from "@tiptap/core";
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from "@tiptap/y-tiptap";
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 import { PersonAvatar } from "../components/person-avatar.js";
 
@@ -30,60 +31,81 @@ export function cursorColor(accountId: string): string {
   return `hsl(${(Math.abs(hash) % 37) * 10}, 100%, 83%)`;
 }
 
-export function assignPresenceColors(
-  previous: ReadonlyMap<string, PresenceColor>,
-  present: readonly string[],
-): Map<string, PresenceColor> {
-  const ids = new Set(present);
-  const next = new Map([...previous].filter(([id]) => ids.has(id)));
-  const used = new Set(next.values());
-  for (const id of [...ids].filter((candidate) => !next.has(candidate)).sort()) {
-    const preferred = presenceColor(id);
-    const color = used.has(preferred)
-      ? (presenceColors.find((candidate) => !used.has(candidate)) ?? preferred)
-      : preferred;
-    next.set(id, color);
-    used.add(color);
-  }
-  return next;
+type PresenceAwareness = Pick<
+  Awareness,
+  "clientID" | "getStates" | "getLocalState" | "setLocalStateField" | "on" | "off"
+>;
+
+function isPresenceColor(value: unknown): value is PresenceColor {
+  return presenceColors.includes(value as PresenceColor);
 }
 
-export class PresencePalette {
-  #colors = new Map<string, PresenceColor>();
-  readonly #present: () => readonly string[];
-
-  constructor(present: () => readonly string[]) {
-    this.#present = present;
-  }
-
-  colorOf(accountId: string): PresenceColor {
-    this.#colors = assignPresenceColors(this.#colors, this.#present());
-    return this.#colors.get(accountId) ?? presenceColor(accountId);
-  }
+export function publishedColor(user: unknown): PresenceColor {
+  const published = user as { id?: unknown; presence?: unknown } | undefined;
+  if (isPresenceColor(published?.presence)) return published.presence;
+  return typeof published?.id === "string" && published.id !== "" ? presenceColor(published.id) : "petrol";
 }
 
-const palettes = new WeakMap<HocuspocusProvider, PresencePalette>();
-
-export function paletteFor(provider: HocuspocusProvider): PresencePalette {
-  let palette = palettes.get(provider);
-  if (!palette) {
-    palette = new PresencePalette(() => {
-      const ids: string[] = [];
-      provider.awareness?.getStates().forEach((state) => {
-        const id = (state.user as { id?: unknown } | undefined)?.id;
-        if (typeof id === "string" && id !== "") ids.push(id);
-      });
-      return ids;
-    });
-    palettes.set(provider, palette);
-  }
-  return palette;
+export function choosePresenceColor(
+  awareness: PresenceAwareness,
+  accountId: string,
+  current: PresenceColor,
+  joining: boolean,
+): PresenceColor {
+  const others: { clientId: number; color: PresenceColor }[] = [];
+  awareness.getStates().forEach((state, clientId) => {
+    const user = state.user as { id?: unknown; presence?: unknown } | undefined;
+    if (clientId === awareness.clientID || !user?.id || user.id === accountId) return;
+    if (isPresenceColor(user.presence)) others.push({ clientId, color: user.presence });
+  });
+  const taken = (color: PresenceColor) => others.some((other) => other.color === color);
+  const conflict = joining
+    ? taken(current)
+    : others.some((other) => other.color === current && other.clientId < awareness.clientID);
+  if (!conflict) return current;
+  return presenceColors.find((color) => !taken(color)) ?? current;
 }
 
-export function selectionAttributes(user: Record<string, unknown>, palette?: PresencePalette) {
-  const id = typeof user.id === "string" ? user.id : "";
-  const color = id === "" ? "petrol" : (palette?.colorOf(id) ?? presenceColor(id));
-  return { class: "ld-remote-selection", "data-color": color };
+export function claimPresenceColor(
+  awareness: PresenceAwareness,
+  user: { id: string; name: string },
+  onChange: (color: PresenceColor) => void = () => {},
+): () => void {
+  const previous = (awareness.getLocalState()?.user as { presence?: unknown } | undefined)?.presence;
+  let color = isPresenceColor(previous) ? previous : presenceColor(user.id);
+  let joining = true;
+  const update = () => {
+    const next = choosePresenceColor(awareness, user.id, color, joining);
+    joining = false;
+    const local = awareness.getLocalState()?.user as Record<string, unknown> | undefined;
+    if (next === color && local?.presence === color) return;
+    color = next;
+    awareness.setLocalStateField("user", { ...local, id: user.id, name: user.name, color, presence: color });
+    onChange(color);
+  };
+  update();
+  awareness.on("change", update);
+  return () => awareness.off("change", update);
+}
+
+export function usePresenceColor(
+  provider: HocuspocusProvider | null,
+  self: { id: string; name: string } | null,
+  synced: boolean,
+): PresenceColor | null {
+  const [color, setColor] = useState<PresenceColor | null>(null);
+  const id = self?.id;
+  const name = self?.name;
+  useEffect(() => {
+    const awareness = provider?.awareness;
+    if (!awareness || !id || name === undefined || !synced) return;
+    return claimPresenceColor(awareness, { id, name }, setColor);
+  }, [provider, id, name, synced]);
+  return color;
+}
+
+export function selectionAttributes(user: Record<string, unknown>) {
+  return { class: "ld-remote-selection", "data-color": publishedColor(user) };
 }
 
 export function hiddenCaret(): HTMLElement {
@@ -101,7 +123,6 @@ interface RemoteState {
 function remoteStates(provider: HocuspocusProvider): RemoteState[] {
   const awareness = provider.awareness;
   if (!awareness) return [];
-  const palette = paletteFor(provider);
   const states: RemoteState[] = [];
   awareness.getStates().forEach((state, clientId) => {
     if (clientId === awareness.clientID) return;
@@ -110,7 +131,7 @@ function remoteStates(provider: HocuspocusProvider): RemoteState[] {
     if (user?.id) {
       states.push({
         clientId,
-        user: { ...user, color: palette.colorOf(user.id) },
+        user: { ...user, color: publishedColor(user) },
         head: cursor?.head ?? null,
       });
     }

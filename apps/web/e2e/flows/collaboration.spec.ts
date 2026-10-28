@@ -250,8 +250,10 @@ test("shows where other people edit: a caret with their name and their selection
 
   await page.goto(address);
   await expect(content(page)).toBeEditable({ timeout: 30_000 });
+  const viewers: (typeof page)[] = [];
   for (const [index, person] of people.entries()) {
     const { page: other } = await organization.signIn(person);
+    viewers.push(other);
     await other.goto(address);
     await expect(content(other)).toBeEditable({ timeout: 30_000 });
     await content(other)
@@ -289,6 +291,17 @@ test("shows where other people edit: a caret with their name and their selection
     elements.map((element) => element.getAttribute("data-color")),
   );
   expect(new Set(colors).size).toBe(people.length);
+  const colorOf = (viewer: typeof page, name: string) =>
+    viewer
+      .getByRole("list", { name: /people? (is|are) editing/ })
+      .getByRole("listitem")
+      .filter({ hasText: `${name} is editing` })
+      .locator(".ld-presence-avatar")
+      .getAttribute("data-color");
+  const [carlaView, dario] = [viewers[0], people[1]];
+  if (!carlaView || !dario) throw new Error("The test needs two co-editors");
+  await expect(carlaView.getByRole("list", { name: "2 people are editing" })).toBeVisible();
+  expect(await colorOf(carlaView, dario.name)).toBe(await colorOf(page, dario.name));
 
   await page.goto(numberedPagePath(key, created));
   const editing = page.getByRole("list", { name: "2 people are editing" });
