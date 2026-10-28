@@ -90,7 +90,10 @@ test("captures the start-page picture of the website", async ({ browser }) => {
     const coEditors = page.getByRole("list", { name: /editing/i });
     for (const { person } of CO_EDITORS) {
       await expect(coEditors.getByText(`${PEOPLE[person]} is editing`)).toBeAttached({ timeout: 20_000 });
+      const label = page.locator(".ld-remote-caret-label", { hasText: PEOPLE[person] });
+      await expect(label).toBeInViewport();
     }
+    await expect(coEditors.locator("img")).toHaveCount(CO_EDITORS.length, { timeout: 20_000 });
     await expect(page.locator(".ld-remote-selection")).toHaveCount(CO_EDITORS.length, { timeout: 20_000 });
     await expect(page.getByRole("tree").getByText("On-call runbook")).toBeVisible();
     await page.mouse.move(DEVICES.desktop.width - 2, DEVICES.desktop.height - 2);
@@ -107,7 +110,8 @@ test("captures the start-page picture of the website", async ({ browser }) => {
         title: "Website start page",
         route: routeOf(page),
         role: `member (${PEOPLE[VIEWER]}), with ${CO_EDITORS.map(({ person }) => PEOPLE[person]).join(", ")} editing`,
-        state: "On-call runbook in the editor, page tree open, three co-editors with their selections",
+        state:
+          "On-call runbook in the editor, page tree open, three co-editors with their cursors and selections",
         language: "en",
         theme,
         device: "desktop",
