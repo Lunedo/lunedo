@@ -15,17 +15,20 @@ proxy="172.31.$((suffix % 200 + 20)).10"
 linux=1
 case "$(uname -s)" in MINGW* | MSYS* | CYGWIN* | Darwin) linux=0 ;; esac
 
+export COMPOSE_PROJECT_NAME="lunedo-install-${LUNEDO_CI_JOB:-local-$$}"
+label=(--label "lunedo.ci.job=${LUNEDO_CI_JOB:-local-$$}")
+
 compose() { docker compose --project-directory "$directory" -f "$directory/compose.yml" "$@"; }
 
 newest_backup() {
-  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/lunedo-backup-*-before-update-*.ldbak 2>/dev/null | head -n 1' | tr -d '
+  docker run "${label[@]}" --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/lunedo-backup-*-before-update-*.ldbak 2>/dev/null | head -n 1' | tr -d '
 '
 }
 
 cleanup() {
   if [ -f "$directory/compose.yml" ]; then compose down --volumes --remove-orphans >/dev/null 2>&1 || true; fi
   if [ -d "$directory/backups" ]; then
-    docker run --rm --user 0 --entrypoint rm -v "$directory:/installation" "$current" -rf /installation/backups       >/dev/null 2>&1 || true
+    docker run "${label[@]}" --rm --user 0 --entrypoint rm -v "$directory:/installation" "$current" -rf /installation/backups       >/dev/null 2>&1 || true
   fi
   rm -rf "$parent"
 }
@@ -124,7 +127,7 @@ fi
 check "the update is recorded with the previous version" grep -q '^previous=' "$directory/.lunedo-install"
 backup_file="$(newest_backup)"
 check "a backup was taken before the update" test -n "$backup_file"
-before_update_backups="$(docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"   -c 'ls /backups/lunedo-backup-*-before-update-*.ldbak 2>/dev/null | wc -l' | tr -d ' ')"
+before_update_backups="$(docker run "${label[@]}" --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"   -c 'ls /backups/lunedo-backup-*-before-update-*.ldbak 2>/dev/null | wc -l' | tr -d ' ')"
 check "the first start of the new version took no second backup" test "$before_update_backups" = "1"
 check "the backup is complete and readable" \
   compose exec -T lunedo lunedo backup verify --input "/var/lib/lunedo/backups/$(basename "$backup_file")"

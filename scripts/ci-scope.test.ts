@@ -110,6 +110,7 @@ describe("scopeOf", () => {
       "docker/Dockerfile",
       "docker/start.sh",
       "scripts/backup-roundtrip.sh",
+      "scripts/ci-docker-cleanup.sh",
     ]) {
       assert.equal(ready([file]).backup, true, file);
     }
@@ -132,6 +133,7 @@ describe("scopeOf", () => {
       "scripts/reverse-proxy-check.sh",
       "docs/admin/reverse-proxy/nginx.md",
       "scripts/backup-network-check.sh",
+      "scripts/ci-docker-cleanup.sh",
       "docs/admin/backups/s3.md",
       "packages/server/src/operations/status.ts",
       "packages/server/src/portal/portals.ts",
