@@ -66,7 +66,7 @@ Errors:
 - `state` and a separate browser token are random values. Only their SHA-256 hashes are stored (`state_hash`, `browser_hash`). The browser token goes into the cookie `__Host-lunedo-provider` (10 minutes), so a flow started in one browser cannot be completed in another.
 - `nonce` and the PKCE `code_verifier` are stored for OIDC flows only; SAML flows store the request ID instead.
 - A flow is valid for 10 minutes. The callback consumes it with one `UPDATE … WHERE consumed_at IS NULL AND expires_at > now()`, so it is used once even with several nodes.
-- A SAML response arrives by POST at the assertion consumer service. It is stored on the flow found by `RelayState` and then processed by the same callback as OIDC, after a redirect that carries the browser cookie. A response without a matching flow is accepted only with `idpInitiated`; Lunedo then creates a flow itself.
+- A SAML response arrives by POST at the assertion consumer service. It is stored on the flow found by `RelayState` and then processed by the same callback as OIDC, after a redirect that carries the browser cookie. A response without a matching flow is accepted only with `idpInitiated`. It is then verified completely (size, issuer, signature, recipient, times, and that its assertion was not used before) before Lunedo creates a flow for it; a response that fails is refused without a database write.
 - The stored SAML response is cleared once it was checked. Test results are stored on the flow and can only be read by the session that started the test.
 
 Consumed SAML assertion IDs are kept in `saml_assertions` and logout token IDs in `provider_logout_tokens` until they expire, so each is accepted once. Expired flows, assertion IDs and logout tokens, and refusals older than 90 days, are removed by the authentication cleanup job.
@@ -84,7 +84,7 @@ The provider setting `secondFactor.mode` is `provider` or `providerProof` for OI
 | `identity-providers.schedule-synchronization` | every 5 minutes | Enqueues due synchronization runs; with SCIM on, once a day as reconciliation |
 | `identity-providers.synchronize` | on demand | One run for one provider; no retries |
 | `identity-providers.remove-old-sync-runs` | daily at 03:23 | Applies `identityProviders.syncLogRetentionDays` |
-| `identity-providers.send-credential-reminders` | hourly at :41 | Reminders 30 and 7 days before the last credential expires |
+| `identity-providers.send-credential-reminders` | hourly at :41 | Reminders 30 and 7 days before the last valid credential of a purpose (client credential, signing certificate, Microsoft Graph) expires |
 | `identity-providers.refresh-saml-metadata` | hourly at :17 | Reloads metadata from an address when it is older than 24 hours |
 
 All run during maintenance mode.

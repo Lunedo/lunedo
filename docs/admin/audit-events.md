@@ -367,10 +367,10 @@ Every event the [audit log](audit-log.md) records, grouped by the area at the st
 
 | Event | What it records | Target | Actor | Level | Fields |
 |---|---|---|---|---|---|
-| `setup.completed` | Setup completed | `instance` | `anonymous`, `system` | instance | `through` |
-| `setup.keyBackupDownloaded` | Keys downloaded | `instance` | `anonymous` | instance | `masterKeyVersions`, `backupKeyVersions` |
-| `setup.sessionStarted` | Setup started | `instance` | `anonymous` | instance | no further fields |
-| `setup.stepCompleted` | Setup step completed | `setupStep` | `anonymous`, `system` | instance | no further fields |
+| `setup.completed` | Setup completed | `instance` | `account`, `system` | instance | `through` |
+| `setup.keyBackupDownloaded` | Keys downloaded | `instance` | `account` | instance | `masterKeyVersions`, `backupKeyVersions` |
+| `setup.sessionStarted` | Setup started | `instance` | `account`, `system` | instance | no further fields |
+| `setup.stepCompleted` | Setup step completed | `setupStep` | `account`, `system` | instance | no further fields |
 
 ## shareLink
 
@@ -402,6 +402,7 @@ Every event the [audit log](audit-log.md) records, grouped by the area at the st
 | `space.permissionRemoved` | Space permission removed | `space` | `account`, `system` | organization | `name`, `principalKind`, `principalId`, `role` |
 | `space.personalAdministratorAppointed` | Space admin of a personal space appointed | `space` | `account` | organization | `key`, `accountId` |
 | `space.personalTransferred` | Personal space transferred | `space` | `account` | instance | `previousOwnerId`, `ownerId` |
+| `space.privateGrantsRemoved` | Roles for everyone removed from a private space | `space` | `system` | organization | `name`, `grants` |
 | `space.restored` | Space restored | `space` | `account` | organization | `name`, `key`, `personal` |
 | `space.shortcutsChanged` | Space shortcuts changed | `space` | `account` | organization | `operation`, `shortcutId`, `name`, `url`, `itemId` |
 | `space.unarchived` | Space brought back from the archive | `space` | `account` | organization | `name` |

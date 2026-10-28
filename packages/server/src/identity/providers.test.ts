@@ -8,6 +8,7 @@ import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
+import { createFakeSamlIdp } from "../testing/fakes/saml-idp.js";
 import { deliverPendingMail } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { IdentityProviderService } from "./providers.js";
@@ -288,6 +289,9 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     try {
       const provider = await instanceProvider(new Date(Date.now() + 20 * DAY));
       expect(provider.warnings).toEqual(["credentialExpiring"]);
+      expect(provider.expiringCredentials).toEqual([
+        { purpose: "clientCredential", expiresAt: expect.any(Date) },
+      ]);
       const count = async () =>
         Number(
           (
@@ -314,6 +318,194 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
     } finally {
       await test.pool.query("update instance set owner_account_id = null");
     }
+  });
+
+  describe("credentials of different purposes", () => {
+    async function asOwner<T>(run: () => Promise<T>): Promise<T> {
+      const { owner } = await organization();
+      await test.pool.query("update instance set owner_account_id = $1", [owner]);
+      try {
+        return await run();
+      } finally {
+        await test.pool.query("update instance set owner_account_id = null");
+      }
+    }
+
+    async function entraSaml() {
+      const idp = await createFakeSamlIdp();
+      const { provider } = await test.services.identityProviders.create(SYSTEM, {
+        type: "saml",
+        name: `Entra SAML ${randomUUID().slice(0, 6)}`,
+        config: { preset: "entraId", tenantId: randomUUID(), metadata: { source: "file" } },
+        metadataXml: idp.metadata(),
+      });
+      await test.services.identityProviders.update(SYSTEM, provider.id, {
+        config: { ...provider.config, graphClientId: "graph-client" },
+      });
+      return provider.id;
+    }
+
+    async function expireIn(credentialId: string, days: number) {
+      await test.pool.query(
+        "update identity_provider_credentials set expires_at = now() + make_interval(days => $2) where id = $1",
+        [credentialId, days],
+      );
+    }
+
+    async function signingCredentials(providerId: string): Promise<string[]> {
+      const result = await test.pool.query<{ id: string }>(
+        "select id from identity_provider_credentials where provider_id = $1 and kind = 'samlSigning' order by created_at, id",
+        [providerId],
+      );
+      return result.rows.map((row) => row.id);
+    }
+
+    async function graphSecret(providerId: string, days: number) {
+      return test.services.identityProviders.addCredential(SYSTEM, providerId, {
+        kind: "clientSecret",
+        secret: `graph-secret-${randomUUID()}`,
+        expiresAt: new Date(Date.now() + days * DAY),
+      });
+    }
+
+    async function reminders(providerId: string) {
+      const result = await test.pool.query<{ params: { credential: string | null }; count: number }>(
+        "select params, count from notifications where type = 'identityProvider.credentialExpiring' and target_id = $1 order by created_at, id",
+        [providerId],
+      );
+      return result.rows.map((row) => ({ credential: row.params.credential, count: row.count }));
+    }
+
+    it("warns about an expiring signing certificate although the Graph credential is valid much longer", async () => {
+      await asOwner(async () => {
+        const id = await entraSaml();
+        const [signing] = await signingCredentials(id);
+        if (!signing) throw new Error("No signing certificate was created");
+        await expireIn(signing, 5);
+        await graphSecret(id, 300);
+        const provider = await test.services.identityProviders.get(id);
+        expect(provider.warnings).toContain("credentialExpiring");
+        expect(provider.expiringCredentials).toEqual([
+          { purpose: "signingCertificate", expiresAt: expect.any(Date) },
+        ]);
+        await test.services.identityProviders.sendCredentialReminders();
+        await test.services.identityProviders.sendCredentialReminders();
+        expect(await reminders(id)).toEqual([{ credential: "signingCertificate", count: 2 }]);
+      });
+    });
+
+    it("keeps the reminders of each purpose apart and sends each only once", async () => {
+      await asOwner(async () => {
+        const id = await entraSaml();
+        const [signing] = await signingCredentials(id);
+        if (!signing) throw new Error("No signing certificate was created");
+        await expireIn(signing, 20);
+        const graph = await graphSecret(id, 20);
+        await test.services.identityProviders.sendCredentialReminders();
+        await test.services.identityProviders.sendCredentialReminders();
+        const first = await reminders(id);
+        expect(first.map((row) => row.credential).sort()).toEqual(["graphCredential", "signingCertificate"]);
+        expect(first.every((row) => row.count === 1)).toBe(true);
+        expect((await test.services.identityProviders.get(id)).expiringCredentials).toEqual([
+          { purpose: "signingCertificate", expiresAt: expect.any(Date) },
+          { purpose: "graphCredential", expiresAt: expect.any(Date) },
+        ]);
+        await expireIn(graph.id, 5);
+        await test.services.identityProviders.sendCredentialReminders();
+        await test.services.identityProviders.sendCredentialReminders();
+        const second = await reminders(id);
+        expect(second).toHaveLength(2);
+        expect(second.find((row) => row.credential === "graphCredential")?.count).toBe(2);
+        expect(second.find((row) => row.credential === "signingCertificate")?.count).toBe(1);
+      });
+    });
+
+    it("stays silent about a signing certificate replaced by a newer one, but not about the Graph credential", async () => {
+      await asOwner(async () => {
+        const id = await entraSaml();
+        const [older] = await signingCredentials(id);
+        if (!older) throw new Error("No signing certificate was created");
+        await test.services.identityProviders.addCredential(SYSTEM, id, {
+          kind: "samlSigning",
+          validDays: 730,
+        });
+        await expireIn(older, 5);
+        await graphSecret(id, 10);
+        const provider = await test.services.identityProviders.get(id);
+        expect(provider.expiringCredentials).toEqual([
+          { purpose: "graphCredential", expiresAt: expect.any(Date) },
+        ]);
+        await test.services.identityProviders.sendCredentialReminders();
+        expect(await reminders(id)).toEqual([{ credential: "graphCredential", count: 1 }]);
+      });
+    });
+
+    it("reminds once about two credentials of one purpose that expire at the same moment", async () => {
+      await asOwner(async () => {
+        const id = await entraSaml();
+        await graphSecret(id, 300);
+        await graphSecret(id, 300);
+        await test.pool.query(
+          "update identity_provider_credentials set expires_at = date_trunc('second', now()) + interval '10 days' where provider_id = $1 and kind = 'clientSecret'",
+          [id],
+        );
+        await test.services.identityProviders.sendCredentialReminders();
+        expect(await reminders(id)).toEqual([{ credential: "graphCredential", count: 1 }]);
+      });
+    });
+
+    it("does not count an expired credential as a valid one of its purpose", async () => {
+      await asOwner(async () => {
+        const id = await entraSaml();
+        const [signing] = await signingCredentials(id);
+        if (!signing) throw new Error("No signing certificate was created");
+        await expireIn(signing, 5);
+        const graph = await graphSecret(id, 300);
+        await test.pool.query(
+          "update identity_provider_credentials set expires_at = now() - interval '1 day' where id = $1",
+          [graph.id],
+        );
+        const provider = await test.services.identityProviders.get(id);
+        expect(provider.warnings).toEqual(
+          expect.arrayContaining(["credentialExpiring", "credentialExpired"]),
+        );
+        expect(provider.expiringCredentials).toEqual([
+          { purpose: "signingCertificate", expiresAt: expect.any(Date) },
+        ]);
+      });
+    });
+
+    it("names an expiring CA certificate of a directory next to its bind password", async () => {
+      const { provider } = await test.services.identityProviders.create(SYSTEM, {
+        type: "ldap",
+        name: `Directory ${randomUUID().slice(0, 6)}`,
+        config: {
+          preset: "generic",
+          url: "ldaps://ldap.example.org",
+          bindDn: "cn=lunedo,dc=example,dc=org",
+          userBaseDn: "ou=people,dc=example,dc=org",
+          groupBaseDn: "ou=groups,dc=example,dc=org",
+        },
+        credential: { kind: "bindPassword", secret: "service password" },
+      });
+      await test.pool.query(
+        `insert into identity_provider_ca_certificates (provider_id, certificates, fingerprint, subject, expires_at)
+         values ($1, 'certificate', '12:34', 'CN=Root CA', now() + interval '10 days')`,
+        [provider.id],
+      );
+      const expiring = await test.services.identityProviders.get(provider.id);
+      expect(expiring.warnings).toEqual(["caCertificateExpiring"]);
+      expect(expiring.expiringCredentials).toEqual([
+        { purpose: "caCertificate", expiresAt: expect.any(Date) },
+      ]);
+      await test.pool.query(
+        "update identity_provider_ca_certificates set expires_at = now() + interval '400 days' where provider_id = $1",
+        [provider.id],
+      );
+      const renewed = await test.services.identityProviders.get(provider.id);
+      expect(renewed.warnings).toEqual([]);
+      expect(renewed.expiringCredentials).toEqual([]);
+    });
   });
 
   it("assigns each e-mail domain to at most one provider, regardless of case", async () => {

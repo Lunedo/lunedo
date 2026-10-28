@@ -6,7 +6,12 @@ import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useOrganizationState, useSession } from "../shell/shell-context.js";
 import type { Grant } from "../spaces/access/holders.js";
-import { GrantsField, VisibilityField, WhoGetsAccess } from "../spaces/access/space-access-fields.js";
+import {
+  GrantsField,
+  VisibilityField,
+  WhoGetsAccess,
+  withoutEveryone,
+} from "../spaces/access/space-access-fields.js";
 import { type SpaceVisibility, spaceDefaultsQuery } from "../spaces/space-queries.js";
 import { importTitle } from "./import-labels.js";
 import { acceptImport, type ImportView, importKeys, proposalQuery, reportQuery } from "./imports-api.js";
@@ -94,7 +99,8 @@ function AcceptForm({
         role: grant.role,
         ...(grant.name ? { name: grant.name } : {}),
       }));
-    setGrants([...others, ...reviewers]);
+    const initial = [...others, ...reviewers];
+    setGrants(knowledgeBase || defaults.data.visibility === "private" ? withoutEveryone(initial) : initial);
   }
 
   if (defaults.isPending) return <Skeleton className="h-control-field w-full" />;
@@ -152,7 +158,10 @@ function AcceptForm({
       ) : (
         <VisibilityField
           value={visibility}
-          onChange={setVisibility}
+          onChange={(next) => {
+            setVisibility(next);
+            if (next === "private") setGrants((current) => withoutEveryone(current));
+          }}
           organizationName={organization?.name ?? ""}
         />
       )}
@@ -162,6 +171,7 @@ function AcceptForm({
         grants={grants}
         onChange={setGrants}
         ownId={ownId}
+        everyone={!knowledgeBase && visibility !== "private"}
         hint={t(imported === false ? "imports.accept.defaultsHint" : "imports.accept.importedHint")}
       />
       <WhoGetsAccess

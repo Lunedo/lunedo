@@ -11,7 +11,7 @@ import { accountSubject, clientSubject, type RateLimiter } from "../auth/throttl
 import { generateToken, hashToken, isWellFormedToken } from "../auth/tokens.js";
 import type { Database, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
-import { type DomainProvider, providerOfEmailDomain } from "../identity/managed.js";
+import { type DomainProvider, holdEmailDomain, providerOfEmailDomain } from "../identity/managed.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { Language } from "../mail/templates.js";
@@ -414,6 +414,7 @@ export class InvitationService {
         if (kind === "collaborator") {
           throw new OrganizationError("invalidInvitation", "Collaborators join with their existing account");
         }
+        await holdEmailDomain(tx, invitation.email);
         provider = portalSpaceId ? null : await providerOfEmailDomain(tx, invitation.email);
         if (!input.name || (!provider && !input.password)) {
           throw new OrganizationError(
@@ -603,6 +604,7 @@ export class InvitationService {
       ) {
         throw new InvalidTokenError();
       }
+      await holdEmailDomain(tx, registration.email);
       const provider = await providerOfEmailDomain(tx, registration.email);
       if (provider) throw managedDomain(provider);
       const account = await this.#accounts.create(tx, {

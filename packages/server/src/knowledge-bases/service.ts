@@ -19,7 +19,7 @@ import type { PeopleService } from "../spaces/people.js";
 import type { SpacePermissionService } from "../spaces/permissions.js";
 import type { ArticleType, KnowledgeBaseAudience } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
-import { audienceVisibility, type Space, type SpaceService } from "../spaces/spaces.js";
+import { audienceVisibility, refuseBroadGrantsOf, type Space, type SpaceService } from "../spaces/spaces.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { PageTemplate, TemplateService } from "../templates/templates.js";
 import { folderIds, folderTitles } from "./folders.js";
@@ -296,6 +296,7 @@ export class KnowledgeBaseService {
       if (change.audience === "groups")
         await this.#replaceGroups(tx, actor, spaceId, before.groups, groupIds);
       if (change.audience !== space.audience) {
+        if (audienceVisibility(change.audience) === "private") await refuseBroadGrantsOf(tx, spaceId);
         await tx.execute(sql`
           update spaces set audience = ${change.audience}, visibility = ${audienceVisibility(change.audience)},
             updated_at = now()

@@ -339,6 +339,29 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       ]),
     );
     expect(JSON.stringify(events.rows)).not.toMatch(/violet tram umbrella/);
+    expect(events.rows.filter((row) => row.actor_type === "anonymous")).toEqual([]);
+  });
+
+  it("shows the setup assistant as actor until the owner exists and the owner afterwards", async () => {
+    const actorOf = async (name: string) =>
+      (await get(`/api/v1/instance/audit-events?name=${name}&limit=1`)).json().items[0]?.actor;
+    const setupAssistant = {
+      type: "system",
+      id: "setupAssistant",
+      name: null,
+      former: false,
+      serviceAccount: false,
+      token: null,
+    };
+    expect(await actorOf("setup.sessionStarted")).toEqual(setupAssistant);
+    expect(await actorOf("account.created")).toEqual(setupAssistant);
+    expect(await actorOf("setup.keyBackupDownloaded")).toMatchObject({
+      type: "account",
+      name: "Olivia Owner",
+    });
+    expect(await actorOf("setup.completed")).toMatchObject({ type: "account", name: "Olivia Owner" });
+    const csv = (await get("/api/v1/instance/audit-events/export?name=account.created")).body;
+    expect(csv).toMatch(/\r\n"[^"]+","setupAssistant","account\.created",/);
   });
 
   it("lets the owner sign in with password and TOTP afterwards", async () => {

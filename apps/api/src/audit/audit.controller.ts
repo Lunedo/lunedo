@@ -112,7 +112,7 @@ function csvRow(entry: AuditEntry): string {
     .join("; ");
   const readableCells = [
     entry.occurredAt,
-    view.actor.name ?? view.actor.type,
+    view.actor.name ?? (view.actor.type === "system" ? view.actor.id : null) ?? view.actor.type,
     entry.name,
     view.target.name ?? view.target.id,
     view.scope.name ?? view.scope.type,

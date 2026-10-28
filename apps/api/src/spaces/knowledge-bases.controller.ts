@@ -571,6 +571,7 @@ export class KnowledgeBasesController {
       "invalidHolder",
       "portalAccountReaderOnly",
       "selfExtension",
+      "privateSpaceBroadGrant",
     ],
   })
   async changeAudience(

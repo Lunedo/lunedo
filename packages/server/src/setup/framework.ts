@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { Principal } from "../accounts/principal.js";
 import type { Transaction } from "../database/database.js";
 
 export interface SetupActionResult {
@@ -8,6 +9,7 @@ export interface SetupActionResult {
 
 export interface SetupActionContext {
   tx: Transaction;
+  actor: Principal;
   complete(): Promise<void>;
   reopen(): Promise<void>;
   state: Record<string, unknown>;

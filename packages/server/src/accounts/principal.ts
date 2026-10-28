@@ -19,7 +19,14 @@ export interface TokenGrant {
 export type Principal =
   | { type: "account"; id: string; token?: TokenGrant }
   | { type: "anonymous" }
-  | { type: "system" };
+  | { type: "system"; id?: SystemActorId };
+
+export const systemActorIds = ["setupAssistant"] as const;
+export type SystemActorId = (typeof systemActorIds)[number];
+
+export function isSystemActorId(value: unknown): value is SystemActorId {
+  return (systemActorIds as readonly unknown[]).includes(value);
+}
 
 export type PrincipalType = Principal["type"];
 
@@ -27,6 +34,7 @@ export const principalTypes = ["account", "anonymous", "system"] as const satisf
 
 export const ANONYMOUS: Principal = { type: "anonymous" };
 export const SYSTEM: Principal = { type: "system" };
+export const SETUP_ASSISTANT: Principal = { type: "system", id: "setupAssistant" };
 
 export function accountPrincipal(id: string): { type: "account"; id: string } {
   return { type: "account", id };

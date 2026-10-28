@@ -5,6 +5,14 @@ export const identityProviderTypes = ["oidc", "saml", "ldap"] as const;
 export type IdentityProviderType = (typeof identityProviderTypes)[number];
 export const identityProviderPresets = ["entraId", "google", "generic", "adfs", "activeDirectory"] as const;
 export type IdentityProviderPreset = (typeof identityProviderPresets)[number];
+export const identityProviderCredentialPurposes = [
+  "clientCredential",
+  "signingCertificate",
+  "graphCredential",
+  "bindPassword",
+  "caCertificate",
+] as const;
+export type IdentityProviderCredentialPurpose = (typeof identityProviderCredentialPurposes)[number];
 
 export const idTokenAlgorithms = [
   "RS256",

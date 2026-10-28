@@ -259,13 +259,13 @@
     "credentialStatus": {
       "none": "No credential",
       "expired": "Credential expired",
-      "expiring": "Expires {date}",
+      "expiring": "{purpose, select, signingCertificate {Signing certificate expires {date}} graphCredential {Graph credential expires {date}} other {Expires {date}}}",
       "validUntil": "Valid until {date}",
       "noExpiry": "No expiry date"
     },
     "warnings": {
-      "expiring": "The credential of {name} expires soon: {status}.",
-      "expiringAction": "Create a new credential at the provider and add it here before then, or sign-in through this provider stops working.",
+      "expiring": "{purpose, select, signingCertificate {The signing certificate for {name}} graphCredential {The Microsoft Graph credential of {name}} other {The credential of {name}}} expires soon, on {date}.",
+      "expiringAction": "{purpose, select, signingCertificate {Add a new signing certificate here and register it with the identity provider before then, or sign-in through this provider stops working.} graphCredential {Create a new client secret or certificate in the app registration and add it here before then, or Lunedo can no longer read groups and synchronize accounts through Microsoft Graph.} other {Create a new credential at the provider and add it here before then, or sign-in through this provider stops working.}}",
       "stopped": "Sign-in through {name} does not work: {status}.",
       "stoppedAction": "Add a valid credential from the provider, then test the sign-in.",
       "renew": "Renew credential",
@@ -1577,6 +1577,7 @@
     "alreadyAdministrator": "You already are space admin of this space. Open it from the list.",
     "notInCleanup": "Someone joined the space again or its waiting period has not passed yet. Reload the list.",
     "confidentialVisibility": "A confidential space is always private. Keep it private, or move the content into a space that is not confidential.",
+    "privateSpaceBroadGrant": "A private space cannot give a role to all members of the organization or to all users of the instance. Remove these entries under Permissions, or give the role to groups or people instead, then try again.",
     "confidentialScope": "In a confidential space, a link can only be shared with specific people. Choose them under “Who can open it”.",
     "seriesEnded": "Bring the series back from the archive to plan meetings or add topics.",
     "meetingClosed": "Someone closed this meeting in the meantime. Reload the page.",
@@ -3273,7 +3274,7 @@
     },
     "types": {
       "identityProvider": {
-        "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working.",
+        "credentialExpiring": "{credential, select, signingCertificate {The signing certificate for {providerName} expires on {expiresAt}. Add a new one and register it with the provider before then, or sign-in through it stops working.} graphCredential {The Microsoft Graph credential of {providerName} expires on {expiresAt}. Add a new one before then, or Lunedo can no longer read groups through Microsoft Graph.} other {The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working.}}",
         "syncHeld": "The synchronization with {providerName} would have deactivated {deactivations} of {accounts} accounts at once and stopped. Check the provider, then confirm the run in the sync log if the people really left."
       },
       "account": {
@@ -4579,6 +4580,9 @@
       "anonymous": "Anonymous",
       "group": "Group"
     },
+    "systemActors": {
+      "setupAssistant": "Setup assistant"
+    },
     "eventsTitle": "Events",
     "events": {
       "identity": {
@@ -4765,6 +4769,7 @@
         "permissionGranted": "Space permission granted",
         "permissionChanged": "Space permission changed",
         "permissionRemoved": "Space permission removed",
+        "privateGrantsRemoved": "Roles for everyone removed from a private space",
         "administratorAppointed": "Space admin appointed",
         "personalTransferred": "Personal space transferred",
         "deleted": "Space deleted",

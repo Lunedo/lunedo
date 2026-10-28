@@ -45,6 +45,27 @@ describe("mail templates", () => {
     expect(german.subject).toBe("Ein Wiederherstellungscode wurde für Docs verwendet");
     expect(german.html).toContain('<html lang="de">');
   });
+
+  it("name the kind of an expiring provider credential", () => {
+    const render = (language: "en" | "de", credential: "signingCertificate" | "graphCredential" | null) =>
+      renderMail(
+        "providerCredentialExpiring",
+        language,
+        { instanceName: "Docs", providerName: "Entra", date: "1 Nov 2026", credential },
+        "a@example.org",
+      );
+    expect(render("en", "signingCertificate").subject).toBe(
+      "Signing certificate for Entra on Docs expires soon",
+    );
+    expect(render("en", "graphCredential").text).toContain("through Microsoft Graph expires on 1 Nov 2026");
+    expect(render("en", null).subject).toBe("Credential of Entra on Docs expires soon");
+    expect(render("de", "signingCertificate").subject).toBe(
+      "Signaturzertifikat für Entra auf Docs läuft bald ab",
+    );
+    expect(render("de", "graphCredential").subject).toBe(
+      "Zugangsdaten für Microsoft Graph von Entra auf Docs laufen bald ab",
+    );
+  });
 });
 
 describe("mail layout", () => {

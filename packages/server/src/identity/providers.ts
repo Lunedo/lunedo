@@ -7,6 +7,7 @@ import {
   ENTRA_AUTHORITY,
   GOOGLE_ISSUER,
   googleServiceAccountKeySchema,
+  type IdentityProviderCredentialPurpose,
   type IdentityProviderType,
   identityProviderNameSchema,
   type LdapConfig,
@@ -45,7 +46,7 @@ import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";
 import type { GroupMappingService } from "./groups.js";
 import { ldapCapabilities } from "./ldap.js";
-import { managedAccountCounts, refreshManagedAccounts } from "./managed.js";
+import { lockProviderDomains, managedAccountCounts, refreshManagedAccounts } from "./managed.js";
 import { oidcCapabilities, oidcIssuer } from "./oidc.js";
 import { samlCapabilities, samlPaths } from "./saml.js";
 import {
@@ -57,6 +58,7 @@ import {
 } from "./saml-metadata.js";
 import {
   identities,
+  identityCredentialKinds,
   identityProviderCaCertificates,
   identityProviderCredentials,
   identityProviderDomains,
@@ -103,6 +105,11 @@ const DISCOVERY_TIMEOUT_MS = 10_000;
 
 export type CredentialKind = "clientSecret" | "certificate" | "samlSigning" | "bindPassword";
 
+export interface ExpiringCredential {
+  purpose: IdentityProviderCredentialPurpose;
+  expiresAt: Date;
+}
+
 export interface CredentialSummary {
   id: string;
   kind: CredentialKind;
@@ -145,6 +152,7 @@ interface ProviderSummaryBase {
   setupComplete: boolean;
   groupsClaimMissingSince: Date | null;
   warnings: ProviderWarning[];
+  expiringCredentials: ExpiringCredential[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -203,6 +211,12 @@ function groupOf(kind: CredentialKind): CredentialGroup {
   if (kind === "samlSigning") return "signing";
   if (kind === "bindPassword") return "bind";
   return "client";
+}
+
+function purposeOf(type: IdentityProviderType, group: CredentialGroup): IdentityProviderCredentialPurpose {
+  if (group === "signing") return "signingCertificate";
+  if (group === "bind") return "bindPassword";
+  return type === "saml" ? "graphCredential" : "clientCredential";
 }
 
 function primaryGroup(type: IdentityProviderType): CredentialGroup {
@@ -317,14 +331,21 @@ function groupsClaimNameOf(config: OidcConfig | SamlConfig | LdapConfig): string
   return "metadata" in config && "attributes" in config ? config.attributes.groups : null;
 }
 
-function warningsOf(credentials: CredentialSummary[], now: Date): ProviderWarning[] {
-  const usable = credentials.filter((credential) => !credential.expiresAt || credential.expiresAt > now);
-  if (credentials.length === 0) return ["noCredential"];
-  if (usable.length === 0) return ["credentialExpired"];
+function healthOf(
+  credentials: CredentialSummary[],
+  now: Date,
+): { warning: ProviderWarning | null; expiresAt: Date | null } {
+  if (credentials.length === 0) return { warning: "noCredential", expiresAt: null };
   const latest = Math.max(
-    ...usable.map((credential) => credential.expiresAt?.getTime() ?? Number.POSITIVE_INFINITY),
+    ...credentials
+      .map((credential) => credential.expiresAt?.getTime() ?? Number.POSITIVE_INFINITY)
+      .filter((expiresAt) => expiresAt > now.getTime()),
   );
-  return latest < now.getTime() + WARNING_DAYS * DAY_MS ? ["credentialExpiring"] : [];
+  if (latest === Number.NEGATIVE_INFINITY) return { warning: "credentialExpired", expiresAt: null };
+  if (latest < now.getTime() + WARNING_DAYS * DAY_MS) {
+    return { warning: "credentialExpiring", expiresAt: new Date(latest) };
+  }
+  return { warning: null, expiresAt: null };
 }
 
 export class IdentityProviderService {
@@ -455,6 +476,7 @@ export class IdentityProviderService {
   }
 
   async #syncDomains(tx: Transaction, providerId: string, domains: readonly string[]): Promise<void> {
+    await lockProviderDomains(tx, providerId, domains);
     await tx.delete(identityProviderDomains).where(eq(identityProviderDomains.providerId, providerId));
     const unique = [...new Set(domains)].sort();
     if (unique.length === 0) return;
@@ -582,7 +604,7 @@ export class IdentityProviderService {
       if (row.type === "saml") {
         const config = samlConfigSchema.parse(row.config);
         const stored = metadata.find((entry) => entry.providerId === row.id);
-        const warnings = this.#credentialWarnings("saml", config, own, now);
+        const { warnings, expiring } = this.#credentialHealth("saml", config, own, now);
         if (stored?.refreshFailedAt) warnings.push("metadataRefreshFailed");
         if (row.groupsClaimMissingSince) warnings.push("groupsClaimMissing");
         const paths = samlPaths(row.id);
@@ -597,6 +619,7 @@ export class IdentityProviderService {
             own.some((credential) => groupOf(credential.kind) === "client"),
           ),
           warnings,
+          expiringCredentials: expiring,
           saml: {
             acsPath: paths.acs,
             metadataPath: paths.metadata,
@@ -616,9 +639,10 @@ export class IdentityProviderService {
       if (row.type === "ldap") {
         const config = ldapConfigSchema.parse(row.config);
         const authority = authorities.find((entry) => entry.providerId === row.id);
-        const warnings = this.#credentialWarnings("ldap", config, own, now);
+        const { warnings, expiring } = this.#credentialHealth("ldap", config, own, now);
         if (authority && authority.expiresAt.getTime() < now.getTime() + WARNING_DAYS * DAY_MS) {
           warnings.push("caCertificateExpiring");
+          expiring.push({ purpose: "caCertificate", expiresAt: authority.expiresAt });
         }
         return {
           ...base,
@@ -627,6 +651,7 @@ export class IdentityProviderService {
           issuer: config.url,
           capabilities: ldapCapabilities(config),
           warnings,
+          expiringCredentials: expiring,
           ldap: {
             caCertificate: authority
               ? {
@@ -639,38 +664,43 @@ export class IdentityProviderService {
         };
       }
       const config = oidcConfigSchema.parse(row.config);
+      const { warnings, expiring } = this.#credentialHealth("oidc", config, own, now);
+      if (row.groupsClaimMissingSince) warnings.push("groupsClaimMissing");
       return {
         ...base,
         type: "oidc",
         config,
         issuer: oidcIssuer(config),
         capabilities: oidcCapabilities(config, directoryKey),
-        warnings: [
-          ...warningsOf(own, now),
-          ...(row.groupsClaimMissingSince ? (["groupsClaimMissing"] as const) : []),
-        ],
+        warnings,
+        expiringCredentials: expiring,
       };
     });
   }
 
-  #credentialWarnings(
+  #credentialHealth(
     type: IdentityProviderType,
     config: OidcConfig | SamlConfig | LdapConfig,
     credentials: CredentialSummary[],
     now: Date,
-  ): ProviderWarning[] {
-    const warnings = new Set<ProviderWarning>(
-      warningsOf(
-        credentials.filter((credential) => groupOf(credential.kind) === primaryGroup(type)),
+  ): { warnings: ProviderWarning[]; expiring: ExpiringCredential[] } {
+    const warnings = new Set<ProviderWarning>();
+    const expiring: ExpiringCredential[] = [];
+    const check = (group: CredentialGroup) => {
+      const health = healthOf(
+        credentials.filter((credential) => groupOf(credential.kind) === group),
         now,
-      ),
-    );
+      );
+      if (health.warning) warnings.add(health.warning);
+      if (health.expiresAt) expiring.push({ purpose: purposeOf(type, group), expiresAt: health.expiresAt });
+    };
+    check(primaryGroup(type));
     if (type === "saml" && config.preset === "entraId" && "graphClientId" in config) {
       const graph = credentials.filter((credential) => groupOf(credential.kind) === "client");
       if (!config.graphClientId || graph.length === 0) warnings.add("noGraphCredential");
-      else for (const warning of warningsOf(graph, now)) warnings.add(warning);
+      else check("client");
     }
-    return [...warnings];
+    return { warnings: [...warnings], expiring };
   }
 
   get allowsInsecure(): boolean {
@@ -868,6 +898,7 @@ export class IdentityProviderService {
     if (metadataXml) this.#parseMetadata(metadataXml);
     const draftId = input.draftId ?? null;
     const created = await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, draftId, config.domains);
       let row: typeof identityProviders.$inferSelect | undefined;
       let signing = false;
       if (draftId) {
@@ -1031,6 +1062,7 @@ export class IdentityProviderService {
 
   async completeSetup(actor: Principal, id: string): Promise<ProviderSummary> {
     await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, id);
       const current = await this.#find(tx, id, true);
       if (current.setupCompletedAt) return;
       await tx
@@ -1108,6 +1140,7 @@ export class IdentityProviderService {
           ? await this.#loadMetadata(config as SamlConfig, null)
           : null;
     await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, id, config.domains);
       const current = await this.#find(tx, id, true);
       const name = input.name === undefined ? current.name : identityProviderNameSchema.parse(input.name);
       if (config.preset !== current.preset) {
@@ -1391,6 +1424,7 @@ export class IdentityProviderService {
 
   async remove(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, id);
       const current = await this.#find(tx, id, true, "include");
       const linked = await this.#linked(tx, id);
       const linkedAccounts = new Set(linked.map((identity) => identity.accountId)).size;
@@ -1825,16 +1859,24 @@ export class IdentityProviderService {
             .where(and(eq(identityProviderCredentials.id, id), isNull(column)))
             .returning({
               providerId: identityProviderCredentials.providerId,
+              kind: identityProviderCredentials.kind,
               expiresAt: identityProviderCredentials.expiresAt,
             });
           if (!marked?.expiresAt) return null;
+          const group = groupOf(marked.kind);
+          const kinds = identityCredentialKinds.filter((kind) => groupOf(kind) === group);
           const newer = await tx.execute(sql`
             select 1 from identity_provider_credentials
             where provider_id = ${marked.providerId} and id <> ${id}
-              and (expires_at is null or expires_at > ${marked.expiresAt})`);
+              and kind in (${sql.join(
+                kinds.map((kind) => sql`${kind}`),
+                sql`, `,
+              )})
+              and (expires_at is null or expires_at > ${marked.expiresAt}
+                or (expires_at = ${marked.expiresAt} and id > ${id}))`);
           if (newer.rows.length > 0) return null;
           const [provider] = await tx
-            .select({ id: identityProviders.id, name: identityProviders.name })
+            .select({ id: identityProviders.id, name: identityProviders.name, type: identityProviders.type })
             .from(identityProviders)
             .where(eq(identityProviders.id, marked.providerId));
           if (!provider) return null;
@@ -1848,6 +1890,7 @@ export class IdentityProviderService {
               providerName: provider.name,
               expiresAt: marked.expiresAt.toISOString(),
               providerId: provider.id,
+              credential: purposeOf(provider.type, group),
             },
           });
         });

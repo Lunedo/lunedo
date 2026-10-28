@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { isUuid, type LdapConfig } from "@lunedo/shared";
 import { AndFilter, EqualityFilter, escapeFilter, Filter, FilterParser, ResultCodeError } from "ldapts";
 import {
@@ -45,7 +46,6 @@ const AD_FAILURES: Record<string, DirectorySignInFailure> = {
   "533": "accountDisabled",
   "701": "accountDisabled",
   "773": "passwordMustChange",
-  "775": "accountLocked",
 };
 
 export function ldapCapabilities(_config: LdapConfig): ProviderCapabilities {
@@ -390,7 +390,7 @@ export class LdapAdapter implements IdentityProviderAdapter {
     }
     return this.#serviceSession(provider, credentials, async (session, ldap) => {
       const user = await this.#findUser(session, ldap, this.#signInFilter(ldap, input.signInName.trim()));
-      if (!user) throw new DirectorySignInError("invalidCredentials", "No single directory entry matches");
+      if (!user) return this.#refuseUnknown(ldap, input.password);
       await this.#bindAs(ldap, user.dn, input.password);
       if (user.disabled)
         throw new DirectorySignInError("accountDisabled", "The directory account is disabled");
@@ -403,6 +403,15 @@ export class LdapAdapter implements IdentityProviderAdapter {
       }
       return { profile: { ...user.profile, groups }, groupsFailed };
     });
+  }
+
+  async #refuseUnknown(provider: LdapProviderDefinition, password: string): Promise<never> {
+    try {
+      await this.#bindAs(provider, `cn=${randomUUID()},${provider.config.userBaseDn}`, password);
+    } catch (error) {
+      if (!(error instanceof DirectorySignInError)) throw error;
+    }
+    throw new DirectorySignInError("invalidCredentials", "The directory refused the password");
   }
 
   async #bindAs(provider: LdapProviderDefinition, dn: string, password: string): Promise<void> {

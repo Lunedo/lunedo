@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { chatChannelKinds, chatFailureReasons } from "./chat.js";
+import { identityProviderCredentialPurposes } from "./identity-providers.js";
 import { idSchema } from "./validation.js";
 
 export const UNREAD_COUNT_CAP = 100;
@@ -108,6 +109,7 @@ export const notificationParamSchemas = {
     providerName: z.string(),
     expiresAt: instant,
     providerId: idSchema,
+    credential: z.enum(identityProviderCredentialPurposes).nullable().default(null),
   }),
   "identityProvider.syncHeld": z.object({
     providerName: z.string(),

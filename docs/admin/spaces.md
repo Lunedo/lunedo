@@ -19,7 +19,9 @@ New spaces start with the organization's default permissions (`spaces.defaultPer
 1. Open **Settings › Organization › Content › Spaces** and the tab **Defaults for new spaces**.
 2. Under **Default permissions for new spaces**, choose the visibility and add or remove holders with their roles.
 
-The creator of a space always becomes its space admin, sees the defaults in the create dialog and can change them there. Changing the defaults never changes existing spaces.
+The creator of a space always becomes its space admin, sees the defaults in the create dialog and can change them there. Changing the defaults never changes existing spaces. With the visibility `private`, the defaults give roles to people and groups only; choosing it removes the roles for all members of the organization and all internal users of the instance.
+
+When Lunedo is updated, existing private spaces that still gave a role to all members of the organization or to all internal users of the instance lose these roles. The audit log of the organization records this once per space as **Roles for everyone removed from a private space**, by the system.
 
 ## Spaces without a space admin
 

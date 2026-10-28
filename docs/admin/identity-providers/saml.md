@@ -44,6 +44,7 @@ Lunedo further checks every response:
 - The response must answer the request Lunedo sent, unless sign-in started at the identity provider is allowed, be addressed to Lunedo's assertion consumer service URL and contain exactly one assertion.
 - The assertion must come from the identity provider's entity ID, be valid at the time of sign-in, with a tolerance of two minutes for clock differences, and be meant for Lunedo.
 - Each assertion is accepted once.
+- A response that arrives without a sign-in started in Lunedo is checked completely when it arrives. Lunedo keeps it only if it passes every check above; otherwise the sign-in page shows that the identity provider answered in an unexpected way.
 
 With **Require proof from the provider**, Lunedo compares the accepted proof values with the authentication context classes of the assertion.
 

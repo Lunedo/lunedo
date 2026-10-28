@@ -52,6 +52,9 @@ function actorName(t: TFunction, item: AuditItem): string {
   if (item.peopleHidden && item.actor.type === "account") return t("audit.hiddenActor");
   if (item.actor.former && item.actor.id) return formerUser(t, item.actor.id);
   if (item.actor.type === "account") return t("audit.deletedAccount");
+  const systemActor = `audit.systemActors.${item.actor.id}`;
+  if (item.actor.type === "system" && item.actor.id && has(t, systemActor))
+    return translateKey(t, systemActor);
   return translateKey(t, `audit.actorTypes.${item.actor.type}`);
 }
 

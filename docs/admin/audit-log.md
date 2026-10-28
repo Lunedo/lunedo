@@ -4,7 +4,7 @@ The audit log records every action that affects security, access or configuratio
 
 ## What an entry holds
 
-Each entry records who acted (an account, a service account or token, anonymous or the system), the action, its target, the time, the request ID, the client address and the browser. Setting changes record the setting, its level, the previous and the new value and the lock state. Updates of organizations, groups, roles, service accounts and API tokens record the previous values.
+Each entry records who acted (an account, a service account or token, the setup assistant, anonymous or the system), the action, its target, the time, the request ID, the client address and the browser. Setup steps taken before the owner account exists show the **Setup assistant** as actor; from the moment the owner account exists, they show the owner. Setting changes record the setting, its level, the previous and the new value and the lock state. Updates of organizations, groups, roles, service accounts and API tokens record the previous values.
 
 Each entry also keeps the names at the time of the event: of the acting account, of the target, of the organization and of every account, group or role it refers to. Renaming them later does not change the entry.
 

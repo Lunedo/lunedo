@@ -15,7 +15,7 @@ import {
   roleLabel,
 } from "../access/holders.js";
 import { ImpactConfirmDialog } from "../access/impact.js";
-import { type SpaceRole, spaceKeys } from "../space-queries.js";
+import { type SpaceRole, type SpaceVisibility, spaceKeys } from "../space-queries.js";
 
 type Chosen = Holder & { name: string };
 
@@ -31,6 +31,7 @@ export function AddHoldersDialog({
     organizationName: string | null;
     personal: boolean;
     confidential: boolean;
+    visibility: SpaceVisibility;
   };
   existing: readonly string[];
   open: boolean;
@@ -133,6 +134,7 @@ export function AddHoldersDialog({
               organizationName={space.organizationName}
               personal={space.personal}
               peopleOnly={space.confidential}
+              everyone={space.visibility !== "private"}
               exclude={[...existing, ...chosen.map(holderValue)]}
               value={null}
               onValueChange={(holder) => {

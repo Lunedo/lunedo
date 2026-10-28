@@ -627,19 +627,19 @@ export const auditCatalog = {
     visibility: "organization",
   }),
   "setup.sessionStarted": event({
-    actor: ["anonymous"],
+    actor: ["account", "system"],
     target: "instance",
     fields: z.object({}),
     visibility: "instance",
   }),
   "setup.stepCompleted": event({
-    actor: ["anonymous", "system"],
+    actor: ["account", "system"],
     target: "setupStep",
     fields: z.object({}),
     visibility: "instance",
   }),
   "setup.keyBackupDownloaded": event({
-    actor: ["anonymous"],
+    actor: ["account"],
     target: "instance",
     fields: z.object({
       masterKeyVersions: z.array(z.number().int()),
@@ -648,7 +648,7 @@ export const auditCatalog = {
     visibility: "instance",
   }),
   "setup.completed": event({
-    actor: ["anonymous", "system"],
+    actor: ["account", "system"],
     target: "instance",
     fields: z.object({ through: z.enum(["assistant", "configuration"]) }),
     visibility: "instance",
@@ -1316,6 +1316,22 @@ export const auditCatalog = {
     actor: ["account", "system"],
     target: "space",
     fields: spacePermissionFields,
+    visibility: "organization",
+  }),
+  "space.privateGrantsRemoved": event({
+    actor: ["system"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      grants: z
+        .array(
+          z.object({
+            principalKind: z.enum(["organizationMembers", "instanceUsers"]),
+            role: z.enum(spaceRoleNames),
+          }),
+        )
+        .min(1),
+    }),
     visibility: "organization",
   }),
   "space.administratorAppointed": event({

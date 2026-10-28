@@ -1609,15 +1609,21 @@ export class ImportService {
       );
       const current = space.rows[0];
       if (!current) throw new ImportError("importNotInReview", "The quarantine space is missing.");
-      const target = { id: spaceId, organizationId: row.organization_id, ownerId: null, confidential: false };
+      const knowledgeBase = current.audience !== null;
+      const visibility = knowledgeBase ? "private" : input.visibility;
+      const target = {
+        id: spaceId,
+        organizationId: row.organization_id,
+        ownerId: null,
+        confidential: false,
+        visibility,
+      };
       const grants = mergeGrants(
         [...input.grants],
         [{ principalKind: "account", principalId: row.importer_id, role: "admin" }],
       );
       for (const grant of grants) await this.#holders.validate(tx, target, grant, actor);
       await tx.execute(sql`delete from space_permissions where space_id = ${spaceId}`);
-      const knowledgeBase = current.audience !== null;
-      const visibility = knowledgeBase ? "private" : input.visibility;
       await tx.execute(sql`
         update spaces set quarantined = false, visibility = ${visibility}, updated_at = now(),
           archived_at = ${row.archived ? sql`now()` : sql`null`}, archived_by = ${row.archived ? row.importer_id : null}

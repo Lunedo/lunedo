@@ -163,3 +163,14 @@ export async function createMigratedDatabase(
   }
   return createTemporaryDatabase(baseUrl, prefix, await template);
 }
+
+export async function waitForLockWait(pool: Pick<pg.Pool, "query">): Promise<boolean> {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const waiting = await pool.query<{ count: string }>(
+      "select count(*) as count from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
+    );
+    if (Number(waiting.rows[0]?.count) > 0) return true;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return false;
+}

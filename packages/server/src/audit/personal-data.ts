@@ -46,6 +46,8 @@ function aad(position: SealedPosition, subjectId: string): Buffer {
   );
 }
 
+const PRELOAD_BATCH = 1000;
+
 export class PersonalDataMissingKeyError extends Error {
   override name = "PersonalDataMissingKeyError";
 
@@ -70,12 +72,42 @@ export class AuditSealer {
     return row ? Buffer.from(this.#encryption.decryptString(row.key, keyContext(subjectId)), "base64") : null;
   }
 
-  async #key(tx: Transaction, subjectId: string, accountId: string | null): Promise<Buffer> {
+  #cache(tx: Transaction): Map<string, Buffer> {
     let cache = this.#transactionKeys.get(tx);
     if (!cache) {
       cache = new Map();
       this.#transactionKeys.set(tx, cache);
     }
+    return cache;
+  }
+
+  async preload(tx: Transaction, subjects: ReadonlyMap<string, string | null>): Promise<void> {
+    const cache = this.#cache(tx);
+    const wanted = [...subjects.keys()].filter((subjectId) => !cache.has(subjectId)).sort();
+    for (let start = 0; start < wanted.length; start += PRELOAD_BATCH) {
+      const batch = wanted.slice(start, start + PRELOAD_BATCH);
+      const stored = await this.#keys(tx, batch);
+      const missing = batch.filter((subjectId) => !stored.has(subjectId));
+      if (missing.length > 0) {
+        await tx
+          .insert(auditSubjectKeys)
+          .values(
+            missing.map((subjectId) => {
+              const fresh = randomBytes(KEY_LENGTH);
+              const key = this.#encryption.encrypt(fresh.toString("base64"), keyContext(subjectId));
+              fresh.fill(0);
+              return { subjectId, accountId: subjects.get(subjectId) ?? null, key };
+            }),
+          )
+          .onConflictDoNothing();
+        for (const [subjectId, key] of await this.#keys(tx, missing)) stored.set(subjectId, key);
+      }
+      for (const [subjectId, key] of stored) cache.set(subjectId, key);
+    }
+  }
+
+  async #key(tx: Transaction, subjectId: string, accountId: string | null): Promise<Buffer> {
+    const cache = this.#cache(tx);
     const cached = cache.get(subjectId);
     if (cached) return cached;
     let key = await this.#stored(tx, subjectId);

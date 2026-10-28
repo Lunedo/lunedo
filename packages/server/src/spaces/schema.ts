@@ -196,6 +196,14 @@ export const spacePermissions = pgTable(
   ],
 );
 
+export const privateSpaceGrantRemovals = pgTable("private_space_grant_removals", {
+  spaceId: uuid().primaryKey(),
+  organizationId: uuid().notNull(),
+  name: text().notNull(),
+  grants: jsonb().notNull(),
+  createdAt: timestampColumn().notNull().defaultNow(),
+});
+
 export const treeItemNumbers = pgSequence("tree_item_numbers", { startWith: 1000, minValue: 1000 });
 
 export const treeItems = pgTable(

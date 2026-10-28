@@ -261,6 +261,7 @@ export {
   pageStatusValues,
   pageVersions,
   pageWidth,
+  privateSpaceGrantRemovals,
   spaceKeyAliases,
   spacePermissions,
   spaceRole,

@@ -23,10 +23,16 @@ export function newestCredential(provider: Pick<IdentityProvider, "credentials">
   return [...provider.credentials].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
 }
 
+export function expiringCredentialsOf(provider: Pick<IdentityProvider, "expiringCredentials">) {
+  return provider.expiringCredentials
+    .filter((entry) => entry.purpose !== "caCertificate")
+    .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
+}
+
 export function credentialStatus(
   t: TFunction,
   format: Formatter,
-  provider: Pick<IdentityProvider, "credentials" | "warnings">,
+  provider: Pick<IdentityProvider, "credentials" | "warnings" | "expiringCredentials">,
 ): { variant: BadgeVariant; label: string } {
   const newest = newestCredential(provider);
   if (provider.warnings.includes("noCredential") || !newest) {
@@ -35,10 +41,14 @@ export function credentialStatus(
   if (provider.warnings.includes("credentialExpired")) {
     return { variant: "danger", label: t("identityProviders.credentialStatus.expired") };
   }
-  if (provider.warnings.includes("credentialExpiring") && newest.expiresAt) {
+  const expiring = expiringCredentialsOf(provider)[0];
+  if (provider.warnings.includes("credentialExpiring") && expiring) {
     return {
       variant: "warning",
-      label: t("identityProviders.credentialStatus.expiring", { date: format.date(newest.expiresAt) }),
+      label: t("identityProviders.credentialStatus.expiring", {
+        date: format.date(expiring.expiresAt),
+        purpose: expiring.purpose,
+      }),
     };
   }
   if (newest.expiresAt) {

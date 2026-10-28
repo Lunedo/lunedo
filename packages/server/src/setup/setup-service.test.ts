@@ -134,6 +134,79 @@ describe.skipIf(!baseUrl)("SetupService", () => {
     });
   });
 
+  it("records setup steps by the setup assistant until the owner exists and by the owner afterwards", async () => {
+    const {
+      services: { setup },
+      pool,
+    } = await services();
+    const log = capturingLogger();
+    const request = { protocol: "https", host: "wiki.example.org" };
+    await setup.issueCode(log.logger);
+    await setup.exchangeCode(log.code(), "203.0.113.30", "https://wiki.example.org");
+    await setup.runAction("instance", "save", { url: "https://wiki.example.org", name: "Docs" }, request);
+    await setup.runAction("systemCheck", "acknowledge", {}, request);
+    await setup.runAction(
+      "owner",
+      "createAccount",
+      { email: "owner@example.org", name: "Owner", password: "a long owner passphrase" },
+      request,
+    );
+    const before = await pool.query<{ sequence: string }>(
+      "select max(sequence)::text as sequence from audit_events where scope_type = 'instance'",
+    );
+    await setup.runAction(
+      "organization",
+      "save",
+      { name: "Docs team", language: "en", timeZone: "Europe/Vienna" },
+      request,
+    );
+    await setup.locked((tx) => setup.markComplete(tx, "assistant"));
+
+    const owner = (await pool.query<{ id: string }>("select id from accounts")).rows[0]?.id;
+    const events = await pool.query<{
+      name: string;
+      scope_type: string;
+      sequence: string;
+      actor_type: string;
+      actor_id: string | null;
+      labels: { actorKind?: string } | null;
+    }>(
+      "select name, scope_type, sequence::text, actor_type, actor_id, labels from audit_events order by scope_type, sequence",
+    );
+    const setupAssistant = { actor_type: "system", actor_id: null, actorKind: "setupAssistant" };
+    const byOwner = { actor_type: "account", actor_id: owner, actorKind: undefined };
+    const actors = events.rows.map((row) => ({
+      name: row.name,
+      actor_type: row.actor_type,
+      actor_id: row.actor_id,
+      actorKind: row.labels?.actorKind,
+      early: row.scope_type === "instance" && Number(row.sequence) <= Number(before.rows[0]?.sequence),
+    }));
+    const early = actors.filter((row) => row.early);
+    const late = actors.filter((row) => !row.early);
+    expect(early.map((row) => row.name)).toEqual(
+      expect.arrayContaining([
+        "setup.sessionStarted",
+        "settings.changed",
+        "setup.stepCompleted",
+        "account.created",
+      ]),
+    );
+    expect(late.map((row) => row.name)).toEqual(
+      expect.arrayContaining([
+        "organization.created",
+        "membership.added",
+        "role.assigned",
+        "settings.changed",
+        "setup.stepCompleted",
+        "setup.completed",
+      ]),
+    );
+    for (const row of early) expect(row).toMatchObject(setupAssistant);
+    for (const row of late) expect(row).toMatchObject(byOwner);
+    expect(actors.some((row) => row.actor_type === "anonymous")).toBe(false);
+  });
+
   it("limits code exchanges per client", async () => {
     const {
       services: { setup },

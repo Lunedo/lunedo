@@ -5,7 +5,7 @@ import { documentationTargets, type Language, proposeFormats, setupStepSchemas }
 import { eq } from "drizzle-orm";
 import { type AccountService, withUniqueEmail } from "../accounts/accounts.js";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
-import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
+import { accountPrincipal } from "../accounts/principal.js";
 import { accounts, instance } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { PASSWORD_MAX_LENGTH } from "../auth/passwords.js";
@@ -409,7 +409,7 @@ export function keyBackupStep(deps: SetupStepDependencies): SetupStep {
           await context.setState({ downloadedAt: createdAt });
           await deps.audit.record(context.tx, {
             name: "setup.keyBackupDownloaded",
-            actor: ANONYMOUS,
+            actor: accountPrincipal(owner.id),
             targetId: null,
             fields: { masterKeyVersions: master.versions, backupKeyVersions: deps.backupKeys.versions },
           });
@@ -510,7 +510,7 @@ export function organizationStep(deps: SetupStepDependencies): SetupStep {
           }
           const owner = await ownerOf(context);
           if (!owner) throw new SetupStepError("ownerMissing", "Create the owner account first");
-          const organization = await deps.organizations.create(context.tx, ANONYMOUS, {
+          const organization = await deps.organizations.create(context.tx, context.actor, {
             name: input.name,
             ...(input.slug ? { slug: input.slug } : {}),
             language: input.language,

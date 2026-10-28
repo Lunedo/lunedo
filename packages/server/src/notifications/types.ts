@@ -291,8 +291,13 @@ const providerCredentialExpiring = defineNotificationType({
   visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
   mail: (params, locale) => ({
     template: "providerCredentialExpiring",
-    params: { providerName: params.providerName, date: formatDay(params.expiresAt, locale) },
+    params: {
+      providerName: params.providerName,
+      date: formatDay(params.expiresAt, locale),
+      credential: params.credential,
+    },
   }),
+  combineKey: (params) => params.credential,
 });
 
 const providerSyncHeld = defineNotificationType({

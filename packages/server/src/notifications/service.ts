@@ -233,7 +233,8 @@ export class NotificationService {
     const settings = event ? notificationEventSettings.get(event.id) : undefined;
     if (!event || !settings) throw new Error(`Notification type ${input.type} belongs to no event`);
     const params = definition.params.parse(input.params);
-    const groupKey = `${input.type}:${input.targetId ?? ""}`;
+    const combineKey = definition.combineKey?.(params) ?? null;
+    const groupKey = `${input.type}:${input.targetId ?? ""}${combineKey ? `:${combineKey}` : ""}`;
     const actor = input.actor?.type === "account" ? input.actor : null;
     const actorIds = [...new Set([...(actor ? [actor.id] : []), ...(input.contributors ?? [])])];
     const ownAction = (recipientId: string) =>

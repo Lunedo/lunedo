@@ -42,6 +42,7 @@ import {
   type DirectorySignInFailure,
   type DirectoryTestResult,
   type IdentityProviderAdapter,
+  type ProviderCredential,
   type ProviderDefinition,
   type ProviderGroup,
   ProviderPolicyError,
@@ -247,6 +248,8 @@ function canSignIn(account: Account | null): account is Account & { email: strin
     account.email !== null
   );
 }
+
+class LinkConfirmationRequired extends Error {}
 
 class Refused extends Error {
   constructor(readonly reason: SignInRefusalReason) {
@@ -679,7 +682,8 @@ export class ProviderSignInService {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
         if (!(await confirmsLinks(this.#database, existing.id))) {
           if (profile.emailUnverified) throw new Refused("emailNotVerified");
-          return this.#adoptExisting(existing, input);
+          const adopted = await this.#adoptExisting(existing, input);
+          if (adopted) return adopted;
         }
         const ways = await this.#linkWays(existing);
         if (!ways.password && !ways.passkey && ways.providers.length === 0) {
@@ -806,72 +810,78 @@ export class ProviderSignInService {
       returnTo: string | null;
       started: Date;
     },
-  ): Promise<CallbackResult> {
+  ): Promise<CallbackResult | null> {
     const { provider, profile } = input;
-    return this.#withSession(
-      existing,
-      async (tx, mailIds) => {
-        const account = await this.#accounts.lock(tx, existing.id);
-        if (!canSignIn(account)) throw new Refused("accountInactive");
-        const [other] = await tx
-          .select({ id: identities.id, subject: identities.subject })
-          .from(identities)
-          .where(and(eq(identities.accountId, account.id), eq(identities.providerId, provider.id)));
-        if (other?.subject === profile.subject) return other.id;
-        if (other) throw new Refused("linkAmbiguous");
-        const [created] = await tx
-          .insert(identities)
-          .values({
-            accountId: account.id,
-            providerId: provider.id,
-            subject: profile.subject,
-            email: profile.email,
-            emailVerified: true,
-            signInName: profile.signInName,
-            displayName: profile.displayName,
-            lastSignInAt: this.#clock(),
-          })
-          .returning({ id: identities.id });
-        if (!created) throw new Error("The identity was not stored");
-        await this.#mapping.applyAtSignIn(
-          tx,
-          {
-            providerId: provider.id,
-            identityId: created.id,
-            accountId: account.id,
-            groups: input.groups,
-            groupsFailed: input.groupsFailed,
-          },
-          mailIds,
-        );
-        const scope = account.homeOrganizationId
-          ? { scope: { type: "organization" as const, id: account.homeOrganizationId } }
-          : {};
-        await this.#audit.record(tx, {
-          name: "identity.linked",
-          actor: accountPrincipal(account.id),
-          targetId: account.id,
-          fields: { providerId: provider.id, via: "signIn" },
-          ...scope,
-        });
-        await refreshManagedAccounts(
-          tx,
-          this.#audit,
-          { accountIds: [account.id] },
-          accountPrincipal(account.id),
-        );
-        const mailId = await takeOverLocalCredentials(
-          tx,
-          { audit: this.#audit, mail: this.#mail },
-          account.id,
-          accountPrincipal(account.id),
-          "signIn",
-        );
-        if (mailId) mailIds.push(mailId);
-        return created.id;
-      },
-      input,
-    );
+    try {
+      return await this.#withSession(
+        existing,
+        async (tx, mailIds) => {
+          const account = await this.#accounts.lock(tx, existing.id);
+          if (!canSignIn(account)) throw new Refused("accountInactive");
+          if (await confirmsLinks(tx, account.id)) throw new LinkConfirmationRequired();
+          const [other] = await tx
+            .select({ id: identities.id, subject: identities.subject })
+            .from(identities)
+            .where(and(eq(identities.accountId, account.id), eq(identities.providerId, provider.id)));
+          if (other?.subject === profile.subject) return other.id;
+          if (other) throw new Refused("linkAmbiguous");
+          const [created] = await tx
+            .insert(identities)
+            .values({
+              accountId: account.id,
+              providerId: provider.id,
+              subject: profile.subject,
+              email: profile.email,
+              emailVerified: true,
+              signInName: profile.signInName,
+              displayName: profile.displayName,
+              lastSignInAt: this.#clock(),
+            })
+            .returning({ id: identities.id });
+          if (!created) throw new Error("The identity was not stored");
+          await this.#mapping.applyAtSignIn(
+            tx,
+            {
+              providerId: provider.id,
+              identityId: created.id,
+              accountId: account.id,
+              groups: input.groups,
+              groupsFailed: input.groupsFailed,
+            },
+            mailIds,
+          );
+          const scope = account.homeOrganizationId
+            ? { scope: { type: "organization" as const, id: account.homeOrganizationId } }
+            : {};
+          await this.#audit.record(tx, {
+            name: "identity.linked",
+            actor: accountPrincipal(account.id),
+            targetId: account.id,
+            fields: { providerId: provider.id, via: "signIn" },
+            ...scope,
+          });
+          await refreshManagedAccounts(
+            tx,
+            this.#audit,
+            { accountIds: [account.id] },
+            accountPrincipal(account.id),
+          );
+          const mailId = await takeOverLocalCredentials(
+            tx,
+            { audit: this.#audit, mail: this.#mail },
+            account.id,
+            accountPrincipal(account.id),
+            "signIn",
+          );
+          if (mailId) mailIds.push(mailId);
+          return created.id;
+        },
+        input,
+      );
+    } catch (error) {
+      if (error instanceof LinkConfirmationRequired) return null;
+      throw error;
+    }
   }
 
   async #adopt(
@@ -1355,7 +1365,7 @@ export class ProviderSignInService {
     clientIp?: string | undefined;
   }): Promise<SamlReceipt> {
     await this.#limit("samlResponse", input.clientIp, STARTS_PER_CLIENT);
-    const { provider } = await this.#load(input.providerId, "signIn");
+    const { provider, credentials } = await this.#load(input.providerId, "signIn");
     if (provider.type !== "saml")
       throw new OrganizationError("notFound", "The identity provider does not exist");
     if (input.relayState) {
@@ -1387,6 +1397,8 @@ export class ProviderSignInService {
         "Sign-in started at the identity provider needs the address of the instance in the settings",
       );
     }
+    const redirectUri = `${instanceUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`;
+    await this.#checkUnsolicitedResponse(provider, credentials, input.samlResponse, redirectUri);
     const state = client.randomState();
     const browserToken = client.randomState();
     await this.#database.insert(providerFlows).values({
@@ -1396,10 +1408,41 @@ export class ProviderSignInService {
       browserHash: hashState(browserToken),
       requestId: null,
       samlResponse: input.samlResponse,
-      redirectUri: `${instanceUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`,
+      redirectUri,
       expiresAt: new Date(this.#clock().getTime() + FLOW_LIFETIME_MS),
     });
     return { state, browserToken };
+  }
+
+  async #checkUnsolicitedResponse(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    samlResponse: string,
+    redirectUri: string,
+  ): Promise<void> {
+    let result: Awaited<ReturnType<IdentityProviderAdapter["completeSignIn"]>>;
+    try {
+      result = await this.#adapter(provider.type).completeSignIn(provider, credentials, {
+        callbackUrl: new URL(redirectUri),
+        redirectUri,
+        state: "",
+        nonce: "",
+        codeVerifier: "",
+        requestId: null,
+        samlResponse,
+      });
+    } catch (error) {
+      if (error instanceof ProviderPolicyError) throw new ProviderResponseError(error.message);
+      throw error;
+    }
+    if (!result.assertion) throw new ProviderResponseError("The SAML response has no assertion");
+    const [used] = await this.#database
+      .select({ assertionId: samlAssertions.assertionId })
+      .from(samlAssertions)
+      .where(
+        and(eq(samlAssertions.providerId, provider.id), eq(samlAssertions.assertionId, result.assertion.id)),
+      );
+    if (used) throw new ProviderResponseError("The assertion was used before");
   }
 
   async serviceProviderMetadata(providerId: string, baseUrl: string): Promise<string> {

@@ -12,7 +12,7 @@ import {
 import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { runWithRequestContext } from "../observability/request-context.js";
-import { testDatabaseBaseUrl } from "../testing/database.js";
+import { testDatabaseBaseUrl, waitForLockWait } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider, type TokenOverrides } from "../testing/fake-oidc.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { VirtualAuthenticator } from "../testing/webauthn.js";
@@ -736,6 +736,28 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       kind: "refused",
       reason: "accountInactive",
     });
+    expect(await localCredentials(existing.id)).toMatchObject({ password: true });
+  });
+
+  it("asks for a confirmation when the account becomes the instance owner while its first sign-in waits", async () => {
+    const existing = await account(null);
+    const id = await provider({});
+    const other = await test.pool.connect();
+    let result: CallbackResult;
+    try {
+      await other.query("begin");
+      await other.query("select id from accounts where id = $1 for update", [existing.id]);
+      const pending = signIn(id, { sub: randomUUID(), email: existing.email });
+      await Promise.race([pending, waitForLockWait(test.pool)]);
+      await other.query("update instance set owner_account_id = $1", [existing.id]);
+      await other.query("commit");
+      result = await pending;
+    } finally {
+      other.release();
+    }
+    expect(result.kind).toBe("linkRequired");
+    const linked = await test.pool.query("select 1 from identities where account_id = $1", [existing.id]);
+    expect(linked.rowCount).toBe(0);
     expect(await localCredentials(existing.id)).toMatchObject({ password: true });
   });
 

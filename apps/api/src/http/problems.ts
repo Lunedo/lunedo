@@ -233,6 +233,7 @@ export const problems = {
   alreadyAdministrator: { status: 409, title: "You are already space admin of this space" },
   notInCleanup: { status: 409, title: "The space is not up for clean-up" },
   confidentialVisibility: { status: 400, title: "A confidential space stays private" },
+  privateSpaceBroadGrant: { status: 409, title: "A private space gives roles to people and groups only" },
   invalidVisibility: { status: 400, title: "The space needs a visibility" },
   knowledgeBaseConfidential: { status: 400, title: "A knowledge base cannot be confidential" },
   invalidAudience: { status: 400, title: "Only knowledge bases have an audience" },

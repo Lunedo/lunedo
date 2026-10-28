@@ -43,6 +43,12 @@ export function VisibilityField({
   );
 }
 
+export function withoutEveryone<T extends { principalKind: string }>(grants: readonly T[]): T[] {
+  return grants.filter(
+    (grant) => grant.principalKind !== "organizationMembers" && grant.principalKind !== "instanceUsers",
+  );
+}
+
 export function GrantsField({
   organizationId,
   organizationName,
@@ -50,6 +56,7 @@ export function GrantsField({
   onChange,
   ownId,
   peopleOnly = false,
+  everyone = true,
   hint,
 }: {
   organizationId: string;
@@ -58,6 +65,7 @@ export function GrantsField({
   onChange: (update: (current: Grant[]) => Grant[]) => void;
   ownId: string;
   peopleOnly?: boolean;
+  everyone?: boolean;
   hint?: string;
 }) {
   const { t } = useTranslation();
@@ -131,6 +139,7 @@ export function GrantsField({
               organizationName={organizationName}
               personal={false}
               peopleOnly={peopleOnly}
+              everyone={everyone}
               exclude={[...grants.map(holderValue), `account:${ownId}`]}
               value={adding ? holderValue(adding) : null}
               onValueChange={setAdding}

@@ -419,6 +419,7 @@ function provider(patch: Record<string, unknown> = {}) {
       },
     ],
     warnings: ["credentialExpiring"],
+    expiringCredentials: [{ purpose: "clientCredential", expiresAt: "2026-10-23T00:00:00.000Z" }],
     directoryKey: false,
     capabilities: { groups: true, directorySync: true, disabledAccounts: true, groupsByName: false },
     scim: false,

@@ -758,6 +758,9 @@ export class MembershipService {
         });
       }
       if (current.owner === newOwnerId) return;
+      await tx.execute(
+        sql`select id from accounts where id in (${current.owner}, ${newOwnerId}) order by id for update`,
+      );
       const [candidate] = await tx
         .execute<{ id: string }>(sql`
         select a.id from accounts a join role_assignments ra

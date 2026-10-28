@@ -116,7 +116,7 @@ Renew a credential without interruption:
 
 **Use this one** keeps an older valid credential of the same kind in use until it expires, is removed or you choose **Use the newest again**. The last credential of a kind cannot be removed; add a new one first.
 
-The instance owner and the holders of the instance area "Sign-in and security" get a notification 30 and 7 days before the last valid credential expires, and the provider list shows a warning. Without a valid credential, sign-in through the provider stops.
+Lunedo watches each purpose on its own: the client credential of an OIDC provider, Lunedo's signing certificate of a SAML provider and the credentials for Microsoft Graph. The instance owner and the holders of the instance area "Sign-in and security" get a notification 30 and 7 days before the last valid credential of a purpose expires, and the provider list shows a warning that names it. A newer credential for another purpose does not hide it. Without a valid credential, sign-in through the provider stops.
 
 For LDAP, change the password of the service account in the directory first, then enter it with **Enter new password**, and remove the old one afterwards.
 
