@@ -99,6 +99,7 @@ function provider(preset: "entraId" | "generic" | "google" = "entraId") {
     logoRef: null,
     credentials: [],
     warnings: [],
+    expiringCredentials: [],
     directoryKey: false,
     capabilities: {
       groups: preset !== "google",

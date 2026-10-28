@@ -259,13 +259,13 @@
     "credentialStatus": {
       "none": "Kein Zugang",
       "expired": "Zugang abgelaufen",
-      "expiring": "Läuft am {date} ab",
+      "expiring": "{purpose, select, signingCertificate {Signaturzertifikat läuft am {date} ab} graphCredential {Zugang für Graph läuft am {date} ab} other {Läuft am {date} ab}}",
       "validUntil": "Gültig bis {date}",
       "noExpiry": "Ohne Ablaufdatum"
     },
     "warnings": {
-      "expiring": "Der Zugang von {name} läuft bald ab: {status}.",
-      "expiringAction": "Erstelle beim Anbieter einen neuen Zugang und trage ihn vorher hier ein, sonst funktioniert die Anmeldung über diesen Anbieter nicht mehr.",
+      "expiring": "{purpose, select, signingCertificate {Das Signaturzertifikat für {name}} graphCredential {Der Zugang von {name} für Microsoft Graph} other {Der Zugang von {name}}} läuft bald ab, am {date}.",
+      "expiringAction": "{purpose, select, signingCertificate {Füge hier vorher ein neues Signaturzertifikat hinzu und hinterlege es beim Identitätsanbieter, sonst funktioniert die Anmeldung über diesen Anbieter nicht mehr.} graphCredential {Erstelle in der App-Registrierung ein neues Client-Secret oder Zertifikat und trage es vorher hier ein, sonst kann Lunedo über Microsoft Graph keine Gruppen mehr lesen und keine Konten mehr synchronisieren.} other {Erstelle beim Anbieter einen neuen Zugang und trage ihn vorher hier ein, sonst funktioniert die Anmeldung über diesen Anbieter nicht mehr.}}",
       "stopped": "Die Anmeldung über {name} funktioniert nicht: {status}.",
       "stoppedAction": "Füge einen gültigen Zugang vom Anbieter hinzu und teste dann die Anmeldung.",
       "renew": "Zugang erneuern",
@@ -3273,7 +3273,7 @@
     },
     "types": {
       "identityProvider": {
-        "credentialExpiring": "Der Zugang von {providerName} läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst funktioniert die Anmeldung darüber nicht mehr.",
+        "credentialExpiring": "{credential, select, signingCertificate {Das Signaturzertifikat für {providerName} läuft am {expiresAt} ab. Füge vorher ein neues hinzu und hinterlege es beim Anbieter, sonst funktioniert die Anmeldung darüber nicht mehr.} graphCredential {Der Zugang von {providerName} für Microsoft Graph läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst kann Lunedo über Microsoft Graph keine Gruppen mehr lesen.} other {Der Zugang von {providerName} läuft am {expiresAt} ab. Füge vorher einen neuen hinzu, sonst funktioniert die Anmeldung darüber nicht mehr.}}",
         "syncHeld": "Die Synchronisierung mit {providerName} hätte {deactivations} von {accounts} Konten auf einmal deaktiviert und wurde angehalten. Prüfe den Anbieter und bestätige den Lauf im Sync-Protokoll, wenn die Personen wirklich ausgeschieden sind."
       },
       "account": {

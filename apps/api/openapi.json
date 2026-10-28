@@ -75364,6 +75364,37 @@
                             },
                             "description": "Problems that need attention."
                           },
+                          "expiringCredentials": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "purpose": {
+                                  "type": "string",
+                                  "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                  "x-extensible-enum": [
+                                    "clientCredential",
+                                    "signingCertificate",
+                                    "graphCredential",
+                                    "bindPassword",
+                                    "caCertificate"
+                                  ]
+                                },
+                                "expiresAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                                }
+                              },
+                              "required": [
+                                "purpose",
+                                "expiresAt"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A purpose whose newest valid credential expires within 30 days."
+                            },
+                            "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -76024,6 +76055,7 @@
                           "deactivatedAt",
                           "groupsClaimMissingSince",
                           "warnings",
+                          "expiringCredentials",
                           "createdAt",
                           "updatedAt",
                           "config"
@@ -76215,6 +76247,37 @@
                               ]
                             },
                             "description": "Problems that need attention."
+                          },
+                          "expiringCredentials": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "purpose": {
+                                  "type": "string",
+                                  "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                  "x-extensible-enum": [
+                                    "clientCredential",
+                                    "signingCertificate",
+                                    "graphCredential",
+                                    "bindPassword",
+                                    "caCertificate"
+                                  ]
+                                },
+                                "expiresAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                                }
+                              },
+                              "required": [
+                                "purpose",
+                                "expiresAt"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A purpose whose newest valid credential expires within 30 days."
+                            },
+                            "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                           },
                           "createdAt": {
                             "type": "string",
@@ -77096,6 +77159,7 @@
                           "deactivatedAt",
                           "groupsClaimMissingSince",
                           "warnings",
+                          "expiringCredentials",
                           "createdAt",
                           "updatedAt",
                           "config",
@@ -77288,6 +77352,37 @@
                               ]
                             },
                             "description": "Problems that need attention."
+                          },
+                          "expiringCredentials": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "purpose": {
+                                  "type": "string",
+                                  "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                  "x-extensible-enum": [
+                                    "clientCredential",
+                                    "signingCertificate",
+                                    "graphCredential",
+                                    "bindPassword",
+                                    "caCertificate"
+                                  ]
+                                },
+                                "expiresAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                                }
+                              },
+                              "required": [
+                                "purpose",
+                                "expiresAt"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A purpose whose newest valid credential expires within 30 days."
+                            },
+                            "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                           },
                           "createdAt": {
                             "type": "string",
@@ -77810,6 +77905,7 @@
                           "deactivatedAt",
                           "groupsClaimMissingSince",
                           "warnings",
+                          "expiringCredentials",
                           "createdAt",
                           "updatedAt",
                           "config",
@@ -80197,6 +80293,37 @@
                               },
                               "description": "Problems that need attention."
                             },
+                            "expiringCredentials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "purpose": {
+                                    "type": "string",
+                                    "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "clientCredential",
+                                      "signingCertificate",
+                                      "graphCredential",
+                                      "bindPassword",
+                                      "caCertificate"
+                                    ]
+                                  },
+                                  "expiresAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                                  }
+                                },
+                                "required": [
+                                  "purpose",
+                                  "expiresAt"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A purpose whose newest valid credential expires within 30 days."
+                              },
+                              "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                            },
                             "createdAt": {
                               "type": "string",
                               "format": "date-time",
@@ -80857,6 +80984,7 @@
                             "deactivatedAt",
                             "groupsClaimMissingSince",
                             "warnings",
+                            "expiringCredentials",
                             "createdAt",
                             "updatedAt",
                             "config"
@@ -81048,6 +81176,37 @@
                                 ]
                               },
                               "description": "Problems that need attention."
+                            },
+                            "expiringCredentials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "purpose": {
+                                    "type": "string",
+                                    "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "clientCredential",
+                                      "signingCertificate",
+                                      "graphCredential",
+                                      "bindPassword",
+                                      "caCertificate"
+                                    ]
+                                  },
+                                  "expiresAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                                  }
+                                },
+                                "required": [
+                                  "purpose",
+                                  "expiresAt"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A purpose whose newest valid credential expires within 30 days."
+                              },
+                              "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                             },
                             "createdAt": {
                               "type": "string",
@@ -81929,6 +82088,7 @@
                             "deactivatedAt",
                             "groupsClaimMissingSince",
                             "warnings",
+                            "expiringCredentials",
                             "createdAt",
                             "updatedAt",
                             "config",
@@ -82121,6 +82281,37 @@
                                 ]
                               },
                               "description": "Problems that need attention."
+                            },
+                            "expiringCredentials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "purpose": {
+                                    "type": "string",
+                                    "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "clientCredential",
+                                      "signingCertificate",
+                                      "graphCredential",
+                                      "bindPassword",
+                                      "caCertificate"
+                                    ]
+                                  },
+                                  "expiresAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                                  }
+                                },
+                                "required": [
+                                  "purpose",
+                                  "expiresAt"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A purpose whose newest valid credential expires within 30 days."
+                              },
+                              "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                             },
                             "createdAt": {
                               "type": "string",
@@ -82643,6 +82834,7 @@
                             "deactivatedAt",
                             "groupsClaimMissingSince",
                             "warnings",
+                            "expiringCredentials",
                             "createdAt",
                             "updatedAt",
                             "config",
@@ -83280,6 +83472,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -83941,6 +84164,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -84132,6 +84356,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -85013,6 +85268,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -85205,6 +85461,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -85727,6 +86014,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -87741,6 +88029,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -88401,6 +88720,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -88592,6 +88912,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -89473,6 +89824,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -89665,6 +90017,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -90187,6 +90570,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -90578,6 +90962,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -91238,6 +91653,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -91429,6 +91845,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -92310,6 +92757,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -92502,6 +92950,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -93024,6 +93503,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -93388,6 +93868,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -94048,6 +94559,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -94239,6 +94751,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -95120,6 +95663,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -95312,6 +95856,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -95834,6 +96409,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -96219,6 +96795,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -96879,6 +97486,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -97070,6 +97678,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -97951,6 +98590,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -98143,6 +98783,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -98665,6 +99336,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -99045,6 +99717,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -99705,6 +100408,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -99896,6 +100600,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -100777,6 +101512,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -100969,6 +101705,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -101491,6 +102258,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -102593,6 +103361,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -103253,6 +104052,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -103444,6 +104244,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -104325,6 +105156,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -104517,6 +105349,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -105039,6 +105902,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -105423,6 +106287,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -106083,6 +106978,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -106274,6 +107170,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -107155,6 +108082,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -107347,6 +108275,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -107869,6 +108828,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -109666,6 +110626,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -110326,6 +111317,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -110517,6 +111509,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -111398,6 +112421,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -111590,6 +112614,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -112112,6 +113167,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -114944,6 +116000,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -115604,6 +116691,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -115795,6 +116883,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -116676,6 +117795,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -116868,6 +117988,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -117390,6 +118541,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -117773,6 +118925,37 @@
                           },
                           "description": "Problems that need attention."
                         },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -118433,6 +119616,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config"
@@ -118624,6 +119808,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -119505,6 +120720,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",
@@ -119697,6 +120913,37 @@
                             ]
                           },
                           "description": "Problems that need attention."
+                        },
+                        "expiringCredentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "purpose": {
+                                "type": "string",
+                                "description": "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "clientCredential",
+                                  "signingCertificate",
+                                  "graphCredential",
+                                  "bindPassword",
+                                  "caCertificate"
+                                ]
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the newest valid credential for this purpose expires. ISO 8601 timestamp in UTC."
+                              }
+                            },
+                            "required": [
+                              "purpose",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A purpose whose newest valid credential expires within 30 days."
+                          },
+                          "description": "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring."
                         },
                         "createdAt": {
                           "type": "string",
@@ -120219,6 +121466,7 @@
                         "deactivatedAt",
                         "groupsClaimMissingSince",
                         "warnings",
+                        "expiringCredentials",
                         "createdAt",
                         "updatedAt",
                         "config",

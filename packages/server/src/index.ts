@@ -412,6 +412,7 @@ export {
   type CredentialInput,
   type CredentialSummary,
   callbackPath,
+  type ExpiringCredential,
   type LdapSummary,
   type ProviderDraft,
   type ProviderSummary,

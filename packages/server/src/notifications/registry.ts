@@ -35,6 +35,7 @@ export interface NotificationTypeDefinition<P = unknown> {
   subject?(context: { targetId: string | null; params: P; executor: Executor }): Promise<NotificationSubject>;
   visible(context: VisibilityContext<P>): Promise<boolean>;
   mail?(params: P, locale: MailLocale): NotificationMail;
+  combineKey?(params: P): string | null;
 }
 
 export function defineNotificationType<P>(

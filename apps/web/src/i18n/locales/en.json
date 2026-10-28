@@ -259,13 +259,13 @@
     "credentialStatus": {
       "none": "No credential",
       "expired": "Credential expired",
-      "expiring": "Expires {date}",
+      "expiring": "{purpose, select, signingCertificate {Signing certificate expires {date}} graphCredential {Graph credential expires {date}} other {Expires {date}}}",
       "validUntil": "Valid until {date}",
       "noExpiry": "No expiry date"
     },
     "warnings": {
-      "expiring": "The credential of {name} expires soon: {status}.",
-      "expiringAction": "Create a new credential at the provider and add it here before then, or sign-in through this provider stops working.",
+      "expiring": "{purpose, select, signingCertificate {The signing certificate for {name}} graphCredential {The Microsoft Graph credential of {name}} other {The credential of {name}}} expires soon, on {date}.",
+      "expiringAction": "{purpose, select, signingCertificate {Add a new signing certificate here and register it with the identity provider before then, or sign-in through this provider stops working.} graphCredential {Create a new client secret or certificate in the app registration and add it here before then, or Lunedo can no longer read groups and synchronize accounts through Microsoft Graph.} other {Create a new credential at the provider and add it here before then, or sign-in through this provider stops working.}}",
       "stopped": "Sign-in through {name} does not work: {status}.",
       "stoppedAction": "Add a valid credential from the provider, then test the sign-in.",
       "renew": "Renew credential",
@@ -3273,7 +3273,7 @@
     },
     "types": {
       "identityProvider": {
-        "credentialExpiring": "The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working.",
+        "credentialExpiring": "{credential, select, signingCertificate {The signing certificate for {providerName} expires on {expiresAt}. Add a new one and register it with the provider before then, or sign-in through it stops working.} graphCredential {The Microsoft Graph credential of {providerName} expires on {expiresAt}. Add a new one before then, or Lunedo can no longer read groups through Microsoft Graph.} other {The credential of {providerName} expires on {expiresAt}. Add a new one before then, or sign-in through it stops working.}}",
         "syncHeld": "The synchronization with {providerName} would have deactivated {deactivations} of {accounts} accounts at once and stopped. Check the provider, then confirm the run in the sync log if the people really left."
       },
       "account": {

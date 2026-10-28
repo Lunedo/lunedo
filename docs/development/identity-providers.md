@@ -84,7 +84,7 @@ The provider setting `secondFactor.mode` is `provider` or `providerProof` for OI
 | `identity-providers.schedule-synchronization` | every 5 minutes | Enqueues due synchronization runs; with SCIM on, once a day as reconciliation |
 | `identity-providers.synchronize` | on demand | One run for one provider; no retries |
 | `identity-providers.remove-old-sync-runs` | daily at 03:23 | Applies `identityProviders.syncLogRetentionDays` |
-| `identity-providers.send-credential-reminders` | hourly at :41 | Reminders 30 and 7 days before the last credential expires |
+| `identity-providers.send-credential-reminders` | hourly at :41 | Reminders 30 and 7 days before the last valid credential of a purpose (client credential, signing certificate, Microsoft Graph) expires |
 | `identity-providers.refresh-saml-metadata` | hourly at :17 | Reloads metadata from an address when it is older than 24 hours |
 
 All run during maintenance mode.

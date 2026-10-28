@@ -1,3 +1,4 @@
+import type { IdentityProviderCredentialPurpose } from "@lunedo/shared";
 import designTokens from "@lunedo/tokens/design-tokens.json" with { type: "json" };
 import type { supportedLanguages } from "../settings/builtin.js";
 import {
@@ -72,7 +73,12 @@ export interface MailTemplates {
     operatingSystem: string | null;
     clientIp: string | null;
   };
-  providerCredentialExpiring: { instanceName: string; providerName: string; date: string };
+  providerCredentialExpiring: {
+    instanceName: string;
+    providerName: string;
+    date: string;
+    credential?: IdentityProviderCredentialPurpose | null;
+  };
   providerSyncHeld: { instanceName: string; providerName: string; deactivations: number; accounts: number };
   homeOrganizationChanged: {
     instanceName: string;
@@ -377,12 +383,30 @@ const catalogs: Record<Language, Catalog> = {
         `The client secret or certificate that ${instanceName} uses to send e-mail through Microsoft Graph expires on ${date}. Add a new one in the e-mail settings before then, or Lunedo can no longer send e-mail.`,
       ],
     }),
-    providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
-      subject: `Credential of ${providerName} on ${instanceName} expires soon`,
-      paragraphs: [
-        `A client secret or certificate of the identity provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
-      ],
-    }),
+    providerCredentialExpiring: ({ instanceName, providerName, date, credential }) => {
+      if (credential === "signingCertificate") {
+        return {
+          subject: `Signing certificate for ${providerName} on ${instanceName} expires soon`,
+          paragraphs: [
+            `The certificate that ${instanceName} uses to sign its requests to the identity provider ${providerName} expires on ${date}. Add a new signing certificate in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
+          ],
+        };
+      }
+      if (credential === "graphCredential") {
+        return {
+          subject: `Microsoft Graph credential of ${providerName} on ${instanceName} expires soon`,
+          paragraphs: [
+            `The client secret or certificate that ${instanceName} uses to read groups of ${providerName} through Microsoft Graph expires on ${date}. Add a new one in the provider settings and register it with the app registration before then, or Lunedo can no longer read groups and synchronize accounts through Microsoft Graph.`,
+          ],
+        };
+      }
+      return {
+        subject: `Credential of ${providerName} on ${instanceName} expires soon`,
+        paragraphs: [
+          `A client secret or certificate of the identity provider ${providerName} on ${instanceName} expires on ${date}. Add a new credential in the provider settings and register it with the provider before then, or sign-in through ${providerName} stops working.`,
+        ],
+      };
+    },
     providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
       subject: `Synchronization of ${providerName} on ${instanceName} stopped`,
       paragraphs: [
@@ -609,12 +633,30 @@ const catalogs: Record<Language, Catalog> = {
         `Das Client-Secret oder Zertifikat, mit dem ${instanceName} E-Mails über Microsoft Graph sendet, läuft am ${date} ab. Füge vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu, sonst kann Lunedo keine E-Mails mehr senden.`,
       ],
     }),
-    providerCredentialExpiring: ({ instanceName, providerName, date }) => ({
-      subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
-      paragraphs: [
-        `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Füge vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlege sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
-      ],
-    }),
+    providerCredentialExpiring: ({ instanceName, providerName, date, credential }) => {
+      if (credential === "signingCertificate") {
+        return {
+          subject: `Signaturzertifikat für ${providerName} auf ${instanceName} läuft bald ab`,
+          paragraphs: [
+            `Das Zertifikat, mit dem ${instanceName} seine Anfragen an den Identitätsanbieter ${providerName} signiert, läuft am ${date} ab. Füge vorher in den Einstellungen des Anbieters ein neues Signaturzertifikat hinzu und hinterlege es beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
+          ],
+        };
+      }
+      if (credential === "graphCredential") {
+        return {
+          subject: `Zugangsdaten für Microsoft Graph von ${providerName} auf ${instanceName} laufen bald ab`,
+          paragraphs: [
+            `Das Client-Secret oder Zertifikat, mit dem ${instanceName} die Gruppen von ${providerName} über Microsoft Graph liest, läuft am ${date} ab. Füge vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlege sie in der App-Registrierung, sonst kann Lunedo über Microsoft Graph keine Gruppen mehr lesen und keine Konten mehr synchronisieren.`,
+          ],
+        };
+      }
+      return {
+        subject: `Zugangsdaten von ${providerName} auf ${instanceName} laufen bald ab`,
+        paragraphs: [
+          `Ein Client-Secret oder Zertifikat des Identitätsanbieters ${providerName} auf ${instanceName} läuft am ${date} ab. Füge vorher in den Einstellungen des Anbieters neue Zugangsdaten hinzu und hinterlege sie beim Anbieter, sonst funktioniert die Anmeldung über ${providerName} nicht mehr.`,
+        ],
+      };
+    },
     providerSyncHeld: ({ instanceName, providerName, deactivations, accounts }) => ({
       subject: `Synchronisierung von ${providerName} auf ${instanceName} angehalten`,
       paragraphs: [

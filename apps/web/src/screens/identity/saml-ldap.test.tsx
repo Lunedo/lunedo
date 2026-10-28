@@ -85,6 +85,7 @@ function adminApi(overrides: Record<string, Handler> = {}) {
 }
 
 const common = {
+  expiringCredentials: [],
   logoRef: null,
   directoryKey: false,
   deactivatedAt: null,
@@ -665,6 +666,30 @@ describe("SAML and LDAP providers in the list and the details", () => {
     await userEvent.click(await screen.findByRole("option", { name: "LDAP" }));
     await waitFor(() => expect(within(table).queryByText("ADFS · Verlag")).toBeNull());
     expect(within(table).getByText("Active Directory · Verlag")).toBeTruthy();
+  });
+
+  it("names each expiring credential of a provider in its own warning", async () => {
+    adminApi({
+      [`GET ${BASE}`]: () => ({
+        body: [
+          samlProvider({
+            warnings: ["credentialExpiring"],
+            expiringCredentials: [
+              { purpose: "graphCredential", expiresAt: "2026-10-30T00:00:00.000Z" },
+              { purpose: "signingCertificate", expiresAt: "2026-10-20T00:00:00.000Z" },
+            ],
+          }),
+        ],
+      }),
+    });
+    await renderPath("/settings/instance/sign-in-providers");
+    expect(
+      await screen.findByText(/The signing certificate for ADFS · Verlag expires soon, on/),
+    ).toBeTruthy();
+    expect(screen.getByText(/The Microsoft Graph credential of ADFS · Verlag expires soon, on/)).toBeTruthy();
+    expect(screen.getByText(/Lunedo can no longer read groups and synchronize accounts/)).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Identity providers" });
+    expect(within(table).getByText(/^Signing certificate expires/)).toBeTruthy();
   });
 
   it("loads the metadata again and explains why it failed", async () => {

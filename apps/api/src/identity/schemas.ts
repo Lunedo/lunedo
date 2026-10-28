@@ -3,6 +3,7 @@ import {
   caCertificateSchema,
   clientSecretSchema,
   directoryPasswordSchema,
+  identityProviderCredentialPurposes,
   identityProviderNameSchema,
   identityProviderPresets,
   identityProviderTypes,
@@ -16,7 +17,7 @@ import {
 } from "@lunedo/shared";
 import { z } from "zod";
 import { authenticationResponseSchema, secondFactorSchema, signedInSchema } from "../auth/schemas.js";
-import { inputTimestamp, timestamp, uuid } from "../http/schemas.js";
+import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
 
 export const removalPreviewSchema = z
   .object({
@@ -572,6 +573,21 @@ const providerBase = {
       ]),
     )
     .describe("Problems that need attention."),
+  expiringCredentials: z
+    .array(
+      z
+        .object({
+          purpose: extensibleEnum(
+            identityProviderCredentialPurposes,
+            "What the credential is for: `clientCredential` signs in to an OpenID Connect provider, `signingCertificate` signs SAML requests, `graphCredential` reads groups through Microsoft Graph, `bindPassword` connects to the directory, `caCertificate` verifies the directory server.",
+          ),
+          expiresAt: timestamp("When the newest valid credential for this purpose expires."),
+        })
+        .describe("A purpose whose newest valid credential expires within 30 days."),
+    )
+    .describe(
+      "Each purpose whose newest valid credential expires within 30 days, behind the warnings credentialExpiring and caCertificateExpiring.",
+    ),
   createdAt: timestamp("When the provider was set up."),
   updatedAt: timestamp("When the provider was last changed."),
 };

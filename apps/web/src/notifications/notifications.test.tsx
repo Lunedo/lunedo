@@ -147,6 +147,38 @@ describe("notificationText", () => {
     expect(notificationText(t, status, format)).toBe("Lea Maier set the status of Runbook to Verified");
   });
 
+  it("names the kind of an expiring provider credential", async () => {
+    const i18n = await initI18n(["en"]);
+    const t = i18n.getFixedT("en");
+    const format = createFormatter({
+      language: "en",
+      timeZone: "UTC",
+      dateFormat: "DD/MM/YYYY",
+      timeFormat: "24h",
+      numberFormat: "en-US",
+      firstDayOfWeek: "monday",
+    });
+    const expiring = (credential: string | null) =>
+      notification("p1", {
+        type: "identityProvider.credentialExpiring",
+        organizationId: null,
+        target: { type: "identityProvider", id: "01929b1e-0000-7000-8000-000000000011", number: null },
+        params: {
+          providerName: "Entra",
+          expiresAt: "2026-11-02T00:00:00.000Z",
+          providerId: "01929b1e-0000-7000-8000-000000000011",
+          credential,
+        },
+      });
+    expect(notificationText(t, expiring("signingCertificate"), format)).toMatch(
+      /^The signing certificate for Entra expires on /,
+    );
+    expect(notificationText(t, expiring("graphCredential"), format)).toMatch(
+      /^The Microsoft Graph credential of Entra expires on .*read groups through Microsoft Graph\.$/,
+    );
+    expect(notificationText(t, expiring(null), format)).toMatch(/^The credential of Entra expires on /);
+  });
+
   it("shows durations readably and explains an unused token", async () => {
     const i18n = await initI18n(["en"]);
     const t = i18n.getFixedT("en");

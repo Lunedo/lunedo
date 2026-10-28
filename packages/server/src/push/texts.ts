@@ -190,7 +190,12 @@ const en: Texts = {
     body: text(params.backupName),
   }),
   "identityProvider.credentialExpiring": ({ params }) => ({
-    title: "A sign-in provider credential expires soon",
+    title:
+      params.credential === "signingCertificate"
+        ? "A signing certificate for a sign-in provider expires soon"
+        : params.credential === "graphCredential"
+          ? "A Microsoft Graph credential of a sign-in provider expires soon"
+          : "A sign-in provider credential expires soon",
     body: text(params.providerName),
   }),
   "identityProvider.syncHeld": ({ params }) => ({
@@ -382,7 +387,12 @@ const de: Texts = {
     body: text(params.backupName),
   }),
   "identityProvider.credentialExpiring": ({ params }) => ({
-    title: "Zugangsdaten eines Anmeldeanbieters laufen bald ab",
+    title:
+      params.credential === "signingCertificate"
+        ? "Ein Signaturzertifikat für einen Anmeldeanbieter läuft bald ab"
+        : params.credential === "graphCredential"
+          ? "Zugangsdaten eines Anmeldeanbieters für Microsoft Graph laufen bald ab"
+          : "Zugangsdaten eines Anmeldeanbieters laufen bald ab",
     body: text(params.providerName),
   }),
   "identityProvider.syncHeld": ({ params }) => ({

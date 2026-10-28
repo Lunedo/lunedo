@@ -33,7 +33,12 @@ import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { EmergencyRecipients } from "./emergency-recipients.js";
-import { credentialStatus, providerPresetLabel, typeLabel } from "./provider-labels.js";
+import {
+  credentialStatus,
+  expiringCredentialsOf,
+  providerPresetLabel,
+  typeLabel,
+} from "./provider-labels.js";
 import { RemoveProviderDialog, useRemovalPreviewLoader } from "./provider-removal.js";
 
 export function providerPath(providerId: string, search?: Record<string, string>) {
@@ -152,8 +157,6 @@ export function ProviderGlyph({ provider }: { provider: Pick<IdentityProvider, "
   );
 }
 
-const CREDENTIAL_WARNINGS = new Set(["noCredential", "credentialExpiring", "credentialExpired"]);
-
 export function ProviderWarnings({ providers }: { providers: IdentityProvider[] }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -163,34 +166,43 @@ export function ProviderWarnings({ providers }: { providers: IdentityProvider[] 
     <div className="flex flex-col gap-3 empty:hidden">
       {providers.flatMap((provider) => {
         const notices = [];
-        if (provider.warnings.some((warning) => CREDENTIAL_WARNINGS.has(warning))) {
-          const status = credentialStatus(t, format, provider);
-          const expired =
-            provider.warnings.includes("credentialExpired") || provider.warnings.includes("noCredential");
+        const renew = (
+          <Button key="renew" size="sm" variant="secondary" onClick={() => open(provider, "overview")}>
+            {t("identityProviders.warnings.renew")}
+          </Button>
+        );
+        if (provider.warnings.includes("credentialExpired") || provider.warnings.includes("noCredential")) {
           notices.push(
             <Notice
               key={`${provider.id}-credential`}
-              variant={expired ? "danger" : "warning"}
-              title={t(
-                expired ? "identityProviders.warnings.stopped" : "identityProviders.warnings.expiring",
-                {
-                  name: provider.name,
-                  status: status.label,
-                },
-              )}
-              action={
-                <Button size="sm" variant="secondary" onClick={() => open(provider, "overview")}>
-                  {t("identityProviders.warnings.renew")}
-                </Button>
-              }
+              variant="danger"
+              title={t("identityProviders.warnings.stopped", {
+                name: provider.name,
+                status: credentialStatus(t, format, provider).label,
+              })}
+              action={renew}
             >
-              {t(
-                expired
-                  ? "identityProviders.warnings.stoppedAction"
-                  : "identityProviders.warnings.expiringAction",
-              )}
+              {t("identityProviders.warnings.stoppedAction")}
             </Notice>,
           );
+        }
+        if (provider.warnings.includes("credentialExpiring")) {
+          for (const expiring of expiringCredentialsOf(provider)) {
+            notices.push(
+              <Notice
+                key={`${provider.id}-${expiring.purpose}`}
+                variant="warning"
+                title={t("identityProviders.warnings.expiring", {
+                  name: provider.name,
+                  purpose: expiring.purpose,
+                  date: format.date(expiring.expiresAt),
+                })}
+                action={renew}
+              >
+                {t("identityProviders.warnings.expiringAction", { purpose: expiring.purpose })}
+              </Notice>,
+            );
+          }
         }
         if (
           provider.type === "saml" &&
@@ -204,7 +216,7 @@ export function ProviderWarnings({ providers }: { providers: IdentityProvider[] 
               variant="warning"
               title={t("identityProviders.warnings.metadataTitle", { name: provider.name })}
               action={
-                <Button size="sm" variant="secondary" onClick={() => open(provider, "overview")}>
+                <Button key="renew" size="sm" variant="secondary" onClick={() => open(provider, "overview")}>
                   {t("identityProviders.openDetails")}
                 </Button>
               }
