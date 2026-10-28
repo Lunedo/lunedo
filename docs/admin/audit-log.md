@@ -1,6 +1,6 @@
 # Audit log
 
-The audit log records every action that affects security, access or configuration: sign-ins, changes of accounts, roles, groups and settings, identity providers, API tokens, backups, maintenance mode and more. It is separate from the application log in the container output. Scripts read it through the API, described in [api/audit-log.md](../api/audit-log.md).
+The audit log records every action that affects security, access or configuration: sign-ins, changes of accounts, roles, groups and settings, identity providers, API tokens, backups, maintenance mode and more. It is separate from the application log in the container output. Scripts read it through the API, described in [api/audit-log.md](../api/audit-log.md). [Audit events](audit-events.md) lists every event it records.
 
 ## What an entry holds
 

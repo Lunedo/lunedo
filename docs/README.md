@@ -78,6 +78,7 @@ Lists generated from the code: every environment variable, setting, audit event 
 
 - [Environment variables](admin/environment-variables.md)
 - [Settings reference](admin/settings-reference.md)
+- [Audit events](admin/audit-events.md)
 
 ## Using Lunedo
 

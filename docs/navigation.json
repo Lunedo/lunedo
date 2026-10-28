@@ -72,7 +72,7 @@
     },
     {
       "title": "Reference",
-      "pages": ["admin/environment-variables.md", "admin/settings-reference.md"]
+      "pages": ["admin/environment-variables.md", "admin/settings-reference.md", "admin/audit-events.md"]
     },
     {
       "title": "Using Lunedo",
