@@ -10,8 +10,7 @@ export MSYS_NO_PATHCONV=1
 
 image="${1:?usage: scripts/backup-roundtrip.sh <image>}"
 suffix="$$"
-run_id="${LUNEDO_CI_RUN:-local-$$}"
-label=(--label "lunedo.ci.run=${run_id}")
+label=(--label "lunedo.ci.job=${LUNEDO_CI_JOB:-local-$$}")
 network="lunedo-roundtrip-${suffix}"
 postgres="lunedo-roundtrip-db-${suffix}"
 postgres_next="lunedo-roundtrip-db-next-${suffix}"

@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Removes containers, volumes and networks that CI scripts left behind on a shared runner.
-# Usage: scripts/ci-docker-cleanup.sh run <run id> [compose project...]
+# Removes the containers, volumes and networks one CI job left behind on a shared runner host.
+# Usage: scripts/ci-docker-cleanup.sh job <job id> [compose project...]
 #        scripts/ci-docker-cleanup.sh stale
 set -uo pipefail
 export MSYS_NO_PATHCONV=1
 
 max_age_seconds=$((6 * 60 * 60))
-legacy_names=(--filter "name=-roundtrip-")
 
 remove() {
   local kind="$1" age_limit="$2"
@@ -40,20 +39,27 @@ sweep() {
 }
 
 case "${1:-}" in
-  run)
-    run_id="${2:?usage: scripts/ci-docker-cleanup.sh run <run id> [compose project...]}"
-    sweep no --filter "label=lunedo.ci.run=${run_id}"
+  job)
+    job_id="${2:?usage: scripts/ci-docker-cleanup.sh job <job id> [compose project...]}"
+    if [[ ! "$job_id" =~ ^([0-9]+-[0-9]+-[a-z0-9_-]+|local-[0-9]+)$ ]]; then
+      echo "The job id must name the run, its attempt and the job: $job_id" >&2
+      exit 2
+    fi
+    sweep no --filter "label=lunedo.ci.job=${job_id}"
     shift 2
     for project in "$@"; do
+      if [[ "$project" != *"$job_id" ]]; then
+        echo "The compose project must end with the job id: $project" >&2
+        exit 2
+      fi
       sweep no --filter "label=com.docker.compose.project=${project}"
     done
     ;;
   stale)
-    sweep yes --filter "label=lunedo.ci.run"
-    sweep yes "${legacy_names[@]}"
+    sweep yes --filter "label=lunedo.ci.job"
     ;;
   *)
-    echo "usage: scripts/ci-docker-cleanup.sh run <run id> [compose project...] | stale" >&2
+    echo "usage: scripts/ci-docker-cleanup.sh job <job id> [compose project...] | stale" >&2
     exit 2
     ;;
 esac
