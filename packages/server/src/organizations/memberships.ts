@@ -758,13 +758,15 @@ export class MembershipService {
         });
       }
       if (current.owner === newOwnerId) return;
+      await tx.execute(
+        sql`select id from accounts where id in (${current.owner}, ${newOwnerId}) order by id for update`,
+      );
       const [candidate] = await tx
         .execute<{ id: string }>(sql`
         select a.id from accounts a join role_assignments ra
           on ra.principal_id = a.id and ra.principal_kind = 'account' and ra.scope = 'instance'
         where a.id = ${newOwnerId} and a.state = 'active' and a.type = 'standard'
-          and ra.built_in_role = 'administrator' and (ra.expires_at is null or ra.expires_at > now())
-        for update of a`)
+          and ra.built_in_role = 'administrator' and (ra.expires_at is null or ra.expires_at > now())`)
         .then((result) => result.rows);
       if (!candidate) {
         throw new OrganizationError("invalidOwner", "The new owner must be an active instance administrator");

@@ -898,6 +898,7 @@ export class IdentityProviderService {
     if (metadataXml) this.#parseMetadata(metadataXml);
     const draftId = input.draftId ?? null;
     const created = await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, draftId, config.domains);
       let row: typeof identityProviders.$inferSelect | undefined;
       let signing = false;
       if (draftId) {
@@ -1061,6 +1062,7 @@ export class IdentityProviderService {
 
   async completeSetup(actor: Principal, id: string): Promise<ProviderSummary> {
     await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, id);
       const current = await this.#find(tx, id, true);
       if (current.setupCompletedAt) return;
       await tx
@@ -1138,6 +1140,7 @@ export class IdentityProviderService {
           ? await this.#loadMetadata(config as SamlConfig, null)
           : null;
     await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, id, config.domains);
       const current = await this.#find(tx, id, true);
       const name = input.name === undefined ? current.name : identityProviderNameSchema.parse(input.name);
       if (config.preset !== current.preset) {
@@ -1421,6 +1424,7 @@ export class IdentityProviderService {
 
   async remove(actor: Principal, id: string): Promise<void> {
     await this.#database.transaction(async (tx) => {
+      await lockProviderDomains(tx, id);
       const current = await this.#find(tx, id, true, "include");
       const linked = await this.#linked(tx, id);
       const linkedAccounts = new Set(linked.map((identity) => identity.accountId)).size;
@@ -1432,7 +1436,6 @@ export class IdentityProviderService {
         );
       }
       const releasedGroups = (await this.#mapping?.releaseGroups(tx, id, current.name)) ?? 0;
-      await lockProviderDomains(tx, id);
       await tx.delete(identityProviderDomains).where(eq(identityProviderDomains.providerId, id));
       await refreshManagedAccounts(tx, this.#audit, { providerId: id }, actor);
       await this.#audit.record(tx, {

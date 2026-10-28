@@ -164,7 +164,6 @@ export async function createMigratedDatabase(
   return createTemporaryDatabase(baseUrl, prefix, await template);
 }
 
-/** Waits until a session of the test database waits for a lock; false when none did within about two seconds. */
 export async function waitForLockWait(pool: Pick<pg.Pool, "query">): Promise<boolean> {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     const waiting = await pool.query<{ count: string }>(

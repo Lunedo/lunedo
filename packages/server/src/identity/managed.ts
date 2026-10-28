@@ -190,20 +190,27 @@ export async function holdEmailDomain(tx: Transaction, email: string | null): Pr
 
 export async function lockProviderDomains(
   tx: Transaction,
-  providerId: string,
+  providerId: string | null,
   extra: readonly string[] = [],
 ): Promise<void> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('managed-providers', 0))`);
-  const current = await tx
-    .select({ domain: identityProviderDomains.domain })
-    .from(identityProviderDomains)
-    .where(eq(identityProviderDomains.providerId, providerId));
+  const current = providerId
+    ? await tx
+        .select({ domain: identityProviderDomains.domain })
+        .from(identityProviderDomains)
+        .where(eq(identityProviderDomains.providerId, providerId))
+    : [];
   const domains = [
     ...new Set([...current.map((row) => row.domain), ...extra].map((d) => d.toLowerCase())),
   ].sort();
   for (const domain of domains) {
     await tx.execute(sql`select pg_advisory_xact_lock(${domainLock(domain)})`);
   }
+  const touched = providerId ? sql`a.id in (${candidates({ providerId })}) or ` : sql``;
+  await tx.execute(sql`
+    select a.id from accounts a
+    where ${touched}lower(substring(a.email from '@([^@]+)$')) = any(${sql.param(domains)}::text[])
+    order by a.id for key share of a`);
 }
 
 function candidates(target: ManagedTarget) {

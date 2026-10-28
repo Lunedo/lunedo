@@ -623,6 +623,218 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
     });
   });
 
+  function gated() {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { gate, release };
+  }
+
+  function outcome(promise: Promise<unknown>): Promise<string> {
+    return promise.then(
+      () => "ok",
+      (error: unknown) => {
+        const cause = (error as { cause?: { message?: string } }).cause?.message;
+        return (error as { code?: string }).code ?? cause ?? String(error);
+      },
+    );
+  }
+
+  it("creates a provider for a domain while an address moves into it without a deadlock", async () => {
+    const domain = uniqueDomain();
+    const person = await account(`person@${uniqueDomain()}`);
+    const token = generateToken();
+    await test.pool.query(
+      "insert into account_tokens (id, account_id, purpose, token_hash, new_email, expires_at) values (gen_random_uuid(), $1, 'emailChange', $2, $3, now() + interval '1 hour')",
+      [person.id, hashToken(token), `person@${domain}`],
+    );
+    const { gate, release } = gated();
+    let reached = false;
+    const lock = test.services.accounts.lock.bind(test.services.accounts);
+    const spy = vi.spyOn(test.services.accounts, "lock").mockImplementation(async (tx, id) => {
+      if (!reached) {
+        reached = true;
+        await gate;
+      }
+      return lock(tx, id);
+    });
+    let results: string[];
+    let providerId = "";
+    try {
+      const changing = outcome(test.services.security.confirmEmailChange(token, undefined));
+      await vi.waitFor(() => expect(reached).toBe(true));
+      const creating = outcome(
+        provider([domain]).then((created) => {
+          providerId = created.id;
+        }),
+      );
+      await Promise.race([creating, waitForLockWait(test.pool)]);
+      release();
+      results = await Promise.all([changing, creating]);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(results).toEqual(["ok", "ok"]);
+    expect(await managedStateOf(test.database, person.id)).toMatchObject({ providerId, source: "domain" });
+  });
+
+  it("transfers the ownership while a provider for the domain of both accounts is created without a deadlock", async () => {
+    const domain = uniqueDomain();
+    const owner = await account(`owner@${domain}`);
+    const candidate = await account(`next@${domain}`);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: candidate.id },
+    });
+    await test.pool.query("update instance set owner_account_id = $1", [owner.id]);
+    const { gate, release } = gated();
+    let reached = false;
+    const record = test.services.audit.record.bind(test.services.audit);
+    const spy = vi.spyOn(test.services.audit, "record").mockImplementation(async (tx, input) => {
+      await record(tx, input);
+      if (input.name === "identityProvider.created" && !reached) {
+        reached = true;
+        await gate;
+      }
+    });
+    let results: string[];
+    try {
+      const creating = outcome(provider([domain]));
+      await vi.waitFor(() => expect(reached).toBe(true));
+      const transfer = outcome(
+        test.services.memberships.transferOwnership(accountPrincipal(owner.id), candidate.id),
+      );
+      await Promise.race([transfer, waitForLockWait(test.pool)]);
+      release();
+      results = await Promise.all([creating, transfer]);
+    } finally {
+      spy.mockRestore();
+      await test.pool.query("update instance set owner_account_id = null");
+    }
+    expect(results).toEqual(["ok", "ownerManaged"]);
+    expect(await managedStateOf(test.database, owner.id)).toBeNull();
+  });
+
+  it("refuses a registration that completes while its domain is being assigned", async () => {
+    const domain = uniqueDomain();
+    const owner = await account(`owner@${uniqueDomain()}`);
+    const organization = await test.services.organizations.createAsActor(SYSTEM, {
+      name: `Registering ${randomUUID().slice(0, 6)}`,
+      ownerAccountId: owner.id,
+    });
+    await test.settings.set(
+      selfRegistrationSetting,
+      organizationSettingsChain(organization.id),
+      "organization",
+      true,
+    );
+    const token = generateToken();
+    await test.pool.query(
+      "insert into registration_tokens (id, organization_id, email, token_hash, expires_at) values (gen_random_uuid(), $1, $2, $3, now() + interval '1 hour')",
+      [organization.id, `new.person@${domain}`, hashToken(token)],
+    );
+    const created = await provider();
+    const { gate, release } = gated();
+    let reached = false;
+    const record = test.services.audit.record.bind(test.services.audit);
+    const spy = vi.spyOn(test.services.audit, "record").mockImplementation(async (tx, input) => {
+      await record(tx, input);
+      if (input.name === "identityProvider.updated" && !reached) {
+        reached = true;
+        await gate;
+      }
+    });
+    let results: string[];
+    try {
+      const assigning = outcome(
+        test.services.identityProviders.update(SYSTEM, created.id, {
+          config: { ...GENERIC, domains: [domain] },
+        }),
+      );
+      await vi.waitFor(() => expect(reached).toBe(true));
+      const registering = outcome(
+        test.services.invitations.completeRegistration(
+          token,
+          { name: "New Person", password: "a long test passphrase" },
+          undefined,
+        ),
+      );
+      await Promise.race([registering, waitForLockWait(test.pool)]);
+      release();
+      results = await Promise.all([assigning, registering]);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(results).toEqual(["ok", "managedDomain"]);
+    const accountRows = await test.pool.query("select 1 from accounts where email = $1", [
+      `new.person@${domain}`,
+    ]);
+    expect(accountRows.rowCount).toBe(0);
+  });
+
+  it("creates an invited account without a password when its domain is assigned at the same moment", async () => {
+    const domain = uniqueDomain();
+    const owner = await account(`owner@${uniqueDomain()}`);
+    const organization = await test.services.organizations.createAsActor(SYSTEM, {
+      name: `Inviting ${randomUUID().slice(0, 6)}`,
+      ownerAccountId: owner.id,
+    });
+    const invitation = await test.services.invitations.create(accountPrincipal(owner.id), organization.id, {
+      email: `invited@${domain}`,
+      kind: "member",
+      role: { builtIn: "administrator" },
+    });
+    const token = generateToken();
+    await test.pool.query("update invitations set token_hash = $1 where id = $2", [
+      hashToken(token),
+      invitation.id,
+    ]);
+    const created = await provider();
+    const { gate, release } = gated();
+    let reached = false;
+    const record = test.services.audit.record.bind(test.services.audit);
+    const spy = vi.spyOn(test.services.audit, "record").mockImplementation(async (tx, input) => {
+      await record(tx, input);
+      if (input.name === "identityProvider.updated" && !reached) {
+        reached = true;
+        await gate;
+      }
+    });
+    let results: string[];
+    try {
+      const assigning = outcome(
+        test.services.identityProviders.update(SYSTEM, created.id, {
+          config: { ...GENERIC, domains: [domain] },
+        }),
+      );
+      await vi.waitFor(() => expect(reached).toBe(true));
+      const accepting = outcome(
+        test.services.invitations.accept(
+          token,
+          { name: "Invited Person", password: "an invited passphrase" },
+          undefined,
+        ),
+      );
+      await Promise.race([accepting, waitForLockWait(test.pool)]);
+      release();
+      results = await Promise.all([assigning, accepting]);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(results).toEqual(["ok", "ok"]);
+    const rows = await test.pool.query<{ id: string; password: boolean }>(
+      "select id, password_hash is not null as password from accounts where email = $1",
+      [`invited@${domain}`],
+    );
+    expect(rows.rows[0]?.password).toBe(false);
+    expect(await managedStateOf(test.database, rows.rows[0]?.id ?? "")).toMatchObject({
+      providerId: created.id,
+    });
+  });
+
   it("assigns a domain with ten thousand accounts in one pass and audits each account", async () => {
     const domain = uniqueDomain();
     await test.pool.query(
