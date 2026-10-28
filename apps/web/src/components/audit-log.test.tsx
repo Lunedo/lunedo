@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
@@ -343,6 +343,44 @@ describe("who acted", () => {
     });
     const table = await renderLog();
     expect(await within(table).findByText("Sync bot (service account) · token “Publishing”")).toBeTruthy();
+  });
+
+  it("names the setup assistant as actor in every language", async () => {
+    const started = event({
+      id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2ea",
+      name: "setup.sessionStarted",
+      actorType: "system",
+      actorId: null,
+      targetType: "instance",
+      targetId: null,
+      labelKey: "audit.events.setup.sessionStarted",
+      changeKind: "fields",
+      actor: {
+        type: "system",
+        id: "setupAssistant",
+        name: null,
+        former: false,
+        serviceAccount: false,
+        token: null,
+      },
+      target: { type: "instance", id: null, name: null, former: false },
+      changes: [],
+    });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({ body: { items: [started], nextCursor: null } }),
+    });
+    const { i18n } = await renderWithProviders(
+      <PreferencesProvider>
+        <AuditLog scope="instance" canExport />
+      </PreferencesProvider>,
+    );
+    const table = await screen.findByRole("table", { name: "Events" });
+    expect(await within(table).findByText("Setup assistant")).toBeTruthy();
+    expect(within(table).queryByText("Anonymous")).toBeNull();
+    expect(within(table).queryByText("System")).toBeNull();
+    await act(() => i18n.changeLanguage("de"));
+    expect(await screen.findByText("Einrichtungsassistent")).toBeTruthy();
   });
 });
 

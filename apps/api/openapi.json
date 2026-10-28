@@ -11499,7 +11499,7 @@
                                 "description": "`account`, `system` or `anonymous`."
                               },
                               "id": {
-                                "description": "ID of the account, or null.",
+                                "description": "ID of the account. For `system`, the part of Lunedo that acted: `setupAssistant` for the setup assistant before the owner account exists, or null for other automatic actions. More values may be added. Null for `anonymous`.",
                                 "type": [
                                   "string",
                                   "null"
@@ -63818,7 +63818,7 @@
                                 "description": "`account`, `system` or `anonymous`."
                               },
                               "id": {
-                                "description": "ID of the account, or null.",
+                                "description": "ID of the account. For `system`, the part of Lunedo that acted: `setupAssistant` for the setup assistant before the owner account exists, or null for other automatic actions. More values may be added. Null for `anonymous`.",
                                 "type": [
                                   "string",
                                   "null"
@@ -168908,7 +168908,7 @@
                                 "description": "`account`, `system` or `anonymous`."
                               },
                               "id": {
-                                "description": "ID of the account, or null.",
+                                "description": "ID of the account. For `system`, the part of Lunedo that acted: `setupAssistant` for the setup assistant before the owner account exists, or null for other automatic actions. More values may be added. Null for `anonymous`.",
                                 "type": [
                                   "string",
                                   "null"

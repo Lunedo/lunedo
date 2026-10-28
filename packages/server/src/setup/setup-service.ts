@@ -1,6 +1,6 @@
 import { createHash, randomInt } from "node:crypto";
 import { and, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
-import { ANONYMOUS, type Principal } from "../accounts/principal.js";
+import { accountPrincipal, type Principal, SETUP_ASSISTANT, SYSTEM } from "../accounts/principal.js";
 import { instance } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { RateLimitedError } from "../auth/errors.js";
@@ -10,6 +10,7 @@ import type { Secret } from "../config/secret.js";
 import { secretsEqual } from "../crypto/constant-time.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
+import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import type { SetupActionContext, SetupActionResult, SetupRegistry, SetupStep } from "./framework.js";
 import { probeAnswer } from "./reachability.js";
 import { setupSessions, setupSteps } from "./schema.js";
@@ -39,6 +40,16 @@ function generateCode(): string {
   return Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)])
     .join("")
     .replace(/(.{4})(?!$)/g, "$1-");
+}
+
+async function setupActorIn(tx: Transaction): Promise<Principal> {
+  const [row] = await tx.select({ ownerAccountId: instance.ownerAccountId }).from(instance);
+  return row?.ownerAccountId ? accountPrincipal(row.ownerAccountId) : SETUP_ASSISTANT;
+}
+
+function actingAs<T>(actor: Principal, operation: () => Promise<T>): Promise<T> {
+  const current = currentRequestContext();
+  return runWithRequestContext({ ...current, requestId: current?.requestId ?? "setup", actor }, operation);
 }
 
 export interface IssueCodeOptions {
@@ -147,7 +158,7 @@ export class SetupService {
         .values({ tokenHash: hashToken(token), origin, expiresAt: new Date(Date.now() + SESSION_IDLE_MS) });
       await this.#audit.record(tx, {
         name: "setup.sessionStarted",
-        actor: ANONYMOUS,
+        actor: await setupActorIn(tx),
         targetId: null,
         fields: {},
       });
@@ -240,8 +251,10 @@ export class SetupService {
       if (await this.#completedIn(tx)) throw new SetupNotFoundError();
       await tx.insert(setupSteps).values({ step: step.id }).onConflictDoNothing();
       const [row] = await tx.select().from(setupSteps).where(eq(setupSteps.step, step.id)).for("update");
+      const actor = await setupActorIn(tx);
       const context: SetupActionContext = {
         tx,
+        actor,
         request,
         state: (row?.state as Record<string, unknown>) ?? {},
         setState: async (state) => {
@@ -251,7 +264,7 @@ export class SetupService {
             .where(eq(setupSteps.step, step.id));
           context.state = state;
         },
-        complete: () => this.#completeStep(tx, step, ANONYMOUS),
+        complete: () => this.#completeStep(tx, step, actor),
         reopen: async () => {
           await tx
             .update(setupSteps)
@@ -259,7 +272,7 @@ export class SetupService {
             .where(eq(setupSteps.step, step.id));
         },
       };
-      return action.run(context, parsed.data);
+      return actingAs(actor, () => action.run(context, parsed.data));
     });
   }
 
@@ -283,7 +296,7 @@ export class SetupService {
       const step = this.#registry.get(id);
       if (!step) continue;
       await tx.insert(setupSteps).values({ step: id }).onConflictDoNothing();
-      await this.#completeStep(tx, step, { type: "system" });
+      await this.#completeStep(tx, step, SYSTEM);
     }
   }
 
@@ -314,7 +327,7 @@ export class SetupService {
     await tx.delete(setupSessions);
     await this.#audit.record(tx, {
       name: "setup.completed",
-      actor: through === "assistant" ? ANONYMOUS : { type: "system" },
+      actor: through === "assistant" ? await setupActorIn(tx) : SYSTEM,
       targetId: null,
       fields: { through },
     });

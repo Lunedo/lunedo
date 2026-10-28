@@ -1,11 +1,11 @@
 import { type SQL, sql } from "drizzle-orm";
-import type { Principal } from "../accounts/principal.js";
+import type { Principal, SystemActorId } from "../accounts/principal.js";
 import type { Executor } from "../database/database.js";
 import type { AuditTargetType } from "./catalog.js";
 
 export interface AuditLabels {
   actor?: string;
-  actorKind?: "serviceAccount";
+  actorKind?: "serviceAccount" | SystemActorId;
   actorToken?: string;
   target?: string;
   scope?: string;
@@ -106,6 +106,7 @@ export async function resolveAuditLabels(
 ): Promise<{ labels: AuditLabels | null; accountReferences: string[] }> {
   const labels: AuditLabels = {};
   const accountReferences: string[] = [];
+  if (event.actor.type === "system" && event.actor.id) labels.actorKind = event.actor.id;
   if (event.actor.type === "account") {
     const actorId = event.actor.id;
     const result = await remembered(event.cache, `actor:${actorId}`, () =>

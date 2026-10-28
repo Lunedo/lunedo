@@ -4579,6 +4579,9 @@
       "anonymous": "Anonymous",
       "group": "Group"
     },
+    "systemActors": {
+      "setupAssistant": "Setup assistant"
+    },
     "eventsTitle": "Events",
     "events": {
       "identity": {

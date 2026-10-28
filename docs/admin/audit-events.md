@@ -367,10 +367,10 @@ Every event the [audit log](audit-log.md) records, grouped by the area at the st
 
 | Event | What it records | Target | Actor | Level | Fields |
 |---|---|---|---|---|---|
-| `setup.completed` | Setup completed | `instance` | `anonymous`, `system` | instance | `through` |
-| `setup.keyBackupDownloaded` | Keys downloaded | `instance` | `anonymous` | instance | `masterKeyVersions`, `backupKeyVersions` |
-| `setup.sessionStarted` | Setup started | `instance` | `anonymous` | instance | no further fields |
-| `setup.stepCompleted` | Setup step completed | `setupStep` | `anonymous`, `system` | instance | no further fields |
+| `setup.completed` | Setup completed | `instance` | `account`, `system` | instance | `through` |
+| `setup.keyBackupDownloaded` | Keys downloaded | `instance` | `account` | instance | `masterKeyVersions`, `backupKeyVersions` |
+| `setup.sessionStarted` | Setup started | `instance` | `account`, `system` | instance | no further fields |
+| `setup.stepCompleted` | Setup step completed | `setupStep` | `account`, `system` | instance | no further fields |
 
 ## shareLink
 

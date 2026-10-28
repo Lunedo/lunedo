@@ -544,7 +544,12 @@ export const auditEntrySchema = z
     actor: z
       .object({
         type: z.string().describe("`account`, `system` or `anonymous`."),
-        id: z.string().nullable().describe("ID of the account, or null."),
+        id: z
+          .string()
+          .nullable()
+          .describe(
+            "ID of the account. For `system`, the part of Lunedo that acted: `setupAssistant` for the setup assistant before the owner account exists, or null for other automatic actions. More values may be added. Null for `anonymous`.",
+          ),
         name: z.string().nullable().describe("Name of the account when the event happened, or null."),
         former: z
           .boolean()

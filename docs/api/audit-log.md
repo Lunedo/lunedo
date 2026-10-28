@@ -48,7 +48,7 @@ Each event has its raw columns: `id`, `scopeType`, `scopeId`, `sequence`, `name`
 | Field | Content |
 |---|---|
 | `labelKey` | translation key of the action, `audit.events.` followed by the event type |
-| `actor` | `type` (`account`, `system`, `anonymous`), `id`, `name` at the time of the event, `former` (anonymized), `serviceAccount` (whether the account is a service account) and `token` (name of the API token it acted with, or `null`) |
+| `actor` | `type` (`account`, `system`, `anonymous`), `id` (the account; for `system`, `setupAssistant` when the setup assistant acted before the owner account existed, otherwise `null`), `name` at the time of the event, `former` (anonymized), `serviceAccount` (whether the account is a service account) and `token` (name of the API token it acted with, or `null`) |
 | `target` | `type`, `id` (for settings the setting key), `name` at the time of the event, `former` |
 | `scope` | `type` (`instance`, `organization`, or `account` for events about one person's own account), `id` (`null` for the instance) and `name` |
 | `changeKind` | `setting` or `fields`: how `changes` reads |
@@ -63,7 +63,7 @@ Names are stored with the event, so renaming something later does not change old
 
 `…/audit-events/export` takes the same filters and streams all matching events as CSV, newest first, without a size limit. The columns are:
 
-1. the readable columns `time`, `actor`, `action`, `target`, `scope` and `changes`, with names in place of IDs. `action` holds the event type, such as `role.assigned`.
+1. the readable columns `time`, `actor`, `action`, `target`, `scope` and `changes`, with names in place of IDs. `action` holds the event type, such as `role.assigned`. `actor` holds `setupAssistant` for the setup assistant.
 2. the raw columns `occurredAt`, `name`, `scopeType`, `scopeId`, `actorType`, `actorId`, `targetType`, `targetId`, `fields`, `clientIp`, `userAgent`, `requestId`, `sequence` and `id`.
 
 Cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return get a leading apostrophe, so spreadsheets do not run them as formulas. Every export is itself recorded in the audit log as `audit.exported` with its filters.

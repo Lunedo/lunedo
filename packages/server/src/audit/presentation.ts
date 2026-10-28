@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { isSystemActorId } from "../accounts/principal.js";
 import { type AuditChangeKind, auditCatalog } from "./catalog.js";
 import type { AuditLabels } from "./labels.js";
 
@@ -108,6 +109,10 @@ function accountScope(
   return null;
 }
 
+function systemActorOf(entry: PresentableAuditEntry, labels: AuditLabels): string | null {
+  return entry.actorType === "system" && isSystemActorId(labels.actorKind) ? labels.actorKind : null;
+}
+
 export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentation {
   const definition = (auditCatalog as Record<string, { change?: AuditChangeKind }>)[entry.name];
   const changeKind = definition?.change ?? "fields";
@@ -123,7 +128,7 @@ export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentati
     changeKind,
     actor: {
       type: entry.actorType,
-      id: entry.actorId,
+      id: entry.actorId ?? systemActorOf(entry, labels),
       name: labels.actor ?? null,
       former: entry.actorId !== null && former.has(entry.actorId),
       serviceAccount: labels.actorKind === "serviceAccount",
