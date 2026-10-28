@@ -215,7 +215,9 @@ describe("LDAP and Active Directory", () => {
         adapter.authenticate(adProvider(), credentials, { signInName, password: PASSWORD }),
       ).rejects.toMatchObject({ reason: "invalidCredentials" });
     }
-    expect(directory.binds.filter((bind) => bind.dn !== SERVICE_DN)).toEqual([]);
+    const userBinds = directory.binds.filter((bind) => bind.dn !== SERVICE_DN);
+    expect(userBinds).toHaveLength(4);
+    expect(userBinds.every((bind) => directory.find(bind.dn) === undefined)).toBe(true);
     expect(directory.filters.some((filter) => filter.includes("(userPrincipalName=a\\2a)"))).toBe(true);
   });
 
@@ -226,7 +228,7 @@ describe("LDAP and Active Directory", () => {
       "533": "accountDisabled",
       "701": "accountDisabled",
       "773": "passwordMustChange",
-      "775": "accountLocked",
+      "775": "invalidCredentials",
       "52e": "invalidCredentials",
     } as const;
     for (const [code, reason] of Object.entries(cases)) {
@@ -240,6 +242,60 @@ describe("LDAP and Active Directory", () => {
         .catch((caught: unknown) => caught);
       expect(error, code).toBeInstanceOf(DirectorySignInError);
       expect((error as DirectorySignInError).reason, code).toBe(reason);
+    }
+  });
+
+  it("binds for unknown sign-in names and answers exactly like a wrong password", async () => {
+    const cases = [
+      { provider: adProvider(), directory: activeDirectory(), known: "alice@corp.example" },
+      {
+        provider: genericProvider(),
+        directory: openLdap([openLdapUser("ada")]),
+        known: "ada",
+      },
+    ];
+    for (const { provider, directory, known } of cases) {
+      const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+      const wrong = await adapter
+        .authenticate(provider, credentials, { signInName: known, password: "wrong password" })
+        .catch((caught: unknown) => caught);
+      const before = directory.binds.length;
+      const unknown = await adapter
+        .authenticate(provider, credentials, { signInName: "nobody", password: "wrong password" })
+        .catch((caught: unknown) => caught);
+      expect(unknown).toBeInstanceOf(DirectorySignInError);
+      expect(wrong).toBeInstanceOf(DirectorySignInError);
+      expect({ ...(unknown as DirectorySignInError), message: (unknown as Error).message }).toEqual({
+        ...(wrong as DirectorySignInError),
+        message: (wrong as Error).message,
+      });
+      const userBinds = directory.binds.slice(before).filter((bind) => bind.dn !== provider.config.bindDn);
+      expect(userBinds).toHaveLength(1);
+      expect(userBinds[0]?.password).toBe("wrong password");
+      expect(userBinds[0]?.dn.toLowerCase().endsWith(`,${provider.config.userBaseDn.toLowerCase()}`)).toBe(
+        true,
+      );
+      expect(directory.find(userBinds[0]?.dn ?? "")).toBeUndefined();
+    }
+  });
+
+  it("does not report a locked Active Directory account for a password it cannot confirm", async () => {
+    for (const password of ["wrong password", PASSWORD]) {
+      const directory = activeDirectory();
+      const alice = directory.find("CN=alice,OU=People,DC=corp,DC=example");
+      if (alice)
+        alice.bindError =
+          "80090308: LdapErr: DSID-0C09044E, comment: AcceptSecurityContext error, data 775, v4563";
+      const adapter = new LdapAdapter({ allowInsecure: false, connector: directory.connector });
+      const locked = await adapter
+        .authenticate(adProvider(), credentials, { signInName: "alice@corp.example", password })
+        .catch((caught: unknown) => caught);
+      const wrong = await new LdapAdapter({ allowInsecure: false, connector: activeDirectory().connector })
+        .authenticate(adProvider(), credentials, { signInName: "alice@corp.example", password: "wrong" })
+        .catch((caught: unknown) => caught);
+      expect(locked).toBeInstanceOf(DirectorySignInError);
+      expect((locked as DirectorySignInError).reason).toBe("invalidCredentials");
+      expect((locked as Error).message).toBe((wrong as Error).message);
     }
   });
 

@@ -53,7 +53,7 @@ People and groups are identified by their `objectGUID`. Group memberships includ
 
 An account counts as disabled when it is disabled in Active Directory or its expiry date (`accountExpires`) has passed.
 
-When Active Directory refuses a password because it has expired, must be changed, the account is locked or disabled, or the person may not sign in at this time, the sign-in page tells the person so and what to do. Control characters in messages of the directory, such as the null byte Active Directory appends, are removed before they are stored or shown.
+When Active Directory refuses a correct password because it has expired, must be changed, the account is disabled, or the person may not sign in at this time, the sign-in page tells the person so and what to do. A locked account gets the same answer as a wrong password, because Active Directory reports the lock without checking the password. A sign-in name the directory does not know also gets the same answer as a wrong password, so the sign-in page does not reveal which names exist. Control characters in messages of the directory, such as the null byte Active Directory appends, are removed before they are stored or shown.
 
 ## OpenLDAP and other directories
 
