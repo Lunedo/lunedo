@@ -249,6 +249,8 @@ function canSignIn(account: Account | null): account is Account & { email: strin
   );
 }
 
+class LinkConfirmationRequired extends Error {}
+
 class Refused extends Error {
   constructor(readonly reason: SignInRefusalReason) {
     super(reason);
@@ -680,7 +682,8 @@ export class ProviderSignInService {
         if (!canSignIn(existing)) throw new Refused("accountInactive");
         if (!(await confirmsLinks(this.#database, existing.id))) {
           if (profile.emailUnverified) throw new Refused("emailNotVerified");
-          return this.#adoptExisting(existing, input);
+          const adopted = await this.#adoptExisting(existing, input);
+          if (adopted) return adopted;
         }
         const ways = await this.#linkWays(existing);
         if (!ways.password && !ways.passkey && ways.providers.length === 0) {
@@ -807,72 +810,78 @@ export class ProviderSignInService {
       returnTo: string | null;
       started: Date;
     },
-  ): Promise<CallbackResult> {
+  ): Promise<CallbackResult | null> {
     const { provider, profile } = input;
-    return this.#withSession(
-      existing,
-      async (tx, mailIds) => {
-        const account = await this.#accounts.lock(tx, existing.id);
-        if (!canSignIn(account)) throw new Refused("accountInactive");
-        const [other] = await tx
-          .select({ id: identities.id, subject: identities.subject })
-          .from(identities)
-          .where(and(eq(identities.accountId, account.id), eq(identities.providerId, provider.id)));
-        if (other?.subject === profile.subject) return other.id;
-        if (other) throw new Refused("linkAmbiguous");
-        const [created] = await tx
-          .insert(identities)
-          .values({
-            accountId: account.id,
-            providerId: provider.id,
-            subject: profile.subject,
-            email: profile.email,
-            emailVerified: true,
-            signInName: profile.signInName,
-            displayName: profile.displayName,
-            lastSignInAt: this.#clock(),
-          })
-          .returning({ id: identities.id });
-        if (!created) throw new Error("The identity was not stored");
-        await this.#mapping.applyAtSignIn(
-          tx,
-          {
-            providerId: provider.id,
-            identityId: created.id,
-            accountId: account.id,
-            groups: input.groups,
-            groupsFailed: input.groupsFailed,
-          },
-          mailIds,
-        );
-        const scope = account.homeOrganizationId
-          ? { scope: { type: "organization" as const, id: account.homeOrganizationId } }
-          : {};
-        await this.#audit.record(tx, {
-          name: "identity.linked",
-          actor: accountPrincipal(account.id),
-          targetId: account.id,
-          fields: { providerId: provider.id, via: "signIn" },
-          ...scope,
-        });
-        await refreshManagedAccounts(
-          tx,
-          this.#audit,
-          { accountIds: [account.id] },
-          accountPrincipal(account.id),
-        );
-        const mailId = await takeOverLocalCredentials(
-          tx,
-          { audit: this.#audit, mail: this.#mail },
-          account.id,
-          accountPrincipal(account.id),
-          "signIn",
-        );
-        if (mailId) mailIds.push(mailId);
-        return created.id;
-      },
-      input,
-    );
+    try {
+      return await this.#withSession(
+        existing,
+        async (tx, mailIds) => {
+          const account = await this.#accounts.lock(tx, existing.id);
+          if (!canSignIn(account)) throw new Refused("accountInactive");
+          if (await confirmsLinks(tx, account.id)) throw new LinkConfirmationRequired();
+          const [other] = await tx
+            .select({ id: identities.id, subject: identities.subject })
+            .from(identities)
+            .where(and(eq(identities.accountId, account.id), eq(identities.providerId, provider.id)));
+          if (other?.subject === profile.subject) return other.id;
+          if (other) throw new Refused("linkAmbiguous");
+          const [created] = await tx
+            .insert(identities)
+            .values({
+              accountId: account.id,
+              providerId: provider.id,
+              subject: profile.subject,
+              email: profile.email,
+              emailVerified: true,
+              signInName: profile.signInName,
+              displayName: profile.displayName,
+              lastSignInAt: this.#clock(),
+            })
+            .returning({ id: identities.id });
+          if (!created) throw new Error("The identity was not stored");
+          await this.#mapping.applyAtSignIn(
+            tx,
+            {
+              providerId: provider.id,
+              identityId: created.id,
+              accountId: account.id,
+              groups: input.groups,
+              groupsFailed: input.groupsFailed,
+            },
+            mailIds,
+          );
+          const scope = account.homeOrganizationId
+            ? { scope: { type: "organization" as const, id: account.homeOrganizationId } }
+            : {};
+          await this.#audit.record(tx, {
+            name: "identity.linked",
+            actor: accountPrincipal(account.id),
+            targetId: account.id,
+            fields: { providerId: provider.id, via: "signIn" },
+            ...scope,
+          });
+          await refreshManagedAccounts(
+            tx,
+            this.#audit,
+            { accountIds: [account.id] },
+            accountPrincipal(account.id),
+          );
+          const mailId = await takeOverLocalCredentials(
+            tx,
+            { audit: this.#audit, mail: this.#mail },
+            account.id,
+            accountPrincipal(account.id),
+            "signIn",
+          );
+          if (mailId) mailIds.push(mailId);
+          return created.id;
+        },
+        input,
+      );
+    } catch (error) {
+      if (error instanceof LinkConfirmationRequired) return null;
+      throw error;
+    }
   }
 
   async #adopt(

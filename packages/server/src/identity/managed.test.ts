@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import "reflect-metadata";
 import { Secret, TOTP } from "otpauth";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { ManagedAccountError } from "../auth/errors.js";
 import { generateToken, hashToken } from "../auth/tokens.js";
 import { organizationSettingsChain, selfRegistrationSetting } from "../organizations/settings.js";
-import { testDatabaseBaseUrl } from "../testing/database.js";
+import { testDatabaseBaseUrl, waitForLockWait } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { VirtualAuthenticator } from "../testing/webauthn.js";
 import { managedAccountCounts, managedStateOf, refreshManagedAccounts } from "./managed.js";
@@ -510,4 +510,136 @@ describe.skipIf(!baseUrl)("managed accounts", () => {
       await test.pool.query("update instance set owner_account_id = null");
     }
   });
+  it("refuses a new owner whose first provider sign-in commits while the transfer runs", async () => {
+    const owner = await account(`owner@${uniqueDomain()}`);
+    const candidate = await account(`next@${uniqueDomain()}`);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: candidate.id },
+    });
+    const created = await provider();
+    await test.pool.query("update instance set owner_account_id = $1", [owner.id]);
+    const signIn = await test.pool.connect();
+    try {
+      await signIn.query("begin");
+      await signIn.query("select id from accounts where id = $1 for update", [candidate.id]);
+      const transfer = test.services.memberships
+        .transferOwnership(accountPrincipal(owner.id), candidate.id)
+        .then(
+          () => null,
+          (error: unknown) => error,
+        );
+      await Promise.race([transfer, waitForLockWait(test.pool)]);
+      await signIn.query(
+        "insert into identities (id, account_id, provider_id, subject) values (gen_random_uuid(), $1, $2, $3)",
+        [candidate.id, created.id, randomUUID()],
+      );
+      await signIn.query(
+        "insert into managed_accounts (account_id, provider_id, source) values ($1, $2, 'identity')",
+        [candidate.id, created.id],
+      );
+      await signIn.query("commit");
+      expect(await transfer).toMatchObject({ code: "ownerManaged" });
+      const current = await test.pool.query("select owner_account_id from instance");
+      expect(current.rows[0]?.owner_account_id).toBe(owner.id);
+    } finally {
+      await signIn.query("rollback");
+      signIn.release();
+      await test.pool.query("update instance set owner_account_id = null");
+    }
+  });
+
+  it("manages an account created in a domain while the domain is being assigned", async () => {
+    const domain = uniqueDomain();
+    const created = await provider();
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let createdId: string | null = null;
+    const creating = test.database.transaction(async (tx) => {
+      const person = await test.services.accounts.create(tx, {
+        type: "standard",
+        email: `late@${domain}`,
+        name: "Person",
+        password: "a long test passphrase",
+        homeOrganizationId: null,
+      });
+      createdId = person.id;
+      await gate;
+    });
+    await vi.waitFor(() => expect(createdId).not.toBeNull());
+    const assigning = test.services.identityProviders.update(SYSTEM, created.id, {
+      config: { ...GENERIC, domains: [domain] },
+    });
+    await Promise.race([assigning, waitForLockWait(test.pool)]);
+    release();
+    await Promise.all([creating, assigning]);
+    expect(await managedStateOf(test.database, createdId ?? "")).toMatchObject({
+      providerId: created.id,
+      source: "domain",
+    });
+  });
+
+  it("manages an account whose new address moves into a domain while the domain is being assigned", async () => {
+    const domain = uniqueDomain();
+    const person = await account(`person@${uniqueDomain()}`);
+    const created = await provider();
+    const token = generateToken();
+    await test.pool.query(
+      "insert into account_tokens (id, account_id, purpose, token_hash, new_email, expires_at) values (gen_random_uuid(), $1, 'emailChange', $2, $3, now() + interval '1 hour')",
+      [person.id, hashToken(token), `person@${domain}`],
+    );
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reached = false;
+    const recordMany = test.services.audit.recordMany.bind(test.services.audit);
+    const spy = vi.spyOn(test.services.audit, "recordMany").mockImplementation(async (tx, inputs) => {
+      await recordMany(tx, inputs);
+      if (inputs.length === 0 && !reached) {
+        reached = true;
+        await gate;
+      }
+    });
+    try {
+      const changing = test.services.security.confirmEmailChange(token, undefined);
+      await vi.waitFor(() => expect(reached).toBe(true));
+      const assigning = test.services.identityProviders.update(SYSTEM, created.id, {
+        config: { ...GENERIC, domains: [domain] },
+      });
+      await Promise.race([assigning, waitForLockWait(test.pool)]);
+      release();
+      await Promise.all([changing, assigning]);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await managedStateOf(test.database, person.id)).toMatchObject({
+      providerId: created.id,
+      source: "domain",
+    });
+  });
+
+  it("assigns a domain with ten thousand accounts in one pass and audits each account", async () => {
+    const domain = uniqueDomain();
+    await test.pool.query(
+      "insert into accounts (id, type, state, name, email) select gen_random_uuid(), 'standard', 'active', 'Person ' || n, 'p' || n || '@' || $1 from generate_series(1, 10000) n",
+      [domain],
+    );
+    const created = await provider();
+    await test.services.identityProviders.update(SYSTEM, created.id, {
+      config: { ...GENERIC, domains: [domain] },
+    });
+    expect((await managedAccountCounts(test.database, [created.id])).get(created.id)).toBe(10_000);
+    const audited = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from audit_events where name = 'account.managed' and fields->>'providerId' = $1",
+      [created.id],
+    );
+    expect(audited.rows[0]?.count).toBe(10_000);
+    const verification = await test.services.audit.verify();
+    expect(verification.every((chain) => chain.broken === null)).toBe(true);
+  }, 120_000);
 });

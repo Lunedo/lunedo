@@ -14,7 +14,7 @@ import {
   pageLimit,
   toPage,
 } from "../database/keyset.js";
-import { refreshManagedAccounts } from "../identity/managed.js";
+import { holdEmailDomain, refreshManagedAccounts } from "../identity/managed.js";
 import { memberships } from "../organizations/access-schema.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { SYSTEM } from "./principal.js";
@@ -178,6 +178,7 @@ export class AccountService {
     const name = accountNameSchema.parse(input.name);
     const passwordHash = input.password === null ? null : await this.hashPassword(input.password);
     const now = new Date();
+    await holdEmailDomain(tx, email);
     const [row] = await withUniqueEmail(() =>
       tx
         .insert(accounts)

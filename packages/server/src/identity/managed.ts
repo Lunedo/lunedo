@@ -1,7 +1,7 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
-import type { AuditLog } from "../audit/audit-log.js";
+import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
 import { ManagedAccountError } from "../auth/errors.js";
 import {
   accountTokens,
@@ -14,7 +14,7 @@ import {
 import { hasSecondFactor, secondFactorsOf } from "../auth/two-factor.js";
 import type { Executor, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
-import { identityProviders, type ManagedSource, managedAccounts } from "./schema.js";
+import { identityProviderDomains, identityProviders, type ManagedSource, managedAccounts } from "./schema.js";
 
 export type ManagingProviderType = "oidc" | "saml" | "ldap";
 
@@ -176,6 +176,35 @@ export async function takeOverLocalCredentials(
 }
 
 const setUpProvider = sql`p.setup_completed_at is not null`;
+const WRITE_BATCH = 5000;
+
+function domainLock(domain: string) {
+  return sql`hashtextextended(${`managed-domain:${domain.toLowerCase()}`}, 0)`;
+}
+
+export async function holdEmailDomain(tx: Transaction, email: string | null): Promise<void> {
+  const domain = email?.split("@")[1];
+  if (!domain) return;
+  await tx.execute(sql`select pg_advisory_xact_lock_shared(${domainLock(domain)})`);
+}
+
+export async function lockProviderDomains(
+  tx: Transaction,
+  providerId: string,
+  extra: readonly string[] = [],
+): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('managed-providers', 0))`);
+  const current = await tx
+    .select({ domain: identityProviderDomains.domain })
+    .from(identityProviderDomains)
+    .where(eq(identityProviderDomains.providerId, providerId));
+  const domains = [
+    ...new Set([...current.map((row) => row.domain), ...extra].map((d) => d.toLowerCase())),
+  ].sort();
+  for (const domain of domains) {
+    await tx.execute(sql`select pg_advisory_xact_lock(${domainLock(domain)})`);
+  }
+}
 
 function candidates(target: ManagedTarget) {
   if ("providerId" in target) {
@@ -200,13 +229,14 @@ export async function refreshManagedAccounts(
   actor: Principal,
 ): Promise<ManagedChange[]> {
   if ("accountIds" in target && target.accountIds.length === 0) return [];
-  const locked = await tx.execute<{ id: string }>(sql`
-    select a.id from accounts a where a.id in (${candidates(target)}) order by a.id for update of a`);
-  if (locked.rows.length === 0) return [];
-  const lockedIds = sql.join(
-    locked.rows.map((row) => sql`${row.id}::uuid`),
-    sql`, `,
+  const byProvider = "providerId" in target;
+  if (byProvider) await lockProviderDomains(tx, target.providerId);
+  const lock = byProvider ? sql`for key share of a` : sql`for update of a`;
+  const locked = await tx.execute<{ id: string }>(
+    sql`select a.id from accounts a where a.id in (${candidates(target)}) order by a.id ${lock}`,
   );
+  if (locked.rows.length === 0) return [];
+  const lockedIds = locked.rows.map((row) => row.id);
   const result = await tx.execute<{
     id: string;
     home: string | null;
@@ -216,7 +246,8 @@ export async function refreshManagedAccounts(
     source: ManagedSource | null;
   }>(sql`
     with locked as (
-      select a.id, a.type, a.email, a.home_organization_id from accounts a where a.id in (${lockedIds}))
+      select a.id, a.type, a.email, a.home_organization_id from accounts a
+      where a.id = any(${sql.param(lockedIds)}::uuid[]))
     select l.id, l.home_organization_id as home,
       m.provider_id as current_provider, m.source as current_source,
       coalesce(own.provider_id, dom.provider_id) as provider,
@@ -234,9 +265,13 @@ export async function refreshManagedAccounts(
       select d.provider_id from identity_provider_domains d join identity_providers p on p.id = d.provider_id
       where d.domain = lower(substring(l.email from '@([^@]+)$')) and ${setUpProvider}) dom
       on l.type in ('standard', 'guest')
-        and l.id is distinct from (select owner_account_id from instance)`);
+        and l.id is distinct from (select owner_account_id from instance)
+    order by l.id`);
 
   const changes: ManagedChange[] = [];
+  const managed: { accountId: string; providerId: string; source: ManagedSource }[] = [];
+  const released: string[] = [];
+  const events: AuditEvents = [];
   for (const row of result.rows) {
     const before =
       row.current_provider && row.current_source
@@ -246,14 +281,8 @@ export async function refreshManagedAccounts(
     if (before?.providerId === after?.providerId && before?.source === after?.source) continue;
     const scope = row.home ? { scope: { type: "organization" as const, id: row.home } } : {};
     if (after) {
-      await tx
-        .insert(managedAccounts)
-        .values({ accountId: row.id, providerId: after.providerId, source: after.source })
-        .onConflictDoUpdate({
-          target: managedAccounts.accountId,
-          set: { providerId: after.providerId, source: after.source, since: sql`now()` },
-        });
-      await audit.record(tx, {
+      managed.push({ accountId: row.id, providerId: after.providerId, source: after.source });
+      events.push({
         name: "account.managed",
         actor,
         targetId: row.id,
@@ -261,8 +290,8 @@ export async function refreshManagedAccounts(
         ...scope,
       });
     } else if (before) {
-      await tx.delete(managedAccounts).where(eq(managedAccounts.accountId, row.id));
-      await audit.record(tx, {
+      released.push(row.id);
+      events.push({
         name: "account.unmanaged",
         actor,
         targetId: row.id,
@@ -272,6 +301,21 @@ export async function refreshManagedAccounts(
     }
     changes.push({ accountId: row.id, before, after });
   }
+  for (let start = 0; start < managed.length; start += WRITE_BATCH) {
+    await tx
+      .insert(managedAccounts)
+      .values(managed.slice(start, start + WRITE_BATCH))
+      .onConflictDoUpdate({
+        target: managedAccounts.accountId,
+        set: { providerId: sql`excluded.provider_id`, source: sql`excluded.source`, since: sql`now()` },
+      });
+  }
+  for (let start = 0; start < released.length; start += WRITE_BATCH) {
+    await tx
+      .delete(managedAccounts)
+      .where(inArray(managedAccounts.accountId, released.slice(start, start + WRITE_BATCH)));
+  }
+  await audit.recordMany(tx, events);
   return changes;
 }
 

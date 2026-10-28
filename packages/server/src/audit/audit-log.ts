@@ -15,7 +15,7 @@ import {
   auditCatalog,
   auditTargetTypes,
 } from "./catalog.js";
-import { type AuditLabels, resolveAuditLabels } from "./labels.js";
+import { type AuditLabelCache, type AuditLabels, preloadAuditTargets, resolveAuditLabels } from "./labels.js";
 import { AuditSealer, PersonalDataMissingKeyError, type SealedParts } from "./personal-data.js";
 import { auditChains, auditConfidentialEvents, auditEvents } from "./schema.js";
 
@@ -74,6 +74,7 @@ const GENESIS_HASH = Buffer.alloc(32);
 const USER_AGENT_MAX_LENGTH = 512;
 const VERIFY_BATCH = 1000;
 const RETENTION_BATCH = 5000;
+const INSERT_BATCH = 500;
 
 interface HashedContent {
   scopeType: string;
@@ -137,6 +138,31 @@ function storable(value: string | undefined, maxLength = Number.POSITIVE_INFINIT
   return value.replaceAll("\u0000", "").slice(0, maxLength);
 }
 
+interface SeparatedEvent {
+  subjects: Map<string, { accountId: string | null; parts: SealedParts }>;
+  labels: AuditLabels | null;
+  fields: Record<string, unknown>;
+  clientIp: string | null;
+  userAgent: string | null;
+}
+
+interface DescribedEvent {
+  input: AuditEventInput<AuditEventName>;
+  definition: AuditEventDefinition;
+  actor: Principal;
+  context: ReturnType<typeof currentRequestContext>;
+  personal: SeparatedEvent;
+  confidentialSpaces: string[];
+}
+
+interface PreparedEvent {
+  content: HashedContent;
+  actorType: Principal["type"];
+  hash: Buffer;
+  confidentialSpaces: string[];
+  signal: AuditChangeSignal;
+}
+
 export interface AuditVerification {
   scope: AuditScope;
   entries: number;
@@ -154,6 +180,7 @@ async function confidentialSpacesOf(
   targetType: AuditTargetType,
   targetId: string | null,
   fields: Record<string, unknown>,
+  known: ReadonlySet<string> = new Set(),
 ): Promise<string[]> {
   const ids = [
     ...(CONTENT_TARGETS.has(targetType) ? [targetId] : []),
@@ -162,12 +189,13 @@ async function confidentialSpacesOf(
     fields.pageId,
   ].filter((id): id is string => typeof id === "string" && UUID.test(id));
   if (ids.length === 0) return [];
+  const earlier = ids.filter((id) => known.has(id));
   const result = await tx.execute<{ id: string }>(sql`
     select s.id from spaces s where s.confidential and (s.id = any(${sql.param(ids)}::uuid[])
       or s.id in (select space_id from tree_items where id = any(${sql.param(ids)}::uuid[])))
     union select distinct space_id from audit_confidential_events
       where space_id = any(${sql.param(ids)}::uuid[])`);
-  return result.rows.map((row) => row.id);
+  return [...new Set([...result.rows.map((row) => row.id), ...earlier])];
 }
 
 function withoutContent(fields: Record<string, unknown>): Record<string, unknown> {
@@ -200,9 +228,26 @@ export class AuditLog {
   }
 
   async record<TName extends AuditEventName>(tx: Transaction, input: AuditEventInput<TName>): Promise<void> {
+    await this.recordMany(tx, [input as AuditEventInput<AuditEventName>]);
+  }
+
+  async #describe(
+    tx: Transaction,
+    input: AuditEventInput<AuditEventName>,
+    scope: AuditScope,
+    labelCache: AuditLabelCache,
+    knownConfidential: Set<string>,
+  ): Promise<DescribedEvent> {
     const definition = auditCatalog[input.name];
     const parsed = definition.fields.strict().parse(input.fields) as Record<string, unknown>;
-    const confidentialSpaces = await confidentialSpacesOf(tx, definition.target, input.targetId, parsed);
+    const confidentialSpaces = await confidentialSpacesOf(
+      tx,
+      definition.target,
+      input.targetId,
+      parsed,
+      knownConfidential,
+    );
+    for (const spaceId of confidentialSpaces) knownConfidential.add(spaceId);
     const confidential = confidentialSpaces.length > 0;
     const fields: unknown = confidential ? withoutContent(parsed) : parsed;
     const context = currentRequestContext();
@@ -210,28 +255,17 @@ export class AuditLog {
     if (!(definition.actor as readonly string[]).includes(actor.type)) {
       throw new Error(`Audit event ${input.name} cannot be performed by ${actor.type}`);
     }
-    const scope = input.scope ?? INSTANCE_AUDIT_SCOPE;
     const resolved = await resolveAuditLabels(tx, {
       actor,
       targetType: definition.target,
       targetId: input.targetId,
       fields,
       scope,
+      cache: labelCache,
     });
     if (confidential && resolved.labels && CONTENT_TARGETS.has(definition.target)) {
       delete resolved.labels.target;
     }
-    const chain = and(eq(auditChains.scopeType, scope.type), eq(auditChains.scopeId, scope.id));
-
-    await tx.insert(auditChains).values({ scopeType: scope.type, scopeId: scope.id }).onConflictDoNothing();
-    const [head] = await tx
-      .select({ lastSequence: auditChains.lastSequence, lastHash: auditChains.lastHash })
-      .from(auditChains)
-      .where(chain)
-      .for("update");
-    if (!head) throw new Error("The audit chain head is missing");
-
-    const sequence = head.lastSequence + 1;
     const personal = this.#separate(definition, {
       actor,
       targetId: input.targetId,
@@ -241,6 +275,17 @@ export class AuditLog {
       clientIp: storable(context?.clientIp),
       userAgent: storable(context?.userAgent, USER_AGENT_MAX_LENGTH),
     });
+    return { input, definition, actor, context, personal, confidentialSpaces };
+  }
+
+  async #prepare(
+    tx: Transaction,
+    described: DescribedEvent,
+    scope: AuditScope,
+    sequence: number,
+    previousHash: Buffer,
+  ): Promise<PreparedEvent> {
+    const { input, definition, actor, context, personal, confidentialSpaces } = described;
     let sealed: Record<string, string> | null = null;
     if (personal.subjects.size > 0) {
       if (!this.#sealer) throw new PersonalDataMissingKeyError();
@@ -266,34 +311,82 @@ export class AuditLog {
       requestId: storable(context?.requestId),
       clientIp: personal.clientIp,
       userAgent: personal.userAgent,
-      previousHash: head.lastHash ?? GENESIS_HASH,
+      previousHash,
     };
-    const hash = hashAuditEntry(content);
-    const [inserted] = await tx
-      .insert(auditEvents)
-      .values({
-        ...content,
-        scopeType: scope.type,
-        actorType: actor.type,
-        hash,
-      })
-      .returning({ id: auditEvents.id });
-    if (inserted && confidential) {
-      await tx
-        .insert(auditConfidentialEvents)
-        .values(confidentialSpaces.map((spaceId) => ({ eventId: inserted.id, spaceId })));
-    }
-    await tx
-      .update(auditChains)
-      .set({ lastSequence: content.sequence, lastHash: hash, updatedAt: new Date() })
-      .where(chain);
     const signal: AuditChangeSignal = {
       scope: scope.type,
       organizationId: scope.type === "organization" ? scope.id : null,
       target: definition.target,
       ...(definition.target === "account" && input.targetId ? { accountId: input.targetId } : {}),
     };
-    await tx.execute(sql`select pg_notify(${AUDIT_CHANGES_CHANNEL}, ${JSON.stringify(signal)})`);
+    return { content, actorType: actor.type, hash: hashAuditEntry(content), confidentialSpaces, signal };
+  }
+
+  async #recordInScope(tx: Transaction, scope: AuditScope, inputs: AuditEventInput<AuditEventName>[]) {
+    const chain = and(eq(auditChains.scopeType, scope.type), eq(auditChains.scopeId, scope.id));
+    await tx.insert(auditChains).values({ scopeType: scope.type, scopeId: scope.id }).onConflictDoNothing();
+    const [head] = await tx
+      .select({ lastSequence: auditChains.lastSequence, lastHash: auditChains.lastHash })
+      .from(auditChains)
+      .where(chain)
+      .for("update");
+    if (!head) throw new Error("The audit chain head is missing");
+    let sequence = head.lastSequence;
+    let previousHash = head.lastHash ?? GENESIS_HASH;
+    const labelCache: AuditLabelCache = new Map();
+    const described: DescribedEvent[] = [];
+    await preloadAuditTargets(
+      tx,
+      labelCache,
+      inputs.map((input) => ({ targetType: auditCatalog[input.name].target, targetId: input.targetId })),
+    );
+    const knownConfidential = new Set<string>();
+    for (const input of inputs) {
+      described.push(await this.#describe(tx, input, scope, labelCache, knownConfidential));
+    }
+    const subjects = new Map<string, string | null>();
+    for (const { personal } of described) {
+      for (const [subjectId, { accountId }] of personal.subjects) subjects.set(subjectId, accountId);
+    }
+    if (subjects.size > 0) {
+      if (!this.#sealer) throw new PersonalDataMissingKeyError();
+      await this.#sealer.preload(tx, subjects);
+    }
+    const prepared: PreparedEvent[] = [];
+    for (const entryInput of described) {
+      sequence += 1;
+      const entry = await this.#prepare(tx, entryInput, scope, sequence, previousHash);
+      previousHash = entry.hash;
+      prepared.push(entry);
+    }
+    for (let start = 0; start < prepared.length; start += INSERT_BATCH) {
+      const batch = prepared.slice(start, start + INSERT_BATCH);
+      const inserted = await tx
+        .insert(auditEvents)
+        .values(
+          batch.map(({ content, actorType, hash }) => ({
+            ...content,
+            scopeType: scope.type,
+            actorType,
+            hash,
+          })),
+        )
+        .returning({ id: auditEvents.id, sequence: auditEvents.sequence });
+      const ids = new Map(inserted.map((row) => [row.sequence, row.id]));
+      const confidential = batch.flatMap(({ content, confidentialSpaces }) => {
+        const eventId = ids.get(content.sequence);
+        return eventId ? confidentialSpaces.map((spaceId) => ({ eventId, spaceId })) : [];
+      });
+      if (confidential.length > 0) await tx.insert(auditConfidentialEvents).values(confidential);
+    }
+    await tx
+      .update(auditChains)
+      .set({ lastSequence: sequence, lastHash: previousHash, updatedAt: new Date() })
+      .where(chain);
+    const signals = [...new Set(prepared.map(({ signal }) => JSON.stringify(signal)))];
+    await tx.execute(
+      sql`select pg_notify(${AUDIT_CHANGES_CHANNEL}, signal) from unnest(${sql.param(signals)}::text[]) as signal`,
+    );
   }
 
   #separate(
@@ -307,7 +400,7 @@ export class AuditLog {
       clientIp: string | null;
       userAgent: string | null;
     },
-  ) {
+  ): SeparatedEvent {
     const subjects = new Map<string, { accountId: string | null; parts: SealedParts }>();
     const partOf = (subjectId: string, accountId: string | null): SealedParts => {
       const existing = subjects.get(subjectId);
@@ -371,16 +464,18 @@ export class AuditLog {
   }
 
   async recordMany(tx: Transaction, inputs: AuditEventInput<AuditEventName>[]): Promise<void> {
-    const key = (input: AuditEventInput<AuditEventName>) => {
+    const groups = new Map<string, { scope: AuditScope; inputs: AuditEventInput<AuditEventName>[] }>();
+    for (const input of inputs) {
       const scope = input.scope ?? INSTANCE_AUDIT_SCOPE;
-      return `${scope.type}:${scope.id}`;
-    };
-    const ordered = inputs
-      .map((input, index) => ({ input, index }))
-      .sort((a, b) =>
-        key(a.input) === key(b.input) ? a.index - b.index : key(a.input) < key(b.input) ? -1 : 1,
-      );
-    for (const { input } of ordered) await this.record(tx, input);
+      const key = `${scope.type}:${scope.id}`;
+      const group = groups.get(key) ?? { scope, inputs: [] };
+      group.inputs.push(input);
+      groups.set(key, group);
+    }
+    for (const key of [...groups.keys()].sort()) {
+      const group = groups.get(key);
+      if (group) await this.#recordInScope(tx, group.scope, group.inputs);
+    }
   }
 
   async recordAlone<TName extends AuditEventName>(input: AuditEventInput<TName>): Promise<void> {

@@ -45,7 +45,7 @@ import { generateCertificate } from "./certificates.js";
 import { foreignDirectoryEndpoint, foreignGraphEndpoint } from "./directory.js";
 import type { GroupMappingService } from "./groups.js";
 import { ldapCapabilities } from "./ldap.js";
-import { managedAccountCounts, refreshManagedAccounts } from "./managed.js";
+import { lockProviderDomains, managedAccountCounts, refreshManagedAccounts } from "./managed.js";
 import { oidcCapabilities, oidcIssuer } from "./oidc.js";
 import { samlCapabilities, samlPaths } from "./saml.js";
 import {
@@ -455,6 +455,7 @@ export class IdentityProviderService {
   }
 
   async #syncDomains(tx: Transaction, providerId: string, domains: readonly string[]): Promise<void> {
+    await lockProviderDomains(tx, providerId, domains);
     await tx.delete(identityProviderDomains).where(eq(identityProviderDomains.providerId, providerId));
     const unique = [...new Set(domains)].sort();
     if (unique.length === 0) return;
@@ -1402,6 +1403,7 @@ export class IdentityProviderService {
         );
       }
       const releasedGroups = (await this.#mapping?.releaseGroups(tx, id, current.name)) ?? 0;
+      await lockProviderDomains(tx, id);
       await tx.delete(identityProviderDomains).where(eq(identityProviderDomains.providerId, id));
       await refreshManagedAccounts(tx, this.#audit, { providerId: id }, actor);
       await this.#audit.record(tx, {

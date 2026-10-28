@@ -763,7 +763,8 @@ export class MembershipService {
         select a.id from accounts a join role_assignments ra
           on ra.principal_id = a.id and ra.principal_kind = 'account' and ra.scope = 'instance'
         where a.id = ${newOwnerId} and a.state = 'active' and a.type = 'standard'
-          and ra.built_in_role = 'administrator' and (ra.expires_at is null or ra.expires_at > now())`)
+          and ra.built_in_role = 'administrator' and (ra.expires_at is null or ra.expires_at > now())
+        for update of a`)
         .then((result) => result.rows);
       if (!candidate) {
         throw new OrganizationError("invalidOwner", "The new owner must be an active instance administrator");

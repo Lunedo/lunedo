@@ -6,7 +6,12 @@ import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
-import { managedStateOf, refreshManagedAccounts, refuseManaged } from "../identity/managed.js";
+import {
+  holdEmailDomain,
+  managedStateOf,
+  refreshManagedAccounts,
+  refuseManaged,
+} from "../identity/managed.js";
 import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { SettingsService } from "../settings/service.js";
@@ -499,6 +504,7 @@ export class AccountSecurityService {
     await this.#limitRedemptions(clientIp);
     const mailId = await this.#database.transaction(async (tx) => {
       const { accountId, newEmail } = await this.#redeemToken(tx, token, "emailChange");
+      await holdEmailDomain(tx, newEmail);
       const account = await this.#accounts.lock(tx, accountId);
       if (!newEmail || !account?.email || account.state !== "active") throw new InvalidTokenError();
       if (await managedStateOf(tx, accountId)) throw new InvalidTokenError();
