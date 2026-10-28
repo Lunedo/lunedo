@@ -197,6 +197,28 @@ export interface SpaceTarget {
   organizationId: string | null;
   ownerId: string | null;
   confidential?: boolean;
+  visibility?: SpaceVisibility;
+}
+
+const BROAD_HOLDERS = new Set<SpaceGrant["principalKind"]>(["organizationMembers", "instanceUsers"]);
+
+export function refuseBroadGrantInPrivateSpace(
+  visibility: SpaceVisibility | undefined,
+  principalKind: SpaceGrant["principalKind"],
+): void {
+  if (visibility !== "private" || !BROAD_HOLDERS.has(principalKind)) return;
+  throw new SpaceError(
+    "privateSpaceBroadGrant",
+    "A private space gives roles to people and groups only, not to all members of the organization or all users of the instance",
+  );
+}
+
+export async function refuseBroadGrantsOf(executor: Executor, spaceId: string): Promise<void> {
+  const broad = await executor.execute<{ principal_kind: SpaceGrant["principalKind"] }>(sql`
+    select principal_kind::text as principal_kind from space_permissions
+    where space_id = ${spaceId} and principal_kind in ('organizationMembers', 'instanceUsers') limit 1`);
+  const first = broad.rows[0];
+  if (first) refuseBroadGrantInPrivateSpace("private", first.principal_kind);
 }
 
 export class SpaceService {
@@ -334,7 +356,12 @@ export class SpaceService {
   ): Promise<void> {
     await this.#database.transaction(async (tx) => {
       for (const grant of value.grants) {
-        await holders.validate(tx, { id: organizationId, organizationId, ownerId: null }, grant, actor);
+        await holders.validate(
+          tx,
+          { id: organizationId, organizationId, ownerId: null, visibility: value.visibility },
+          grant,
+          actor,
+        );
       }
       await this.#settings.set(
         defaultSpacePermissionsSetting,
@@ -397,7 +424,7 @@ export class SpaceService {
       ).rows;
       if (!space) throw new Error("The space was not created");
       await insertDefaultPageStatuses(tx, space.id);
-      const target: SpaceTarget = { id: space.id, organizationId, ownerId: null, confidential };
+      const target: SpaceTarget = { id: space.id, organizationId, ownerId: null, confidential, visibility };
       const grants = mergeGrants(
         input.grants,
         creatorId ? [{ principalKind: "account", principalId: creatorId, role: "admin" }] : [],
@@ -546,6 +573,9 @@ export class SpaceService {
     visibility: SpaceVisibility,
   ): Promise<AccessImpact> {
     const space = await this.require(spaceId);
+    if (visibility === "private" && space.visibility !== "private") {
+      await refuseBroadGrantsOf(this.#database, spaceId);
+    }
     const grants = await currentGrants(this.#database, spaceId);
     return accessImpact(
       this.#database,
@@ -571,6 +601,7 @@ export class SpaceService {
         );
       }
       if (space.visibility === visibility) return space;
+      if (visibility === "private") await refuseBroadGrantsOf(tx, spaceId);
       await tx.execute(
         sql`update spaces set visibility = ${visibility}, updated_at = now() where id = ${spaceId}`,
       );

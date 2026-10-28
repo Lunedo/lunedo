@@ -1318,6 +1318,22 @@ export const auditCatalog = {
     fields: spacePermissionFields,
     visibility: "organization",
   }),
+  "space.privateGrantsRemoved": event({
+    actor: ["system"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      grants: z
+        .array(
+          z.object({
+            principalKind: z.enum(["organizationMembers", "instanceUsers"]),
+            role: z.enum(spaceRoleNames),
+          }),
+        )
+        .min(1),
+    }),
+    visibility: "organization",
+  }),
   "space.administratorAppointed": event({
     actor: ["account"],
     target: "space",

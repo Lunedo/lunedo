@@ -85,6 +85,7 @@ export function HolderPicker({
   label,
   groups: groupsAllowed = true,
   peopleOnly = false,
+  everyone: everyoneAllowed = true,
   placeholder,
   invalid,
 }: {
@@ -97,13 +98,14 @@ export function HolderPicker({
   label: string;
   groups?: boolean;
   peopleOnly?: boolean;
+  everyone?: boolean;
   placeholder?: string;
   invalid?: boolean;
 }) {
   const { t } = useTranslation();
   const includeGroups = groupsAllowed && !peopleOnly;
   const everyone: ComboboxItem[] =
-    personal || peopleOnly
+    personal || peopleOnly || !everyoneAllowed
       ? []
       : [
           {

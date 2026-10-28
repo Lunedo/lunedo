@@ -33,7 +33,7 @@ A private space can be made findable: with **Members of the organization can fin
 | Editor | Also create, edit and move pages, folders and links |
 | Space admin | Also manage the settings and permissions of the space |
 
-Roles are given to people, groups, **All members of the organization** or **All internal users of the instance**. A person's role is the highest of all roles that reach them, including the reader role through visibility. Only active accounts count.
+Roles are given to people, groups, **All members of the organization** or **All internal users of the instance**. A private space gives roles to people and groups only: choosing **Private** when creating a space removes the roles for all members and all internal users, and a space with such a role becomes private only after you remove it under **Permissions** (`privateSpaceBroadGrant`). A person's role is the highest of all roles that reach them, including the reader role through visibility. Only active accounts count.
 
 Every change of visibility or roles shows first who gets access, who loses access and who gets another role. People you may not see are counted but not named.
 

@@ -22,7 +22,12 @@ import { translateKey } from "../i18n/translate.js";
 import type { Audience } from "../knowledge-bases/queries.js";
 import { useOrganizationState, useSession } from "../shell/shell-context.js";
 import type { Grant } from "./access/holders.js";
-import { GrantsField, VisibilityField, WhoGetsAccess } from "./access/space-access-fields.js";
+import {
+  GrantsField,
+  VisibilityField,
+  WhoGetsAccess,
+  withoutEveryone,
+} from "./access/space-access-fields.js";
 import { type SpaceVisibility, spaceDefaultsQuery, spaceKeys } from "./space-queries.js";
 
 const KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
@@ -90,7 +95,19 @@ function CreateSpaceForm({
   const confidential = confidentialChoice && !knowledgeBase;
   const canCreateConfidential = state.can("organization.spaces.createConfidential");
   const [grants, setGrants] = useState<Grant[]>([]);
-  const visibleGrants = confidential ? grants.filter((grant) => grant.principalKind === "account") : grants;
+  const effectiveVisibility: SpaceVisibility = knowledgeBase
+    ? audienceVisibility(audience)
+    : confidential
+      ? "private"
+      : visibility;
+  const visibleGrants = confidential
+    ? grants.filter((grant) => grant.principalKind === "account")
+    : effectiveVisibility === "private"
+      ? withoutEveryone(grants)
+      : grants;
+  const choosePrivacy = (next: SpaceVisibility) => {
+    if (next === "private") setGrants((current) => withoutEveryone(current));
+  };
   const [initialized, setInitialized] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; key?: string; audience?: string }>({});
   const [failure, setFailure] = useState<string | null>(null);
@@ -100,7 +117,8 @@ function CreateSpaceForm({
   if (defaults.data && !initialized) {
     setInitialized(true);
     setVisibility(defaults.data.visibility);
-    setGrants(defaults.data.grants.map((grant) => ({ ...grant })));
+    const initial = defaults.data.grants.map((grant) => ({ ...grant }));
+    setGrants(defaults.data.visibility === "private" ? withoutEveryone(initial) : initial);
   }
 
   useEffect(() => {
@@ -301,7 +319,10 @@ function CreateSpaceForm({
             label={t("knowledgeBase.audience.label")}
             variant="card"
             value={audience}
-            onValueChange={(value) => setAudience(value as Audience)}
+            onValueChange={(value) => {
+              setAudience(value as Audience);
+              choosePrivacy(audienceVisibility(value as Audience));
+            }}
             options={AUDIENCES.map((value) => ({
               value,
               label: translateKey(t, `knowledgeBase.audience.${value}.title`),
@@ -320,7 +341,10 @@ function CreateSpaceForm({
       ) : confidential ? null : (
         <VisibilityField
           value={visibility}
-          onChange={setVisibility}
+          onChange={(next) => {
+            setVisibility(next);
+            choosePrivacy(next);
+          }}
           organizationName={organization?.name ?? ""}
         />
       )}
@@ -331,9 +355,10 @@ function CreateSpaceForm({
         onChange={setGrants}
         ownId={ownId}
         peopleOnly={confidential}
+        everyone={effectiveVisibility !== "private"}
       />
       <WhoGetsAccess
-        visibility={knowledgeBase ? audienceVisibility(audience) : confidential ? null : visibility}
+        visibility={confidential ? null : effectiveVisibility}
         grants={visibleGrants}
         ownId={ownId}
         organizationName={organization?.name ?? null}

@@ -5,6 +5,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { GroupService } from "../organizations/groups.js";
 import { actorIdOf } from "../spaces/common.js";
+import type { SpaceVisibility } from "../spaces/schema.js";
 import type { SpaceGrant } from "../spaces/settings.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { type HolderValidation, insertGrants } from "../spaces/spaces.js";
@@ -545,10 +546,18 @@ export class ImportResolutionService {
   ): Promise<void> {
     const { grants } = await this.#resolvedGrants(tx, importId, true);
     if (grants.size === 0) return;
-    const space = await tx.execute<{ name: string }>(sql`select name from spaces where id = ${spaceId}`);
+    const space = await tx.execute<{ name: string; visibility: SpaceVisibility }>(
+      sql`select name, visibility from spaces where id = ${spaceId}`,
+    );
     const name = space.rows[0]?.name;
     if (name === undefined) return;
-    const target = { id: spaceId, organizationId, ownerId: null, confidential: false };
+    const target = {
+      id: spaceId,
+      organizationId,
+      ownerId: null,
+      confidential: false,
+      visibility: space.rows[0]?.visibility,
+    };
     const existing = await tx.execute<{ principal_kind: string; principal_id: string | null }>(sql`
       select principal_kind::text as principal_kind, principal_id from space_permissions where space_id = ${spaceId}`);
     const held = new Set(existing.rows.map((row) => `${row.principal_kind}:${row.principal_id ?? ""}`));

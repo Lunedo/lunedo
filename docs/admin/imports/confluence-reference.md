@@ -121,7 +121,7 @@ Confluence Cloud stores the draw.io and Gliffy apps as app extensions (`ac:adf-e
 
 ## Permissions
 
-- Each person or group gets the highest space role that fits its Confluence permissions: administer the space becomes space admin, add or edit pages becomes editor, comment becomes commenter, view becomes reader. Combinations that do not fit are marked for review. Anonymous access is never taken over. "All licensed users" becomes all members of the organization.
+- Each person or group gets the highest space role that fits its Confluence permissions: administer the space becomes space admin, add or edit pages becomes editor, comment becomes commenter, view becomes reader. Combinations that do not fit are marked for review. Anonymous access is never taken over. "All licensed users" becomes all members of the organization; when the space is accepted as private or as a knowledge base, the accept dialog leaves this role out and Lunedo refuses it (`privateSpaceBroadGrant`), because a private space gives roles to people and groups only.
 - Spaces that use roles in Confluence Cloud (Admin, Manager, Collaborator, Viewer, View only and custom roles) are taken over through the permissions of their roles, so the same rule applies: a Collaborator becomes editor, a Viewer commenter.
 - App accounts of Confluence, such as the accounts of the draw.io or Teams apps, get no role; the permissions list them as not taken over. Lunedo recognizes them when the people come from an API token or from the API. Site administrators of Confluence (`all-product-admins`) get no role either.
 - Groups are matched by name to groups of the organization, see [People and groups](review-and-report.md#people-and-groups).

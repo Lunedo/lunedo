@@ -174,6 +174,7 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(await role(regular, byGroup.id)).toBeNull();
 
       const byMembers = await space(org.id, creator, {
+        visibility: "organization",
         grants: [{ principalKind: "organizationMembers", principalId: null, role: "commenter" }],
       });
       expect(await role(regular, byMembers.id)).toBe("commenter");
@@ -181,6 +182,7 @@ describe.skipIf(!baseUrl)("spaces", () => {
       expect(await role(collaborator, byMembers.id)).toBeNull();
 
       const byInstance = await space(org.id, creator, {
+        visibility: "organization",
         grants: [{ principalKind: "instanceUsers", principalId: null, role: "reader" }],
       });
       expect(await role(elsewhere, byInstance.id)).toBe("reader");
@@ -266,6 +268,7 @@ describe.skipIf(!baseUrl)("spaces", () => {
           grants: [{ principalKind: "group", principalId: team, role: "editor" }],
         }),
         await space(org.id, creator, {
+          visibility: "organization",
           grants: [{ principalKind: "organizationMembers", principalId: null, role: "commenter" }],
         }),
         await space(org.id, creator, {
@@ -368,6 +371,140 @@ describe.skipIf(!baseUrl)("spaces", () => {
         "private",
       );
       expect(back.losing).toBe(impact.gaining);
+    });
+  });
+
+  describe("private spaces", () => {
+    const everyone = [
+      { principalKind: "organizationMembers", principalId: null, role: "editor" },
+      { principalKind: "instanceUsers", principalId: null, role: "reader" },
+    ] as const;
+
+    it("refuses roles for everyone when a private space is created", async () => {
+      const org = await organization();
+      const creator = await member(org.id);
+      for (const grant of everyone) {
+        await expect(
+          space(org.id, creator, { visibility: "private", grants: [grant] }),
+        ).rejects.toMatchObject({
+          code: "privateSpaceBroadGrant",
+        });
+      }
+      const open = await space(org.id, creator, { visibility: "organization", grants: [everyone[0]] });
+      expect(await role(await member(org.id), open.id)).toBe("editor");
+      await expect(
+        test.services.spaces.setDefaultPermissions(
+          accountPrincipal(creator),
+          org.id,
+          { visibility: "private", grants: [everyone[0]] },
+          test.services.spacePermissions.holders,
+        ),
+      ).rejects.toMatchObject({ code: "privateSpaceBroadGrant" });
+    });
+
+    it("refuses roles for everyone in a private space later, and making a space with them private", async () => {
+      const org = await organization();
+      const creator = await member(org.id);
+      const actor = accountPrincipal(creator);
+      const closed = await space(org.id, creator);
+      for (const grant of everyone) {
+        const change = { action: "grant" as const, ...grant };
+        await expect(test.services.spacePermissions.preview(actor, closed.id, change)).rejects.toMatchObject({
+          code: "privateSpaceBroadGrant",
+        });
+        await expect(test.services.spacePermissions.apply(actor, closed.id, change)).rejects.toMatchObject({
+          code: "privateSpaceBroadGrant",
+        });
+        await expect(
+          test.services.spacePermissions.grant(
+            actor,
+            closed.id,
+            [{ principalKind: grant.principalKind, principalId: null }],
+            grant.role,
+          ),
+        ).rejects.toMatchObject({ code: "privateSpaceBroadGrant" });
+      }
+      const open = await space(org.id, creator, { visibility: "organization", grants: [everyone[0]] });
+      await expect(test.services.spaces.visibilityImpact(actor, open.id, "private")).rejects.toMatchObject({
+        code: "privateSpaceBroadGrant",
+      });
+      await expect(test.services.spaces.changeVisibility(actor, open.id, "private")).rejects.toMatchObject({
+        code: "privateSpaceBroadGrant",
+      });
+      expect((await test.services.spaces.require(open.id)).visibility).toBe("organization");
+      const [broad] = (await test.services.spacePermissions.list(open.id)).filter(
+        (entry) => entry.principalKind === "organizationMembers",
+      );
+      await test.services.spacePermissions.apply(actor, open.id, {
+        action: "remove",
+        permissionId: broad?.id ?? "",
+      });
+      await test.services.spaces.changeVisibility(actor, open.id, "private");
+      expect((await test.services.spaces.require(open.id)).visibility).toBe("private");
+    });
+
+    it("refuses a knowledge base audience that makes it private while everyone has a role", async () => {
+      const org = await organization();
+      const creator = await member(org.id);
+      const readers = await group(org.id, []);
+      const knowledgeBase = await test.services.spaces.create(
+        accountPrincipal(creator),
+        org.id,
+        {
+          name: "Help",
+          key: await test.services.spaces.suggestKey("Help"),
+          type: "knowledgeBase",
+          audience: "signedIn",
+          grants: [everyone[0]],
+        },
+        test.services.spacePermissions.holders,
+      );
+      await expect(
+        test.services.knowledgeBases.changeAudience(accountPrincipal(creator), knowledgeBase.id, {
+          audience: "groups",
+          groupIds: [readers],
+          confirmWidening: true,
+        }),
+      ).rejects.toMatchObject({ code: "privateSpaceBroadGrant" });
+      expect((await test.services.spaces.require(knowledgeBase.id)).visibility).toBe("instance");
+    });
+
+    it("records one audit event per space for roles for everyone removed by the update", async () => {
+      const org = await organization();
+      const creator = await member(org.id);
+      const closed = await space(org.id, creator, { name: "Cleaned" });
+      await test.database.execute(sql`
+        insert into private_space_grant_removals (space_id, organization_id, name, grants)
+        values (${closed.id}, ${org.id}, 'Cleaned', ${JSON.stringify([
+          { principalKind: "instanceUsers", role: "reader" },
+          { principalKind: "organizationMembers", role: "editor" },
+        ])}::jsonb)`);
+      expect(await test.services.spacePermissions.recordPrivateGrantRemovals()).toBeGreaterThanOrEqual(1);
+      const events = await test.database.execute<{
+        actor_type: string;
+        fields: unknown;
+        scope_id: string;
+      }>(sql`
+        select actor_type, fields, scope_id from audit_events
+        where target_id = ${closed.id} and name = 'space.privateGrantsRemoved'`);
+      expect(events.rows).toEqual([
+        {
+          actor_type: "system",
+          scope_id: org.id,
+          fields: {
+            name: "Cleaned",
+            grants: [
+              { principalKind: "instanceUsers", role: "reader" },
+              { principalKind: "organizationMembers", role: "editor" },
+            ],
+          },
+        },
+      ]);
+      const left = await test.database.execute(
+        sql`select 1 from private_space_grant_removals where space_id = ${closed.id}`,
+      );
+      expect(left.rows).toHaveLength(0);
+      expect(await test.services.spacePermissions.recordPrivateGrantRemovals()).toBe(0);
     });
   });
 

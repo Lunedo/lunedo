@@ -55,6 +55,7 @@ import {
   holderValue,
   RoleSelect,
 } from "../access/holders.js";
+import { withoutEveryone } from "../access/space-access-fields.js";
 import { type SpaceRole, type SpaceVisibility, spaceDefaultsQuery, spaceKeys } from "../space-queries.js";
 import { BecomeAdministratorDialog, type BecomeAdministratorTarget } from "./become-administrator-dialog.js";
 import { ConfidentialSpaces } from "./confidential-spaces.js";
@@ -515,11 +516,13 @@ function DefaultPermissions({
           params: { path: { organizationId } },
           body: {
             visibility,
-            grants: grants.map(({ principalKind, principalId, role }) => ({
-              principalKind,
-              principalId,
-              role,
-            })),
+            grants: (visibility === "private" ? withoutEveryone(grants) : grants).map(
+              ({ principalKind, principalId, role }) => ({
+                principalKind,
+                principalId,
+                role,
+              }),
+            ),
           },
         }),
       );
@@ -536,7 +539,8 @@ function DefaultPermissions({
       />
     );
   }
-  const { visibility, grants } = defaults.data;
+  const { visibility } = defaults.data;
+  const grants = visibility === "private" ? withoutEveryone(defaults.data.grants) : defaults.data.grants;
   return (
     <Panel
       title={t("spaces.organization.defaults")}
@@ -629,6 +633,7 @@ function DefaultPermissions({
                   organizationId={organizationId}
                   organizationName={organizationName}
                   personal={false}
+                  everyone={visibility !== "private"}
                   exclude={grants.map(holderValue)}
                   value={adding ? holderValue(adding) : null}
                   onValueChange={setAdding}

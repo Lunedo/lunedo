@@ -1,6 +1,6 @@
 import { uuidv7 } from "@lunedo/shared";
-import { sql } from "drizzle-orm";
-import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import { inArray, sql } from "drizzle-orm";
+import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import {
   type AccessImpact,
@@ -16,10 +16,16 @@ import type { PrincipalKind } from "../organizations/access-schema.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import type { PeopleService } from "./people.js";
 import { spaceRoleRank } from "./roles.js";
-import type { SpaceRole } from "./schema.js";
+import { privateSpaceGrantRemovals, type SpaceRole } from "./schema.js";
 import type { SpaceGrant } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
-import type { HolderValidation, Space, SpaceService, SpaceTarget } from "./spaces.js";
+import {
+  type HolderValidation,
+  refuseBroadGrantInPrivateSpace,
+  type Space,
+  type SpaceService,
+  type SpaceTarget,
+} from "./spaces.js";
 
 export interface SpacePermissionEntry {
   id: string;
@@ -102,6 +108,8 @@ function apply(current: StoredPermission[], change: PermissionChange): StoredPer
   }
 }
 
+const REMOVAL_BATCH = 500;
+
 export class SpaceHolders implements HolderValidation {
   readonly #people: PeopleService;
 
@@ -143,6 +151,7 @@ export class SpaceHolders implements HolderValidation {
       if (!person.rows[0]) invalid("Only people of the organization can get a role in a confidential space");
       return;
     }
+    refuseBroadGrantInPrivateSpace(space.visibility, grant.principalKind);
     if (grant.principalKind === "account" && grant.principalId) {
       const account = await tx.execute<{ id: string; type: string }>(sql`
         select a.id, a.type from accounts a
@@ -273,6 +282,7 @@ export class SpacePermissionService {
         organizationId: space.organizationId,
         ownerId: space.ownerId,
         confidential: space.confidential,
+        visibility: space.visibility,
       },
       { principalKind: change.principalKind, principalId: change.principalId, role: change.role },
       actor,
@@ -304,6 +314,49 @@ export class SpacePermissionService {
       for (const change of grantsOf(holders, role)) await this.apply(actor, spaceId, change, { tx });
     });
     return this.list(spaceId);
+  }
+
+  async recordPrivateGrantRemovals(): Promise<number> {
+    let recorded = 0;
+    for (;;) {
+      const count = await this.#database.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(privateSpaceGrantRemovals)
+          .orderBy(privateSpaceGrantRemovals.spaceId)
+          .limit(REMOVAL_BATCH)
+          .for("update", { skipLocked: true });
+        if (rows.length === 0) return 0;
+        await this.#audit.recordMany(
+          tx,
+          rows.map((row) => ({
+            name: "space.privateGrantsRemoved" as const,
+            actor: SYSTEM,
+            targetId: row.spaceId,
+            fields: {
+              name: row.name,
+              grants: row.grants as {
+                principalKind: "organizationMembers" | "instanceUsers";
+                role: SpaceRole;
+              }[],
+            },
+            scope: auditScopeOf({ organizationId: row.organizationId }),
+          })),
+        );
+        const ids = rows.map((row) => row.spaceId);
+        await tx.delete(privateSpaceGrantRemovals).where(inArray(privateSpaceGrantRemovals.spaceId, ids));
+        const existing = await tx.execute<{ id: string }>(
+          sql`select id from spaces where id = any(${sql.param(ids)}::uuid[])`,
+        );
+        for (const { id } of existing.rows) {
+          await signalSpaceChange(tx, { spaceId: id, kind: "access", itemId: null });
+          for (const listener of this.#listeners) await listener(tx, id);
+        }
+        return rows.length;
+      });
+      if (count === 0) return recorded;
+      recorded += count;
+    }
   }
 
   onAccessChange(listener: (tx: Transaction, spaceId: string) => Promise<void>): void {

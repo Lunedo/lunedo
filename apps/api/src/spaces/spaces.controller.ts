@@ -261,6 +261,7 @@ export class SpacesController {
     body: visibilityBodySchema,
     bodyExample: { visibility: "organization" },
     response: { description: "The change in access.", schema: impactSchema, example: exampleImpact },
+    errors: ["privateSpaceBroadGrant"],
   })
   async previewVisibility(
     @Param("spaceId") spaceId: string,
@@ -281,7 +282,7 @@ export class SpacesController {
     body: visibilityBodySchema,
     bodyExample: { visibility: "organization" },
     response: { description: "The changed space.", schema: spaceSchema, example: exampleSpace },
-    errors: ["personalSpaceVisibility", "knowledgeBaseVisibility"],
+    errors: ["personalSpaceVisibility", "knowledgeBaseVisibility", "privateSpaceBroadGrant"],
   })
   async changeVisibility(
     @Param("spaceId") spaceId: string,
@@ -325,7 +326,13 @@ export class SpacesController {
       role: "reader",
     },
     response: { description: "The change in access.", schema: impactSchema, example: exampleImpact },
-    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted", "permissionNotFound"],
+    errors: [
+      "invalidHolder",
+      "portalAccountReaderOnly",
+      "alreadyGranted",
+      "permissionNotFound",
+      "privateSpaceBroadGrant",
+    ],
   })
   async preview(
     @Param("spaceId") spaceId: string,
@@ -352,7 +359,7 @@ export class SpacesController {
       role: "reader",
     },
     response: { description: "The change in access.", schema: impactSchema, example: exampleImpact },
-    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted"],
+    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted", "privateSpaceBroadGrant"],
   })
   async previewGrants(
     @Param("spaceId") spaceId: string,
@@ -384,7 +391,13 @@ export class SpacesController {
       schema: z.array(permissionSchema).describe("Permissions of the space."),
       example: [examplePermission],
     },
-    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted", "selfExtension"],
+    errors: [
+      "invalidHolder",
+      "portalAccountReaderOnly",
+      "alreadyGranted",
+      "selfExtension",
+      "privateSpaceBroadGrant",
+    ],
   })
   async grant(
     @Param("spaceId") spaceId: string,
@@ -422,6 +435,7 @@ export class SpacesController {
       "permissionNotFound",
       "lastSpaceAdmin",
       "selfExtension",
+      "privateSpaceBroadGrant",
     ],
   })
   async change(

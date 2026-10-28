@@ -571,7 +571,7 @@ export class ImportsController {
       schema: importSchema,
       example: { ...exampleImport, state: "accepted" },
     },
-    errors: ["importNotInReview", "invalidHolder"],
+    errors: ["importNotInReview", "invalidHolder", "privateSpaceBroadGrant"],
   })
   async accept(
     @Param("importId") importId: string,

@@ -660,6 +660,45 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     ).rejects.toMatchObject({ code: "importNotInReview" });
   });
 
+  it("refuses to accept an import as a private space or a knowledge base with roles for everyone", async () => {
+    const everyone = {
+      principalKind: "organizationMembers" as const,
+      principalId: null,
+      role: "editor" as const,
+    };
+    const privateImport = await imported(syntheticExport(), { key: "SYNPV" });
+    const knowledgeBaseImport = await imported(syntheticExport(), { key: "SYNKB" });
+    const client = await test.pool.connect();
+    try {
+      await client.query("begin");
+      await client.query("set local session_replication_role = replica");
+      await client.query("update spaces set type = 'knowledgeBase', audience = 'groups' where id = $1", [
+        knowledgeBaseImport.quarantineSpace?.id ?? "",
+      ]);
+      await client.query("commit");
+    } finally {
+      client.release();
+    }
+    for (const [result, visibility] of [
+      [privateImport, "private"],
+      [knowledgeBaseImport, "organization"],
+    ] as const) {
+      const spaceId = result.quarantineSpace?.id ?? "";
+      await expect(
+        test.services.imports.accept(as(admin), result.id, { visibility, grants: [everyone] }),
+      ).rejects.toMatchObject({ code: "privateSpaceBroadGrant" });
+      const space = await test.database.execute<{ quarantined: boolean }>(
+        sql`select quarantined from spaces where id = ${spaceId}`,
+      );
+      expect(space.rows[0]?.quarantined).toBe(true);
+      const broad = await test.database.execute(sql`
+        select 1 from space_permissions where space_id = ${spaceId}
+          and principal_kind in ('organizationMembers', 'instanceUsers')`);
+      expect(broad.rows).toHaveLength(0);
+      expect((await test.services.imports.get(as(admin), result.id)).state).toBe("review");
+    }
+  });
+
   it("accepts an archived import as an archived space", async () => {
     const result = await imported(syntheticExport(), { key: "SYNAR", archived: true });
     await test.services.imports.accept(as(admin), result.id, { visibility: "organization", grants: [] });

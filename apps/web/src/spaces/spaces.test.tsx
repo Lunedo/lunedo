@@ -434,6 +434,58 @@ describe("spaces", () => {
     );
   });
 
+  it("drops the roles for everyone when a new space is made private", async () => {
+    const { requests } = mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes(),
+      "GET /api/v1/spaces": () => ({ body: { items: [], nextCursor: null } }),
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/space-defaults`]: () => ({
+        body: {
+          visibility: "organization",
+          grants: [
+            { principalKind: "organizationMembers", principalId: null, role: "editor", name: null },
+            { principalKind: "instanceUsers", principalId: null, role: "reader", name: null },
+          ],
+        },
+      }),
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/space-key-suggestion`]: () => ({
+        body: { key: "CS", valid: true, available: true },
+      }),
+      [`GET /api/v1/organizations/${ORGANIZATION.id}/space-keys/CS`]: () => ({
+        body: { key: "CS", valid: true, available: true },
+      }),
+      [`POST /api/v1/organizations/${ORGANIZATION.id}/spaces`]: () => ({
+        status: 201,
+        body: { ...space(), key: "CS", name: "Customer Support" },
+      }),
+      "GET /api/v1/space-keys/CS": () => ({
+        body: { space: { ...space(), key: "CS", name: "Customer Support" }, redirected: false },
+      }),
+    });
+    await renderAt("/spaces");
+    await userEvent.click((await screen.findAllByRole("button", { name: "Create space" }))[0] as HTMLElement);
+    const dialog = await screen.findByRole("dialog", { name: "Create a space" });
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Customer Support");
+    await waitFor(() => expect((within(dialog).getByLabelText("Key") as HTMLInputElement).value).toBe("CS"));
+    expect(within(dialog).getByText("All members of Platform Team: Editor")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("radio", { name: /^Private/ }));
+    expect(within(dialog).queryByText("All members of Platform Team: Editor")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("radio", { name: /^Organization/ }));
+    expect(within(dialog).queryByText("All members of Platform Team: Editor")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("radio", { name: /^Private/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create space" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+        name: "Customer Support",
+        key: "CS",
+        description: "",
+        visibility: "private",
+        confidential: false,
+        grants: [],
+      }),
+    );
+  });
+
   it("shows the field error when the key is taken", async () => {
     mockApi({
       ...baseRoutes(),
