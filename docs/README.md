@@ -72,6 +72,12 @@ Run an instance and administer organizations, sign-in, mail, storage, backups an
   - [Old Confluence links](admin/imports/old-confluence-links.md)
   - [What Lunedo takes over from Confluence](admin/imports/confluence-reference.md)
 
+## Reference
+
+Lists generated from the code: every environment variable, setting, audit event and command (`admin/`).
+
+- [Environment variables](admin/environment-variables.md)
+
 ## Using Lunedo
 
 Sign in, then write, organize and share content in spaces and knowledge bases (`user/`).

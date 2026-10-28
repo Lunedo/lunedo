@@ -71,6 +71,10 @@
       ]
     },
     {
+      "title": "Reference",
+      "pages": ["admin/environment-variables.md"]
+    },
+    {
       "title": "Using Lunedo",
       "pages": [
         "user/sign-in-and-security.md",

@@ -14,7 +14,7 @@ For automated deployments, the values of the [setup assistant](setup-assistant.m
 | `LUNEDO_INSTANCE_NAME` | no | Name of the instance, `Lunedo` by default. |
 | `LUNEDO_ORGANIZATION_LANGUAGE` | no | Language of the first organization, `en` or `de`. |
 | `LUNEDO_ORGANIZATION_TIME_ZONE` | no | IANA time zone of the first organization, for example `Europe/Vienna`. |
-| `LUNEDO_SMTP_HOST`, `LUNEDO_SMTP_PORT`, `LUNEDO_SMTP_SECURITY`, `LUNEDO_SMTP_USERNAME`, `LUNEDO_SMTP_PASSWORD`, `LUNEDO_SMTP_FROM` | no | The mail server for outgoing e-mail; see [Configuration](configuration.md#setup-through-configuration). |
+| `LUNEDO_SMTP_HOST`, `LUNEDO_SMTP_PORT`, `LUNEDO_SMTP_SECURITY`, `LUNEDO_SMTP_USERNAME`, `LUNEDO_SMTP_PASSWORD`, `LUNEDO_SMTP_FROM` | no | The mail server for outgoing e-mail; see [Environment variables](environment-variables.md#setup-through-configuration). |
 
 Setting any of the owner, organization or instance name settings starts setup through configuration. Then the start fails with exit code 78 and names every missing or invalid value:
 
