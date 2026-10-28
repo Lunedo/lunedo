@@ -14,7 +14,7 @@ Tested examples:
 
 - Serve Lunedo over HTTPS only and redirect HTTP to HTTPS. Sign-in cookies are `Secure`, and browsers store them only over HTTPS.
 - The instance address, from `LUNEDO_INSTANCE_URL` or the setup assistant, is the address people open, for example `https://wiki.example.com`. Links in e-mails, the WebSocket origin check and CSRF protection use it. See [Instance address](instance-address.md).
-- The [system status](system-status.md#https) page shows a warning under **HTTPS** when no instance address is set or when it does not use HTTPS.
+- The [system status](monitoring/system-status.md#https) page shows a warning under **HTTPS** when no instance address is set or when it does not use HTTPS.
 
 ### Forwarded headers and `LUNEDO_TRUSTED_PROXIES`
 

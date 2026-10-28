@@ -14,6 +14,7 @@ export interface SettingDefinition<T> {
   levels: readonly SettingLevel[];
   /** Whether a level can lock the value for the levels below it. */
   lockable: boolean;
+  format?: string;
   stricterOnly?: "lower" | "higher";
   minimum?: SettingDefinition<number>;
   maximum?: SettingDefinition<Limit>;

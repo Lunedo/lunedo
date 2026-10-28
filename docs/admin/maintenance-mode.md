@@ -54,4 +54,4 @@ With **Pause signing in for everyone except instance administrators** (`--block-
 
 ## Where it shows
 
-Switching on, changing the message and switching off are recorded in the [audit log](audit-log.md), for example as **Maintenance mode switched on**. The [system status page](system-status.md#maintenance) warns while it is on, and the metric `lunedo_maintenance_mode` is 1 (see [monitoring.md](monitoring.md)).
+Switching on, changing the message and switching off are recorded in the [audit log](audit-log.md), for example as **Maintenance mode switched on**. The [system status page](monitoring/system-status.md#maintenance) warns while it is on, and the metric `lunedo_maintenance_mode` is 1 (see [monitoring.md](monitoring.md)).

@@ -39,7 +39,7 @@ Text inside blocks can be bold, italic, underlined, struck through, subscript, s
 | Expand | `/Expand` | Content that readers open on demand, with a title of up to 500 characters. |
 | Two, Three, Four columns | `/Two columns` and so on, or **Column layout** in the toolbar | Content side by side, 2 to 4 columns. The toolbar also offers **Sidebar on the left** and **Sidebar on the right**. Each column is 5 to 95 % wide, and the widths add up to 100 %. |
 | Table | `/Table`, or `/table 4x3` | Opens **Insert table** to choose the size; `/table 4x3` inserts 4 columns × 3 rows directly. Up to 20 columns and 20 rows when inserting. Cells can be merged and split, rows and columns sorted and moved. |
-| Tabs | `/Tabs` | Named tabs, each with its own content. At most 20 tabs, names up to 100 characters. See [Embeds and blocks](embeds-and-blocks.md). |
+| Tabs | `/Tabs` | Named tabs, each with its own content. At most 20 tabs, names up to 100 characters. See [Embeds and blocks](blocks/embeds-and-blocks.md). |
 | Table of contents | `/Table of contents` | Links to the headings of this page, by default levels 1 to 3; any range from 1 to 6 can be set. |
 
 ## In the text
@@ -63,9 +63,9 @@ Text inside blocks can be bold, italic, underlined, struck through, subscript, s
 
 | Block | Insert | Purpose and limits |
 |---|---|---|
-| Image or file | `/Image or file`, or **Image or file** in the toolbar | Uploads files and inserts them. Images can be set to small, medium, large or full width, aligned left, center or right, framed, and given an alternative text. Other files show as a link; some can show a preview of 150 to 2000 pixels in height. See [Embeds and blocks](embeds-and-blocks.md). |
+| Image or file | `/Image or file`, or **Image or file** in the toolbar | Uploads files and inserts them. Images can be set to small, medium, large or full width, aligned left, center or right, framed, and given an alternative text. Other files show as a link; some can show a preview of 150 to 2000 pixels in height. See [Embeds and blocks](blocks/embeds-and-blocks.md). |
 | Attachment list | `/Attachment list` | List of the files attached to this page, optionally limited to up to 20 file types. |
-| External embed | `/External embed` | Video, design, presentation or document from a service on the allowlist. Other addresses show as a link. See [Embeds and blocks](embeds-and-blocks.md) and, for administrators, [Embeds](../admin/embeds.md). |
+| External embed | `/External embed` | Video, design, presentation or document from a service on the allowlist. Other addresses show as a link. See [Embeds and blocks](blocks/embeds-and-blocks.md) and, for administrators, [Embeds](../admin/embeds.md). |
 
 ## Diagrams and drawings
 
@@ -75,9 +75,9 @@ Text inside blocks can be bold, italic, underlined, struck through, subscript, s
 | Mermaid diagram | `/Mermaid diagram` | Diagram from text in Mermaid syntax. |
 | PlantUML diagram | `/PlantUML diagram` | Sequence, class and other UML diagrams from text. |
 | Drawing | `/Drawing` | Hand sketch with shapes, arrows and sticky notes. See [Whiteboards](whiteboards.md#drawings-in-pages). |
-| Link to whiteboard | `/Link to whiteboard` | Preview of a whiteboard that opens it. Readers see it only if they can open the whiteboard. See [Embeds and blocks](embeds-and-blocks.md#whiteboard-blocks). |
+| Link to whiteboard | `/Link to whiteboard` | Preview of a whiteboard that opens it. Readers see it only if they can open the whiteboard. See [Embeds and blocks](blocks/embeds-and-blocks.md#whiteboard-blocks). |
 
-A draw.io diagram from another page appears as **draw.io diagram from another page**. It is read-only and comes from imported content. Details and limits of all diagram blocks: [Diagrams](diagrams.md).
+A draw.io diagram from another page appears as **draw.io diagram from another page**. It is read-only and comes from imported content. Details and limits of all diagram blocks: [Diagrams](blocks/diagrams.md).
 
 ## Reports and lists
 
@@ -92,7 +92,7 @@ A draw.io diagram from another page appears as **draw.io diagram from another pa
 | Related labels | `/Related labels` | Labels used together with the labels of this page. |
 | Child pages | `/Child pages` | List of the pages below this page or another page, 1 to 10 levels or all levels, in tree order, by title, by creation date or by last change. |
 
-Reports and lists show only what the reader may see. Filters take at most 20 labels, pages or spaces each. See [Reports and reuse](reports-and-reuse.md).
+Reports and lists show only what the reader may see. Filters take at most 20 labels, pages or spaces each. See [Reports and reuse](blocks/reports-and-reuse.md).
 
 ## Reuse
 
@@ -103,7 +103,7 @@ Reports and lists show only what the reader may see. Filters take at most 20 lab
 | Include page | `/Include page` | Shows the content of another page. |
 | Template button | `/Template button` | Button that creates a page from a template below this page. Only editors of the space can use it. |
 
-Readers see included content only if they can read its page. Includes inside includes go at most 3 levels deep, and content that would include itself is not shown. See [Reports and reuse](reports-and-reuse.md) and [Templates](templates.md).
+Readers see included content only if they can read its page. Includes inside includes go at most 3 levels deep, and content that would include itself is not shown. See [Reports and reuse](blocks/reports-and-reuse.md) and [Templates](templates.md).
 
 Templates also have placeholders and input fields that are filled in when a page is created; they are inserted in the template editor. See [Templates](templates.md).
 
@@ -120,8 +120,8 @@ These blocks are created by imports and cannot be inserted from the menu:
 
 | Block | What it shows |
 |---|---|
-| Roadmap | A read-only timeline with lanes, bars, markers and months. **Show as list** shows it as text. See [Reports and reuse](reports-and-reuse.md). |
-| draw.io diagram from another page | See [Diagrams](diagrams.md). |
+| Roadmap | A read-only timeline with lanes, bars, markers and months. **Show as list** shows it as text. See [Reports and reuse](blocks/reports-and-reuse.md). |
+| draw.io diagram from another page | See [Diagrams](blocks/diagrams.md). |
 | Unsupported macro | "Unsupported macro: *name*" for content the import could not convert. See [Import review and report](../admin/imports/review-and-report.md). |
 
 Knowledge base articles made from the built-in article templates **How-to** and **Troubleshooting** are divided into sections, such as "Steps" or "What you see", "Cause" and "Solution". The sections come with the template. See [Knowledge bases](knowledge-bases.md).

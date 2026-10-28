@@ -6,7 +6,7 @@ The rules your organization sets for spaces, such as who may create them and wha
 
 ## Spaces
 
-A space has a name, an optional description and a key of 2 to 10 letters or digits. The key appears in the addresses of the space and its content, for example `/spaces/ITOPS/pages/1040/network-plan`; see [Content addresses](content-addresses.md). Keys are unique regardless of case.
+A space has a name, an optional description and a key of 2 to 10 letters or digits. The key appears in the addresses of the space and its content, for example `/spaces/ITOPS/pages/1040/network-plan`; see [Content addresses](spaces-and-pages/content-addresses.md). Keys are unique regardless of case.
 
 When a space admin changes the key, addresses with the old key keep leading to the space until another space takes that key. Links to pages always keep working, because the number in the address identifies the page.
 
@@ -58,7 +58,7 @@ Pages inside a space can narrow access further with restrictions, and single pag
 6. Check the **Permissions**. Your organization suggests roles for new spaces; change them as needed. You always become space admin.
 7. Choose **Create space**.
 
-To create a confidential space instead, for example for one-on-ones or a works council, turn on **Confidential space** in the same dialog, if your organization allows it. This cannot be changed later; see [Confidential spaces](confidential-spaces.md).
+To create a confidential space instead, for example for one-on-ones or a works council, turn on **Confidential space** in the same dialog, if your organization allows it. This cannot be changed later; see [Confidential spaces](sharing-and-restrictions/confidential-spaces.md).
 
 ### Space settings
 
@@ -70,7 +70,7 @@ Space admins open the settings from the space menu. The settings are grouped:
 | Access | **Permissions** | Who has which role |
 | Access | **Access** | Give people access, decide on access requests, review restricted pages |
 | Content | **Pages and trash** | Publish or live mode for new pages, trash periods, deleting the space |
-| Content | **Page status** | The status values pages can have; see [Publishing and page status](publishing-and-page-status.md) |
+| Content | **Page status** | The status values pages can have; see [Publishing and page status](spaces-and-pages/publishing-and-page-status.md) |
 | Content | **Templates** | Templates of the space; see [Templates](templates.md) |
 | Content | **Export** | Whether people may export; see [Export](export.md) |
 | Connections | **Shortcuts** | Links to content people need often |
@@ -80,7 +80,7 @@ Knowledge bases have additional pages for their portal; see [Knowledge bases](kn
 
 ### Deleting a space
 
-**Delete space** in the danger zone of **Pages and trash** moves the space with all its pages to second-stage recovery. Type the name of the space to confirm. Nobody can open the space or its pages afterwards, and links to its pages stop working. The people who were space admins can restore it from **Deleted spaces** in the list of spaces until that period ends; organization administrators can too, unless the space is confidential. See [Trash and archive](trash-and-archive.md) for the periods and for archiving a space instead.
+**Delete space** in the danger zone of **Pages and trash** moves the space with all its pages to second-stage recovery. Type the name of the space to confirm. Nobody can open the space or its pages afterwards, and links to its pages stop working. The people who were space admins can restore it from **Deleted spaces** in the list of spaces until that period ends; organization administrators can too, unless the space is confidential. See [Trash and archive](spaces-and-pages/trash-and-archive.md) for the periods and for archiving a space instead.
 
 ## Your personal space
 
@@ -114,7 +114,7 @@ Drag an item to its new place, or choose **Move…** in its menu and pick the sp
 
 Changes to the tree reach every open sidebar at once.
 
-To duplicate an item instead, see [Copying](copying.md). To delete or archive items, see [Trash and archive](trash-and-archive.md).
+To duplicate an item instead, see [Copying](spaces-and-pages/copying.md). To delete or archive items, see [Trash and archive](spaces-and-pages/trash-and-archive.md).
 
 ### Keyboard
 
@@ -122,13 +122,13 @@ In the page tree, the arrow keys move between items and open and close levels, H
 
 ## Pages
 
-Readers see a rendered view of a page. People with the editor role switch to editing with **Edit** or the E key and finish with **Done**. Several people can edit a page at the same time; see [Editing together](collaboration.md). Whether changes go live at once or are published as versions depends on the page's mode; see [Publishing and page status](publishing-and-page-status.md). Every block the editor offers is listed in [Blocks](blocks.md).
+Readers see a rendered view of a page. People with the editor role switch to editing with **Edit** or the E key and finish with **Done**. Several people can edit a page at the same time; see [Editing together](collaboration.md). Whether changes go live at once or are published as versions depends on the page's mode; see [Publishing and page status](spaces-and-pages/publishing-and-page-status.md). Every block the editor offers is listed in [Blocks](blocks.md).
 
 - **Labels:** a page can have up to 100 labels. Select a label to list the pages of the space with it, at `/spaces/<key>/labels/<label>`; **Everywhere** widens the list to all spaces.
 - **Backlinks:** "Linked from 3 pages" lists the pages you can read that link to the page.
 - **Page width:** **Use full width** and **Use fixed width** in the page menu change the width for everyone.
-- **Number headings** in the page menu numbers the headings of the page; see [Embeds and blocks](embeds-and-blocks.md#numbered-headings).
-- **Owner:** every page has an owner; see [Owners](owners.md).
+- **Number headings** in the page menu numbers the headings of the page; see [Embeds and blocks](blocks/embeds-and-blocks.md#numbered-headings).
+- **Owner:** every page has an owner; see [Owners](spaces-and-pages/owners.md).
 - **History:** the line "Edited by … on …" below the title opens the versions of the page.
 
-Pages can also be exported ([Export](export.md)), copied ([Copying](copying.md)), turned into templates ([Templates](templates.md)) and watched ([Notifications](notifications.md#watching)).
+Pages can also be exported ([Export](export.md)), copied ([Copying](spaces-and-pages/copying.md)), turned into templates ([Templates](templates.md)) and watched ([Notifications](notifications.md#watching)).

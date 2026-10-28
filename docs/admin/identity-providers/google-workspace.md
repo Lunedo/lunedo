@@ -4,7 +4,7 @@ Checked against Google Cloud and Google Workspace documentation, October 2026.
 
 People sign in with their Google Workspace account through OpenID Connect. At first, Google Workspace is used for sign-in only. Group synchronization can be turned on later with a service account; Lunedo then reads groups through the Google Directory API and synchronizes them in the background.
 
-What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](../identity-provider-groups.md).
+What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](identity-provider-groups.md).
 
 ## Setting up sign-in
 
@@ -46,7 +46,7 @@ To deactivate accounts that are suspended, archived or deleted in Google Workspa
 
 Without it, Lunedo does not see suspensions: a suspended person can no longer sign in through Google, but sessions already open run until they expire. Synchronization then only updates groups and deactivates nobody.
 
-See [Synchronization](../identity-provider-groups.md#synchronization) for how runs work and how Lunedo guards against deactivating many accounts by mistake.
+See [Synchronization](identity-provider-groups.md#synchronization) for how runs work and how Lunedo guards against deactivating many accounts by mistake.
 
 ## Second factor
 

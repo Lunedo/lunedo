@@ -60,4 +60,4 @@ Actions: `instance/save`, `systemCheck/acknowledge`, `owner/createAccount`, `own
 
 ## Restore during the setup
 
-`packages/server/src/setup/restore.ts` runs the restore in the API process that received it. Uploads arrive in parts of at most 8 MiB. The progress is kept in `setup-restore.json` in `LUNEDO_WORK_DIR` and shown for a day. When the restore is complete, every process of the instance ends itself gracefully so that the container restarts with the restored data and keys. The operator view is in [Restore](../admin/restore.md).
+`packages/server/src/setup/restore.ts` runs the restore in the API process that received it. Uploads arrive in parts of at most 8 MiB. The progress is kept in `setup-restore.json` in `LUNEDO_WORK_DIR` and shown for a day. When the restore is complete, every process of the instance ends itself gracefully so that the container restarts with the restored data and keys. The operator view is in [Restore](../admin/backups/restore.md).

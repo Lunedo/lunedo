@@ -1,6 +1,6 @@
 # Reports and reusable content
 
-How the page properties report, content by label and related labels get their data. What the blocks do for people is described in [user/reports-and-reuse.md](../user/reports-and-reuse.md).
+How the page properties report, content by label and related labels get their data. What the blocks do for people is described in [user/reports-and-reuse.md](../user/blocks/reports-and-reuse.md).
 
 ## Where the values come from
 

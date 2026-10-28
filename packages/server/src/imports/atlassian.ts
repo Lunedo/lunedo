@@ -22,6 +22,7 @@ export const atlassianHostsSetting = defineSetting({
   default: "",
   levels: ["instance"],
   lockable: false,
+  format: `Up to ${MAX_HOSTS} host names such as \`wiki.example.com\`, separated by commas.`,
 });
 
 export function splitHosts(value: string): string[] {

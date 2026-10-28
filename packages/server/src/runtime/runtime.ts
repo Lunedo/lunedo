@@ -1,9 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { HealthCheck } from "@lunedo/shared";
-import { instanceSettings } from "../accounts/instance-settings.js";
 import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
-import { auditRetentionSetting } from "../audit/retention.js";
-import { authSettings } from "../auth/settings.js";
 import { backupBeforeMigrations, consumeSkipMarker } from "../backup/before-update.js";
 import { PostgresArchiver } from "../backup/postgres.js";
 import { checkRestoreComplete } from "../backup/restore-marker.js";
@@ -11,7 +8,6 @@ import { pauseBackupsAfterRestore } from "../backup/restored.js";
 import { removeStaleStaging } from "../backup/runner.js";
 import { startChatDelivery } from "../chat/jobs.js";
 import { startBlogAnnouncements } from "../collaboration/jobs.js";
-import { collaborationSettings } from "../collaboration/settings.js";
 import { configurationForBackup } from "../config/backup-view.js";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
@@ -29,13 +25,9 @@ import { createDatabase, type Database } from "../database/database.js";
 import { currentSchemaVersion, knownSchemaVersions, runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
-import { embedSettings } from "../embeds/settings.js";
 import { startDisplayVersions } from "../files/jobs.js";
 import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
-import { fileSettings } from "../files/settings.js";
 import { readinessChecks } from "../health/readiness.js";
-import { syncLogRetentionDaysSetting } from "../identity/sync.js";
-import { importSettings } from "../imports/settings.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import {
@@ -45,32 +37,21 @@ import {
 } from "../jobs/progress-cleanup.js";
 import { startRemovedArticlePruning, startReviewReminders } from "../knowledge-bases/jobs.js";
 import { createLogger, type Logger } from "../logging/logger.js";
-import { graphMailSetting, mailMethodSetting, smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
 import { NotificationHub } from "../notifications/hub.js";
-import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
 import { ErrorEvents } from "../operations/error-events.js";
 import { instanceMetricsSource } from "../operations/instance-metrics.js";
 import { startUpdateChecks } from "../operations/jobs.js";
-import { operationsSettings } from "../operations/settings.js";
 import type { CollaborationProbe } from "../operations/status.js";
-import { organizationSettings } from "../organizations/settings.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
-import { portalSettings } from "../portal/settings.js";
 import { startPushDelivery } from "../push/push-service.js";
 import { startSearchIndexing } from "../search/jobs.js";
-import { searchSettings } from "../search/languages.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
-import { builtinSettings } from "../settings/builtin.js";
+import { settingDefinitions } from "../settings/catalog.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
-import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
 import { restartWhenRestored } from "../setup/restore.js";
-import { sharingSettings } from "../sharing/settings.js";
-import { spaceSettings } from "../spaces/settings.js";
-import { storageSettings } from "../storage/settings.js";
-import { tokenSettings } from "../tokens/settings.js";
 
 export type ProcessRole = "api" | "collab" | "worker";
 
@@ -233,30 +214,7 @@ export async function createServerRuntime(options: {
     const encryption = new Encryption(() => keyRing.ring);
 
     const settingsRegistry = new SettingsRegistry().register(
-      ...([
-        ...builtinSettings,
-        ...instanceSettings,
-        ...authSettings,
-        ...organizationSettings,
-        ...tokenSettings,
-        ...preferenceSettings,
-        ...notificationSettings,
-        ...spaceSettings,
-        ...portalSettings,
-        ...collaborationSettings,
-        ...sharingSettings,
-        ...fileSettings,
-        ...storageSettings,
-        ...operationsSettings,
-        ...importSettings,
-        ...embedSettings,
-        ...searchSettings,
-        auditRetentionSetting,
-        smtpSetting,
-        mailMethodSetting,
-        graphMailSetting,
-        syncLogRetentionDaysSetting,
-      ] as SettingDefinition<never>[]),
+      ...settingDefinitions,
       ...(options.settings ?? []),
     );
     const audit = new AuditLog({ database, encryption });

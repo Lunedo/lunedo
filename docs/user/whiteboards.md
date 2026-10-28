@@ -1,6 +1,6 @@
 # Whiteboards and drawings
 
-Lunedo uses [Excalidraw](https://excalidraw.com) for hand-drawn sketches. A **whiteboard** is an item in the page tree with an infinite canvas that several people edit at the same time. A **drawing** is a block inside a page. draw.io, Mermaid and PlantUML diagrams are described in [Diagrams](diagrams.md).
+Lunedo uses [Excalidraw](https://excalidraw.com) for hand-drawn sketches. A **whiteboard** is an item in the page tree with an infinite canvas that several people edit at the same time. A **drawing** is a block inside a page. draw.io, Mermaid and PlantUML diagrams are described in [Diagrams](blocks/diagrams.md).
 
 Everything Excalidraw needs, including its fonts, is served by your Lunedo instance, so whiteboards and drawings work without internet access. Embedded web content is not available on whiteboards; add a link instead.
 
@@ -10,11 +10,11 @@ Everything Excalidraw needs, including its fonts, is served by your Lunedo insta
 
 Create a whiteboard with **+** in the page tree of a space and **New whiteboard**, or with **New whiteboard inside** in the menu of a page or folder.
 
-Whiteboards are renamed, moved, archived, moved to the trash and restored like pages; see [Trash and archive](trash-and-archive.md). A copy keeps its images and preview; see [Copying](copying.md#copying). Whiteboards can be starred and watched. They cannot contain pages.
+Whiteboards are renamed, moved, archived, moved to the trash and restored like pages; see [Trash and archive](spaces-and-pages/trash-and-archive.md). A copy keeps its images and preview; see [Copying](spaces-and-pages/copying.md#copying). Whiteboards can be starred and watched. They cannot contain pages.
 
 Access follows the space and the page tree, like pages: view restrictions of parent pages apply, a whiteboard can be restricted and shared with people outside the space, and people without access cannot open it, connect to it or see its image. See [Sharing and restrictions](sharing-and-restrictions.md).
 
-A whiteboard has an address with its number, such as `/spaces/OPS/whiteboards/1042/network-plan`; see [Content addresses](content-addresses.md#content-numbers-and-addresses).
+A whiteboard has an address with its number, such as `/spaces/OPS/whiteboards/1042/network-plan`; see [Content addresses](spaces-and-pages/content-addresses.md#content-numbers-and-addresses).
 
 ### Drawing together
 
@@ -56,6 +56,6 @@ The drawing and its image are stored as versions of the attachments `drawing-<bl
 
 ## Whiteboards in pages and the page tree
 
-**Link to whiteboard** shows a whiteboard's image and title in a page and opens it on click, with the reader's permissions; links in the page tree can point to whiteboards. See [Whiteboard blocks](embeds-and-blocks.md#whiteboard-blocks).
+**Link to whiteboard** shows a whiteboard's image and title in a page and opens it on click, with the reader's permissions; links in the page tree can point to whiteboards. See [Whiteboard blocks](blocks/embeds-and-blocks.md#whiteboard-blocks).
 
 Scripts can read and restore whiteboards through the API; see [Diagrams and whiteboards](../api/diagrams-and-whiteboards.md).

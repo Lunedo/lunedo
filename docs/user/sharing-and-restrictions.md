@@ -31,7 +31,7 @@ If the person has no account in the organization, you can invite them by e-mail:
 
 The person joins the organization as a guest and sees the page after accepting. If at that moment you may no longer share the page, the share is not created; it becomes an access request for the people who manage the page.
 
-Organization administrators can always invite guests. Other people can do it only when the organization turns on **Members can invite guests to a page** (default off) under **Settings › Organization › Content › Pages and trash**, section **Sharing**. In a [confidential space](confidential-spaces.md), you must also be one of its space admins to invite guests or share pages with guests; organization administrators who are not space admins cannot.
+Organization administrators can always invite guests. Other people can do it only when the organization turns on **Members can invite guests to a page** (default off) under **Settings › Organization › Content › Pages and trash**, section **Sharing**. In a [confidential space](sharing-and-restrictions/confidential-spaces.md), you must also be one of its space admins to invite guests or share pages with guests; organization administrators who are not space admins cannot.
 
 ## Share links
 
@@ -61,11 +61,7 @@ To change a link, select **Change** next to it. To end it, select **Revoke** and
 
 The organization sets these under **Settings › Organization › Content › Pages and trash**, section **Sharing**. Links for anyone and their lifetime can also be set for the whole instance; an organization can only shorten the lifetime.
 
-| Setting | Default | Effect |
-|---|---|---|
-| **Share links** | on | Off: no new links, and existing links stop working. Sharing with people still works. |
-| **Links for anyone without signing in** | off | Allows links that open without signing in. |
-| **Longest lifetime of a link for anyone** | 30 days | 1 to 3650 days. |
+Turning **Share links** off stops new links, and existing links stop working; sharing with people still works. **Links for anyone without signing in** allows links that open without signing in. **Longest lifetime of a link for anyone** limits how long such a link can stay valid. The [Settings reference](../admin/settings-reference.md#organization--content--pages-and-trash) lists their defaults and allowed values.
 
 ## Restrict viewing or editing
 
@@ -106,7 +102,7 @@ Shares, links and restrictions belong to the page and move with it. What the pag
 
 When a move changes who can open or edit the content, the move dialog shows **How access changes**: who gains and who loses access. Confirm with **Move and change access**. If access changes again before you confirm, the dialog asks you to check the list and move again.
 
-Moving content into a [confidential space](confidential-spaces.md) is refused while any of the pages is shared with groups, has groups on a restriction list, or has a link that is not limited to named people.
+Moving content into a [confidential space](sharing-and-restrictions/confidential-spaces.md) is refused while any of the pages is shared with groups, has groups on a restriction list, or has a link that is not limited to named people.
 
 ## Access requests
 

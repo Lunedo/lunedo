@@ -53,12 +53,7 @@ Check the result in the [report](imports/review-and-report.md), map people and g
 
 Instance administrators set the limits of all imports under **Settings › Instance › People and sign-in › Policies**, section **Imports**. They apply to every organization.
 
-| Setting | Key | Default | Range |
-| --- | --- | --- | --- |
-| **Largest export to upload** | `imports.maxUploadMegabytes` | 2,048 MiB | 1 to 1,000,000 MiB |
-| **Import storage per organization** | `imports.maxOrganizationMegabytes` | 20,480 MiB | 1 to 10,000,000 MiB |
-| **Import folder** | `imports.folderEnabled` | on | on or off |
-| **Further Atlassian sites** | `imports.atlassianHosts` | empty | up to 50 host names, separated by commas |
+They are **Largest export to upload** and **Import storage per organization** in MiB, **Import folder** and **Further Atlassian sites**. The [Settings reference](settings-reference.md#instance--people-and-sign-in--policies) lists each of them with its key, default and allowed values.
 
 - **Largest export to upload**: larger files are refused before the upload starts. The wizard then names the limit and both ways out: raise the limit, or place the file in the organization's import folder.
 - **Import storage per organization**: uploaded files and the data Lunedo reads from them count together. When an organization reaches the limit, new uploads and reading are refused until earlier imports are accepted, discarded or deleted.

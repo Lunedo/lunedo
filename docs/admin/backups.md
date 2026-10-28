@@ -2,7 +2,7 @@
 
 A backup contains the database, the file store and the configuration. It is encrypted with the backup key. It never contains the master keys or the backup keys: keep those separately (see [Backing up the keys](encryption.md#backing-up-the-keys)). **A backup cannot be restored without its backup key, and the encrypted values in it cannot be read without the master keys.**
 
-This page explains scheduled backups in the interface. Restoring is described in [Restoring a backup](restore.md), the commands and the file format in [Backup reference](backup-reference.md).
+This page explains scheduled backups in the interface. Restoring is described in [Restoring a backup](backups/restore.md), the commands and the file format in [Backup reference](backups/backup-reference.md).
 
 ## Setting up backups
 
@@ -78,7 +78,7 @@ A restore of a backup without the file store restores the database and leaves th
 
 With S3 file storage, a backup with everything contains the objects of the bucket, and a restore writes them back to the configured bucket.
 
-The configuration in a backup consists of the configuration file and a list of the settings from the environment. Secret values from the environment are replaced by `[set]`, and the master keys and the backup keys are left out. The configuration file is copied as it is, without the key settings: other secrets in it, such as an SMTP password or the password in `LUNEDO_DATABASE_URL`, are in the backup, protected only by its encryption. See [Configuration in a backup](backup-reference.md#configuration-in-a-backup).
+The configuration in a backup consists of the configuration file and a list of the settings from the environment. Secret values from the environment are replaced by `[set]`, and the master keys and the backup keys are left out. The configuration file is copied as it is, without the key settings: other secrets in it, such as an SMTP password or the password in `LUNEDO_DATABASE_URL`, are in the backup, protected only by its encryption. See [Configuration in a backup](backups/backup-reference.md#configuration-in-a-backup).
 
 ## Backup key
 
@@ -119,7 +119,7 @@ Warnings go to the instance administrators (notification center, e-mail and push
 
 The reminder is the setting **Reminder while a level is active** on the [storage page](storage.md#storage-page) (weekly by default). While scheduled backups are off, have no target or are paused after a restore, Lunedo does not check for missing backups and clears an active warning.
 
-The status of the backups is also shown in the [system status](system-status.md#backups). For monitoring, `GET /api/v1/instance/backups/status` returns the last success, the last failure, the next run, whether a backup is running, whether scheduled backups and backups before updates are on, whether the backups are paused after a restore and when leftovers of a test restore were last removed. The route is described at `/api/docs` of your instance.
+The status of the backups is also shown in the [system status](monitoring/system-status.md#backups). For monitoring, `GET /api/v1/instance/backups/status` returns the last success, the last failure, the next run, whether a backup is running, whether scheduled backups and backups before updates are on, whether the backups are paused after a restore and when leftovers of a test restore were last removed. The route is described at `/api/docs` of your instance.
 
 ## Backups before updates
 
@@ -131,4 +131,4 @@ When migrations are pending at a start, Lunedo first writes a backup with the cl
 
 ## After a restore
 
-A restored instance pauses scheduled backups, retention and the monthly test restore until an instance administrator confirms the target. See [After a restore](restore.md#after-a-restore).
+A restored instance pauses scheduled backups, retention and the monthly test restore until an instance administrator confirms the target. See [After a restore](backups/restore.md#after-a-restore).

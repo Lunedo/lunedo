@@ -4,7 +4,7 @@ Checked against Microsoft Entra documentation, October 2026.
 
 People sign in with their Microsoft work account. Lunedo connects to one Entra ID tenant, through OpenID Connect or through SAML 2.0. Prefer OpenID Connect: with one app registration, Lunedo signs people in, reads their groups and synchronizes account status in the background. Use SAML when your organization requires it.
 
-What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](../identity-provider-groups.md).
+What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](identity-provider-groups.md).
 
 ## OpenID Connect
 
@@ -49,7 +49,7 @@ When Graph cannot be reached at sign-in, the person is signed in with the groups
 
 ### Synchronization
 
-Entra ID providers are synchronized in the background: Lunedo updates profiles and groups of linked accounts and deactivates accounts that are disabled or deleted in Entra ID. See [Synchronization](../identity-provider-groups.md#synchronization).
+Entra ID providers are synchronized in the background: Lunedo updates profiles and groups of linked accounts and deactivates accounts that are disabled or deleted in Entra ID. See [Synchronization](identity-provider-groups.md#synchronization).
 
 ### Second factor
 
@@ -88,7 +88,7 @@ With **Require proof from the provider**, Lunedo compares the accepted proof val
 
 ## SCIM
 
-With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo in its provisioning cycles, about every 40 minutes, without waiting for a sign-in. Whether automatic provisioning to your own application is included depends on your Entra ID licence; check Microsoft's licensing overview. See [SCIM](../scim.md) for what Lunedo does with the requests.
+With SCIM, Entra ID sends new, changed and removed people and groups to Lunedo in its provisioning cycles, about every 40 minutes, without waiting for a sign-in. Whether automatic provisioning to your own application is included depends on your Entra ID licence; check Microsoft's licensing overview. See [SCIM](scim.md) for what Lunedo does with the requests.
 
 1. On the provider page in Lunedo, open the tab **SCIM** and choose **Create token**. Copy the token; Lunedo shows it only once.
 2. In the enterprise application in Entra ID, open **Provisioning** and create a new provisioning configuration.

@@ -1,6 +1,6 @@
 # Allowing external embeds
 
-An external embed shows a video, design, presentation or document of another service inside a page (see [Embeds, file previews, tabs and whiteboard blocks](../user/embeds-and-blocks.md)). Pages embed content only from services on the embed allowlist. An address that is not on the list appears as a link with a short hint.
+An external embed shows a video, design, presentation or document of another service inside a page (see [Embeds, file previews, tabs and whiteboard blocks](../user/blocks/embeds-and-blocks.md)). Pages embed content only from services on the embed allowlist. An address that is not on the list appears as a link with a short hint.
 
 The list has two levels:
 

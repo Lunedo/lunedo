@@ -1,6 +1,6 @@
 # Old Confluence links
 
-Imported pages and blog posts remember their Confluence IDs and titles, so links into the old Confluence keep working after the migration. An old link leads to the number address of the imported page, such as `/spaces/OPS/pages/1042/backup-rotation` (see [Content numbers and addresses](../../user/content-addresses.md#content-numbers-and-addresses)).
+Imported pages and blog posts remember their Confluence IDs and titles, so links into the old Confluence keep working after the migration. An old link leads to the number address of the imported page, such as `/spaces/OPS/pages/1042/backup-rotation` (see [Content numbers and addresses](../../user/spaces-and-pages/content-addresses.md#content-numbers-and-addresses)).
 
 ## Recognized links
 

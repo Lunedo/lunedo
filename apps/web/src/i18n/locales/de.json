@@ -2865,6 +2865,82 @@
         "label": "Wartezeit vor dem Aufräumen",
         "description": "Wartezeit, mindestens 7 Tage.",
         "help": "Wie lange ein persönlicher, 1:1- oder vertraulicher Space ohne aktive Mitglieder bleibt, bevor er unter Aufräumen erscheint. Mindestens 7 Tage."
+      },
+      "auth_emergencySignInRecipients": {
+        "label": "Notfall-Anmeldung des Owners",
+        "description": "Wer informiert wird, wenn sich der Owner im Notfall anmeldet."
+      },
+      "appearance_sidebarCollapsedWhileEditing": {
+        "label": "Eingeklappte Seitenleiste beim Bearbeiten",
+        "description": "Ob die Seitenleiste beim Bearbeiten eingeklappt ist."
+      },
+      "appearance_editorToolbar": {
+        "label": "Werkzeugleiste im Editor",
+        "description": "Ob die Formatierungsleiste angezeigt wird."
+      },
+      "appearance_categoryView": {
+        "label": "Kategorien in Wissensdatenbanken",
+        "description": "Deine Kategorien oder alle."
+      },
+      "appearance_startPage": {
+        "label": "Einstiegsseite",
+        "description": "Wo du nach der Anmeldung landest."
+      },
+      "spaces_defaultPermissions": {
+        "label": "Standardrechte für neue Spaces",
+        "description": "Wer einen Space erstellt, kann sie ändern."
+      },
+      "portal_appLinkName": {
+        "label": "Name des Links zur App",
+        "description": "Im Kontomenü des Portals."
+      },
+      "help_knowledgeBase": {
+        "label": "Wissensdatenbank hinter dem Hilfe-Symbol",
+        "description": "Öffnet sich für alle Angemeldeten über das Hilfe-Symbol."
+      },
+      "home_organizationPage": {
+        "label": "Startseite der Organisation",
+        "description": "Wo Mitglieder landen, die sie als Einstiegsseite wählen."
+      },
+      "storage_warningPercent": {
+        "label": "Speicherstufe Warnung",
+        "description": "Informiert, sperrt nichts."
+      },
+      "storage_largeWritesPercent": {
+        "label": "Speicherstufe für pausierte große Schreibvorgänge",
+        "description": "Neue Exporte und Importe werden abgelehnt."
+      },
+      "storage_criticalPercent": {
+        "label": "Kritische Speicherstufe",
+        "description": "Auch Uploads werden abgelehnt."
+      },
+      "storage_s3LimitBytes": {
+        "label": "Limit für gespeicherte Dateien",
+        "description": "Limit für die Warnung, sonst leer."
+      },
+      "storage_operationsEmails": {
+        "label": "Betriebskontakte",
+        "description": "E-Mail-Adressen für Betriebswarnungen."
+      },
+      "embeds_services": {
+        "label": "Liste erlaubter Einbettungen",
+        "description": "Dienste, die Seiten einbetten dürfen."
+      },
+      "embeds_allowedServices": {
+        "label": "Erlaubte Einbettungsdienste",
+        "description": "Dienste der Instanz, die diese Organisation erlaubt."
+      },
+      "mail_smtp": {
+        "label": "Mailserver",
+        "description": "SMTP-Server für ausgehende E-Mails."
+      },
+      "mail_method": {
+        "label": "Versandart",
+        "description": "SMTP oder Microsoft Graph."
+      },
+      "mail_graph": {
+        "label": "Microsoft Graph",
+        "description": "Versand über Microsoft Graph."
       }
     },
     "disabled": {

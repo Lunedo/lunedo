@@ -69,7 +69,7 @@ An empty `items` list means that the token reaches no space: either you have no 
 
 ## Read a page
 
-Every page has a number, which you see in its address in the browser, for example `https://wiki.example.com/spaces/OPS/pages/1042/vpn-access`. See [Content numbers and addresses](../user/content-addresses.md#content-numbers-and-addresses).
+Every page has a number, which you see in its address in the browser, for example `https://wiki.example.com/spaces/OPS/pages/1042/vpn-access`. See [Content numbers and addresses](../user/spaces-and-pages/content-addresses.md#content-numbers-and-addresses).
 
 1. Look up the page by its number:
 

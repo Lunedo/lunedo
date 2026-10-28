@@ -12,20 +12,9 @@ By default (`LUNEDO_FILE_STORAGE=local`) files are stored below `LUNEDO_FILES_DI
 
 ### S3-compatible storage
 
-With `LUNEDO_FILE_STORAGE=s3`, attachments are stored as objects named `<prefix>attachments/<key>` in a bucket. Set these settings on every node:
+With `LUNEDO_FILE_STORAGE=s3`, attachments are stored as objects named `<prefix>attachments/<key>` in a bucket. Set the S3 settings on every node.
 
-| Setting | Default | Description |
-|---|---|---|
-| `LUNEDO_FILE_STORAGE` | `local` | `local` stores files in the file store directory, `s3` in S3-compatible object storage. |
-| `LUNEDO_S3_BUCKET` | none | Bucket for the files. Required when `LUNEDO_FILE_STORAGE` is `s3`. |
-| `LUNEDO_S3_ENDPOINT` | none | Address of the S3-compatible service, starting with `http://` or `https://`, for example `https://minio.example.com`. Leave it out for Amazon S3. |
-| `LUNEDO_S3_REGION` | `us-east-1` | Region of the bucket. |
-| `LUNEDO_S3_ACCESS_KEY_ID` | none | Access key ID for the bucket. Secret. Without it and the secret access key, the usual AWS credential sources of the environment apply. |
-| `LUNEDO_S3_SECRET_ACCESS_KEY` | none | Secret access key for the bucket. Secret. Set both keys or neither. |
-| `LUNEDO_S3_FORCE_PATH_STYLE` | `false` | `true` addresses the bucket in the path instead of the host name, as MinIO and some other services need. |
-| `LUNEDO_S3_PREFIX` | empty | Prefix for all object names, empty or ending with `/`, for example `lunedo/`. |
-
-Secret settings can also be given as a file with the suffix `_FILE`, for example `LUNEDO_S3_SECRET_ACCESS_KEY_FILE=/run/secrets/s3-secret`.
+`LUNEDO_S3_BUCKET` is required; the endpoint, region, access keys, path style and prefix are optional. [File storage and imports](environment-variables.md#file-storage-and-imports) lists each of them with its default and allowed values. The access keys are secrets and can also be given as a file, for example `LUNEDO_S3_SECRET_ACCESS_KEY_FILE=/run/secrets/s3-secret`.
 
 The bucket for files and the target for backups are separate. Backups of an instance with S3 file storage contain the objects of the bucket, and a restore writes them back to the configured bucket (see [Backups](backups.md#content)).
 
@@ -78,7 +67,7 @@ Backups use the critical level as well: a backup or test restore that would take
 | **S3 limit** | Only with S3 file storage. **Limit for stored files** in GiB (the field is labeled GB and counts 1024³ bytes), or empty for no warning. |
 | **Reminders** | **Reminder while a level is active**: **Never**, **Daily**, **Weekly** or **Monthly**. The backup warnings use the same reminder. |
 
-Viewing the page needs the permission to view instance settings; changing it needs the permission to manage them (see [Roles and permissions](roles-and-permissions.md)). The API is described in [Storage API](../api/storage.md). The system status shows the storage level as well (see [System status](system-status.md#storage)).
+Viewing the page needs the permission to view instance settings; changing it needs the permission to manage them (see [Roles and permissions](roles-and-permissions.md)). The API is described in [Storage API](../api/storage.md). The system status shows the storage level as well (see [System status](monitoring/system-status.md#storage)).
 
 ## Operations contacts
 

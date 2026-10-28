@@ -74,6 +74,6 @@ Choose **Delete template** in the actions of the template. It disappears from th
 
 ## Exporting and importing
 
-Templates can be exported as a file and imported into another Lunedo instance or another level. On the template screen, select templates and export them, or choose **Export all**; choose **Import** to read a file. When a template with the same name exists, choose **Replace the existing template** or **Import under a new name**. See [Sharing templates](template-sharing.md) for the details, and [Template file format](../api/template-format.md) for the file itself.
+Templates can be exported as a file and imported into another Lunedo instance or another level. On the template screen, select templates and export them, or choose **Export all**; choose **Import** to read a file. When a template with the same name exists, choose **Replace the existing template** or **Import under a new name**. See [Sharing templates](templates/template-sharing.md) for the details, and [Template file format](../api/template-format.md) for the file itself.
 
 Exports, imports, saving a restricted page as a template and changes to organization and instance templates are recorded in the [audit log](../admin/audit-log.md).

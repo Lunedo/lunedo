@@ -82,7 +82,7 @@ docker compose exec lunedo lunedo backup create --before-update
 
 It writes a "before update" backup to the target (or to `LUNEDO_BACKUP_DIR`), applies the retention of that class and prints only the location on standard output: a path, or `s3://<bucket>/<key>`. Messages go to standard error. Run `backup skip-before-update --for-version <new version>` afterwards if the first start of the new version should not take a second backup; `./lunedo update` does this.
 
-The setting **Back up before migrations** under **Settings › Instance › Operations › Backups**, section **Before updates**, and the environment variable `LUNEDO_BACKUP_BEFORE_UPDATE=false` turn the backup off for installations with their own backup strategy. The backup settings show which of them did, and the [system status](system-status.md#backups) shows that it is off. See [Backups](backups.md).
+The setting **Back up before migrations** under **Settings › Instance › Operations › Backups**, section **Before updates**, and the environment variable `LUNEDO_BACKUP_BEFORE_UPDATE=false` turn the backup off for installations with their own backup strategy. The backup settings show which of them did, and the [system status](monitoring/system-status.md#backups) shows that it is off. See [Backups](backups.md).
 
 ## Rollback
 
@@ -100,7 +100,7 @@ Migrations only go forward, so going back means restoring the backup from before
 
 The update command prints these commands with the name of its backup when an update fails. `backups/` in the installation directory is `/var/lib/lunedo/backups` in the container. A backup in S3 storage must be downloaded to the `backups` directory first.
 
-`--force` replaces the database and the files with the content of the backup; changes made after the backup are lost. The `.env` with the keys stays as it is. After the restore, scheduled backups are paused until an instance administrator confirms the backup target. See [Restore](restore.md) and [Backup reference](backup-reference.md).
+`--force` replaces the database and the files with the content of the backup; changes made after the backup are lost. The `.env` with the keys stays as it is. After the restore, scheduled backups are paused until an instance administrator confirms the backup target. See [Restore](backups/restore.md) and [Backup reference](backups/backup-reference.md).
 
 ## Update check
 

@@ -31,6 +31,7 @@
     "playwright-image:check": "node scripts/check-playwright-image.ts",
     "i18n:check": "node scripts/check-i18n.ts",
     "docs:check": "node scripts/check-docs.ts",
+    "docs:generate": "node scripts/generate-docs.ts",
     "shell:check": "node scripts/check-shell.ts",
     "release-jobs:check": "node scripts/check-release-jobs.ts",
     "container-users:check": "node scripts/check-container-users.ts",

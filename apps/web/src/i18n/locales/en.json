@@ -2865,6 +2865,82 @@
         "label": "Waiting period before clean-up",
         "description": "Waiting period, at least 7 days.",
         "help": "How long a personal, one-on-one or confidential space stays without active members before it appears under Clean up. At least 7 days."
+      },
+      "auth_emergencySignInRecipients": {
+        "label": "Emergency sign-in of the owner",
+        "description": "Who is told when the owner signs in in an emergency."
+      },
+      "appearance_sidebarCollapsedWhileEditing": {
+        "label": "Collapsed sidebar while editing",
+        "description": "Whether the sidebar is collapsed while you edit."
+      },
+      "appearance_editorToolbar": {
+        "label": "Editor toolbar",
+        "description": "Whether the formatting toolbar is shown."
+      },
+      "appearance_categoryView": {
+        "label": "Categories in knowledge bases",
+        "description": "Your categories or all of them."
+      },
+      "appearance_startPage": {
+        "label": "Start page",
+        "description": "Where you land after signing in."
+      },
+      "spaces_defaultPermissions": {
+        "label": "Default permissions for new spaces",
+        "description": "The creator of a space can change them."
+      },
+      "portal_appLinkName": {
+        "label": "Name of the link to the app",
+        "description": "In the account menu of the portal."
+      },
+      "help_knowledgeBase": {
+        "label": "Knowledge base behind the help icon",
+        "description": "Opens from the help icon for everyone signed in."
+      },
+      "home_organizationPage": {
+        "label": "Organization home page",
+        "description": "Where members land who choose it as their start page."
+      },
+      "storage_warningPercent": {
+        "label": "Storage warning level",
+        "description": "Informs, blocks nothing."
+      },
+      "storage_largeWritesPercent": {
+        "label": "Storage level for pausing large writes",
+        "description": "New exports and imports are refused."
+      },
+      "storage_criticalPercent": {
+        "label": "Critical storage level",
+        "description": "Uploads are refused too."
+      },
+      "storage_s3LimitBytes": {
+        "label": "Limit for stored files",
+        "description": "Limit for the warning, or empty."
+      },
+      "storage_operationsEmails": {
+        "label": "Operations contacts",
+        "description": "E-mail addresses for operations warnings."
+      },
+      "embeds_services": {
+        "label": "External embeds allowlist",
+        "description": "Services pages may embed."
+      },
+      "embeds_allowedServices": {
+        "label": "Allowed embed services",
+        "description": "Services of the instance this organization allows."
+      },
+      "mail_smtp": {
+        "label": "Mail server",
+        "description": "SMTP server for outgoing e-mail."
+      },
+      "mail_method": {
+        "label": "Sending method",
+        "description": "SMTP or Microsoft Graph."
+      },
+      "mail_graph": {
+        "label": "Microsoft Graph",
+        "description": "Sending through Microsoft Graph."
       }
     },
     "disabled": {

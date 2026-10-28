@@ -2,7 +2,7 @@
 
 Checked against Microsoft Entra and AD FS documentation, October 2026.
 
-Use **SAML 2.0** for identity providers such as Active Directory Federation Services (ADFS), Shibboleth or Microsoft Entra ID. Lunedo is the service provider. Profile and groups update at every sign-in; SAML has no directory Lunedo could synchronize with in the background. With [SCIM](../scim.md), the provider can send changes at once.
+Use **SAML 2.0** for identity providers such as Active Directory Federation Services (ADFS), Shibboleth or Microsoft Entra ID. Lunedo is the service provider. Profile and groups update at every sign-in; SAML has no directory Lunedo could synchronize with in the background. With [SCIM](scim.md), the provider can send changes at once.
 
 The assistant offers three presets under **Identity provider**: Microsoft Entra ID (SAML), Active Directory Federation Services and Other SAML provider. For Entra ID, see [Microsoft Entra ID](entra-id.md#saml); this page describes the settings every SAML provider shares, and ADFS and other providers. What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md).
 
@@ -89,4 +89,4 @@ Groups come as SIDs by default: in the same rule, map the LDAP attribute "Token-
 
 When the group values are names, the rule list and the rule dialog warn that renaming a group at the identity provider breaks the rules for it. Use identifiers if the identity provider can send them.
 
-When a groups attribute is set and an assertion does not carry it, the person counts as having no groups, and instance administrators see a banner once the provider stops sending the attribute (see [Identity provider groups](../identity-provider-groups.md#groups)).
+When a groups attribute is set and an assertion does not carry it, the person counts as having no groups, and instance administrators see a banner once the provider stops sending the attribute (see [Identity provider groups](identity-provider-groups.md#groups)).

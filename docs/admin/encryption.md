@@ -67,7 +67,7 @@ When the instance is set up through configuration, the assistant and its emergen
 - **Master keys lost together with the server:** a backup can be restored only with the master key ring of the instance it comes from. Without it, the restore stops before it changes anything.
 - **Backup key lost:** the backups encrypted with it cannot be restored. New backups use the key that is configured now.
 
-Key versions that are still needed must stay in the ring: a restore stops when the backup uses a master key version or a backup key version that is not configured (see [Checks before restoring](restore.md#checks-before-restoring)).
+Key versions that are still needed must stay in the ring: a restore stops when the backup uses a master key version or a backup key version that is not configured (see [Checks before restoring](backups/restore.md#checks-before-restoring)).
 
 ## Rotating the master key
 
@@ -131,7 +131,7 @@ Keep the old versions for as long as backups made with them are kept.
 
 ## Status messages
 
-The item **Encryption** of the [system status](system-status.md#encryption) reports:
+The item **Encryption** of the [system status](monitoring/system-status.md#encryption) reports:
 
 | Reason | Meaning |
 |---|---|

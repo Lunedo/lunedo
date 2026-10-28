@@ -16,9 +16,11 @@ What changed for the people who run and use Lunedo. Each release lists its chang
 - Administrators make a managed account local again by unlinking its last identity; the person gets an e-mail to set a password.
 - Invitations to an address in a provider's domain ask only for the name and send the person to the provider; self-registration refuses such addresses (`managedDomain`) and points to the provider.
 - A user page on signing in, second factors, passkeys and sessions.
+- Reference pages that list every environment variable, setting, audit event and command, generated from the code.
 
 ### Improved
 
+- `lunedo help` describes every command and lists the exit codes; `./lunedo help` also lists `print-compose`, `help` and its exit codes.
 - Every sign-in of the instance owner with password or passkey counts as emergency sign-in while an identity provider is active.
 - Failed sign-ins for the instance owner's account are counted per client only, so wrong passwords sent for the owner's address cannot lock the owner out.
 

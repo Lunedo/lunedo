@@ -28,6 +28,8 @@ Usage:
   lunedo maintenance on|off|status   Switch maintenance mode, see lunedo maintenance --help
   lunedo backup ...                  Run a backup command in the container
   lunedo version                     Show the installed version
+  lunedo print-compose [options]     Print the Compose file this script writes
+  lunedo help                        Show this help
 
 Options:
   --dir <directory>     Installation directory (default /opt/lunedo, on macOS ~/lunedo)
@@ -42,6 +44,11 @@ Options:
   --no-pull             Use a local image without pulling it
   --yes                 Answer every question with its default, for unattended runs
   --help                Show this help
+
+Exit codes:
+  0                     Success
+  1                     The command failed; the message says why
+  maintenance and backup end with the exit code of the command in the container.
 USAGE
 }
 

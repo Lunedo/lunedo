@@ -102,7 +102,7 @@ The Compose file reads these variables from it:
 | `LUNEDO_PORT` | `3000` | Host port of Lunedo. |
 | `LUNEDO_SUBNET` | `172.30.0.0/24` | Subnet of the Compose network. |
 
-Every other setting is in [Configuration](../configuration.md); add it to the `environment` of the `lunedo` service.
+Every other variable is listed in [Environment variables](../environment-variables.md); add it to the `environment` of the `lunedo` service.
 
 Create each key, and the metrics token, with:
 

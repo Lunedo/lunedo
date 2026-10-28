@@ -11,7 +11,7 @@ The system check is the second step of the [setup assistant](setup-assistant.md)
 
 A check that did not pass names its cause, shows a command when one fixes it, and links the section below. The database, clock and file storage checks run again every time the step is shown and with **Check again**. The address check runs again until the step is confirmed; after that its result is kept.
 
-After the setup, the [system status](system-status.md) page watches a running instance.
+After the setup, the [system status](monitoring/system-status.md) page watches a running instance.
 
 ## Database
 

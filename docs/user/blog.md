@@ -19,7 +19,7 @@ On the post you can also:
 
 ## Publish a post
 
-Blog posts always use publish mode: readers see the last published version, and later changes stay in a draft until someone selects **Update**. The steps and the draft tools are the same as for pages; see [Publishing and page status](publishing-and-page-status.md#publish-a-page).
+Blog posts always use publish mode: readers see the last published version, and later changes stay in a draft until someone selects **Update**. The steps and the draft tools are the same as for pages; see [Publishing and page status](spaces-and-pages/publishing-and-page-status.md#publish-a-page).
 
 - **Publish now:** select **Publish**.
 - **Schedule:** select **Schedule publication** in the post menu and choose a date and time in your time zone, at most 366 days ahead. The post shows **Publishes on** with the date. **Change schedule** and **Cancel schedule** work until then. At the scheduled time, the draft as it is then is published.
@@ -34,7 +34,7 @@ Space admins see every scheduled post of the space under **Scheduled** on the bl
 - **All blog posts:** the home page lists **New blog posts** from the last 30 days in your spaces. **All blog posts** opens the blog posts of all spaces of your organization you can read, with filters for **Space** and **Label**.
 - **Search:** blog posts are found like pages; the operator `type:blog` limits results to them.
 
-Each post has its own address with its content number; see [Content addresses](content-addresses.md).
+Each post has its own address with its content number; see [Content addresses](spaces-and-pages/content-addresses.md).
 
 ## Pin a post
 
@@ -61,4 +61,4 @@ See [Notifications](notifications.md).
 | Pinning | No | In the space and in the organization |
 | Knowledge bases | Articles | Not available |
 
-Deleting a post moves it to the trash with **Move to trash** in the post menu; see [Trash and archive](trash-and-archive.md).
+Deleting a post moves it to the trash with **Move to trash** in the post menu; see [Trash and archive](spaces-and-pages/trash-and-archive.md).
