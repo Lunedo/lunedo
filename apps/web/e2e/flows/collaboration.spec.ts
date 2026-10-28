@@ -285,4 +285,17 @@ test("shows where other people edit: a caret with their name and their selection
       avatarColor ?? "",
     );
   }
+  const colors = await avatars.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-color")),
+  );
+  expect(new Set(colors).size).toBe(people.length);
+
+  await page.goto(numberedPagePath(key, created));
+  const editing = page.getByRole("list", { name: "2 people are editing" });
+  await expect(editing).toBeVisible({ timeout: 20_000 });
+  const [left, right] = await Promise.all([
+    editing.getByRole("listitem").nth(0).boundingBox(),
+    editing.getByRole("listitem").nth(1).boundingBox(),
+  ]);
+  expect(left && right && left.x + left.width <= right.x).toBe(true);
 });

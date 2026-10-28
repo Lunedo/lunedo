@@ -18,7 +18,7 @@ A whiteboard has an address with its number, such as `/spaces/OPS/whiteboards/10
 
 ### Drawing together
 
-Editors and space admins draw directly on the canvas; everyone who can read the whiteboard sees it. Changes appear at once for everyone who has the whiteboard open, with their cursor, name and selection. The header shows who is on the whiteboard and whether all changes are saved ("Saved"). Saving works as on pages; see [Editing together](collaboration.md).
+Editors and space admins draw directly on the canvas; everyone who can read the whiteboard sees it. Changes appear at once for everyone who has the whiteboard open, with their cursor, name and selection. The header shows who is on the whiteboard, with their profile pictures, and whether all changes are saved ("Saved"). Saving works as on pages; see [Editing together](collaboration.md).
 
 - Shapes, arrows, lines, freehand, text, frames and images are available from the toolbar.
 - **Sticky note** adds a note in the middle of the visible area. Notes are rectangles with text and can be colored and resized like other shapes.

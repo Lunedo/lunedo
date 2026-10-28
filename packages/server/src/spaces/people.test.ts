@@ -61,4 +61,22 @@ describe.skipIf(!baseUrl)("people", () => {
     });
     expect(asGuest.items.map((person) => person.name)).toEqual(["Guest Alpha"]);
   });
+
+  it("finds given people with their picture, and only those the caller may see", async () => {
+    const org = await organization();
+    const other = await organization();
+    const viewer = await member(org.id, "member", "Viewer");
+    const colleague = await member(org.id, "member", "Colleague Beta");
+    const stranger = await member(other.id, "member", "Stranger Beta");
+    await test.database.execute(
+      sql`update accounts set picture_ref = 'p1' where id in (${colleague}, ${stranger})`,
+    );
+
+    const found = await test.services.people.search(
+      accountPrincipal(viewer),
+      { limit: 50 },
+      { ids: [colleague, stranger] },
+    );
+    expect(found.items.map((person) => [person.id, person.pictureRef])).toEqual([[colleague, "p1"]]);
+  });
 });

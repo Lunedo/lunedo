@@ -223960,6 +223960,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "description": "Only these people, up to 20 account IDs separated by commas, for example to show who is on a whiteboard.",
+            "schema": {
+              "type": "string",
+              "maxLength": 800
+            }
           }
         ],
         "responses": {
@@ -223994,13 +224004,21 @@
                           "type": {
                             "type": "string",
                             "description": "`standard`, `guest`, `portal` or `service`."
+                          },
+                          "pictureRef": {
+                            "description": "Version of the profile picture, or null when there is none.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           }
                         },
                         "required": [
                           "id",
                           "name",
                           "email",
-                          "type"
+                          "type",
+                          "pictureRef"
                         ],
                         "additionalProperties": false,
                         "description": "A person the caller may see."
@@ -224028,7 +224046,8 @@
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
                       "email": null,
-                      "type": "standard"
+                      "type": "standard",
+                      "pictureRef": null
                     }
                   ],
                   "nextCursor": null

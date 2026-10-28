@@ -31,7 +31,14 @@ import { type MissingSection, setRequiredSections } from "./extensions/required-
 import { FindBar } from "./find-bar.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
-import { AvatarStack, type PresenceUser, presenceColor, RemoteCarets, usePresence } from "./presence.js";
+import {
+  AvatarStack,
+  type PresenceUser,
+  paletteFor,
+  presenceColor,
+  RemoteCarets,
+  usePresence,
+} from "./presence.js";
 import { rememberReferences } from "./references.js";
 import {
   CollaborationProblemNotice,
@@ -294,6 +301,10 @@ function CollaborativeEditor({
   useUnsavedChangesWarning(hasUnsavedChanges);
 
   const others = usePresence(collaboration.provider, self);
+  const shownSelf =
+    self && collaboration.provider
+      ? { ...self, color: paletteFor(collaboration.provider).colorOf(self.id) }
+      : self;
   useEffect(() => {
     onPresenceChange?.(others);
   }, [others, onPresenceChange]);
@@ -366,7 +377,7 @@ function CollaborativeEditor({
                     {showStatus && !docked ? (
                       <div className="flex shrink-0 items-center gap-2 px-1">
                         <SaveStateIndicator state={snapshot.saveState} draft={draft} />
-                        <AvatarStack self={self} others={others} pictureOf={pictureOf} />
+                        <AvatarStack self={shownSelf} others={others} pictureOf={pictureOf} />
                       </div>
                     ) : null}
                   </div>

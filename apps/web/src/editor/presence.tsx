@@ -30,8 +30,59 @@ export function cursorColor(accountId: string): string {
   return `hsl(${(Math.abs(hash) % 37) * 10}, 100%, 83%)`;
 }
 
-export function selectionAttributes(user: Record<string, unknown>) {
-  const color = typeof user.id === "string" && user.id !== "" ? presenceColor(user.id) : "petrol";
+export function assignPresenceColors(
+  previous: ReadonlyMap<string, PresenceColor>,
+  present: readonly string[],
+): Map<string, PresenceColor> {
+  const ids = new Set(present);
+  const next = new Map([...previous].filter(([id]) => ids.has(id)));
+  const used = new Set(next.values());
+  for (const id of [...ids].filter((candidate) => !next.has(candidate)).sort()) {
+    const preferred = presenceColor(id);
+    const color = used.has(preferred)
+      ? (presenceColors.find((candidate) => !used.has(candidate)) ?? preferred)
+      : preferred;
+    next.set(id, color);
+    used.add(color);
+  }
+  return next;
+}
+
+export class PresencePalette {
+  #colors = new Map<string, PresenceColor>();
+  readonly #present: () => readonly string[];
+
+  constructor(present: () => readonly string[]) {
+    this.#present = present;
+  }
+
+  colorOf(accountId: string): PresenceColor {
+    this.#colors = assignPresenceColors(this.#colors, this.#present());
+    return this.#colors.get(accountId) ?? presenceColor(accountId);
+  }
+}
+
+const palettes = new WeakMap<HocuspocusProvider, PresencePalette>();
+
+export function paletteFor(provider: HocuspocusProvider): PresencePalette {
+  let palette = palettes.get(provider);
+  if (!palette) {
+    palette = new PresencePalette(() => {
+      const ids: string[] = [];
+      provider.awareness?.getStates().forEach((state) => {
+        const id = (state.user as { id?: unknown } | undefined)?.id;
+        if (typeof id === "string" && id !== "") ids.push(id);
+      });
+      return ids;
+    });
+    palettes.set(provider, palette);
+  }
+  return palette;
+}
+
+export function selectionAttributes(user: Record<string, unknown>, palette?: PresencePalette) {
+  const id = typeof user.id === "string" ? user.id : "";
+  const color = id === "" ? "petrol" : (palette?.colorOf(id) ?? presenceColor(id));
   return { class: "ld-remote-selection", "data-color": color };
 }
 
@@ -50,13 +101,18 @@ interface RemoteState {
 function remoteStates(provider: HocuspocusProvider): RemoteState[] {
   const awareness = provider.awareness;
   if (!awareness) return [];
+  const palette = paletteFor(provider);
   const states: RemoteState[] = [];
   awareness.getStates().forEach((state, clientId) => {
     if (clientId === awareness.clientID) return;
     const user = state.user as PresenceUser | undefined;
     const cursor = state.cursor as { head?: unknown } | null | undefined;
     if (user?.id) {
-      states.push({ clientId, user: { ...user, color: presenceColor(user.id) }, head: cursor?.head ?? null });
+      states.push({
+        clientId,
+        user: { ...user, color: palette.colorOf(user.id) },
+        head: cursor?.head ?? null,
+      });
     }
   });
   return states;
@@ -103,7 +159,7 @@ export function PresenceAvatar({
             "data-theme": "light",
             style: { "--presence-color": colorFor(user) } as CSSProperties,
           }
-        : { "data-color": presenceColor(user.id) })}
+        : { "data-color": user.color })}
       className={`ld-presence-avatar${colorFor ? " ld-presence-avatar-cursor" : ""} relative inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
     >
       {pictureRef ? (

@@ -30,7 +30,7 @@ export function PageEditors({ pageId }: { pageId: string }) {
   return (
     <ul
       aria-label={t("editor.presence.coEditors", { count: others.length })}
-      className="flex items-center -space-x-1 px-1"
+      className="flex items-center gap-2 px-1"
     >
       {visible.map((person) => (
         <li key={person.id}>

@@ -40,7 +40,7 @@ import { MathView } from "../nodes/math-view.js";
 import { DecisionView, TopicUpdateView } from "../nodes/meeting-views.js";
 import { TaskItemView } from "../nodes/task-item-view.js";
 import { TaskReportView } from "../nodes/task-report-view.js";
-import { hiddenCaret, type PresenceUser, selectionAttributes } from "../presence.js";
+import { hiddenCaret, type PresenceUser, paletteFor, selectionAttributes } from "../presence.js";
 import { PagePropertiesView, PagePropertyView, PropertiesReportView } from "../properties.js";
 import { searchPeople } from "../references.js";
 import { DecisionReportView, PageReportView } from "../reports.js";
@@ -280,7 +280,8 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
             provider: collaboration.provider,
             user: collaboration.user,
             render: hiddenCaret,
-            selectionRender: selectionAttributes,
+            selectionRender: (user: Record<string, unknown>) =>
+              selectionAttributes(user, paletteFor(collaboration.provider)),
           }),
         ]
       : [UndoRedo]),

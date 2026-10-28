@@ -4,7 +4,7 @@ People who edit a page at the same time work on one shared document. Everyone se
 
 ## Starting to edit
 
-Readers see the rendered page. People with the editor role choose **Edit** or press E to edit. While others edit the same page, their avatars appear in the editor header ("2 people are editing"), with the profile picture or, without one, the initials. Their cursors and selections appear in the text with their names, in the same color as their avatar.
+Readers see the rendered page. People with the editor role choose **Edit** or press E to edit. While others edit the same page, their avatars appear in the editor header ("2 people are editing"), with the profile picture or, without one, the initials. Their cursors and selections appear in the text with their names, in the same color as their avatar. Up to six people on a page each get a color of their own, and a person keeps it while they stay on the page.
 
 Drawings and draw.io diagrams are edited in a window of their own. While someone edits one, the others see "Anna is editing this drawing" or "Anna is editing this diagram" on the block and keep editing the rest of the page.
 

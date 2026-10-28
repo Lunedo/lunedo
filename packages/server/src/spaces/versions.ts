@@ -924,7 +924,8 @@ export class VersionService {
       name: string | null;
       picture_ref: string | null;
     }>(sql`
-      select a.id, ${this.#people.visibleName(viewer, sql`a`)} as name, a.picture_ref
+      select a.id, ${this.#people.visibleName(viewer, sql`a`)} as name,
+        ${this.#people.visiblePictureRef(viewer, sql`a`)} as picture_ref
       from accounts a
       where a.id in (
         select account_id from collaboration_editors

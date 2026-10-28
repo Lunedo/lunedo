@@ -28,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { useMaintenance } from "../api/maintenance.js";
 import type { DescribeElement } from "../collaboration/comments-panel.js";
 import { useContentCollaboration } from "../collaboration/content-collaboration.js";
+import { usePeoplePictures } from "../collaboration/people.js";
 import { useStar } from "../collaboration/star.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "../editor/collaboration.js";
 import {
@@ -184,6 +185,7 @@ export function WhiteboardView({
     [account],
   );
   const others = usePresence(collaboration?.provider ?? null, self);
+  const othersPicture = usePeoplePictures(others.map((user) => user.id));
 
   const describeElement = useCallback<DescribeElement>(
     (elementId, quote) => {
@@ -310,7 +312,16 @@ export function WhiteboardView({
         <PageBar breadcrumbs={[...(breadcrumbs ?? []), { label: board.title }]}>
           {editing ? <SaveStateIndicator state={snapshot.saveState} /> : null}
           {editing ? (
-            <AvatarStack self={self} others={others} colorFor={(user) => cursorColor(user.id)} />
+            <AvatarStack
+              self={self}
+              others={others}
+              colorFor={(user) => cursorColor(user.id)}
+              pictureOf={(accountId) =>
+                accountId === session.account?.id
+                  ? (session.account?.pictureRef ?? null)
+                  : othersPicture(accountId)
+              }
+            />
           ) : null}
           {editedAt ? <EditedAt value={editedAt} {...(onHistory ? { onOpen: onHistory } : {})} /> : null}
           {editing && boardReady ? (
