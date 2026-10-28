@@ -32,7 +32,7 @@ Usage:
   lunedo help                        Show this help
 
 Options:
-  --dir <directory>     Installation directory (default /opt/lunedo, on macOS ~/lunedo)
+  --dir <directory>     Installation directory (default /opt/lunedo)
   --url <address>       Address people open, for example https://wiki.example.org
   --version <version>   Version to install or update to (default: the newest release)
   --image <reference>   Image to use instead of ghcr.io/lunedo/lunedo:<version>
@@ -133,8 +133,11 @@ setup_code() {
   printf '%s-%s-%s-%s' "${raw:0:4}" "${raw:4:4}" "${raw:8:4}" "${raw:12:4}"
 }
 
-default_directory() {
-  if [ "$(uname -s)" = "Darwin" ]; then printf '%s/lunedo' "$HOME"; else printf '/opt/lunedo'; fi
+default_directory() { printf '/opt/lunedo'; }
+
+refuse_macos() {
+  [ "$(uname -s)" = "Darwin" ] || return 0
+  fail "Lunedo runs on Linux only, and this host runs macOS. Install it on a Linux server or virtual machine with Docker. To work on Lunedo itself on a Mac, see the development docs: https://github.com/lunedo/lunedo/tree/main/docs/development"
 }
 
 script_directory() {
@@ -555,6 +558,8 @@ if [ "$#" -gt 0 ]; then
     --help | -h) command="help"; shift ;;
   esac
 fi
+
+if [ "$command" != "help" ]; then refuse_macos; fi
 
 if [ "$command" = "maintenance" ] || [ "$command" = "backup" ]; then
   in_container "$command" "$@"

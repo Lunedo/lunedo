@@ -1,6 +1,6 @@
 # Installation with the setup script
 
-The setup script installs Lunedo with Docker Compose on one Linux or macOS host and later updates it with one command. Check the [requirements](../requirements.md) first: Docker Engine 24 or newer with Docker Compose v2, at least 4 GB of free disk space and a free port (3000 by default).
+The setup script installs Lunedo with Docker Compose on one Linux host and later updates it with one command. It refuses to run on macOS. Check the [requirements](../requirements.md) first: Docker Engine 24 or newer with Docker Compose v2, at least 4 GB of free disk space and a free port (3000 by default).
 
 ## Install
 
@@ -11,7 +11,7 @@ The setup script installs Lunedo with Docker Compose on one Linux or macOS host 
    ```
 
 2. Answer the questions. Each has a default in brackets:
-   - the installation directory, `/opt/lunedo` (on macOS `~/lunedo`);
+   - the installation directory, `/opt/lunedo`;
    - the address people open, for example `https://wiki.example.com`;
    - the fixed address of a reverse proxy in this Compose project, for example `172.30.0.10`, or empty for none.
 3. Copy the setup link the script prints. It shows the link before it downloads the images, so you can copy it while the download runs.

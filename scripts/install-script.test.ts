@@ -8,11 +8,16 @@ import { describe, it } from "node:test";
 const root = path.resolve(import.meta.dirname, "..");
 const script = path.join(root, "scripts", "install.sh");
 
-function run(args: string[]) {
-  return spawnSync("bash", [script, ...args], {
-    encoding: "utf8",
-    env: { ...process.env, MSYS_NO_PATHCONV: "1" },
-  });
+function run(args: string[], extraPath?: string) {
+  const env: NodeJS.ProcessEnv = { ...process.env, MSYS_NO_PATHCONV: "1" };
+  if (extraPath) env.PATH = `${extraPath}${path.delimiter}${process.env.PATH ?? ""}`;
+  return spawnSync("bash", [script, ...args], { encoding: "utf8", env });
+}
+
+function onMacos(): string {
+  const bin = mkdtempSync(path.join(tmpdir(), "lunedo-macos-"));
+  writeFileSync(path.join(bin, "uname"), "#!/bin/sh\necho Darwin\n", { mode: 0o755 });
+  return bin;
 }
 
 function documented(): string {
@@ -49,6 +54,31 @@ describe("install.sh", () => {
     assert.match(result.stdout, /Lunedo is already installed in .* \(version 1\.4\.2\)/);
     assert.match(result.stdout, /lunedo update/);
     assert.equal(readFileSync(path.join(directory, ".env"), "utf8"), "LUNEDO_MASTER_KEYS=1:kept\n");
+  });
+
+  it("refuses every command on macOS and points to the development docs", () => {
+    const bin = onMacos();
+    const directory = mkdtempSync(path.join(tmpdir(), "lunedo-macos-target-"));
+    for (const args of [
+      ["install", "--dir", directory, "--yes"],
+      ["update", "--dir", directory, "--yes"],
+      ["backup", "list"],
+      ["print-compose"],
+    ]) {
+      const result = run(args, bin);
+      assert.equal(result.status, 1, args.join(" "));
+      assert.match(result.stderr, /Lunedo runs on Linux only, and this host runs macOS/);
+      assert.match(result.stderr, /docs\/development/);
+      assert.equal(result.stdout, "");
+    }
+    assert.equal(run(["help"], bin).status, 0);
+  });
+
+  it("installs into /opt/lunedo by default", () => {
+    assert.match(
+      run(["help"]).stdout,
+      /--dir <directory> +Installation directory \(default \/opt\/lunedo\)\n/,
+    );
   });
 
   it("refuses to update a directory without an installation", () => {

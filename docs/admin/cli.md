@@ -135,7 +135,7 @@ Run it in the installation directory, for example `cd /opt/lunedo && ./lunedo ve
 
 | Option | Description |
 |---|---|
-| `--dir <directory>` | Installation directory (default `/opt/lunedo`, on macOS `~/lunedo`). |
+| `--dir <directory>` | Installation directory (default `/opt/lunedo`). |
 | `--url <address>` | Address people open, for example `https://wiki.example.org`. |
 | `--version <version>` | Version to install or update to (default: the newest release). |
 | `--image <reference>` | Image to use instead of `ghcr.io/lunedo/lunedo:<version>`. |
