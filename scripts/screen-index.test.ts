@@ -7,11 +7,26 @@ describe("parseArguments", () => {
     assert.deepEqual(parseArguments(["../screens/2026-10-22"]), {
       output: "../screens/2026-10-22",
       build: true,
+      only: null,
     });
   });
 
   it("skips the build on request", () => {
-    assert.deepEqual(parseArguments(["--skip-build", "out"]), { output: "out", build: false });
+    assert.deepEqual(parseArguments(["--skip-build", "out"]), { output: "out", build: false, only: null });
+  });
+
+  it("captures only the named part", () => {
+    assert.deepEqual(parseArguments(["out", "--only", "website", "--skip-build"]), {
+      output: "out",
+      build: false,
+      only: "website",
+    });
+    assert.deepEqual(parseArguments(["--only", "screens", "out"]).only, "screens");
+  });
+
+  it("rejects an unknown or missing part", () => {
+    assert.throws(() => parseArguments(["out", "--only", "hero"]), /--only takes one of screens, website/);
+    assert.throws(() => parseArguments(["out", "--only"]), /--only takes one of screens, website/);
   });
 
   it("requires exactly one output directory", () => {

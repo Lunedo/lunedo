@@ -25,5 +25,6 @@ export default defineConfig({
     { name: "setup", testMatch: /setup\.spec\.ts/, use: { locale: "en-US" } },
     { name: "content", testMatch: /content\.spec\.ts/, dependencies: ["setup"], use: { locale: "en-US" } },
     { name: "screens", testMatch: /screens\.spec\.ts/, dependencies: ["content"] },
+    { name: "website", testMatch: /website\.spec\.ts/, dependencies: ["content"] },
   ],
 });

@@ -18,22 +18,37 @@ export interface FailedEntry {
 
 export type CaptureEntry = CapturedEntry | FailedEntry;
 
-export const USAGE = "Usage: pnpm screens:capture <output directory> [--skip-build]";
+export const PARTS = ["screens", "website"] as const;
+export type Part = (typeof PARTS)[number];
+
+export const USAGE = `Usage: pnpm screens:capture <output directory> [--skip-build] [--only ${PARTS.join("|")}]`;
 
 export interface CaptureOptions {
   output: string;
   build: boolean;
+  only: Part | null;
 }
 
 export function parseArguments(args: readonly string[]): CaptureOptions {
-  const flags = args.filter((arg) => arg.startsWith("--"));
-  const positional = args.filter((arg) => !arg.startsWith("--"));
+  const rest = [...args];
+  let only: Part | null = null;
+  const at = rest.indexOf("--only");
+  if (at >= 0) {
+    const part = rest[at + 1];
+    if (!PARTS.includes(part as Part)) {
+      throw new Error(`--only takes one of ${PARTS.join(", ")}. ${USAGE}`);
+    }
+    only = part as Part;
+    rest.splice(at, 2);
+  }
+  const flags = rest.filter((arg) => arg.startsWith("--"));
+  const positional = rest.filter((arg) => !arg.startsWith("--"));
   const unknown = flags.filter((flag) => flag !== "--skip-build");
   if (unknown.length > 0) throw new Error(`Unknown option ${unknown.join(", ")}. ${USAGE}`);
   if (positional.length !== 1 || !positional[0]) {
     throw new Error(`Name exactly one output directory. ${USAGE}`);
   }
-  return { output: positional[0], build: !flags.includes("--skip-build") };
+  return { output: positional[0], build: !flags.includes("--skip-build"), only };
 }
 
 export function parseLog(text: string): CaptureEntry[] {

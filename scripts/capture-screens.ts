@@ -37,10 +37,20 @@ if (options.build) {
 }
 
 const status = run(
-  ["--filter", "@lunedo/web", "exec", "playwright", "test", "--config", "playwright.screens.config.ts"],
+  [
+    "--filter",
+    "@lunedo/web",
+    "exec",
+    "playwright",
+    "test",
+    "--config",
+    "playwright.screens.config.ts",
+    ...(options.only ? ["--project", options.only] : []),
+  ],
   {
     ...process.env,
     LUNEDO_SCREENS_DIR: output,
+    ...(options.only ? { LUNEDO_SCREENS_ONLY: options.only } : {}),
     LUNEDO_E2E_PORT: process.env.LUNEDO_E2E_PORT ?? "4410",
     LUNEDO_E2E_STATE_DIR: process.env.LUNEDO_E2E_STATE_DIR ?? path.join(tmpdir(), "lunedo-screens-state"),
   },
