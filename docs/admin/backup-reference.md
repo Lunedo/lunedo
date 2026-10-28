@@ -1,29 +1,14 @@
 # Backup reference
 
-This page lists the backup commands, the backup file format and the database connection rules of the backup tools. How to set up backups is described in [Backups](backups.md), how to restore in [Restoring a backup](restore.md).
+This page describes how the backup commands run, the backup file format and the database connection rules of the backup tools. How to set up backups is described in [Backups](backups.md), how to restore in [Restoring a backup](restore.md).
 
 ## Commands
 
 The commands run inside the image, with the same configuration as the instance, for example `docker compose exec lunedo lunedo backup …` while Lunedo runs, or `docker compose run --rm lunedo backup …` while it is stopped. In an installation of the setup script, `./lunedo backup …` in the installation directory runs `lunedo backup …` in the running container.
 
-| Command | Description |
-|---|---|
-| `lunedo backup create --output <file>` | Writes a backup with everything to a file. The directory must be writable by the container user; `/var/lib/lunedo/backups` is. When another backup is running, the command waits for it. It prints the file and the number of entries. |
-| `lunedo backup create --before-update` | Writes a backup with the class "before update" to the target, or to `LUNEDO_BACKUP_DIR` while no target is set up, and prints only its location: a path, or `s3://<bucket>/<key>`. See [Updates](updates.md). |
-| `lunedo backup skip-before-update [--for-version <version>]` | Lets the next start of that version apply pending migrations without the backup before the update. See [Updates](updates.md). |
-| `lunedo backup verify --input <file>` | Checks the header, decrypts the whole backup and checks the manifest and every checksum without restoring anything. Needs the backup key only. |
-| `lunedo backup restore --input <file> [--force] [--config-dir <dir>]` | Restores the backup into an empty instance. `--force` replaces all database schemas and the content of the file store. `--config-dir` writes the configuration files from the backup to a directory for review. |
+[Command line](cli.md#lunedo-in-the-image) lists the backup commands `backup create`, `backup create --before-update`, `backup skip-before-update`, `backup verify` and `backup restore` with their options and exit codes.
 
 `verify` and `restore` read local files only. `create`, also with `--before-update`, refuses to run while an earlier restore is incomplete; run `restore` again with `--force` to complete it (see [How a restore changes the instance](restore.md#how-a-restore-changes-the-instance)).
-
-## Exit codes
-
-| Code | Meaning |
-|---|---|
-| 0 | Success. |
-| 1 | Failure. The message on standard error says why. |
-| 64 | Invalid command or option. The usage is printed. |
-| 78 | Invalid configuration. |
 
 ## File names
 

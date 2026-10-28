@@ -35,6 +35,7 @@ import {
   writeBackupFile,
 } from "@lunedo/server";
 import { verifyAuditLog } from "./audit.js";
+import { exitCodes } from "./commands.js";
 import { maintenance } from "./maintenance.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
 import { releaseNotes, UpdateStepError } from "./release-notes.js";
@@ -221,17 +222,17 @@ try {
 } catch (error) {
   if (error instanceof UsageError) {
     process.stderr.write(`${error.message}\n\n${usage}`);
-    process.exit(64);
+    process.exit(exitCodes.usage.code);
   }
   if (error instanceof UpdateStepError) {
     process.stderr.write(`${error.message}
 `);
-    process.exit(65);
+    process.exit(exitCodes.updateStep.code);
   }
   if (error instanceof ConfigError) {
     process.stderr.write(`${error.message}\n`);
-    process.exit(78);
+    process.exit(exitCodes.configuration.code);
   }
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exit(1);
+  process.exit(exitCodes.failure.code);
 }

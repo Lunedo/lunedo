@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { usageText } from "./commands.js";
 import type { MaintenanceCommand } from "./maintenance.js";
 import type { ReleaseNotesCommand } from "./release-notes.js";
 
@@ -22,23 +23,7 @@ export class UsageError extends Error {
   override name = "UsageError";
 }
 
-export const usage = `Usage:
-  lunedo backup create --output <file>
-  lunedo backup create --before-update
-  lunedo backup skip-before-update [--for-version <version>]
-  lunedo backup verify --input <file>
-  lunedo backup restore --input <file> [--force] [--config-dir <dir>]
-  lunedo keys rotate
-  lunedo keys status
-  lunedo audit verify
-  lunedo search rebuild
-  lunedo search status
-  lunedo maintenance on [--message <text>] [--block-sign-in]
-  lunedo maintenance off
-  lunedo maintenance status
-  lunedo version
-  lunedo release-notes [--since <version>] [--update-from <version>] [--json]
-`;
+export const usage = usageText();
 
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/;
 

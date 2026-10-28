@@ -70,45 +70,10 @@ The setup code from the script has 16 characters in groups of four, from an alph
 
 ## The lunedo command
 
-The script copies itself into the installation directory as `lunedo`. Run it there, for example `cd /opt/lunedo && ./lunedo version`, or pass `--dir`.
-
-| Command | What it does |
-|---|---|
-| `./lunedo update [<version>]` | Updates to the newest release or to the given one, with a backup first. Options: `--image`, `--no-pull`, `--yes`. See [Updates](../updates.md#with-the-update-command). |
-| `./lunedo maintenance on [--message <text>] [--block-sign-in]` | Switches on maintenance mode in the running container. `off` switches it off, `status` shows it. See [Maintenance mode](../maintenance-mode.md). |
-| `./lunedo backup <command>` | Runs a backup command in the running container, for example `./lunedo backup create --before-update`. See the table below. |
-| `./lunedo version` | Prints the installed version from `.lunedo-install`. |
-| `./lunedo print-compose` | Prints the Compose file the script writes, with `<version>` in place of the version, or the version given with `--version`. |
-| `./lunedo help` | Shows the usage. |
+The script copies itself into the installation directory as `lunedo`. Run it there, for example `cd /opt/lunedo && ./lunedo version`, or pass `--dir`. `./lunedo update` updates to the newest release or to the given one, with a backup first; see [Updates](../updates.md#with-the-update-command). `./lunedo print-compose` prints the Compose file the script writes, with `<version>` in place of the version, or the version given with `--version`. [Command line](../cli.md#lunedo-of-the-setup-script) lists every command and option.
 
 `maintenance` and `backup` run `lunedo` inside the running `lunedo` container, so Lunedo must be running. Restoring a backup needs a stopped container instead; see [Rollback](../updates.md#rollback) and [Restore](../restore.md).
 
 ### Commands in the container
 
-The image contains the command `lunedo`. Without the setup script, run it with `docker compose exec lunedo lunedo <command>` in the running container, or with `docker compose run --rm lunedo <command>` while the container is stopped.
-
-| Command | What it does |
-|---|---|
-| `backup create --output <file>` | Writes a backup to a file. |
-| `backup create --before-update` | Writes a backup of the class "before update" to the backup target and prints its location. See [Backups before updates](../updates.md#backups-before-updates). |
-| `backup skip-before-update [--for-version <version>]` | Lets the next start of that version skip its backup before the update once. |
-| `backup verify --input <file>` | Checks a backup without restoring it. |
-| `backup restore --input <file> [--force] [--config-dir <directory>]` | Restores a backup. See [Restore](../restore.md). |
-| `keys status` | Shows the current master key version and the latest key rotation. |
-| `keys rotate` | Starts a rotation to the newest master key. See [Encryption](../encryption.md). |
-| `audit verify` | Checks that the audit log is intact. See [Audit log](../audit-log.md). |
-| `search rebuild` | Queues every page, blog post and running topic for a new search index. Search keeps answering meanwhile. |
-| `search status` | Shows the progress of a rebuild and how many pages wait for an update. |
-| `maintenance on [--message <text>] [--block-sign-in]`, `maintenance off`, `maintenance status` | Maintenance mode, as above. |
-| `version` | Prints the version of the image. |
-| `release-notes [--since <version>] [--update-from <version>] [--json]` | Prints the changes of the releases in the image. With `--update-from`, it fails when the installed version cannot update to this one directly. |
-
-[Backup reference](../backup-reference.md) describes the backup commands in full. The commands end with these exit codes:
-
-| Code | Meaning |
-|---|---|
-| `0` | Success. |
-| `1` | The command failed; the message says why. |
-| `64` | Unknown command or option; the usage follows. |
-| `65` | `release-notes --update-from`: the update cannot be made in one step. |
-| `78` | The configuration is not valid; the message names the setting. |
+The image contains the command `lunedo`. Without the setup script, run it with `docker compose exec lunedo lunedo <command>` in the running container, or with `docker compose run --rm lunedo <command>` while the container is stopped. [Command line](../cli.md#lunedo-in-the-image) lists its commands, their options and the exit codes, and [Backup reference](../backup-reference.md) describes the backups they write.

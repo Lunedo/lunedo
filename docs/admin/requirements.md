@@ -46,7 +46,7 @@ One image holds every part of Lunedo. The first argument of the container choose
 
 In `all`, only the API port needs to be published; the API forwards `/collab` to the collaboration server in the same container. Each process answers `/health/live`, `/health/ready` and `/metrics` on its own port; see [Monitoring](monitoring.md).
 
-Every other argument runs a command instead of a server, such as `backup`, `keys`, `audit`, `search`, `maintenance`, `version` or `release-notes`. See [Commands in the container](installation/script.md#commands-in-the-container).
+Every other argument runs a command instead of a server, such as `backup`, `keys`, `audit`, `search`, `maintenance`, `version` or `release-notes`. See [Command line](cli.md#lunedo-in-the-image).
 
 ## Container user and volumes
 
