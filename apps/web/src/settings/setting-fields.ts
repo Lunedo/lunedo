@@ -104,6 +104,7 @@ const fields: SettingField[] = [
   { key: "auth.lockoutMaxMinutes", type: minutes(1, 7 * DAY, [HOUR, DAY]) },
   { key: "apiTokens.maxLifetimeDays", type: days(1, 3650, [30, 90, 365], true) },
   { key: "apiTokens.requestsPerMinute", type: { kind: "number", min: 1, max: 100_000, unit: "perMinute" } },
+  { key: "mail.sendRatePerMinute", type: { kind: "number", min: 1, max: 10_000, unit: "perMinute" } },
   { key: "apiTokens.expiryReminderDays", type: days(1, 90, [7, 14, 30]) },
   { key: "apiTokens.unusedNoticeDays", type: days(7, 3650, [30, 90, 180]) },
   { key: "apiTokens.publicDocumentation", type: { kind: "boolean" } },

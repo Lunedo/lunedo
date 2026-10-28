@@ -20,8 +20,9 @@ export async function updateSearchIndex(
   indexer: SearchIndexer,
   jobs: JobQueue,
   job: { signal: AbortSignal; logger: Logger },
+  concurrency = 1,
 ): Promise<void> {
-  const result = await indexer.drain({ signal: job.signal, logger: job.logger });
+  const result = await indexer.drain({ signal: job.signal, logger: job.logger, concurrency });
   if (result.items + result.spaces + result.failed > 0) {
     job.logger.info(
       { items: result.items, spaces: result.spaces, failed: result.failed },
@@ -38,9 +39,13 @@ export async function startSearchIndexing(options: {
   listener: NotificationListener;
   indexer: SearchIndexer;
   logger: Logger;
+  concurrency?: number;
 }): Promise<void> {
   const { jobs, listener, indexer, logger } = options;
-  await jobs.work(searchIndexJob, (job) => updateSearchIndex(indexer, jobs, job));
+  const concurrency = options.concurrency ?? 1;
+  await jobs.work(searchIndexJob, (job) => updateSearchIndex(indexer, jobs, job, concurrency), {
+    coalesce: true,
+  });
   let timer: NodeJS.Timeout | undefined;
   const request = () => {
     if (timer) return;

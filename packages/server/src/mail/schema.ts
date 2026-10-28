@@ -66,3 +66,13 @@ export const mailDeliveryStatus = pgTable(
   },
   (table) => [check("mail_delivery_status_single_row", sql`${table.id} = 1`)],
 );
+
+export const mailSends = pgTable(
+  "mail_sends",
+  {
+    id: primaryId(),
+    sender: text().notNull(),
+    sentAt: timestamp({ withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index().on(table.sender, table.sentAt)],
+);

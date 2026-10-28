@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { type Clock, type Job, PgBoss, type QueueResult } from "pg-boss";
+import { type Clock, type Job, type JobResult, PgBoss, type QueueResult } from "pg-boss";
 import type { Database } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
@@ -15,6 +15,7 @@ import type {
   JobState,
   QueueCounts,
   ScheduleOptions,
+  WorkOptions,
 } from "./job-queue.js";
 import { jobProgress } from "./schema.js";
 
@@ -52,6 +53,7 @@ const UNIQUE_PREFIX = "job:";
 const SCHEDULE_PREFIX = "schedule:";
 const DEFAULT_SCHEDULE_KEY = "default";
 const ENQUEUE_ATTEMPTS = 5;
+const COALESCE_BATCH = 100;
 
 export interface PgBossQueueOptions {
   connectionString: string;
@@ -84,6 +86,7 @@ export class PgBossQueue implements JobQueue {
       max: 4,
       supervise: worker,
       schedule: worker,
+      useListenNotify: worker,
       ...(options.clock ? { clock: options.clock } : {}),
     });
     this.#boss.on("error", (error) => options.logger.error({ err: error }, "Job queue error"));
@@ -102,6 +105,7 @@ export class PgBossQueue implements JobQueue {
       retryDelay: definition.retryDelaySeconds,
       retryBackoff: definition.retryBackoff,
       expireInSeconds: definition.expireInSeconds,
+      notify: true,
     };
     const existing = await this.#boss.getQueue(definition.name);
     if (existing) {
@@ -178,7 +182,7 @@ export class PgBossQueue implements JobQueue {
   async work<TPayload>(
     definition: JobDefinition<TPayload>,
     handler: JobHandler<TPayload>,
-    options: { concurrency?: number } = {},
+    options: WorkOptions = {},
   ): Promise<void> {
     if (this.#options.role !== "worker") throw new Error("Only the worker role runs jobs");
     await this.register(definition);
@@ -191,18 +195,64 @@ export class PgBossQueue implements JobQueue {
   async #startWorking<TPayload>(
     definition: JobDefinition<TPayload>,
     handler: JobHandler<TPayload>,
-    options: { concurrency?: number },
+    options: WorkOptions,
   ): Promise<void> {
+    const concurrency = options.concurrency ?? 1;
+    const pollingIntervalSeconds = this.#options.pollingIntervalSeconds ?? 2;
+    if (options.coalesce) {
+      await this.#boss.work<StoredData>(
+        definition.name,
+        {
+          batchSize: COALESCE_BATCH,
+          localConcurrency: 1,
+          pollingIntervalSeconds,
+          notifyPollingIntervalSeconds: pollingIntervalSeconds,
+          burstWhenBatchFull: true,
+        },
+        async ([job]) => {
+          if (job) await this.#run(definition, handler, job);
+        },
+      );
+      return;
+    }
+    if (!options.batch || concurrency === 1) {
+      await this.#boss.work<StoredData>(
+        definition.name,
+        {
+          batchSize: 1,
+          localConcurrency: concurrency,
+          pollingIntervalSeconds,
+          notifyPollingIntervalSeconds: pollingIntervalSeconds,
+        },
+        async ([job]) => {
+          if (job) await this.#run(definition, handler, job);
+        },
+      );
+      return;
+    }
     await this.#boss.work<StoredData>(
       definition.name,
       {
-        batchSize: 1,
-        localConcurrency: options.concurrency ?? 1,
-        pollingIntervalSeconds: this.#options.pollingIntervalSeconds ?? 2,
+        batchSize: concurrency,
+        localConcurrency: 1,
+        pollingIntervalSeconds,
+        notifyPollingIntervalSeconds: pollingIntervalSeconds,
+        burstWhenBatchFull: true,
+        perJobResults: true,
       },
-      async ([job]) => {
-        if (job) await this.#run(definition, handler, job);
-      },
+      (jobs) =>
+        Promise.all(
+          jobs.map((job) =>
+            this.#run(definition, handler, job).then(
+              (): JobResult => ({ id: job.id, status: "completed" }),
+              (error: unknown): JobResult => ({
+                id: job.id,
+                status: "failed",
+                output: { message: error instanceof Error ? error.message : String(error) },
+              }),
+            ),
+          ),
+        ),
     );
   }
 

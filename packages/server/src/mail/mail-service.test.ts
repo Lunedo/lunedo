@@ -13,7 +13,7 @@ import { SettingsService } from "../settings/service.js";
 import { CapturingTransport, testJobContext } from "../testing/jobs.js";
 import { Mailpit, testMailpitUrl } from "../testing/mailpit.js";
 import { deliverMailJob, MailService, SmtpConfigurationError } from "./mail-service.js";
-import { instanceSecrets, mailOutbox } from "./schema.js";
+import { instanceSecrets, mailOutbox, mailSends } from "./schema.js";
 import { renderMail } from "./templates.js";
 import { SmtpTransport } from "./transport.js";
 
@@ -150,7 +150,10 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     await pool?.end();
   });
 
-  function service(transport = new CapturingTransport()) {
+  function service(
+    transport = new CapturingTransport(),
+    sleep?: (ms: number, signal: AbortSignal) => Promise<void>,
+  ) {
     const settings = new SettingsService({ database, logger });
     const audit = new AuditLog({ database });
     return new MailService({
@@ -161,7 +164,15 @@ describe.skipIf(!databaseUrl)("MailService", () => {
       jobs: undefined,
       logger,
       transport: () => transport,
+      ...(sleep ? { sleep } : {}),
     });
+  }
+
+  async function fillSendWindow(count: number) {
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    await database
+      .insert(mailSends)
+      .values(Array.from({ length: count }, () => ({ sender: "wiki@example.org" })));
   }
 
   async function queue(mail: MailService, to: string): Promise<string> {
@@ -186,6 +197,42 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     await mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }));
     expect(transport.sent.map((sent) => sent.to)).toEqual(["stored@example.org"]);
     expect(await database.select().from(mailOutbox).where(eq(mailOutbox.id, id))).toEqual([]);
+  });
+
+  it("waits for a free slot of the sender instead of failing when the send rate is used up", async () => {
+    const transport = new CapturingTransport();
+    const waits: number[] = [];
+    const mail = service(transport, async (ms) => {
+      waits.push(ms);
+      expect(transport.sent).toHaveLength(0);
+      await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    });
+    await fillSendWindow(30);
+    const id = await queue(mail, "waiting@example.org");
+    await mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }));
+    expect(waits).toHaveLength(1);
+    expect(waits[0]).toBeGreaterThan(0);
+    expect(waits[0]).toBeLessThanOrEqual(60_000);
+    expect(transport.sent.map((sent) => sent.to)).toEqual(["waiting@example.org"]);
+    expect(await database.select().from(mailOutbox).where(eq(mailOutbox.id, id))).toEqual([]);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+  });
+
+  it("puts a waiting mail back in the queue when the worker stops", async () => {
+    const transport = new CapturingTransport();
+    const mail = service(transport, async () => {
+      throw new DOMException("The worker stopped", "AbortError");
+    });
+    await fillSendWindow(30);
+    const id = await queue(mail, "stopped@example.org");
+    await expect(mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }))).rejects.toThrow(
+      "The worker stopped",
+    );
+    const [row] = await database.select().from(mailOutbox).where(eq(mailOutbox.id, id));
+    expect(row).toMatchObject({ status: "pending", attempts: 0 });
+    expect(transport.sent).toHaveLength(0);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    await database.delete(mailOutbox).where(eq(mailOutbox.id, id));
   });
 
   it("retries failed deliveries and gives up after the last attempt without logging the content", async () => {

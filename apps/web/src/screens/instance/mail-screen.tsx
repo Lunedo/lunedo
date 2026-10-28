@@ -7,10 +7,12 @@ import { instanceKeys, instanceSettingsQuery, mailQuery, storageQuery } from "..
 import { request } from "../../api/request.js";
 import { GraphMailForm } from "../../components/graph-mail-form.js";
 import { mailFailure } from "../../components/mail-failure.js";
+import { SettingsList } from "../../components/settings-list.js";
 import { SmtpForm } from "../../components/smtp-form.js";
 import { LoadError } from "../../errors/failure.js";
 import { BrowserPushSetting } from "../../notifications/browser-push-setting.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
+import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 import { OperationsContactsSection } from "./storage-screen.js";
@@ -32,6 +34,7 @@ export function InstanceMailScreen() {
   const data = mail.data;
   const method = shown ?? data?.method ?? "smtp";
   const configured = data ? (data.method === "graph" ? data.graph !== null : data.smtp !== null) : true;
+  const rateMutation = useInstanceSettingMutation();
 
   return (
     <SettingsPage title={t("mail.title")} description={t("mail.description")}>
@@ -110,6 +113,15 @@ export function InstanceMailScreen() {
       ) : null}
       {data ? (
         <Section title={t("mail.delivery.title")}>
+          <SettingsList
+            settings={settings.data}
+            canManage={() => manage}
+            onChange={async (key, change) => {
+              await rateMutation.mutateAsync({ key, change });
+            }}
+            keys={["mail.sendRatePerMinute"]}
+            level="instance"
+          />
           <SettingRow
             label={t("mail.delivery.lastFailure")}
             description={data.delivery.lastFailure ? t("mail.delivery.retry") : undefined}

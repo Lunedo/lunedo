@@ -771,6 +771,13 @@
       "when": 1793201641946,
       "tag": "0109_private_space_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1793214291562,
+      "tag": "0110_mail_send_rate",
+      "breakpoints": true
     }
   ]
 }

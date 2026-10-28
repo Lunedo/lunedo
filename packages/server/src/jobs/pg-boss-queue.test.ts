@@ -123,6 +123,97 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
     expect([...seen].sort()).toEqual(["before", "running", "waiting"]);
   });
 
+  it("runs a batch side by side and fails only the job that failed", async () => {
+    const job = define("batch", { retryLimit: 0 });
+    let running = 0;
+    let mostAtOnce = 0;
+    const ids: string[] = [];
+    for (let value = 0; value < 6; value++) ids.push(await producer.enqueue(job, { value }));
+    await worker.work(
+      job,
+      async ({ payload }) => {
+        running += 1;
+        mostAtOnce = Math.max(mostAtOnce, running);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        running -= 1;
+        if (payload.value === 3) throw new Error("value 3 failed");
+      },
+      { concurrency: 6, batch: true },
+    );
+    const states = await waitFor(async () => {
+      const infos = await Promise.all(ids.map((id) => producer.get(job, id)));
+      return infos.every((info) => info?.state === "completed" || info?.state === "failed")
+        ? infos
+        : undefined;
+    });
+    expect(mostAtOnce).toBe(6);
+    expect(states.map((info) => info?.state)).toEqual([
+      "completed",
+      "completed",
+      "completed",
+      "failed",
+      "completed",
+      "completed",
+    ]);
+    expect(states[3]?.error).toBe("value 3 failed");
+  });
+
+  it("starts a new job at once instead of waiting for the next poll", async () => {
+    const job = define("notify");
+    const slow = new PgBossQueue({
+      connectionString: databaseUrl,
+      database,
+      logger,
+      role: "worker",
+      pollingIntervalSeconds: 60,
+    });
+    try {
+      await slow.start();
+      let ranAt = 0;
+      await slow.work(job, async () => {
+        ranAt = Date.now();
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const sentAt = Date.now();
+      await producer.enqueue(job, { value: 1 });
+      await waitFor(async () => ranAt > 0, 10_000);
+      expect(ranAt - sentAt).toBeLessThan(5000);
+    } finally {
+      await slow.stop({ timeoutSeconds: 1 });
+    }
+  });
+
+  it("answers a backlog of equal requests with one run instead of one run per poll", async () => {
+    const job = define("coalesce");
+    const slow = new PgBossQueue({
+      connectionString: databaseUrl,
+      database,
+      logger,
+      role: "worker",
+      pollingIntervalSeconds: 60,
+    });
+    try {
+      await slow.start();
+      const ids: string[] = [];
+      for (let value = 0; value < 30; value++) ids.push(await producer.enqueue(job, { value }));
+      let runs = 0;
+      await slow.work(
+        job,
+        async () => {
+          runs += 1;
+        },
+        { coalesce: true },
+      );
+      await waitFor(async () => {
+        const states = await Promise.all(ids.map((id) => producer.get(job, id)));
+        return states.every((info) => info?.state === "completed");
+      }, 10_000);
+      expect(runs).toBe(1);
+    } finally {
+      await slow.stop({ timeoutSeconds: 1 });
+    }
+  });
+
   it("validates payloads before enqueueing", async () => {
     const job = define("validation");
     await expect(producer.enqueue(job, { value: "x" } as never)).rejects.toThrow();

@@ -2942,6 +2942,11 @@
       "mail_graph": {
         "label": "Microsoft Graph",
         "description": "Sending through Microsoft Graph."
+      },
+      "mail_sendRatePerMinute": {
+        "label": "E-mails per minute",
+        "description": "Further e-mails wait for the next minute.",
+        "help": "Mail services limit how many e-mails one mailbox may send. Microsoft 365 allows 30 per minute over SMTP; the limit applies to SMTP and Microsoft Graph alike."
       }
     },
     "disabled": {

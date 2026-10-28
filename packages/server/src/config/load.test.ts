@@ -48,6 +48,27 @@ describe("loadConfig", () => {
     expect(config.database.poolSize).toBe(25);
   });
 
+  it("reads the jobs that a queue runs at once and leaves other queues to the CPU count", () => {
+    expect(loadConfig({ LUNEDO_DATABASE_URL: databaseUrl }).jobConcurrency).toEqual({});
+    expect(
+      loadConfig({
+        LUNEDO_DATABASE_URL: databaseUrl,
+        LUNEDO_JOB_CONCURRENCY: " search.update-index=8, files.create-display-versions=2 ",
+      }).jobConcurrency,
+    ).toEqual({ "search.update-index": 8, "files.create-display-versions": 2 });
+    for (const value of [
+      "mail.deliver=4",
+      "search.update-index=0",
+      "search.update-index=65",
+      "search.update-index",
+    ]) {
+      expectConfigError(
+        () => loadConfig({ LUNEDO_DATABASE_URL: databaseUrl, LUNEDO_JOB_CONCURRENCY: value }),
+        "LUNEDO_JOB_CONCURRENCY:",
+      );
+    }
+  });
+
   it("names every invalid setting", () => {
     const load = () => loadConfig({ LUNEDO_API_PORT: "70000", LUNEDO_LOG_LEVEL: "verbose" });
     for (const problem of ["LUNEDO_DATABASE_URL: is required", "LUNEDO_API_PORT:", "LUNEDO_LOG_LEVEL:"]) {

@@ -394,6 +394,12 @@ The same settings as in [My account › Notifications](#my-account--notification
 
 ## Instance › Services › Delivery
 
+### Delivery
+
+| Key | Label | Levels | Default | Allowed values | Lockable | Hint |
+|---|---|---|---|---|---|---|
+| `mail.sendRatePerMinute` | E-mails per minute | instance | `30` | A whole number from 1 to 10,000. | no | Further e-mails wait for the next minute. |
+
 ### Browser push
 
 | Key | Label | Levels | Default | Allowed values | Lockable | Hint |

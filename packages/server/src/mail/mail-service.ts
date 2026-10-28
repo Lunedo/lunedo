@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import {
   clientSecretSchema,
   type DateFormat,
@@ -44,6 +45,7 @@ import {
   tokenFingerprint,
 } from "./oauth2.js";
 import { instanceSecrets, mailCredentials, mailDeliveryStatus, mailOutbox } from "./schema.js";
+import { MailSendRate } from "./send-rate.js";
 import {
   type Language,
   type MailBranding,
@@ -85,6 +87,14 @@ export const graphMailSetting = defineSetting({
   key: "mail.graph",
   schema: graphMailConfigurationSchema.nullable(),
   default: null,
+  levels: ["instance"],
+  lockable: false,
+});
+
+export const mailSendRateSetting = defineSetting({
+  key: "mail.sendRatePerMinute",
+  schema: z.number().int().min(1).max(10_000),
+  default: 30,
   levels: ["instance"],
   lockable: false,
 });
@@ -251,6 +261,8 @@ export class MailService {
   readonly #transport: (options: SmtpOptions) => MailTransport;
   readonly #fetch: typeof fetch | undefined;
   readonly #allowInsecure: boolean;
+  readonly #sendRate: MailSendRate;
+  readonly #sleep: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly #graphTokens = new Map<string, { token: string; expiresAt: number }>();
   #notifications: NotificationService | undefined;
 
@@ -264,6 +276,7 @@ export class MailService {
     transport?: (options: SmtpOptions) => MailTransport;
     fetch?: typeof fetch;
     allowInsecure?: boolean;
+    sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   }) {
     this.#database = options.database;
     this.#encryption = options.encryption;
@@ -274,6 +287,8 @@ export class MailService {
     this.#transport = options.transport ?? ((smtp) => new SmtpTransport(smtp));
     this.#fetch = options.fetch;
     this.#allowInsecure = options.allowInsecure ?? false;
+    this.#sendRate = new MailSendRate(options.database);
+    this.#sleep = options.sleep ?? ((ms, signal) => delay(ms, undefined, { signal }));
   }
 
   useNotifications(notifications: NotificationService): void {
@@ -423,6 +438,15 @@ export class MailService {
       JSON.parse(this.#encryption.decryptString(row.message, messageContext(mailId))),
     );
     try {
+      await this.#waitForSendSlot(job.signal);
+    } catch (error) {
+      await this.#database
+        .update(mailOutbox)
+        .set({ status: "pending", updatedAt: new Date() })
+        .where(eq(mailOutbox.id, mailId));
+      throw error;
+    }
+    try {
       await this.#send({ ...message, messageId: await this.#messageId(mailId) });
     } catch (error) {
       const last = job.retryCount >= deliverMailJob.retryLimit;
@@ -446,6 +470,23 @@ export class MailService {
     await this.#database.delete(mailOutbox).where(eq(mailOutbox.id, mailId));
     await this.#recordDelivery(null);
   };
+
+  async #waitForSendSlot(signal: AbortSignal): Promise<void> {
+    const sender = await this.#sender();
+    if (!sender) return;
+    const perMinute = await this.#settings.get(mailSendRateSetting, {});
+    for (;;) {
+      signal.throwIfAborted();
+      const slot = await this.#sendRate.claim(sender, perMinute);
+      if (slot.claimed) return;
+      await this.#sleep(slot.waitMs, signal);
+    }
+  }
+
+  async #sender(): Promise<string | null> {
+    if ((await this.method()) === "graph") return (await this.graphConfiguration())?.sender ?? null;
+    return (await this.smtpConfiguration())?.from ?? null;
+  }
 
   async #messageId(mailId: string): Promise<string> {
     const url = await this.#settings.get(instanceUrlSetting, {});

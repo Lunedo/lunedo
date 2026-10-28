@@ -2942,6 +2942,11 @@
       "mail_graph": {
         "label": "Microsoft Graph",
         "description": "Versand über Microsoft Graph."
+      },
+      "mail_sendRatePerMinute": {
+        "label": "E-Mails pro Minute",
+        "description": "Weitere E-Mails warten auf die nächste Minute.",
+        "help": "Mail-Dienste begrenzen, wie viele E-Mails ein Postfach senden darf. Microsoft 365 erlaubt über SMTP 30 pro Minute; die Grenze gilt für SMTP und Microsoft Graph gleichermaßen."
       }
     },
     "disabled": {

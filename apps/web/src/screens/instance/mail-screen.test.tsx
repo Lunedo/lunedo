@@ -347,6 +347,46 @@ describe("the e-mail settings", () => {
     expect(screen.getByText(/Failed step: connecting to the mail server/)).toBeTruthy();
     expect(screen.getByText("Not yet")).toBeTruthy();
   });
+
+  it("limits the e-mails per minute and saves a new limit at once", async () => {
+    const { requests } = api({
+      "GET /api/v1/instance/settings": () => ({
+        body: {
+          items: [
+            {
+              key: "mail.sendRatePerMinute",
+              value: 30,
+              defaultValue: 30,
+              source: "default",
+              lockedBy: null,
+              stricterOnly: null,
+              minimum: null,
+              maximum: null,
+              locked: false,
+              lockable: false,
+              levelsBelow: [],
+              editable: true,
+              levels: [{ level: "instance", value: null, locked: false, effective: true }],
+            },
+          ],
+          nextCursor: null,
+        },
+      }),
+      "PUT /api/v1/instance/settings/mail.sendRatePerMinute": () => ({ status: 204 }),
+    });
+    await renderMail();
+    const field = await screen.findByRole("textbox", { name: "E-mails per minute" });
+    expect(screen.getByText("Further e-mails wait for the next minute.")).toBeTruthy();
+    await userEvent.clear(field);
+    await userEvent.type(field, "12{Enter}");
+    await waitFor(() =>
+      expect(
+        requests.find(
+          (request) => request.method === "PUT" && request.path.endsWith("mail.sendRatePerMinute"),
+        )?.body,
+      ).toEqual({ value: 12 }),
+    );
+  });
 });
 
 describe("the instance overview", () => {

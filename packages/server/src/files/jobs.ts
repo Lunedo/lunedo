@@ -35,7 +35,6 @@ export const queueDisplayVersionsJob = defineJob({
 });
 
 export const DISPLAY_VERSIONS_WATCHDOG_SCHEDULE = "17 * * * *";
-export const DISPLAY_VERSION_CONCURRENCY = 2;
 const QUEUE_DELAY_MS = 250;
 
 export async function startDisplayVersions(options: {
@@ -43,6 +42,7 @@ export async function startDisplayVersions(options: {
   listener: NotificationListener;
   displayVersions: DisplayVersionService;
   logger: Logger;
+  concurrency?: number;
 }): Promise<void> {
   const { jobs, listener, displayVersions, logger } = options;
   await jobs.work(
@@ -53,15 +53,19 @@ export async function startDisplayVersions(options: {
       });
       if (outcome === "done") job.logger.debug({ fileId: job.payload.fileId }, "Display versions created");
     },
-    { concurrency: DISPLAY_VERSION_CONCURRENCY },
+    { concurrency: options.concurrency ?? 1, batch: true },
   );
-  await jobs.work(queueDisplayVersionsJob, async (job) => {
-    const queued = await displayVersions.queuePending(async (fileId) => {
-      await jobs.enqueue(displayVersionJob, { fileId }, { idempotencyKey: fileId });
-    });
-    if (queued > 0)
-      job.logger.info({ queued, ...(await displayVersions.counts()) }, "Display versions queued");
-  });
+  await jobs.work(
+    queueDisplayVersionsJob,
+    async (job) => {
+      const queued = await displayVersions.queuePending(async (fileId) => {
+        await jobs.enqueue(displayVersionJob, { fileId }, { idempotencyKey: fileId });
+      });
+      if (queued > 0)
+        job.logger.info({ queued, ...(await displayVersions.counts()) }, "Display versions queued");
+    },
+    { coalesce: true },
+  );
   let timer: NodeJS.Timeout | undefined;
   const request = () => {
     if (timer) return;

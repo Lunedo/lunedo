@@ -6,7 +6,12 @@ import { embedSettings } from "../embeds/settings.js";
 import { fileSettings } from "../files/settings.js";
 import { syncLogRetentionDaysSetting } from "../identity/sync.js";
 import { importSettings } from "../imports/settings.js";
-import { graphMailSetting, mailMethodSetting, smtpSetting } from "../mail/mail-service.js";
+import {
+  graphMailSetting,
+  mailMethodSetting,
+  mailSendRateSetting,
+  smtpSetting,
+} from "../mail/mail-service.js";
 import { notificationSettings } from "../notifications/types.js";
 import { operationsSettings } from "../operations/settings.js";
 import { organizationSettings } from "../organizations/settings.js";
@@ -42,5 +47,6 @@ export const settingDefinitions = [
   smtpSetting,
   mailMethodSetting,
   graphMailSetting,
+  mailSendRateSetting,
   syncLogRetentionDaysSetting,
 ] as SettingDefinition<never>[];
