@@ -71,6 +71,7 @@ export const backupPaths = [
   "docker/runtime/",
   "scripts/bundle-server.ts",
   "scripts/backup-roundtrip.sh",
+  "scripts/ci-docker-cleanup.sh",
 ];
 
 export const operationsPaths = [
@@ -83,6 +84,7 @@ export const operationsPaths = [
   "scripts/install-update-check.sh",
   "scripts/reverse-proxy-check.sh",
   "scripts/backup-network-check.sh",
+  "scripts/ci-docker-cleanup.sh",
   "docs/admin/reverse-proxy/",
   "docs/admin/backups/s3.md",
   "packages/server/src/operations/",

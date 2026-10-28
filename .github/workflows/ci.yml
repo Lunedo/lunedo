@@ -236,12 +236,12 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     env:
-      LUNEDO_CI_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+      LUNEDO_CI_JOB: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Remove round trip leftovers older than 6 hours
+      - name: Remove CI leftovers older than 6 hours
         run: scripts/ci-docker-cleanup.sh stale
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
@@ -280,7 +280,7 @@ jobs:
         run: scripts/backup-roundtrip.sh lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove the containers, volumes and networks of this job
         if: always()
-        run: scripts/ci-docker-cleanup.sh run "$LUNEDO_CI_RUN"
+        run: scripts/ci-docker-cleanup.sh job "$LUNEDO_CI_JOB"
       - name: Remove the image of this job
         if: always()
         run: docker image rm --force lunedo:ci-${{ github.run_id }}-${{ github.run_attempt }}
@@ -292,13 +292,13 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 60
     env:
-      LUNEDO_CI_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+      LUNEDO_CI_JOB: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Remove leftovers older than 6 hours
+      - name: Remove CI leftovers older than 6 hours
         run: scripts/ci-docker-cleanup.sh stale
       - name: Find the previous version
         id: previous
@@ -379,7 +379,7 @@ jobs:
         run: scripts/backup-network-check.sh lunedo:operations-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove the containers, volumes and networks of this job
         if: always()
-        run: scripts/ci-docker-cleanup.sh run "$LUNEDO_CI_RUN" "lunedo-storage-$LUNEDO_CI_RUN"
+        run: scripts/ci-docker-cleanup.sh job "$LUNEDO_CI_JOB" "lunedo-storage-$LUNEDO_CI_JOB" "lunedo-install-$LUNEDO_CI_JOB"
       - name: Remove the images of this job
         if: always()
         env:
@@ -549,7 +549,7 @@ jobs:
       - name: Name the compose project and point the tests at the chosen ports
         run: |
           {
-            echo "COMPOSE_PROJECT_NAME=lunedo-idp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            echo "COMPOSE_PROJECT_NAME=lunedo-idp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
             echo "LUNEDO_E2E_STATE_DIR=${RUNNER_TEMP}/lunedo-e2e-state"
             echo "LUNEDO_E2E_DATABASE_URL=postgres://lunedo:lunedo@localhost:${POSTGRES_PORT}/lunedo"
             echo "LUNEDO_E2E_MAILPIT_URL=http://localhost:${MAILPIT_PORT}"

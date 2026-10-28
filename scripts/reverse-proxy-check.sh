@@ -19,8 +19,7 @@ suffix="$$"
 network="lunedo-proxy-${suffix}"
 subnet="172.30.$((suffix % 200 + 20)).0/24"
 proxy_address="172.30.$((suffix % 200 + 20)).10"
-run_id="${LUNEDO_CI_RUN:-local-$$}"
-label=(--label "lunedo.ci.run=${run_id}")
+label=(--label "lunedo.ci.job=${LUNEDO_CI_JOB:-local-$$}")
 postgres="lunedo-proxy-db-${suffix}"
 app="lunedo-proxy-app-${suffix}"
 proxy="lunedo-proxy-${suffix}"

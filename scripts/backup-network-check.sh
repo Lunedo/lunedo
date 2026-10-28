@@ -7,7 +7,8 @@ curl_image="curlimages/curl:8.18.0@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c6
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 docs="$root/docs/admin/backups/s3.md"
-project="lunedo-storage-${LUNEDO_CI_RUN:-$$}"
+project="lunedo-storage-${LUNEDO_CI_JOB:-local-$$}"
+label=(--label "lunedo.ci.job=${LUNEDO_CI_JOB:-local-$$}")
 work="$(mktemp -d "${TMPDIR:-/tmp}/lunedo-storage-$$-XXXX")"
 if command -v cygpath >/dev/null; then work="$(cygpath -m "$work")"; fi
 failures=0
@@ -44,7 +45,7 @@ sed -i.bak "s#^    image: ghcr.io/lunedo/lunedo:.*#    image: $image#" "$work/co
 echo "Checking the storage example of docs/admin/backups/s3.md with the Compose file of the setup script"
 compose config --format json >"$work/config.json"
 read_config() {
-  docker run --rm -i --entrypoint node "$image" -e "
+  docker run "${label[@]}" --rm -i --entrypoint node "$image" -e "
     const config = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
     $1
   " <"$work/config.json"
@@ -73,7 +74,7 @@ esac
 
 status=""
 for _ in $(seq 1 60); do
-  status="$(docker run --rm --network "${project}_storage" "$curl_image" -s -o /dev/null -w '%{http_code}' \
+  status="$(docker run "${label[@]}" --rm --network "${project}_storage" "$curl_image" -s -o /dev/null -w '%{http_code}' \
     -X PUT "http://$storage_address:8333/storage-check-$$" || true)"
   [ "$status" != "000" ] && break
   sleep 1
