@@ -2,7 +2,7 @@
 
 Groups at an identity provider decide what people get in Lunedo. Mapping rules turn membership in a provider group into membership in an organization, a role, membership in a synchronized Lunedo group, or an instance role. Rules apply at every sign-in, at every synchronization and with every SCIM request.
 
-How a provider is set up is described in [Identity providers](identity-providers.md) and on the page of each method.
+How a provider is set up is described in [Identity providers](../identity-providers.md) and on the page of each method.
 
 ## Groups
 
@@ -10,11 +10,11 @@ Lunedo identifies a group by its stable ID at the provider, never by its name. I
 
 | Method | Where the groups come from |
 |---|---|
-| Microsoft Entra ID | Object IDs from the token or assertion; names, overage and nested groups through Microsoft Graph. See [Microsoft Entra ID](identity-providers/entra-id.md#groups). |
-| Google Workspace | Only with group synchronization, through the Directory API. See [Google Workspace](identity-providers/google-workspace.md#group-synchronization). |
-| Other OIDC providers | A configurable claim in the ID token. See [OpenID Connect](identity-providers/openid-connect.md#groups). |
-| ADFS and other SAML providers | A configurable attribute of the assertion, with identifiers or names. See [SAML](identity-providers/saml.md). |
-| LDAP and Active Directory | The directory, including nested groups. See [LDAP and Active Directory](identity-providers/ldap.md). |
+| Microsoft Entra ID | Object IDs from the token or assertion; names, overage and nested groups through Microsoft Graph. See [Microsoft Entra ID](entra-id.md#groups). |
+| Google Workspace | Only with group synchronization, through the Directory API. See [Google Workspace](google-workspace.md#group-synchronization). |
+| Other OIDC providers | A configurable claim in the ID token. See [OpenID Connect](openid-connect.md#groups). |
+| ADFS and other SAML providers | A configurable attribute of the assertion, with identifiers or names. See [SAML](saml.md). |
+| LDAP and Active Directory | The directory, including nested groups. See [LDAP and Active Directory](ldap.md). |
 
 Where a provider sends group names instead of IDs, renaming a group at the provider breaks the rules for it until they are changed in Lunedo. The rule list and the rule dialog warn about this.
 
@@ -46,7 +46,7 @@ Rules behave as follows:
 - A rule whose group no longer exists at the provider grants nothing, is marked "Group not found" in the list and produces a warning in the sync log.
 - **Remove rule**: members of the group lose what this rule granted at their next sign-in or synchronization. Access granted by hand stays.
 
-Every change of a rule, and every membership, role and group membership a rule grants or withdraws, is recorded in the [audit log](audit-log.md) and can be found there with the filter.
+Every change of a rule, and every membership, role and group membership a rule grants or withdraws, is recorded in the [audit log](../audit-log.md) and can be found there with the filter.
 
 ### Group preview
 

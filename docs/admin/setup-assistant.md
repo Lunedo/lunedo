@@ -75,7 +75,7 @@ Confirming the step also confirms the backup key on the backups page. Outside th
 
 ## Restore during the setup
 
-Instead of setting up a new instance, **Welcome** restores a backup into this empty instance: **Upload a backup**, **From an S3 target** or **From the server**. It asks for the keys of the earlier server, restores the database and the file store, and restarts the instance. The steps are described in [Restore](restore.md).
+Instead of setting up a new instance, **Welcome** restores a backup into this empty instance: **Upload a backup**, **From an S3 target** or **From the server**. It asks for the keys of the earlier server, restores the database and the file store, and restarts the instance. The steps are described in [Restore](backups/restore.md).
 
 ## Setup through configuration
 

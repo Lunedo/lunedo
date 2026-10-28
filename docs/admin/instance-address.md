@@ -33,9 +33,9 @@ When the address comes from `LUNEDO_INSTANCE_URL`, change the variable and resta
 
 - Update the reverse proxy and its certificates; see [Reverse proxy](reverse-proxy.md).
 - Update the redirect and reply URLs at your identity providers.
-- Check **Settings › Instance › Operations › System status**: under **HTTPS** it warns when no address is set or when the address does not use HTTPS. See [System status](system-status.md#https).
+- Check **Settings › Instance › Operations › System status**: under **HTTPS** it warns when no address is set or when the address does not use HTTPS. See [System status](monitoring/system-status.md#https).
 - Own domains of knowledge base portals are separate from the instance address and stay as they are; see [Own domains](knowledge-base-portals.md#own-domains).
 
 ## Restoring on a new address
 
-When a backup is restored in the setup assistant on a server with another address, the restore offers to use the new address; see [Restore](restore.md).
+When a backup is restored in the setup assistant on a server with another address, the restore offers to use the new address; see [Restore](backups/restore.md).

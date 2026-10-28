@@ -67,7 +67,7 @@ Backups use the critical level as well: a backup or test restore that would take
 | **S3 limit** | Only with S3 file storage. **Limit for stored files** in GiB (the field is labeled GB and counts 1024³ bytes), or empty for no warning. |
 | **Reminders** | **Reminder while a level is active**: **Never**, **Daily**, **Weekly** or **Monthly**. The backup warnings use the same reminder. |
 
-Viewing the page needs the permission to view instance settings; changing it needs the permission to manage them (see [Roles and permissions](roles-and-permissions.md)). The API is described in [Storage API](../api/storage.md). The system status shows the storage level as well (see [System status](system-status.md#storage)).
+Viewing the page needs the permission to view instance settings; changing it needs the permission to manage them (see [Roles and permissions](roles-and-permissions.md)). The API is described in [Storage API](../api/storage.md). The system status shows the storage level as well (see [System status](monitoring/system-status.md#storage)).
 
 ## Operations contacts
 

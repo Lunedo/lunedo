@@ -142,7 +142,7 @@ The server accepted the mail and rejected it later. Look for a non-delivery repo
 
 ### Status `notConfigured`
 
-**Settings › Instance › Operations › System status** shows the e-mail item as a warning when no method has saved settings. Set up SMTP or Microsoft Graph as described above. See [System status](system-status.md#e-mail).
+**Settings › Instance › Operations › System status** shows the e-mail item as a warning when no method has saved settings. Set up SMTP or Microsoft Graph as described above. See [System status](monitoring/system-status.md#e-mail).
 
 ### Status `deliveryFailing`
 

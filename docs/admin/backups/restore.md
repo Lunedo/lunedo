@@ -1,6 +1,6 @@
 # Restoring a backup
 
-A backup is restored with `lunedo backup restore` on the command line, or in the browser from the first page of the setup assistant of a new, empty instance. This page describes both, what Lunedo checks first, how a restore changes the instance and what to do afterwards. Creating backups is described in [Backups](backups.md), every command and the file format in [Backup reference](backup-reference.md).
+A backup is restored with `lunedo backup restore` on the command line, or in the browser from the first page of the setup assistant of a new, empty instance. This page describes both, what Lunedo checks first, how a restore changes the instance and what to do afterwards. Creating backups is described in [Backups](../backups.md), every command and the file format in [Backup reference](backup-reference.md).
 
 To restore a backup you need:
 
@@ -9,7 +9,7 @@ To restore a backup you need:
 - the master key ring of the instance the backup comes from;
 - a Lunedo version at least as new as the one that created the backup.
 
-Where these keys are kept is described in [Backing up the keys](encryption.md#backing-up-the-keys).
+Where these keys are kept is described in [Backing up the keys](../encryption.md#backing-up-the-keys).
 
 ## Commands
 
@@ -64,7 +64,7 @@ Because the whole backup is verified before anything is written, a rejected back
 
 This procedure moves an instance installed with the setup script to a new server, or rebuilds it after the old server is lost. For an installation with your own Compose file, the steps are the same; put the keys where your configuration expects them.
 
-1. On the new server, install Lunedo with the setup script (see [Installation with the setup script](installation/script.md)), with the same version as the old server or a newer one. Use the same file storage settings as the old server; with S3 file storage, the restore writes the attachments to the configured bucket and removes every other object under `<prefix>attachments/`. While the old server still runs, give the new one a bucket or prefix of its own.
+1. On the new server, install Lunedo with the setup script (see [Installation with the setup script](../installation/script.md)), with the same version as the old server or a newer one. Use the same file storage settings as the old server; with S3 file storage, the restore writes the attachments to the configured bucket and removes every other object under `<prefix>attachments/`. While the old server still runs, give the new one a bucket or prefix of its own.
 2. Stop Lunedo in the installation directory, for example `/opt/lunedo`:
 
    ```sh
@@ -87,7 +87,7 @@ This procedure moves an instance installed with the setup script to a new server
    ```
 
 7. Start Lunedo with `docker compose up -d`. It applies pending migrations.
-8. Sign in with an account from the backup. When the new server has another address, check the instance address (see [Instance address](instance-address.md)); `LUNEDO_INSTANCE_URL` in `.env`, when set, always applies.
+8. Sign in with an account from the backup. When the new server has another address, check the instance address (see [Instance address](../instance-address.md)); `LUNEDO_INSTANCE_URL` in `.env`, when set, always applies.
 9. Under **Settings › Instance › Operations › Backups**, confirm the backup target or change it (see [After a restore](#after-a-restore)).
 10. Store the `.env` file of the new server outside the server.
 
@@ -99,7 +99,7 @@ Instead of setting up a new instance, the first page of the setup assistant, **W
 
 1. **Backup**, from one of three places:
    - **Upload a backup**: a `.ldbak` file from the browser, sent in parts of at most 8 MiB, so the body limit of a reverse proxy does not matter. A part that the proxy still refuses with `413` is split further, down to 256 KiB. An interrupted upload continues where it stopped, also after a reload when the same file is chosen again. The file may be as large as the free space of `LUNEDO_BACKUP_DIR`, where it is stored.
-   - **From an S3 target**: endpoint, bucket, prefix, region and the access keys of the bucket the earlier server backed up to. **Connect and load backups** lists the backups with date, size, version and content. The server downloads the chosen one into `LUNEDO_BACKUP_DIR` itself, not through the browser. The keys are used for this restore only and are never stored; a restored database brings its own backup target. Endpoints in private networks need `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`, as for [backup targets](backups/s3.md#endpoints-in-private-networks).
+   - **From an S3 target**: endpoint, bucket, prefix, region and the access keys of the bucket the earlier server backed up to. **Connect and load backups** lists the backups with date, size, version and content. The server downloads the chosen one into `LUNEDO_BACKUP_DIR` itself, not through the browser. The keys are used for this restore only and are never stored; a restored database brings its own backup target. Endpoints in private networks need `LUNEDO_OUTBOUND_ALLOWED_NETWORKS`, as for [backup targets](s3.md#endpoints-in-private-networks).
    - **From the server**: the backups in `LUNEDO_BACKUP_DIR`, or in another directory given as an absolute path that Lunedo may read (**Use another directory**). Only files ending with `.ldbak` are listed.
 2. **Keys**: when the backup names another address than the one the setup is opened with, or names none, the step says so ("The backup comes from https://old.example.com. This instance runs under https://wiki.example.com.") and offers **Use the new address** (chosen by default) or **Keep the old one**. With the new address, the restore sets the instance URL to it after the migrations, so that sign-in, passkeys and links in e-mails work without `LUNEDO_INSTANCE_URL`; the change is recorded in the audit log and ends the sessions of the backup. `LUNEDO_INSTANCE_URL`, when set, always wins. The progress page repeats the addresses and says which one applies.
 
@@ -122,7 +122,7 @@ An instance administrator then either confirms the target with **Confirm target 
 
 - **Back up now** keeps working, without retention.
 - A backup before an update goes to `LUNEDO_BACKUP_DIR` instead of the target and deletes nothing.
-- The system status shows the pause (see [System status](system-status.md#backups)).
+- The system status shows the pause (see [System status](../monitoring/system-status.md#backups)).
 
 `backup restore` records the restore as the file `restored` in the work directory (`LUNEDO_WORK_DIR`), never in the file store, so no later backup carries it along. The next start turns it into the pause in the database and removes the file. Test restores never set it.
 

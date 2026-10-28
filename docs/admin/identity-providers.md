@@ -30,11 +30,11 @@ What happens in the background differs by method:
 | Other OIDC provider, generic SAML, ADFS | At every sign-in | No | No |
 | LDAP and Active Directory | At every sign-in and synchronization | Yes | Yes |
 
-Every provider can also receive changes through [SCIM](scim.md). Groups, mapping rules and synchronization are described in [Identity provider groups](identity-provider-groups.md).
+Every provider can also receive changes through [SCIM](identity-providers/scim.md). Groups, mapping rules and synchronization are described in [Identity provider groups](identity-providers/identity-provider-groups.md).
 
 ## Configured for the whole instance
 
-Providers are set up for the instance in **Settings › Instance › People and sign-in › Sign-in methods**. People who hold the instance area "Sign-in and security" with "View" see the providers; with "Manage" they change them (see [Roles and permissions](roles-and-permissions.md)). Organizations do not choose or configure sign-in methods; which organizations a person belongs to follows from the [mapping rules](identity-provider-groups.md#mapping-rules) after sign-in.
+Providers are set up for the instance in **Settings › Instance › People and sign-in › Sign-in methods**. People who hold the instance area "Sign-in and security" with "View" see the providers; with "Manage" they change them (see [Roles and permissions](roles-and-permissions.md)). Organizations do not choose or configure sign-in methods; which organizations a person belongs to follows from the [mapping rules](identity-providers/identity-provider-groups.md#mapping-rules) after sign-in.
 
 ## Domains
 
@@ -156,7 +156,7 @@ People see their own linked sign-ins under **Settings › My account › Profile
 
 An account is managed by a provider when:
 
-- an identity of the provider is linked to it: the provider or [SCIM](scim.md) created the account, the account was linked at a sign-in, or an administrator linked it; or
+- an identity of the provider is linked to it: the provider or [SCIM](identity-providers/scim.md) created the account, the account was linked at a sign-in, or an administrator linked it; or
 - the domain of its e-mail address is one of the provider's domains.
 
 A linked identity decides before a domain. When identities of several providers are linked, the provider linked most recently manages the account. Only providers whose setup is finished count. Every other account is local, including guests whose domain belongs to no provider. The instance owner is never managed, see [Emergency sign-in](#emergency-sign-in).
@@ -291,4 +291,4 @@ The instance owner is always told. By default, all instance owners and administr
 - The environment variable `LUNEDO_INSECURE_IDENTITY_PROVIDERS=true` allows plain HTTP, unencrypted LDAP and other hosts. It is for development and tests only; while it is set, instance administrators see a warning banner. See [Configuration](configuration.md).
 - Sign-in flows are bound to the browser that started them and are valid for 10 minutes. A sign-in that started in one browser cannot be completed in another.
 - Each SAML assertion and each logout token is accepted once.
-- Sign-in through a provider never grants access by itself: access comes from invitations, memberships granted by hand and [mapping rules](identity-provider-groups.md#mapping-rules).
+- Sign-in through a provider never grants access by itself: access comes from invitations, memberships granted by hand and [mapping rules](identity-providers/identity-provider-groups.md#mapping-rules).

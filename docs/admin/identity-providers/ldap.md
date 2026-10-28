@@ -2,7 +2,7 @@
 
 With an LDAP provider, people sign in on the Lunedo sign-in page with their directory password. Lunedo looks them up with a service account, checks the password with the directory, reads their groups, and synchronizes groups and account status in the background. Lunedo never changes directory passwords.
 
-The assistant offers two presets under **Directory**: **Active Directory** and **Other LDAP directory**, for example OpenLDAP or FreeIPA. What all providers share, such as domains, credentials and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](../identity-provider-groups.md).
+The assistant offers two presets under **Directory**: **Active Directory** and **Other LDAP directory**, for example OpenLDAP or FreeIPA. What all providers share, such as domains, credentials and the first sign-in, is described in [Identity providers](../identity-providers.md). Groups and mapping rules are described in [Identity provider groups](identity-provider-groups.md).
 
 ## Before you start
 
@@ -98,7 +98,7 @@ Lunedo's own attempt limits and lockouts apply before the directory is asked (se
 
 ## Synchronization
 
-LDAP providers are synchronized in the background: each run reads the people under the base DN for people, updates profiles and groups of linked accounts, and deactivates accounts that are disabled or no longer found. A base DN for people or groups that does not exist fails the run instead of returning no entries, so a moved unit never looks as if everyone left. See [Synchronization](../identity-provider-groups.md#synchronization).
+LDAP providers are synchronized in the background: each run reads the people under the base DN for people, updates profiles and groups of linked accounts, and deactivates accounts that are disabled or no longer found. A base DN for people or groups that does not exist fails the run instead of returning no entries, so a moved unit never looks as if everyone left. See [Synchronization](identity-provider-groups.md#synchronization).
 
 ## Second factor
 

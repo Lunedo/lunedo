@@ -52,7 +52,7 @@ Groups belong to an organization and contain members of it. A group may have a s
 
 Administrators with the area Members and groups create groups. Members can create groups when **Members create groups** (`organizations.membersCreateGroups`, default off) is on under **Settings › Organization › People and access › Domains and guests**. The creator becomes the first group manager and can add further managers. Adding someone to a group that holds roles requires the right to give those roles.
 
-Groups can also come from an identity provider, see [Identity provider groups](identity-provider-groups.md).
+Groups can also come from an identity provider, see [Identity provider groups](identity-providers/identity-provider-groups.md).
 
 ## Invitations and self-registration
 

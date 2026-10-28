@@ -72,8 +72,8 @@ The setup code from the script has 16 characters in groups of four, from an alph
 
 The script copies itself into the installation directory as `lunedo`. Run it there, for example `cd /opt/lunedo && ./lunedo version`, or pass `--dir`. `./lunedo update` updates to the newest release or to the given one, with a backup first; see [Updates](../updates.md#with-the-update-command). `./lunedo print-compose` prints the Compose file the script writes, with `<version>` in place of the version, or the version given with `--version`. [Command line](../cli.md#lunedo-of-the-setup-script) lists every command and option.
 
-`maintenance` and `backup` run `lunedo` inside the running `lunedo` container, so Lunedo must be running. Restoring a backup needs a stopped container instead; see [Rollback](../updates.md#rollback) and [Restore](../restore.md).
+`maintenance` and `backup` run `lunedo` inside the running `lunedo` container, so Lunedo must be running. Restoring a backup needs a stopped container instead; see [Rollback](../updates.md#rollback) and [Restore](../backups/restore.md).
 
 ### Commands in the container
 
-The image contains the command `lunedo`. Without the setup script, run it with `docker compose exec lunedo lunedo <command>` in the running container, or with `docker compose run --rm lunedo <command>` while the container is stopped. [Command line](../cli.md#lunedo-in-the-image) lists its commands, their options and the exit codes, and [Backup reference](../backup-reference.md) describes the backups they write.
+The image contains the command `lunedo`. Without the setup script, run it with `docker compose exec lunedo lunedo <command>` in the running container, or with `docker compose run --rm lunedo <command>` while the container is stopped. [Command line](../cli.md#lunedo-in-the-image) lists its commands, their options and the exit codes, and [Backup reference](../backups/backup-reference.md) describes the backups they write.

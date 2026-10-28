@@ -41,7 +41,7 @@ An invitation is sent by e-mail; its link works once and expires.
 | `GET`, `POST /api/v1/groups/{groupId}/members`, `DELETE …/members/{accountId}` | Members of a group | `group.view`, `group.manage` |
 | `POST /api/v1/groups/{groupId}/managers`, `DELETE …/managers/{accountId}` | Managers of a group | `group.manage` |
 
-Groups that come from an identity provider are kept in step by the provider; see [Identity provider groups](../admin/identity-provider-groups.md).
+Groups that come from an identity provider are kept in step by the provider; see [Identity provider groups](../admin/identity-providers/identity-provider-groups.md).
 
 ## Roles
 

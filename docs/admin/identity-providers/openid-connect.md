@@ -2,7 +2,7 @@
 
 Checked against Keycloak and Authentik documentation, October 2026.
 
-Use **Other OIDC provider** for identity providers that speak OpenID Connect, such as Keycloak, Authentik, Okta or Zitadel. People sign in at the provider; profile and groups update at every sign-in. Generic OIDC providers have no directory Lunedo could synchronize with in the background; with [SCIM](../scim.md), the provider can send changes at once.
+Use **Other OIDC provider** for identity providers that speak OpenID Connect, such as Keycloak, Authentik, Okta or Zitadel. People sign in at the provider; profile and groups update at every sign-in. Generic OIDC providers have no directory Lunedo could synchronize with in the background; with [SCIM](scim.md), the provider can send changes at once.
 
 For Microsoft Entra ID and Google Workspace, use their presets instead: [Microsoft Entra ID](entra-id.md), [Google Workspace](google-workspace.md). What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md).
 
@@ -45,7 +45,7 @@ The claims must be in the ID token. A test sign-in shows every claim the provide
 
 Lunedo matches mapping rules by the values in the groups claim. Use a value that never changes, such as a group ID, if the provider can send one, and send the names in the second claim. When the groups claim carries names, renaming a group at the provider breaks the rules for it until they are changed in Lunedo.
 
-A sign-in whose ID token has no groups claim counts as a person without groups, because providers such as Keycloak leave the claim out for people in no group. Only distributed claims (`_claim_names`) leave the groups unknown. When the provider sent the claim before and stops, instance administrators see a banner with the provider and the date, until a sign-in carries the claim again or the groups setting changes. See [Identity provider groups](../identity-provider-groups.md#groups).
+A sign-in whose ID token has no groups claim counts as a person without groups, because providers such as Keycloak leave the claim out for people in no group. Only distributed claims (`_claim_names`) leave the groups unknown. When the provider sent the claim before and stops, instance administrators see a banner with the provider and the date, until a sign-in carries the claim again or the groups setting changes. See [Identity provider groups](identity-provider-groups.md#groups).
 
 For generic providers, the rule dialog suggests the groups Lunedo has seen at sign-ins; to use another group, type its value exactly as the provider sends it.
 

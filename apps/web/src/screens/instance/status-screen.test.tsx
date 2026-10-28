@@ -39,7 +39,7 @@ function item(
   facts: Record<string, unknown> = {},
   page: string | null = null,
 ) {
-  return { id, status, reason, facts, page, docs: `admin/system-status.md#${id}` };
+  return { id, status, reason, facts, page, docs: `admin/monitoring/system-status.md#${id}` };
 }
 
 function api(status: unknown, permissions = ["instance.operations.view", "instance.settings.view"]) {

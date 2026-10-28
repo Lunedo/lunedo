@@ -1,6 +1,6 @@
 # Backup internals
 
-This page explains how backups, restores and test restores work inside the code. The operator view is in [Backups](../admin/backups.md), [Restoring a backup](../admin/restore.md) and [Backup reference](../admin/backup-reference.md), which also describes the file format.
+This page explains how backups, restores and test restores work inside the code. The operator view is in [Backups](../admin/backups.md), [Restoring a backup](../admin/backups/restore.md) and [Backup reference](../admin/backups/backup-reference.md), which also describes the file format.
 
 ## Modules
 
