@@ -42,6 +42,7 @@ import {
   type DirectorySignInFailure,
   type DirectoryTestResult,
   type IdentityProviderAdapter,
+  type ProviderCredential,
   type ProviderDefinition,
   type ProviderGroup,
   ProviderPolicyError,
@@ -1355,7 +1356,7 @@ export class ProviderSignInService {
     clientIp?: string | undefined;
   }): Promise<SamlReceipt> {
     await this.#limit("samlResponse", input.clientIp, STARTS_PER_CLIENT);
-    const { provider } = await this.#load(input.providerId, "signIn");
+    const { provider, credentials } = await this.#load(input.providerId, "signIn");
     if (provider.type !== "saml")
       throw new OrganizationError("notFound", "The identity provider does not exist");
     if (input.relayState) {
@@ -1387,6 +1388,8 @@ export class ProviderSignInService {
         "Sign-in started at the identity provider needs the address of the instance in the settings",
       );
     }
+    const redirectUri = `${instanceUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`;
+    await this.#checkUnsolicitedResponse(provider, credentials, input.samlResponse, redirectUri);
     const state = client.randomState();
     const browserToken = client.randomState();
     await this.#database.insert(providerFlows).values({
@@ -1396,10 +1399,41 @@ export class ProviderSignInService {
       browserHash: hashState(browserToken),
       requestId: null,
       samlResponse: input.samlResponse,
-      redirectUri: `${instanceUrl.replace(/\/+$/, "")}${samlPaths(provider.id).acs}`,
+      redirectUri,
       expiresAt: new Date(this.#clock().getTime() + FLOW_LIFETIME_MS),
     });
     return { state, browserToken };
+  }
+
+  async #checkUnsolicitedResponse(
+    provider: ProviderDefinition,
+    credentials: readonly ProviderCredential[],
+    samlResponse: string,
+    redirectUri: string,
+  ): Promise<void> {
+    let result: Awaited<ReturnType<IdentityProviderAdapter["completeSignIn"]>>;
+    try {
+      result = await this.#adapter(provider.type).completeSignIn(provider, credentials, {
+        callbackUrl: new URL(redirectUri),
+        redirectUri,
+        state: "",
+        nonce: "",
+        codeVerifier: "",
+        requestId: null,
+        samlResponse,
+      });
+    } catch (error) {
+      if (error instanceof ProviderPolicyError) throw new ProviderResponseError(error.message);
+      throw error;
+    }
+    if (!result.assertion) throw new ProviderResponseError("The SAML response has no assertion");
+    const [used] = await this.#database
+      .select({ assertionId: samlAssertions.assertionId })
+      .from(samlAssertions)
+      .where(
+        and(eq(samlAssertions.providerId, provider.id), eq(samlAssertions.assertionId, result.assertion.id)),
+      );
+    if (used) throw new ProviderResponseError("The assertion was used before");
   }
 
   async serviceProviderMetadata(providerId: string, baseUrl: string): Promise<string> {

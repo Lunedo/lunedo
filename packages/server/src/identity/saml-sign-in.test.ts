@@ -20,6 +20,7 @@ import {
 import { createFakeSamlIdp, type FakeSamlIdp } from "../testing/fakes/saml-idp.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { ProviderResponseError } from "./adapter.js";
 import { samlEntityId, samlPaths } from "./saml.js";
 import type { CallbackResult } from "./sign-in.js";
 
@@ -223,18 +224,61 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
       }),
     );
     expect(results.map((result) => result.kind).sort()).toEqual(["refused", "signedIn"]);
-    const replayed = await test.services.providerSignIn.receiveSamlResponse({
+    await expect(
+      test.services.providerSignIn.receiveSamlResponse({ providerId: id, samlResponse, relayState: null }),
+    ).rejects.toThrow(ProviderResponseError);
+    expect(await flowCount(id)).toBe(2);
+  });
+
+  async function flowCount(providerId: string): Promise<number> {
+    const result = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from provider_flows where provider_id = $1",
+      [providerId],
+    );
+    return result.rows[0]?.count ?? 0;
+  }
+
+  it("refuses forged and oversized unsolicited responses without storing anything", async () => {
+    const { id, domain } = await provider({ idpInitiated: true });
+    const person = { nameId: randomUUID(), attributes: { email: [`grace@${domain}`] } };
+    const impostor = await createFakeSamlIdp({ entityId: idp.entityId });
+    const valid = await idp.response({ ...target(id), ...person, requestId: null });
+    const refusalsBefore = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from sign_in_refusals",
+    );
+    const forged = [
+      await impostor.response({ ...target(id), ...person, requestId: null }),
+      await idp.response({ ...target(id), ...person, requestId: null, signAssertion: false }),
+      await idp.response({ ...target(id), ...person, requestId: null, issuer: "https://other.saml.test" }),
+      Buffer.from(
+        Buffer.from(valid, "base64").toString("utf8").replace(`grace@${domain}`, `mallory@${domain}`),
+      ).toString("base64"),
+      `${valid}${"A".repeat(1_000_000 - valid.length)}`,
+      Buffer.from("<html>not SAML</html>").toString("base64"),
+    ];
+    for (const samlResponse of forged) {
+      await expect(
+        test.services.providerSignIn.receiveSamlResponse({ providerId: id, samlResponse, relayState: null }),
+      ).rejects.toThrow(ProviderResponseError);
+    }
+    expect(await flowCount(id)).toBe(0);
+    const refusalsAfter = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from sign_in_refusals",
+    );
+    expect(refusalsAfter.rows[0]?.count).toBe(refusalsBefore.rows[0]?.count);
+    const receipt = await test.services.providerSignIn.receiveSamlResponse({
       providerId: id,
-      samlResponse,
+      samlResponse: valid,
       relayState: null,
     });
-    const third = await test.services.providerSignIn.callback({
+    expect(await flowCount(id)).toBe(1);
+    const result = await test.services.providerSignIn.callback({
       providerId: id,
-      query: new URLSearchParams({ state: replayed.state }),
-      browserToken: replayed.browserToken ?? "",
+      query: new URLSearchParams({ state: receipt.state }),
+      browserToken: receipt.browserToken ?? "",
       client: {},
     });
-    expect(third).toMatchObject({ kind: "refused", reason: "invalidResponse" });
+    expect(result.kind).toBe("signedIn");
   });
 
   it("checks unsolicited responses against the configured address of the instance, not the request", async () => {
@@ -247,18 +291,10 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
       attributes: { email: [`frank@${domain}`] },
       requestId: null,
     });
-    const receipt = await test.services.providerSignIn.receiveSamlResponse({
-      providerId: id,
-      samlResponse,
-      relayState: null,
-    });
-    const result = await test.services.providerSignIn.callback({
-      providerId: id,
-      query: new URLSearchParams({ state: receipt.state }),
-      browserToken: receipt.browserToken ?? "",
-      client: {},
-    });
-    expect(result).toMatchObject({ kind: "refused", reason: "invalidResponse" });
+    await expect(
+      test.services.providerSignIn.receiveSamlResponse({ providerId: id, samlResponse, relayState: null }),
+    ).rejects.toThrow(ProviderResponseError);
+    expect(await flowCount(id)).toBe(0);
     await test.settings.set(instanceUrlSetting, {}, "instance", "");
     try {
       await expect(
