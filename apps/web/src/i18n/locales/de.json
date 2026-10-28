@@ -2593,8 +2593,9 @@
         "help": "Weitere Versuche werden eine Minute lang abgewiesen."
       },
       "auth_signInAttemptsPerClientPerMinute": {
-        "label": "Anmeldeversuche pro Client",
-        "description": "Gezählt pro IP-Adresse."
+        "label": "Fehlgeschlagene Anmeldeversuche pro Client",
+        "description": "Nur Fehlschläge zählen, pro IP-Adresse.",
+        "help": "Erfolgreiche Anmeldungen zählen nicht, so können sich viele Personen hinter einer Adresse, etwa ein Büro, gleichzeitig anmelden."
       },
       "auth_lockoutFailuresPerAccount": {
         "label": "Fehlversuche bis zur Kontosperre",

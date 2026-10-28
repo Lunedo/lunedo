@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { SYSTEM } from "../accounts/principal.js";
+import { RateLimitedError } from "../auth/errors.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 
@@ -48,6 +49,21 @@ describe.skipIf(!baseUrl)("choosing the sign-in method", () => {
       passkeys: true,
     });
     expect(await test.services.providerSignIn.discover("person@example.org")).toEqual({ step: "password" });
+  });
+
+  it("answers a whole office behind one address and limits a flood", async () => {
+    const office = "198.51.100.60";
+    for (let person = 0; person < 300; person++) {
+      await test.services.providerSignIn.discover(`person${person}@example.org`, office);
+    }
+    await expect(test.services.providerSignIn.discover("one.more@example.org", office)).rejects.toThrow(
+      RateLimitedError,
+    );
+    await expect(
+      test.services.providerSignIn.discover("one.more@example.org", "198.51.100.61"),
+    ).resolves.toEqual({
+      step: "password",
+    });
   });
 
   it("keeps the e-mail step with a single provider, because local accounts sign in with a password", async () => {

@@ -409,6 +409,16 @@ describe.skipIf(!databaseBaseUrl)("brute-force protection", () => {
     expect(statuses.slice(0, 10).every((status) => status === 200)).toBe(true);
     expect(statuses[10]).toBe(429);
 
+    const office = new TestClient(test.app, { remoteAddress: "198.18.2.1" });
+    for (let person = 0; person < 31; person++) {
+      const colleague = await createAccount(test, `office.${person}@example.org`);
+      const response = await office.post("/api/v1/auth/sign-in", {
+        email: colleague.email,
+        password: colleague.password,
+      });
+      expect(response.statusCode).toBe(200);
+    }
+
     const busy = new TestClient(test.app, { remoteAddress: "198.18.1.1" });
     const responses = [];
     for (let attempt = 0; attempt < 31; attempt++) {
@@ -416,7 +426,7 @@ describe.skipIf(!databaseBaseUrl)("brute-force protection", () => {
         await busy.post("/api/v1/auth/sign-in", { email: `rate${attempt}@example.org`, password: "x" }),
       );
     }
-    expect(responses.at(-1)?.json()).toMatchObject({ code: "rateLimited" });
+    expect(["rateLimited", "locked"]).toContain(responses.at(-1)?.json().code);
   });
 
   it("takes the client address from forwarding headers only behind a trusted proxy", async () => {

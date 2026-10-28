@@ -110,7 +110,7 @@ function canSignIn(account: Account | null): account is Account & { email: strin
   );
 }
 
-const PASSKEY_OPTIONS_PER_CLIENT_PER_MINUTE = 30;
+const PASSKEY_OPTIONS_PER_CLIENT_PER_MINUTE = 300;
 
 export interface PendingProviderSession {
   providerId: string;

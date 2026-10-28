@@ -68,10 +68,11 @@ import {
 const FLOW_LIFETIME_MS = 10 * 60 * 1000;
 const AUTH_TIME_TOLERANCE_MS = 60 * 1000;
 const REFUSAL_RETENTION_DAYS = 90;
-const DISCOVERIES_PER_CLIENT = 30;
-const STARTS_PER_CLIENT = 20;
+const DISCOVERIES_PER_CLIENT = 300;
+const STARTS_PER_CLIENT = 300;
 const CONNECTION_CHECKS_PER_CLIENT = 20;
-const LOGOUTS_PER_CLIENT = 60;
+const FAILED_LOGOUTS_PER_CLIENT = 60;
+const FAILED_SAML_RESPONSES_PER_CLIENT = 20;
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test" | "linkConfirmation";
@@ -1302,8 +1303,28 @@ export class ProviderSignInService {
     if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
   }
 
+  async #countingFailures<T>(
+    kind: string,
+    clientIp: string | undefined,
+    perMinute: number,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    if (clientIp === undefined) return run();
+    const key = `${kind}:failed:${clientSubject(clientIp)}`;
+    const limit = await this.#rateLimiter.consume(key, perMinute, 60);
+    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
+    const result = await run();
+    await this.#rateLimiter.refund(key);
+    return result;
+  }
+
   async backchannelLogout(providerId: string, logoutToken: string, clientIp?: string): Promise<number> {
-    await this.#limit("providerLogout", clientIp, LOGOUTS_PER_CLIENT);
+    return this.#countingFailures("providerLogout", clientIp, FAILED_LOGOUTS_PER_CLIENT, () =>
+      this.#backchannelLogout(providerId, logoutToken),
+    );
+  }
+
+  async #backchannelLogout(providerId: string, logoutToken: string): Promise<number> {
     const { provider, credentials } = await this.#load(providerId);
     const adapter = this.#adapter(provider.type);
     if (!adapter.verifyLogout)
@@ -1364,7 +1385,17 @@ export class ProviderSignInService {
     relayState: string | null;
     clientIp?: string | undefined;
   }): Promise<SamlReceipt> {
-    await this.#limit("samlResponse", input.clientIp, STARTS_PER_CLIENT);
+    return this.#countingFailures("samlResponse", input.clientIp, FAILED_SAML_RESPONSES_PER_CLIENT, () =>
+      this.#receiveSamlResponse(input),
+    );
+  }
+
+  async #receiveSamlResponse(input: {
+    providerId: string;
+    samlResponse: string;
+    relayState: string | null;
+    clientIp?: string | undefined;
+  }): Promise<SamlReceipt> {
     const { provider, credentials } = await this.#load(input.providerId, "signIn");
     if (provider.type !== "saml")
       throw new OrganizationError("notFound", "The identity provider does not exist");

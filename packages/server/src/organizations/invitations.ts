@@ -28,9 +28,13 @@ import { organizationSettingsChain, selfRegistrationSetting } from "./settings.j
 const INVITATION_DAYS = 7;
 const REGISTRATION_HOURS = 24;
 const HOUR_SECONDS = 60 * 60;
-const ACCEPTANCES_PER_CLIENT = 30;
+const FAILED_ACCEPTANCES_PER_CLIENT = 30;
 const REGISTRATIONS_PER_CLIENT = 10;
 const REGISTRATIONS_PER_ADDRESS = 3;
+
+function invitationFailures(clientIp: string | undefined): string {
+  return `invitation:failure:${clientSubject(clientIp ?? "unknown")}`;
+}
 
 export const registrationRequestJob = defineJob({
   name: "organizations.registration-request",
@@ -317,8 +321,33 @@ export class InvitationService {
     if (!result.allowed) throw new RateLimitedError(result.retryAfterSeconds);
   }
 
+  async #countingInvalidTokens<T>(
+    key: string,
+    run: () => Promise<T>,
+    failed: (result: T) => boolean = () => false,
+  ): Promise<T> {
+    const counted = await this.#rateLimiter.consume(key, FAILED_ACCEPTANCES_PER_CLIENT, HOUR_SECONDS);
+    if (!counted.allowed) throw new RateLimitedError(counted.retryAfterSeconds);
+    let result: T;
+    try {
+      result = await run();
+    } catch (error) {
+      if (!(error instanceof InvalidTokenError)) await this.#rateLimiter.refund(key);
+      throw error;
+    }
+    if (!failed(result)) await this.#rateLimiter.refund(key);
+    return result;
+  }
+
   async preview(token: string, clientIp: string | undefined): Promise<InvitationPreview> {
-    await this.#limit(`invitation:client:${clientSubject(clientIp ?? "unknown")}`, ACCEPTANCES_PER_CLIENT);
+    return this.#countingInvalidTokens(
+      invitationFailures(clientIp),
+      () => this.#preview(token),
+      (preview) => preview.state !== "open",
+    );
+  }
+
+  async #preview(token: string): Promise<InvitationPreview> {
     if (!isWellFormedToken(token)) throw new InvalidTokenError();
     const inviter = alias(accounts, "inviter");
     const [row] = await this.#database
@@ -367,7 +396,19 @@ export class InvitationService {
     portalSpaceId: string | null;
     provider: DomainProvider | null;
   }> {
-    await this.#limit(`invitation:client:${clientSubject(clientIp ?? "unknown")}`, ACCEPTANCES_PER_CLIENT);
+    return this.#countingInvalidTokens(invitationFailures(clientIp), () => this.#accept(token, input));
+  }
+
+  async #accept(
+    token: string,
+    input: { name?: string; password?: string },
+  ): Promise<{
+    accountId: string;
+    organizationId: string;
+    accountCreated: boolean;
+    portalSpaceId: string | null;
+    provider: DomainProvider | null;
+  }> {
     if (!isWellFormedToken(token)) throw new InvalidTokenError();
     return this.#database.transaction(async (tx) => {
       const [invitation] = await tx
@@ -578,10 +619,15 @@ export class InvitationService {
     input: { name: string; password: string },
     clientIp: string | undefined,
   ): Promise<{ accountId: string; organizationId: string }> {
-    await this.#limit(
-      `registration:complete:${clientSubject(clientIp ?? "unknown")}`,
-      ACCEPTANCES_PER_CLIENT,
+    return this.#countingInvalidTokens(`registration:failure:${clientSubject(clientIp ?? "unknown")}`, () =>
+      this.#completeRegistration(token, input),
     );
+  }
+
+  async #completeRegistration(
+    token: string,
+    input: { name: string; password: string },
+  ): Promise<{ accountId: string; organizationId: string }> {
     if (!isWellFormedToken(token)) throw new InvalidTokenError();
     return this.#database.transaction(async (tx: Transaction) => {
       const [registration] = await tx

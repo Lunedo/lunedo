@@ -2593,8 +2593,9 @@
         "help": "Further attempts are refused for a minute."
       },
       "auth_signInAttemptsPerClientPerMinute": {
-        "label": "Sign-in attempts per client",
-        "description": "Counted per IP address."
+        "label": "Failed sign-in attempts per client",
+        "description": "Only failures count, per IP address.",
+        "help": "Successful sign-ins do not count, so many people behind one address, such as an office, can sign in at the same time."
       },
       "auth_lockoutFailuresPerAccount": {
         "label": "Failures before an account is locked",

@@ -39,6 +39,8 @@ export function accountSubject(email: string): string {
   return createHash("sha256").update(email.trim().toLowerCase(), "utf8").digest("hex");
 }
 
+export const CLIENT_ATTEMPTS_PER_MINUTE = 300;
+
 export interface RateLimitResult {
   allowed: boolean;
   retryAfterSeconds: number;
@@ -63,6 +65,24 @@ export class RateLimiter {
     const row = result.rows[0];
     const count = Number(row?.count ?? 0);
     return { allowed: count <= limit, retryAfterSeconds: Math.max(1, Number(row?.retry_after ?? 1)) };
+  }
+
+  async peek(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
+    const window = sql`make_interval(secs => ${windowSeconds})`;
+    const result = await this.#database.execute<{ count: number; retry_after: string }>(sql`
+      select count, ceil(extract(epoch from (window_start + ${window} - now()))) as retry_after
+      from ${rateLimits} where key = ${key} and window_start > now() - ${window}`);
+    const row = result.rows[0];
+    return {
+      allowed: Number(row?.count ?? 0) < limit,
+      retryAfterSeconds: Math.max(1, Number(row?.retry_after ?? 1)),
+    };
+  }
+
+  async refund(key: string): Promise<void> {
+    await this.#database.execute(
+      sql`update ${rateLimits} set count = greatest(${rateLimits.count} - 1, 0) where key = ${key}`,
+    );
   }
 
   async cleanup(): Promise<number> {
@@ -113,8 +133,16 @@ export class SignInThrottle {
     };
     let retryAfterSeconds = 0;
     for (const { subject, key } of this.#keys(subjects)) {
-      const result = await this.#rateLimiter.consume(`signIn:${key}`, limits[subject], 60);
-      if (!result.allowed) retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds);
+      const results =
+        subject === "account"
+          ? [await this.#rateLimiter.consume(`signIn:${key}`, limits.account, 60)]
+          : [
+              await this.#rateLimiter.consume(`signIn:${key}`, CLIENT_ATTEMPTS_PER_MINUTE, 60),
+              await this.#rateLimiter.peek(`signIn:failed:${key}`, limits.clientIp, 60),
+            ];
+      for (const result of results) {
+        if (!result.allowed) retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds);
+      }
     }
     return { allowed: retryAfterSeconds === 0, retryAfterSeconds };
   }
@@ -153,6 +181,9 @@ export class SignInThrottle {
     const lockouts: Lockout[] = [];
 
     for (const { subject, key } of this.#keys(subjects)) {
+      if (subject === "clientIp") {
+        await this.#rateLimiter.consume(`signIn:failed:${key}`, Number.MAX_SAFE_INTEGER, 60);
+      }
       const threshold = thresholds[subject];
       const lockout = await executor.transaction(async (tx) => {
         await tx.insert(signInFailures).values({ key }).onConflictDoNothing();

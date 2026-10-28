@@ -322,7 +322,7 @@ The same settings as in [My account › Notifications](#my-account--notification
 | Key | Label | Levels | Default | Allowed values | Lockable | Hint |
 |---|---|---|---|---|---|---|
 | `auth.signInAttemptsPerAccountPerMinute` | Sign-in attempts per account | instance | `10` | A whole number from 1 to 1,000. | no | Then refused for one minute. |
-| `auth.signInAttemptsPerClientPerMinute` | Sign-in attempts per client | instance | `30` | A whole number from 1 to 10,000. | no | Counted per IP address. |
+| `auth.signInAttemptsPerClientPerMinute` | Failed sign-in attempts per client | instance | `30` | A whole number from 1 to 10,000. | no | Only failures count, per IP address. |
 | `auth.lockoutFailuresPerAccount` | Failures before an account is locked | instance | `5` | A whole number from 3 to 1,000. | no | Within the lockout window. |
 | `auth.lockoutFailuresPerClient` | Failures before a client is locked | instance | `20` | A whole number from 3 to 10,000. | no | Within the lockout window, per IP address. |
 | `auth.lockoutWindowMinutes` | Lockout window | instance | `15` | A whole number from 1 to 1,440. | no | Failures within it count together. |

@@ -20,7 +20,7 @@ All are `HttpOnly`, `Secure`, `SameSite=Lax` and `Path=/` (`apps/api/src/http/co
 ## Sign-in flow
 
 1. The sign-in page loads `GET /api/v1/auth/sign-in-options`: the active providers and the provider used last. The page always shows the provider buttons and the e-mail field; passkeys are always offered.
-2. The page sends the address to `POST /api/v1/auth/sign-in/discover`. The answer is one of `provider`, `directory` or `password` and depends only on the domain and the active providers. 30 requests per client and minute.
+2. The page sends the address to `POST /api/v1/auth/sign-in/discover`. The answer is one of `provider`, `directory` or `password` and depends only on the domain and the active providers. 300 requests per client and minute, enough for an office behind one address.
 3. Then, by method:
    - **Password**: `POST /api/v1/auth/sign-in`. A managed account is refused with `managedAccount` after a correct password (see [Managed accounts](#managed-accounts)). Without a second factor, the answer sets the session cookie. Otherwise it sets the pending cookie and names the factors; the client completes with `POST /api/v1/auth/sign-in/second-factor` and a TOTP code, a recovery code or a passkey assertion (options from `POST /api/v1/auth/sign-in/second-factor/passkey-options`). The pending sign-in ends after five wrong attempts.
    - **Passkey without password**: `POST /api/v1/auth/sign-in/passkey-options`, then `POST /api/v1/auth/sign-in/passkey`. Managed accounts are refused with `managedAccount`.
