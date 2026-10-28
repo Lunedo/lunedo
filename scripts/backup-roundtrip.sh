@@ -71,12 +71,16 @@ start_postgres() {
   docker run "${label[@]}" -d --name "$name" --network "$network" ${postgres_args[@]+"${postgres_args[@]}"} \
     -e POSTGRES_USER=lunedo -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=source \
     "postgres:${version}-alpine" ${postgres_settings[@]+"${postgres_settings[@]}"} >/dev/null
-  for _ in $(seq 1 60); do
+  local state=""
+  for _ in $(seq 1 120); do
     # Only the final server listens on TCP; the temporary one during initialization uses the socket.
     docker exec "$name" pg_isready -h 127.0.0.1 -U lunedo -d source >/dev/null 2>&1 && return 0
+    state="$(docker inspect -f '{{.State.Status}} (exit code {{.State.ExitCode}}, out of memory: {{.State.OOMKilled}})' "$name" 2>&1)"
+    case "$state" in running*) ;; *) break ;; esac
     sleep 1
   done
-  echo "PostgreSQL ${version} did not start" >&2
+  echo "PostgreSQL ${version} did not start; container ${state}" >&2
+  docker logs --tail 50 "$name" >&2 2>&1 || true
   exit 1
 }
 
