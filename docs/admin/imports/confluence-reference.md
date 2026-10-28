@@ -90,7 +90,7 @@ An include of a page that is not part of the import keeps the Confluence space k
 
 ## Diagrams
 
-draw.io, Gliffy, Mermaid and PlantUML macros become diagram blocks, also the draw.io and Gliffy apps of Confluence Cloud (see [Diagrams](../../user/diagrams.md)).
+draw.io, Gliffy, Mermaid and PlantUML macros become diagram blocks, also the draw.io and Gliffy apps of Confluence Cloud (see [Diagrams](../../user/blocks/diagrams.md)).
 
 | Confluence macro | Becomes |
 | --- | --- |

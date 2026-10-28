@@ -20,7 +20,7 @@ An article is due when its interval has passed since its last review, or since i
 
 ## Reminders
 
-The owner of an article is reminded when it becomes due, and once before, at the time of the first reminder. Articles without an owner, for example because the owner's account was deactivated, are reminded to the space admins. The reminders arrive through the notification channels as **Article reviews** and can be changed there like every other notification (see [Notifications](notifications.md)).
+The owner of an article is reminded when it becomes due, and once before, at the time of the first reminder. Articles without an owner, for example because the owner's account was deactivated, are reminded to the space admins. The reminders arrive through the notification channels as **Article reviews** and can be changed there like every other notification (see [Notifications](../notifications.md)).
 
 A reminder is sent at most once per due date. When the due date changes, the reminders move with it.
 
@@ -38,15 +38,15 @@ The list shows title, area or topic, owner, interval, last review and the state,
 | Without owner | articles whose owner is missing or left |
 | Translations | outdated translations (see [Knowledge base translations](knowledge-base-translations.md#outdated-translations)) |
 
-**Only my articles** shows the articles you own. Articles without an owner show **Set owner** to space admins, who choose a person with edit rights by name. See [Owners](owners.md).
+**Only my articles** shows the articles you own. Articles without an owner show **Set owner** to space admins, who choose a person with edit rights by name. See [Owners](../spaces-and-pages/owners.md).
 
 ## Marking as reviewed
 
-Anyone with edit rights marks an article as reviewed, with **Mark as reviewed** in the review list, on **For you** or at the top of the article. The review is recorded in the article's history with who and when, without a new version, and the next due date starts from now. Only published articles can be marked as reviewed. The confirmation offers **Undo** for a short time. Every review and every undo is recorded in the [audit log](../admin/audit-log.md), as `article.reviewed` and `article.reviewUndone`.
+Anyone with edit rights marks an article as reviewed, with **Mark as reviewed** in the review list, on **For you** or at the top of the article. The review is recorded in the article's history with who and when, without a new version, and the next due date starts from now. Only published articles can be marked as reviewed. The confirmation offers **Undo** for a short time. Every review and every undo is recorded in the [audit log](../../admin/audit-log.md), as `article.reviewed` and `article.reviewUndone`.
 
 When you publish a changed article and tick **Content reviewed** in the publish dialog, the publication also counts as a review. The box is not ticked by default.
 
-**For you** shows your own due articles under **Due for review** (see [Knowledge bases](knowledge-bases.md#for-you)).
+**For you** shows your own due articles under **Due for review** (see [Knowledge bases](../knowledge-bases.md#for-you)).
 
 In the portal, an article with a review interval that was reviewed at least once shows "Last reviewed on" with the date of the last review; otherwise it shows "Updated on" with the date of the published version.
 
@@ -66,4 +66,4 @@ When a source page is published with changes, the article shows **Source page ch
 - Readers of the portal never see source pages, and they are not part of the article's content or its machine-readable form.
 - Editors of the article see how many linked source pages they cannot read, and can remove those links, for example when the person who linked a restricted page has left. Only people who can read such a page can link it again.
 
-Adding and removing a source page is recorded in the [audit log](../admin/audit-log.md).
+Adding and removing a source page is recorded in the [audit log](../../admin/audit-log.md).

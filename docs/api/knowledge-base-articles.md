@@ -138,7 +138,7 @@ echo "$PAGE" | jq -r '.nextChangedSince' > last-sync
 | `GET`, `POST /api/v1/articles/{itemId}/sources`, `DELETE …/sources/{sourceId}` | Source pages the caller can read | read, edit the article |
 | `GET`, `DELETE /api/v1/articles/{itemId}/hidden-sources` | Counts and removes the linked source pages the caller cannot read | edit the article |
 
-`POST /api/v1/pages/{pageId}/publish` accepts `"reviewed": true` for articles. Reviews also appear in `GET /api/v1/items/{itemId}/activity` with the type `review`. `GET …/review` returns `reviewedAt` and `effectiveIntervalMonths`; the portal shows "Last reviewed on" with that date while an interval applies and the article was reviewed at least once. See [Reviews](../user/knowledge-base-reviews.md).
+`POST /api/v1/pages/{pageId}/publish` accepts `"reviewed": true` for articles. Reviews also appear in `GET /api/v1/items/{itemId}/activity` with the type `review`. `GET …/review` returns `reviewedAt` and `effectiveIntervalMonths`; the portal shows "Last reviewed on" with that date while an interval applies and the article was reviewed at least once. See [Reviews](../user/knowledge-bases/knowledge-base-reviews.md).
 
 ## Problems
 

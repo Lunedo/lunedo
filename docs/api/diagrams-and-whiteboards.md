@@ -1,6 +1,6 @@
 # Diagrams and whiteboards
 
-Routes for the files and images behind diagram blocks (draw.io, Mermaid, PlantUML), drawings in pages and whiteboards. [Diagrams](../user/diagrams.md) and [Whiteboards](../user/whiteboards.md) describe them in the interface. The full reference is at `/api/docs` on your instance.
+Routes for the files and images behind diagram blocks (draw.io, Mermaid, PlantUML), drawings in pages and whiteboards. [Diagrams](../user/blocks/diagrams.md) and [Whiteboards](../user/whiteboards.md) describe them in the interface. The full reference is at `/api/docs` on your instance.
 
 ## How blocks and files fit together
 

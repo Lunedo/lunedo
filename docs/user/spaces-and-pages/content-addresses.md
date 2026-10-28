@@ -31,7 +31,7 @@ Addresses in the app contain the space key, the type, the number and a short for
 
 The number alone identifies the item. When the space key, the type or the short form in an address is wrong or outdated, the app replaces the address with the current one without an extra entry in the browser history. Renames and moves therefore keep links working, and `/spaces/ITOPS/pages/1040` without a short form works too.
 
-Articles of a knowledge base have their own addresses in the portal; see [The knowledge base portal](knowledge-base-portal.md).
+Articles of a knowledge base have their own addresses in the portal; see [The knowledge base portal](../knowledge-bases/knowledge-base-portal.md).
 
 ### Short forms of titles
 
@@ -63,4 +63,4 @@ Enter only a number, such as `1040` or `#1040`, in the search:
 - The quick search shows the item first, under **Open by number**.
 - Pressing Enter on the search page opens the item if you can read it; otherwise the search runs normally.
 
-The API finds items by number as well, with `GET /api/v1/items/by-number/{number}`; see [Spaces and pages in the API](../api/spaces-and-pages.md). A number you cannot read and a number that does not exist give the same answer.
+The API finds items by number as well, with `GET /api/v1/items/by-number/{number}`; see [Spaces and pages in the API](../../api/spaces-and-pages.md). A number you cannot read and a number that does not exist give the same answer.

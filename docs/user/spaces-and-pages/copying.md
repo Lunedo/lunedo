@@ -1,6 +1,6 @@
 # Copying pages, folders and whiteboards
 
-A copy duplicates a page, a folder or a whiteboard, within its space or into another space of the same organization. To move an item instead, see [Moving items](spaces-and-pages.md#moving-items).
+A copy duplicates a page, a folder or a whiteboard, within its space or into another space of the same organization. To move an item instead, see [Moving items](../spaces-and-pages.md#moving-items).
 
 ## Copying
 
@@ -41,7 +41,7 @@ When the target space already has an item you can see with the same title, ignor
 
 ### Who can open the copy
 
-A copy takes the access rules of its new place; restrictions of the original are not copied. Before copying, the dialog shows who can open the copy compared with the original. When people can open the copy who cannot open the original, the dialog says "More people can read the copy than the original", and you must confirm **I want these people to be able to open the copy**. Every copy is recorded in the audit log, including whether more people can open it than the original; see [Audit log](../admin/audit-log.md).
+A copy takes the access rules of its new place; restrictions of the original are not copied. Before copying, the dialog shows who can open the copy compared with the original. When people can open the copy who cannot open the original, the dialog says "More people can read the copy than the original", and you must confirm **I want these people to be able to open the copy**. Every copy is recorded in the audit log, including whether more people can open it than the original; see [Audit log](../../admin/audit-log.md).
 
 ### Large copies
 
@@ -53,4 +53,4 @@ Copies of more than 20 items run in the background. The dialog shows their progr
 
 Attachments of a copy share the stored files of the original, so a copy takes almost no extra storage. When the storage is almost full, copies are stopped like uploads.
 
-Copies can also be made through the API; see [Spaces and pages in the API](../api/spaces-and-pages.md).
+Copies can also be made through the API; see [Spaces and pages in the API](../../api/spaces-and-pages.md).

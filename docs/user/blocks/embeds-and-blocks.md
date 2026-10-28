@@ -1,6 +1,6 @@
 # Embeds, file previews, tabs and whiteboard blocks
 
-These blocks are inserted with the slash menu or the **Insert** menu of the editor. The other blocks are listed in [Blocks](blocks.md).
+These blocks are inserted with the slash menu or the **Insert** menu of the editor. The other blocks are listed in [Blocks](../blocks.md).
 
 ## External embeds
 
@@ -21,7 +21,7 @@ The embedded service runs in its own origin and cannot reach the page, your sess
 
 Instance administrators decide which services can be embedded, and organization administrators can narrow that list for their organization. The default list allows YouTube (through the privacy-enhanced domain `youtube-nocookie.com`), Vimeo, Loom, Figma, Miro, Google Docs, Slides and Sheets, and Microsoft Stream and SharePoint. For SharePoint and Stream, paste the address from the embed code that SharePoint offers, not the share link.
 
-How to manage the list is described in [External embeds](../admin/embeds.md).
+How to manage the list is described in [External embeds](../../admin/embeds.md).
 
 ## File previews
 
@@ -44,7 +44,7 @@ A **Tabs** block holds up to 20 named tabs, each with its own content. A tab nam
 
 ## Whiteboard blocks
 
-**Link to whiteboard** shows the image and title of a [whiteboard](whiteboards.md); clicking it opens the whiteboard. Choose the whiteboard in the block by its title.
+**Link to whiteboard** shows the image and title of a [whiteboard](../whiteboards.md); clicking it opens the whiteboard. Choose the whiteboard in the block by its title.
 
 The block resolves the whiteboard with the reader's permissions when the page is shown: readers who cannot open it see nothing, editors see "Restricted content" without the title. Print and Word show the image and the linked title by the same rule. The text of the whiteboard is searched on the whiteboard only, not on pages that show it.
 

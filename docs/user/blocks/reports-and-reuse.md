@@ -1,6 +1,6 @@
 # Page properties, label reports and reusable content
 
-These blocks collect information from many pages and reuse content in several places. They are inserted with `/` in the editor or come from a Confluence import. The other report blocks (Page report, Decision report, Task report, Child pages, Attachment list) are described in [Blocks](blocks.md#reports-and-lists).
+These blocks collect information from many pages and reuse content in several places. They are inserted with `/` in the editor or come from a Confluence import. The other report blocks (Page report, Decision report, Task report, Child pages, Attachment list) are described in [Blocks](../blocks.md#reports-and-lists).
 
 Every block shows only what the viewer may read. Pages that are restricted for the viewer, in the trash or not published yet are never listed, counted or used for sorting, and their titles never appear. Archived pages are left out too, except in a block that is limited to spaces that are archived as a whole.
 
@@ -11,7 +11,7 @@ Every block shows only what the viewer may read. Pages that are restricted for t
 - **ID** separates several sets of page properties on one page. A page properties report can show only the sets with a given ID.
 - **Hide on the page** hides the table from readers of the page. Reports still show its values. Editors see a dashed frame in the editor.
 
-Only the published version of a page counts, or the saved state of a page in live mode. While a page has an unpublished draft, reports show the values of the published version. A page that was never published is not listed. See [Publishing and page status](publishing-and-page-status.md).
+Only the published version of a page counts, or the saved state of a page in live mode. While a page has an unpublished draft, reports show the values of the published version. A page that was never published is not listed. See [Publishing and page status](../spaces-and-pages/publishing-and-page-status.md).
 
 | What | Limit |
 |---|---|
@@ -58,7 +58,7 @@ An **Excerpt** marks part of a page for reuse. It can have a name of up to 100 c
 
 ## Blocks from a Confluence import
 
-A page properties report or content by label list whose Confluence query uses filters that Lunedo cannot apply keeps the original query. In the editor, the block then shows "Filter from Confluence not taken over" with the query, so that an editor can check the labels and spaces. See [what a Confluence import takes over](../admin/imports/confluence-reference.md).
+A page properties report or content by label list whose Confluence query uses filters that Lunedo cannot apply keeps the original query. In the editor, the block then shows "Filter from Confluence not taken over" with the query, so that an editor can check the labels and spaces. See [what a Confluence import takes over](../../admin/imports/confluence-reference.md).
 
 ## Roadmaps
 

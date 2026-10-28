@@ -6,7 +6,7 @@ A confidential space shows the badge **Confidential** and the note "Only its mem
 
 ## Creating one
 
-1. Create a space as usual (see [Spaces and pages](spaces-and-pages.md)).
+1. Create a space as usual (see [Spaces and pages](../spaces-and-pages.md)).
 2. Turn on **Confidential space**.
 3. Add the people who get a role. Groups cannot be chosen.
 
@@ -17,23 +17,23 @@ Rules:
 - A knowledge base cannot be confidential.
 - A one-on-one meeting gets its own confidential space that only the two people can open.
 
-Who may create one: people whose organization role manages spaces, always. Other members only when both **Members create spaces** and **Members create confidential spaces** are on (both default on). The organization sets them under **Settings › Organization › Content › Spaces**; see [Spaces in the organization](../admin/spaces.md).
+Who may create one: people whose organization role manages spaces, always. Other members only when both **Members create spaces** and **Members create confidential spaces** are on (both default on). The organization sets them under **Settings › Organization › Content › Spaces**; see [Spaces in the organization](../../admin/spaces.md).
 
 ## What differs from a standard space
 
 | Area | In a confidential space |
 |---|---|
 | Space roles | Only individual people of the organization. No groups, no "all members of the organization". |
-| Sharing pages | Only with individual people, never with groups. See [Sharing and restrictions](sharing-and-restrictions.md). |
+| Sharing pages | Only with individual people, never with groups. See [Sharing and restrictions](../sharing-and-restrictions.md). |
 | Guests | Only the space admins invite guests, share pages with guests of the organization, name guests on a link, widen or extend a guest's share or link, or move pages that are shared with guests into the space. Editors and organization administrators who are not space admins cannot. Inviting a new guest also needs what the organization requires everywhere: a space admin who is not an organization administrator invites only when the organization lets members invite guests. An invitation is held as an access request when the person who sent it is no longer space admin when the guest accepts. |
 | Share links | Only **Only the people and groups you choose**, and only with individual people. Links for the organization, the instance or anyone are not possible. |
 | Administrators | Organization and instance administrators cannot open the space, change its permissions or appoint its space admins. In organization lists they see it by key only, with a few numbers, never its name, members or content. |
-| Owners | Only the owner and the space admins can transfer ownership; organization administrators cannot. See [Owners](owners.md). |
+| Owners | Only the owner and the space admins can transfer ownership; organization administrators cannot. See [Owners](../spaces-and-pages/owners.md). |
 | Exporting the whole space or a page with its pages below | Space admins only. |
 | Chat channels | The space cannot post to chat channels. |
-| Audit log | Events of the space are recorded without content. People who are not members see the actor as **Hidden (confidential space)**. See [Audit log](../admin/audit-log.md). |
+| Audit log | Events of the space are recorded without content. People who are not members see the actor as **Hidden (confidential space)**. See [Audit log](../../admin/audit-log.md). |
 | Meetings | Members of a meeting series must be members of the space first. |
-| Trash | The space admins also see and restore entries in second-stage recovery. A deleted confidential space can be restored only by the people who were its space admins. See [Trash and archive](trash-and-archive.md). |
+| Trash | The space admins also see and restore entries in second-stage recovery. A deleted confidential space can be restored only by the people who were its space admins. See [Trash and archive](../spaces-and-pages/trash-and-archive.md). |
 
 ## Moving and copying content
 
@@ -44,7 +44,7 @@ Who may create one: people whose organization role manages spaces, always. Other
 
 If the last active space admin is deactivated or leaves the organization while other members remain, the people who manage spaces in the organization get the notification "The confidential space … has no space admin anymore". In **Settings › Organization › Content › Spaces**, tab **All spaces**, panel **Confidential spaces**, the space shows **No space admin**, and they can select **Appoint space admin** and choose one of the remaining members. They cannot appoint themselves or anyone who is not a member, and they still cannot read the space. The appointment is recorded in the audit log.
 
-When no active member is left at all, the space appears under **Clean up** after the waiting period set by the organization (see [Spaces in the organization](../admin/spaces.md)).
+When no active member is left at all, the space appears under **Clean up** after the waiting period set by the organization (see [Spaces in the organization](../../admin/spaces.md)).
 
 ## What the protection does not cover
 

@@ -8,7 +8,7 @@ Instance administrators manage every account under **Settings › Instance › P
 |---|---|
 | Standard | People in an organization |
 | Guest | People outside the organization who see only what is shared with them |
-| Portal | Readers of a knowledge base portal, see [Knowledge base access](../user/knowledge-base-access.md) |
+| Portal | Readers of a knowledge base portal, see [Knowledge base access](../user/knowledge-bases/knowledge-base-access.md) |
 | Service | Scripts and integrations that act only through API tokens, see [Service accounts](service-accounts.md) |
 
 An account is **Invited**, **Active**, **Deactivated**, **Anonymized** or a **Placeholder**.

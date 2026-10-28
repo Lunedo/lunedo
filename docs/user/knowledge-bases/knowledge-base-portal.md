@@ -15,7 +15,7 @@ Every knowledge base has a portal at `/help/<path>/` on the instance, for exampl
 | Contact page | `/help/ithelp/contact` |
 | German translation of article 1040 | `/help/ithelp/de/1040-vpn-verbindung-einrichten` |
 
-- An article and a category use the number they have in the app, from the one number sequence of the instance, followed by a short form of the title. The short form follows the same rule as in the app (see [Content addresses](content-addresses.md#content-numbers-and-addresses)).
+- An article and a category use the number they have in the app, from the one number sequence of the instance, followed by a short form of the title. The short form follows the same rule as in the app (see [Content addresses](../spaces-and-pages/content-addresses.md#content-numbers-and-addresses)).
 - A translation uses the number of its original in the portal, its own short form, and the language prefix. In the app it has a number of its own. See [Knowledge base translations](knowledge-base-translations.md#addresses).
 - An article address with an outdated short form, for example after a rename, or with the bare number (`/help/ithelp/1040`) redirects permanently (301) to the current address. The same holds for categories.
 - When an article is moved to another knowledge base, its old address redirects permanently (301) to the article in the portal of the other knowledge base, on its path or its own domain.
@@ -26,9 +26,9 @@ Every knowledge base has a portal at `/help/<path>/` on the instance, for exampl
 1. Open **Space settings › Publishing › Address**. Only space admins change it.
 2. Click **Change**, enter the new **Path** (lowercase letters, digits and single hyphens, at most 60 characters) and save.
 
-Links to the old path keep redirecting (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way. A change of the address is recorded in the [audit log](../admin/audit-log.md) as `knowledgeBase.portalAddressChanged`.
+Links to the old path keep redirecting (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way. A change of the address is recorded in the [audit log](../../admin/audit-log.md) as `knowledgeBase.portalAddressChanged`.
 
-On the same page, a space admin can choose an **Own domain**, for example the address of an older help center, once an instance administrator has allowed it for the organization. The page shows the DNS record to copy before saving. The setup is described in [Knowledge base portals](../admin/knowledge-base-portals.md#own-domains).
+On the same page, a space admin can choose an **Own domain**, for example the address of an older help center, once an instance administrator has allowed it for the organization. The page shows the DNS record to copy before saving. The setup is described in [Knowledge base portals](../../admin/knowledge-base-portals.md#own-domains).
 
 ## Appearance
 
@@ -47,7 +47,7 @@ Palette colors reach the required contrast in both modes. An own color is saved 
 
 Shortening the retention of notes asks first and then deletes older notes at once; they cannot be restored.
 
-The areas appear in the order set under **Space settings › Content › Areas and topics** (see [Knowledge bases](knowledge-bases.md#areas-and-topics)).
+The areas appear in the order set under **Space settings › Content › Areas and topics** (see [Knowledge bases](../knowledge-bases.md#areas-and-topics)).
 
 ## What readers see
 
@@ -67,7 +67,7 @@ The areas appear in the order set under **Space settings › Content › Areas a
 - The portal shows only published versions. Drafts and articles that were never published are not shown, also not to editors.
 - Area lists and article counts are computed for each reader. A folder the reader cannot read, and every article in it, is neither shown nor counted.
 - People who may edit an article see **Edit**, which opens the article in the editor of the app.
-- The account menu shows the name, the e-mail address, a link to the app and **Sign out**. The link to the app appears only for people who can see at least one space, never for portal accounts. Portal accounts see **Account settings** instead. Its name is set for the instance (see [Knowledge base portals](../admin/knowledge-base-portals.md)); empty means "Go to the wiki".
+- The account menu shows the name, the e-mail address, a link to the app and **Sign out**. The link to the app appears only for people who can see at least one space, never for portal accounts. Portal accounts see **Account settings** instead. Its name is set for the instance (see [Knowledge base portals](../../admin/knowledge-base-portals.md)); empty means "Go to the wiki".
 - Frequent searches on the start page are the most searched terms of the last 90 days that had results, each searched at least three times. A reader sees only terms with which they find something themselves.
 - Child page lists, attachment lists and reports are left out of articles. Links to articles the reader cannot read and to pages outside the knowledge base show "No access" without their title.
 
@@ -97,4 +97,4 @@ The areas appear in the order set under **Space settings › Content › Areas a
 
 The portal counts without names, accounts, sessions or IP addresses. A term appears only once it was searched at least 3 times in the period, so that a single search for a name stays hidden. Articles you cannot read are left out with their ratings, views and notes. Searches older than 12 months are kept only as counts per term and month, for terms searched at least 3 times that month.
 
-Space admins can **Delete note** for good, for example when it contains personal data. The deletion is recorded in the [audit log](../admin/audit-log.md) without the text.
+Space admins can **Delete note** for good, for example when it contains personal data. The deletion is recorded in the [audit log](../../admin/audit-log.md) without the text.

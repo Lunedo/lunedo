@@ -42,11 +42,11 @@ Blog posts are created with `POST /api/v1/spaces/{spaceId}/blog`, not in the tre
 
 ### Numbers
 
-Every item has a `number` from one sequence per instance that starts at 1000. It never changes and is never reused; a copy gets a new number. Addresses in the app use it, for example `/spaces/OPS/pages/1042/vpn-access`. `GET /api/v1/items/by-number/{number}` answers like `GET /api/v1/items/{itemId}`; an unknown number and a number the caller cannot read give the same `404`. The ID stays the key in the API, in links inside content and in exports. See [Content addresses](../user/content-addresses.md#content-numbers-and-addresses).
+Every item has a `number` from one sequence per instance that starts at 1000. It never changes and is never reused; a copy gets a new number. Addresses in the app use it, for example `/spaces/OPS/pages/1042/vpn-access`. `GET /api/v1/items/by-number/{number}` answers like `GET /api/v1/items/{itemId}`; an unknown number and a number the caller cannot read give the same `404`. The ID stays the key in the API, in links inside content and in exports. See [Content addresses](../user/spaces-and-pages/content-addresses.md#content-numbers-and-addresses).
 
 ### Moving and copying
 
-A move or copy that changes who can access the content, through roles or inherited view restrictions, is refused until the request carries the `confirmation` from a preview of exactly that change. Moving to another space needs edit permission in both spaces. See [Copying](../user/copying.md#copying).
+A move or copy that changes who can access the content, through roles or inherited view restrictions, is refused until the request carries the `confirmation` from a preview of exactly that change. Moving to another space needs edit permission in both spaces. See [Copying](../user/spaces-and-pages/copying.md#copying).
 
 ## Content and versions
 

@@ -21,8 +21,8 @@ The history of owner changes is in the **Status and owner** section of the page'
 
 ## What the owner does
 
-- The owner is the person responsible for the content. In a knowledge base, review reminders for an article go to its owner. See [Knowledge base reviews](knowledge-base-reviews.md).
-- A new owner automatically watches the content, unless they turned off automatic watching, and gets a notification that they were made the owner. Watchers of the content are told about the change too. See [Notifications](notifications.md).
+- The owner is the person responsible for the content. In a knowledge base, review reminders for an article go to its owner. See [Knowledge base reviews](../knowledge-bases/knowledge-base-reviews.md).
+- A new owner automatically watches the content, unless they turned off automatic watching, and gets a notification that they were made the owner. Watchers of the content are told about the change too. See [Notifications](../notifications.md).
 
 ## Transfer ownership
 
@@ -36,11 +36,11 @@ Who can transfer ownership:
 - space admins;
 - organization administrators who manage spaces and have a role in the space, except in confidential spaces.
 
-You must be able to open the content yourself. The list offers only active people who can edit the content right now, including any edit restriction. If the person you want is missing, give them edit access first. See [Sharing and restrictions](sharing-and-restrictions.md).
+You must be able to open the content yourself. The list offers only active people who can edit the content right now, including any edit restriction. If the person you want is missing, give them edit access first. See [Sharing and restrictions](../sharing-and-restrictions.md).
 
 The owner of archived content, of content in the trash and of meeting topics cannot be changed. Bring the content back first. See [Trash and archive](trash-and-archive.md).
 
-Transfers are recorded in the [audit log](../admin/audit-log.md).
+Transfers are recorded in the [audit log](../../admin/audit-log.md).
 
 ## When the owner leaves
 

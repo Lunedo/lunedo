@@ -13,7 +13,7 @@ From two enabled languages on, the portal shows a language choice. **State of th
 - Turning a language off keeps its translations but hides them from readers.
 - A language that already has translations cannot become the default language. Delete those translations first.
 - Changing the default language updates the search of all articles in the background; the progress shows on the page.
-- Changing the languages is recorded in the [audit log](../admin/audit-log.md) as `knowledgeBase.languagesChanged`.
+- Changing the languages is recorded in the [audit log](../../admin/audit-log.md) as `knowledgeBase.languagesChanged`.
 
 ## Translating an article
 

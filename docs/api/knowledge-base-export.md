@@ -2,7 +2,7 @@
 
 Checked against Cloudflare documentation, October 2026.
 
-A script can rebuild the static website of a public knowledge base, for example every night, and publish it on any web server. [Static website](../user/knowledge-base-static-website.md) describes what the website contains and how to publish it by hand. The full reference of the routes is at `/api/docs` on your instance.
+A script can rebuild the static website of a public knowledge base, for example every night, and publish it on any web server. [Static website](../user/knowledge-bases/knowledge-base-static-website.md) describes what the website contains and how to publish it by hand. The full reference of the routes is at `/api/docs` on your instance.
 
 ## Before you start
 

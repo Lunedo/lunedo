@@ -8,7 +8,7 @@ Readers see the rendered page. People with the editor role choose **Edit** or pr
 
 Drawings and draw.io diagrams are edited in a window of their own. While someone edits one, the others see "Anna is editing this drawing" or "Anna is editing this diagram" on the block and keep editing the rest of the page.
 
-Whether readers see each change at once or only after publishing depends on the page's mode; see [Publishing and page status](publishing-and-page-status.md).
+Whether readers see each change at once or only after publishing depends on the page's mode; see [Publishing and page status](spaces-and-pages/publishing-and-page-status.md).
 
 ## Saving
 

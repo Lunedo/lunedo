@@ -1,6 +1,6 @@
 # Templates
 
-Templates exist at three levels: a space, an organization and the instance. Through the API you create and change them, export them as files and import files. [Templates](../user/templates.md) and [Sharing templates](../user/template-sharing.md) describe them in the interface, [Template file format](template-format.md) describes the file. The full reference is at `/api/docs` on your instance.
+Templates exist at three levels: a space, an organization and the instance. Through the API you create and change them, export them as files and import files. [Templates](../user/templates.md) and [Sharing templates](../user/templates/template-sharing.md) describe them in the interface, [Template file format](template-format.md) describes the file. The full reference is at `/api/docs` on your instance.
 
 ## Levels and permissions
 

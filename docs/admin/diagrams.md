@@ -1,6 +1,6 @@
 # Diagrams on the server
 
-Pages can contain draw.io, Mermaid and PlantUML diagrams (see [Diagrams](../user/diagrams.md)). Everything these blocks need is served by the instance itself. They work without internet access, diagrams never leave the server, and there is nothing to install or configure.
+Pages can contain draw.io, Mermaid and PlantUML diagrams (see [Diagrams](../user/blocks/diagrams.md)). Everything these blocks need is served by the instance itself. They work without internet access, diagrams never leave the server, and there is nothing to install or configure.
 
 ## draw.io
 

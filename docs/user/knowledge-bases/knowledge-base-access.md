@@ -11,7 +11,7 @@ Who may edit a knowledge base is set with roles under **Space settings › Acces
 | Specific groups | members of the chosen groups, and holders of other roles | the same |
 | Portal accounts | only holders of a role | portal accounts invited to this knowledge base, and holders of a role |
 
-Guests read a knowledge base only when they hold a role. Shares of single articles and share links work as in every other space (see [Sharing and restrictions](sharing-and-restrictions.md)), except for portal accounts.
+Guests read a knowledge base only when they hold a role. Shares of single articles and share links work as in every other space (see [Sharing and restrictions](../sharing-and-restrictions.md)), except for portal accounts.
 
 A public knowledge base can be found by search engines, and they may keep public articles for a while after you restrict the knowledge base again. Only a public knowledge base can be downloaded as a [static website](knowledge-base-static-website.md).
 
@@ -21,7 +21,7 @@ A public knowledge base can be found by search engines, and they may keep public
 2. Choose the audience under **Who may read it**. For **Specific groups**, search the groups by name.
 3. Click **Save visibility**.
 
-A change that lets more people read, for example from groups to all signed-in people, to public, or adding a group, asks first: **Let more people read …?** names the number of articles without a view restriction that become readable. Confirm with **Allow reading**. Narrowing saves without asking. Every change is recorded in the [audit log](../admin/audit-log.md) as `knowledgeBase.audienceChanged`.
+A change that lets more people read, for example from groups to all signed-in people, to public, or adding a group, asks first: **Let more people read …?** names the number of articles without a view restriction that become readable. Confirm with **Allow reading**. Narrowing saves without asking. Every change is recorded in the [audit log](../../admin/audit-log.md) as `knowledgeBase.audienceChanged`.
 
 ## Portal accounts
 
@@ -56,7 +56,7 @@ The person who invites is responsible for the account and is reminded before its
 - **Deactivate** ends all sessions of the account at once and blocks its sign-in. An instance administrator, or an administrator of every organization the account belongs to, can reactivate it.
 - **Remove from organization** ends its access to every knowledge base of the organization. Invite it again to give it access back.
 
-An account that also reads knowledge bases of other organizations can only be removed from this organization, not deactivated. Organization administrators can do the same in the member list. Invitations, acceptances, deactivations and the end of access are recorded in the [audit log](../admin/audit-log.md), for example as `portalAccount.invited`.
+An account that also reads knowledge bases of other organizations can only be removed from this organization, not deactivated. Organization administrators can do the same in the member list. Invitations, acceptances, deactivations and the end of access are recorded in the [audit log](../../admin/audit-log.md), for example as `portalAccount.invited`.
 
 ## Access per area and topic
 
@@ -74,7 +74,7 @@ A topic can only name groups of the folder above it, for both settings. The shar
 3. Read **What changes**: who can only read the articles afterwards, how many people lose or gain read access, and whether the folder disappears from the public portal and the static website.
 4. Click **Save access**. A change that lets more people read asks for confirmation with the number of articles.
 
-Every change is recorded in the [audit log](../admin/audit-log.md) as `knowledgeBase.categoryAccessChanged`. Moving an article between folders with different responsible groups asks for confirmation, like every move that changes access.
+Every change is recorded in the [audit log](../../admin/audit-log.md) as `knowledgeBase.categoryAccessChanged`. Moving an article between folders with different responsible groups asks for confirmation, like every move that changes access.
 
 ### Mine and All
 

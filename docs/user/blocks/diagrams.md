@@ -1,12 +1,12 @@
 # Diagrams: draw.io, Mermaid and PlantUML
 
-Pages and blog posts can contain three kinds of diagram blocks besides [drawings](whiteboards.md#drawings-in-pages):
+Pages and blog posts can contain three kinds of diagram blocks besides [drawings](../whiteboards.md#drawings-in-pages):
 
 - **draw.io diagram**: network, flow, UML and other diagrams, edited in the [draw.io](https://www.drawio.com) editor.
 - **Mermaid diagram**: a diagram written as text in [Mermaid](https://mermaid.js.org) syntax.
 - **PlantUML diagram**: sequence, class and other UML diagrams written as text in [PlantUML](https://plantuml.com) syntax.
 
-Everything these blocks need is served by your Lunedo instance. They work without internet access, and diagrams never leave the server. How the editors are shipped and secured is described in [Diagrams for administrators](../admin/diagrams.md).
+Everything these blocks need is served by your Lunedo instance. They work without internet access, and diagrams never leave the server. How the editors are shipped and secured is described in [Diagrams for administrators](../../admin/diagrams.md).
 
 ## Using diagram blocks
 
@@ -57,7 +57,7 @@ A page can show a draw.io diagram of another page. Such a block comes from an im
 - Search finds the diagram only on the page that holds it.
 - The block keeps no file or image of its own, so moving, deleting or cleaning up the other page never leaves it with an outdated copy.
 
-How Confluence diagrams are imported is described in [What a Confluence import takes over](../admin/imports/confluence-reference.md).
+How Confluence diagrams are imported is described in [What a Confluence import takes over](../../admin/imports/confluence-reference.md).
 
 ## Limits
 
@@ -69,4 +69,4 @@ How Confluence diagrams are imported is described in [What a Confluence import t
 | Mermaid or PlantUML image | 2 MiB, 20,000 × 20,000 pixels | Keeps pages, Word and PDF exports fast. |
 | Mermaid or PlantUML rendering | 10 seconds | Stops sources that would never finish. |
 
-Scripts can store diagrams through the API; see [Diagrams and whiteboards](../api/diagrams-and-whiteboards.md).
+Scripts can store diagrams through the API; see [Diagrams and whiteboards](../../api/diagrams-and-whiteboards.md).

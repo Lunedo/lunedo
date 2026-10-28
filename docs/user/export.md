@@ -38,7 +38,7 @@ A page with its subpages or a whole space is built in the background. You get a 
 - Markdown files start with front matter (title, dates, labels and a `lunedo` block), so that a [Markdown import](../admin/imports/markdown.md) can restore them.
 - Before you start, the dialog counts the pages you can read.
 
-For public knowledge bases, a whole knowledge base can also be downloaded as a static website; see [Static website](knowledge-base-static-website.md).
+For public knowledge bases, a whole knowledge base can also be downloaded as a static website; see [Static website](knowledge-bases/knowledge-base-static-website.md).
 
 ## PDF
 

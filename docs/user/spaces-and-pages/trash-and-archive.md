@@ -39,7 +39,7 @@ The trash lists only entries you could edit. Entries of a restricted page are vi
 
 If the page it was below is also in the trash, Lunedo asks: **Restore both** puts it back at its place below the restored parent, **Restore only "…"** puts it at the top level.
 
-If the parent page restricted who can view the content, the content is not restored alone, because it would lose that view restriction. Restore it together with the pages above it (**Restore with pages above**). That needs the right to restore each of those entries; if you lack it, ask a space or organization administrator to restore the parent pages first. See [Sharing and restrictions](sharing-and-restrictions.md).
+If the parent page restricted who can view the content, the content is not restored alone, because it would lose that view restriction. Restore it together with the pages above it (**Restore with pages above**). That needs the right to restore each of those entries; if you lack it, ask a space or organization administrator to restore the parent pages first. See [Sharing and restrictions](../sharing-and-restrictions.md).
 
 ## Empty the trash of a space
 
@@ -50,9 +50,9 @@ Space admins can empty the trash at the end of the trash page (**Empty trash**).
 Organization administrators see the deleted content of all spaces of the organization except confidential spaces under **Settings › Organization › Content › Pages and trash**, in the panel **Deleted content**. From there they can:
 
 - **Restore** an entry from either stage.
-- **Delete permanently** an entry at once, for example after an erasure request. Enter a reason and type the title of the entry to confirm. Pages that were below it in the trash are deleted with it. The deletion and its reason are recorded in the [audit log](../admin/audit-log.md). This action asks you to sign in again if your last sign-in is not recent.
+- **Delete permanently** an entry at once, for example after an erasure request. Enter a reason and type the title of the entry to confirm. Pages that were below it in the trash are deleted with it. The deletion and its reason are recorded in the [audit log](../../admin/audit-log.md). This action asks you to sign in again if your last sign-in is not recent.
 
-In a confidential space, the space admins see the entries in second-stage recovery in the trash of the space and restore them there. See [Confidential spaces](confidential-spaces.md).
+In a confidential space, the space admins see the entries in second-stage recovery in the trash of the space and restore them there. See [Confidential spaces](../sharing-and-restrictions/confidential-spaces.md).
 
 ## Delete and restore a space
 
@@ -63,7 +63,7 @@ A deleted space goes straight to second-stage recovery. Nobody can open it or it
 - the people who were its space admins when it was deleted, as long as they are still active members of the organization: on the **Spaces** page, choose **Deleted spaces** in the filter and then **Restore**;
 - organization administrators under **Settings › Organization › Content › Pages and trash**, unless the space is confidential.
 
-A deleted personal space can be restored by instance administrators, and by its owner if the owner deleted it. See [Spaces](../admin/spaces.md).
+A deleted personal space can be restored by instance administrators, and by its owner if the owner deleted it. See [Spaces](../../admin/spaces.md).
 
 ## Archive a page
 
@@ -92,4 +92,4 @@ An archived space:
 
 To make it editable again, choose **Bring space back** at the same place. Organization administrators can also archive and restore spaces in the list under **Settings › Organization › Content › Spaces**.
 
-Archiving and restoring pages and spaces is recorded in the [audit log](../admin/audit-log.md).
+Archiving and restoring pages and spaces is recorded in the [audit log](../../admin/audit-log.md).

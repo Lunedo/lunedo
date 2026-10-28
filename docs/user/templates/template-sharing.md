@@ -8,7 +8,7 @@ Templates can be shared with other Lunedo instances, between levels of one insta
 | Organization | organization administrators | **Settings › Organization › Content › Templates** |
 | Instance | instance administrators, also the built-in templates | **Settings › Instance › Content › Templates** |
 
-Everyone else uses templates as usual; see [Templates](templates.md).
+Everyone else uses templates as usual; see [Templates](../templates.md).
 
 ## Exporting templates
 
@@ -60,10 +60,10 @@ When a template with the same name exists at the level, choose per template:
 
 A file with invalid templates imports nothing unless you choose **Import only the valid templates**. When no template in the file is valid, fix the file and upload it again.
 
-The import accepts only what the editor accepts: content that fails the editor's rules, unknown keys, files whose type does not match their content and archives with unsafe entries are refused. The full list of checks and limits is in [Template file format](../api/template-format.md).
+The import accepts only what the editor accepts: content that fails the editor's rules, unknown keys, files whose type does not match their content and archives with unsafe entries are refused. The full list of checks and limits is in [Template file format](../../api/template-format.md).
 
 ## Templates in a Git repository
 
-Lunedo writes template files in a fixed order and the same templates always give the same file, so templates kept in a Git repository give clean diffs. The format is described in [Template file format](../api/template-format.md).
+Lunedo writes template files in a fixed order and the same templates always give the same file, so templates kept in a Git repository give clean diffs. The format is described in [Template file format](../../api/template-format.md).
 
-Exports and imports are recorded in the [audit log](../admin/audit-log.md) with the level, the number of templates and what was removed or replaced.
+Exports and imports are recorded in the [audit log](../../admin/audit-log.md) with the level, the number of templates and what was removed or replaced.

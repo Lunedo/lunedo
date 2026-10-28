@@ -17,7 +17,7 @@ Each route in the reference names the permission it needs, in the text and in `x
 ## Requests and responses
 
 - Request and response bodies are JSON (`application/json`), except uploads, which send the bytes as `application/octet-stream`, and downloads.
-- IDs are UUIDs. Content also has numbers, which appear in addresses; see [Content numbers and addresses](../user/content-addresses.md#content-numbers-and-addresses).
+- IDs are UUIDs. Content also has numbers, which appear in addresses; see [Content numbers and addresses](../user/spaces-and-pages/content-addresses.md#content-numbers-and-addresses).
 - Timestamps are ISO 8601. Responses use UTC; requests may carry an offset.
 - Boolean query parameters are written `true` or `false`.
 - Every response carries `X-Request-Id`. The audit log records the same ID, so give it when you report a problem.

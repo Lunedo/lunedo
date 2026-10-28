@@ -11,14 +11,14 @@ Every page uses one of two modes. In **publish mode**, readers see the last publ
 | Versions | Each publication creates a version | A version is created after a pause without changes, or when the last person editing leaves |
 | A new page | Only editors see it until someone publishes it | Readers see it at once |
 
-Both modes save every change as you type; see [Collaboration](collaboration.md).
+Both modes save every change as you type; see [Collaboration](../collaboration.md).
 
 ### Who chooses the mode
 
 - **New pages** get the mode from the setting **Default mode of new pages** (default: Publish mode). Organization admins set it in **Settings › Organization › Content › Pages and trash**, space admins in **Space settings › Content › Pages and trash**. The organization can lock it so spaces cannot deviate.
 - **Each page** can deviate from the default. Anyone who may edit the page switches it in the page menu with **Switch to live mode** or **Switch to publish mode**.
-- **Blog posts** always use publish mode; see [Blog](blog.md).
-- **Knowledge base articles** always use publish mode, and the page menu offers no switch. A page in live mode must be switched to publish mode before it can be moved into a knowledge base. See [Knowledge bases](knowledge-bases.md).
+- **Blog posts** always use publish mode; see [Blog](../blog.md).
+- **Knowledge base articles** always use publish mode, and the page menu offers no switch. A page in live mode must be switched to publish mode before it can be moved into a knowledge base. See [Knowledge bases](../knowledge-bases.md).
 
 The setting **Version after a pause in live mode** (default 10 minutes, 1 minute to 24 hours) sets how long a live page must stay unchanged before it gets a version. It sits next to the default mode and can also be set per organization and per space.
 
@@ -43,7 +43,7 @@ Publishing a draft without changes creates no new version. A page below a page t
 
 ### Who may publish
 
-Publishing, switching the mode and restoring versions need the editor role in the space and edit access to the page. A view or edit restriction narrows this; see [Sharing and restrictions](sharing-and-restrictions.md). Viewing the draft needs edit access too. API tokens can be limited to writing drafts; a person then publishes in Lunedo.
+Publishing, switching the mode and restoring versions need the editor role in the space and edit access to the page. A view or edit restriction narrows this; see [Sharing and restrictions](../sharing-and-restrictions.md). Viewing the draft needs edit access too. API tokens can be limited to writing drafts; a person then publishes in Lunedo.
 
 ## Page status
 
@@ -80,7 +80,7 @@ Anyone who may edit the page can set its status. Only pages have a status; folde
 - **At the top of the page** for everyone who can read it.
 - **In search results**, next to each page.
 - **In the Status and owner section** of the page's versions screen, with who changed the status and when.
-- **In notifications** to people who watch the page; see [Notifications](notifications.md#watching).
+- **In notifications** to people who watch the page; see [Notifications](../notifications.md#watching).
 
 When a page moves to another space, it keeps a status with the same built-in value or the same name in the target space. Otherwise the status is removed.
 

@@ -1,6 +1,6 @@
 # Spaces
 
-This page covers the rules an organization sets for spaces: who may create them, what new spaces start with, spaces without a space admin, personal spaces and the clean-up of spaces nobody uses anymore. Creating and managing your own space, visibility and space roles are described in [Spaces and pages](../user/spaces-and-pages.md); confidential spaces in [Confidential spaces](../user/confidential-spaces.md).
+This page covers the rules an organization sets for spaces: who may create them, what new spaces start with, spaces without a space admin, personal spaces and the clean-up of spaces nobody uses anymore. Creating and managing your own space, visibility and space roles are described in [Spaces and pages](../user/spaces-and-pages.md); confidential spaces in [Confidential spaces](../user/sharing-and-restrictions/confidential-spaces.md).
 
 The organization's spaces are under **Settings › Organization › Content › Spaces**. The page needs the organization area Settings with View, and changing the defaults for new spaces needs Settings with Manage. The lists of spaces need the organization area Spaces; with Manage, administrators also act on spaces.
 
@@ -39,7 +39,7 @@ Confidential spaces are listed separately by key only; their names, members and 
 
 In the list **All spaces**, **Become space admin …** in the actions of a space gives you the space admin role there, for example when nobody else can fix its permissions. Enter a reason of up to 500 characters. You need an active membership in the organization and a recent confirmation of your identity. The space admins are told at once, by notification and e-mail, who took the role, when and why (event **An administrator became space admin of my space**). The role appears in the permissions of the space like any other, any space admin can remove it, and the step is recorded in the audit log. Personal spaces and confidential spaces, including those of one-on-ones, do not offer this.
 
-The same list archives, restores and deletes spaces, see [Trash and archive](../user/trash-and-archive.md).
+The same list archives, restores and deletes spaces, see [Trash and archive](../user/spaces-and-pages/trash-and-archive.md).
 
 ## Personal spaces
 

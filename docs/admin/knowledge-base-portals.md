@@ -1,6 +1,6 @@
 # Knowledge base portals
 
-Readers open a knowledge base in its portal, a lean site without the navigation and editor of the app (see [Knowledge base portal](../user/knowledge-base-portal.md)). Every knowledge base has a portal at `/help/<path>/` on the instance. Instance administrators can also allow own domains for portals.
+Readers open a knowledge base in its portal, a lean site without the navigation and editor of the app (see [Knowledge base portal](../user/knowledge-bases/knowledge-base-portal.md)). Every knowledge base has a portal at `/help/<path>/` on the instance. Instance administrators can also allow own domains for portals.
 
 The instance settings for all portals are under **Settings › Instance › Services › Knowledge base portals**.
 

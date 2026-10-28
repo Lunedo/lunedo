@@ -2,7 +2,7 @@
 
 Checked against Cloudflare, nginx and GitHub documentation, October 2026.
 
-A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The Lunedo instance stays the place where articles are edited. After changes, download a new ZIP and upload it again, by hand or with your own script ([Knowledge base export](../api/knowledge-base-export.md) shows how to do this through the API).
+A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The Lunedo instance stays the place where articles are edited. After changes, download a new ZIP and upload it again, by hand or with your own script ([Knowledge base export](../../api/knowledge-base-export.md) shows how to do this through the API).
 
 ## Downloading the website
 
@@ -12,7 +12,7 @@ The knowledge base must have the audience **Public**, because a static website h
 2. Under **Static website**, optionally enter the **Address of the website**, for example `https://help.example.com/`. It is used for the sitemap and the language links; the website works at any address.
 3. Click **Download as static website**.
 
-The website is built in the background like other exports, with the same notification, download lifetime and audit entry (see [Export](export.md)). If the audience changes before the website is built, the build fails and says that the knowledge base is no longer public.
+The website is built in the background like other exports, with the same notification, download lifetime and audit entry (see [Export](../export.md)). If the audience changes before the website is built, the build fails and says that the knowledge base is no longer public.
 
 ## Content of the ZIP file
 
