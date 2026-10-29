@@ -26,6 +26,7 @@ import { lastTerm, type ParsedQuery, type QueryAtom } from "./query.js";
 const MIN_TYPO_LENGTH = 4;
 const TYPO_SIMILARITY = 0.5;
 const TYPO_ALTERNATIVES = 3;
+const TYPO_CANDIDATES = 40;
 const FACET_LIMIT = 20;
 const RECENT_USE_DAYS = 30;
 const MAX_RECENT_BOOST = 0.15;
@@ -535,31 +536,63 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ),
     ];
     if (terms.length === 0) return { alternatives: new Map(), corrections: new Map() };
-    const visibleWord = (word: SQL, exact: boolean) => sql`exists (select 1 from search_chunks c
+    const matching = (
+      word: SQL,
+      extra: SQL[] = [],
+      source: SQL = sql`search_chunks c`,
+    ) => sql`exists (select 1 from ${source}
       join tree_items t on t.id = c.item_id
       join spaces s on s.id = t.space_id
       left join search_pending_spaces p on p.space_id = c.space_id
-      where ${sql.join(visibleChunkConditions(viewer), sql` and `)} and (${sql.join(
-        configs.map(
-          (config) =>
-            sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
-        ),
-        sql` or `,
-      )}) ${exact ? sql`and ${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})` : sql``})`;
-    const lookup = (term: string) => sql`
-      select ${term}::text as term, ${visibleWord(sql`${term}::text`, false)} as known,
+      where ${sql.join(
+        [
+          ...visibleChunkConditions(viewer),
+          sql`(${sql.join(
+            configs.map(
+              (config) =>
+                sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
+            ),
+            sql` or `,
+          )})`,
+          ...extra,
+        ],
+        sql` and `,
+      )})`;
+    const exactly = (word: SQL) => sql`${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})`;
+    const confirmed = (word: string) => {
+      const value = sql`${word}::text`;
+      const inOrganization = matching(
+        value,
+        [sql`i.organization_id = ${viewer.organizationId}::uuid`, sql`i.word = ${value}`, exactly(value)],
+        sql`search_item_terms i join search_chunks c on c.item_id = i.item_id`,
+      );
+      if (viewer.personalTokens.length === 0) return inOrganization;
+      return sql`(${inOrganization} or ${matching(value, [sql`c.organization_id is null`, exactly(value)])})`;
+    };
+    const candidates = await executor.execute<{ term: string; known: boolean; words: string[] }>(
+      sql.join(
+        terms.map(
+          (term) => sql`
+      select ${term}::text as term, ${matching(sql`${term}::text`)} as known,
         array(select w.word from search_terms w
           where w.organization_id = ${viewer.organizationId} and w.word % ${term}::text and w.word <> ${term}::text
-            and similarity(w.word, ${term}::text) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`, true)}
-          order by similarity(w.word, ${term}::text) desc, w.word limit ${TYPO_ALTERNATIVES}) as words`;
-    const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(
-      sql.join(terms.map(lookup), sql` union all `),
+            and similarity(w.word, ${term}::text) >= ${TYPO_SIMILARITY}
+          order by similarity(w.word, ${term}::text) desc, w.word limit ${TYPO_CANDIDATES}) as words`,
+        ),
+        sql` union all `,
+      ),
     );
     const alternatives = new Map<string, string[]>();
     const corrections = new Map<string, string>();
-    for (const row of result.rows) {
-      alternatives.set(row.term, row.words);
-      const best = row.words[0];
+    for (const row of candidates.rows) {
+      const found: string[] = [];
+      for (const word of row.words) {
+        if (found.length >= TYPO_ALTERNATIVES) break;
+        const check = await executor.execute<{ visible: boolean }>(sql`select ${confirmed(word)} as visible`);
+        if (check.rows[0]?.visible) found.push(word);
+      }
+      alternatives.set(row.term, found);
+      const best = found[0];
       if (!row.known && best) corrections.set(row.term, best);
     }
     return { alternatives, corrections };
