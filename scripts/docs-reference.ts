@@ -10,6 +10,7 @@ export interface Reference<T = unknown> {
   readonly title: string;
   readonly sources: readonly string[];
   readonly entry: string;
+  readonly section?: string;
   render(data: T): string;
 }
 
@@ -17,13 +18,32 @@ export function defineReference<T>(reference: Reference<T>): Reference<T> {
   return reference;
 }
 
-export function generatedNote(sources: readonly string[]): string {
+export function generatedNote(sources: readonly string[], part: "page" | "section" = "page"): string {
   const files = sources.map((source) => `\`${source}\``).join(", ");
-  return `This page is generated from ${files} by \`${GENERATE_COMMAND}\`. Do not edit it by hand; change the code and run the command again.`;
+  return `This ${part} is generated from ${files} by \`${GENERATE_COMMAND}\`. Do not edit it by hand; change the ${part === "page" ? "code" : "sources"} and run the command again.`;
 }
 
 export function page(reference: Pick<Reference, "title" | "sources">, body: string): string {
   return `# ${reference.title}\n\n${generatedNote(reference.sources)}\n\n${body.trim()}\n`;
+}
+
+export function sectionMarkers(name: string): readonly [string, string] {
+  return [`<!-- generated:${name} -->`, `<!-- /generated:${name} -->`];
+}
+
+export function replaceSection(
+  content: string,
+  reference: Pick<Reference, "page" | "sources"> & { readonly section: string },
+  body: string,
+): string {
+  const [start, end] = sectionMarkers(reference.section);
+  const from = content.indexOf(start);
+  const to = content.indexOf(end, from);
+  if (from < 0 || to < 0 || content.indexOf(start, from + start.length) >= 0) {
+    throw new Error(`docs/${reference.page} needs exactly one pair of the markers ${start} and ${end}`);
+  }
+  const generated = `${start}\n\n${generatedNote(reference.sources, "section")}\n\n${body.trim()}\n\n`;
+  return content.slice(0, from) + generated + content.slice(to);
 }
 
 export function cell(text: string): string {
@@ -118,9 +138,16 @@ export async function renderReferences(
 ): Promise<Map<string, string>> {
   const pages = new Map<string, string>();
   for (const reference of references) {
-    const name = path.basename(reference.page, ".md");
+    const file = path.posix.join("docs", reference.page);
+    const name = reference.section ?? path.basename(reference.page, ".md");
     const data = (await loadEntry(root, name, reference.entry)) as never;
-    pages.set(path.posix.join("docs", reference.page), page(reference, reference.render(data)));
+    const body = reference.render(data);
+    if (reference.section === undefined) {
+      pages.set(file, page(reference, body));
+    } else {
+      const current = pages.get(file) ?? readFileSync(path.join(root, file), "utf8");
+      pages.set(file, replaceSection(current, { ...reference, section: reference.section }, body));
+    }
   }
   return pages;
 }
