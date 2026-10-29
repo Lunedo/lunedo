@@ -17,7 +17,6 @@ import type { DirectoryConnector } from "../identity/ldap-connection.js";
 import type { ConfluenceTransport } from "../imports/confluence/api-client.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
-import { mailSendRateSetting } from "../mail/mail-service.js";
 import type { OutboundPolicy } from "../outbound/guarded-request.js";
 import { type AccountServices, createAccountServices } from "../services.js";
 import { SettingsService } from "../settings/service.js";
@@ -106,9 +105,9 @@ export async function createTestServices(
       ...(options.renderFetch ? { renderFetch: options.renderFetch } : {}),
       ...(options.meetingClock ? { meetingClock: options.meetingClock } : {}),
       mailTransport: () => mail,
+      mailSendRate: { claim: async () => ({ claimed: true }) },
     });
   const services = build();
-  await settings.set(mailSendRateSetting, {}, "instance", 10_000);
   return {
     backupKeys,
     filesDir,

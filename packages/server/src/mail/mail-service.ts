@@ -263,7 +263,7 @@ export class MailService {
   readonly #transport: (options: SmtpOptions) => MailTransport;
   readonly #fetch: typeof fetch | undefined;
   readonly #allowInsecure: boolean;
-  readonly #sendRate: MailSendRate;
+  readonly #sendRate: Pick<MailSendRate, "claim">;
   readonly #sleep: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly #graphTokens = new Map<string, { token: string; expiresAt: number }>();
   #notifications: NotificationService | undefined;
@@ -279,6 +279,7 @@ export class MailService {
     fetch?: typeof fetch;
     allowInsecure?: boolean;
     sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+    sendRate?: Pick<MailSendRate, "claim">;
   }) {
     this.#database = options.database;
     this.#encryption = options.encryption;
@@ -289,7 +290,7 @@ export class MailService {
     this.#transport = options.transport ?? ((smtp) => new SmtpTransport(smtp));
     this.#fetch = options.fetch;
     this.#allowInsecure = options.allowInsecure ?? false;
-    this.#sendRate = new MailSendRate(options.database);
+    this.#sendRate = options.sendRate ?? new MailSendRate(options.database);
     this.#sleep = options.sleep ?? ((ms, signal) => delay(ms, undefined, { signal }));
   }
 
