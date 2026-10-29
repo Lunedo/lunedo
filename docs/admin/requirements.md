@@ -68,7 +68,7 @@ Directories that you mount must belong to UID 1000, or the [system check](system
 
 This section is generated from `docs/data/requirements.json`, `packages/server/src/backup/configuration.ts` by `pnpm docs:generate`. Do not edit it by hand; change the sources and run the command again.
 
-Measured on 2026-10-29 with commit `8c70161e` on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script with synthetic content, and with 3 load runs of 15 minutes each, in which the people active at the same time open pages, search, edit and publish, and read notifications, and five of them edit the same page together.
+Measured on 2026-10-29 with commit `8c70161e` on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. The load came from one computer, which sent the requests of each person from a client address of its own. Each size had 3 load runs of 15 minutes each, in which the people active at the same time open pages, search, edit and publish, and read notifications, and five of them edit the same page together.
 
 ### Sizes
 

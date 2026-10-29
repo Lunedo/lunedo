@@ -195,6 +195,10 @@ describe("rendered section", () => {
       text,
       /^Measured on 2026-10-28 with commit `01234567` on a reference machine with 4 vCPU \(Example CPU\)/,
     );
+    assert.match(
+      text,
+      /without TLS and without a reverse proxy, with synthetic content and the default limits/,
+    );
     assert.match(text, /\| small \| 2 vCPU \| 2 GiB \| 6 GB \| 3 vCPU \| 2 GiB \| 8 GB \| 70 GB \|/);
     assert.match(text, /counts the 20 backups that the default retention keeps/);
     assert.match(text, /\| small \| 4 \| 263 \| 1,310 \| 52 \| 4\.4 MB\/s \| 80 % \|/);
