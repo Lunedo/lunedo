@@ -63,6 +63,8 @@ Values that are not known are left out instead of reported as 0, for example the
 | `lunedo_http_request_duration_seconds{method,route,status}` | histogram | Request latency. |
 | `lunedo_job_duration_seconds{queue,state}` | histogram | Duration of job attempts on this worker, by outcome. |
 | `lunedo_db_pool_connections{state}` | gauge | Database connections of this process: `total`, `idle`, `waiting`. |
+| `lunedo_db_pool_acquire_seconds` | histogram | Time a query waited for a free database connection. |
+| `lunedo_db_pool_acquire_timeouts_total` | counter | Queries that gave up waiting for a connection and failed. |
 | `lunedo_log_errors_total{type}` | counter | Error-level log events by their fixed text, the same as under [Recent errors](monitoring/system-status.md#recent-errors). |
 | `lunedo_collab_connections` | gauge | Open editor connections (collaboration server). |
 | `lunedo_collab_documents` | gauge | Documents the collaboration server holds open. |

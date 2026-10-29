@@ -150,15 +150,16 @@ export async function createServerRuntime(options: {
   const { metricsToken, backupKeys } = resolveGeneratedSecrets(config);
 
   const connectionString = config.database.url.reveal();
+  const metrics = new Metrics(role);
   const pool = createDatabasePool({
     connectionString,
     applicationName: `lunedo-${role}`,
     max: config.database.poolSize,
+    onAcquire: metrics.observeDatabaseAcquire,
   });
   pool.on("error", (error) => logger.warn({ err: error }, "Idle database connection failed"));
   const database = createDatabase(pool);
   const listener = new NotificationListener({ connectionString, logger });
-  const metrics = new Metrics(role);
   metrics.observeDatabasePool(pool);
   metrics.observeBuild(config.version);
   errorEvents.onRecord(metrics.countLoggedError);
