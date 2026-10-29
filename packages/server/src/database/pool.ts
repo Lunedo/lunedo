@@ -56,6 +56,7 @@ export function createDatabasePool(options: {
     application_name: options.applicationName,
     max: options.max ?? 10,
     connectionTimeoutMillis: 5000,
+    options: "-c jit=off",
   };
   return options.onAcquire ? new ObservedPool(config, options.onAcquire) : new pg.Pool(config);
 }

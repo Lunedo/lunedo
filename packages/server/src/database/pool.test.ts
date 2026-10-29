@@ -34,6 +34,18 @@ describe("database pool", () => {
       await expect(pingDatabase(pool)).resolves.toBeUndefined();
     });
 
+    it("turns off just-in-time compilation on every connection", async () => {
+      const two = createDatabasePool({ connectionString: url ?? "", applicationName: "lunedo-test", max: 2 });
+      const first = await two.connect();
+      const second = await two.connect();
+      for (const client of [first, second]) {
+        const result = await client.query<{ jit: string }>("show jit");
+        expect(result.rows[0]?.jit).toBe("off");
+        client.release();
+      }
+      await two.end();
+    });
+
     it("reports how long a query waited for a free connection", async () => {
       const events: PoolAcquireEvent[] = [];
       const small = createDatabasePool({

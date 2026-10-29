@@ -20,6 +20,7 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 |---|---|
 | Server | PostgreSQL 16, 17 or 18. The image contains `pg_dump`, `pg_restore` and `psql` for these three major versions and picks the one that matches the server for backups. The Compose file of the setup script uses `postgres:17-alpine`. |
 | Shared memory | 1 GB of `/dev/shm` for the PostgreSQL container (`shm_size: 1gb` in the Compose file of the setup script). Parallel queries on large databases fail without it, because Docker gives a container only 64 MB. It is used only while queries need it and counts towards the memory of PostgreSQL. |
+| Connection settings | Lunedo turns off just-in-time compilation (`jit`) for its own connections by sending `-c jit=off` as a startup option. Nothing changes on the server. |
 | Extension | `pg_trgm`, for search. A migration creates it with `CREATE EXTENSION IF NOT EXISTS "pg_trgm"`. It is a trusted extension, so a database user with the `CREATE` privilege on the database can create it. On a managed server that does not allow this, create it beforehand as an administrator of the server. |
 | Rights | The user in `LUNEDO_DATABASE_URL` owns the database or may create tables, types and indexes in it. Lunedo applies its migrations at every start. |
 | Optional right | `CREATEDB` for the monthly test restore of backups, which restores into a temporary database on the same server, for example `ALTER ROLE "lunedo" CREATEDB;`. Without it, a test restore only verifies the backup. See [Backups](backups.md). |
