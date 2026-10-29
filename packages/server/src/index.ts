@@ -1080,6 +1080,8 @@ export {
   type DecisionReportPage,
   type LabeledItem,
   MAX_DECISION_REPORT_PAGE,
+  MAX_NEWEST_CONTENT,
+  type NewestContent,
   type PropertiesReportPage,
   type PropertiesReportRow,
   type ReportDecision,

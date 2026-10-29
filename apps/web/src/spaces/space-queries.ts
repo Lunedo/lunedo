@@ -24,12 +24,14 @@ export type ItemCopy = Ok<"/api/v1/items/{itemId}/copy", "post">;
 export type SpacePermission = Ok<"/api/v1/spaces/{spaceId}/permissions", "get">[number];
 export type HolderKind = SpacePermission["principalKind"];
 export type PageContent = Ok<"/api/v1/pages/{pageId}/content", "get">;
+export type NewestContent = Ok<"/api/v1/spaces/{spaceId}/newest-content", "get">[number];
 
 export const spaceKeys = {
   all: ["spaces"] as const,
   list: (filters: { search: string; organizationId: string | null }) => ["spaces", "list", filters] as const,
   byKey: (key: string) => ["spaces", "key", key.toUpperCase()] as const,
   space: (spaceId: string) => ["spaces", spaceId] as const,
+  newest: (spaceId: string) => ["spaces", spaceId, "newest"] as const,
   children: (spaceId: string, parentId: string | null) => ["spaces", spaceId, "children", parentId] as const,
   permissions: (spaceId: string) => ["spaces", spaceId, "permissions"] as const,
   labelPages: (spaceId: string, label: string) => ["spaces", spaceId, "labels", label] as const,
@@ -87,6 +89,20 @@ export function childrenQuery(spaceId: string, parentId: string | null) {
         ),
       ),
     staleTime: 10_000,
+  });
+}
+
+export function newestContentQuery(spaceId: string, limit: number) {
+  return queryOptions({
+    queryKey: [...spaceKeys.newest(spaceId), limit] as const,
+    queryFn: ({ signal }) =>
+      request(() =>
+        api.GET("/api/v1/spaces/{spaceId}/newest-content", {
+          params: { path: { spaceId }, query: { limit } },
+          signal,
+        }),
+      ),
+    staleTime: 30_000,
   });
 }
 
