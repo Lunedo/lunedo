@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { AuditLog } from "../audit/audit-log.js";
 import { Secret } from "../config/secret.js";
@@ -7,12 +7,19 @@ import { Encryption } from "../crypto/envelope.js";
 import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
+import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import { createLogger } from "../logging/logger.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { SettingsService } from "../settings/service.js";
 import { CapturingTransport, testJobContext } from "../testing/jobs.js";
 import { Mailpit, testMailpitUrl } from "../testing/mailpit.js";
-import { deliverMailJob, MailService, SmtpConfigurationError } from "./mail-service.js";
+import {
+  deliverMailJob,
+  deliverMailWork,
+  MailService,
+  mailSendRateSetting,
+  SmtpConfigurationError,
+} from "./mail-service.js";
 import { instanceSecrets, mailOutbox, mailSends } from "./schema.js";
 import { renderMail } from "./templates.js";
 import { SmtpTransport } from "./transport.js";
@@ -233,6 +240,48 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     expect(transport.sent).toHaveLength(0);
     await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
     await database.delete(mailOutbox).where(eq(mailOutbox.id, id));
+  });
+
+  async function deliverInWorker(perMinute: number, count: number, until: (sent: number) => boolean) {
+    await new SettingsService({ database, logger }).set(mailSendRateSetting, {}, "instance", perMinute);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    const transport = new CapturingTransport();
+    const mail = service(transport);
+    const ids: string[] = [];
+    for (let index = 0; index < count; index++) ids.push(await queue(mail, `bulk-${index}@example.org`));
+    const job = { ...deliverMailJob, name: `test.deliver-${randomBytes(4).toString("hex")}` };
+    const worker = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "worker" });
+    await worker.start();
+    try {
+      for (const mailId of ids) await worker.enqueue(job, { mailId });
+      const started = Date.now();
+      await worker.work(job, mail.deliver, deliverMailWork);
+      while (!until(transport.sent.length) && Date.now() - started < 90_000) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return { sent: transport.sent.length, seconds: (Date.now() - started) / 1000 };
+    } finally {
+      await worker.stop({ timeoutSeconds: 1 });
+      await database.delete(mailOutbox).where(inArray(mailOutbox.id, ids));
+      await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+      await new SettingsService({ database, logger }).set(mailSendRateSetting, {}, "instance", 30);
+    }
+  }
+
+  it("reaches the configured send rate with the worker's batches", { timeout: 120_000 }, async () => {
+    const result = await deliverInWorker(600, 600, (sent) => sent >= 600);
+    expect(result.sent).toBe(600);
+    expect(result.seconds).toBeLessThan(70);
+  });
+
+  it("never sends more than the configured rate within a minute", { timeout: 60_000 }, async () => {
+    let reached: number | null = null;
+    const result = await deliverInWorker(30, 45, (sent) => {
+      if (sent >= 30) reached ??= Date.now();
+      return reached !== null && Date.now() - reached > 5_000;
+    });
+    expect(result.sent).toBe(30);
+    expect(result.seconds).toBeLessThan(55);
   });
 
   it("retries failed deliveries and gives up after the last attempt without logging the content", async () => {

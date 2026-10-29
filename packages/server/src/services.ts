@@ -143,6 +143,7 @@ import type { Logger } from "./logging/logger.js";
 import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
   deliverMailJob,
+  deliverMailWork,
   dispatchPendingMailJob,
   MAIL_CREDENTIAL_REMINDER_SCHEDULE,
   MailService,
@@ -1388,7 +1389,7 @@ export async function workAccountJobs(
   services: AccountServices,
   settings: SettingsService,
 ): Promise<void> {
-  await jobs.work(deliverMailJob, services.mail.deliver, { concurrency: 4 });
+  await jobs.work(deliverMailJob, services.mail.deliver, deliverMailWork);
   await jobs.work(dispatchPendingMailJob, async () => {
     await services.mail.dispatchPending();
   });

@@ -24,7 +24,7 @@ import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { generateCertificate } from "../identity/certificates.js";
 import { foreignGraphEndpoint } from "../identity/directory.js";
-import { defineJob, type JobContext, type JobQueue } from "../jobs/job-queue.js";
+import { defineJob, type JobContext, type JobQueue, type WorkOptions } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { BuiltInRoleKey } from "../organizations/access-schema.js";
@@ -168,6 +168,8 @@ export const deliverMailJob = defineJob({
   retryBackoff: true,
   expireInSeconds: 5 * 60,
 });
+
+export const deliverMailWork: WorkOptions = { concurrency: 4, batch: true };
 
 export const dispatchPendingMailJob = defineJob({
   name: "mail.dispatch-pending",
