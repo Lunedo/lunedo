@@ -546,13 +546,15 @@ export class PostgresSearchAdapter implements SearchAdapter {
         ),
         sql` or `,
       )}) ${exact ? sql`and ${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})` : sql``})`;
-    const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(sql`
-      select q.term, ${visibleWord(sql`q.term`, false)} as known,
+    const lookup = (term: string) => sql`
+      select ${term}::text as term, ${visibleWord(sql`${term}::text`, false)} as known,
         array(select w.word from search_terms w
-          where w.organization_id = ${viewer.organizationId} and w.word % q.term and w.word <> q.term
-            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`, true)}
-          order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
-      from unnest(${sql.param(terms)}::text[]) as q(term)`);
+          where w.organization_id = ${viewer.organizationId} and w.word % ${term}::text and w.word <> ${term}::text
+            and similarity(w.word, ${term}::text) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`, true)}
+          order by similarity(w.word, ${term}::text) desc, w.word limit ${TYPO_ALTERNATIVES}) as words`;
+    const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(
+      sql.join(terms.map(lookup), sql` union all `),
+    );
     const alternatives = new Map<string, string[]>();
     const corrections = new Map<string, string>();
     for (const row of result.rows) {
