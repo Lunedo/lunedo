@@ -8,6 +8,7 @@ export const documentationTargets = {
   checkInstanceUrl: "admin/system-check.md#instance-url",
   checkAddressReachable: "admin/system-check.md#address-reachable",
   tlsAndInstanceAddress: "admin/reverse-proxy.md#tls-and-the-instance-address",
+  forwardedHeaders: "admin/reverse-proxy.md#forwarded-headers-and-lunedo_trusted_proxies",
   statusBackups: "admin/monitoring/system-status.md#backups",
   statusJobs: "admin/monitoring/system-status.md#jobs",
   statusVersion: "admin/monitoring/system-status.md#version",

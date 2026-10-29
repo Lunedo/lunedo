@@ -232804,6 +232804,50 @@
                                           "request"
                                         ],
                                         "additionalProperties": false
+                                      },
+                                      "clientAddress": {
+                                        "type": "object",
+                                        "properties": {
+                                          "status": {
+                                            "type": "string",
+                                            "enum": [
+                                              "ok",
+                                              "warning",
+                                              "error"
+                                            ]
+                                          },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "untrustedProxy"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          }
+                                        },
+                                        "required": [
+                                          "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs"
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     },
                                     "required": [
@@ -232812,7 +232856,8 @@
                                       "fileStorage",
                                       "instanceUrl",
                                       "reachability",
-                                      "https"
+                                      "https",
+                                      "clientAddress"
                                     ],
                                     "additionalProperties": false
                                   }

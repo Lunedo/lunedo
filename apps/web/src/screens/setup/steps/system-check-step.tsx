@@ -18,7 +18,7 @@ type CheckKey = keyof Checks;
 
 const ICONS = { ok: CircleCheck, warning: CircleAlert, error: CircleX, info: Info } as const;
 const BADGES = { ok: "success", warning: "warning", error: "danger", info: "info" } as const;
-const CHECK_ORDER = ["database", "fileStorage", "clock", "reachability", "https"] as const;
+const CHECK_ORDER = ["database", "fileStorage", "clock", "reachability", "https", "clientAddress"] as const;
 type ShownCheck = (typeof CHECK_ORDER)[number];
 
 function unknownId(t: TFunction, id: number | null): string {
@@ -39,6 +39,8 @@ function passedDescription(t: TFunction, format: Formatter, checks: Checks, key:
         : t("setup.systemCheck.reachabilityOk", { url: checks.reachability.url ?? "" });
     case "https":
       return t("setup.systemCheck.httpsOk");
+    case "clientAddress":
+      return t("setup.systemCheck.clientAddressOk");
   }
 }
 

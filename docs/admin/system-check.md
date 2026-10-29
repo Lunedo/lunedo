@@ -74,3 +74,11 @@ Lunedo does not speak TLS itself; a reverse proxy in front of it does. See [Reve
 | `requestNotHttps` | Warning | No instance address is known and this page was not loaded over HTTPS. Either the request reached Lunedo without TLS, or the reverse proxy is not listed in `LUNEDO_TRUSTED_PROXIES`, so its `X-Forwarded-Proto` header is ignored. |
 
 Once an instance address is known, only that address is checked, not the address the setup is opened with. Set up TLS before you invite people.
+
+## Client address
+
+Behind a reverse proxy, Lunedo reads the address of each person from `X-Forwarded-For`, but only when the request comes from an address in `LUNEDO_TRUSTED_PROXIES`. The check looks at the request that shows the step.
+
+| Cause | State | What to do |
+|---|---|---|
+| `untrustedProxy` | Warning | The request carried an `X-Forwarded-For` header, but it came from an address that is not in `LUNEDO_TRUSTED_PROXIES`. Lunedo ignores the header, so every person appears to come from the address of the proxy and they all share one sign-in limit. Add the address of the proxy to `LUNEDO_TRUSTED_PROXIES`, restart Lunedo and check again. See [Forwarded headers](reverse-proxy.md#forwarded-headers-and-lunedo_trusted_proxies). |

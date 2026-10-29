@@ -2050,7 +2050,8 @@
         "fileStorage": "File storage",
         "clock": "Clock",
         "https": "HTTPS",
-        "reachability": "Address"
+        "reachability": "Address",
+        "clientAddress": "Client address"
       },
       "status": {
         "ok": "OK",
@@ -2062,6 +2063,7 @@
       "storageFree": "Writable, {free} free",
       "clockOk": "In sync with the database",
       "httpsOk": "Enabled",
+      "clientAddressOk": "Client addresses are read correctly",
       "checkAgain": "Check again",
       "acknowledgeFailed": "The system check could not be confirmed",
       "unknownId": "unknown",
@@ -2108,6 +2110,12 @@
           "requestNotHttps": {
             "cause": "This page was not loaded over HTTPS. Lunedo itself does not speak TLS; a reverse proxy in front of it does.",
             "action": "Set up a reverse proxy with TLS before you invite people. If one is in place, add its address to LUNEDO_TRUSTED_PROXIES so Lunedo sees the protocol."
+          }
+        },
+        "clientAddress": {
+          "untrustedProxy": {
+            "cause": "This request carried an X-Forwarded-For header, but it came from an address that is not in LUNEDO_TRUSTED_PROXIES. Lunedo ignores the header, so every person appears to come from the address of the proxy and they all share one sign-in limit.",
+            "action": "Add the address of your reverse proxy to LUNEDO_TRUSTED_PROXIES and restart Lunedo, then check again."
           }
         },
         "reachability": {
