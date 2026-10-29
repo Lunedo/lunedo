@@ -24,6 +24,10 @@ What changed for the people who run and use Lunedo. Each release lists its chang
 - Every sign-in of the instance owner with password or passkey counts as emergency sign-in while an identity provider is active.
 - Failed sign-ins for the instance owner's account are counted per client only, so wrong passwords sent for the owner's address cannot lock the owner out.
 
+### Fixed
+
+- The PostgreSQL container gets 1 GB of shared memory. With Docker's 64 MB, parallel queries on large databases failed and requests such as search and opening pages answered with server errors.
+
 ### Breaking changes
 
 - The instance setting `auth.passwordSignIn` is removed. `GET /api/v1/auth/sign-in-options` no longer returns `emailStep`, `directProvider` and `passwordSignIn`, `POST /api/v1/auth/sign-in/discover` no longer answers the step `none`, and the problem `passwordSignInDisabled` is gone. Setting the key is refused.
@@ -31,3 +35,7 @@ What changed for the people who run and use Lunedo. Each release lists its chang
 - Accounts managed by an identity provider can no longer sign in with a password or a passkey, change their password or e-mail address, or get a password reset link. Accounts managed through OIDC or SAML can no longer use authenticator apps, passkeys or recovery codes in Lunedo, and administrators cannot reset their second factor. These requests are refused with `managedAccount`.
 - An identity provider with linked accounts can no longer be removed (`providerHasAccounts`); deactivate it, or move or unlink the accounts first.
 - The instance ownership can only be transferred to an account that is not managed by an identity provider (`ownerManaged`).
+
+### Manual steps
+
+- Installations from before this release keep their `compose.yml`, also after `./lunedo update`. Add `shm_size: 1gb` to the service `postgres` in it and run `docker compose up -d`, which restarts PostgreSQL once.

@@ -36,6 +36,10 @@ describe("install.sh", () => {
     assert.match(printed.stdout, /image: ghcr\.io\/lunedo\/lunedo:<version>\n/);
     assert.match(printed.stdout, /LUNEDO_SETUP_CODE: \$\{LUNEDO_SETUP_CODE:-\}/);
     assert.match(printed.stdout, /LUNEDO_INSTANCE_URL: \$\{LUNEDO_INSTANCE_URL:-\}/);
+    assert.match(
+      printed.stdout,
+      /\n {2}postgres:\n {4}image: postgres:17-alpine\n {4}restart: unless-stopped\n {4}shm_size: 1gb\n/,
+    );
   });
 
   it("refuses versions, ports and options it does not know", () => {
