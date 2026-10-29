@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { proposeFormats } from "@lunedo/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
-import { InvalidTokenError } from "../auth/errors.js";
+import { InvalidTokenError, RateLimitedError } from "../auth/errors.js";
 import { twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { languageSetting } from "../settings/builtin.js";
@@ -220,6 +220,60 @@ describe.skipIf(!baseUrl)("organizations", () => {
       ).rejects.toThrow(InvalidTokenError);
     });
 
+    it("check at most 30 invalid invitation tokens per address even when they arrive at once", async () => {
+      const results = await Promise.allSettled(
+        Array.from({ length: 50 }, () =>
+          test.services.invitations.accept(randomBytes(32).toString("base64url"), {}, "198.51.100.82"),
+        ),
+      );
+      const reasons = results.map((result) => (result.status === "rejected" ? result.reason : null));
+      expect(reasons.filter((reason) => reason instanceof InvalidTokenError)).toHaveLength(30);
+      expect(reasons.filter((reason) => reason instanceof RateLimitedError)).toHaveLength(20);
+    });
+
+    it("let one office address accept 250 invitations and refuse it only after invalid tokens", async () => {
+      const org = await organization();
+      const run = randomUUID().slice(0, 6);
+      const emails = Array.from({ length: 250 }, (_, index) => `office-${run}-${index}@example.net`);
+      for (const email of emails) {
+        await test.services.invitations.create(accountPrincipal(org.owner), org.id, {
+          email,
+          kind: "member",
+        });
+      }
+      await deliverPendingMail(test.services, test.database);
+      const tokens = emails.map((email) =>
+        token(test.mail.sent.filter((mail) => mail.to === email).at(-1)?.text),
+      );
+      const office = "198.51.100.80";
+      for (const [index, invitationToken] of tokens.entries()) {
+        if (index === 249) break;
+        await expect(
+          test.services.invitations.accept(
+            invitationToken,
+            { name: `Person ${index}`, password: "an office passphrase" },
+            office,
+          ),
+        ).resolves.toMatchObject({ organizationId: org.id, accountCreated: true });
+      }
+
+      const attacker = "198.51.100.81";
+      expect((await test.services.invitations.preview(tokens[0] ?? "", attacker)).state).toBe("accepted");
+      for (let attempt = 0; attempt < 29; attempt++) {
+        await expect(
+          test.services.invitations.accept(randomBytes(32).toString("base64url"), {}, attacker),
+        ).rejects.toThrow(InvalidTokenError);
+      }
+      const last = tokens[249] ?? "";
+      await expect(
+        test.services.invitations.accept(last, { name: "Last", password: "an office passphrase" }, attacker),
+      ).rejects.toThrow(RateLimitedError);
+      await expect(test.services.invitations.preview(last, attacker)).rejects.toThrow(RateLimitedError);
+      await expect(
+        test.services.invitations.accept(last, { name: "Last", password: "an office passphrase" }, office),
+      ).resolves.toMatchObject({ accountCreated: true });
+    }, 180_000);
+
     it("add guests with the inviter as responsible person and join existing accounts", async () => {
       const org = await organization();
       const guestEmail = `guest-${randomUUID().slice(0, 6)}@contractor.example`;
@@ -385,6 +439,50 @@ describe.skipIf(!baseUrl)("organizations", () => {
     await add(third.id, "member");
     expect(await home()).toBe(first.id);
   });
+
+  it("lets one office address complete many registrations and limits requests and invalid tokens", async () => {
+    const org = await organization();
+    const domain = `${randomUUID().slice(0, 8)}.example`;
+    await test.services.organizations.addDomain(SYSTEM, org.id, domain);
+    await test.settings.set(selfRegistrationSetting, { organization: org.id }, "organization", true);
+    const office = "198.51.100.90";
+    const emails = Array.from({ length: 40 }, (_, index) => `person${index}@${domain}`);
+    for (const email of emails.slice(0, 10))
+      await test.services.invitations.requestRegistration(email, office);
+    await expect(test.services.invitations.requestRegistration(emails[10] ?? "", office)).rejects.toThrow(
+      RateLimitedError,
+    );
+    for (const email of emails) {
+      await test.services.invitations.handleRegistrationRequest(
+        testJobContext("organizations.registration-request", { email }),
+      );
+    }
+    for (const email of emails) {
+      const registered = await test.services.invitations.completeRegistration(
+        token((await sentMailTo(email)).at(-1)?.text),
+        { name: "Office", password: "an office passphrase" },
+        office,
+      );
+      expect(registered.organizationId).toBe(org.id);
+    }
+    const attacker = "198.51.100.91";
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await expect(
+        test.services.invitations.completeRegistration(
+          randomBytes(32).toString("base64url"),
+          { name: "x", password: "an office passphrase" },
+          attacker,
+        ),
+      ).rejects.toThrow(InvalidTokenError);
+    }
+    await expect(
+      test.services.invitations.completeRegistration(
+        randomBytes(32).toString("base64url"),
+        { name: "x", password: "an office passphrase" },
+        attacker,
+      ),
+    ).rejects.toThrow(RateLimitedError);
+  }, 120_000);
 
   it("registers accounts in the organization of an assigned domain only when allowed", async () => {
     const org = await organization();

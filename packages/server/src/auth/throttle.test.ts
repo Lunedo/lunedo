@@ -4,7 +4,13 @@ import { createDatabase, type Database } from "../database/database.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 import { SettingsService } from "../settings/service.js";
-import { accountSubject, clientSubject, RateLimiter, SignInThrottle } from "./throttle.js";
+import {
+  accountSubject,
+  CLIENT_ATTEMPTS_PER_MINUTE,
+  clientSubject,
+  RateLimiter,
+  SignInThrottle,
+} from "./throttle.js";
 
 const databaseUrl = inject("databaseUrl");
 
@@ -91,6 +97,59 @@ describe.skipIf(!databaseUrl)("RateLimiter and SignInThrottle", () => {
     await throttle.recordSuccess(email);
     expect(await throttle.recordFailure({ email })).toEqual([]);
     expect(await throttle.lockout({ email })).toBeNull();
+  });
+
+  it("counts only failed sign-ins per client, so one address can sign in many people", async () => {
+    const clientIp = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
+    for (let person = 0; person < 100; person++) {
+      expect((await throttle.attempt({ email: `${randomUUID()}@example.org`, clientIp })).allowed).toBe(true);
+    }
+    for (let failure = 0; failure < 30; failure++) {
+      await throttle.recordFailure({ clientIp });
+    }
+    const refused = await throttle.attempt({ email: `${randomUUID()}@example.org`, clientIp });
+    expect(refused.allowed).toBe(false);
+    expect(refused.retryAfterSeconds).toBeGreaterThan(0);
+    expect(
+      (await throttle.attempt({ email: `${randomUUID()}@example.org`, clientIp: "203.0.113.250" })).allowed,
+    ).toBe(true);
+  });
+
+  it("still counts every attempt per account", async () => {
+    const email = `${randomUUID()}@example.org`;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      expect((await throttle.attempt({ email, clientIp: `203.0.113.${attempt + 1}` })).allowed).toBe(true);
+    }
+    expect((await throttle.attempt({ email, clientIp: "203.0.113.99" })).allowed).toBe(false);
+  });
+
+  it("lets at most the ceiling of attempts through when one client sends many at once", async () => {
+    const clientIp = `192.0.2.${Math.floor(Math.random() * 200) + 1}`;
+    const results = await Promise.all(
+      Array.from({ length: CLIENT_ATTEMPTS_PER_MINUTE + 20 }, () =>
+        throttle.attempt({ email: `${randomUUID()}@example.org`, clientIp }),
+      ),
+    );
+    expect(results.filter((result) => result.allowed)).toHaveLength(CLIENT_ATTEMPTS_PER_MINUTE);
+  });
+
+  it("gives back a counted request", async () => {
+    const key = `test:${randomUUID()}`;
+    await rateLimiter.consume(key, 1, 60);
+    expect(await rateLimiter.peek(key, 1, 60)).toMatchObject({ allowed: false });
+    await rateLimiter.refund(key);
+    expect(await rateLimiter.peek(key, 1, 60)).toMatchObject({ allowed: true });
+    await rateLimiter.refund(key);
+    expect((await rateLimiter.consume(key, 1, 60)).allowed).toBe(true);
+  });
+
+  it("only reads a counter when peeking", async () => {
+    const key = `test:${randomUUID()}`;
+    expect(await rateLimiter.peek(key, 1, 60)).toMatchObject({ allowed: true });
+    expect(await rateLimiter.peek(key, 1, 60)).toMatchObject({ allowed: true });
+    await rateLimiter.consume(key, 1, 60);
+    expect(await rateLimiter.peek(key, 1, 60)).toMatchObject({ allowed: false });
+    expect(await rateLimiter.peek(key, 2, 60)).toMatchObject({ allowed: true });
   });
 
   it("removes old entries without an active lockout", async () => {

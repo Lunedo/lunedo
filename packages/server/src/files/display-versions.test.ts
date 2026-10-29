@@ -6,7 +6,7 @@ import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { NotificationListener } from "../database/notifications.js";
-import type { JobDefinition, JobHandler, JobQueue } from "../jobs/job-queue.js";
+import type { JobDefinition, JobHandler, JobQueue, WorkOptions } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
@@ -21,7 +21,7 @@ const logger = createLogger({ service: "test", level: "silent" });
 class RecordingQueue {
   readonly enqueued: { name: string; payload: unknown; key: string | undefined }[] = [];
   readonly handlers = new Map<string, JobHandler<unknown>>();
-  readonly concurrency = new Map<string, number | undefined>();
+  readonly options = new Map<string, WorkOptions>();
   readonly schedules: string[] = [];
 
   async enqueue<T>(definition: JobDefinition<T>, payload: T, options: { idempotencyKey?: string } = {}) {
@@ -29,13 +29,9 @@ class RecordingQueue {
     return randomUUID();
   }
 
-  async work<T>(
-    definition: JobDefinition<T>,
-    handler: JobHandler<T>,
-    options: { concurrency?: number } = {},
-  ) {
+  async work<T>(definition: JobDefinition<T>, handler: JobHandler<T>, options: WorkOptions = {}) {
     this.handlers.set(definition.name, handler as JobHandler<unknown>);
-    this.concurrency.set(definition.name, options.concurrency);
+    this.options.set(definition.name, options);
   }
 
   async schedule<T>(definition: JobDefinition<T>) {
@@ -453,9 +449,10 @@ describe.skipIf(!baseUrl)("display versions of images", () => {
       listener,
       displayVersions: test.services.displayVersions,
       logger,
+      concurrency: 3,
     });
 
-    expect(queue.concurrency.get(displayVersionJob.name)).toBe(2);
+    expect(queue.options.get(displayVersionJob.name)).toEqual({ concurrency: 3, batch: true });
     expect(queue.schedules).toEqual([queueDisplayVersionsJob.name]);
     const queuing = queue.handlers.get(queueDisplayVersionsJob.name);
     const creating = queue.handlers.get(displayVersionJob.name);

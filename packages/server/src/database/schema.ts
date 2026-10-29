@@ -156,6 +156,7 @@ export {
   mailCredentials,
   mailDeliveryStatus,
   mailOutbox,
+  mailSends,
   mailStatus,
 } from "../mail/schema.js";
 export {

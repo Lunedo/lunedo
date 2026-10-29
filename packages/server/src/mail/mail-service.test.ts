@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { AuditLog } from "../audit/audit-log.js";
 import { Secret } from "../config/secret.js";
@@ -7,13 +7,20 @@ import { Encryption } from "../crypto/envelope.js";
 import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
+import { PgBossQueue } from "../jobs/pg-boss-queue.js";
 import { createLogger } from "../logging/logger.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { SettingsService } from "../settings/service.js";
 import { CapturingTransport, testJobContext } from "../testing/jobs.js";
 import { Mailpit, testMailpitUrl } from "../testing/mailpit.js";
-import { deliverMailJob, MailService, SmtpConfigurationError } from "./mail-service.js";
-import { instanceSecrets, mailOutbox } from "./schema.js";
+import {
+  deliverMailJob,
+  deliverMailWork,
+  MailService,
+  mailSendRateSetting,
+  SmtpConfigurationError,
+} from "./mail-service.js";
+import { instanceSecrets, mailOutbox, mailSends } from "./schema.js";
 import { renderMail } from "./templates.js";
 import { SmtpTransport } from "./transport.js";
 
@@ -150,7 +157,10 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     await pool?.end();
   });
 
-  function service(transport = new CapturingTransport()) {
+  function service(
+    transport = new CapturingTransport(),
+    sleep?: (ms: number, signal: AbortSignal) => Promise<void>,
+  ) {
     const settings = new SettingsService({ database, logger });
     const audit = new AuditLog({ database });
     return new MailService({
@@ -161,7 +171,15 @@ describe.skipIf(!databaseUrl)("MailService", () => {
       jobs: undefined,
       logger,
       transport: () => transport,
+      ...(sleep ? { sleep } : {}),
     });
+  }
+
+  async function fillSendWindow(count: number) {
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    await database
+      .insert(mailSends)
+      .values(Array.from({ length: count }, () => ({ sender: "wiki@example.org" })));
   }
 
   async function queue(mail: MailService, to: string): Promise<string> {
@@ -186,6 +204,84 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     await mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }));
     expect(transport.sent.map((sent) => sent.to)).toEqual(["stored@example.org"]);
     expect(await database.select().from(mailOutbox).where(eq(mailOutbox.id, id))).toEqual([]);
+  });
+
+  it("waits for a free slot of the sender instead of failing when the send rate is used up", async () => {
+    const transport = new CapturingTransport();
+    const waits: number[] = [];
+    const mail = service(transport, async (ms) => {
+      waits.push(ms);
+      expect(transport.sent).toHaveLength(0);
+      await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    });
+    await fillSendWindow(30);
+    const id = await queue(mail, "waiting@example.org");
+    await mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }));
+    expect(waits).toHaveLength(1);
+    expect(waits[0]).toBeGreaterThan(0);
+    expect(waits[0]).toBeLessThanOrEqual(60_000);
+    expect(transport.sent.map((sent) => sent.to)).toEqual(["waiting@example.org"]);
+    expect(await database.select().from(mailOutbox).where(eq(mailOutbox.id, id))).toEqual([]);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+  });
+
+  it("puts a waiting mail back in the queue when the worker stops", async () => {
+    const transport = new CapturingTransport();
+    const mail = service(transport, async () => {
+      throw new DOMException("The worker stopped", "AbortError");
+    });
+    await fillSendWindow(30);
+    const id = await queue(mail, "stopped@example.org");
+    await expect(mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }))).rejects.toThrow(
+      "The worker stopped",
+    );
+    const [row] = await database.select().from(mailOutbox).where(eq(mailOutbox.id, id));
+    expect(row).toMatchObject({ status: "pending", attempts: 0 });
+    expect(transport.sent).toHaveLength(0);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    await database.delete(mailOutbox).where(eq(mailOutbox.id, id));
+  });
+
+  async function deliverInWorker(perMinute: number, count: number, until: (sent: number) => boolean) {
+    await new SettingsService({ database, logger }).set(mailSendRateSetting, {}, "instance", perMinute);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    const transport = new CapturingTransport();
+    const mail = service(transport);
+    const ids: string[] = [];
+    for (let index = 0; index < count; index++) ids.push(await queue(mail, `bulk-${index}@example.org`));
+    const job = { ...deliverMailJob, name: `test.deliver-${randomBytes(4).toString("hex")}` };
+    const worker = new PgBossQueue({ connectionString: databaseUrl, database, logger, role: "worker" });
+    await worker.start();
+    try {
+      for (const mailId of ids) await worker.enqueue(job, { mailId });
+      const started = Date.now();
+      await worker.work(job, mail.deliver, deliverMailWork);
+      while (!until(transport.sent.length) && Date.now() - started < 90_000) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return { sent: transport.sent.length, seconds: (Date.now() - started) / 1000 };
+    } finally {
+      await worker.stop({ timeoutSeconds: 1 });
+      await database.delete(mailOutbox).where(inArray(mailOutbox.id, ids));
+      await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+      await new SettingsService({ database, logger }).set(mailSendRateSetting, {}, "instance", 30);
+    }
+  }
+
+  it("reaches the configured send rate with the worker's batches", { timeout: 120_000 }, async () => {
+    const result = await deliverInWorker(600, 600, (sent) => sent >= 600);
+    expect(result.sent).toBe(600);
+    expect(result.seconds).toBeLessThan(70);
+  });
+
+  it("never sends more than the configured rate within a minute", { timeout: 60_000 }, async () => {
+    let reached: number | null = null;
+    const result = await deliverInWorker(30, 45, (sent) => {
+      if (sent >= 30) reached ??= Date.now();
+      return reached !== null && Date.now() - reached > 5_000;
+    });
+    expect(result.sent).toBe(30);
+    expect(result.seconds).toBeLessThan(55);
   });
 
   it("retries failed deliveries and gives up after the last attempt without logging the content", async () => {

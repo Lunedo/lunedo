@@ -102,9 +102,10 @@ A mail is written to an outbox in the same transaction as the change that causes
 
 - **Retries.** A failed delivery is retried up to eight times. The first retry waits 30 to 60 seconds, and every further wait doubles, so the attempts spread over two to four hours. After the last attempt the mail is marked as failed and its content is removed.
 - **Lost mails.** A job looks every minute for mails whose delivery was never started, for example after a crash right after the commit, and queues them.
+- **Send rate.** Lunedo sends at most **E-mails per minute** from its sender address, 30 by default, which is the limit of a Microsoft 365 mailbox for SMTP. The limit counts the last 60 seconds and applies to all workers and nodes together, for SMTP and Microsoft Graph alike. Further mails wait for a free place without using up a retry. Set it in the section **Delivery** of the e-mail settings, from 1 to 10,000; raise it only when your mail service allows more. Each worker sends up to four mails at a time, so the configured rate is reached also for a large backlog. Many mails at once, for example after an import, are then sent over several minutes.
 - **No duplicates.** Before sending, a node claims the mail, so two nodes never send it at the same time. A claim older than ten minutes, left by a node that stopped while sending, is handed to the next run. Each mail carries a `Message-ID` derived from its ID, except through Microsoft Graph with the default setting, so a mail sent again after such a stop has the same ID and mail systems can recognize it.
 
-The section **Delivery** on the settings page shows the **Last delivery error** with its cause and the step that failed, and the **Last e-mail handed to the server**. Logs name the mail ID, template, attempt and error code, never recipients, content, secrets or tokens.
+The section **Delivery** on the settings page holds **E-mails per minute** and shows the **Last delivery error** with its cause and the step that failed, and the **Last e-mail handed to the server**. Logs name the mail ID, template, attempt and error code, never recipients, content, secrets or tokens.
 
 ## Language and layout
 

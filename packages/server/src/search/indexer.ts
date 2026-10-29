@@ -117,7 +117,10 @@ export class SearchIndexer {
     this.#extractor = options.extractor ?? new TextExtractor();
   }
 
-  async drain(options: { signal?: AbortSignal; logger?: Logger } = {}): Promise<DrainResult> {
+  async drain(
+    options: { signal?: AbortSignal; logger?: Logger; concurrency?: number } = {},
+  ): Promise<DrainResult> {
+    const concurrency = options.concurrency ?? 1;
     const result: DrainResult = { items: 0, spaces: 0, failed: 0, nextDueAt: null };
     const busySpaces = new Set<string>();
     let busy = false;
@@ -147,36 +150,17 @@ export class SearchIndexer {
         where due_at <= now() and item_id <> all(${sql.param([...busyItems])}::uuid[])
         order by due_at, item_id limit ${BATCH_SIZE}`);
       if (items.rows.length === 0) break;
-      for (const row of items.rows) {
-        if (options.signal?.aborted) break;
-        try {
-          await this.#extractTexts(row.item_id, options);
-          const outcome = await this.#indexItem(row.item_id, Number(row.generation));
+      const queue = [...items.rows];
+      const lane = async () => {
+        for (let row = queue.shift(); row && !options.signal?.aborted; row = queue.shift()) {
+          const outcome = await this.#drainItem(row, options);
           if (outcome === "indexed") result.items += 1;
-          else if (outcome === "busy") {
-            busyItems.add(row.item_id);
-            busy = true;
-          } else {
-            result.failed += 1;
-            options.logger?.warn(
-              { itemId: row.item_id, error: { code: outcome.code } },
-              "An item was refused by the search index; it is left out of search until it changes",
-            );
-          }
-        } catch (error) {
-          if (options.signal?.aborted) break;
-          result.failed += 1;
-          busyItems.add(row.item_id);
-          options.logger?.warn(
-            {
-              itemId: row.item_id,
-              error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
-            },
-            "Indexing an item for search failed",
-          );
-          await this.#postpone(row.item_id, Number(row.generation), Number(row.attempts));
+          if (outcome === "failed" || outcome === "postponed") result.failed += 1;
+          if (outcome === "busy" || outcome === "postponed") busyItems.add(row.item_id);
+          if (outcome === "busy") busy = true;
         }
-      }
+      };
+      await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, queue.length)) }, lane));
     }
     await this.#database.execute(sql`
       update search_index_state set building_since = null, updated_at = now()
@@ -232,6 +216,33 @@ export class SearchIndexer {
       done: building ? Math.max(0, total - Number(row?.remaining ?? 0)) : 0,
       pendingItems: Number(row?.pending ?? 0),
     };
+  }
+
+  async #drainItem(
+    row: { item_id: string; generation: number; attempts: number },
+    options: { signal?: AbortSignal; logger?: Logger },
+  ): Promise<"indexed" | "busy" | "failed" | "postponed" | "aborted"> {
+    try {
+      await this.#extractTexts(row.item_id, options);
+      const outcome = await this.#indexItem(row.item_id, Number(row.generation));
+      if (outcome === "indexed" || outcome === "busy") return outcome;
+      options.logger?.warn(
+        { itemId: row.item_id, error: { code: outcome.code } },
+        "An item was refused by the search index; it is left out of search until it changes",
+      );
+      return "failed";
+    } catch (error) {
+      if (options.signal?.aborted) return "aborted";
+      options.logger?.warn(
+        {
+          itemId: row.item_id,
+          error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
+        },
+        "Indexing an item for search failed",
+      );
+      await this.#postpone(row.item_id, Number(row.generation), Number(row.attempts));
+      return "postponed";
+    }
   }
 
   async #postpone(itemId: string, generation: number, attempts: number): Promise<void> {

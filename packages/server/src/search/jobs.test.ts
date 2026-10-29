@@ -9,6 +9,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import type { SearchIndexer } from "./indexer.js";
 import { searchIndexJob, startSearchIndexing, updateSearchIndex } from "./jobs.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -70,6 +71,26 @@ describe.skipIf(!baseUrl)("search index jobs", () => {
     });
     await vi.waitFor(() => expect(queue.enqueued.length).toBeGreaterThanOrEqual(2), { timeout: 5000 });
     expect(queue.enqueued.every((job) => job.name === searchIndexJob.name)).toBe(true);
+  });
+
+  it("indexes with the configured number of pages at once", async () => {
+    const queue = new RecordingQueue();
+    const drains: (number | undefined)[] = [];
+    const indexer = {
+      drain: async (options: { concurrency?: number }) => {
+        drains.push(options.concurrency);
+        return { items: 0, spaces: 0, failed: 0, nextDueAt: null };
+      },
+    };
+    await startSearchIndexing({
+      jobs: queue as unknown as JobQueue,
+      listener,
+      indexer: indexer as unknown as SearchIndexer,
+      logger,
+      concurrency: 6,
+    });
+    await queue.handlers.get(searchIndexJob.name)?.(testJobContext(searchIndexJob.name, {}));
+    expect(drains).toEqual([6]);
   });
 
   it("queues a later run for changes that are not due yet", async () => {

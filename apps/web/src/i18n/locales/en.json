@@ -2593,8 +2593,9 @@
         "help": "Further attempts are refused for a minute."
       },
       "auth_signInAttemptsPerClientPerMinute": {
-        "label": "Sign-in attempts per client",
-        "description": "Counted per IP address."
+        "label": "Failed sign-in attempts per client",
+        "description": "Only failures count, per IP address.",
+        "help": "Successful sign-ins do not count, so many people behind one address, such as an office, can sign in at the same time."
       },
       "auth_lockoutFailuresPerAccount": {
         "label": "Failures before an account is locked",
@@ -2942,6 +2943,11 @@
       "mail_graph": {
         "label": "Microsoft Graph",
         "description": "Sending through Microsoft Graph."
+      },
+      "mail_sendRatePerMinute": {
+        "label": "E-mails per minute",
+        "description": "Further e-mails wait for the next minute.",
+        "help": "Mail services limit how many e-mails one mailbox may send. Microsoft 365 allows 30 per minute over SMTP; the limit applies to SMTP and Microsoft Graph alike."
       }
     },
     "disabled": {

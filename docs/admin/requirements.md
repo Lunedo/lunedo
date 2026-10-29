@@ -6,9 +6,11 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 
 | Requirement | Value |
 |---|---|
-| Container runtime | Docker Engine 24 or newer with Docker Compose v2. The setup script runs on Linux and macOS. |
+| Operating system | Linux. Lunedo is not supported on macOS or Windows hosts, and the setup script refuses to run on macOS. |
+| Container runtime | Docker Engine 24 or newer with Docker Compose v2. |
 | Architecture | The image `ghcr.io/lunedo/lunedo` is published for `linux/amd64` and `linux/arm64`. |
-| Disk space | At least 4 GB free for the images and the first data, plus room for attachments, backups and the database. |
+| CPU and RAM | Depend on the size of the organization; see [Measured requirements](#measured-requirements). |
+| Disk space | The setup script needs at least 4 GB free to install. What the data and backups need later is listed under [Measured requirements](#measured-requirements). |
 | Port | One free host port for Lunedo, `3000` by default. |
 | Clock | Synchronized, for example with NTP. The [system check](system-check.md#clock) warns when Lunedo and the database differ by more than 5 seconds. |
 
@@ -17,6 +19,7 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 | Requirement | Value |
 |---|---|
 | Server | PostgreSQL 16, 17 or 18. The image contains `pg_dump`, `pg_restore` and `psql` for these three major versions and picks the one that matches the server for backups. The Compose file of the setup script uses `postgres:17-alpine`. |
+| Shared memory | 1 GB of `/dev/shm` for the PostgreSQL container (`shm_size: 1gb` in the Compose file of the setup script). Parallel queries on large databases fail without it, because Docker gives a container only 64 MB. It is used only while queries need it and counts towards the memory of PostgreSQL. |
 | Extension | `pg_trgm`, for search. A migration creates it with `CREATE EXTENSION IF NOT EXISTS "pg_trgm"`. It is a trusted extension, so a database user with the `CREATE` privilege on the database can create it. On a managed server that does not allow this, create it beforehand as an administrator of the server. |
 | Rights | The user in `LUNEDO_DATABASE_URL` owns the database or may create tables, types and indexes in it. Lunedo applies its migrations at every start. |
 | Optional right | `CREATEDB` for the monthly test restore of backups, which restores into a temporary database on the same server, for example `ALTER ROLE "lunedo" CREATEDB;`. Without it, a test restore only verifies the backup. See [Backups](backups.md). |
@@ -58,3 +61,84 @@ The container runs as the user `node` with UID 1000 and GID 1000.
 | `/data/import` | The import folder for large exports (`LUNEDO_IMPORT_DIR`). Mount it read-only; see [Imports](imports.md). |
 
 Directories that you mount must belong to UID 1000, or the [system check](system-check.md#file-storage) reports that the file store is not writable.
+
+## Measured requirements
+
+<!-- generated:measured-requirements -->
+
+This section is generated from `docs/data/requirements.json`, `packages/server/src/backup/configuration.ts` by `pnpm docs:generate`. Do not edit it by hand; change the sources and run the command again.
+
+Measured on 2026-10-29 with commit `8c70161e` on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. The load came from one computer, which sent the requests of each person from a client address of its own. Each size had 3 load runs of 15 minutes each, in which the people active at the same time open pages, search, edit and publish, and read notifications, and five of them edit the same page together.
+
+### Sizes
+
+| Size | People | Pages | Spaces | Attachments | Active at the same time |
+|---|---|---|---|---|---|
+| small | 25 | 2,002 | 10 | 1.9 GB | 5 |
+| medium | 250 | 20,048 | 60 | 19.5 GB | 50 |
+| large | 1,000 | 99,594 | 200 | 48.9 GB | 200 |
+
+### Hardware
+
+**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × 1.5, and recommended CPU keeps the response times below the targets with room for peaks. Disk is the image, the database, the file store and backups, with 30 % headroom; with backups on the same host, it counts the 20 backups that the default retention keeps.
+
+| Size | Minimum CPU | Minimum RAM | Minimum disk | Recommended CPU | Recommended RAM | Recommended disk, backups elsewhere | Recommended disk, backups on this host |
+|---|---|---|---|---|---|---|---|
+| small | 2 vCPU | 2 GiB | 6 GB | 3 vCPU | 3 GiB | 7 GB | 56 GB |
+| medium | 4 vCPU | 2 GiB | 42 GB | more than 4 vCPU; the targets were missed on the reference machine | 3 GiB | 55 GB | 541 GB |
+| large | 4 vCPU | 4 GiB | 107 GB | more than 4 vCPU; the targets were missed on the reference machine | 6 GiB | 139 GB | 1,371 GB |
+
+The minimum of medium and large is what the reference machine used while it missed the targets, not what keeps these sizes usable.
+
+### Response times under load
+
+Median of the load runs; p95 is the time within which 95 % of the requests finished. **Readable** is the time until the page is shown in the browser.
+
+| Size | Open a page, API | Open a page, readable | Search | Save | For you and notifications | Errors |
+|---|---|---|---|---|---|---|
+| small | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
+| medium | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
+| large | 23.7 s / 32.7 s | 11.4 s / 28.0 s | 9.04 s / 18.5 s | 8.14 s / 14.9 s | 9.71 s / 15.6 s | 58,616 |
+
+Each cell shows p50 / p95.
+
+### Targets
+
+| Size | Target | Limit | Measured (worst run) | Met |
+|---|---|---|---|---|
+| small | Open a page, API (p95) | below 500 ms | 263 ms | yes |
+| small | Open a page, readable (p95) | below 1.50 s | 879 ms | yes |
+| small | Search (p95) | below 800 ms | 148 ms | yes |
+| small | Save (p95) | below 500 ms | 101 ms | yes |
+| small | Errors | 0 | 0 | yes |
+| medium | Open a page, API (p95) | below 500 ms | 1.48 s | no |
+| medium | Open a page, readable (p95) | below 1.50 s | 1.93 s | no |
+| medium | Search (p95) | below 800 ms | 1.41 s | no |
+| medium | Save (p95) | below 500 ms | 375 ms | yes |
+| medium | Errors | 0 | 0 | yes |
+| large | Open a page, API (p95) | below 500 ms | 33.0 s | no |
+| large | Open a page, readable (p95) | below 1.50 s | 29.6 s | no |
+| large | Search (p95) | below 800 ms | 22.6 s | no |
+| large | Save (p95) | below 500 ms | 22.2 s | no |
+| large | Errors | 0 | 58,616 | no |
+
+### Footprint and operations
+
+| Size | Database | File store | Image | One full backup | Backup takes | Restore takes | Start until ready | RAM when idle | New page found in search (p95) | Job queue under load (peak) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| small | 150 MB | 2.0 GB | 1.1 GB | 2.0 GB | 45.5 s | 22.8 s | 9.30 s | 741 MiB | 700 ms | 16 |
+| medium | 1.3 GB | 19.6 GB | 1.1 GB | 19.7 GB | 7 min 25 s | 4 min 52 s | 9.30 s | 826 MiB | 3.50 s | 16 |
+| large | 6.4 GB | 49.2 GB | 1.1 GB | 49.9 GB | 20 min 8 s | 17 min 4 s | 10.0 s | 885 MiB | 8.90 s | 24 |
+
+### Writing through the API
+
+How fast the content of each size was written through the public API, as a migration script would do it: pages with their versions, attachments, comments and permissions, by several clients at once.
+
+| Size | Clients at once | Pages per minute | Versions per minute | Requests per second | Upload | Busy CPU |
+|---|---|---|---|---|---|---|
+| small | 4 | 240 | 1,189 | 47 | 4.1 MB/s | 80 % |
+| medium | 4 | 263 | 1,314 | 52 | 4.4 MB/s | 80 % |
+| medium | 8 | 276 | 1,388 | 55 | 4.6 MB/s | 92 % |
+| large | 4 | 228 | 1,142 | 43 | 2.0 MB/s | 83 % |
+
+<!-- /generated:measured-requirements -->

@@ -1211,10 +1211,10 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(left.rows).toEqual([]);
   });
 
-  it("limits sign-in starts and logout requests per client", async () => {
+  it("lets a whole office start sign-ins from one address and limits floods and invalid logouts", async () => {
     const id = await provider({ accountCreation: true });
     const clientIp = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
-    for (let attempt = 0; attempt < 20; attempt++) {
+    for (let attempt = 0; attempt < 300; attempt++) {
       await test.services.providerSignIn.start({
         providerId: id,
         purpose: "signIn",

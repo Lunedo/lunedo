@@ -60,6 +60,7 @@ export interface ServerConfig {
   trustedProxies: string[];
   outboundAllowedNetworks: string[];
   passwordHashConcurrency: number;
+  jobConcurrency: Readonly<Record<string, number>>;
   insecureIdentityProviders: boolean;
   setup: ConfiguredSetup | undefined;
   setupCode: Secret | undefined;
@@ -303,6 +304,7 @@ export function loadConfig(env: Env): ServerConfig {
     trustedProxies: values.LUNEDO_TRUSTED_PROXIES as string[],
     outboundAllowedNetworks: values.LUNEDO_OUTBOUND_ALLOWED_NETWORKS as string[],
     passwordHashConcurrency: values.LUNEDO_PASSWORD_HASH_CONCURRENCY as number,
+    jobConcurrency: values.LUNEDO_JOB_CONCURRENCY as Record<string, number>,
     insecureIdentityProviders: values.LUNEDO_INSECURE_IDENTITY_PROVIDERS as boolean,
     setup,
     setupCode: secret("LUNEDO_SETUP_CODE"),

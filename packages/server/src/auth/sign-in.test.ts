@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { Secret, TOTP } from "otpauth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -5,7 +6,7 @@ import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { SYSTEM } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import { RateLimitedError } from "./errors.js";
+import { InvalidCredentialsError, LockedError, RateLimitedError } from "./errors.js";
 import { TotpService } from "./two-factor.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -167,8 +168,8 @@ describe.skipIf(!baseUrl)("SignInService", () => {
     expect(await notices()).toHaveLength(1);
   });
 
-  it("limits passkey sign-in options per client", async () => {
-    for (let attempt = 0; attempt < 30; attempt++) {
+  it("offers passkey sign-in to a whole office behind one address and limits a flood", async () => {
+    for (let attempt = 0; attempt < 300; attempt++) {
       await test.services.signIn.passkeyOptions("203.0.113.30");
     }
     await expect(test.services.signIn.passkeyOptions("203.0.113.30")).rejects.toThrow(RateLimitedError);
@@ -178,6 +179,63 @@ describe.skipIf(!baseUrl)("SignInService", () => {
     const challenges = await test.pool.query(
       "select count(*)::int as count from auth_challenges where purpose = 'passkeySignIn'",
     );
-    expect(challenges.rows[0]?.count).toBe(31);
+    expect(challenges.rows[0]?.count).toBe(301);
   });
+
+  it("signs in 250 people from one office address and still limits wrong passwords from it", async () => {
+    const { services, database } = test;
+    const office = "198.51.100.40";
+    const run = randomUUID().slice(0, 8);
+    const emails = Array.from({ length: 250 }, (_, index) => `office-${run}-${index}@example.org`);
+    for (let start = 0; start < emails.length; start += 5) {
+      await Promise.all(
+        emails.slice(start, start + 5).map((email) =>
+          database.transaction((tx) =>
+            services.accounts.createStandard(tx, {
+              email,
+              name: "Office",
+              password: "a long office passphrase",
+              homeOrganizationId: null,
+            }),
+          ),
+        ),
+      );
+    }
+    for (const email of emails) {
+      const result = await services.signIn.signInWithPassword({
+        email,
+        password: "a long office passphrase",
+        client: { ip: office },
+      });
+      expect(result.status).toBe("signedIn");
+    }
+    let refusedAfter = 0;
+    for (let attempt = 1; attempt <= 40 && refusedAfter === 0; attempt++) {
+      const refusal = await services.signIn
+        .signInWithPassword({
+          email: emails[attempt] ?? "",
+          password: "a wrong guess",
+          client: { ip: office },
+        })
+        .then(
+          () => null,
+          (error: unknown) => error,
+        );
+      if (refusal instanceof RateLimitedError || refusal instanceof LockedError) refusedAfter = attempt;
+      else expect(refusal).toBeInstanceOf(InvalidCredentialsError);
+    }
+    expect(refusedAfter).toBeGreaterThan(1);
+    expect(refusedAfter).toBeLessThanOrEqual(31);
+    const blocked = await services.signIn
+      .signInWithPassword({
+        email: emails[100] ?? "",
+        password: "a long office passphrase",
+        client: { ip: office },
+      })
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+    expect(blocked instanceof RateLimitedError || blocked instanceof LockedError).toBe(true);
+  }, 120_000);
 });

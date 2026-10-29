@@ -191,6 +191,88 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     expect((await test.services.search.search(editor, org.id, searchRequest(word))).total).toBe(1);
   });
 
+  function delegating(
+    adapter: PostgresSearchAdapter,
+    replaceItem: PostgresSearchAdapter["replaceItem"],
+  ): ConstructorParameters<typeof SearchIndexer>[0]["adapter"] {
+    return {
+      ...adapter,
+      search: adapter.search.bind(adapter),
+      articles: adapter.articles.bind(adapter),
+      articleCounts: adapter.articleCounts.bind(adapter),
+      languageCounts: adapter.languageCounts.bind(adapter),
+      removeItem: adapter.removeItem.bind(adapter),
+      updateAccess: adapter.updateAccess.bind(adapter),
+      updateContextAccess: adapter.updateContextAccess.bind(adapter),
+      indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
+      replaceItem,
+    };
+  }
+
+  it("indexes several pages at once but never the same page twice at the same time", async () => {
+    const context = await setup(12);
+    const adapter = new PostgresSearchAdapter();
+    const active = new Map<string, number>();
+    let running = 0;
+    let mostAtOnce = 0;
+    let samePageAtOnce = 0;
+    const tracked = delegating(adapter, async (executor, item) => {
+      running += 1;
+      active.set(item.itemId, (active.get(item.itemId) ?? 0) + 1);
+      mostAtOnce = Math.max(mostAtOnce, running);
+      samePageAtOnce = Math.max(samePageAtOnce, active.get(item.itemId) ?? 0);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        await adapter.replaceItem(executor, item);
+      } finally {
+        running -= 1;
+        active.set(item.itemId, (active.get(item.itemId) ?? 1) - 1);
+      }
+    });
+    const otherNode = createDatabasePool({ connectionString: test.url, applicationName: "lunedo-test-node" });
+    const first = new SearchIndexer({ database: test.database, adapter: tracked });
+    const second = new SearchIndexer({ database: createDatabase(otherNode), adapter: tracked });
+    const [a, b] = await Promise.all([
+      first.drain({ concurrency: 4 }),
+      second.drain({ concurrency: 4 }),
+    ]).finally(() => otherNode.end());
+    expect(mostAtOnce).toBeGreaterThan(1);
+    expect(samePageAtOnce).toBe(1);
+    expect(a.items + b.items).toBeGreaterThanOrEqual(12);
+    expect(await found(context)).toEqual([...context.ids].sort());
+    const counts = await test.pool.query<{ count: number }>(
+      "select count(*)::int as count from search_chunks where item_id = any($1::uuid[]) group by item_id",
+      [context.ids],
+    );
+    expect(counts.rows.every((row) => row.count === 1)).toBe(true);
+  });
+
+  it("ends with the newest content when a page changes while an older state is being indexed", async () => {
+    const context = await setup(1);
+    const [pageId] = context.ids;
+    const editor = accountPrincipal(context.memberId);
+    const adapter = new PostgresSearchAdapter();
+    let changed = false;
+    const indexer = new SearchIndexer({
+      database: test.database,
+      adapter: delegating(adapter, async (executor, item) => {
+        if (!changed) {
+          changed = true;
+          await test.services.documents.replace(editor, pageId ?? "", body(`${context.word}newer`));
+        }
+        await adapter.replaceItem(executor, item);
+      }),
+    });
+    await indexer.drain({ concurrency: 4 });
+    expect(changed).toBe(true);
+    await test.pool.query("update search_pending_items set due_at = now() where item_id = $1", [pageId]);
+    await indexer.drain({ concurrency: 4 });
+    expect(await found(context, `${context.word}newer`)).toEqual(context.ids);
+    expect(await found(context, `${context.word} number`)).toEqual([]);
+    const pending = await test.pool.query("select 1 from search_pending_items where item_id = $1", [pageId]);
+    expect(pending.rows).toHaveLength(0);
+  });
+
   it("leaves the item pending when indexing fails halfway and indexes it on the next run", async () => {
     const context = await setup(1);
     const adapter = new PostgresSearchAdapter();

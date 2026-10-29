@@ -57,7 +57,11 @@ describe.skipIf(!databaseBaseUrl)("e-mail settings through the API", () => {
       key: string;
       editable: boolean;
     }[];
-    expect(listed.filter((item) => item.key.startsWith("mail.")).every((item) => !item.editable)).toBe(true);
+    const managedElsewhere = ["mail.smtp", "mail.method", "mail.graph"];
+    expect(listed.filter((item) => managedElsewhere.includes(item.key)).every((item) => !item.editable)).toBe(
+      true,
+    );
+    expect(listed.find((item) => item.key === "mail.sendRatePerMinute")?.editable).toBe(true);
   });
 
   it("stores the Graph settings and a credential, tests them and switches the sending method", async () => {

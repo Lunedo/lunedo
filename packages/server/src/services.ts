@@ -143,11 +143,13 @@ import type { Logger } from "./logging/logger.js";
 import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
   deliverMailJob,
+  deliverMailWork,
   dispatchPendingMailJob,
   MAIL_CREDENTIAL_REMINDER_SCHEDULE,
   MailService,
   mailCredentialReminderJob,
 } from "./mail/mail-service.js";
+import type { MailSendRate } from "./mail/send-rate.js";
 import type { MailTransport, SmtpOptions } from "./mail/transport.js";
 import { AgendaService } from "./meetings/agenda.js";
 import { DecisionService } from "./meetings/decisions.js";
@@ -411,6 +413,7 @@ export function createAccountServices(options: {
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
+  mailSendRate?: Pick<MailSendRate, "claim">;
   atlassianFetch?: typeof fetch;
   confluenceTransport?: ConfluenceTransport;
   outboundAllowedNetworks?: readonly string[];
@@ -469,6 +472,7 @@ export function createAccountServices(options: {
     allowInsecure: options.insecureIdentityProviders ?? false,
     ...(options.mailTransport ? { transport: options.mailTransport } : {}),
     ...(options.mailFetch ? { fetch: options.mailFetch } : {}),
+    ...(options.mailSendRate ? { sendRate: options.mailSendRate } : {}),
   });
   const authorization = new AuthorizationService({
     database,
@@ -1388,7 +1392,7 @@ export async function workAccountJobs(
   services: AccountServices,
   settings: SettingsService,
 ): Promise<void> {
-  await jobs.work(deliverMailJob, services.mail.deliver, { concurrency: 4 });
+  await jobs.work(deliverMailJob, services.mail.deliver, deliverMailWork);
   await jobs.work(dispatchPendingMailJob, async () => {
     await services.mail.dispatchPending();
   });

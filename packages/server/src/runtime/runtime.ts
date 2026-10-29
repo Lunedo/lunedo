@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { availableParallelism } from "node:os";
 import type { HealthCheck } from "@lunedo/shared";
 import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { backupBeforeMigrations, consumeSkipMarker } from "../backup/before-update.js";
@@ -25,7 +26,7 @@ import { createDatabase, type Database } from "../database/database.js";
 import { currentSchemaVersion, knownSchemaVersions, runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
-import { startDisplayVersions } from "../files/jobs.js";
+import { displayVersionJob, startDisplayVersions } from "../files/jobs.js";
 import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
 import { readinessChecks } from "../health/readiness.js";
 import type { JobQueue } from "../jobs/job-queue.js";
@@ -46,7 +47,7 @@ import { startUpdateChecks } from "../operations/jobs.js";
 import type { CollaborationProbe } from "../operations/status.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
 import { startPushDelivery } from "../push/push-service.js";
-import { startSearchIndexing } from "../search/jobs.js";
+import { searchIndexJob, startSearchIndexing } from "../search/jobs.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
 import { settingDefinitions } from "../settings/catalog.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
@@ -294,11 +295,24 @@ export async function createServerRuntime(options: {
         await services.backups.cleanUpTestRestores();
         await services.spacePermissions.recordPrivateGrantRemovals();
         await workAccountJobs(jobs, services, settings);
-        await startSearchIndexing({ jobs, listener, indexer: services.search.indexer, logger });
+        const concurrency = (queue: string) => config.jobConcurrency[queue] ?? availableParallelism();
+        await startSearchIndexing({
+          jobs,
+          listener,
+          indexer: services.search.indexer,
+          logger,
+          concurrency: concurrency(searchIndexJob.name),
+        });
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });
         await startPushDelivery({ jobs, listener, push: services.push, logger });
         await startChatDelivery({ jobs, listener, channels: services.chatChannels, logger });
-        await startDisplayVersions({ jobs, listener, displayVersions: services.displayVersions, logger });
+        await startDisplayVersions({
+          jobs,
+          listener,
+          displayVersions: services.displayVersions,
+          logger,
+          concurrency: concurrency(displayVersionJob.name),
+        });
         await startReviewReminders({ jobs, listener, reviews: services.reviews, logger });
         await startRemovedArticlePruning({ jobs, articles: services.articleApi });
         await startUpdateChecks({ jobs, listener, updates: services.updates, logger });

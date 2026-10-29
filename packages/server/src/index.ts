@@ -614,6 +614,7 @@ export {
   MailNotConfiguredError,
   type MailTestResult,
   mailMethodSetting,
+  mailSendRateSetting,
   SmtpConfigurationError,
   smtpSetting,
 } from "./mail/mail-service.js";

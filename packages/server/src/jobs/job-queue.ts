@@ -50,6 +50,12 @@ export interface ScheduleOptions {
   timeZone?: string;
 }
 
+export interface WorkOptions {
+  concurrency?: number;
+  batch?: boolean;
+  coalesce?: boolean;
+}
+
 export interface JobProgress {
   done: number;
   total: number | null;
@@ -123,7 +129,7 @@ export interface JobQueue {
   work<TPayload>(
     definition: JobDefinition<TPayload>,
     handler: JobHandler<TPayload>,
-    options?: { concurrency?: number },
+    options?: WorkOptions,
   ): Promise<void>;
   get<TPayload>(definition: JobDefinition<TPayload>, id: string): Promise<JobInfo | null>;
   listFailed<TPayload>(definition: JobDefinition<TPayload>, options?: { limit?: number }): Promise<JobInfo[]>;

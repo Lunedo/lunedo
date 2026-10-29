@@ -14,6 +14,7 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    shm_size: 1gb
     environment:
       POSTGRES_USER: lunedo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}

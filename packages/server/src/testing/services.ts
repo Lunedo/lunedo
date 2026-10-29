@@ -105,6 +105,7 @@ export async function createTestServices(
       ...(options.renderFetch ? { renderFetch: options.renderFetch } : {}),
       ...(options.meetingClock ? { meetingClock: options.meetingClock } : {}),
       mailTransport: () => mail,
+      mailSendRate: { claim: async () => ({ claimed: true }) },
     });
   const services = build();
   return {

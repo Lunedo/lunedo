@@ -16,6 +16,7 @@ Every environment variable Lunedo reads, grouped by task. The [configuration fil
 | `LUNEDO_WORKER_PORT` | `3002` | A whole number from 1 to 65,535. |  | Port of the worker's health and metrics endpoints. |
 | `LUNEDO_LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. |  | Minimum level of the messages Lunedo logs. |
 | `LUNEDO_SHUTDOWN_TIMEOUT_SECONDS` | `30` | A whole number of at least 1. |  | Time in seconds that running requests and jobs get to finish on shutdown. Allow a stop grace period of at least this time plus 10 seconds in the container orchestrator. |
+| `LUNEDO_JOB_CONCURRENCY` | the number of CPUs | Comma-separated `queue=number` pairs with numbers from 1 to 64, for example `search.update-index=8,files.create-display-versions=2`. |  | Jobs that one worker process runs at once in the queues `search.update-index` (search index updates) and `files.create-display-versions` (display versions of images). A queue that is not listed runs as many at once as the process has CPUs. |
 | `LUNEDO_WEB_ROOT` | `/app/web` in the image |  |  | Directory with the built web client, served by the API. |
 | `LUNEDO_CONFIG_FILE` | none |  |  | Path of an optional JSON configuration file. Its keys are the names of these settings; environment variables take precedence over it. |
 

@@ -86,6 +86,34 @@ const addressList = z
     "must be a comma-separated list of IP addresses and CIDR ranges",
   );
 
+export const CONCURRENT_JOB_QUEUES = ["search.update-index", "files.create-display-versions"] as const;
+
+const jobConcurrency = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value, context) => {
+    const entries: Record<string, number> = {};
+    const parts = (value ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    for (const part of parts) {
+      const match = /^([a-z0-9.-]+)=(\d+)$/.exec(part);
+      const queue = match?.[1] ?? "";
+      const count = Number(match?.[2]);
+      if (!(CONCURRENT_JOB_QUEUES as readonly string[]).includes(queue) || !(count >= 1 && count <= 64)) {
+        context.addIssue({
+          code: "custom",
+          message: `${part} must be queue=number with one of ${CONCURRENT_JOB_QUEUES.join(", ")} and a number from 1 to 64`,
+        });
+        return z.NEVER;
+      }
+      entries[queue] = count;
+    }
+    return entries;
+  });
+
 export const configSettings: readonly ConfigSetting[] = [
   ...topic("Database and processes", [
     setting(
@@ -115,6 +143,16 @@ export const configSettings: readonly ConfigSetting[] = [
       "LUNEDO_SHUTDOWN_TIMEOUT_SECONDS",
       positiveInt.default(30),
       "Time in seconds that running requests and jobs get to finish on shutdown. Allow a stop grace period of at least this time plus 10 seconds in the container orchestrator.",
+    ),
+    setting(
+      "LUNEDO_JOB_CONCURRENCY",
+      jobConcurrency,
+      "Jobs that one worker process runs at once in the queues `search.update-index` (search index updates) and `files.create-display-versions` (display versions of images). A queue that is not listed runs as many at once as the process has CPUs.",
+      {
+        format:
+          "Comma-separated `queue=number` pairs with numbers from 1 to 64, for example `search.update-index=8,files.create-display-versions=2`.",
+        defaultText: "the number of CPUs",
+      },
     ),
     setting("LUNEDO_WEB_ROOT", path.optional(), "Directory with the built web client, served by the API.", {
       defaultText: "`/app/web` in the image",

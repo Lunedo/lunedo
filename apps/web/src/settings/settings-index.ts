@@ -245,6 +245,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "instance.security": POLICY_SECTIONS.map((policy) => section(policy.titleKey, policy.keys.map(setting))),
   "instance.breakGlass": [section("breakGlass.title", [setting("organizations.breakGlassMinutes")])],
   "instance.mail": [
+    section("mail.delivery.title", [setting("mail.sendRatePerMinute")]),
     section("notifications.push.title", [setting("notifications.browserPush")]),
     section("storage.contacts.title", [row("operationsContacts", "storage.contacts.title")]),
   ],

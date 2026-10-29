@@ -6,7 +6,7 @@ import { ENTRA_SAML_CLAIMS } from "@lunedo/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, SYSTEM } from "../accounts/principal.js";
-import { ChallengeExpiredError } from "../auth/errors.js";
+import { ChallengeExpiredError, RateLimitedError } from "../auth/errors.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -181,6 +181,49 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         client: {},
       }),
     ).rejects.toThrow(ChallengeExpiredError);
+  });
+
+  it("accepts the answers of a whole office from one address and limits invalid answers", async () => {
+    const { id, domain } = await provider();
+    const office = "198.51.100.120";
+    for (let person = 0; person < 25; person++) {
+      const started = await test.services.providerSignIn.start({
+        providerId: id,
+        purpose: "signIn",
+        baseUrl: BASE,
+      });
+      const receipt = await test.services.providerSignIn.receiveSamlResponse({
+        providerId: id,
+        samlResponse: await idp.response({
+          ...target(id),
+          nameId: randomUUID(),
+          attributes: { email: [`office${person}@${domain}`] },
+          requestId: requestIdOf(started.url),
+        }),
+        relayState: new URL(started.url).searchParams.get("RelayState"),
+        clientIp: office,
+      });
+      expect(receipt.state).toBeTruthy();
+    }
+    const attacker = "198.51.100.121";
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await expect(
+        test.services.providerSignIn.receiveSamlResponse({
+          providerId: id,
+          samlResponse: "not a response",
+          relayState: null,
+          clientIp: attacker,
+        }),
+      ).rejects.not.toThrow(RateLimitedError);
+    }
+    await expect(
+      test.services.providerSignIn.receiveSamlResponse({
+        providerId: id,
+        samlResponse: "not a response",
+        relayState: null,
+        clientIp: attacker,
+      }),
+    ).rejects.toThrow(RateLimitedError);
   });
 
   it("refuses sign-in started at the identity provider unless the provider allows it", async () => {

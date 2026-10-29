@@ -476,7 +476,7 @@ describe.skipIf(!databaseBaseUrl)("identity providers through the API", () => {
     }
     expect(known.email).toBe("known.person@other.test");
     const limited = new TestClient(test.app, { remoteAddress: "198.51.100.42" });
-    for (let attempt = 0; attempt < 30; attempt++) {
+    for (let attempt = 0; attempt < 300; attempt++) {
       expect(
         (await limited.post("/api/v1/auth/sign-in/discover", { email: "a@other.test" })).statusCode,
       ).toBe(200);
